@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Gadfly</RootNamespace>
+    <!-- AssemblyName/PackageId deliberately differ from the Cli project's "gadfly" output name:
+         NuGet's .slnx restore graph treats project names case-insensitively and rejects two
+         projects that collide once lowercased ("Gadfly" vs "gadfly") as ambiguous. -->
+    <AssemblyName>Gadfly.Core</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Whole-number versioning: major-only bumps (1.0.0 → 2.0.0 → 3.0.0). Minor/patch stay 0. -->
+    <Version>1.0.0</Version>
+    <PackageId>Gadfly.Core</PackageId>
+    <Title>Gadfly.Core</Title>
+    <Authors>MindAttic</Authors>
+    <Company>MindAttic</Company>
+    <Description>Mines your own Claude Code transcripts and claude.ai export into a corpus, then cross-examines you Socrates-style through MindAttic.Legion's multi-LLM voting until you reach Aporia.</Description>
+    <PackageTags>mindattic;gadfly;socratic;legion;introspection;cli</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Copyright>Copyright (c) 2026 MindAttic</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MindAttic.Legion" Version="26.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Gadfly.Tests" />
+  </ItemGroup>
+
+</Project>

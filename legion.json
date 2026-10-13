@@ -1,0 +1,5 @@
+{
+  "_comment": "Gadfly interrogates its own user — a high-stakes, personal-insight domain. Default voter panel is the trusted four; tier is selected in code (see LegionTierResolver), not here — 'tier' is not a real legion.json field.",
+  "voters": ["claude", "openai", "gemini", "deepseek"],
+  "judge": "claude"
+}
