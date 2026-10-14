@@ -50,7 +50,8 @@ public static class GadflyCli
         Console.WriteLine();
         Console.WriteLine("Commands:");
         Console.WriteLine("  ingest [opts]        Scan ~/.claude/projects/**/*.jsonl into the corpus.");
-        Console.WriteLine("  import <zip> [opts]  Import a claude.ai data export.");
+        Console.WriteLine("  import <zip> [opts]  Import a claude.ai data export. --downloads uses the");
+        Console.WriteLine("                       newest *.zip in Downloads instead of an explicit path.");
         Console.WriteLine("  corpus status        Show corpus message counts and digest-cache freshness.");
         Console.WriteLine("  interrogate [opts]   Prompt 1 — Socratic Elenchus REPL until you reach Aporia.");
         Console.WriteLine("  reflect [opts]       Prompt 2 — one-shot Final Reflection.");

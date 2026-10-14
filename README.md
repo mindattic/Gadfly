@@ -60,7 +60,7 @@ sessions, as a hint, not a verdict.
 | Command | Purpose |
 |---|---|
 | `gadfly ingest [opts]` | Scan `~/.claude/projects/**/*.jsonl` into the corpus. Idempotent. |
-| `gadfly import <zip> [opts]` | Import a claude.ai data export. |
+| `gadfly import <zip> \| --downloads [opts]` | Import a claude.ai data export, by path or newest `*.zip` in Downloads. |
 | `gadfly corpus status [--verbose]` | Message counts by source, last-ingest time, digest-cache freshness. |
 | `gadfly interrogate [opts]` | Prompt 1 — Socratic Elenchus REPL until you reach Aporia. |
 | `gadfly reflect [opts]` | Prompt 2 — one-shot Final Reflection. |
@@ -82,6 +82,12 @@ Imports an Anthropic account data export. **The export schema was not verified a
 file as of v1** — the importer is written defensively and raises a clear error naming what
 didn't match rather than silently ingesting partial data. Expect to need one fix the first time
 you run this against a real export.
+
+`--downloads` skips the explicit path and picks the newest `*.zip` in the user's Downloads
+folder — for chaining after a browser-automation task (e.g. MindAttic.Automata) that requests
+the claude.ai export and downloads the resulting zip. It still only picks the single newest zip;
+it does not disambiguate between multiple candidates, so an unrelated recent zip in Downloads
+will surface as whatever error the schema check raises rather than being skipped silently.
 
 ### `gadfly interrogate`
 
