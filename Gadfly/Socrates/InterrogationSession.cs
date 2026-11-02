@@ -45,13 +45,14 @@ public class InterrogationSession
     /// <summary>
     /// Runs the loop. <paramref name="writeQuestion"/> is called with each generated
     /// question; <paramref name="readHumanReply"/> is then called to get the human's
-    /// next reply — a console ReadLine in production, a canned queue in tests.
+    /// next reply — a console ReadLine in production, a canned queue in tests. A null
+    /// reply means input has ended (EOF) and stops the loop.
     /// Returns the full transcript (also left in <see cref="Transcript"/>).
     /// </summary>
     public async Task<IReadOnlyList<InterrogationTurn>> RunAsync(
         string corpusDigest,
         Func<string, Task> writeQuestion,
-        Func<Task<string>> readHumanReply,
+        Func<Task<string?>> readHumanReply,
         CancellationToken ct = default)
     {
         for (var turn = 0; turn < maxTurns; turn++)
@@ -70,6 +71,9 @@ public class InterrogationSession
             await writeQuestion(question);
 
             var reply = await readHumanReply();
+            if (reply is null)
+                break; // input closed (EOF) — no human left to answer, stop instead of burning votes
+
             Transcript.Add(new InterrogationTurn { Speaker = "You", Text = reply });
 
             if (IsAporia(reply))

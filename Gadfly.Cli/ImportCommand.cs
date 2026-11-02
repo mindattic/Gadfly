@@ -31,7 +31,16 @@ public static class ImportCommand
         }
         else
         {
-            zipPath = args[0];
+            // The zip path is the first non-flag argument, so `import --dry-run <zip>` works too.
+            var positional = args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
+            if (positional is null)
+            {
+                Console.Error.WriteLine("import: missing <zip> path (or pass --downloads).");
+                PrintUsage();
+                return Task.FromResult(1);
+            }
+
+            zipPath = positional;
         }
 
         IReadOnlyList<CorpusMessage> messages;
@@ -47,6 +56,11 @@ public static class ImportCommand
         catch (FileNotFoundException ex)
         {
             Console.Error.WriteLine($"import: {ex.Message}");
+            return Task.FromResult(1);
+        }
+        catch (InvalidDataException ex)
+        {
+            Console.Error.WriteLine($"import: {zipPath} is not a readable zip archive — {ex.Message}");
             return Task.FromResult(1);
         }
 

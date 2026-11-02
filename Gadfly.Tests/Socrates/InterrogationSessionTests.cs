@@ -18,7 +18,7 @@ public class InterrogationSessionTests
         var transcript = await session.RunAsync(
             corpusDigest: "digest",
             writeQuestion: _ => Task.CompletedTask,
-            readHumanReply: () => Task.FromResult(replies.Dequeue()));
+            readHumanReply: () => Task.FromResult<string?>(replies.Dequeue()));
 
         Assert.That(transcript, Has.Count.EqualTo(2));
         Assert.That(transcript[0].Speaker, Is.EqualTo("Socrates"));
@@ -34,7 +34,7 @@ public class InterrogationSessionTests
         var transcript = await session.RunAsync(
             corpusDigest: "digest",
             writeQuestion: _ => Task.CompletedTask,
-            readHumanReply: () => Task.FromResult("I don't know, but not that word"));
+            readHumanReply: () => Task.FromResult<string?>("I don't know, but not that word"));
 
         Assert.That(transcript, Has.Count.EqualTo(6)); // 3 turns * (question + reply)
     }

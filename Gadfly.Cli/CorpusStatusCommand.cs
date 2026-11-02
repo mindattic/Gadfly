@@ -37,8 +37,17 @@ public static class CorpusStatusCommand
         var cacheFresh = false;
         if (File.Exists(digestCachePath))
         {
-            using var doc = JsonDocument.Parse(File.ReadAllText(digestCachePath));
-            cacheFresh = all.Count > 0 && doc.RootElement.TryGetProperty(repository.CorpusHash(), out _);
+            try
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(digestCachePath));
+                cacheFresh = all.Count > 0
+                    && doc.RootElement.ValueKind == JsonValueKind.Object
+                    && doc.RootElement.TryGetProperty(repository.CorpusHash(), out _);
+            }
+            catch (JsonException)
+            {
+                // Corrupt cache: CorpusSummarizer treats it as empty and rebuilds, so report it as stale.
+            }
         }
         Console.WriteLine($"  digest cache: {(cacheFresh ? "fresh" : "stale or missing")}");
 

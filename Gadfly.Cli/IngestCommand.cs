@@ -22,7 +22,8 @@ public static class IngestCommand
             switch (args[i].ToLowerInvariant())
             {
                 case "--project":
-                    if (i + 1 < args.Length) projectFilter = ClaudeCodeProjectScanner.FolderNameFor(args[++i]);
+                    if (i + 1 < args.Length) projectFilter = ClaudeCodeProjectScanner.FolderNameFor(
+                        Path.TrimEndingDirectorySeparator(Path.GetFullPath(args[++i])));
                     break;
                 case "--since":
                     if (i + 1 < args.Length && DateTimeOffset.TryParse(args[++i], out var parsedSince)) since = parsedSince;

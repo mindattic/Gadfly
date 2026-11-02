@@ -36,9 +36,10 @@ public static class ClaudeCodeProjectScanner
     /// <summary>
     /// Resolves the hyphenated folder name Claude Code uses for a given project working
     /// directory, e.g. <c>D:\Projects\MindAttic\Gadfly</c> → <c>D--Projects-MindAttic-Gadfly</c>
-    /// (drive colon, path separators, and dots each become a hyphen). Used to implement
-    /// <c>gadfly ingest --project &lt;cwd&gt;</c>.
+    /// (every character that is not an ASCII letter or digit — drive colon, path separators,
+    /// dots, spaces, underscores, ... — becomes a hyphen, as Claude Code itself does). Used to
+    /// implement <c>gadfly ingest --project &lt;cwd&gt;</c>.
     /// </summary>
     public static string FolderNameFor(string projectPath) =>
-        string.Concat(projectPath.Select(c => c is ':' or '\\' or '/' or '.' ? '-' : c));
+        string.Concat(projectPath.Select(c => char.IsAsciiLetterOrDigit(c) ? c : '-'));
 }

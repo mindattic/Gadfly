@@ -72,7 +72,7 @@ public static class InterrogateCommand
             readHumanReply: () =>
             {
                 Console.Write("You: ");
-                return Task.FromResult(Console.ReadLine() ?? "");
+                return Task.FromResult(Console.ReadLine()); // null at EOF ends the session
             });
 
         var path = session.SaveTranscript();
