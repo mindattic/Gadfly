@@ -76,6 +76,15 @@ Project folders that only hold Claude Code's own `memory/*.md` notes — no raw 
 skipped, not an error. Safe to re-run: already-ingested messages are deduped by a stable
 per-message id.
 
+It reads the **current login's** store: `%CLAUDE_CONFIG_DIR%\projects` when Claude Code runs
+under a per-account config dir, else `~/.claude/projects`. `--all-accounts` scans every login on
+the machine (`~/.claude` and each `~/.claude-accounts/*`). If an interrupted write leaves a torn
+last line in the corpus, commands skip it with a warning and the next `ingest`/`import` sets it
+aside in `messages.torn.txt` and re-ingests that message.
+
+`interrogate --voters/--single-voter` and `examine --voters` refuse (exit 2) any provider id
+outside the trusted set (claude, openai, gemini, deepseek) instead of silently dropping it.
+
 ### `gadfly import <zip>`
 
 Imports an Anthropic account data export. **The export schema was not verified against a real

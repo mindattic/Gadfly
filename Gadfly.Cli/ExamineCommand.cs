@@ -40,6 +40,13 @@ public static class ExamineCommand
             }
         }
 
+        var untrusted = LegionTierResolver.UntrustedIds(providerOverride);
+        if (untrusted.Count > 0)
+        {
+            Console.Error.WriteLine($"examine: untrusted provider id(s) {string.Join(", ", untrusted)}; --voters accepts only {string.Join(", ", LegionTierResolver.TrustedProviderIds)}.");
+            return 2;
+        }
+
         var config = GadflyConfiguration.Build(tier, providerOverride: providerOverride);
         using var client = new LegionVotingClient(config);
 

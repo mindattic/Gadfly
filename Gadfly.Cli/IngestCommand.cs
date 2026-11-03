@@ -16,6 +16,7 @@ public static class IngestCommand
         string? projectFilter = null;
         DateTimeOffset? since = null;
         var dryRun = false;
+        var allAccounts = false;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -31,6 +32,9 @@ public static class IngestCommand
                 case "--dry-run":
                     dryRun = true;
                     break;
+                case "--all-accounts":
+                    allAccounts = true;
+                    break;
             }
         }
 
@@ -38,7 +42,11 @@ public static class IngestCommand
         var totalFound = 0;
         var totalAppended = 0;
 
-        foreach (var project in ClaudeCodeProjectScanner.ScanAll())
+        var roots = allAccounts
+            ? ClaudeCodeProjectScanner.AllAccountRoots()
+            : new[] { ClaudeCodeProjectScanner.DefaultRoot };
+
+        foreach (var project in roots.SelectMany(root => ClaudeCodeProjectScanner.ScanAll(root)))
         {
             if (projectFilter is not null && !string.Equals(project.ProjectFolder, projectFilter, StringComparison.OrdinalIgnoreCase))
                 continue;
@@ -68,12 +76,14 @@ public static class IngestCommand
     {
         Console.WriteLine("gadfly ingest [opts]");
         Console.WriteLine();
-        Console.WriteLine("  Scan ~/.claude/projects/**/*.jsonl and append new messages to the corpus.");
+        Console.WriteLine("  Scan the current login's transcripts (%CLAUDE_CONFIG_DIR%/projects, else ~/.claude/projects)");
+        Console.WriteLine("  and append new messages to the corpus.");
         Console.WriteLine("  Idempotent — safe to re-run; already-ingested messages are skipped.");
         Console.WriteLine();
         Console.WriteLine("Options:");
         Console.WriteLine("  --project <cwd>   Only ingest the project transcript folder matching this working directory.");
         Console.WriteLine("  --since <date>    Only ingest messages timestamped on/after this date.");
         Console.WriteLine("  --dry-run         Report counts without writing to the corpus.");
+        Console.WriteLine("  --all-accounts    Scan every login on this machine (~/.claude and ~/.claude-accounts/*), not just the current one.");
     }
 }

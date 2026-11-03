@@ -39,6 +39,15 @@ public static class LegionTierResolver
     /// <c>MindAttic.Legion.Cli.AskCommand.IntersectWithTrustedSet</c>. Null/empty means "no narrowing
     /// requested", i.e. every trusted provider is eligible.
     /// </summary>
+    /// <summary>The ids in <paramref name="requested"/> that are not in <see cref="TrustedProviderIds"/>.
+    /// The CLI rejects a --voters/--single-voter list up front when this is non-empty, rather than
+    /// silently dropping the untrusted ids (or, for examine, passing them straight to a voter).</summary>
+    public static IReadOnlyList<string> UntrustedIds(IEnumerable<string>? requested) =>
+        (requested ?? Enumerable.Empty<string>())
+            .Where(s => !string.IsNullOrWhiteSpace(s))
+            .Where(s => !TrustedProviderIds.Contains(s, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
     public static HashSet<string> IntersectWithTrustedSet(IEnumerable<string>? requested)
     {
         var trusted = new HashSet<string>(TrustedProviderIds, StringComparer.OrdinalIgnoreCase);

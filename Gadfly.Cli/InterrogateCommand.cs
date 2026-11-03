@@ -43,6 +43,13 @@ public static class InterrogateCommand
             }
         }
 
+        var untrusted = LegionTierResolver.UntrustedIds(providerOverride);
+        if (untrusted.Count > 0)
+        {
+            Console.Error.WriteLine($"interrogate: untrusted provider id(s) {string.Join(", ", untrusted)}; --voters/--single-voter accept only {string.Join(", ", LegionTierResolver.TrustedProviderIds)}.");
+            return 2;
+        }
+
         var config = GadflyConfiguration.Build(tier, providerOverride: providerOverride);
         using var client = new LegionVotingClient(config);
 
