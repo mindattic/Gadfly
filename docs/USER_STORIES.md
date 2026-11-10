@@ -39,3 +39,7 @@ _Nothing recorded yet._
 | GAD-T16 | 2026-10-24 | docs | closed | Update USER_STORIES.md | — |
 | GAD-T17 | 2026-10-31 | feature | closed | LAMP: move Gadfly's app-level settings and keys to MindAttic.Vault.Desktop (manifest, LoadOrSeed, shared named keys, cog opens Vault) | 2e3748b Gadfly.Tests (51/51); keys via M.LEGN-T44 LampKeyTests |
 | GAD-T18 | 2026-10-31 | docs | closed | Update USER_STORIES.md | — |
+| GAD-T19 | 2026-11-02 | docs | open | Adopt MindAttic.Agency docs-site pipeline, publish README to GitHub Pages (HOUSE-LAW-14) | — |
+| GAD-T20 | 2026-11-02 | fix | closed | Bughunt sweep, two passes: find and fix real bugs across tracked source (user request 2026-11-02) | — |
+| GAD-T21 | 2026-11-02 | fix | closed | Fix the open items the 2026-11-02 bughunt left for decision (ingest login scoping, torn jsonl tail, untrusted voters) | — |
+| GAD-T22 | 2026-11-10 | chore | closed | Crash recovery: commit the command-catalog sync (.agent/commands/*.md) and regenerated docs/USER_STORIES.md left uncommitted by the session crash | — |
