@@ -34,12 +34,14 @@ _Nothing recorded yet._
 | GAD-T11 | 2026-10-16 | docs | open | Bring README.md up to date with the code as it is now (what it is, setup, usage, commands, current state), following codex-standard/README-STYLE.md; README.htm regenerated if the repo has one | user request 2026-10-16: approved repo sweep |
 | GAD-T12 | 2026-10-16 | docs | closed | Update USER_STORIES.md | — |
 | GAD-T13 | 2026-10-19 | chore | wont-do | Convert tracked source files to LF line endings via .gitattributes, per HOUSE-LAW-13 (low priority) | — |
-| GAD-T14 | 2026-10-20 | docs | open | Publish Gadfly docs to GitHub Pages via the shared Agency DocFX pipeline: run adopt-docs-site.ps1 (README.md as home page, docs/*.md as articles, API reference only where the code builds in CI), enable Pages with build_type=workflow, set the repo homepage URL, retire tools/build-readme.ps1 and README.htm, confirm the docs Actions run is green and https://mindattic.github.io/Gadfly/ returns 200. Depends on MAT-T8. | — |
+| GAD-T14 | 2026-10-20 | docs | closed | Publish Gadfly docs to GitHub Pages via the shared Agency DocFX pipeline: run adopt-docs-site.ps1 (README.md as home page, docs/*.md as articles, API reference only where the code builds in CI), enable Pages with build_type=workflow, set the repo homepage URL, retire tools/build-readme.ps1 and README.htm, confirm the docs Actions run is green and https://mindattic.github.io/Gadfly/ returns 200. Depends on MAT-T8. | — |
 | GAD-T15 | 2026-10-22 | docs | closed | Update USER_STORIES.md | — |
 | GAD-T16 | 2026-10-24 | docs | closed | Update USER_STORIES.md | — |
 | GAD-T17 | 2026-10-31 | feature | closed | LAMP: move Gadfly's app-level settings and keys to MindAttic.Vault.Desktop (manifest, LoadOrSeed, shared named keys, cog opens Vault) | 2e3748b Gadfly.Tests (51/51); keys via M.LEGN-T44 LampKeyTests |
 | GAD-T18 | 2026-10-31 | docs | closed | Update USER_STORIES.md | — |
-| GAD-T19 | 2026-11-02 | docs | open | Adopt MindAttic.Agency docs-site pipeline, publish README to GitHub Pages (HOUSE-LAW-14) | — |
+| GAD-T19 | 2026-11-02 | docs | closed | Adopt MindAttic.Agency docs-site pipeline, publish README to GitHub Pages (HOUSE-LAW-14) | — |
 | GAD-T20 | 2026-11-02 | fix | closed | Bughunt sweep, two passes: find and fix real bugs across tracked source (user request 2026-11-02) | — |
 | GAD-T21 | 2026-11-02 | fix | closed | Fix the open items the 2026-11-02 bughunt left for decision (ingest login scoping, torn jsonl tail, untrusted voters) | — |
 | GAD-T22 | 2026-11-10 | chore | closed | Crash recovery: commit the command-catalog sync (.agent/commands/*.md) and regenerated docs/USER_STORIES.md left uncommitted by the session crash | — |
+| GAD-T23 | 2026-11-10 | chore | closed | Adopt the shared docs-site pipeline: turn on GitHub Pages | — |
+| GAD-T24 | 2026-11-17 | docs | closed | Update USER_STORIES.md | — |
