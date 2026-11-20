@@ -125,7 +125,7 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
 
     private static void MergeInto(List<(ConceptEntry Concept, int Support)> list, ConceptEntry entry, int support = 1)
     {
-        var i = list.FindIndex(x => x.Concept.Key == entry.Key || PanelJson.Similarity(x.Concept.Title, entry.Title) >= 0.6);
+        var i = list.FindIndex(x => SameConcept(x.Concept, entry));
         if (i < 0)
         {
             list.Add((entry, support));
@@ -149,14 +149,37 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
         result.AddRange(edited);
         foreach (var c in fresh)
         {
-            if (edited.Any(e => e.Key == c.Key || PanelJson.Similarity(e.Title, c.Title) >= 0.6)) continue;
-            var prior = previous?.Concepts.FirstOrDefault(p => p.Key == c.Key || PanelJson.Similarity(p.Title, c.Title) >= 0.6);
+            if (edited.Any(e => SameConcept(e, c))) continue;
+            var prior = previous?.Concepts.FirstOrDefault(p => SameConcept(p, c));
             var key = prior?.Key ?? c.Key;
             var unique = key;
             for (var n = 2; result.Any(r => r.Key == unique); n++) unique = $"{key}-{n}";
             result.Add(c with { Key = unique });
         }
         return result;
+    }
+
+    /// <summary>
+    /// Whether two extracted concepts are the same idea: equal keys, similar titles, one title's words
+    /// contained in the other's with overlapping definitions ("Photosynthesis" / "Photosynthesis
+    /// overview"), or near-identical definitions.
+    /// </summary>
+    internal static bool SameConcept(ConceptEntry a, ConceptEntry b)
+    {
+        if (a.Key == b.Key || PanelJson.Similarity(a.Title, b.Title) >= 0.6) return true;
+        var definitions = a.Definition.Length > 0 && b.Definition.Length > 0 ? PanelJson.Similarity(a.Definition, b.Definition) : 0;
+        if (definitions >= 0.6) return true;
+        return TitleContains(a.Title, b.Title) && definitions >= 0.3;
+    }
+
+    private static bool TitleContains(string x, string y)
+    {
+        static HashSet<string> Words(string s) => s.ToLowerInvariant()
+            .Split([' ', '-', '_', ',', ':', '(', ')', '/'], StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length > 2 && w is not ("the" or "and" or "of" or "overview" or "introduction" or "basics")).ToHashSet();
+        var a = Words(x);
+        var b = Words(y);
+        return a.Count > 0 && b.Count > 0 && (a.IsSubsetOf(b) || b.IsSubsetOf(a));
     }
 
     private static string? Resolve(IReadOnlyList<ConceptEntry> concepts, string title) =>
