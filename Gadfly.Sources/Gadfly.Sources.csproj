@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Gadfly.Sources: instructor source material for the Socratic engine (docs/SOCRATIC_PLATFORM.md):
+       ingest documents into chunks, build the concept map and rubric, retrieve grounding. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Gadfly.Sources</RootNamespace>
+    <AssemblyName>Gadfly.Sources</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <PackageId>Gadfly.Sources</PackageId>
+    <Title>Gadfly.Sources</Title>
+    <Authors>MindAttic</Authors>
+    <Company>MindAttic</Company>
+    <Description>Source material for the Gadfly Socratic engine: document ingestion and chunking, Legion-built concept maps and rubrics, and hybrid grounding retrieval.</Description>
+    <PackageTags>mindattic;gadfly;socratic;rag;rubric</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Copyright>Copyright (c) 2026 MindAttic</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gadfly\Gadfly.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Gadfly.Tests" />
+  </ItemGroup>
+
+</Project>
