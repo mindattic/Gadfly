@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Gadfly.Server": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:7311;http://localhost:5311",
+      "environmentVariables": { "ASPNETCORE_ENVIRONMENT": "Development" }
+    }
+  }
+}

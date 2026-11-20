@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Gadfly.Server: the hosted Socratic platform (docs/SOCRATIC_PLATFORM.md). One deployable that
+       will carry the SQL data layer, the SessionHub, the platform API and (from GAD-T48) the
+       Blazor Server exam app. EF Core on SQL Server: LocalDB in development, Azure SQL later. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Gadfly.Server</RootNamespace>
+    <AssemblyName>Gadfly.Server</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <UserSecretsId>gadfly-server-6f1d2c3a</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gadfly\Gadfly.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MindAttic.Vault" Version="7.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.8" />
+    <!-- Lift the transitive System.Security.Cryptography.Pkcs 9.0.4 (from the SqlClient chain) past
+         GHSA-2fmv-rv2c-59x7 and GHSA-846f-f764-76mx. -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>
