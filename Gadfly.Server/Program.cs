@@ -1,4 +1,5 @@
 using Gadfly.Server.Data;
+using Gadfly.Server.Jobs;
 using Microsoft.EntityFrameworkCore;
 using MindAttic.Vault.Configuration;
 
@@ -12,6 +13,9 @@ builder.Configuration.AddMindAtticVaultFiles(o => o.Buckets = new[] { "LLM", "Se
 var connectionString = GadflyDatabase.Resolve(builder.Configuration);
 builder.Services.AddDbContext<GadflyDbContext>(o => GadflyDatabase.Configure(o, connectionString));
 builder.Services.AddHealthChecks().AddDbContextCheck<GadflyDbContext>("database");
+
+// Background work (ingestion, concept extraction, reports) on the SQL job table (GAD-T43).
+builder.Services.AddGadflyJobs();
 
 var app = builder.Build();
 
