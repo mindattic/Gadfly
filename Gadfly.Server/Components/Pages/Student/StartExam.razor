@@ -1,0 +1,295 @@
+@page "/my-exams/{AssignmentId:guid}/start"
+@attribute [Authorize(Policy = GadflyPolicies.Student)]
+@implements IAsyncDisposable
+@using Gadfly.Server.Data
+@using Gadfly.Server.Sessions
+@using Gadfly.Server.Student
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+@inject SessionOrchestrator Sessions
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
+<PageTitle>Get ready · Gadfly Exams</PageTitle>
+
+@if (loading)
+{
+    <h1>Get ready</h1>
+    <p class="hint">Loading…</p>
+}
+else if (assignment is null)
+{
+    <h1>Get ready</h1>
+    <p class="notice">That exam isn't assigned to you in this organization. <a href="my-exams">Back to my exams</a></p>
+}
+else
+{
+    <h1>@assignment.ExamTitle <span>· get ready</span></h1>
+
+    @if (assignment.CanResumeDirectly)
+    {
+        <p class="notice">You already have this exam in progress. <a class="button" href="exam/@assignment.ActiveSessionId">Resume where you left off</a></p>
+    }
+    else if (!assignment.CanStart)
+    {
+        <p class="notice">This exam can't be started right now: @StudentExams.Describe(assignment.Standing).ToLowerInvariant(). <a href="my-exams">Back to my exams</a></p>
+    }
+    else
+    {
+        <ol class="steps">
+            <li class="@(Done(1) ? "done" : "")">System check</li>
+            <li class="@(Done(2) ? "done" : "")">How it works</li>
+            <li class="@(Done(3) ? "done" : "")">Notice and consent</li>
+        </ol>
+
+        <section class="panel wide">
+            <h2>1. System check</h2>
+            @if (checks is null)
+            {
+                <p class="hint">Checking your browser…</p>
+            }
+            else
+            {
+                <ul class="syschecks">
+                    @foreach (var c in checks)
+                    {
+                        <li class="syscheck syscheck-@c.Status.ToString().ToLowerInvariant()">
+                            <span class="syscheck-mark" aria-hidden="true">@Mark(c.Status)</span>
+                            <div>
+                                <strong>@c.Name</strong> — @c.Result
+                                @if (c.Fix is not null)
+                                {
+                                    <div class="hint">@c.Fix</div>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+                <button type="button" class="secondary" @onclick="RunChecksAsync" disabled="@checking">Check again</button>
+                @if (!ChecksPass)
+                {
+                    <p class="error" role="status">Fix the items marked ✗ above, then press "Check again".</p>
+                }
+            }
+        </section>
+
+        <section class="panel wide">
+            <h2>2. How Socratic questioning works</h2>
+            <p>This isn't a multiple-choice test. The examiner asks one question at a time and builds the next question from <em>your own answer</em>: it may ask you to clarify a word you used, give an example, test your idea against a tricky case, or point out when two of your answers seem to disagree.</p>
+            <ul>
+                <li>Answer in your own words. Short, honest answers are better than long copied ones.</li>
+                <li>If you genuinely don't know, press <strong>I don't know</strong>. Admitting it is a real answer, not a failure, and the examiner moves on.</li>
+                <li>The clock is kept on the server; if you reload the page, you return to the same question.</li>
+                <li>You won't see scores during the exam. Your instructor releases results later.</li>
+            </ul>
+            <div class="practice">
+                <h3>Try one (practice, not recorded)</h3>
+                <p class="question">@practiceQuestion</p>
+                @if (practiceFollowUp is null)
+                {
+                    <textarea rows="3" @bind="practiceAnswer" @bind:event="oninput" aria-label="Practice answer" placeholder="Type a sentence or two…"></textarea>
+                    <div class="actions">
+                        <button type="button" @onclick="PracticeAnswer" disabled="@string.IsNullOrWhiteSpace(practiceAnswer)">Submit practice answer</button>
+                        <button type="button" class="secondary" @onclick="PracticeDontKnow">I don't know</button>
+                    </div>
+                }
+                else
+                {
+                    <p class="question">@practiceFollowUp</p>
+                    <p class="hint">@practiceExplain</p>
+                    <button type="button" class="link" @onclick="ResetPractice">Try again</button>
+                }
+            </div>
+        </section>
+
+        <section class="panel wide">
+            <h2>3. @notice!.Title</h2>
+            @foreach (var p in notice.Paragraphs)
+            {
+                <p>@p</p>
+            }
+            <label class="inline">
+                <input type="checkbox" @bind="agreed" />
+                I have read this notice and agree to take the exam on these terms.
+            </label>
+            <button type="button" @onclick="BeginAsync" disabled="@(!agreed || !ChecksPass || starting)">
+                @(starting ? "Starting…" : assignment.ActiveSessionId is null ? "Begin exam" : "Continue to the exam")
+            </button>
+            @if (error is not null)
+            {
+                <p class="error" role="alert">@error</p>
+            }
+        </section>
+    }
+}
+
+@code {
+    [Parameter] public Guid AssignmentId { get; set; }
+
+    private enum CheckStatus { Pass, Warn, Fail, Later }
+    private sealed record Check(string Name, CheckStatus Status, string Result, string? Fix = null);
+
+    private sealed class BrowserReport
+    {
+        public string UserAgent { get; set; } = "";
+        public bool WebSocket { get; set; }
+        public bool Cookies { get; set; }
+        public bool Online { get; set; }
+        public bool SecureContext { get; set; }
+        public bool SpeechRecognition { get; set; }
+        public bool MediaDevices { get; set; }
+        public int ScreenWidth { get; set; }
+    }
+
+    private bool loading = true, checking, agreed, starting;
+    private StudentAssignmentView? assignment;
+    private ConsentNotice? notice;
+    private List<Check>? checks;
+    private string? clientInfo, error;
+    private IJSObjectReference? module;
+
+    private const string practiceQuestion = "Practice: in your own words, what is a habit?";
+    private string practiceAnswer = "";
+    private string? practiceFollowUp, practiceExplain;
+
+    private bool ChecksPass => checks is not null && checks.All(c => c.Status != CheckStatus.Fail);
+    private bool Done(int step) => step switch
+    {
+        1 => ChecksPass,
+        2 => practiceFollowUp is not null,
+        _ => agreed,
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.OrganizationId is { } org && Tenant.UserId is { } user)
+        {
+            assignment = await StudentExams.FindAsync(Scopes, org, user, AssignmentId, Clock.GetUtcNow());
+            if (assignment is not null)
+            {
+                var (orgName, retention) = await StudentExams.OrganizationAsync(Scopes, org);
+                notice = ConsentNotice.For(orgName, assignment.ExamTitle, retention, assignment.Mode);
+            }
+        }
+        loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && assignment is { CanStart: true, CanResumeDirectly: false })
+        {
+            await RunChecksAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task RunChecksAsync()
+    {
+        checking = true;
+        var list = new List<Check>();
+        try
+        {
+            module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/system-check.js");
+            var r = await module.InvokeAsync<BrowserReport>("check");
+            clientInfo = r.UserAgent;
+
+            // Round trip through the live connection the exam uses.
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            for (var i = 0; i < 3; i++) await module.InvokeAsync<bool>("ping");
+            var ms = sw.Elapsed.TotalMilliseconds / 3;
+
+            list.Add(r.WebSocket
+                ? new Check("Browser", CheckStatus.Pass, "supported")
+                : new Check("Browser", CheckStatus.Fail, "this browser can't keep a live connection",
+                    "Use a current version of Chrome, Edge, Firefox or Safari."));
+            list.Add(r.Cookies
+                ? new Check("Cookies", CheckStatus.Pass, "enabled")
+                : new Check("Cookies", CheckStatus.Fail, "blocked", "Allow cookies for this site in your browser settings, then reload."));
+            list.Add(r.Online
+                ? ms switch
+                {
+                    < 400 => new Check("Connection", CheckStatus.Pass, $"good ({ms:0} ms round trip)"),
+                    < 1500 => new Check("Connection", CheckStatus.Warn, $"slow ({ms:0} ms round trip)",
+                        "Typed answers will still work. Move closer to your Wi-Fi router or close other downloads if pages feel sluggish."),
+                    _ => new Check("Connection", CheckStatus.Fail, $"too slow ({ms:0} ms round trip)",
+                        "Move closer to your Wi-Fi router, use a wired connection, or stop other downloads and streams, then check again."),
+                }
+                : new Check("Connection", CheckStatus.Fail, "offline", "Reconnect to the internet, then check again."));
+            list.Add(r.ScreenWidth is > 0 and < 360
+                ? new Check("Screen", CheckStatus.Warn, "very narrow", "A larger window or a tablet or computer is easier to type on.")
+                : new Check("Screen", CheckStatus.Pass, "fine"));
+            list.Add(new Check("Microphone level", CheckStatus.Later, "coming with voice mode",
+                r.MediaDevices ? null : "When voice mode arrives you'll need a browser that allows microphone access."));
+            list.Add(new Check("Camera and face visible", CheckStatus.Later, "coming with voice mode"));
+        }
+        catch (JSException ex)
+        {
+            list.Add(new Check("Browser", CheckStatus.Fail, "the check couldn't run",
+                $"Reload the page; if it keeps failing, try another browser. ({ex.Message})"));
+        }
+        catch (TaskCanceledException)
+        {
+            list.Add(new Check("Connection", CheckStatus.Fail, "no response from your browser",
+                "Reload the page and check again; if it keeps failing, check your internet connection."));
+        }
+        checks = list;
+        checking = false;
+    }
+
+    private static string Mark(CheckStatus s) => s switch
+    {
+        CheckStatus.Pass => "✓",
+        CheckStatus.Warn => "!",
+        CheckStatus.Fail => "✗",
+        _ => "…",
+    };
+
+    private void PracticeAnswer()
+    {
+        var words = practiceAnswer.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        var quote = string.Join(' ', words.Take(14)) + (words.Length > 14 ? "…" : "");
+        practiceFollowUp = $"You said: \"{quote}\". Can you think of something that fits that description but that you wouldn't call a habit?";
+        practiceExplain = "That's a counterexample move: the examiner tests your definition against a case built from your own words. In the real exam the follow-ups are written live from what you say.";
+    }
+
+    private void PracticeDontKnow()
+    {
+        practiceFollowUp = "That's fine. Let's come at it from another side: can you name one thing you do almost every day without thinking about it?";
+        practiceExplain = "\"I don't know\" is an honest answer. The examiner records it and either tries an easier angle or moves on to the next topic.";
+    }
+
+    private void ResetPractice()
+    {
+        practiceAnswer = "";
+        practiceFollowUp = practiceExplain = null;
+    }
+
+    private async Task BeginAsync()
+    {
+        if (assignment is null || notice is null || Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        starting = true;
+        error = null;
+        try
+        {
+            var sessionId = await Sessions.CreateOrResumeAsync(org, assignment.AssignmentId, user, clientInfo);
+            await Sessions.RecordConsentAsync(org, sessionId, user, notice.Sha256);
+            Nav.NavigateTo($"exam/{sessionId}");
+        }
+        catch (SessionRefusedException ex)
+        {
+            error = ex.Message;
+            starting = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is not null)
+        {
+            try { await module.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+        }
+    }
+}

@@ -1,0 +1,104 @@
+@page "/my-exams"
+@attribute [Authorize(Policy = GadflyPolicies.Student)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Student
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+
+<HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
+<PageTitle>My exams · Gadfly Exams</PageTitle>
+<h1>My exams</h1>
+
+@if (rows is null)
+{
+    <p class="hint">Loading your exams…</p>
+}
+else if (rows.Count == 0)
+{
+    <p class="notice">You have no exams assigned yet. When your instructor assigns one, it appears here.</p>
+}
+else
+{
+    <div class="exam-list">
+        @foreach (var r in rows)
+        {
+            <section class="panel exam-item">
+                <div class="exam-item-head">
+                    <h2>@r.ExamTitle</h2>
+                    <span class="badge badge-@r.Standing.ToString().ToLowerInvariant()">@StudentExams.Describe(r.Standing)</span>
+                </div>
+                <p class="hint">
+                    @Window(r) · Attempts used @r.AttemptsUsed of @r.AttemptsAllowed
+                    @if (r.Mode == ExamMode.Voice)
+                    {
+                        <span> · Voice exam (typed answers for now)</span>
+                    }
+                </p>
+                @if (!string.IsNullOrWhiteSpace(r.Instructions))
+                {
+                    <p>@r.Instructions</p>
+                }
+                @if (r.CanStart)
+                {
+                    <div class="actions">
+                        @if (r.CanResumeDirectly)
+                        {
+                            <a class="button" href="exam/@r.ActiveSessionId">Resume</a>
+                        }
+                        else
+                        {
+                            <a class="button" href="my-exams/@r.AssignmentId/start">@(r.ActiveSessionId is null ? "Start" : "Resume")</a>
+                        }
+                    </div>
+                }
+                @if (r.Result is { } result)
+                {
+                    <div class="result">
+                        <h3>Your result</h3>
+                        @if (!string.IsNullOrWhiteSpace(result.Grade))
+                        {
+                            <p><strong>Grade:</strong> @result.Grade</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(result.Comment))
+                        {
+                            <p><strong>Instructor's comment:</strong> @result.Comment</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(result.Recommendation))
+                        {
+                            <p class="hint">Examiner's recommendation: @StudentExams.DescribeRecommendation(result.Recommendation). Your instructor decided the grade.</p>
+                        }
+                    </div>
+                }
+                else if (r.Standing == AssignmentStanding.Completed)
+                {
+                    <p class="hint">Your answers were submitted. Your instructor will release results.</p>
+                }
+            </section>
+        }
+    </div>
+}
+
+@code {
+    private IReadOnlyList<StudentAssignmentView>? rows;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user)
+        {
+            rows = [];
+            return;
+        }
+        rows = await StudentExams.ListAsync(Scopes, org, user, Clock.GetUtcNow());
+    }
+
+    private static string Window(StudentAssignmentView r) => (r.OpensAt, r.ClosesAt) switch
+    {
+        (null, null) => "Open any time",
+        ({ } o, null) => $"Opens {Local(o)}",
+        (null, { } c) => $"Closes {Local(c)}",
+        ({ } o, { } c) => $"{Local(o)} to {Local(c)}",
+    };
+
+    private static string Local(DateTimeOffset t) => t.ToUniversalTime().ToString("ddd d MMM yyyy, HH:mm") + " UTC";
+}
