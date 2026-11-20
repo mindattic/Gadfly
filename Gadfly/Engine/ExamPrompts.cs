@@ -101,11 +101,19 @@ public static class ExamPrompts
         Student's earlier claims:
         {claims}
 
+        Source passages:
+        {passages}
+
         Question:
         {question}
 
         Student's answer:
         {answer}
+
+        Return JSON only, scores 0 (absent or wrong) to 10 (fully demonstrated):
+        {"criteria": [{"criterion": "accuracy", "score": <0-10>, "rationale": "<one sentence>", "passages": [<numbers>]},
+                      {"criterion": "reasoning", ...}, {"criterion": "consistency", ...}, {"criterion": "completeness", ...}],
+         "verdict": "<one sentence on what the answer shows about the student's understanding>"}
         """;
 
     public const string Claims = """
