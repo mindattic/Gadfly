@@ -230,8 +230,9 @@ public sealed class SqlConceptMapStore(GadflyDbContext db, Guid organizationId) 
                 existing.Add(row);
             }
             row.Ordinal = i;
+            // Never overwrite an instructor's edit, and never revive a concept the instructor archived.
+            if (row.EditedByInstructor && !entry.EditedByInstructor) continue;
             row.IsArchived = false;
-            if (row.EditedByInstructor && !entry.EditedByInstructor) continue; // never overwrite an instructor's edit
             row.Title = entry.Title;
             row.Definition = entry.Definition;
             row.KeyFactsJson = JsonSerializer.Serialize(entry.KeyFacts);

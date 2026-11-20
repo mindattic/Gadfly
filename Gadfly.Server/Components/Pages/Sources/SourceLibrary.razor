@@ -1,0 +1,171 @@
+@page "/sources"
+@attribute [Authorize(Policy = GadflyPolicies.Instructor)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Jobs
+@using Gadfly.Server.Sources
+@implements IAsyncDisposable
+@inject GadflyDbContext Db
+@inject JobQueue Jobs
+@inject TimeProvider Clock
+@inject ITenantContext Tenant
+@inject NavigationManager Nav
+
+<PageTitle>Source material · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="sources.css" /></HeadContent>
+<h1>Source material</h1>
+
+@if (Tenant.OrganizationId is null || Tenant.UserId is null)
+{
+    <p class="notice">Choose an organization first.</p>
+}
+else
+{
+    <EditForm Model="form" OnValidSubmit="CreateAsync" FormName="new-collection" class="panel">
+        <h2>New collection</h2>
+        <label>Title <InputText @bind-Value="form.Title" autocomplete="off" maxlength="200" placeholder="e.g. Biology 101: cells" /></label>
+        <p class="hint">A collection is the material one exam is grounded in: a textbook chapter, lecture notes, readings.</p>
+        <button type="submit" disabled="@busy">Create</button>
+        @if (message is not null)
+        {
+            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+        }
+    </EditForm>
+
+    @if (collections is null)
+    {
+        <p class="hint">Loading…</p>
+    }
+    else if (collections.Count == 0)
+    {
+        <p class="notice">No source material yet. Create a collection, then upload documents to it.</p>
+    }
+    else
+    {
+        <table class="grid">
+            <thead><tr><th>Title</th><th>Documents</th><th>Concepts</th><th>Status</th><th>Latest processing</th></tr></thead>
+            <tbody>
+                @foreach (var c in collections)
+                {
+                    <tr>
+                        <td><a href="sources/@c.Id">@c.Title</a></td>
+                        <td>@c.DocumentCount</td>
+                        <td>@c.ConceptCount</td>
+                        <td>@StatusText(c)</td>
+                        <td>
+                            @if (c.LatestJob is { } j)
+                            {
+                                <span class="@(j.State == JobState.Failed ? "error" : null)">@JobText(j)</span>
+                                @if (j.IsActive)
+                                {
+                                    <progress max="1" value="@j.Progress.ToString(System.Globalization.CultureInfo.InvariantCulture)"></progress>
+                                }
+                            }
+                            else
+                            {
+                                <span class="hint">never processed</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private sealed class Form
+    {
+        public string Title { get; set; } = "";
+    }
+
+    private Form form = new();
+    private IReadOnlyList<SourceCollectionSummary>? collections;
+    private string? message;
+    private bool ok, busy;
+    private readonly SemaphoreSlim gate = new(1, 1);
+    private PeriodicTimer? timer;
+    private readonly CancellationTokenSource stop = new();
+
+    private SourceLibraryService Library => new(Db, Jobs, Clock);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.OrganizationId is null) return;
+        await LoadAsync();
+        _ = PollAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        await gate.WaitAsync();
+        try { collections = await Library.ListCollectionsAsync(Tenant.OrganizationId!.Value); }
+        finally { gate.Release(); }
+    }
+
+    // Refreshes every 2 s while any collection has a queued or running job.
+    private async Task PollAsync()
+    {
+        timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(stop.Token))
+            {
+                if (collections?.Any(c => c.LatestJob is { IsActive: true }) != true) continue;
+                await InvokeAsync(async () =>
+                {
+                    await LoadAsync();
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (ObjectDisposedException) { }
+    }
+
+    private async Task CreateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(form.Title))
+        {
+            ok = false;
+            message = "Give the collection a title.";
+            return;
+        }
+        busy = true;
+        Guid id;
+        await gate.WaitAsync();
+        try { id = await Library.CreateCollectionAsync(Tenant.OrganizationId!.Value, Tenant.UserId!.Value, form.Title); }
+        finally { gate.Release(); busy = false; }
+        Nav.NavigateTo($"sources/{id}");
+    }
+
+    private static string StatusText(SourceCollectionSummary c) => c.LatestJob switch
+    {
+        { IsActive: true } => "Processing",
+        { State: JobState.Failed } => "Processing failed",
+        _ => c.Status switch
+        {
+            ProcessingStatus.Ready => $"Ready (map v{c.ConceptMapVersion})",
+            ProcessingStatus.Pending => c.DocumentCount == 0 ? "Empty" : "Not processed yet",
+            ProcessingStatus.Processing => "Not processed yet",
+            ProcessingStatus.Failed => "Failed",
+            _ => c.Status.ToString(),
+        },
+    };
+
+    internal static string JobText(SourceJobStatus j) => j.State switch
+    {
+        JobState.Queued => "Queued",
+        JobState.Running => $"{j.Progress:P0} · {j.Message ?? "Working"}",
+        JobState.Succeeded => $"Done {j.CompletedAt?.ToLocalTime():g}" + (j.Message is { } m ? $" · {m}" : ""),
+        JobState.Failed => $"Failed: {j.Error ?? "unknown error"}",
+        JobState.Cancelled => "Cancelled",
+        _ => j.State.ToString(),
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        await stop.CancelAsync();
+        timer?.Dispose();
+        stop.Dispose();
+    }
+}

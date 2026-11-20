@@ -1,0 +1,576 @@
+@page "/sources/{Id:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Instructor)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Jobs
+@using Gadfly.Server.Sources
+@using Gadfly.Sources
+@implements IAsyncDisposable
+@inject GadflyDbContext Db
+@inject JobQueue Jobs
+@inject TimeProvider Clock
+@inject ITenantContext Tenant
+
+<PageTitle>@(collection?.Title ?? "Source material") · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="sources.css" /></HeadContent>
+<p class="crumbs"><a href="sources">Source material</a></p>
+
+@if (Tenant.OrganizationId is null || Tenant.UserId is null)
+{
+    <p class="notice">Choose an organization first.</p>
+}
+else if (loaded && collection is null)
+{
+    <h1>Not found</h1>
+    <p class="notice">That collection doesn't exist in this organization.</p>
+}
+else if (collection is not null)
+{
+    <h1>@collection.Title <span>· concept map version @collection.ConceptMapVersion</span></h1>
+
+    @if (message is not null)
+    {
+        <p role="status" class="notice @(ok ? "ok" : "error")">@message</p>
+    }
+
+    <div class="src-columns">
+        <section class="panel">
+            <h2>Upload documents</h2>
+            <InputFile OnChange="UploadAsync" multiple accept="@SourceLibraryService.AcceptAttribute" disabled="@(uploading || JobActive)" />
+            <p class="hint">
+                Plain text and Markdown (@string.Join(", ", SourceLibraryService.AcceptedExtensions)), up to
+                @(SourceLibraryService.MaxFileBytes / (1024 * 1024)) MB each. PDF, Word (DOCX), EPUB and HTML arrive with
+                Tutor.Ingestion. Uploading a file with the same name replaces it.
+            </p>
+            @if (uploading)
+            {
+                <p class="hint">Uploading…</p>
+            }
+            @foreach (var line in uploadLog)
+            {
+                <p class="@(line.Ok ? "ok" : "error") src-line">@line.Message</p>
+            }
+        </section>
+
+        <section class="panel">
+            <h2>Process</h2>
+            <p class="hint">Reads new and changed documents, finds the concepts in them and writes a rubric for each. Your edits are kept.</p>
+            <label class="src-check"><input type="checkbox" @bind="rebuild" disabled="@JobActive" /> Re-run concept extraction even if no document changed</label>
+            <button @onclick="ProcessAsync" disabled="@(JobActive || busy || !documents.Any(d => d.Uploaded))">Process</button>
+            @if (job is { } j)
+            {
+                <div class="src-job">
+                    <span class="@(j.State == JobState.Failed ? "error" : j.State == JobState.Succeeded ? "ok" : null)">@SourceLibrary.JobText(j)</span>
+                    @if (j.IsActive)
+                    {
+                        <progress max="1" value="@j.Progress.ToString(System.Globalization.CultureInfo.InvariantCulture)"></progress>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+
+    <h2>Documents</h2>
+    @if (documents.Count == 0)
+    {
+        <p class="hint">No documents yet.</p>
+    }
+    else
+    {
+        <table class="grid">
+            <thead><tr><th>File</th><th>Size</th><th>Passages</th><th>Status</th></tr></thead>
+            <tbody>
+                @foreach (var d in documents)
+                {
+                    <tr>
+                        <td>@d.FileName</td>
+                        <td>@(d.SizeBytes is { } s ? FormatSize(s) : "")</td>
+                        <td>@(d.Ingested ? d.PassageCount.ToString() : "")</td>
+                        <td>
+                            @if (d.Error is not null) { <span class="error">@d.Error</span> }
+                            else if (!d.Uploaded) { <span>Processed (original not on this server)</span> }
+                            else if (!d.Ingested) { <span class="hint">Waiting to be processed</span> }
+                            else if (d.ChangedSinceIngest) { <span class="hint">Changed; process again</span> }
+                            else { <span class="ok">Processed @d.IngestedAt?.ToLocalTime().ToString("g")</span> }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <h2>Concept map</h2>
+    @if (JobActive)
+    {
+        <p class="notice">Processing is running; editing is paused until it finishes.</p>
+    }
+    @if (map is null || map.Concepts.Count == 0)
+    {
+        <p class="hint">No concepts yet. Upload documents and press Process.</p>
+    }
+    else
+    {
+        <p class="hint">@map.Concepts.Count concepts. Click a citation number to read the passage it comes from.</p>
+        @foreach (var c in map.Concepts)
+        {
+            var rubric = rubrics.FirstOrDefault(r => r.ConceptKey == c.Key);
+            var cites = CitationNumbers(c, rubric);
+            <article class="src-concept" id="concept-@c.Key">
+                @if (editingConcept == c.Key && conceptForm is not null)
+                {
+                    <div class="src-form">
+                        <label>Title <input @bind="conceptForm.Title" maxlength="300" /></label>
+                        <label>Definition <textarea rows="4" @bind="conceptForm.Definition"></textarea></label>
+                        <label>Key facts (one per line) <textarea rows="4" @bind="conceptForm.KeyFacts"></textarea></label>
+                        <label>Common misconceptions (one per line) <textarea rows="3" @bind="conceptForm.Misconceptions"></textarea></label>
+                        <div class="src-actions">
+                            <button @onclick="SaveConceptAsync" disabled="@busy">Save concept</button>
+                            <button class="link" @onclick="CancelEdit">Cancel</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <header class="src-concept-head">
+                        <h3>@c.Title</h3>
+                        @if (c.EditedByInstructor) { <span class="src-tag">edited</span> }
+                        <span class="src-key">@c.Key</span>
+                    </header>
+                    <p>@c.Definition</p>
+                    @if (c.KeyFacts.Count > 0)
+                    {
+                        <h4>Key facts</h4>
+                        <ul>@foreach (var f in c.KeyFacts) { <li>@f</li> }</ul>
+                    }
+                    @if (c.Misconceptions.Count > 0)
+                    {
+                        <h4>Common misconceptions</h4>
+                        <ul>@foreach (var m in c.Misconceptions) { <li>@m</li> }</ul>
+                    }
+                    @if (c.PassageIds.Count > 0)
+                    {
+                        <p class="src-cites">Sources: @foreach (var p in c.PassageIds) { <CiteButton Number="@cites.GetValueOrDefault(p)" Active="@(openPassage?.Id == p && openFor == c.Key)" OnClick="() => OpenPassageAsync(p, c.Key)" /> }</p>
+                    }
+                    <div class="src-actions">
+                        <button class="link" @onclick="() => EditConcept(c)" disabled="@JobActive">Edit concept</button>
+                        <button class="link" @onclick="() => EditRubric(c, rubric)" disabled="@JobActive">Edit rubric</button>
+                        <button class="link" @onclick="() => ArchiveAsync(c)" disabled="@JobActive">Archive</button>
+                    </div>
+                }
+
+                @if (openPassage is not null && openFor == c.Key)
+                {
+                    <aside class="src-passage" aria-live="polite">
+                        <header>
+                            <strong>[@cites.GetValueOrDefault(openPassage.Id)] @openPassage.FileName</strong>
+                            <span class="hint">@(openPassage.Location ?? $"passage {openPassage.Ordinal + 1}")</span>
+                            <button class="link" @onclick="ClosePassage">Close</button>
+                        </header>
+                        <blockquote>@openPassage.Text</blockquote>
+                    </aside>
+                }
+                @if (passageMissing && openFor == c.Key)
+                {
+                    <p class="hint">That passage is no longer in the collection (its document was re-processed).</p>
+                }
+
+                <section class="src-rubric">
+                    @if (editingRubric == c.Key && rubricForm is not null)
+                    {
+                        <h4>Rubric (saving writes version @((rubric?.Version ?? 0) + 1))</h4>
+                        <p class="hint">Understanding points: what a real understanding covers, each with a weight.</p>
+                        @foreach (var row in rubricForm.Understanding)
+                        {
+                            <div class="src-row">
+                                <input class="src-text" @bind="row.Text" placeholder="A point a good answer covers" />
+                                <label class="src-weight">Weight <input type="number" step="0.1" min="0.1" max="100" @bind="row.Weight" /></label>
+                                <button class="link" @onclick="() => rubricForm.Understanding.Remove(row)">Remove</button>
+                            </div>
+                        }
+                        <button class="link" @onclick="() => rubricForm.Understanding.Add(new RubricRow())">Add understanding point</button>
+                        <p class="hint">Acceptable variants: other ways of saying it that count.</p>
+                        @foreach (var row in rubricForm.Variants)
+                        {
+                            <div class="src-row">
+                                <input class="src-text" @bind="row.Text" placeholder="An acceptable variant" />
+                                <button class="link" @onclick="() => rubricForm.Variants.Remove(row)">Remove</button>
+                            </div>
+                        }
+                        <button class="link" @onclick="() => rubricForm.Variants.Add(new RubricRow())">Add variant</button>
+                        <p class="hint">Misconceptions to watch for.</p>
+                        @foreach (var row in rubricForm.Misconceptions)
+                        {
+                            <div class="src-row">
+                                <input class="src-text" @bind="row.Text" placeholder="A wrong belief to watch for" />
+                                <button class="link" @onclick="() => rubricForm.Misconceptions.Remove(row)">Remove</button>
+                            </div>
+                        }
+                        <button class="link" @onclick="() => rubricForm.Misconceptions.Add(new RubricRow())">Add misconception</button>
+                        <div class="src-actions">
+                            <button @onclick="SaveRubricAsync" disabled="@busy">Save rubric</button>
+                            <button class="link" @onclick="CancelEdit">Cancel</button>
+                        </div>
+                    }
+                    else if (rubric is null)
+                    {
+                        <p class="hint">No rubric yet.</p>
+                    }
+                    else
+                    {
+                        <h4>Rubric, version @(rubric.Version)@(rubric.EditedByInstructor ? " · edited" : "")</h4>
+                        <ul>
+                            @foreach (var u in rubric.Understanding)
+                            {
+                                <li><span class="src-w">@u.Weight.ToString("0.#")</span> @u.Text @foreach (var p in u.PassageIds) { <CiteButton Number="@cites.GetValueOrDefault(p)" Active="@(openPassage?.Id == p && openFor == c.Key)" OnClick="() => OpenPassageAsync(p, c.Key)" /> }</li>
+                            }
+                        </ul>
+                        @if (rubric.AcceptableVariants.Count > 0)
+                        {
+                            <p class="src-sub">Also acceptable</p>
+                            <ul>@foreach (var v in rubric.AcceptableVariants) { <li>@v.Text</li> }</ul>
+                        }
+                        @if (rubric.Misconceptions.Count > 0)
+                        {
+                            <p class="src-sub">Misconceptions to watch for</p>
+                            <ul>@foreach (var m in rubric.Misconceptions) { <li>@m.Text</li> }</ul>
+                        }
+                    }
+                </section>
+            </article>
+        }
+    }
+
+    @if (archived.Count > 0)
+    {
+        <h2>Archived concepts</h2>
+        <p class="hint">Archived concepts aren't asked about in new exams; re-processing won't bring them back.</p>
+        <ul>
+            @foreach (var a in archived)
+            {
+                <li>@a.Title <button class="link" @onclick="() => RestoreAsync(a.Key)" disabled="@JobActive">Restore</button></li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private sealed class ConceptForm
+    {
+        public string Key { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Definition { get; set; } = "";
+        public string KeyFacts { get; set; } = "";
+        public string Misconceptions { get; set; } = "";
+    }
+
+    private sealed class RubricRow
+    {
+        public string Text { get; set; } = "";
+        public double Weight { get; set; } = 1.0;
+        public string OriginalText { get; init; } = "";
+        public IReadOnlyList<string> PassageIds { get; init; } = [];
+
+        public static RubricRow From(RubricItem i) => new() { Text = i.Text, Weight = i.Weight, OriginalText = i.Text, PassageIds = i.PassageIds };
+
+        // A reworded point keeps its citations: the passages still ground the same idea.
+        public RubricItem ToItem() => new(Text, Weight, PassageIds);
+    }
+
+    private sealed class RubricForm
+    {
+        public string Key { get; set; } = "";
+        public List<RubricRow> Understanding { get; set; } = [];
+        public List<RubricRow> Variants { get; set; } = [];
+        public List<RubricRow> Misconceptions { get; set; } = [];
+    }
+
+    private SourceCollection? collection;
+    private IReadOnlyList<SourceLibraryDocument> documents = [];
+    private ConceptMap? map;
+    private IReadOnlyList<ConceptRubric> rubrics = [];
+    private IReadOnlyList<(string Key, string Title)> archived = [];
+    private SourceJobStatus? job;
+    private bool loaded, ok, busy, uploading, rebuild, passageMissing;
+    private string? message;
+    private readonly List<(bool Ok, string Message)> uploadLog = [];
+
+    private string? editingConcept, editingRubric, openFor;
+    private ConceptForm? conceptForm;
+    private RubricForm? rubricForm;
+    private SourcePassageView? openPassage;
+    private readonly Dictionary<string, SourcePassageView?> passageCache = [];
+
+    // The circuit's DbContext is shared by every handler and the poll; one operation at a time.
+    private readonly SemaphoreSlim gate = new(1, 1);
+    private readonly CancellationTokenSource stop = new();
+    private PeriodicTimer? timer;
+
+    private Guid Org => Tenant.OrganizationId!.Value;
+    private bool JobActive => job is { IsActive: true };
+    private SourceLibraryService Library => new(Db, Jobs, Clock);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Tenant.OrganizationId is null) return;
+        await Locked(LoadAllAsync);
+        loaded = true;
+        timer ??= StartPolling();
+    }
+
+    private async Task LoadAllAsync()
+    {
+        var lib = Library;
+        collection = await lib.GetCollectionAsync(Org, Id);
+        if (collection is null) return;
+        documents = await lib.ListDocumentsAsync(Org, Id);
+        map = await lib.LoadMapAsync(Org, Id);
+        rubrics = await lib.LoadRubricsAsync(Org, Id);
+        archived = await lib.ArchivedConceptsAsync(Org, Id);
+        job = await lib.LatestJobAsync(Org, Id);
+    }
+
+    private async Task Locked(Func<Task> work)
+    {
+        await gate.WaitAsync();
+        try { await work(); }
+        finally { gate.Release(); }
+    }
+
+    // Polls the job every 2 s while one is queued or running; reloads everything when it finishes.
+    private PeriodicTimer StartPolling()
+    {
+        var t = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                while (await t.WaitForNextTickAsync(stop.Token))
+                {
+                    if (!JobActive) continue;
+                    await InvokeAsync(async () =>
+                    {
+                        if (!await gate.WaitAsync(0)) return;
+                        try
+                        {
+                            job = await Library.LatestJobAsync(Org, Id);
+                            if (!JobActive) await LoadAllAsync();
+                        }
+                        finally { gate.Release(); }
+                        StateHasChanged();
+                    });
+                }
+            }
+            catch (OperationCanceledException) { }
+            catch (ObjectDisposedException) { }
+        });
+        return t;
+    }
+
+    private void Say(bool success, string text)
+    {
+        ok = success;
+        message = text;
+    }
+
+    private async Task UploadAsync(InputFileChangeEventArgs e)
+    {
+        uploading = true;
+        uploadLog.Clear();
+        message = null;
+        try
+        {
+            IReadOnlyList<IBrowserFile> files;
+            try { files = e.GetMultipleFiles(50); }
+            catch (InvalidOperationException) { uploadLog.Add((false, "Pick at most 50 files at a time.")); return; }
+            foreach (var file in files)
+            {
+                if (file.Size > SourceLibraryService.MaxFileBytes)
+                {
+                    uploadLog.Add((false, $"\"{file.Name}\" is larger than the {SourceLibraryService.MaxFileBytes / (1024 * 1024)} MB limit."));
+                    continue;
+                }
+                await Locked(async () =>
+                {
+                    try
+                    {
+                        await using var stream = file.OpenReadStream(SourceLibraryService.MaxFileBytes, stop.Token);
+                        var r = await Library.SaveUploadAsync(Org, Id, file.Name, file.Size, stream, stop.Token);
+                        uploadLog.Add((r.Ok, r.Message));
+                    }
+                    catch (IOException ex)
+                    {
+                        uploadLog.Add((false, $"\"{file.Name}\" didn't upload: {ex.Message}"));
+                    }
+                });
+                StateHasChanged();
+            }
+            await Locked(async () => documents = await Library.ListDocumentsAsync(Org, Id));
+            if (uploadLog.Any(l => l.Ok)) uploadLog.Add((true, "Press Process to read the new material."));
+        }
+        finally { uploading = false; }
+    }
+
+    private async Task ProcessAsync()
+    {
+        busy = true;
+        try
+        {
+            await Locked(async () =>
+            {
+                var r = await Library.EnqueueProcessingAsync(Org, Tenant.UserId!.Value, Id, rebuild);
+                Say(r.Ok, r.Message);
+                job = await Library.LatestJobAsync(Org, Id);
+            });
+            CancelEdit();
+        }
+        finally { busy = false; }
+    }
+
+    private Dictionary<string, int> CitationNumbers(ConceptEntry c, ConceptRubric? r)
+    {
+        var numbers = new Dictionary<string, int>();
+        var all = c.PassageIds.Concat(r is null ? [] : r.Understanding.Concat(r.AcceptableVariants).Concat(r.Misconceptions).SelectMany(i => i.PassageIds));
+        foreach (var p in all)
+            if (!numbers.ContainsKey(p)) numbers[p] = numbers.Count + 1;
+        return numbers;
+    }
+
+    private async Task OpenPassageAsync(string passageId, string conceptKey)
+    {
+        if (openPassage?.Id == passageId && openFor == conceptKey)
+        {
+            ClosePassage();
+            return;
+        }
+        if (!passageCache.TryGetValue(passageId, out var view))
+        {
+            await Locked(async () => view = (await Library.GetPassagesAsync(Org, Id, [passageId])).FirstOrDefault());
+            passageCache[passageId] = view;
+        }
+        openFor = conceptKey;
+        openPassage = view;
+        passageMissing = view is null;
+    }
+
+    private void ClosePassage()
+    {
+        openPassage = null;
+        openFor = null;
+        passageMissing = false;
+    }
+
+    private void EditConcept(ConceptEntry c)
+    {
+        CancelEdit();
+        editingConcept = c.Key;
+        conceptForm = new ConceptForm
+        {
+            Key = c.Key,
+            Title = c.Title,
+            Definition = c.Definition,
+            KeyFacts = string.Join("\n", c.KeyFacts),
+            Misconceptions = string.Join("\n", c.Misconceptions),
+        };
+    }
+
+    private void EditRubric(ConceptEntry c, ConceptRubric? r)
+    {
+        CancelEdit();
+        editingRubric = c.Key;
+        rubricForm = new RubricForm
+        {
+            Key = c.Key,
+            Understanding = r?.Understanding.Select(RubricRow.From).ToList() ?? [new RubricRow()],
+            Variants = r?.AcceptableVariants.Select(RubricRow.From).ToList() ?? [],
+            Misconceptions = r?.Misconceptions.Select(RubricRow.From).ToList() ?? [],
+        };
+        if (rubricForm.Understanding.Count == 0) rubricForm.Understanding.Add(new RubricRow());
+    }
+
+    private void CancelEdit()
+    {
+        editingConcept = editingRubric = null;
+        conceptForm = null;
+        rubricForm = null;
+    }
+
+    private static List<string> Lines(string text) =>
+        text.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).ToList();
+
+    private async Task SaveConceptAsync()
+    {
+        if (conceptForm is null) return;
+        busy = true;
+        try
+        {
+            await Locked(async () =>
+            {
+                var f = conceptForm;
+                var r = await Library.UpdateConceptAsync(Org, Id, f.Key, f.Title, f.Definition, Lines(f.KeyFacts), Lines(f.Misconceptions));
+                Say(r.Ok, r.Message);
+                if (r.Ok)
+                {
+                    CancelEdit();
+                    await LoadAllAsync();
+                }
+            });
+        }
+        finally { busy = false; }
+    }
+
+    private async Task SaveRubricAsync()
+    {
+        if (rubricForm is null) return;
+        busy = true;
+        try
+        {
+            await Locked(async () =>
+            {
+                var f = rubricForm;
+                var r = await Library.SaveRubricAsync(Org, Id, f.Key,
+                    f.Understanding.Select(x => x.ToItem()).ToList(),
+                    f.Variants.Select(x => x.ToItem()).ToList(),
+                    f.Misconceptions.Select(x => x.ToItem()).ToList());
+                Say(r.Ok, r.Message);
+                if (r.Ok)
+                {
+                    CancelEdit();
+                    await LoadAllAsync();
+                }
+            });
+        }
+        finally { busy = false; }
+    }
+
+    private async Task ArchiveAsync(ConceptEntry c)
+    {
+        CancelEdit();
+        await Locked(async () =>
+        {
+            var r = await Library.ArchiveConceptAsync(Org, Id, c.Key);
+            Say(r.Ok, r.Message);
+            await LoadAllAsync();
+        });
+    }
+
+    private async Task RestoreAsync(string key)
+    {
+        await Locked(async () =>
+        {
+            var r = await Library.RestoreConceptAsync(Org, Id, key);
+            Say(r.Ok, r.Message);
+            await LoadAllAsync();
+        });
+    }
+
+    private static string FormatSize(long bytes) =>
+        bytes < 1024 ? $"{bytes} B" : bytes < 1024 * 1024 ? $"{bytes / 1024.0:0.#} KB" : $"{bytes / (1024.0 * 1024):0.#} MB";
+
+    public async ValueTask DisposeAsync()
+    {
+        await stop.CancelAsync();
+        timer?.Dispose();
+        stop.Dispose();
+    }
+}

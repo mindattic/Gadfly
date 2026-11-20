@@ -1,0 +1,8 @@
+@* A citation marker, "[n]", that opens the cited source passage (GAD-T49). *@
+<button type="button" class="src-cite @(Active ? "active" : null)" title="Show source passage @Number" aria-pressed="@(Active ? "true" : "false")" @onclick="OnClick">@Number</button>
+
+@code {
+    [Parameter] public int Number { get; set; }
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+}
