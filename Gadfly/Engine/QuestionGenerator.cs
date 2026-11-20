@@ -29,6 +29,9 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
     public const string Leaks = "LEAKS";
     public const string Safe = "SAFE";
 
+    /// <summary>How the last question was produced: "drafted", "redrafted", or "fallback: ..." with the reason.</summary>
+    public string LastOutcome { get; private set; } = "";
+
     /// <summary>Turns of dialogue included in the prompt.</summary>
     public int DialogueTurns { get; init; } = 8;
 
@@ -48,16 +51,51 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
             ["dialogue"] = dialogue.Length == 0 ? "(this is the first question)" : dialogue,
         });
 
+        var reasons = new List<string>();
         for (var attempt = 0; attempt < 2; attempt++)
         {
             var ask = attempt == 0 ? prompt : prompt + "\n\nYour previous draft revealed expected answer points. Ask without stating or hinting at any of them.";
             var result = await panel.AskAsync(ask, "", Quorum.Plurality, ct);
             var question = Clean(!string.IsNullOrWhiteSpace(result.Consensus) ? result.Consensus : result.NarrativeSummary);
-            if (question.Length == 0) continue;
+            if (question.Length == 0)
+                question = await PickDraftAsync(result, r.Decision.Move, dialogue, ct);
+            if (question.Length == 0)
+            {
+                var errors = result.IndividualVotes.Where(v => v.IsError).Select(v => $"; {v.ProviderId}: {v.ErrorMessage}");
+                reasons.Add($"empty draft ({(result.QuorumReached ? "quorum reached" : "no quorum")}{string.Concat(errors)})");
+                continue;
+            }
             if (string.IsNullOrWhiteSpace(r.RubricForGuard) || !await LeaksAsync(question, r.RubricForGuard, dialogue, ct))
+            {
+                LastOutcome = attempt == 0 ? "drafted" : "redrafted";
                 return question;
+            }
+            reasons.Add($"leaked: \"{question}\"");
         }
+        LastOutcome = "fallback: " + string.Join(" | ", reasons);
         return Fallback(r.Decision.Move, r.ConceptTitle, r.RelatedConceptTitle);
+    }
+
+    /// <summary>
+    /// Free-form drafts rarely match word for word, so a plurality often has no winner and Legion
+    /// returns no consensus. Then the drafts themselves become the ballot: the panel picks the
+    /// sharpest one. A single draft is used as is.
+    /// </summary>
+    private async Task<string> PickDraftAsync(VotingResult result, MoveKind move, string dialogue, CancellationToken ct)
+    {
+        var drafts = result.IndividualVotes.Where(v => !v.IsError).Select(v => Clean(v.Decision))
+            .Where(d => d.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+        if (drafts.Count <= 1) return drafts.FirstOrDefault() ?? "";
+        var ballot = $"""
+            Which of these is the sharpest next question for a {move} move in a spoken Socratic exam?
+            Prefer the one that builds most directly on the student's own words, is answerable aloud,
+            and gives nothing away.
+
+            Conversation so far:
+            {(dialogue.Length == 0 ? "(this is the first question)" : dialogue)}
+            """;
+        var d = await panel.DecideAsync(ballot, drafts, "", ct);
+        return drafts.FirstOrDefault(x => string.Equals(x, d.Choice, StringComparison.Ordinal)) ?? drafts[0];
     }
 
     private async Task<bool> LeaksAsync(string question, string rubric, string dialogue, CancellationToken ct)
