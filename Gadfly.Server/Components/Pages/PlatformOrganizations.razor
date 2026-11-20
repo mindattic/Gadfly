@@ -1,0 +1,59 @@
+@page "/platform/organizations"
+@attribute [Authorize(Policy = GadflyPolicies.SuperAdmin)]
+@inject IOrganizationDirectory Directory
+@inject ITenantContext Tenant
+
+<PageTitle>Organizations · Gadfly Exams</PageTitle>
+<h1>Customer organizations</h1>
+
+<EditForm Model="form" OnValidSubmit="CreateAsync" FormName="create-org" class="panel">
+    <h2>New organization</h2>
+    <label>Name <InputText @bind-Value="form.Name" /></label>
+    <label>Owner user name <InputText @bind-Value="form.OwnerUserName" autocomplete="off" /></label>
+    <label>Owner email <InputText @bind-Value="form.OwnerEmail" type="email" autocomplete="off" /></label>
+    <label>Temporary password <InputText @bind-Value="form.Password" type="password" autocomplete="new-password" /></label>
+    <p class="hint">The owner must change it at first sign-in and set up two-step verification.</p>
+    <button type="submit" disabled="@busy">Create organization</button>
+    @if (message is not null)
+    {
+        <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+    }
+</EditForm>
+
+<table class="grid">
+    <thead><tr><th>Name</th><th>Slug</th><th>Created</th><th>Active</th></tr></thead>
+    <tbody>
+        @foreach (var o in orgs)
+        {
+            <tr><td>@o.Name</td><td>@o.Slug</td><td>@o.CreatedAt.ToString("yyyy-MM-dd")</td><td>@(o.IsActive ? "yes" : "no")</td></tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private sealed class Form
+    {
+        public string Name { get; set; } = "";
+        public string OwnerUserName { get; set; } = "";
+        public string OwnerEmail { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+
+    private Form form = new();
+    private IReadOnlyList<Gadfly.Server.Data.Organization> orgs = [];
+    private string? message;
+    private bool ok, busy;
+
+    protected override async Task OnInitializedAsync() => orgs = await Directory.ListOrganizationsAsync();
+
+    private async Task CreateAsync()
+    {
+        busy = true;
+        var r = await Directory.CreateOrganizationAsync(form.Name, form.OwnerUserName, form.OwnerEmail, form.Password, Tenant.UserId ?? Guid.Empty);
+        ok = r.Ok;
+        message = r.Message;
+        if (r.Ok) form = new();
+        orgs = await Directory.ListOrganizationsAsync();
+        busy = false;
+    }
+}

@@ -1,0 +1,27 @@
+@page "/login"
+@using MindAttic.Authentication.Components
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout EmptyLayout
+
+<PageTitle>Sign in · Gadfly Exams</PageTitle>
+
+<section class="auth-card" aria-labelledby="login-heading">
+    <h1 id="login-heading">Gadfly <span>Exams</span></h1>
+    <p class="subtitle">Show what you understand, in your own words.</p>
+    @if (Reset == "sent")
+    {
+        <p role="status">If an account matches, we've emailed a password-reset link.</p>
+    }
+    else if (Reset == "ok")
+    {
+        <p role="status">Your password was reset. Sign in with the new password.</p>
+    }
+    <MaLogin ReturnUrl="@ReturnUrl" Error="@(Error == 1)" />
+</section>
+
+@code {
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] public int Error { get; set; }
+    [SupplyParameterFromQuery] public string? Reset { get; set; }
+}

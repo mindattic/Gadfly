@@ -1,0 +1,38 @@
+@page "/mfa"
+@page "/account/change-password"
+@page "/account/mfa/setup"
+@using MindAttic.Authentication.Components
+@inject NavigationManager Nav
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout EmptyLayout
+
+@* The library's sign-in steps, rendered static SSR so their antiforgery POSTs validate.
+   /mfa is reachable mid-sign-in (MFA-pending cookie); the other two require a signed-in user,
+   which the library's forced-step middleware and its own endpoints enforce. *@
+<PageTitle>Account · Gadfly Exams</PageTitle>
+<section class="auth-card">
+    @switch (Path)
+    {
+        case "mfa":
+            <h1>Two-step verification</h1>
+            <MaMfaChallenge ReturnUrl="@ReturnUrl" Error="@(Error == 1)" />
+            break;
+        case "account/change-password":
+            <h1>Choose a new password</h1>
+            <MaChangePassword />
+            break;
+        default:
+            <h1>Set up two-step verification</h1>
+            <p>Staff accounts (owners, admins, instructors) sign in with an authenticator app.</p>
+            <MaMfaSetup />
+            break;
+    }
+</section>
+
+@code {
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] public int Error { get; set; }
+
+    private string Path => Nav.ToBaseRelativePath(Nav.Uri).Split('?')[0].Trim('/');
+}

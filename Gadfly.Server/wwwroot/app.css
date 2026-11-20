@@ -1,0 +1,48 @@
+/* Gadfly Exams — a quiet, readable shell. Light and dark from the system setting. */
+:root {
+    --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1f; --muted: #5f6368; --line: #dedbd2;
+    --accent: #7a3e2e; --accent-ink: #ffffff; --ok: #1e7b45; --error: #b3261e; --radius: 10px;
+    color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #16171a; --panel: #1f2024; --ink: #ecebe8; --muted: #a6a7ab; --line: #34353a;
+        --accent: #d98a6c; --accent-ink: #16171a; --ok: #6fcf97; --error: #f28b82; color-scheme: dark;
+    }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--accent); }
+h1 { font-size: 1.6rem; margin: 0 0 1rem; }
+h1 span, .brand span { font-weight: 400; color: var(--muted); }
+.topbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; padding: .75rem 1.25rem; background: var(--panel); border-bottom: 1px solid var(--line); }
+.brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--ink); }
+.nav { display: flex; flex-wrap: wrap; gap: .25rem; }
+.nav a { padding: .35rem .65rem; border-radius: 6px; text-decoration: none; color: var(--ink); }
+.nav a.active { background: var(--accent); color: var(--accent-ink); }
+.who { margin-left: auto; display: flex; gap: .75rem; align-items: center; color: var(--muted); font-size: .9rem; }
+.who form { margin: 0; }
+main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+main.bare { display: grid; place-items: center; min-height: 100vh; padding: 1rem; }
+.auth-card { width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.75rem; }
+.auth-card input { width: 100%; }
+.subtitle, .hint { color: var(--muted); font-size: .9rem; }
+.cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.card { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.1rem; text-decoration: none; color: var(--ink); }
+.card:hover { border-color: var(--accent); }
+.card h2 { font-size: 1.05rem; margin: 0 0 .35rem; }
+.card p { margin: 0; color: var(--muted); font-size: .92rem; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: grid; gap: .6rem; max-width: 560px; }
+.panel h2 { font-size: 1.05rem; margin: 0; }
+label { display: grid; gap: .2rem; font-size: .9rem; }
+input, select, textarea { font: inherit; padding: .45rem .55rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+button { font: inherit; padding: .5rem .9rem; border: 0; border-radius: 6px; background: var(--accent); color: var(--accent-ink); cursor: pointer; justify-self: start; }
+button:disabled { opacity: .6; cursor: default; }
+button.link { background: none; color: var(--accent); padding: 0; text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.grid { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.grid th, .grid td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.grid th { color: var(--muted); font-weight: 600; }
+.ok { color: var(--ok); } .error { color: var(--error); }
+.notice { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: .75rem 1rem; border-radius: 6px; }
+@media (max-width: 640px) { .who { margin-left: 0; width: 100%; } .grid { display: block; overflow-x: auto; } }

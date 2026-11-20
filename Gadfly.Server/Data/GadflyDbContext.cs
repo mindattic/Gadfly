@@ -1,5 +1,9 @@
+using System.Linq.Expressions;
+using Gadfly.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using MindAttic.Authentication.Data;
+using MindAttic.Authentication.Entities;
 
 namespace Gadfly.Server.Data;
 
@@ -8,9 +12,35 @@ namespace Gadfly.Server.Data;
 /// MindAttic.Authentication tables join in their own <c>auth</c> schema from GAD-T41).
 /// Enums are stored as their names; foreign keys never cascade (see Entities.cs).
 /// </summary>
-public sealed class GadflyDbContext(DbContextOptions<GadflyDbContext> options) : DbContext(options)
+public sealed class GadflyDbContext : DbContext, IAuthDataContext
 {
     public const string Schema = "gadfly";
+
+    private readonly ITenantContext? _tenant;
+
+    public GadflyDbContext(DbContextOptions<GadflyDbContext> options, ITenantContext? tenant = null) : base(options)
+    {
+        _tenant = tenant;
+    }
+
+    // Tenant isolation (GAD-T42). Read by the global query filters below on every query: system work
+    // (no request) sees every organization; a request sees only its active organization, and a request
+    // with no organization (signed out, or no membership) sees no tenant-owned rows at all.
+    internal bool TenantBypass => _tenant is null || _tenant.IsSystem;
+    internal Guid? TenantOrganizationId => _tenant?.OrganizationId;
+
+    // MindAttic.Authentication's tables, in its own "auth" schema in the same database (GAD-T41).
+    public DbSet<AuthUser> AuthUsers => Set<AuthUser>();
+    public DbSet<AuthUserMfa> AuthUserMfa => Set<AuthUserMfa>();
+    public DbSet<AuthRecoveryCode> AuthRecoveryCodes => Set<AuthRecoveryCode>();
+    public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
+    public DbSet<AuthLoginThrottle> AuthLoginThrottles => Set<AuthLoginThrottle>();
+    public DbSet<AuthAuditLog> AuthAuditLog => Set<AuthAuditLog>();
+    public DbSet<AuthPasswordHistory> AuthPasswordHistory => Set<AuthPasswordHistory>();
+    public DbSet<AuthPasswordResetToken> AuthPasswordResetTokens => Set<AuthPasswordResetToken>();
+
+    public DbSet<Organization> Organizations => Set<Organization>();
+    public DbSet<OrganizationMember> OrganizationMembers => Set<OrganizationMember>();
 
     public DbSet<OrganizationSettings> OrganizationSettings => Set<OrganizationSettings>();
     public DbSet<SourceCollection> SourceCollections => Set<SourceCollection>();
@@ -56,6 +86,21 @@ public sealed class GadflyDbContext(DbContextOptions<GadflyDbContext> options) :
     {
         base.OnModelCreating(b);
         b.HasDefaultSchema(Schema);
+        b.ApplyMindAtticAuthConfiguration();   // the library's tables in the "auth" schema
+
+        b.Entity<Organization>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Slug).HasMaxLength(80);
+            e.HasIndex(x => x.Slug).IsUnique();
+        });
+        b.Entity<OrganizationMember>(e =>
+        {
+            e.Property(x => x.Role).HasMaxLength(20);
+            e.HasOne(x => x.Organization).WithMany().HasForeignKey(x => x.OrganizationId);
+            e.HasIndex(x => new { x.OrganizationId, x.UserId }).IsUnique();
+            e.HasIndex(x => x.UserId);
+        });
 
         b.Entity<OrganizationSettings>().HasKey(x => x.OrganizationId);
 
@@ -217,9 +262,53 @@ public sealed class GadflyDbContext(DbContextOptions<GadflyDbContext> options) :
             e.HasIndex(x => new { x.State, x.RunAfter });
         });
 
-        // Never cascade: deletions are explicit, audited jobs (retention, data-subject deletion).
-        foreach (var fk in b.Model.GetEntityTypes().SelectMany(t => t.GetForeignKeys()))
+        // Never cascade in Gadfly's schema: deletions are explicit, audited jobs (retention, data-subject
+        // deletion). The library's own auth-schema relationships keep the behavior it configured.
+        foreach (var fk in b.Model.GetEntityTypes().Where(t => t.GetSchema() == Schema).SelectMany(t => t.GetForeignKeys()))
             fk.DeleteBehavior = DeleteBehavior.Restrict;
+
+        // Tenant isolation: every ITenantOwned entity gets the organization filter.
+        foreach (var type in b.Model.GetEntityTypes().Where(t => typeof(ITenantOwned).IsAssignableFrom(t.ClrType)))
+            b.Entity(type.ClrType).HasQueryFilter(TenantFilter(type.ClrType));
+    }
+
+    private LambdaExpression TenantFilter(Type entity)
+    {
+        // e => TenantBypass || e.OrganizationId == TenantOrganizationId
+        var e = Expression.Parameter(entity, "e");
+        var ctx = Expression.Constant(this);
+        var bypass = Expression.Property(ctx, nameof(TenantBypass));
+        var orgId = Expression.Convert(Expression.Property(e, nameof(ITenantOwned.OrganizationId)), typeof(Guid?));
+        var current = Expression.Property(ctx, nameof(TenantOrganizationId));
+        return Expression.Lambda(Expression.OrElse(bypass, Expression.Equal(orgId, current)), e);
+    }
+
+    /// <summary>
+    /// Write guard (GAD-T42): inside a request, a tenant-owned row can only be written into the caller's
+    /// active organization, whatever the code above it got wrong.
+    /// </summary>
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        GuardTenantWrites();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        GuardTenantWrites();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    private void GuardTenantWrites()
+    {
+        if (TenantBypass) return;
+        foreach (var entry in ChangeTracker.Entries<ITenantOwned>())
+        {
+            if (entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted)) continue;
+            if (TenantOrganizationId is null || entry.Entity.OrganizationId != TenantOrganizationId)
+                throw new InvalidOperationException(
+                    $"Refused to write a {entry.Entity.GetType().Name} outside the caller's organization.");
+        }
     }
 }
 

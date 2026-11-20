@@ -1,0 +1,88 @@
+@page "/org/members"
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@inject IOrganizationDirectory Directory
+@inject ITenantContext Tenant
+
+<PageTitle>Members · Gadfly Exams</PageTitle>
+<h1>Members</h1>
+
+<EditForm Model="form" OnValidSubmit="AddAsync" FormName="add-member" class="panel">
+    <h2>Add a member</h2>
+    <label>User name <InputText @bind-Value="form.UserName" autocomplete="off" /></label>
+    <label>Email <InputText @bind-Value="form.Email" type="email" autocomplete="off" /></label>
+    <label>Role
+        <InputSelect @bind-Value="form.Role">
+            @foreach (var r in OrgRoles.All.Where(r => r != OrgRoles.Owner || Tenant.Role == OrgRoles.Owner))
+            {
+                <option value="@r">@r</option>
+            }
+        </InputSelect>
+    </label>
+    <label>Temporary password <InputText @bind-Value="form.Password" type="password" autocomplete="new-password" /></label>
+    <p class="hint">New accounts change this at first sign-in; staff also set up two-step verification. Email invitations arrive with M.AUTH-T35.</p>
+    <button type="submit" disabled="@busy">Add</button>
+    @if (message is not null)
+    {
+        <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+    }
+</EditForm>
+
+<table class="grid">
+    <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+        @foreach (var m in members)
+        {
+            <tr>
+                <td>@m.UserName</td>
+                <td>@m.Email</td>
+                <td>@m.Member.Role</td>
+                <td>@(m.Member.IsActive ? "active" : "removed")</td>
+                <td><button class="link" @onclick="() => ToggleAsync(m.Member.Id, !m.Member.IsActive)">@(m.Member.IsActive ? "Remove" : "Restore")</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    private sealed class Form
+    {
+        public string UserName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Role { get; set; } = OrgRoles.Student;
+        public string Password { get; set; } = "";
+    }
+
+    private Form form = new();
+    private IReadOnlyList<(Gadfly.Server.Data.OrganizationMember Member, string UserName, string? Email)> members = [];
+    private string? message;
+    private bool ok, busy;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync() => members = await Directory.MembersAsync(Tenant.OrganizationId!.Value);
+
+    private async Task AddAsync()
+    {
+        if (form.Role == OrgRoles.Owner && Tenant.Role != OrgRoles.Owner)
+        {
+            ok = false;
+            message = "Only an owner can add another owner.";
+            return;
+        }
+        busy = true;
+        var r = await Directory.AddMemberAsync(Tenant.OrganizationId!.Value, form.UserName, form.Email, form.Role, form.Password);
+        ok = r.Ok;
+        message = r.Message;
+        if (r.Ok) form = new();
+        await LoadAsync();
+        busy = false;
+    }
+
+    private async Task ToggleAsync(Guid memberId, bool active)
+    {
+        var r = await Directory.SetMemberActiveAsync(Tenant.OrganizationId!.Value, memberId, active);
+        ok = r.Ok;
+        message = r.Message;
+        await LoadAsync();
+    }
+}

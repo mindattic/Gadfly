@@ -1,0 +1,69 @@
+@inherits LayoutComponentBase
+@inject ITenantContext Tenant
+@inject IOrganizationDirectory Directory
+
+<div class="shell">
+    <header class="topbar">
+        <a class="brand" href="/">Gadfly <span>Exams</span></a>
+        <AuthorizeView>
+            <Authorized>
+                <nav class="nav">
+                    @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor)
+                    {
+                        <NavLink href="sources">Source material</NavLink>
+                        <NavLink href="exams">Exams</NavLink>
+                        <NavLink href="review">Review</NavLink>
+                    }
+                    @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin)
+                    {
+                        <NavLink href="org/members">Members</NavLink>
+                    }
+                    @if (Tenant.Role == OrgRoles.Student)
+                    {
+                        <NavLink href="my-exams">My exams</NavLink>
+                    }
+                    @if (Tenant.IsSuperAdmin)
+                    {
+                        <NavLink href="platform/organizations">Organizations</NavLink>
+                    }
+                </nav>
+                <div class="who">
+                    @if (Tenant.Memberships.Count > 1)
+                    {
+                        <form method="post" action="/org/switch" class="org-switch" data-enhance="false">
+                            <AntiforgeryToken />
+                            <select name="organizationId" onchange="this.form.submit()" aria-label="Organization">
+                                @foreach (var m in orgNames)
+                                {
+                                    <option value="@m.Id" selected="@(m.Id == Tenant.OrganizationId)">@m.Name (@m.Role)</option>
+                                }
+                            </select>
+                        </form>
+                    }
+                    else if (orgNames.Count == 1)
+                    {
+                        <span class="org">@orgNames[0].Name · @orgNames[0].Role</span>
+                    }
+                    <span class="user">@context.User.Identity?.Name</span>
+                    <form method="post" action="/_ma-auth/logout" data-enhance="false">
+                        <AntiforgeryToken />
+                        <button type="submit" class="link">Sign out</button>
+                    </form>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+    </header>
+    <main>
+        @Body
+    </main>
+</div>
+
+@code {
+    private List<(Guid Id, string Name, string Role)> orgNames = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.UserId is { } uid)
+            orgNames = (await Directory.MembershipsOfAsync(uid)).Select(m => (m.Org.Id, m.Org.Name, m.Role)).ToList();
+    }
+}

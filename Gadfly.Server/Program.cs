@@ -1,19 +1,26 @@
+using Gadfly.Server;
+using Gadfly.Server.Components;
 using Gadfly.Server.Data;
 using Gadfly.Server.Jobs;
 using Gadfly.Server.Sessions;
 using Gadfly.Server.Sources;
+using Gadfly.Server.Tenancy;
 using Gadfly.Socrates;
 using Gadfly.Sources;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using MindAttic.Authentication.Services;
+using MindAttic.Authentication.Web;
 using MindAttic.Log.Extensions;
 using MindAttic.Vault.Configuration;
 
-// Gadfly.Server — the hosted Socratic platform (docs/SOCRATIC_PLATFORM.md, GAD-T39).
+// Gadfly.Server — the hosted Socratic platform and the Gadfly Exams web app (docs/SOCRATIC_PLATFORM.md).
 var builder = WebApplication.CreateBuilder(args);
 
 // Secrets: on a dev machine MindAttic.Vault's files (the shared LLM provider keys Legion reads, the
-// Security bucket the auth stack will need); in Azure, App Service settings / Key Vault references.
-builder.Configuration.AddMindAtticVaultFiles(o => o.Buckets = new[] { "LLM", "Security" });
+// Security bucket the auth stack needs: pepper, bootstrap-token); in Azure, App Service settings / Key Vault.
+builder.Configuration.AddMindAtticVaultFiles(o => o.Buckets = new[] { "LLM", "Security", "Notifications" });
 
 // Durable structured logs in MindAttic.Log's per-app database (GAD-T62); ILogger<T> call sites unchanged.
 builder.Services.AddMindAtticLog(o =>
@@ -22,9 +29,29 @@ builder.Services.AddMindAtticLog(o =>
     o.DbPath = MindAttic.Vault.Paths.VaultPaths.LoggingDbPath("Gadfly.Server");
 });
 
+// Who is calling, and in which organization (GAD-T41/T42). Scoped: one per request or circuit.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
+
+// One SQL Server database: Gadfly's "gadfly" schema plus MindAttic.Authentication's "auth" schema.
 var connectionString = GadflyDatabase.Resolve(builder.Configuration);
 builder.Services.AddDbContext<GadflyDbContext>(o => GadflyDatabase.Configure(o, connectionString));
 builder.Services.AddHealthChecks().AddDbContextCheck<GadflyDbContext>("database");
+
+// Accounts (GAD-T41): MindAttic.Authentication (Argon2id, TOTP MFA, lockout, audit) over the same
+// database; organization memberships ride on the sign-in cookie; default-deny with Gadfly's role policies.
+OrgRoleHandler.MfaRequired = !builder.Environment.IsDevelopment() || builder.Configuration["Gadfly:RequireMfaInDevelopment"] == "true";
+builder.Services.AddMindAtticAuthentication<GadflyDbContext>(builder.Configuration, o =>
+{
+    o.AppName = "Gadfly";
+    o.IsProduction = !builder.Environment.IsDevelopment();
+    o.ConfigureAdditionalPolicies = TenancyAuthorization.Configure;
+    // Production Data Protection (Blob + Key Vault) is wired with the Azure deployment (GAD-T63); until
+    // then a production start fails closed, which is what the library intends.
+});
+builder.Services.AddScoped<IAuthorizationHandler, OrgRoleHandler>();
+builder.Services.AddScoped<IOrganizationDirectory, OrganizationDirectory>();
+builder.Services.AddScoped<IMaClaimsAugmentor, OrganizationClaimsAugmentor>();
 
 // Background work (ingestion, concept extraction, reports) on the SQL job table (GAD-T43).
 builder.Services.AddGadflyJobs();
@@ -48,18 +75,38 @@ builder.Services.AddJobHandler<SourceProcessingJob>();
 // Live exam sessions: one engine per active session, persisted after every step (GAD-T44).
 builder.Services.AddSingleton<SessionOrchestrator>();
 
+// The Gadfly Exams web app (GAD-T48): Blazor Server.
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+
 var app = builder.Build();
 
-// Development convenience: bring LocalDB up to the latest migration on start. Production applies
-// migrations as a deploy step (GAD-T63), never from a running web instance.
-if (app.Environment.IsDevelopment() || args.Contains("--migrate"))
+// Startup: migrate (development; production migrates as a deploy step, GAD-T63), then seed the first
+// MindAttic SuperAdmin from Vault Security:bootstrap-token if no account exists yet.
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<GadflyDbContext>().Database.MigrateAsync();
+    var sp = scope.ServiceProvider;
+    if (app.Environment.IsDevelopment() || args.Contains("--migrate"))
+        await sp.GetRequiredService<GadflyDbContext>().Database.MigrateAsync();
+    await sp.GetRequiredService<AuthBootstrapper>().SeedAdminAsync();
 }
 
-app.MapHealthChecks("/healthz");
-app.MapGet("/healthz/providers", (LegionVotingClient panel) => Results.Json(panel.Health.Snapshot()));
-app.MapGet("/", () => Results.Text("Gadfly.Server is running. See /healthz."));
+var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto };
+forwarded.KnownIPNetworks.Clear();
+forwarded.KnownProxies.Clear();
+app.UseForwardedHeaders(forwarded);
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/error", createScopeForErrors: true);
+    app.UseHsts();
+}
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseMindAtticAuthentication();   // authn + authz + forced steps (change password, enroll MFA) + CSP
+app.UseAntiforgery();
+
+GadflyEndpoints.Map(app);
 
 app.Run();
+
+/// <summary>Program's partial, so Razor components can name the app assembly.</summary>
+public partial class Program;

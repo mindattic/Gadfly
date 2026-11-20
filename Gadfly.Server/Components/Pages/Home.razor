@@ -1,0 +1,43 @@
+@page "/"
+@inject ITenantContext Tenant
+
+<PageTitle>Gadfly Exams</PageTitle>
+
+@if (Tenant.OrganizationId is null && !Tenant.IsSuperAdmin)
+{
+    <h1>Welcome</h1>
+    <p class="notice">Your account isn't a member of any organization yet. Ask your organization's administrator to add you.</p>
+}
+else
+{
+    <h1>@Greeting</h1>
+    <div class="cards">
+        @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor)
+        {
+            <a class="card" href="sources"><h2>Source material</h2><p>Upload what students learn from; review the concepts and rubrics built from it.</p></a>
+            <a class="card" href="exams"><h2>Exams</h2><p>Build an oral exam from your concepts and assign it.</p></a>
+            <a class="card" href="review"><h2>Review</h2><p>Read each session, its evidence and integrity notes, and decide the grade.</p></a>
+        }
+        @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin)
+        {
+            <a class="card" href="org/members"><h2>Members</h2><p>Add instructors and students.</p></a>
+        }
+        @if (Tenant.Role == OrgRoles.Student)
+        {
+            <a class="card" href="my-exams"><h2>My exams</h2><p>Take an assigned exam and see released results.</p></a>
+        }
+        @if (Tenant.IsSuperAdmin)
+        {
+            <a class="card" href="platform/organizations"><h2>Organizations</h2><p>MindAttic: create customer organizations and their owners.</p></a>
+        }
+    </div>
+}
+
+@code {
+    private string Greeting => Tenant.Role switch
+    {
+        OrgRoles.Student => "Your exams",
+        null => "MindAttic platform",
+        _ => "Your organization",
+    };
+}
