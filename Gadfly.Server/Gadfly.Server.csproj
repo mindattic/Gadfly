@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <PackageReference Include="MindAttic.Vault" Version="7.0.0" />
+    <PackageReference Include="MindAttic.Log" Version="3.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.8" />
     <!-- Lift the transitive System.Security.Cryptography.Pkcs 9.0.4 (from the SqlClient chain) past

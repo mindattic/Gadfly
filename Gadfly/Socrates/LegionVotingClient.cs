@@ -12,6 +12,9 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
     private readonly LlmVotingService service;
     private readonly LlmVotingProvider provider;
 
+    /// <summary>Per-provider failure tracking for the raw fan-out calls (GAD-T62).</summary>
+    public ProviderHealth Health { get; } = new();
+
     public LegionVotingClient(VotingConfiguration config)
     {
         this.config = config;
@@ -43,6 +46,7 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
             try
             {
                 var text = await provider.CallAsync(id, systemPrompt, userMessage, maxTokens, temperature, null, ct);
+                Health.RecordSuccess(id, DateTimeOffset.UtcNow);
                 return new PanelReply(id, text ?? "");
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -51,6 +55,7 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
             }
             catch (Exception ex)
             {
+                Health.RecordFailure(id, ex.Message, DateTimeOffset.UtcNow);
                 return new PanelReply(id, "", ex.Message);
             }
         });

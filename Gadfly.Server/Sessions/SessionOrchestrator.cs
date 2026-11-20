@@ -137,6 +137,9 @@ public sealed class SessionOrchestrator(
 
     private async Task<SessionStep> StepAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Func<Live, Task<Turn?>> step, CancellationToken ct)
     {
+        // Every log line inside a step carries the session and organization (GAD-T62).
+        using var scope = log.BeginScope(new Dictionary<string, object> { ["SessionId"] = sessionId, ["OrganizationId"] = organizationId });
+        var started = clock.GetTimestamp();
         var live = await GetLiveAsync(organizationId, sessionId, studentUserId, ct);
         await live.Gate.WaitAsync(ct);
         try
@@ -151,7 +154,10 @@ public sealed class SessionOrchestrator(
                 // Persist whatever happened, even if a panel call failed midway: the transcript is the resume point.
                 await PersistAsync(live, studentUserId, ct);
             }
-            return View(live, question);
+            var view = View(live, question);
+            log.LogInformation("Session step: turn {Turn}, {Move}, state {State}, {Elapsed} ms.",
+                view.TurnIndex, view.Move ?? "-", view.State, (long)clock.GetElapsedTime(started).TotalMilliseconds);
+            return view;
         }
         catch (DbUpdateConcurrencyException)
         {
