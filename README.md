@@ -65,6 +65,7 @@ sessions, as a hint, not a verdict.
 | `gadfly interrogate [opts]` | Prompt 1 — Socratic Elenchus REPL until you reach Aporia. |
 | `gadfly reflect [opts]` | Prompt 2 — one-shot Final Reflection. |
 | `gadfly examine [opts]` | Prompt 3 — Socrates/Confucius/Buddha, three perspectives. |
+| `gadfly exam --source <path> [opts]` | A Socratic exam over your own source material, judged by the panel against it. |
 
 Run `gadfly <command> --help` for every command's full option list (tier, voters, quorum, etc).
 
@@ -115,6 +116,27 @@ Prompt 2, one-shot. Add `--last` to fold in your most recently saved `interrogat
 Prompt 3, one-shot. Three named voters — Socrates, Confucius, Buddha — each a distinct LLM
 provider, each reading the same corpus digest. Prints all three individual answers; there is no
 synthesized consensus, since the point is three voices, not one merged one.
+
+### `gadfly exam`
+
+A text-only Socratic exam over source material, the first step of the
+[Socratic exam platform](docs/SOCRATIC_PLATFORM.md). Point it at a folder (or file) of `.txt` or
+Markdown notes: the panel builds a concept map and a rubric per concept (kept under
+`%APPDATA%\MindAttic\Gadfly\sources\<collection>\`, editable, reused while the material is unchanged),
+then examines you concept by concept. Each question is drafted by the panel for a planned move
+(elicit, clarify, probe, counterexample, apply, contradiction, synthesize) from your previous answer;
+each answer is judged against the source passages with citations; contradictions between your own
+claims are put back to you. It ends at mastery, aporia, the time budget or the turn limit, and writes a
+Markdown and JSON report plus the full session transcript under `%APPDATA%\MindAttic\Gadfly\exams\`.
+
+```powershell
+dotnet run --project Gadfly.Cli -- exam --source path	o
+otes --list-concepts
+dotnet run --project Gadfly.Cli -- exam --source path	o
+otes --concepts calvin-cycle --minutes 10 --verbose
+```
+
+PDF, DOCX, EPUB and HTML arrive when Tutor's parsers are shared as `Tutor.Ingestion`.
 
 ## How it works
 
