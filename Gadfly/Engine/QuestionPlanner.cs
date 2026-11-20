@@ -66,8 +66,8 @@ public sealed class QuestionPlanner
     {
         ArgumentNullException.ThrowIfNull(session);
         if (session.IsEnded) return PlanDecision.Ending(session.EndReason, "The session has already ended.");
-        if (session.OpenTurn is not null)
-            throw new InvalidOperationException("Judge the open turn before planning the next one.");
+        if (session.OpenTurn is not null || session.AwaitingJudgment is not null)
+            throw new InvalidOperationException("Answer and judge the last turn before planning the next one.");
 
         var p = session.Policy;
         if (session.Remaining(now) <= TimeSpan.Zero) return PlanDecision.Ending(EndReason.TimeUp, "The time budget is spent.");

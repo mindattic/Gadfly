@@ -59,8 +59,12 @@ public sealed class SocraticSession
     /// <summary>Latest mastery estimate per concept.</summary>
     public IReadOnlyDictionary<string, MasterySnapshot> Mastery => _mastery;
 
-    /// <summary>The turn waiting for an answer or judgment, if any.</summary>
-    public Turn? OpenTurn => _turns.Count > 0 && _turns[^1].Judgment is null ? _turns[^1] : null;
+    /// <summary>The last turn, while it still waits for the student's answer.</summary>
+    public Turn? OpenTurn => _turns.Count > 0 && _turns[^1].Answer is null ? _turns[^1] : null;
+
+    /// <summary>The last turn, while it is answered but not yet judged. Subjects that don't judge (the
+    /// personal introspection tool) leave every turn here; exam subjects judge before planning on.</summary>
+    public Turn? AwaitingJudgment => _turns.Count > 0 && _turns[^1].Answer is not null && _turns[^1].Judgment is null ? _turns[^1] : null;
 
     /// <summary>Time left in the budget at <paramref name="now"/> (never negative).</summary>
     public TimeSpan Remaining(DateTimeOffset now)
@@ -72,11 +76,11 @@ public sealed class SocraticSession
     /// <summary>Turns asked so far on <paramref name="conceptId"/>.</summary>
     public int TurnsOn(string conceptId) => _turns.Count(t => t.ConceptId == conceptId);
 
-    /// <summary>Asks a new question. The previous turn must be judged first.</summary>
+    /// <summary>Asks a new question. The previous turn must be answered first.</summary>
     public Turn Ask(string conceptId, MoveKind move, string question, DateTimeOffset askedAt, IReadOnlyList<string>? targetClaimIds = null)
     {
         EnsureRunning();
-        if (OpenTurn is not null) throw new InvalidOperationException("The previous turn has not been answered and judged yet.");
+        if (OpenTurn is not null) throw new InvalidOperationException("The previous turn has not been answered yet.");
         if (string.IsNullOrWhiteSpace(question)) throw new ArgumentException("A turn needs a question.", nameof(question));
         var turn = new Turn
         {
@@ -95,17 +99,17 @@ public sealed class SocraticSession
     public Turn RecordAnswer(Answer answer)
     {
         EnsureRunning();
+        ArgumentNullException.ThrowIfNull(answer);
         var open = OpenTurn ?? throw new InvalidOperationException("There is no open turn to answer.");
-        if (open.Answer is not null) throw new InvalidOperationException("The open turn already has an answer.");
         return Replace(open with { Answer = answer });
     }
 
-    /// <summary>Records the judgment of the open turn's answer and the concept's new mastery estimate.</summary>
+    /// <summary>Records the judgment of the last turn's answer and the concept's new mastery estimate.</summary>
     public Turn RecordJudgment(AnswerJudgment judgment, double masteryEstimate)
     {
         EnsureRunning();
-        var open = OpenTurn ?? throw new InvalidOperationException("There is no open turn to judge.");
-        if (open.Answer is null) throw new InvalidOperationException("The open turn has no answer to judge.");
+        ArgumentNullException.ThrowIfNull(judgment);
+        var open = AwaitingJudgment ?? throw new InvalidOperationException("There is no answered, unjudged turn to judge.");
         var snapshot = new MasterySnapshot(open.ConceptId, Math.Clamp(masteryEstimate, 0, 1), TurnsOn(open.ConceptId));
         _mastery[open.ConceptId] = snapshot;
         return Replace(open with { Judgment = judgment, MasteryAfter = snapshot });

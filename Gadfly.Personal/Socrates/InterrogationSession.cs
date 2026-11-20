@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Gadfly.Engine;
 using Gadfly.Mining;
 using Gadfly.Prompts;
 using MindAttic.Legion;
@@ -32,6 +33,12 @@ public class InterrogationSession
 
     public List<InterrogationTurn> Transcript { get; } = new();
 
+    /// <summary>
+    /// The same dialogue recorded on the generic Socratic engine (<see cref="SocraticSession"/>), with
+    /// the personal prompt set's hash and an end reason. Null until <see cref="RunAsync"/> runs.
+    /// </summary>
+    public SocraticSession? Session { get; private set; }
+
     public InterrogationSession(ISocraticVotingClient client, Quorum quorum = Quorum.Plurality, int maxTurns = 20)
     {
         this.client = client;
@@ -55,6 +62,11 @@ public class InterrogationSession
         Func<Task<string?>> readHumanReply,
         CancellationToken ct = default)
     {
+        var session = new SocraticSession(PersonalCorpusSubject.SubjectId,
+            PersonalCorpusSubject.InterrogationPolicy(maxTurns), PersonalCorpusSubject.Prompts, DateTimeOffset.UtcNow);
+        Session = session;
+        var end = EndReason.TurnLimit;
+
         for (var turn = 0; turn < maxTurns; turn++)
         {
             var context = ContextBuilder.BuildInterrogationContext(
@@ -68,18 +80,27 @@ public class InterrogationSession
                 question = "I have nothing further to ask — the panel returned no usable question this turn.";
 
             Transcript.Add(new InterrogationTurn { Speaker = "Socrates", Text = question });
+            session.Ask(PersonalCorpusSubject.SelfConceptId, turn == 0 ? MoveKind.Elicit : MoveKind.Probe, question, DateTimeOffset.UtcNow);
             await writeQuestion(question);
 
             var reply = await readHumanReply();
             if (reply is null)
+            {
+                end = EndReason.Abandoned;
                 break; // input closed (EOF) — no human left to answer, stop instead of burning votes
+            }
 
             Transcript.Add(new InterrogationTurn { Speaker = "You", Text = reply });
+            session.RecordAnswer(new Answer { Text = reply, CompletedAt = DateTimeOffset.UtcNow });
 
             if (IsAporia(reply))
+            {
+                end = EndReason.Aporia;
                 break;
+            }
         }
 
+        session.End(end, DateTimeOffset.UtcNow);
         return Transcript;
     }
 
@@ -89,10 +110,17 @@ public class InterrogationSession
     {
         var dir = sessionsDir ?? DefaultSessionsDir;
         Directory.CreateDirectory(dir);
-        var path = Path.Combine(dir, $"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}.jsonl");
-        using var writer = new StreamWriter(path);
-        foreach (var turn in Transcript)
-            writer.WriteLine(JsonSerializer.Serialize(turn));
+        var stamp = $"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}";
+        var path = Path.Combine(dir, $"{stamp}.jsonl");
+        using (var writer = new StreamWriter(path))
+        {
+            foreach (var turn in Transcript)
+                writer.WriteLine(JsonSerializer.Serialize(turn));
+        }
+        // The engine's full session record sits beside the JSONL (which `reflect --last` reads);
+        // it is named *.session.json so the *.jsonl lookup below never picks it up.
+        if (Session is not null)
+            File.WriteAllText(Path.Combine(dir, $"{stamp}.session.json"), SessionTranscriptSerializer.Serialize(Session));
         return path;
     }
 
