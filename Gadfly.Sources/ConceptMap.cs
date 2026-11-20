@@ -62,8 +62,17 @@ public sealed record ConceptRubric
     }
 }
 
+/// <summary>Where a collection's concept map and rubrics are kept: files for the CLI, SQL for the platform.</summary>
+public interface IConceptMapStore
+{
+    Task<ConceptMap?> LoadMapAsync(string collectionId, CancellationToken ct = default);
+    Task SaveMapAsync(ConceptMap map, CancellationToken ct = default);
+    Task<IReadOnlyList<ConceptRubric>> LoadRubricsAsync(string collectionId, CancellationToken ct = default);
+    Task SaveRubricsAsync(string collectionId, IReadOnlyList<ConceptRubric> rubrics, CancellationToken ct = default);
+}
+
 /// <summary>Reads and writes a collection's concept map and rubrics beside its passages (file store).</summary>
-public sealed class ConceptMapFiles(FileSourceStore store)
+public sealed class ConceptMapFiles(FileSourceStore store) : IConceptMapStore
 {
     private static readonly JsonSerializerOptions Json = new()
     {

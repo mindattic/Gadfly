@@ -140,7 +140,8 @@ public sealed class SourceIngestor(ISourceStore store, IReadOnlyList<IDocumentTe
         }
     }
 
-    internal static string DocumentId(string relativePath)
+    /// <summary>The id a document gets from its path relative to the ingested root (stable across runs).</summary>
+    public static string DocumentId(string relativePath)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(relativePath.ToLowerInvariant()));
         return "d" + Convert.ToHexStringLower(hash)[..12];

@@ -92,6 +92,10 @@ public sealed class Concept : ITenantOwned
     public string Title { get; set; } = "";
     public string Definition { get; set; } = "";
     public string? Summary { get; set; }
+    /// <summary>JSON array of strings.</summary>
+    public string KeyFactsJson { get; set; } = "[]";
+    /// <summary>JSON array of strings: concept-level wrong beliefs (rubrics add their own).</summary>
+    public string MisconceptionsJson { get; set; } = "[]";
     public int Ordinal { get; set; }
     public bool EditedByInstructor { get; set; }
     public bool IsArchived { get; set; }

@@ -1,5 +1,8 @@
 using Gadfly.Server.Data;
 using Gadfly.Server.Jobs;
+using Gadfly.Server.Sources;
+using Gadfly.Socrates;
+using Gadfly.Sources;
 using Microsoft.EntityFrameworkCore;
 using MindAttic.Vault.Configuration;
 
@@ -16,6 +19,13 @@ builder.Services.AddHealthChecks().AddDbContextCheck<GadflyDbContext>("database"
 
 // Background work (ingestion, concept extraction, reports) on the SQL job table (GAD-T43).
 builder.Services.AddGadflyJobs();
+
+// The Legion panel every question, judgment, concept map and rubric goes through.
+builder.Services.AddSingleton<ISocraticVotingClient>(_ => new LegionVotingClient(Gadfly.GadflyConfiguration.Build()));
+
+// Source material: text extractors (PDF/DOCX/EPUB/HTML join with Tutor.Ingestion) and processing jobs.
+builder.Services.AddSingleton<IDocumentTextExtractor, PlainTextExtractor>();
+builder.Services.AddJobHandler<SourceProcessingJob>();
 
 var app = builder.Build();
 

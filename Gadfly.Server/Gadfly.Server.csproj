@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Gadfly\Gadfly.csproj" />
+    <ProjectReference Include="..\Gadfly.Sources\Gadfly.Sources.csproj" />
   </ItemGroup>
 
   <ItemGroup>
