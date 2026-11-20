@@ -1,0 +1,116 @@
+@page "/review"
+@attribute [Authorize(Policy = GadflyPolicies.Instructor)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Review
+@inject GadflyDbContext Db
+@inject ITenantContext Tenant
+
+<PageTitle>Review · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="review.css" /></HeadContent>
+<h1>Review <span>sessions to read and grade</span></h1>
+
+<div class="review-filters">
+    <label>Exam
+        <select @bind="ExamFilter" @bind:after="LoadAsync">
+            <option value="">All exams</option>
+            @foreach (var e in exams)
+            {
+                <option value="@e.Id">@e.Title</option>
+            }
+        </select>
+    </label>
+    <label class="check"><input type="checkbox" @bind="needsGrade" @bind:after="LoadAsync" /> Needs a grade</label>
+    <label class="check"><input type="checkbox" @bind="needsReview" @bind:after="LoadAsync" /> Judges disagreed</label>
+</div>
+
+@if (rows is null)
+{
+    <p class="hint">Loading…</p>
+}
+else if (rows.Count == 0)
+{
+    <p class="notice">
+        @if (ExamFilter.Length > 0 || needsGrade || needsReview)
+        {
+            <text>No sessions match these filters.</text>
+        }
+        else
+        {
+            <text>No exam sessions yet. Once students sit an exam, their sessions appear here for review and grading.</text>
+        }
+    </p>
+}
+else
+{
+    <table class="grid review-list">
+        <thead>
+            <tr>
+                <th>Student</th><th>Exam</th><th>Attempt</th><th>State</th><th>Ended</th>
+                <th>AI recommendation</th><th title="Answers where the judging panel disagreed">Disagreed</th>
+                <th title="Integrity flags (normal behavior like looking away is not counted)">Flags</th><th>Grade</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in rows)
+            {
+                <tr>
+                    <td><a href="review/@r.SessionId">@r.StudentName</a></td>
+                    <td>@r.ExamTitle</td>
+                    <td>@r.Attempt</td>
+                    <td>@r.State</td>
+                    <td>@(r.EndedAt?.ToLocalTime().ToString("g") ?? "—")</td>
+                    <td>
+                        @if (r.Recommendation is not null)
+                        {
+                            <span class="tag rec-@r.Recommendation">@r.Recommendation</span>
+                            <span class="hint">@Pct(r.AiScore)</span>
+                        }
+                        else
+                        {
+                            <span class="hint">—</span>
+                        }
+                    </td>
+                    <td>@if (r.JudgesDisagreed > 0) { <span class="tag warn">@r.JudgesDisagreed</span> } else { <span class="hint">0</span> }</td>
+                    <td>@if (r.IntegrityFlags > 0) { <span class="tag warn">@r.IntegrityFlags</span> } else { <span class="hint">0</span> }</td>
+                    <td>
+                        @if (r.LatestGrade is { } g)
+                        {
+                            <strong>@g.Grade</strong>
+                            @if (g.OverridesRecommendation) { <span class="hint"> (override)</span> }
+                        }
+                        else if (r.NeedsGrade)
+                        {
+                            <span class="tag">needs grade</span>
+                        }
+                        else
+                        {
+                            <span class="hint">in progress</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <p class="hint">@rows.Count session@(rows.Count == 1 ? "" : "s").</p>
+}
+
+@code {
+    private IReadOnlyList<(Guid Id, string Title)> exams = [];
+    private IReadOnlyList<ReviewListRow>? rows;
+    private string ExamFilter { get; set; } = "";
+    private bool needsGrade, needsReview;
+
+    private ReviewService Service => new(Db, Tenant.OrganizationId!.Value);
+
+    protected override async Task OnInitializedAsync()
+    {
+        exams = await Service.ExamsWithSessionsAsync();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync() =>
+        rows = await Service.ListAsync(new ReviewListFilter(
+            Guid.TryParse(ExamFilter, out var id) ? id : null, needsGrade, needsReview));
+
+    private static string Pct(double? v) => v is { } x ? $"{x * 100:0}%" : "";
+}

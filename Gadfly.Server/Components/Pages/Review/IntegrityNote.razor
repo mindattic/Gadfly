@@ -1,0 +1,23 @@
+@using Gadfly.Server.Review
+
+@* One integrity event, explained plainly (GAD-T54). Normal behavior (looking away while thinking) is
+   shown as such, not as a flag. *@
+<div class="integrity @(Event.IsNormalBehavior ? "normal" : "sev-" + Event.Severity.ToString().ToLowerInvariant())">
+    <div>
+        <strong>@Event.Label</strong>
+        <span class="hint">
+            @Event.StartedAt.ToLocalTime().ToString("T")@(Event.EndedAt is { } end ? $"–{end.ToLocalTime():T} ({Math.Max(0, (end - Event.StartedAt).TotalSeconds):0} s)" : "")
+            · @Event.Source
+            @if (!Event.IsNormalBehavior) { <text> · @Event.Severity.ToString().ToLowerInvariant() · confidence @($"{Event.Confidence * 100:0}%")</text> }
+        </span>
+    </div>
+    <div>@Event.Explanation</div>
+    @if (!string.IsNullOrWhiteSpace(Event.Summary) && Event.Summary != Event.Explanation)
+    {
+        <div class="hint">@Event.Summary</div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IntegrityView Event { get; set; } = default!;
+}

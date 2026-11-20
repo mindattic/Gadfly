@@ -1,0 +1,348 @@
+@page "/review/{SessionId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Instructor)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Review
+@inject GadflyDbContext Db
+@inject ITenantContext Tenant
+
+<PageTitle>Session review · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="review.css" /></HeadContent>
+<p class="hint"><a href="review">← All sessions</a></p>
+
+@if (loading)
+{
+    <p class="hint">Loading…</p>
+}
+else if (view is null)
+{
+    <h1>Session not found</h1>
+    <p class="notice">This session doesn't exist in the current organization.</p>
+}
+else
+{
+    var s = view.Session;
+    <h1>@view.StudentName <span>· @view.ExamTitle · attempt @s.Attempt</span></h1>
+
+    <div class="review-summary">
+        <div><span class="hint">State</span> @s.State@(s.EndReason is { } er ? $" ({er})" : "")</div>
+        <div><span class="hint">Started</span> @(s.StartedAt?.ToLocalTime().ToString("g") ?? "—")</div>
+        <div><span class="hint">Ended</span> @(s.EndedAt?.ToLocalTime().ToString("g") ?? "—")</div>
+        <div><span class="hint">AI recommendation</span>
+            @if (view.Report is { } rep) { <span class="tag rec-@rep.Recommendation">@rep.Recommendation</span> @Pct(rep.OverallScore) }
+            else { <span>none yet</span> }
+        </div>
+        <div><span class="hint">Grade</span> @(view.LatestGrade?.Grade ?? "not graded")</div>
+        <div><span class="hint">Exports</span>
+            <a href="@ReviewExportEndpoints.CsvPath(s.Id)" download target="_blank" data-enhance-nav="false">turns (CSV)</a> ·
+            <a href="@ReviewExportEndpoints.MarkdownPath(s.Id)" download target="_blank" data-enhance-nav="false">report (Markdown)</a>
+            <span class="hint">· PDF export comes later</span>
+        </div>
+    </div>
+
+    @if (view.JudgesDisagreed > 0)
+    {
+        <p class="notice warn">The judging panel disagreed on @view.JudgesDisagreed answer@(view.JudgesDisagreed == 1 ? "" : "s"). Those answers are marked below; please read them before grading.</p>
+    }
+
+    <h2 class="section">Timeline</h2>
+    @if (view.Timeline.Count == 0)
+    {
+        <p class="notice">No questions were asked in this session yet.</p>
+    }
+    <ol class="timeline">
+        @foreach (var item in view.Timeline)
+        {
+            if (item.Turn is { } t)
+            {
+                <li class="turn @(t.Judgment?.NeedsHumanReview == true ? "disputed" : "")" id="turn-@t.Index">
+                    <div class="turn-head">
+                        <strong>Q@(t.Index + 1)</strong>
+                        <span class="tag">@t.Move</span>
+                        <span>@t.ConceptTitle</span>
+                        <span class="hint">@t.AskedAt.ToLocalTime().ToString("T")</span>
+                    </div>
+                    @if (t.Judgment?.NeedsHumanReview == true)
+                    {
+                        <p class="banner">Judges disagreed — review this answer.</p>
+                    }
+                    <p class="question">@t.Question</p>
+                    @if (!string.IsNullOrWhiteSpace(t.PlannerReason))
+                    {
+                        <p class="hint">Why this question: @t.PlannerReason</p>
+                    }
+                    @if (t.AnswerText is { } answer)
+                    {
+                        <blockquote class="answer">@answer</blockquote>
+                        <p class="hint">
+                            @(t.AnswerMode ?? "answer")
+                            @if (t.LatencySeconds is { } lat) { <text> · started after @lat.ToString("0.#") s</text> }
+                            @if (t.AnswerCompletedAt is { } done) { <text> · finished @done.ToLocalTime().ToString("T")</text> }
+                            @if (t.HasAudio) { <text> · audio recorded (playback arrives with media storage)</text> }
+                            @foreach (var m in t.SpeechMetrics.Take(6)) { <text> · @m.Key @m.Value.ToString("0.##")</text> }
+                        </p>
+                    }
+                    else
+                    {
+                        <p class="hint">No answer yet.</p>
+                    }
+
+                    @foreach (var c in t.Contradictions)
+                    {
+                        <p class="notice warn">Contradicts an earlier answer: “@c.Quote” vs earlier “@c.EarlierQuote”.</p>
+                    }
+
+                    @if (t.Judgment is { } j)
+                    {
+                        <div class="judgment">
+                            <div><strong>Score @Pct(j.OverallScore)</strong> <span class="hint">· panel agreement @Pct(j.Agreement)</span></div>
+                            @if (!string.IsNullOrWhiteSpace(j.Summary)) { <p>@j.Summary</p> }
+                            @if (j.Criteria.Count > 0)
+                            {
+                                <table class="grid criteria">
+                                    <thead><tr><th>Criterion</th><th>Score</th><th>Why</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var c in j.Criteria)
+                                        {
+                                            <tr>
+                                                <td>@c.Criterion</td>
+                                                <td>@Pct(c.Score)</td>
+                                                <td>
+                                                    @c.Rationale
+                                                    @foreach (var cite in c.Citations)
+                                                    {
+                                                        <details class="cite">
+                                                            <summary>Source@(cite.Document is { } d ? $": {d}" : "")@(cite.Location is { } loc ? $", {loc}" : "")@(cite.Quote is { Length: > 0 } q ? $" — “{Trim(q, 80)}”" : "")</summary>
+                                                            @if (cite.Found)
+                                                            {
+                                                                <pre class="passage">@cite.Text</pre>
+                                                            }
+                                                            else
+                                                            {
+                                                                <p class="hint">That passage is no longer in the source material (chunk @cite.ChunkId).</p>
+                                                            }
+                                                        </details>
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                            @if (j.Votes.Count > 0)
+                            {
+                                <details class="votes" open="@j.NeedsHumanReview">
+                                    <summary>Each judge's verdict (@j.Votes.Count)</summary>
+                                    <ul>
+                                        @foreach (var v in j.Votes)
+                                        {
+                                            <li class="@(v.Dissents ? "dissent" : "")">
+                                                <strong>@v.ProviderId</strong> <span class="hint">@v.Model</span> · @Pct(v.OverallScore)
+                                                @if (v.Dissents) { <span class="tag warn">dissents</span> }
+                                                <div>@v.Verdict</div>
+                                            </li>
+                                        }
+                                    </ul>
+                                </details>
+                            }
+                            @if (j.TextStyleScore is { } ts)
+                            {
+                                <p class="hint">Text style @Pct(ts): @IntegrityExplanations.TextStyle(ts) It never affects the score.</p>
+                            }
+                        </div>
+                    }
+                    @if (t.MasteryAfter is { } ma)
+                    {
+                        <p class="hint">Mastery of @t.ConceptTitle after this answer: @Pct(ma)</p>
+                    }
+                    @foreach (var e in item.DuringTurn)
+                    {
+                        <IntegrityNote Event="e" />
+                    }
+                </li>
+            }
+            else if (item.Event is { } ev)
+            {
+                <li class="event"><IntegrityNote Event="ev" /></li>
+            }
+        }
+    </ol>
+
+    <p class="hint">
+        Integrity events are evidence for you to weigh, never findings: the platform doesn't infer dishonesty or emotion
+        and never fails anyone on its own. Looking up or away while answering is a normal sign of thinking.
+    </p>
+
+    @if (view.Mastery.Count > 0)
+    {
+        <h2 class="section">Mastery by concept</h2>
+        <table class="grid">
+            <thead><tr><th>Concept</th><th>Mastery</th><th>Questions</th><th>Status</th></tr></thead>
+            <tbody>
+                @foreach (var m in view.Mastery)
+                {
+                    <tr>
+                        <td>@m.ConceptTitle</td>
+                        <td><span class="bar" style="--v:@((int)Math.Round(m.Estimate * 100))%"></span> @Pct(m.Estimate)</td>
+                        <td>@m.Turns</td>
+                        <td>@m.Status</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <h2 class="section">AI report</h2>
+    @if (view.Report is { } report)
+    {
+        <div class="report">@((MarkupString)SimpleMarkdown.ToHtml(report.Markdown))</div>
+    }
+    else
+    {
+        <p class="notice">The AI report is written when the session ends.</p>
+    }
+
+    <h2 class="section">Grade</h2>
+    <EditForm Model="form" OnValidSubmit="SaveAsync" FormName="grade" class="panel">
+        @if (s.State != SessionState.Ended)
+        {
+            <p class="hint">This session hasn't ended; you can grade it once it has.</p>
+        }
+        @if (view.Report is { } r)
+        {
+            <p class="hint">
+                The AI recommends <strong>@r.Recommendation</strong> (@Pct(r.OverallScore)).
+                <button type="button" class="link" @onclick="UseRecommendation">Use it</button>
+            </p>
+        }
+        <label>Grade <InputText @bind-Value="form.Grade" placeholder="A, B+, Pass, mastered…" /></label>
+        <label>Score (0–100, optional) <InputNumber @bind-Value="form.Score" step="any" /></label>
+        <label>Comment <InputTextArea @bind-Value="form.Comment" rows="4" /></label>
+        @if (view.Report is { } r2 && !string.IsNullOrWhiteSpace(form.Grade))
+        {
+            var overrides = GradePolicy.Overrides(form.Grade, form.Score, r2.Recommendation, r2.OverallScore);
+            <p class="hint">
+                @if (overrides)
+                {
+                    <text>This will be recorded as <strong>overriding</strong> the AI recommendation.</text>
+                }
+                else
+                {
+                    <text>This agrees with the AI recommendation.</text>
+                }
+            </p>
+        }
+        <button type="submit" disabled="@(busy || s.State != SessionState.Ended)">Save grade</button>
+        @if (message is not null)
+        {
+            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+        }
+    </EditForm>
+
+    @if (view.Assignment is { } a)
+    {
+        <div class="panel">
+            <h2>Release to the student</h2>
+            @if (a.ResultsReleasedAt is { } rel)
+            {
+                <p>Released @rel.ToLocalTime().ToString("g"). The student sees the latest grade and comment.</p>
+                <button type="button" class="link" disabled="@busy" @onclick="() => ReleaseAsync(false)">Withdraw the result</button>
+            }
+            else
+            {
+                <p class="hint">Students see their result only after you release it.</p>
+                <button type="button" disabled="@(busy || view.LatestGrade is null)" @onclick="() => ReleaseAsync(true)">Release result</button>
+            }
+        </div>
+    }
+
+    @if (view.Grades.Count > 0)
+    {
+        <h2 class="section">Grade history</h2>
+        <table class="grid">
+            <thead><tr><th>When</th><th>By</th><th>Grade</th><th>Score</th><th>Override</th><th>Comment</th></tr></thead>
+            <tbody>
+                @foreach (var (g, by) in view.Grades)
+                {
+                    <tr>
+                        <td>@g.DecidedAt.ToLocalTime().ToString("g")</td>
+                        <td>@by</td>
+                        <td><strong>@g.Grade</strong></td>
+                        <td>@(g.Score?.ToString("0.##") ?? "—")</td>
+                        <td>@(g.OverridesRecommendation ? "yes" : "no")</td>
+                        <td>@g.Comment</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="hint">The newest decision is the grade; earlier ones are kept for the record.</p>
+    }
+}
+
+@code {
+    [Parameter] public Guid SessionId { get; set; }
+
+    private sealed class GradeForm
+    {
+        public string Grade { get; set; } = "";
+        public double? Score { get; set; }
+        public string? Comment { get; set; }
+    }
+
+    private SessionReviewView? view;
+    private GradeForm form = new();
+    private bool loading = true, busy, ok;
+    private string? message;
+
+    private ReviewService Service => new(Db, Tenant.OrganizationId!.Value);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        await LoadAsync();
+        if (view?.LatestGrade is { } g)
+            form = new GradeForm { Grade = g.Grade, Score = g.Score, Comment = g.Comment };
+        loading = false;
+    }
+
+    private async Task LoadAsync() => view = await Service.GetAsync(SessionId);
+
+    private void UseRecommendation()
+    {
+        if (view?.Report is { } r)
+        {
+            form.Grade = r.Recommendation;
+            form.Score ??= Math.Round(r.OverallScore * 100);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var result = await Service.SaveGradeAsync(SessionId, Tenant.UserId!.Value, new GradeInput(form.Grade, form.Score, form.Comment));
+            ok = result.Ok;
+            message = result.Message;
+            if (result.Ok) await LoadAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task ReleaseAsync(bool release)
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var result = await Service.ReleaseAsync(SessionId, release);
+            ok = result.Ok;
+            message = result.Message;
+            await LoadAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private static string Pct(double? v) => v is { } x ? $"{x * 100:0}%" : "—";
+    private static string Trim(string s, int max) => s.Length <= max ? s : s[..max] + "…";
+}
