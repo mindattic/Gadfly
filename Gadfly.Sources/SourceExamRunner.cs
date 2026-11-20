@@ -36,6 +36,7 @@ public sealed class SourceExamEngine
     private readonly QuestionGenerator _generator;
     private readonly PanelAnswerJudge _judge;
     private readonly ClaimAnalyzer _claims;
+    private readonly TextStyleAssessor _style;
 
     private SourceExamEngine(ISocraticVotingClient panel, SourceMaterialSubject subject, SocraticSession session, ClaimLedger ledger,
         IReadOnlyList<PlannerConcept> concepts, TimeProvider clock)
@@ -49,7 +50,11 @@ public sealed class SourceExamEngine
         _generator = new QuestionGenerator(panel);
         _judge = new PanelAnswerJudge(panel);
         _claims = new ClaimAnalyzer(panel, ExamPrompts.Set);
+        _style = new TextStyleAssessor(panel);
     }
+
+    /// <summary>Whether answers get the answer-text integrity assessment (GAD-T59). On by default.</summary>
+    public bool AssessTextStyle { get; set; } = true;
 
     public SocraticSession Session { get; }
     public ClaimLedger Ledger { get; }
@@ -158,6 +163,8 @@ public sealed class SourceExamEngine
                 Passages = passages,
                 EarlierClaims = Ledger.Describe(concept.Key),
             }, rubric.Version, ct);
+            if (AssessTextStyle && await _style.AssessAsync(Session, turn, ct) is { } style)
+                judgment = judgment with { TextStyle = style };
         }
 
         var prior = Session.Mastery.TryGetValue(concept.Key, out var m) ? m.Estimate : MasteryModel.Prior;

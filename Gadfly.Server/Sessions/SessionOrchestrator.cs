@@ -297,6 +297,7 @@ public sealed class SessionOrchestrator(
                     RubricVersion = j.RubricVersion,
                     Summary = j.Summary,
                     CriteriaJson = JsonSerializer.Serialize(j.Criteria, Json),
+                    TextStyleScore = j.TextStyle?.Score,
                     CreatedAt = now,
                     Votes = j.Votes.Select(v => new JudgeVoteRecord
                     {
@@ -320,6 +321,21 @@ public sealed class SessionOrchestrator(
             m.TurnsOnConcept = s.TurnsOn(conceptKey);
             m.Status = QuestionPlanner.StatusOf(s, conceptKey).ToString();
             m.UpdatedAt = now;
+        }
+
+        // Answer-text integrity: a strong "read aloud" signal becomes reviewable evidence (never a score).
+        foreach (var turn in s.Turns.Where(t => t.Judgment?.TextStyle is { Score: >= 0.7 }))
+        {
+            var turnRow = stored[turn.Index];
+            if (await db.IntegrityEvents.AnyAsync(e => e.SessionId == s.Id && e.TurnId == turnRow.Id && e.Type == "text-reads-as-written", ct)) continue;
+            var style = turn.Judgment!.TextStyle!;
+            db.IntegrityEvents.Add(new IntegrityEvent
+            {
+                OrganizationId = org, SessionId = s.Id, TurnId = turnRow.Id, Source = "text", Type = "text-reads-as-written",
+                StartedAt = turn.Answer!.StartedAt ?? turn.Answer.CompletedAt, EndedAt = turn.Answer.CompletedAt,
+                Confidence = style.Score, Severity = IntegritySeverity.Low,
+                Summary = $"This answer reads more like written text than the student's other answers ({style.Reason}). Weak evidence on its own.",
+            });
         }
 
         var knownClaims = (await db.SessionClaims.Where(c => c.SessionId == s.Id).Select(c => c.Normalized).ToListAsync(ct)).ToHashSet();

@@ -41,6 +41,12 @@ public sealed record CriterionScore
 /// <summary>One voter's raw verdict, kept so dissent is visible to the reviewer.</summary>
 public sealed record JudgeVote(string ProviderId, string Model, double OverallScore, string Verdict);
 
+/// <summary>
+/// How much an answer reads like written text read aloud, against the student's own baseline
+/// (0 = spontaneous speech, 1 = clearly read). Shown only to a human reviewer; never scored.
+/// </summary>
+public sealed record TextStyleAssessment(double Score, string Reason, int Voters);
+
 /// <summary>The Legion panel's judgment of one answer.</summary>
 public sealed record AnswerJudgment
 {
@@ -54,6 +60,8 @@ public sealed record AnswerJudgment
     public bool NeedsHumanReview { get; init; }
     /// <summary>The rubric version that judged this answer.</summary>
     public int RubricVersion { get; init; }
+    /// <summary>Answer-text integrity signal (GAD-T59); null when not assessed.</summary>
+    public TextStyleAssessment? TextStyle { get; init; }
     public string Summary { get; init; } = "";
 }
 
