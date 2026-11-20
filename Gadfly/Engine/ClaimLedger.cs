@@ -43,6 +43,24 @@ public sealed class ClaimLedger
     public IReadOnlyList<ContradictionCandidate> ForPlanner() =>
         _contradictions.Select(c => new ContradictionCandidate(c.ConceptId, c.FirstClaimId, c.SecondClaimId)).ToList();
 
+    private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+    private sealed record LedgerDto(List<StudentClaim> Claims, List<ClaimContradiction> Contradictions);
+
+    /// <summary>The whole ledger as JSON, persisted beside the session so a resumed exam keeps its memory.</summary>
+    public string ToJson() => JsonSerializer.Serialize(new LedgerDto([.. _claims], [.. _contradictions]), Json);
+
+    public static ClaimLedger FromJson(string? json)
+    {
+        var ledger = new ClaimLedger();
+        if (string.IsNullOrWhiteSpace(json)) return ledger;
+        var dto = JsonSerializer.Deserialize<LedgerDto>(json, Json);
+        if (dto is null) return ledger;
+        ledger._claims.AddRange(dto.Claims ?? []);
+        ledger._contradictions.AddRange(dto.Contradictions ?? []);
+        return ledger;
+    }
+
     /// <summary>Earlier claims as a prompt-ready list ("[turn 3] ...").</summary>
     public string Describe(string? conceptId = null, int max = 30) =>
         string.Join("\n", _claims.Where(c => conceptId is null || c.ConceptId == conceptId)

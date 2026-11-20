@@ -206,6 +206,12 @@ public sealed class ExamSession : ITenantOwned
     /// <summary>SHA-256 of the consent text the student accepted.</summary>
     public string? ConsentTextSha256 { get; set; }
     public string? ClientInfo { get; set; }
+    /// <summary>The engine's full session (SessionTranscriptSerializer), saved after every step; the resume point.</summary>
+    public string? TranscriptJson { get; set; }
+    /// <summary>The claim ledger (ClaimLedger.ToJson), saved with the transcript.</summary>
+    public string? LedgerJson { get; set; }
+    /// <summary>Optimistic-concurrency token: two servers can't both advance one session.</summary>
+    public byte[]? RowVersion { get; set; }
     public List<SessionTurn> Turns { get; set; } = [];
 }
 

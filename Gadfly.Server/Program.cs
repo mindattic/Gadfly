@@ -1,5 +1,6 @@
 using Gadfly.Server.Data;
 using Gadfly.Server.Jobs;
+using Gadfly.Server.Sessions;
 using Gadfly.Server.Sources;
 using Gadfly.Socrates;
 using Gadfly.Sources;
@@ -26,6 +27,9 @@ builder.Services.AddSingleton<ISocraticVotingClient>(_ => new LegionVotingClient
 // Source material: text extractors (PDF/DOCX/EPUB/HTML join with Tutor.Ingestion) and processing jobs.
 builder.Services.AddSingleton<IDocumentTextExtractor, PlainTextExtractor>();
 builder.Services.AddJobHandler<SourceProcessingJob>();
+
+// Live exam sessions: one engine per active session, persisted after every step (GAD-T44).
+builder.Services.AddSingleton<SessionOrchestrator>();
 
 var app = builder.Build();
 

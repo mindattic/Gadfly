@@ -123,6 +123,7 @@ public sealed class GadflyDbContext(DbContextOptions<GadflyDbContext> options) :
             e.Property(x => x.PromptSetSha256).HasMaxLength(64);
             e.Property(x => x.ConsentTextSha256).HasMaxLength(64);
             e.Property(x => x.ClientInfo).HasMaxLength(500);
+            e.Property(x => x.RowVersion).IsRowVersion();
             e.HasOne(x => x.Assignment).WithMany().HasForeignKey(x => x.AssignmentId);
             e.HasOne<Exam>().WithMany().HasForeignKey(x => x.ExamId);
             e.HasIndex(x => new { x.AssignmentId, x.Attempt }).IsUnique();

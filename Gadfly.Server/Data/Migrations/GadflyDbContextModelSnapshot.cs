@@ -377,6 +377,9 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<Guid>("ExamId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("LedgerJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier");
 
@@ -389,6 +392,11 @@ namespace Gadfly.Server.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<DateTimeOffset?>("StartedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -399,6 +407,9 @@ namespace Gadfly.Server.Data.Migrations
 
                     b.Property<Guid>("StudentUserId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TranscriptJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
