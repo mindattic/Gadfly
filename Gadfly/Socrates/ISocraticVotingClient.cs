@@ -22,4 +22,18 @@ public interface ISocraticVotingClient
     /// <summary>Panel picks exactly one of <paramref name="options"/> (Legion's DecideAsync). An empty
     /// <see cref="DecisionResult.Choice"/> means no quorum was reached.</summary>
     Task<DecisionResult> DecideAsync(string question, IReadOnlyList<string> options, string context, CancellationToken ct = default);
+
+    /// <summary>
+    /// Sends the same prompt to every active panel provider in parallel and returns each raw reply,
+    /// unparsed. For structured (JSON) work — concept maps, rubrics, judging — where Gadfly aggregates
+    /// the panel itself instead of going through Legion's ballot format.
+    /// </summary>
+    Task<IReadOnlyList<PanelReply>> FanOutAsync(string systemPrompt, string userMessage, int maxTokens = 4096,
+        double temperature = 0.2, CancellationToken ct = default);
+}
+
+/// <summary>One provider's raw reply from <see cref="ISocraticVotingClient.FanOutAsync"/>.</summary>
+public sealed record PanelReply(string ProviderId, string Text, string? Error = null)
+{
+    public bool IsError => Error is not null;
 }

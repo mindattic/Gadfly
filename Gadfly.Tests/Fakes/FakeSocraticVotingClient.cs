@@ -41,4 +41,12 @@ public class FakeSocraticVotingClient : ISocraticVotingClient
         var choice = responses.Count > 0 ? responses.Dequeue() : "";
         return Task.FromResult(new DecisionResult { Question = question, Options = options.ToList(), Choice = choice, QuorumReached = choice.Length > 0 });
     }
+
+    public Task<IReadOnlyList<PanelReply>> FanOutAsync(string systemPrompt, string userMessage, int maxTokens = 4096,
+        double temperature = 0.2, CancellationToken ct = default)
+    {
+        Calls.Add((systemPrompt, userMessage));
+        var text = responses.Count > 0 ? responses.Dequeue() : "";
+        return Task.FromResult<IReadOnlyList<PanelReply>>([new PanelReply("fake", text)]);
+    }
 }
