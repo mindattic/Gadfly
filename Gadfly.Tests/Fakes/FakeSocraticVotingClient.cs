@@ -34,4 +34,11 @@ public class FakeSocraticVotingClient : ISocraticVotingClient
         }).ToList();
         return Task.FromResult(new VotingResult { Question = question, QuorumReached = true, IndividualVotes = votes });
     }
+
+    public Task<DecisionResult> DecideAsync(string question, IReadOnlyList<string> options, string context, CancellationToken ct = default)
+    {
+        Calls.Add((question, context));
+        var choice = responses.Count > 0 ? responses.Dequeue() : "";
+        return Task.FromResult(new DecisionResult { Question = question, Options = options.ToList(), Choice = choice, QuorumReached = choice.Length > 0 });
+    }
 }

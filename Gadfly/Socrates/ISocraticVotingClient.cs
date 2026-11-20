@@ -18,4 +18,8 @@ public interface ISocraticVotingClient
     /// <summary>Vote using specific named voter profiles — used for Prompt 3's three perspectives,
     /// where each individual vote (not the synthesized consensus) is the point.</summary>
     Task<VotingResult> AskWithProfilesAsync(string question, string context, IReadOnlyList<VoterProfile> voters, CancellationToken ct = default);
+
+    /// <summary>Panel picks exactly one of <paramref name="options"/> (Legion's DecideAsync). An empty
+    /// <see cref="DecisionResult.Choice"/> means no quorum was reached.</summary>
+    Task<DecisionResult> DecideAsync(string question, IReadOnlyList<string> options, string context, CancellationToken ct = default);
 }

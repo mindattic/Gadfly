@@ -29,5 +29,8 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
             voters,
             ct);
 
+    public Task<DecisionResult> DecideAsync(string question, IReadOnlyList<string> options, string context, CancellationToken ct = default) =>
+        service.DecideAsync(question, options, context, Quorum.Plurality, ct: ct);
+
     public void Dispose() => http.Dispose();
 }
