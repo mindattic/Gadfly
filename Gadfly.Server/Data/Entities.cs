@@ -240,6 +240,8 @@ public sealed class ExamSession : ITenantOwned
     public string? TranscriptJson { get; set; }
     /// <summary>The claim ledger (ClaimLedger.ToJson), saved with the transcript.</summary>
     public string? LedgerJson { get; set; }
+    /// <summary>When the retention job removed what the student said (GAD-T61); the outcome is kept.</summary>
+    public DateTimeOffset? RedactedAt { get; set; }
     /// <summary>Optimistic-concurrency token: two servers can't both advance one session.</summary>
     public byte[]? RowVersion { get; set; }
     public List<SessionTurn> Turns { get; set; } = [];

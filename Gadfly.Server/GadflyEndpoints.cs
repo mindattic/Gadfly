@@ -45,6 +45,8 @@ public static class GadflyEndpoints
         app.MapGet("/healthz/providers", (Gadfly.Socrates.LegionVotingClient panel) => Results.Json(panel.Health.Snapshot()))
             .RequireAuthorization(GadflyPolicies.SuperAdmin);
 
+        MapPrivacy(app);
+
         // Switch the active organization: only to one the caller is a member of (checked against the
         // sign-in claims by HttpTenantContext on every request, so a forged cookie just falls back).
         app.MapPost("/org/switch", (HttpContext http, [Microsoft.AspNetCore.Mvc.FromForm] Guid organizationId) =>
@@ -56,6 +58,30 @@ public static class GadflyEndpoints
             });
             return Results.LocalRedirect("/");
         });
+    }
+
+    /// <summary>Data-subject export and erasure (GAD-T61).</summary>
+    private static void MapPrivacy(WebApplication app)
+    {
+        // A student downloads their own data; an org admin downloads any member's.
+        app.MapGet("/privacy/export/{userId:guid}", async (Guid userId, ITenantContext tenant, Privacy.PrivacyService privacy, CancellationToken ct) =>
+        {
+            if (tenant.OrganizationId is not { } org) return Results.Forbid();
+            var isSelf = tenant.UserId == userId;
+            var isAdmin = tenant.Role is OrgRoles.Owner or OrgRoles.Admin;
+            if (!isSelf && !isAdmin) return Results.Forbid();
+            var json = await privacy.ExportStudentAsync(org, userId, ct);
+            return Results.File(System.Text.Encoding.UTF8.GetBytes(json), "application/json", $"gadfly-data-{userId:N}.json");
+        });
+
+        // Erasure is an org-admin decision, confirmed by re-typing the word DELETE.
+        app.MapPost("/privacy/erase/{userId:guid}", async (Guid userId, [Microsoft.AspNetCore.Mvc.FromForm] string confirm,
+            ITenantContext tenant, Privacy.PrivacyService privacy, CancellationToken ct) =>
+        {
+            if (confirm != "DELETE") return Results.BadRequest("Type DELETE to confirm.");
+            var n = await privacy.DeleteStudentDataAsync(tenant.OrganizationId!.Value, userId, ct);
+            return Results.LocalRedirect($"/org/members?erased={n}");
+        }).RequireAuthorization(GadflyPolicies.OrgAdmin);
     }
 
     private static bool IsAnonymousAuthPost(RoutePattern pattern)

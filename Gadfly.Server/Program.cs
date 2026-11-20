@@ -2,6 +2,7 @@ using Gadfly.Server;
 using Gadfly.Server.Components;
 using Gadfly.Server.Data;
 using Gadfly.Server.Jobs;
+using Gadfly.Server.Privacy;
 using Gadfly.Server.Sessions;
 using Gadfly.Server.Sources;
 using Gadfly.Server.Tenancy;
@@ -74,6 +75,11 @@ builder.Services.AddJobHandler<SourceProcessingJob>();
 
 // Live exam sessions: one engine per active session, persisted after every step (GAD-T44).
 builder.Services.AddSingleton<SessionOrchestrator>();
+
+// Privacy (GAD-T61): daily retention redaction, per-student export and erasure.
+builder.Services.AddScoped<PrivacyService>();
+builder.Services.AddJobHandler<RetentionJob>();
+builder.Services.AddHostedService<RetentionScheduler>();
 
 // The Gadfly Exams web app (GAD-T48): Blazor Server.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
