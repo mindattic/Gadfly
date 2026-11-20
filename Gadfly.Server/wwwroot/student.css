@@ -27,3 +27,26 @@ button.secondary, a.button.secondary { background: none; color: var(--accent); b
 label.inline { display: flex; gap: .5rem; align-items: flex-start; font-size: .95rem; }
 label.inline input { margin-top: .3rem; }
 textarea { width: 100%; resize: vertical; }
+
+/* Exam room, text mode (GAD-T52). */
+.exam-room { max-width: 760px; margin: 0 auto; }
+.exam-head { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: baseline; justify-content: space-between; margin-bottom: 1rem; }
+.exam-head h1 { margin: 0; }
+.exam-status { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; align-items: center; color: var(--muted); font-size: .92rem; }
+.timer { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 1.15rem; color: var(--ink); padding: .1rem .6rem; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
+.timer-low { color: var(--error); border-color: var(--error); }
+.progress-line { display: inline-flex; gap: .5rem; align-items: center; }
+.progress-line progress { width: 110px; height: .5rem; accent-color: var(--accent); }
+.exam-card { gap: .85rem; }
+.concept { color: var(--accent); font-weight: 600; font-size: .9rem; text-transform: uppercase; letter-spacing: .04em; }
+.exam-question { font-size: 1.35rem; line-height: 1.45; font-weight: 600; }
+.muted-question { color: var(--muted); font-size: 1.1rem; }
+.thinking { display: flex; gap: .65rem; align-items: center; font-weight: 600; }
+.dots { display: inline-flex; gap: .3rem; }
+.dots i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--accent); animation: gadfly-pulse 1.2s infinite ease-in-out; }
+.dots i:nth-child(2) { animation-delay: .2s; }
+.dots i:nth-child(3) { animation-delay: .4s; }
+@keyframes gadfly-pulse { 0%, 80%, 100% { opacity: .25; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: .7; } }
+.finish { margin-top: .5rem; }
+.finish .notice { display: grid; gap: .6rem; }

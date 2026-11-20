@@ -1,0 +1,341 @@
+@page "/exam/{SessionId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Student)]
+@implements IDisposable
+@using Gadfly.Engine
+@using Gadfly.Server.Data
+@using Gadfly.Server.Sessions
+@using Gadfly.Server.Student
+@using Gadfly.Sources
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+@inject SessionOrchestrator Sessions
+@inject NavigationManager Nav
+@inject ILogger<ExamRoom> Log
+
+<HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
+<PageTitle>@(examTitle ?? "Exam") · Gadfly Exams</PageTitle>
+
+<div class="exam-room">
+    <header class="exam-head">
+        <h1>@(examTitle ?? "Exam")</h1>
+        @if (phase is Phase.Answering or Phase.Thinking && step is not null)
+        {
+            <div class="exam-status">
+                <span class="timer @(TimeLeft <= TimeSpan.FromMinutes(2) ? "timer-low" : "")" role="timer" aria-live="off" title="Time left">@Format(TimeLeft)</span>
+                <span class="progress-line">
+                    Topics finished @step.ConceptsClosed of @step.ConceptsTotal
+                    <progress max="@Math.Max(1, step.ConceptsTotal)" value="@step.ConceptsClosed" aria-hidden="true"></progress>
+                </span>
+            </div>
+        }
+    </header>
+
+    @switch (phase)
+    {
+        case Phase.Loading:
+            <p class="hint">Loading your exam…</p>
+            break;
+
+        case Phase.NotFound:
+            <p class="notice">That exam session isn't yours, or it no longer exists. <a href="my-exams">Back to my exams</a></p>
+            break;
+
+        case Phase.Thinking:
+            <section class="panel wide exam-card" aria-busy="true">
+                @if (step?.Question is { } asked && thinkingAbout == ThinkingAbout.Answer)
+                {
+                    <p class="hint">@step.ConceptTitle</p>
+                    <p class="exam-question muted-question">@asked</p>
+                }
+                <div class="thinking" role="status">
+                    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                    @(thinkingAbout switch
+                    {
+                        ThinkingAbout.Answer => "Thinking about your answer…",
+                        ThinkingAbout.Finish => "Submitting your exam…",
+                        _ => "Preparing your question…",
+                    })
+                </div>
+                <p class="hint">This can take a few seconds. Please keep this page open.</p>
+            </section>
+            break;
+
+        case Phase.Answering:
+            <section class="panel wide exam-card">
+                @if (!string.IsNullOrWhiteSpace(step?.ConceptTitle))
+                {
+                    <p class="concept">@step.ConceptTitle</p>
+                }
+                <p class="exam-question" aria-live="polite">@step?.Question</p>
+                <label>
+                    Your answer
+                    <textarea rows="7" @bind="answer" @bind:event="oninput" @bind:after="OnTyped" @onkeydown="OnKeyDown"
+                              placeholder="Answer in your own words…" aria-describedby="answer-hint"></textarea>
+                </label>
+                <p id="answer-hint" class="hint">Ctrl+Enter submits. Answers can't be changed after you submit.</p>
+                <div class="actions">
+                    <button type="button" @onclick="SubmitAsync" disabled="@string.IsNullOrWhiteSpace(answer)">Submit answer</button>
+                    <button type="button" class="secondary" @onclick="DontKnowAsync">I don't know</button>
+                </div>
+                @if (error is not null)
+                {
+                    <p class="error" role="alert">@error</p>
+                }
+            </section>
+
+            <section class="finish">
+                @if (!confirmFinish)
+                {
+                    <button type="button" class="link" @onclick="() => confirmFinish = true">Finish and leave the exam</button>
+                }
+                else
+                {
+                    <div class="notice" role="alertdialog" aria-labelledby="finish-q">
+                        <p id="finish-q"><strong>Finish the exam now?</strong> What you've answered so far is submitted and this attempt is used up. You can't come back to it.</p>
+                        <div class="actions">
+                            <button type="button" @onclick="FinishAsync">Yes, finish now</button>
+                            <button type="button" class="secondary" @onclick="() => confirmFinish = false">Keep going</button>
+                        </div>
+                    </div>
+                }
+            </section>
+            break;
+
+        case Phase.Ended:
+            <section class="panel wide exam-card">
+                <h2>Your answers were submitted</h2>
+                @if (endNote is not null)
+                {
+                    <p>@endNote</p>
+                }
+                <p>Your instructor will review your exam and release results. You'll see them on <a href="my-exams">My exams</a>.</p>
+                <a class="button" href="my-exams">Back to my exams</a>
+            </section>
+            break;
+
+        case Phase.Error:
+            <section class="panel wide exam-card">
+                <p class="error" role="alert">@error</p>
+                <div class="actions">
+                    <button type="button" @onclick="RetryAsync">Try again</button>
+                    <a class="button secondary" href="my-exams">Back to my exams</a>
+                </div>
+            </section>
+            break;
+    }
+</div>
+
+@code {
+    [Parameter] public Guid SessionId { get; set; }
+
+    private enum Phase { Loading, NotFound, Thinking, Answering, Ended, Error }
+    private enum ThinkingAbout { Question, Answer, Finish }
+
+    private Phase phase = Phase.Loading;
+    private ThinkingAbout thinkingAbout;
+    private SessionStep? step;
+    private string? examTitle, error, endNote;
+    private string answer = "";
+    private DateTimeOffset? answerStartedAt;
+    private DateTimeOffset deadline;
+    private bool busy, confirmFinish, timeUpHandled;
+    /// <summary>The answer to resend when a step failed partway (e.g. a panel call timed out).</summary>
+    private string? pendingAnswer;
+
+    private readonly CancellationTokenSource stop = new();
+    private PeriodicTimer? ticker;
+
+    private TimeSpan TimeLeft
+    {
+        get
+        {
+            var left = deadline - Clock.GetUtcNow();
+            return left < TimeSpan.Zero ? TimeSpan.Zero : left;
+        }
+    }
+
+    // Load only once interactive: the first step can call the panel, which must not run during prerender.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await LoadAsync();
+        StateHasChanged();
+        _ = TickAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user)
+        {
+            phase = Phase.NotFound;
+            return;
+        }
+        var info = await StudentExams.SessionAsync(Scopes, org, user, SessionId);
+        if (info is not { } s)
+        {
+            phase = Phase.NotFound;
+            return;
+        }
+        examTitle = s.ExamTitle;
+        switch (s.State)
+        {
+            case SessionState.Created:
+                // Consent first.
+                Nav.NavigateTo($"my-exams/{s.AssignmentId}/start");
+                return;
+            case SessionState.Ended:
+                phase = Phase.Ended;
+                return;
+            case SessionState.Failed:
+                phase = Phase.Error;
+                error = "This exam session could not continue. Ask your instructor to reset it.";
+                return;
+        }
+        await RunStepAsync(ThinkingAbout.Question, () => Sessions.CurrentAsync(org, SessionId, user));
+    }
+
+    /// <summary>Runs one orchestrator step with the thinking state shown, then shows its result.</summary>
+    private async Task RunStepAsync(ThinkingAbout about, Func<Task<SessionStep>> run)
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        confirmFinish = false;
+        thinkingAbout = about;
+        var previous = phase;
+        phase = Phase.Thinking;
+        StateHasChanged();
+        try
+        {
+            Apply(await run());
+            pendingAnswer = null;
+        }
+        catch (SessionRefusedException ex)
+        {
+            error = ex.Message;
+            phase = previous == Phase.Answering ? Phase.Answering : Phase.Error;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !stop.IsCancellationRequested)
+        {
+            Log.LogError(ex, "Exam room step failed for session {SessionId}.", SessionId);
+            error = "Something went wrong on our side. Your progress is saved; press \"Try again\" to continue.";
+            phase = Phase.Error;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void Apply(SessionStep next)
+    {
+        step = next;
+        deadline = Clock.GetUtcNow() + next.Remaining;
+        if (next.State == SessionState.Ended || next.Question is null)
+        {
+            phase = Phase.Ended;
+            endNote = next.EndReason switch
+            {
+                nameof(EndReason.TimeUp) => "Time ran out.",
+                nameof(EndReason.Abandoned) => "You finished the exam early.",
+                nameof(EndReason.Mastery) or nameof(EndReason.Aporia) or nameof(EndReason.TurnLimit) => "The examiner has finished asking questions.",
+                _ => null,
+            };
+            return;
+        }
+        // A new question clears the answer box; the same question (a resume) keeps what was typed.
+        if (next.TurnIndex != shownTurn)
+        {
+            answer = "";
+            answerStartedAt = null;
+            shownTurn = next.TurnIndex;
+        }
+        timeUpHandled = false;
+        phase = Phase.Answering;
+    }
+
+    private int? shownTurn;
+
+    private void OnTyped()
+    {
+        if (answerStartedAt is null && answer.Length > 0) answerStartedAt = Clock.GetUtcNow();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey) && !string.IsNullOrWhiteSpace(answer)) await SubmitAsync();
+    }
+
+    private Task SubmitAsync() => SendAsync(answer.Trim());
+
+    private Task DontKnowAsync() => SendAsync(SourceExamEngine.AporiaWord);
+
+    private async Task SendAsync(string text)
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user || string.IsNullOrWhiteSpace(text)) return;
+        pendingAnswer = text;
+        var submitted = new Answer
+        {
+            Text = text,
+            Mode = "text",
+            StartedAt = answerStartedAt,
+            CompletedAt = Clock.GetUtcNow(),
+        };
+        await RunStepAsync(ThinkingAbout.Answer, () => Sessions.AnswerAsync(org, SessionId, user, submitted));
+    }
+
+    private async Task FinishAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        await RunStepAsync(ThinkingAbout.Finish, () => Sessions.EndAsync(org, SessionId, user, EndReason.Abandoned));
+    }
+
+    private async Task RetryAsync()
+    {
+        if (pendingAnswer is { } text) await SendAsync(text);
+        else await LoadAsync();
+    }
+
+    /// <summary>Ticks the countdown locally between steps; the server's Remaining resets it on every step.</summary>
+    private async Task TickAsync()
+    {
+        ticker = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        try
+        {
+            while (await ticker.WaitForNextTickAsync(stop.Token))
+            {
+                await InvokeAsync(async () =>
+                {
+                    if (phase is not (Phase.Answering or Phase.Thinking)) return;
+                    if (phase == Phase.Answering && !busy && !timeUpHandled && step is not null && TimeLeft <= TimeSpan.Zero)
+                    {
+                        timeUpHandled = true;
+                        await TimeUpAsync();
+                    }
+                    StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (ObjectDisposedException) { }
+    }
+
+    /// <summary>Time's up: hand in what's typed (the server then ends the session), or end it outright.</summary>
+    private async Task TimeUpAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        if (!string.IsNullOrWhiteSpace(answer)) await SendAsync(answer.Trim());
+        else await RunStepAsync(ThinkingAbout.Finish, () => Sessions.EndAsync(org, SessionId, user, EndReason.TimeUp));
+    }
+
+    private static string Format(TimeSpan t) =>
+        t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes:00}:{t.Seconds:00}";
+
+    public void Dispose()
+    {
+        stop.Cancel();
+        ticker?.Dispose();
+        stop.Dispose();
+    }
+}
