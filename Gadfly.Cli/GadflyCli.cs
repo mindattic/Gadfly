@@ -21,6 +21,7 @@ public static class GadflyCli
             "interrogate" => await InterrogateCommand.RunAsync(rest),
             "reflect" => await ReflectCommand.RunAsync(rest),
             "examine" => await ExamineCommand.RunAsync(rest),
+            "exam" => await ExamCommand.RunAsync(rest),
             "version" => PrintVersion(),
             _ => Unknown(command),
         };
@@ -56,6 +57,7 @@ public static class GadflyCli
         Console.WriteLine("  interrogate [opts]   Prompt 1 — Socratic Elenchus REPL until you reach Aporia.");
         Console.WriteLine("  reflect [opts]       Prompt 2 — one-shot Final Reflection.");
         Console.WriteLine("  examine [opts]       Prompt 3 — Socrates/Confucius/Buddha, three perspectives.");
+        Console.WriteLine("  exam --source <path> A Socratic exam over your own source material, judged by the panel.");
         Console.WriteLine("  version              Print the gadfly version.");
         Console.WriteLine();
         Console.WriteLine("Run 'gadfly <command> --help' for command-specific options.");

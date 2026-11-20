@@ -36,6 +36,10 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
                 new Dictionary<string, string?> { ["passages"] = PanelJson.Number(batch) });
             var replies = await panel.FanOutAsync(PanelJson.JsonOnlySystem, prompt, maxTokens: 6000, ct: ct);
             var parsed = replies.Where(r => !r.IsError).Select(r => PanelJson.ParseObject(r.Text)).Where(d => d is not null).ToList();
+            foreach (var r in replies.Where(r => r.IsError))
+                progress?.Report($"{r.ProviderId} failed: {r.Error}");
+            foreach (var r in replies.Where(r => !r.IsError && PanelJson.ParseObject(r.Text) is null))
+                progress?.Report($"{r.ProviderId} returned no JSON: {Snippet(r.Text)}");
             if (parsed.Count == 0) continue;
             var needed = parsed.Count <= 2 ? 1 : (parsed.Count + 1) / 2;
 
@@ -95,6 +99,9 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
             Relations = rel,
         };
     }
+
+    private static string Snippet(string text) =>
+        text.Length == 0 ? "(empty reply)" : text.Length <= 160 ? text.ReplaceLineEndings(" ") : text[..160].ReplaceLineEndings(" ") + "...";
 
     private List<List<SourcePassage>> Batch(IReadOnlyList<SourcePassage> passages)
     {

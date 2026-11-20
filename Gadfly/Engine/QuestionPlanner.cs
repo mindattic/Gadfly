@@ -115,8 +115,10 @@ public sealed class QuestionPlanner
         // 1. The elenchus first: a contradiction not yet put to the student.
         var confronted = new HashSet<string>(
             session.Turns.Where(t => t.Move == MoveKind.Contradiction).SelectMany(t => t.TargetClaimIds), StringComparer.Ordinal);
-        var pending = contradictions?.FirstOrDefault(c => c.ConceptId == conceptId
-            && !(confronted.Contains(c.FirstClaimId) && confronted.Contains(c.SecondClaimId)));
+        // A claim already put to the student is not confronted again, and two Contradiction moves
+        // never come back to back: the student gets a turn to recover first.
+        var pending = last.Move == MoveKind.Contradiction ? null : contradictions?.FirstOrDefault(c => c.ConceptId == conceptId
+            && !confronted.Contains(c.FirstClaimId) && !confronted.Contains(c.SecondClaimId));
         if (pending is not null)
             return new PlanDecision
             {
