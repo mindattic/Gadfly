@@ -15,7 +15,7 @@
     <Title>Gadfly.Core</Title>
     <Authors>MindAttic</Authors>
     <Company>MindAttic</Company>
-    <Description>Mines your own Claude Code transcripts and claude.ai export into a corpus, then cross-examines you Socrates-style through MindAttic.Legion's multi-LLM voting until you reach Aporia.</Description>
+    <Description>Gadfly.Core: the subject-agnostic Socratic engine. Runs Socratic questioning and judging through MindAttic.Legion multi-LLM voting for any subject an app supplies.</Description>
     <PackageTags>mindattic;gadfly;socratic;legion;introspection;cli</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Copyright>Copyright (c) 2026 MindAttic</Copyright>

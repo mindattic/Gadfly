@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Gadfly\Gadfly.csproj" />
+    <ProjectReference Include="..\Gadfly.Personal\Gadfly.Personal.csproj" />
     <ProjectReference Include="..\Gadfly.Cli\Gadfly.Cli.csproj" />
   </ItemGroup>
 

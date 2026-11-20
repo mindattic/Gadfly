@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Gadfly.Personal: the personal introspection subject. Ingests your own Claude Code
+       transcripts and claude.ai export into a local corpus and runs the three irrevocable
+       prompts (Interrogation, Reflection, Master) over it. Built on the subject-agnostic
+       Socratic engine in Gadfly.Core (docs/SOCRATIC_PLATFORM.md). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Gadfly</RootNamespace>
+    <AssemblyName>Gadfly.Personal</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>1.0.0</Version>
+    <PackageId>Gadfly.Personal</PackageId>
+    <Title>Gadfly.Personal</Title>
+    <Authors>MindAttic</Authors>
+    <Company>MindAttic</Company>
+    <Description>Gadfly's personal introspection subject: mines your own Claude Code transcripts and claude.ai export into a corpus and cross-examines you about it through the Gadfly.Core Socratic engine.</Description>
+    <PackageTags>mindattic;gadfly;socratic;legion;introspection</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Copyright>Copyright (c) 2026 MindAttic</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Gadfly\Gadfly.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Gadfly.Tests" />
+    <InternalsVisibleTo Include="gadfly" />
+  </ItemGroup>
+
+</Project>

@@ -162,10 +162,15 @@ quality isn't NUnit's job.
 ## Project layout
 
 ```
-Gadfly/                  Core library (ingestion, corpus, mining, Legion wiring, Socratic runners)
+Gadfly/                  Gadfly.Core: the subject-agnostic Socratic engine (Legion voting client, tier resolver, configuration)
+Gadfly.Personal/          The personal introspection subject: ingestion, corpus, mining, the three irrevocable prompts and their runners
 Gadfly.Cli/               The `gadfly` executable and its command classes
 Gadfly.Tests/             NUnit tests + fixtures
 ```
+
+Gadfly is becoming a general Socratic engine that any app can embed, with the personal tool above as one
+consumer. The first new consumer is a spoken Socratic exam platform: see
+[docs/SOCRATIC_PLATFORM.md](docs/SOCRATIC_PLATFORM.md).
 
 ## Glossary
 
