@@ -1,0 +1,8 @@
+/* Exam builder and assignments (GAD-T50). Loaded by the pages under Components/Pages/Exams. */
+.eb-list { border: 1px solid var(--line); border-radius: 6px; padding: .5rem .75rem; display: grid; gap: .3rem; margin: 0; }
+.eb-list.scroll { max-height: 22rem; overflow-y: auto; }
+.eb-list legend { padding: 0 .25rem; font-size: .9rem; }
+label.eb-check { display: flex; gap: .5rem; align-items: flex-start; }
+label.eb-check input { margin-top: .3rem; }
+.eb-actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.eb-toolbar { margin: 0 0 1rem; }

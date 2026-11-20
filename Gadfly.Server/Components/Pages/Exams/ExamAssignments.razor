@@ -1,0 +1,189 @@
+@inject IJSRuntime JS
+
+@* Assigning a published exam and releasing results (GAD-T50). Hosted by ExamBuilder. *@
+
+@if (CanAssign)
+{
+    <div class="panel">
+        <h2>Assign to students</h2>
+        @if (students is null)
+        {
+            <p class="hint">Loading…</p>
+        }
+        else if (students.Count == 0)
+        {
+            <p class="hint">This organization has no students yet. Add them under Members.</p>
+        }
+        else
+        {
+            <label class="eb-check">
+                <input type="checkbox" checked="@allStudents" @onchange="e => allStudents = e.Value is true" />
+                <span>All students (@students.Count)</span>
+            </label>
+            @if (!allStudents)
+            {
+                <fieldset class="eb-list scroll">
+                    <legend>Students</legend>
+                    @foreach (var s in students)
+                    {
+                        var already = assignedIds.Contains(s.UserId);
+                        <label class="eb-check">
+                            <input type="checkbox" disabled="@already" checked="@(already || picked.Contains(s.UserId))"
+                                   @onchange="e => Pick(s.UserId, e.Value is true)" />
+                            <span>@s.UserName @if (!string.IsNullOrEmpty(s.Email)) { <span class="hint">@s.Email</span> } @if (already) { <span class="hint">(assigned)</span> }</span>
+                        </label>
+                    }
+                </fieldset>
+            }
+            <label>Opens (optional, your time @OffsetLabel) <input type="datetime-local" @bind="opensLocal" /></label>
+            <label>Closes (optional, your time @OffsetLabel) <input type="datetime-local" @bind="closesLocal" /></label>
+            <label>Attempts allowed <input type="number" min="1" max="20" @bind="attempts" /></label>
+            <p class="hint">Students already assigned to this exam are skipped. Email invitations arrive with M.AUTH-T35; for now students see the exam under My exams.</p>
+            <button type="button" disabled="@busy" @onclick="AssignAsync">Assign</button>
+        }
+        @if (message is not null)
+        {
+            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+        }
+    </div>
+}
+
+<h2>Assignments</h2>
+@if (rows is null)
+{
+    <p class="hint">Loading…</p>
+}
+else if (rows.Count == 0)
+{
+    <p class="hint">Not assigned to anyone yet.</p>
+}
+else
+{
+    <table class="grid">
+        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Latest session</th><th>Results</th></tr></thead>
+        <tbody>
+            @foreach (var r in rows)
+            {
+                <tr>
+                    <td>@r.StudentName</td>
+                    <td>@Window(r)</td>
+                    <td>@r.AttemptsUsed / @r.AttemptsAllowed</td>
+                    <td>@(r.LatestState is { } st ? StateLabel(st) + (r.LatestEndedAt is { } end ? $" {Local(end)}" : "") : "not started")</td>
+                    <td>
+                        @if (r.ResultsReleasedAt is { } rel)
+                        {
+                            <span class="ok">released @Local(rel)</span>
+                        }
+                        else
+                        {
+                            <button type="button" class="link" disabled="@busy" @onclick="() => ReleaseAsync(r)">Release results</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <p class="hint">Releasing results lets that student see their report. You decide when; review the session first.</p>
+    @if (!CanAssign && message is not null)
+    {
+        <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public ExamService Service { get; set; } = default!;
+    [Parameter, EditorRequired] public Guid ExamId { get; set; }
+    [Parameter] public bool CanAssign { get; set; }
+
+    private IReadOnlyList<StudentOption>? students;
+    private IReadOnlyList<AssignmentRow>? rows;
+    private HashSet<Guid> assignedIds = [];
+    private readonly HashSet<Guid> picked = [];
+    private bool allStudents = true;
+    private DateTime? opensLocal, closesLocal;
+    private int attempts = 1;
+    private TimeSpan offset = TimeSpan.Zero;
+    private string? message;
+    private bool ok, busy;
+
+    private string OffsetLabel => offset == TimeSpan.Zero ? "(UTC)" : $"(UTC{(offset < TimeSpan.Zero ? "-" : "+")}{offset.Duration():hh\\:mm})";
+
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            // getTimezoneOffset is minutes behind UTC (positive west of Greenwich).
+            await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/exams.js");
+            var minutes = await module.InvokeAsync<int>("timezoneOffsetMinutes");
+            offset = TimeSpan.FromMinutes(-minutes);
+            StateHasChanged();
+        }
+        catch (JSException)
+        {
+            // Keep UTC.
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit gone.
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        rows = await Service.AssignmentsAsync(ExamId);
+        assignedIds = rows.Select(r => r.StudentUserId).ToHashSet();
+        if (CanAssign) students = await Service.StudentsAsync();
+    }
+
+    private void Pick(Guid id, bool on)
+    {
+        if (on) picked.Add(id); else picked.Remove(id);
+    }
+
+    private async Task AssignAsync()
+    {
+        busy = true;
+        var r = await Service.AssignAsync(ExamId, allStudents ? null : picked.ToList(), ToUtc(opensLocal), ToUtc(closesLocal), attempts);
+        ok = r.Ok;
+        message = r.Message;
+        if (r.Ok) picked.Clear();
+        await LoadAsync();
+        busy = false;
+    }
+
+    private async Task ReleaseAsync(AssignmentRow row)
+    {
+        busy = true;
+        var r = await Service.ReleaseResultsAsync(row.Id);
+        ok = r.Ok;
+        message = r.Ok ? $"{row.StudentName}: {r.Message}" : r.Message;
+        await LoadAsync();
+        busy = false;
+    }
+
+    private DateTimeOffset? ToUtc(DateTime? local) =>
+        local is { } l ? new DateTimeOffset(DateTime.SpecifyKind(l, DateTimeKind.Unspecified), offset).ToUniversalTime() : null;
+
+    private string Local(DateTimeOffset t) => t.ToOffset(offset).ToString("yyyy-MM-dd HH:mm");
+
+    private string Window(AssignmentRow r) => (r.OpensAt, r.ClosesAt) switch
+    {
+        (null, null) => "any time",
+        ({ } o, null) => $"from {Local(o)}",
+        (null, { } c) => $"until {Local(c)}",
+        ({ } o, { } c) => $"{Local(o)} – {Local(c)}",
+    };
+
+    private static string StateLabel(SessionState s) => s switch
+    {
+        SessionState.Created => "opened",
+        SessionState.ConsentGiven => "consented",
+        SessionState.Running => "in progress",
+        SessionState.Paused => "paused",
+        SessionState.Ended => "ended",
+        _ => "failed",
+    };
+}

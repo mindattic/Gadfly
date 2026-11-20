@@ -1,0 +1,269 @@
+@page "/exams/new"
+@page "/exams/{Id:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Instructor)]
+@inject GadflyDbContext Db
+@inject ITenantContext Tenant
+@inject IOrganizationDirectory Directory
+@inject TimeProvider Clock
+@inject NavigationManager Nav
+
+<PageTitle>@(Id is null ? "New exam" : draft?.Title ?? "Exam") · Gadfly Exams</PageTitle>
+<h1>@(Id is null ? "New exam" : draft?.Title ?? "Exam") @if (draft?.Id is not null) { <span>· @draft.Status</span> }</h1>
+<p class="eb-toolbar"><a href="exams">← All exams</a></p>
+<HeadContent><link rel="stylesheet" href="exams.css" /></HeadContent>
+
+@if (notFound)
+{
+    <p class="notice">That exam does not exist in this organization.</p>
+}
+else if (draft is null)
+{
+    <p class="hint">Loading…</p>
+}
+else
+{
+    @if (Frozen)
+    {
+        <p class="notice">
+            This exam is @draft.Status.ToString().ToLowerInvariant()@(draft.PublishedAt is { } at ? $" (published {at:yyyy-MM-dd})" : ""),
+            so its settings are frozen. Saving changes creates a copy as a new draft; this exam stays as it is.
+        </p>
+    }
+
+    <div class="panel">
+        <h2>Source and concepts</h2>
+        <label>Source collection
+            <select value="@(draft.CollectionId == Guid.Empty ? "" : draft.CollectionId.ToString())" @onchange="CollectionChangedAsync">
+                <option value="">Choose a collection…</option>
+                @foreach (var c in collections)
+                {
+                    <option value="@c.Id">@c.Title (concept map v@(c.ConceptMapVersion))</option>
+                }
+                @if (draft.CollectionId != Guid.Empty && collections.All(c => c.Id != draft.CollectionId))
+                {
+                    <option value="@draft.CollectionId">(collection not ready)</option>
+                }
+            </select>
+        </label>
+        @if (collections.Count == 0)
+        {
+            <p class="hint">No source collection has a ready concept map yet. Upload material under Source material first.</p>
+        }
+
+        @if (draft.CollectionId != Guid.Empty)
+        {
+            <fieldset class="eb-list scroll">
+                <legend>Concepts to examine <span class="hint">(numbers show the order they will be examined: the order you tick them)</span></legend>
+                @if (concepts.Count == 0)
+                {
+                    <p class="hint">This collection has no concepts.</p>
+                }
+                @foreach (var c in concepts)
+                {
+                    var pos = draft.ConceptKeys.IndexOf(c.Key);
+                    <label class="eb-check" title="@c.Definition">
+                        <input type="checkbox" checked="@(pos >= 0)" @onchange="e => ToggleConcept(c.Key, e.Value is true)" />
+                        <span>@(pos >= 0 ? $"{pos + 1}. " : "")@c.Title</span>
+                    </label>
+                }
+                @foreach (var gone in draft.ConceptKeys.Where(k => concepts.All(c => c.Key != k)).ToList())
+                {
+                    <label class="eb-check error">
+                        <input type="checkbox" checked @onchange="_ => ToggleConcept(gone, false)" />
+                        <span>@(draft.ConceptKeys.IndexOf(gone) + 1). @gone (no longer in the concept map)</span>
+                    </label>
+                }
+                <p class="hint">
+                    @draft.ConceptKeys.Count selected.
+                    @if (concepts.Count > 0)
+                    {
+                        <button type="button" class="link" @onclick="SelectAll">Select all</button>
+                        <text> · </text>
+                        <button type="button" class="link" @onclick="() => draft.ConceptKeys.Clear()">Clear</button>
+                    }
+                </p>
+            </fieldset>
+        }
+    </div>
+
+    <div class="panel">
+        <h2>Exam settings</h2>
+        <label>Title <input @bind="draft.Title" maxlength="200" /></label>
+        <label>Duration (minutes) <input type="number" min="@ExamService.MinDurationMinutes" max="@ExamService.MaxDurationMinutes" @bind="draft.DurationMinutes" /></label>
+        <label>Difficulty
+            <select @bind="draft.Difficulty">
+                @for (var d = 1; d <= 5; d++)
+                {
+                    <option value="@d">@d · @DifficultyName(d)</option>
+                }
+            </select>
+        </label>
+        <label>Most follow-up questions per concept <input type="number" min="0" max="@ExamService.MaxFollowUpsLimit" @bind="draft.MaxFollowUps" /></label>
+        <p class="hint">The examiner moves on sooner when a concept is clearly mastered or clearly not understood.</p>
+        <label>Mode
+            <select @bind="draft.Mode">
+                <option value="@ExamMode.Voice">Voice: the examiner speaks, the student answers aloud</option>
+                <option value="@ExamMode.Text">Text: questions and answers are typed</option>
+            </select>
+        </label>
+        <fieldset class="eb-list">
+            <legend>Integrity monitoring</legend>
+            @foreach (var level in Enum.GetValues<IntegrityLevel>())
+            {
+                <label class="eb-check">
+                    <input type="radio" name="integrity" checked="@(draft.IntegrityLevel == level)" @onchange="() => draft.IntegrityLevel = level" />
+                    <span><strong>@level</strong>: @IntegrityHint(level)</span>
+                </label>
+            }
+            <p class="hint">Signals are evidence for you to review. Nobody is failed automatically.</p>
+        </fieldset>
+        <label>Examiner voice id <input @bind="draft.VoiceId" placeholder="default voice" /></label>
+        <label>Examiner avatar id <input @bind="draft.AvatarId" placeholder="default examiner" /></label>
+        <p class="hint">Voice and avatar choices are free text until the voice (D4) and avatar (D3) decisions land; blank uses the defaults.</p>
+        <label>Instructions shown to students <textarea rows="4" @bind="draft.Instructions"></textarea></label>
+
+        <div class="eb-actions">
+            <button type="button" disabled="@busy" @onclick="SaveAsync">@(Frozen ? "Save as new draft" : "Save draft")</button>
+            @if (draft.Id is not null && draft.Status == ExamStatus.Draft)
+            {
+                <button type="button" disabled="@busy" @onclick="PublishAsync">Publish</button>
+            }
+            @if (draft.Id is not null && draft.Status != ExamStatus.Archived)
+            {
+                <button type="button" class="link" disabled="@busy" @onclick="ArchiveAsync">Archive</button>
+            }
+        </div>
+        @if (draft.Id is not null && draft.Status == ExamStatus.Draft)
+        {
+            <p class="hint">Publish uses the last saved draft: save your changes first. Publishing freezes the settings.</p>
+        }
+        @if (message is not null)
+        {
+            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+        }
+    </div>
+
+    @if (draft.Id is { } examId && draft.Status != ExamStatus.Draft)
+    {
+        <ExamAssignments @key="examId" Service="svc" ExamId="examId" CanAssign="@(draft.Status == ExamStatus.Published)" />
+    }
+}
+
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private ExamService svc = default!;
+    private ExamDraft? draft;
+    private IReadOnlyList<CollectionOption> collections = [];
+    private IReadOnlyList<ConceptOption> concepts = [];
+    private string? message;
+    private bool ok, busy, notFound;
+
+    private bool Frozen => draft is { Id: not null, Status: not ExamStatus.Draft };
+
+    protected override void OnInitialized() => svc = new ExamService(Db, Tenant, Directory, Clock);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        notFound = false;
+        collections = await svc.ReadyCollectionsAsync();
+        if (Id is { } id)
+        {
+            draft = await svc.GetAsync(id);
+            if (draft is null)
+            {
+                notFound = true;
+                return;
+            }
+        }
+        else if (draft?.Id is not null || draft is null)
+        {
+            draft = new ExamDraft();
+            if (collections.Count == 1) draft.CollectionId = collections[0].Id;
+        }
+        concepts = draft.CollectionId == Guid.Empty ? [] : await svc.ConceptsAsync(draft.CollectionId);
+    }
+
+    private async Task CollectionChangedAsync(ChangeEventArgs e)
+    {
+        if (draft is null) return;
+        draft.CollectionId = Guid.TryParse(e.Value?.ToString(), out var g) ? g : Guid.Empty;
+        draft.ConceptKeys.Clear();
+        concepts = draft.CollectionId == Guid.Empty ? [] : await svc.ConceptsAsync(draft.CollectionId);
+    }
+
+    private void ToggleConcept(string key, bool on)
+    {
+        if (draft is null) return;
+        draft.ConceptKeys.Remove(key);
+        if (on) draft.ConceptKeys.Add(key);
+    }
+
+    private void SelectAll()
+    {
+        if (draft is null) return;
+        foreach (var c in concepts.Where(c => !draft.ConceptKeys.Contains(c.Key))) draft.ConceptKeys.Add(c.Key);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (draft is null) return;
+        busy = true;
+        var r = await svc.SaveDraftAsync(draft);
+        Show(r);
+        busy = false;
+        if (r.Ok && r.Id is { } id && id != draft.Id)
+        {
+            // New exam or a copy of a frozen one: go to it (keeps the message).
+            var keep = message;
+            Nav.NavigateTo($"exams/{id}");
+            message = keep;
+            ok = true;
+        }
+        else if (r.Ok && r.Id is { } same)
+        {
+            draft = await svc.GetAsync(same) ?? draft;
+        }
+    }
+
+    private async Task PublishAsync()
+    {
+        if (draft?.Id is not { } id) return;
+        busy = true;
+        Show(await svc.PublishAsync(id));
+        draft = await svc.GetAsync(id) ?? draft;
+        busy = false;
+    }
+
+    private async Task ArchiveAsync()
+    {
+        if (draft?.Id is not { } id) return;
+        busy = true;
+        Show(await svc.ArchiveAsync(id));
+        draft = await svc.GetAsync(id) ?? draft;
+        busy = false;
+    }
+
+    private void Show(ExamResult r)
+    {
+        ok = r.Ok;
+        message = r.Message;
+    }
+
+    private static string DifficultyName(int d) => d switch
+    {
+        1 => "gentle",
+        2 => "easy",
+        3 => "standard",
+        4 => "demanding",
+        _ => "rigorous",
+    };
+
+    private static string IntegrityHint(IntegrityLevel level) => level switch
+    {
+        IntegrityLevel.Off => "no monitoring; only the answers are recorded.",
+        IntegrityLevel.Standard => "browser focus and answer-text signals are flagged for your review.",
+        _ => "adds webcam and audio signals (faces, other voices, off-screen reading) for your review.",
+    };
+}

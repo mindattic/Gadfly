@@ -1,0 +1,51 @@
+@page "/exams"
+@attribute [Authorize(Policy = GadflyPolicies.Instructor)]
+@inject GadflyDbContext Db
+@inject ITenantContext Tenant
+@inject IOrganizationDirectory Directory
+@inject TimeProvider Clock
+@inject NavigationManager Nav
+
+<PageTitle>Exams · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="exams.css" /></HeadContent>
+<h1>Exams</h1>
+
+<p class="eb-toolbar"><button type="button" @onclick='() => Nav.NavigateTo("exams/new")'>New exam</button></p>
+
+@if (exams is null)
+{
+    <p class="hint">Loading…</p>
+}
+else if (exams.Count == 0)
+{
+    <p class="notice">No exams yet. Build one from a source collection whose concept map is ready.</p>
+}
+else
+{
+    <table class="grid">
+        <thead><tr><th>Title</th><th>Collection</th><th>Status</th><th>Assigned</th><th>Sessions started</th><th>Sessions ended</th></tr></thead>
+        <tbody>
+            @foreach (var e in exams)
+            {
+                <tr>
+                    <td><a href="exams/@e.Id">@e.Title</a></td>
+                    <td>@e.CollectionTitle</td>
+                    <td>@e.Status</td>
+                    <td>@e.Assigned</td>
+                    <td>@e.SessionsStarted</td>
+                    <td>@e.SessionsEnded</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IReadOnlyList<ExamSummary>? exams;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var svc = new ExamService(Db, Tenant, Directory, Clock);
+        exams = await svc.ListAsync();
+    }
+}
