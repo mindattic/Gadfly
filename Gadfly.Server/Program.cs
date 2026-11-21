@@ -10,6 +10,7 @@ using Gadfly.Server.Tenancy;
 using Gadfly.Socrates;
 using Gadfly.Sources;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using MindAttic.Authentication.Services;
@@ -48,8 +49,20 @@ builder.Services.AddMindAtticAuthentication<GadflyDbContext>(builder.Configurati
     o.AppName = "Gadfly";
     o.IsProduction = !builder.Environment.IsDevelopment();
     o.ConfigureAdditionalPolicies = TenancyAuthorization.Configure;
-    // Production Data Protection (Blob + Key Vault) is wired with the Azure deployment (GAD-T63); until
-    // then a production start fails closed, which is what the library intends.
+    if (o.IsProduction)
+    {
+        // Production key ring (GAD-T63): persisted in Blob Storage and wrapped by a Key Vault key, reached
+        // with the App Service's managed identity. Missing settings stop startup (fail closed).
+        o.ConfigureDataProtection = dp =>
+        {
+            var cred = new Azure.Identity.DefaultAzureCredential();
+            var blobUri = builder.Configuration["DataProtection:BlobUri"]
+                ?? throw new InvalidOperationException("DataProtection:BlobUri is required in production.");
+            var keyId = builder.Configuration["DataProtection:KeyVaultKeyId"]
+                ?? throw new InvalidOperationException("DataProtection:KeyVaultKeyId is required in production.");
+            dp.PersistKeysToAzureBlobStorage(new Uri(blobUri), cred).ProtectKeysWithAzureKeyVault(new Uri(keyId), cred);
+        };
+    }
 });
 builder.Services.AddScoped<IAuthorizationHandler, OrgRoleHandler>();
 builder.Services.AddAuthentication().AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
