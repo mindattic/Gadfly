@@ -38,7 +38,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Demo and classroom source notes, seeded with --seed-demo / --seed-classroom (GAD-T103, GAD-T151). -->
+    <!-- Demo and classroom source notes, used by the demo and classroom seeders (GAD-T103, GAD-T151). -->
     <None Include="Demo\Material\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
