@@ -155,6 +155,17 @@ public static class ObjectiveAssessor
     /// <summary>True when no judge gave a usable verdict: the answer is not evidence either way until a human grades it.</summary>
     public static bool IsUnjudged(AnswerJudgment j) => j.Criteria.Count == 0 && j.NeedsHumanReview;
 
+    /// <summary>
+    /// How well the student resolved a contradiction put to them (GAD-T266). A contradiction shows only that two claims
+    /// cannot both stand, not which is wrong, and revising either is a legitimate resolution, so the confrontation is
+    /// settled by the judge's consistency criterion (which, on a Contradiction move, scores the resolution) rather than by
+    /// the overall score, whose accuracy part depends on which claim the student kept. Falls back to the overall score
+    /// when the panel gave no consistency score.
+    /// </summary>
+    public static double ResolutionScore(AnswerJudgment j) =>
+        j.Criteria.FirstOrDefault(c => string.Equals(c.Criterion, "consistency", StringComparison.OrdinalIgnoreCase))?.Score
+        ?? j.OverallScore;
+
     public static AnswerResult ResultOf(double score) =>
         score >= PositiveAtOrAbove ? AnswerResult.Positive : score < NegativeBelow ? AnswerResult.Negative : AnswerResult.Mixed;
 
@@ -242,7 +253,7 @@ public static class ObjectiveAssessor
             var judgedTurn = asked.FirstOrDefault(t => t.Answer is not null && t.Judgment is { } tj && !IsUnjudged(tj));
             if (asked.Count == 0) unconfronted++;
             else if (judgedTurn is null) unjudgedConfrontations++;
-            else if (judgedTurn.Judgment!.OverallScore < 0.5) failedConfrontations++;
+            else if (ResolutionScore(judgedTurn.Judgment!) < 0.5) failedConfrontations++;
         }
         var consistent = unconfronted == 0 && failedConfrontations == 0 && unjudgedConfrontations == 0;
 

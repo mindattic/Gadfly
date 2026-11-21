@@ -15,8 +15,11 @@ public static partial class ExamPrompts
     /// 4: objective-driven examination: the question prompt names the objective and all eight strategies,
     /// plus the Learning Mode and response-analysis prompts (GAD-T89..T93, merged from ExamPromptsV3 in GAD-T120).
     /// 5: adaptive Socratic probing: the question prompt carries how each recent answer was delivered (delay, hesitations,
-    /// strain against the student's baseline, hedging) and presses harder where understanding looks shaky (GAD-T233).</summary>
-    public const int Version = 5;
+    /// strain against the student's baseline, hedging) and presses harder where understanding looks shaky (GAD-T233).
+    /// 6: a Contradiction answer is judged on how well the student resolves the conflict, never on which claim they keep;
+    /// which claim is wrong is decided from the rubric and source alone; and the no-hint rule, the leak guard and the
+    /// analysis's revealed-answer flag also catch a question whose form presupposes an answer point (GAD-T266).</summary>
+    public const int Version = 6;
 
     /// <summary>Delimits text the student wrote or said; <see cref="Student"/> strips forged copies of these tags from the text it wraps.</summary>
     public const string StudentOpen = "<student_text>", StudentClose = "</student_text>";
@@ -63,8 +66,8 @@ public static partial class ExamPrompts
           fixed, and ask what changes and why.
         - Apply (knowledge transfer): describe a short new situation the source material does not discuss
           directly, where the concept is needed, and ask what happens or what they would do.
-        - Contradiction: quote the two claims of theirs listed under "Claims to confront" and ask how both
-          can be true.
+        - Contradiction: quote the two claims of theirs listed under "Claims to confront" and ask how they
+          fit together. Never say or imply which of the two is wrong, or which one the source supports.
         - AssumptionTesting: ask what must be true for their explanation or conclusion to hold.
         - IndependentExplanation: ask them to rebuild the explanation from their own reasoning, without
           repeating a textbook definition.
@@ -78,6 +81,9 @@ public static partial class ExamPrompts
         - Do not repeat a question already asked. Do not ask yes/no questions.
         - Never include rubric points, definitions, causes, examples or facts the student has not already
           said themselves, and never say whether an earlier answer was right.
+        - Never let the form of the question presuppose an answer the student has not given: "what makes X
+          happen?" presupposes an outside cause, "why does X raise Y?" presupposes that it does. Ask about
+          what the student said ("what happens to Y when X changes, and why?") instead.
         - Adapt to how the answers were delivered (listed below): where understanding looks shaky, probe
           harder within the move (ask for a concrete example, challenge an assumption, ask why again, or pose
           a counterfactual) until it is clear whether the concept is understood. Delivery is only a reason to
@@ -173,7 +179,7 @@ public static partial class ExamPrompts
          "evidence": [{"objective": "<objective key>", "stance": "supports|contradicts|misconception|uncertain",
                        "dimension": "factual-knowledge|conceptual-understanding|logical-reasoning|application|knowledge-transfer|misconception-recognition|consistency|metacognition",
                        "quote": "<exact student words>", "note": "<one sentence: what this shows>"}],
-         "questionRevealedAnswer": <true if the question itself stated or strongly hinted at expected answer points the student had not already said, else false>}
+         "questionRevealedAnswer": <true if the question itself stated, strongly hinted at, or by its form presupposed expected answer points the student had not already said, else false>}
         Use [] for an empty list. "supports" means the words show the objective is understood on that
         dimension; "contradicts" that they show it is not; "misconception" that they state a wrong belief;
         "uncertain" that their meaning cannot be determined.
@@ -183,7 +189,11 @@ public static partial class ExamPrompts
         You check exam questions before a student hears them. Reply with exactly one word: LEAKS or SAFE.
 
         LEAKS means the question states or strongly hints at any of the expected answer points below
-        that the student has not already said in the conversation. SAFE means it does not.
+        that the student has not already said in the conversation, or that its form presupposes one: a
+        question that takes an answer point for granted hints at it as surely as one that states it.
+        "What makes X happen?" presupposes an outside cause; "why does X raise Y?" presupposes that X
+        raises Y; "how does X cause Y?" presupposes a causal link. A presupposition the student already
+        stated themselves is not a leak. SAFE means none of these.
 
         {{StudentTextRule}}
 
@@ -220,6 +230,14 @@ public static partial class ExamPrompts
         - consistency: no conflict with the student's earlier claims (listed below), unless they
           explicitly corrected themselves, which is a strength.
         - completeness: covers the rubric points this question called for.
+
+        When the question move is Contradiction, the question put two of the student's own conflicting
+        claims to them. A contradiction shows only that the two claims cannot both stand; it never shows
+        which one is wrong. Score consistency on the quality of the resolution: whether the student sees
+        the conflict, settles it (by revising either claim, or by a distinction that makes both hold) and
+        gives a reason. Revising either claim is an equally legitimate resolution. Decide whether the
+        position they end with is correct only from the rubric and the source passages, under accuracy,
+        never from which claim they kept or gave up.
 
         Question move: {move}
         Concept: {concept}
