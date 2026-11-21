@@ -349,3 +349,4 @@ Answer by code, e.g. "D3: B". Until a decision is answered, work proceeds on the
 | D21 | When webcam notes reach the reviewer | **A: also send an update every minute while an episode lasts** · B: only when an episode ends (today's behavior). **Proceeding on default A (GAD-T171)** |
 | D22 | 3D avatar on Azure | **A: upload the 37 MB model to blob storage and point Gadfly:Voice:AvatarModelUrl at it** · B: keep the 2D portrait on Azure |
 | D23 | Live AI | **A: stay in mock mode until the owner says go** · B: turn on the live panel (and, with D4, ElevenLabs voice) for named test sessions |
+| D24 | MFA for the classroom test staff (Teacher_A..C, Classroom_Owner) on Azure | **A: keep MFA required for staff; each tester enrolls an authenticator app at first sign-in** · B: exempt only the "Gadfly Classroom" test organization's staff from MFA while testing |
