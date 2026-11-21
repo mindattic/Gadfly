@@ -1,4 +1,5 @@
 using Gadfly.Server.Components;
+using Gadfly.Server.Analytics;
 using Gadfly.Server.Data;
 using Gadfly.Server.Tenancy;
 using Microsoft.AspNetCore.Authorization;
@@ -53,6 +54,7 @@ public static class GadflyEndpoints
         app.MapHub<Sessions.SessionHub>(Sessions.SessionHub.Path).RequireRateLimiting(Platform.RateLimits.Hub);
         Platform.ApiEndpoints.Map(app);
         Review.ReviewExportEndpoints.Map(app);
+        app.MapAnalytics();
         app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
 
         // Switch the active organization: only to one the caller is a member of (checked against the

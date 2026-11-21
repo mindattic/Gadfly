@@ -11,8 +11,9 @@
                     @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor)
                     {
                         <NavLink href="sources">Source material</NavLink>
-                        <NavLink href="exams">Exams</NavLink>
+                        <NavLink href="assessments">Assessments</NavLink>
                         <NavLink href="review">Review</NavLink>
+                        <NavLink href="analytics">Analytics</NavLink>
                     }
                     @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin)
                     {

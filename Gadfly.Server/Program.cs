@@ -1,6 +1,8 @@
 using Gadfly.Server;
 using Gadfly.Server.Components;
 using Gadfly.Server.Data;
+using Gadfly.Server.Analytics;
+using Gadfly.Server.Assessments;
 using Gadfly.Server.Jobs;
 using Gadfly.Server.Platform;
 using Gadfly.Server.Privacy;
@@ -118,6 +120,8 @@ builder.Services.AddHostedService<RetentionScheduler>();
 
 // Instructor and student pages' services (GAD-T49, GAD-T50).
 builder.Services.AddScoped<SourceLibraryService>();
+builder.Services.AddAnalytics();
+builder.Services.AddAssessments();
 builder.Services.AddScoped<Gadfly.Server.Exams.ExamService>();
 
 // The Gadfly Exams web app (GAD-T48): Blazor Server.
