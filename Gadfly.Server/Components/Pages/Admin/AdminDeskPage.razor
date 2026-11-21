@@ -1,0 +1,542 @@
+@page "/admin"
+@attribute [Authorize(Policy = DeskAccess.Policy)]
+@implements IDisposable
+@using Gadfly.Server.Data
+@using Gadfly.Server.Desk
+@using Gadfly.Server.Sources
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject IConfiguration Config
+@inject AuthenticationStateProvider Auth
+@inject IJSRuntime JS
+
+@* The admin desk (GAD-T246): exams, students and the assignments between them on one page, for the owner to set up, test and reset. *@
+<PageTitle>Admin · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-desk.css" /></HeadContent>
+<h1>Admin</h1>
+
+<nav class="desk-tabs" role="tablist" aria-label="Admin desk">
+    <a href="admin?tab=exams" role="tab" aria-selected="@(CurrentTab == "exams")" class="@(CurrentTab == "exams" ? "active" : null)">Exams</a>
+    <a href="admin?tab=students" role="tab" aria-selected="@(CurrentTab == "students")" class="@(CurrentTab == "students" ? "active" : null)">Students</a>
+    <a href="admin?tab=student-exams" role="tab" aria-selected="@(CurrentTab == "student-exams")" class="@(CurrentTab == "student-exams" ? "active" : null)">Student exams</a>
+</nav>
+
+@if (message is not null)
+{
+    <p role="status" class="desk-message @(ok ? "ok" : "error")">@message</p>
+}
+
+@if (CurrentTab == "exams")
+{
+    <details class="panel desk-form" open="@(exams is { Count: 0 })">
+        <summary><strong>New exam</strong></summary>
+        <div class="desk-row">
+            <label>Subject <input @bind="newExam.Subject" placeholder="Biology" maxlength="200" /></label>
+            <label>Topic <input @bind="newExam.Topic" placeholder="Photosynthesis" maxlength="200" /></label>
+        </div>
+        <label>Title <span class="hint">(optional; "Subject: Topic" by default)</span> <input @bind="newExam.Title" maxlength="200" /></label>
+        <label>Source notes: paste them here
+            <textarea @bind="newExam.Notes" rows="8" placeholder="Paste the notes the examiner should draw on."></textarea>
+        </label>
+        <label>…or upload notes files (@string.Join(", ", SourceLibraryService.AcceptedExtensions))
+            <InputFile OnChange="FilesChosen" multiple accept="@SourceLibraryService.AcceptAttribute" />
+        </label>
+        @if (files.Count > 0)
+        {
+            <p class="hint">@files.Count file@(files.Count == 1 ? "" : "s"): @string.Join(", ", files.Select(f => f.Name))</p>
+        }
+        <div class="desk-row">
+            <label>Duration (minutes) <input type="number" min="1" max="240" @bind="newExam.DurationMinutes" /></label>
+            <label class="check"><input type="checkbox" @bind="newExam.VoiceOnly" /> Voice exam (the examiner speaks, the student answers aloud)</label>
+        </div>
+        <label>Instructions for the student <span class="hint">(optional)</span> <textarea @bind="newExam.Instructions" rows="2"></textarea></label>
+        <p class="hint">The panel reads the notes and finds their concepts; then "Build objectives &amp; publish" turns them into the exam's objectives.</p>
+        <button type="button" @onclick="CreateExamAsync" disabled="@busy">Create exam</button>
+    </details>
+
+    @if (exams is null)
+    {
+        <p class="hint">Loading…</p>
+    }
+    else if (exams.Count == 0)
+    {
+        <p class="notice">No exams yet.</p>
+    }
+    else
+    {
+        <table class="grid">
+            <thead><tr><th>Exam</th><th>Mode</th><th>Status</th><th>Notes</th><th class="num">Objectives</th><th class="num">Assigned</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var e in exams)
+                {
+                    <tr>
+                        <td><strong>@e.Title</strong><br /><span class="hint">@e.Subject@(e.Topic.Length > 0 ? " · " + e.Topic : "") · @e.DurationMinutes min</span></td>
+                        <td>@(e.Voice ? "Voice" : "Text")</td>
+                        <td>@e.Status</td>
+                        <td>@(e.Processing ?? (e.CollectionStatus == ProcessingStatus.Ready ? "Ready" : e.CollectionStatus.ToString()))</td>
+                        <td class="num">@e.Objectives</td>
+                        <td class="num">@e.Assigned</td>
+                        <td>
+                            <div class="row-actions">
+                                <button class="link" type="button" @onclick="() => EditAsync(e.Id)" disabled="@busy">Edit</button>
+                                @if (e.CanFinish)
+                                {
+                                    <button type="button" @onclick="() => FinishAsync(e.Id)" disabled="@busy">Build objectives &amp; publish</button>
+                                }
+                                @if (e.Status == ExamStatus.Published)
+                                {
+                                    <button class="link" type="button" @onclick="() => ArchiveAsync(e)" disabled="@busy">Archive</button>
+                                }
+                                @if (IsStaff)
+                                {
+                                    <a href="assessments/@e.Id">Full editor</a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                    @if (edit is not null && edit.Id == e.Id)
+                    {
+                        <tr class="desk-edit">
+                            <td colspan="7">
+                                <div class="desk-form">
+                                    @if (e.Status != ExamStatus.Draft)
+                                    {
+                                        <p class="hint">This exam is @e.Status.ToString().ToLowerInvariant(): its objectives, rubric and duration are frozen. The wording and voice mode can still change.</p>
+                                    }
+                                    <label>Title <input @bind="edit.Title" maxlength="200" /></label>
+                                    <div class="desk-row">
+                                        <label>Subject <input @bind="edit.Subject" maxlength="200" /></label>
+                                        <label>Topic <input @bind="edit.Topic" maxlength="200" /></label>
+                                        <label>Duration (minutes) <input type="number" min="1" max="240" @bind="edit.DurationMinutes" disabled="@(e.Status != ExamStatus.Draft)" /></label>
+                                    </div>
+                                    <label class="check"><input type="checkbox" @bind="edit.VoiceOnly" /> Voice exam</label>
+                                    <label>Instructions <textarea @bind="edit.Instructions" rows="2"></textarea></label>
+                                    <div class="row-actions">
+                                        <button type="button" @onclick="SaveEditAsync" disabled="@busy">Save</button>
+                                        <button class="link" type="button" @onclick="() => edit = null">Cancel</button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+}
+else if (CurrentTab == "students")
+{
+    <details class="panel desk-form" open="@(students is { Count: 0 })">
+        <summary><strong>Add a student</strong></summary>
+        <div class="desk-row">
+            <label>Name <input @bind="newStudent.Name" autocomplete="off" /></label>
+            <label>User name <input @bind="newStudent.UserName" autocomplete="off" /></label>
+        </div>
+        <div class="desk-row">
+            <label>Password <input type="password" @bind="newStudent.Password" autocomplete="new-password" /></label>
+            <label>Email <span class="hint">(optional)</span> <input type="email" @bind="newStudent.Email" autocomplete="off" /></label>
+        </div>
+        <label class="check"><input type="checkbox" @bind="newStudent.MustChange" /> Make them choose their own password at first sign-in</label>
+        <button type="button" @onclick="AddStudentAsync" disabled="@busy">Add student</button>
+    </details>
+
+    @if (students is null)
+    {
+        <p class="hint">Loading…</p>
+    }
+    else if (students.Count == 0)
+    {
+        <p class="notice">No students yet.</p>
+    }
+    else
+    {
+        <table class="grid">
+            <thead><tr><th>User name</th><th>Name</th><th>Email</th><th class="num">Exams</th><th>Last sign-in</th><th>Password</th></tr></thead>
+            <tbody>
+                @foreach (var s in students)
+                {
+                    <tr class="@(s.Active ? null : "muted")">
+                        <td>@s.UserName@(s.Active ? "" : " (removed)")</td>
+                        <td>@s.DisplayName</td>
+                        <td>@s.Email</td>
+                        <td class="num">@s.Assigned</td>
+                        <td>@(s.LastLogin is { } l ? l.ToString("yyyy-MM-dd HH:mm") + " UTC" : "never")</td>
+                        <td>
+                            @if (resetFor == s.UserId)
+                            {
+                                <div class="row-actions">
+                                    <input type="password" @bind="resetPassword" placeholder="New password" autocomplete="new-password" aria-label="New password for @s.UserName" />
+                                    <label class="check"><input type="checkbox" @bind="resetMustChange" /> must change</label>
+                                    <button type="button" @onclick="() => ResetPasswordAsync(s.UserId)" disabled="@busy">Set</button>
+                                    <button class="link" type="button" @onclick="() => resetFor = null">Cancel</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="link" type="button" @onclick="() => StartReset(s.UserId)">Reset password</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+else
+{
+    <div class="panel desk-form">
+        <h2>Assign an exam</h2>
+        <div class="desk-row">
+            <label>Exam
+                <select @bind="assignExam">
+                    <option value="">Choose…</option>
+                    @foreach (var e in (exams ?? []).Where(x => x.Status == ExamStatus.Published))
+                    {
+                        <option value="@e.Id">@e.Title@(e.Voice ? " (voice)" : "")</option>
+                    }
+                </select>
+            </label>
+            <label>Student
+                <select @bind="assignStudent">
+                    <option value="">Choose…</option>
+                    @foreach (var s in (students ?? []).Where(x => x.Active))
+                    {
+                        <option value="@s.UserId">@s.UserName@(s.DisplayName is { Length: > 0 } n ? $" ({n})" : "")</option>
+                    }
+                </select>
+            </label>
+            <label>Attempts allowed <input type="number" min="1" max="20" @bind="assignAttempts" /></label>
+        </div>
+        <p class="hint">Only published exams can be assigned. Assigning one that is already assigned changes its attempts allowed.</p>
+        <button type="button" @onclick="AssignAsync" disabled="@busy">Assign</button>
+    </div>
+
+    @if (assignments is null)
+    {
+        <p class="hint">Loading…</p>
+    }
+    else if (assignments.Count == 0)
+    {
+        <p class="notice">No exams assigned yet.</p>
+    }
+    else
+    {
+        <label class="desk-filter">Show
+            <select @bind="filterStudent">
+                <option value="">every student</option>
+                @foreach (var name in assignments.Select(a => a.StudentName).Distinct().Order(StringComparer.OrdinalIgnoreCase))
+                {
+                    <option value="@name">@name</option>
+                }
+            </select>
+        </label>
+        <table class="grid">
+            <thead><tr><th>Student</th><th>Exam</th><th>Attempts</th><th>Status</th><th>Latest score</th><th>Transcript</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var a in assignments.Where(x => string.IsNullOrEmpty(filterStudent) || x.StudentName == filterStudent))
+                {
+                    <tr>
+                        <td>@a.StudentName</td>
+                        <td>@a.ExamTitle@(a.Voice ? " (voice)" : "")</td>
+                        <td>
+                            @if (attemptsFor == a.Id)
+                            {
+                                <div class="row-actions">
+                                    <input type="number" min="1" max="20" @bind="attemptsValue" aria-label="Attempts allowed" />
+                                    <button type="button" @onclick="() => SetAttemptsAsync(a.Id)" disabled="@busy">Set</button>
+                                    <button class="link" type="button" @onclick="() => attemptsFor = null">Cancel</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button class="link" type="button" title="Change attempts allowed" @onclick="() => { attemptsFor = a.Id; attemptsValue = a.AttemptsAllowed; }">@a.AttemptsUsed of @a.AttemptsAllowed used</button>
+                            }
+                        </td>
+                        <td>@a.Status</td>
+                        <td>@(a.LatestScore ?? "—")</td>
+                        <td>
+                            @if (a.LatestSessionId is { } sid)
+                            {
+                                <div class="row-actions">
+                                    <button class="link" type="button" @onclick="() => ToggleTranscriptAsync(sid)">@(transcriptFor == sid ? "Hide" : "Transcript")</button>
+                                    @if (IsStaff)
+                                    {
+                                        <a href="review/@sid">Review</a>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="hint">—</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="row-actions">
+                                <button class="danger" type="button" @onclick="() => ResetAsync(a)" disabled="@busy" title="Remove every attempt with its scores and grades; the student starts fresh">Reset</button>
+                                <button class="link" type="button" @onclick="() => ClearScoresAsync(a)" disabled="@busy">Clear scores</button>
+                            </div>
+                        </td>
+                    </tr>
+                    @if (a.LatestSessionId is { } open && transcriptFor == open)
+                    {
+                        <tr class="desk-edit">
+                            <td colspan="7">
+                                @if (transcript is null || transcript.Count == 0)
+                                {
+                                    <p class="hint">No questions asked yet.</p>
+                                }
+                                else
+                                {
+                                    <ol class="desk-transcript">
+                                        @foreach (var t in transcript)
+                                        {
+                                            <li>
+                                                <p class="q"><strong>Examiner:</strong> @t.Question</p>
+                                                <p class="a"><strong>Student@(t.AnswerMode is { Length: > 0 } m ? $" ({m.ToLowerInvariant()})" : ""):</strong> @(t.Answer ?? "(no answer yet)")</p>
+                                            </li>
+                                        }
+                                    </ol>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "tab")] public string? Tab { get; set; }
+
+    private string CurrentTab => Tab is "students" or "student-exams" ? Tab : "exams";
+
+    /// <summary>The caller's own role reaches the staff pages (full editor, review); a listed desk admin who is a student does not.</summary>
+    private bool IsStaff => Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor;
+
+    private sealed class NewStudentForm
+    {
+        public string Name { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Password { get; set; } = "";
+        public bool MustChange { get; set; }
+    }
+
+    private IReadOnlyList<DeskExam>? exams;
+    private IReadOnlyList<DeskStudent>? students;
+    private IReadOnlyList<DeskAssignment>? assignments;
+    private IReadOnlyList<DeskTurn>? transcript;
+    private IReadOnlyList<IBrowserFile> files = [];
+    private DeskNewExam newExam = new();
+    private DeskExamEdit? edit;
+    private NewStudentForm newStudent = new();
+    private Guid? resetFor, attemptsFor, transcriptFor;
+    private string resetPassword = "";
+    private bool resetMustChange;
+    private int attemptsValue = 1;
+    private string assignExam = "", assignStudent = "", filterStudent = "";
+    private int assignAttempts = 3;
+    private string? message;
+    private bool ok, busy;
+    private string? loadedTab;
+    private System.Threading.Timer? poll;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedTab == CurrentTab) return;
+        loadedTab = CurrentTab;
+        message = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        await RunAsync(async desk =>
+        {
+            switch (CurrentTab)
+            {
+                case "exams":
+                    exams = await desk.ExamsAsync();
+                    break;
+                case "students":
+                    students = await desk.StudentsAsync();
+                    break;
+                default:
+                    exams = await desk.ExamsAsync();
+                    students = await desk.StudentsAsync();
+                    assignments = await desk.AssignmentsAsync();
+                    break;
+            }
+        });
+        // While the panel is reading someone's notes, refresh the exam list every few seconds.
+        var processing = CurrentTab == "exams" && exams?.Any(e => e.Processing is not null) == true;
+        if (processing && poll is null) poll = new System.Threading.Timer(_ => _ = InvokeAsync(PollAsync), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+        else if (!processing && poll is not null) { poll.Dispose(); poll = null; }
+    }
+
+    private async Task PollAsync()
+    {
+        if (busy || CurrentTab != "exams") return;
+        await LoadAsync();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Runs one desk operation in its own scope acting as the caller with the Admin role, after checking again that the caller may
+    /// use the desk. One at a time: a second click while one runs is ignored.
+    /// </summary>
+    private async Task RunAsync(Func<DeskService, Task> work)
+    {
+        var user = (await Auth.GetAuthenticationStateAsync()).User;
+        if (!DeskAccess.IsDeskAdmin(user, Tenant, Config))
+        {
+            ok = false;
+            message = "The admin desk is not available to you.";
+            return;
+        }
+        await using var scope = Scopes.CreateAsyncScopeFor(DeskAccess.Elevated(Tenant));
+        await work(new DeskService(scope.ServiceProvider));
+    }
+
+    private async Task ActAsync(Func<DeskService, Task<DeskResult>> work, bool reload = true)
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            DeskResult? r = null;
+            await RunAsync(async desk => r = await work(desk));
+            if (r is not null)
+            {
+                ok = r.Ok;
+                message = r.Message;
+            }
+            if (reload) await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            message = "That didn't work: " + ex.Message;
+        }
+        finally { busy = false; }
+    }
+
+    // ------------------------------------------------------------------ exams
+
+    private void FilesChosen(InputFileChangeEventArgs e) => files = e.GetMultipleFiles(20);
+
+    private Task CreateExamAsync() => ActAsync(async desk =>
+    {
+        var uploads = files.Select(f => new DeskUpload(f.Name, f.Size, () => f.OpenReadStream(SourceLibraryService.MaxFileBytes))).ToList();
+        var r = await desk.CreateExamAsync(newExam, uploads);
+        if (r.Ok)
+        {
+            newExam = new();
+            files = [];
+        }
+        return r;
+    });
+
+    private Task FinishAsync(Guid examId) => ActAsync(desk => desk.FinishExamAsync(examId));
+
+    private async Task ArchiveAsync(DeskExam e)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Archive \"{e.Title}\"? Students can no longer start it; results are kept.")) return;
+        await ActAsync(async desk =>
+        {
+            var r = await desk.ArchiveExamAsync(e.Id);
+            return new DeskResult(r.Ok, r.Message, r.Id);
+        });
+    }
+
+    private async Task EditAsync(Guid examId)
+    {
+        if (busy) return;
+        await RunAsync(async desk => edit = await desk.GetEditAsync(examId));
+    }
+
+    private Task SaveEditAsync() => edit is null ? Task.CompletedTask : ActAsync(async desk =>
+    {
+        var r = await desk.EditExamAsync(edit);
+        if (r.Ok) edit = null;
+        return r;
+    });
+
+    // ------------------------------------------------------------------ students
+
+    private Task AddStudentAsync() => ActAsync(async desk =>
+    {
+        var r = await desk.AddStudentAsync(newStudent.Name, newStudent.UserName, newStudent.Email, newStudent.Password, newStudent.MustChange);
+        if (r.Ok) newStudent = new();
+        return r;
+    });
+
+    private void StartReset(Guid userId)
+    {
+        resetFor = userId;
+        resetPassword = "";
+        resetMustChange = false;
+    }
+
+    private Task ResetPasswordAsync(Guid userId) => ActAsync(async desk =>
+    {
+        var r = await desk.ResetPasswordAsync(userId, resetPassword, resetMustChange);
+        if (r.Ok)
+        {
+            resetFor = null;
+            resetPassword = "";
+        }
+        return r;
+    });
+
+    // ------------------------------------------------------------------ student exams
+
+    private Task AssignAsync()
+    {
+        if (!Guid.TryParse(assignExam, out var examId) || !Guid.TryParse(assignStudent, out var studentId))
+        {
+            ok = false;
+            message = "Choose an exam and a student.";
+            return Task.CompletedTask;
+        }
+        return ActAsync(desk => desk.AssignAsync(examId, studentId, assignAttempts));
+    }
+
+    private Task SetAttemptsAsync(Guid assignmentId) => ActAsync(async desk =>
+    {
+        var r = await desk.SetAttemptsAsync(assignmentId, attemptsValue);
+        if (r.Ok) attemptsFor = null;
+        return r;
+    });
+
+    private async Task ResetAsync(DeskAssignment a)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm",
+                $"Reset {a.StudentName}'s \"{a.ExamTitle}\"? Every attempt is removed with its transcript, scores and grades, and the student starts fresh. This can't be undone.")) return;
+        transcriptFor = null;
+        await ActAsync(desk => desk.ResetAsync(a.Id));
+    }
+
+    private async Task ClearScoresAsync(DeskAssignment a)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm",
+                $"Clear the scores of {a.StudentName}'s \"{a.ExamTitle}\"? Grades and reports are removed; the attempts and transcripts stay.")) return;
+        await ActAsync(desk => desk.ClearScoresAsync(a.Id));
+    }
+
+    private async Task ToggleTranscriptAsync(Guid sessionId)
+    {
+        if (transcriptFor == sessionId)
+        {
+            transcriptFor = null;
+            transcript = null;
+            return;
+        }
+        transcriptFor = sessionId;
+        transcript = null;
+        await RunAsync(async desk => transcript = await desk.TranscriptAsync(sessionId));
+    }
+
+    public void Dispose() => poll?.Dispose();
+}

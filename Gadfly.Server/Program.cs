@@ -1,6 +1,7 @@
 using Gadfly.Server;
 using Gadfly.Server.Components;
 using Gadfly.Server.Data;
+using Gadfly.Server.Desk;
 using Gadfly.Server.Analytics;
 using Gadfly.Server.Verification;
 using Gadfly.Server.Assessments;
@@ -136,6 +137,8 @@ builder.Services.AddAssessments();
 builder.Services.AddGrading();
 builder.Services.AddVerification();   // backfills original-response records for older turns (GAD-T86)
 builder.Services.AddScoped<Gadfly.Server.Exams.ExamService>();
+// The admin desk at /admin (GAD-T246): its Admin-role policy, behind Gadfly:AdminDesk:Enabled.
+builder.Services.AddAdminDesk();
 
 // The Gadfly Exams web app (GAD-T48): Blazor Server.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();

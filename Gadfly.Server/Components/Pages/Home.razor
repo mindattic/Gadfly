@@ -12,6 +12,9 @@ else
 {
     <h1>@Greeting</h1>
     <div class="cards">
+        <AuthorizeView Policy="@Gadfly.Server.Desk.DeskAccess.Policy">
+            <a class="card" href="admin"><h2>Admin</h2><p>Exams, students and who sits what: create, assign, and reset an attempt in one click.</p></a>
+        </AuthorizeView>
         @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor)
         {
             <a class="card" href="sources"><h2>Source material</h2><p>Upload what students learn from; review the concepts and rubrics built from it.</p></a>

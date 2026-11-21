@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject ITenantContext Tenant
 @inject IServiceScopeFactory Scopes
+@inject IConfiguration Config
 
 <div class="shell">
     <Gadfly.Server.Components.Shared.MockBanner />
@@ -9,20 +10,22 @@
         <AuthorizeView>
             <Authorized>
                 <nav class="nav">
-                    @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor)
+                    @{ var desk = Gadfly.Server.Desk.DeskAccess.IsDeskAdmin(context.User, Tenant, Config); }
+                    @if (desk)
                     {
-                        <NavLink href="sources">Source material</NavLink>
-                        <NavLink href="assessments">Assessments</NavLink>
-                        <NavLink href="review">Review</NavLink>
-                        <NavLink href="analytics">Analytics</NavLink>
+                        <NavLink href="admin">Admin</NavLink>
                     }
-                    @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor or OrgRoles.Examiner or OrgRoles.SecondReviewer)
+                    @if (desk && Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor or OrgRoles.Examiner or OrgRoles.SecondReviewer)
                     {
-                        <NavLink href="grading">Grading</NavLink>
+                        @* The admin desk covers the everyday work; the organization, course and instructor screens stay, out of the way (GAD-T246). *@
+                        <details class="nav-more">
+                            <summary>More</summary>
+                            <div>@StaffLinks</div>
+                        </details>
                     }
-                    @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin)
+                    else
                     {
-                        <NavLink href="org/members">Members</NavLink>
+                        @StaffLinks
                     }
                     @if (Tenant.Role == OrgRoles.Student)
                     {
@@ -66,6 +69,25 @@
 
 @code {
     private List<(Guid Id, string Name, string Role)> orgNames = [];
+
+    /// <summary>The staff screens (sources, assessments, review, analytics, grading, members) by role.</summary>
+    private RenderFragment StaffLinks => @<text>
+        @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor)
+        {
+            <NavLink href="sources">Source material</NavLink>
+            <NavLink href="assessments">Assessments</NavLink>
+            <NavLink href="review">Review</NavLink>
+            <NavLink href="analytics">Analytics</NavLink>
+        }
+        @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor or OrgRoles.Examiner or OrgRoles.SecondReviewer)
+        {
+            <NavLink href="grading">Grading</NavLink>
+        }
+        @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin)
+        {
+            <NavLink href="org/members">Members</NavLink>
+        }
+    </text>;
 
     protected override async Task OnInitializedAsync()
     {
