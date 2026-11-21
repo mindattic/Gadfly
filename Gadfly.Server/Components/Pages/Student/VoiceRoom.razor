@@ -7,7 +7,9 @@
 @inject ILogger<VoiceRoom> Log
 
 @* Voice mode for the exam room (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
-   out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js; text mode is untouched and one click away. *@
+   out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js; text mode is untouched and one click away.
+   The interview room (GAD-T231): the student's own camera beside the examiner (a local mirror, never recorded or sent), an
+   on-screen transcript of every question and spoken answer, and each answer's response delay as it happens. *@
 <HeadContent><link rel="stylesheet" href="voice.css" /></HeadContent>
 
 <section class="voice-room" aria-label="Voice mode" data-state="@state.ToString().ToLowerInvariant()">
@@ -27,22 +29,66 @@
             {
                 <button type="button" data-voice-action="start">Start voice mode</button>
                 <p class="hint">Your browser will ask to use your microphone. Audio is sent to the speech service to be turned into text; no recording is kept.</p>
+                <p class="hint">It will also ask for your camera, so you can see yourself beside the examiner like a mirror. Your picture stays on this screen: it is never recorded or sent, and you can hide it or decline it.</p>
             }
         </div>
     }
 
-    <div class="voice-stage" data-voice-stage hidden="@(state is not (VoiceState.On or VoiceState.Starting))"></div>
+    <div class="voice-interview" hidden="@(state is not (VoiceState.On or VoiceState.Starting))">
+        <figure class="voice-party voice-examiner">
+            <div class="voice-stage" data-voice-stage></div>
+            <figcaption>Examiner</figcaption>
+        </figure>
+        <figure class="voice-party voice-self" data-self-state="@selfState">
+            <div class="voice-self-frame">
+                <video data-voice-self muted playsinline autoplay aria-label="Your camera (only you see this)"></video>
+                @if (SelfNote is { } selfNote)
+                {
+                    <p class="voice-self-note">@selfNote</p>
+                }
+            </div>
+            <figcaption>
+                You
+                <button type="button" class="link" data-voice-action="self" hidden="@(selfState == "starting")">@(selfState == "on" ? "Hide my camera" : "Show my camera")</button>
+            </figcaption>
+        </figure>
+    </div>
 
     @if (state is VoiceState.Starting or VoiceState.On)
     {
         <div class="voice-body">
             <p class="voice-status" role="status" aria-live="polite" data-voice-status>Starting voice mode…</p>
+            <p class="voice-delay" data-voice-delay data-state="idle" aria-live="off"></p>
             <div class="voice-level" data-voice-level aria-hidden="true"><i></i></div>
             <p class="voice-caption" data-voice-caption aria-hidden="true"></p>
             @if (avatarNote is not null)
             {
                 <p class="hint" role="note">@avatarNote</p>
             }
+            <section class="voice-transcript" aria-labelledby="voice-transcript-title">
+                <h2 id="voice-transcript-title" class="verify-label">Transcript</h2>
+                @if (transcript.Count == 0)
+                {
+                    <p class="hint">Each question and each answer you speak will appear here as the interview goes.</p>
+                }
+                else
+                {
+                    @* Off, not polite: the question is already announced by the exam room, and the answer was just spoken. *@
+                    <ol class="voice-log" role="log" aria-live="off" data-voice-transcript>
+                        @foreach (var line in transcript)
+                        {
+                            <li @key="line.Id" class="voice-line @(line.Examiner ? "voice-line-examiner" : "voice-line-you")">
+                                <span class="voice-who">@(line.Examiner ? "Examiner" : "You")</span>
+                                <span class="voice-said">@line.Text</span>
+                                @if (line.DelaySeconds is { } delay)
+                                {
+                                    <span class="voice-line-delay">Response delay: @FormatDelay(delay)</span>
+                                }
+                            </li>
+                        }
+                    </ol>
+                }
+            </section>
             <div class="voice-answer">
                 <p class="verify-label">What I heard</p>
                 <p class="voice-draft" data-voice-draft aria-live="polite"></p>
@@ -85,10 +131,37 @@
     private string? notice, avatarNote;
     private string? spokenKey;
     private bool lastAllowed;
+    /// <summary>The camera self-view, as voice-room.js reports it: starting, on, hidden, denied or unavailable.</summary>
+    private string selfState = "starting";
+    /// <summary>The interview so far: every question or request the examiner spoke and every answer spoken back (GAD-T231).</summary>
+    private readonly List<TranscriptLine> transcript = [];
+    private string? loggedKey;
+    private int renderedLines;
     private IJSObjectReference? module;
     private DotNetObjectReference<VoiceRoom>? self;
     private Guid org, user;
     private readonly CancellationTokenSource stop = new();
+
+    private sealed record TranscriptLine(int Id, bool Examiner, string Text, double? DelaySeconds);
+
+    /// <summary>The longest response delay worth showing; anything longer is a clock problem, not a pause.</summary>
+    private const double MaxDelaySeconds = 6 * 60 * 60;
+
+    private string? SelfNote => selfState switch
+    {
+        "denied" => "The camera wasn't allowed, so your picture isn't shown. Voice answers work without it.",
+        "unavailable" => "No camera is available, so your picture isn't shown. Voice answers work without it.",
+        "hidden" => "Your camera is hidden.",
+        _ => null,
+    };
+
+    private static string FormatDelay(double seconds) => seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s";
+
+    private void AddLine(bool examiner, string text, double? delaySeconds)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        transcript.Add(new TranscriptLine(transcript.Count + 1, examiner, text.Trim(), delaySeconds));
+    }
 
     private bool CanRepeat => state == VoiceState.On && !string.IsNullOrWhiteSpace(SpokenText);
 
@@ -110,7 +183,12 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || !armed) return;
+        if (!firstRender)
+        {
+            await ScrollTranscriptAsync();
+            return;
+        }
+        if (!armed) return;
         try
         {
             module = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/voice-room.js");
@@ -143,6 +221,15 @@
         await SyncAsync();
     }
 
+    /// <summary>Keeps the newest transcript line in view after a line was added.</summary>
+    private async Task ScrollTranscriptAsync()
+    {
+        if (module is null || transcript.Count == renderedLines) return;
+        renderedLines = transcript.Count;
+        try { await module.InvokeVoidAsync("scrollTranscript", stop.Token); }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException) { }
+    }
+
     /// <summary>Speaks a new question or request once, and tells the browser whether an answer is wanted.</summary>
     private async Task SyncAsync()
     {
@@ -155,6 +242,12 @@
             {
                 spokenKey = key;
                 spoke = true;
+                // Into the transcript once, in full (a long read-back is spoken shortened); turning voice off and on doesn't repeat it.
+                if (key != loggedKey)
+                {
+                    loggedKey = key;
+                    AddLine(true, Prompt is { Length: > 0 } p ? p : Question ?? text, null);
+                }
                 await SpeakAsync(text);
             }
             if (spoke || CanAnswer != lastAllowed)
@@ -210,6 +303,7 @@
     {
         notice = null;
         avatarNote = null;
+        selfState = "starting";
         await SetStateAsync(VoiceState.Starting);
     });
 
@@ -257,7 +351,23 @@
     });
 
     [JSInvokable]
-    public Task OnVoiceAnswer(VoiceAnswerPayload payload) => InvokeAsync(() => OnAnswer.InvokeAsync(payload));
+    public Task OnSelfView(string selfView) => InvokeAsync(() =>
+    {
+        if (selfView is not ("starting" or "on" or "hidden" or "denied" or "unavailable") || selfView == selfState) return;
+        selfState = selfView;
+        StateHasChanged();
+    });
+
+    [JSInvokable]
+    public Task OnVoiceAnswer(VoiceAnswerPayload payload) => InvokeAsync(async () =>
+    {
+        // The words as heard, joined the way VoiceAnswerBuilder joins them; the delay is the one the student watched (display only).
+        var said = string.Join(' ', (payload?.Segments ?? []).Select(s => (s.Text ?? "").Trim()).Where(t => t.Length > 0));
+        var delay = payload?.ResponseDelayMs is { } ms && double.IsFinite(ms) && ms >= 0 && ms / 1000 <= MaxDelaySeconds ? ms / 1000 : (double?)null;
+        AddLine(false, said, delay);
+        StateHasChanged();
+        await OnAnswer.InvokeAsync(payload);
+    });
 
     private sealed record Capabilities(bool Microphone, bool Webgl, bool AudioContext);
 

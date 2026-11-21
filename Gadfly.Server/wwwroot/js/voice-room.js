@@ -8,6 +8,11 @@
 // Everything degrades to typing: if the microphone is refused, the browser lacks the pieces, or a hub fails, the page is told
 // through OnVoiceProblem and the exam room goes back to the answer box. The buttons use one delegated listener (data-voice-action)
 // because the microphone may only be opened from the click itself, not from a round trip to the server.
+//
+// The interview room (GAD-T231): beside the examiner the student sees their own camera, as a mirror. The self-view stream stays in
+// this page: no frame is recorded, analysed or sent anywhere, and a refused or missing camera changes nothing else. While the
+// microphone is open the response delay (examiner finished, student starts speaking) counts up live and freezes when the student
+// speaks; it rides along with the answer so the on-screen transcript can show it. It is display only and never scored.
 
 const LIB = "/lib/voice";
 const SPEECH_HUB = "/hubs/speech";
@@ -53,6 +58,7 @@ export function init(dotnet, cfg) {
         dotnet, cfg, running: false, allowed: false, gate: true, speaking: false, mode: "hands-free",
         segments: [], partial: "", listeningStartMs: null, startedAtUnixMs: null, cueTimer: null, captionTimers: [],
         mic: null, pcm16ToBase64: null, speechConn: null, avatarConn: null, avatar: null, speech: null, avatarOk: false,
+        selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null,
     };
     S.onClick = (e) => {
         const el = e.target.closest && e.target.closest("[data-voice-action]");
@@ -62,6 +68,7 @@ export function init(dotnet, cfg) {
         else if (action === "done") void submit(true);
         else if (action === "clear") discard();
         else if (action === "mode") toggleMode(el);
+        else if (action === "self") void toggleSelfView();
     };
     S.onDown = (e) => { if (e.target.closest?.('[data-voice-action="ptt"]') && S?.mic && S.mode === "push-to-talk" && !S.gate) S.mic.pttDown(); };
     S.onUp = () => { if (S?.mic && S.mode === "push-to-talk") S.mic.pttUp(); };
@@ -94,6 +101,7 @@ async function start() {
             onSpeechStart: () => {
                 if (s.gate) return;
                 s.startedAtUnixMs ??= Date.now();
+                freezeDelay(s);
                 clearCue();
                 status("Hearing you…");
             },
@@ -108,6 +116,7 @@ async function start() {
             onError: (err) => problem("microphone", err && err.message ? err.message : String(err), true),
         });
         await s.mic.start();
+        void startSelfView(s);   // the camera is only a mirror for the student: never awaited, never required
     } catch (err) {
         const denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
         return fail(denied ? "mic-denied" : "microphone",
@@ -179,6 +188,7 @@ export function speak(what, cacheable) {
     s.segments = [];
     s.partial = "";
     s.startedAtUnixMs = null;
+    resetDelay(s);
     drawTranscript();
     showCaption(what);
     status("The examiner is speaking…");
@@ -207,7 +217,13 @@ export function setAllowed(allowed) {
     if (!s.running || s.speaking) return;
     if (s.allowed && was && !s.gate) return;
     if (s.allowed) openMic();
-    else { s.gate = true; clearCue(); if (s.avatar) s.avatar.state = "thinking"; status("Thinking about your answer…"); }
+    else { s.gate = true; clearCue(); stopDelayTimer(s); if (s.avatar) s.avatar.state = "thinking"; status("Thinking about your answer…"); }
+}
+
+/** Keeps the newest transcript line in view (the list itself is rendered by VoiceRoom). */
+export function scrollTranscript() {
+    const log = q("transcript");
+    if (log) log.scrollTop = log.scrollHeight;
 }
 
 export function dispose() {
@@ -228,6 +244,8 @@ export function stop() {
     s.gate = true;
     clearCue();
     clearCaptions();
+    resetDelay(s);
+    stopSelfView(s, null);
     try { s.mic && s.mic.stop(); } catch { }
     // Hold the connection in a local: the fields are nulled below, before this promise settles, so reading s.speechConn in the
     // callback threw and the speech hub connection was never closed (GAD-T200).
@@ -247,6 +265,7 @@ function openMic() {
     if (!s || !s.mic || !s.speechConn) return;
     s.gate = false;
     s.listeningStartMs = s.mic.currentTimeMs;
+    startDelay(s);
     s.speechConn.send("MarkListening", s.listeningStartMs).catch(() => { });
     if (s.avatar) s.avatar.state = "listening";
     status(s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.");
@@ -303,7 +322,10 @@ async function submit(immediate) {
     const s = S;
     if (!s || s.gate || s.segments.length === 0) return;
     clearCue();
-    const payload = { segments: s.segments, listeningStartMs: s.listeningStartMs, startedAtUnixMs: s.startedAtUnixMs };
+    const payload = {
+        segments: s.segments, listeningStartMs: s.listeningStartMs, startedAtUnixMs: s.startedAtUnixMs,
+        responseDelayMs: s.delayMs == null ? null : Math.round(s.delayMs),
+    };
     s.gate = true;
     status("Sending your answer…");
     try {
@@ -323,6 +345,89 @@ function toggleMode(button) {
     button.textContent = s.mode === "hands-free" ? "Switch to hold-to-talk" : "Switch to hands-free";
     document.querySelectorAll('[data-voice-action="ptt"]').forEach((b) => { b.hidden = s.mode !== "push-to-talk"; });
     if (!s.gate) status(s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.");
+}
+
+// ------------------------------------------------------------------------------------------------------ response delay
+
+/** The examiner has finished and the microphone is open: the delay counts up until the student starts speaking. */
+function startDelay(s) {
+    stopDelayTimer(s);
+    s.waitStartMs = performance.now();
+    s.delayMs = null;
+    drawDelay(s);
+    s.delayTimer = setInterval(() => drawDelay(s), 100);
+}
+
+/** The student's first speech after the microphone opened fixes the delay for this answer. */
+function freezeDelay(s) {
+    if (s.delayMs != null || s.waitStartMs == null) return;
+    s.delayMs = performance.now() - s.waitStartMs;
+    stopDelayTimer(s);
+    drawDelay(s);
+}
+
+function stopDelayTimer(s) {
+    if (s.delayTimer) { clearInterval(s.delayTimer); s.delayTimer = null; }
+}
+
+function resetDelay(s) {
+    stopDelayTimer(s);
+    s.waitStartMs = null;
+    s.delayMs = null;
+    drawDelay(s);
+}
+
+function drawDelay(s) {
+    const el = q("delay");
+    if (!el || S !== s) return;
+    if (s.waitStartMs == null) { el.textContent = ""; el.dataset.state = "idle"; return; }
+    const ms = s.delayMs ?? (performance.now() - s.waitStartMs);
+    el.textContent = "Response delay: " + (ms / 1000).toFixed(1) + " s";
+    el.dataset.state = s.delayMs == null ? "counting" : "final";
+}
+
+// ----------------------------------------------------------------------------------------------------------- self-view
+
+/** Shows the student's own camera beside the examiner. Local only: the stream is attached to a muted <video> and nothing else. */
+async function startSelfView(s) {
+    if (!s || s.selfStream || !s.running) return;
+    const video = q("self");
+    if (!video || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return selfState(s, "unavailable");
+    selfState(s, "starting");
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+        if (S !== s || !s.running) { stream.getTracks().forEach((t) => t.stop()); return; }
+        s.selfStream = stream;
+        video.srcObject = stream;
+        try { await video.play(); } catch { }
+        selfState(s, "on");
+    } catch (err) {
+        const denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
+        selfState(s, denied ? "denied" : "unavailable");
+    }
+}
+
+/** Releases the camera; <paramref name="next"/> is the state to report, or null to report nothing (voice mode is stopping). */
+function stopSelfView(s, next) {
+    if (!s) return;
+    const stream = s.selfStream;
+    s.selfStream = null;
+    try { stream && stream.getTracks().forEach((t) => t.stop()); } catch { }
+    const video = q("self");
+    if (video) { try { video.srcObject = null; } catch { } }
+    if (next) selfState(s, next);
+}
+
+async function toggleSelfView() {
+    const s = S;
+    if (!s || !s.running) return;
+    if (s.selfStream) stopSelfView(s, "hidden");
+    else await startSelfView(s);
+}
+
+function selfState(s, state) {
+    if (S !== s) return;
+    s.dotnet.invokeMethodAsync("OnSelfView", state).catch(() => { });
 }
 
 // ------------------------------------------------------------------------------------------------------------ captions

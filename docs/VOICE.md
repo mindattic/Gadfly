@@ -15,6 +15,23 @@ transcript read-back and judging as a typed one. Typing stays the default for ev
   hub cannot connect. No 3D graphics (or reduced motion) shows the 2D portrait and the examiner still speaks. If the
   avatar fails entirely, questions are shown as text and answers can still be spoken.
 
+## The interview room (GAD-T231)
+
+With voice on, the exam room reads like an interview. Only the student's exam room changes; instructor and teacher
+screens are untouched.
+
+- **Self-view.** The student's own camera is shown, mirrored, beside the talking examiner. The stream is attached to a
+  muted `<video>` in the page and nothing else: no frame is recorded, analysed or sent (camera integrity checks, GAD-T57,
+  are separate and unchanged). A refused or missing camera shows a short note and voice carries on; **Hide my camera**
+  releases it and **Show my camera** asks again.
+- **Transcript.** Every question or request the examiner speaks (in full, even when a long read-back is spoken
+  shortened) and every answer the student speaks is added to an on-screen transcript, newest at the bottom. Turning voice
+  off and on doesn't repeat a question already listed.
+- **Response delay.** When the examiner finishes and the microphone opens, "Response delay" counts up live and freezes
+  when the student starts speaking; the answer's transcript line keeps it. It is the browser's timing, sent with the
+  answer as `ResponseDelayMs` for display only: it is never scored or stored (the stored `timeToFirstWordSeconds` is still
+  recomputed from the words on the server).
+
 ## How an answer flows
 
 1. `voice-room.js` opens the microphone from the click (hands-free voice activity detection, or hold-to-talk), streams

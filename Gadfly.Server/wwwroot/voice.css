@@ -2,9 +2,33 @@
 .voice-room { display: grid; gap: .75rem; margin: 0 0 1rem; padding: .85rem 1.1rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
 .voice-offer { display: grid; gap: .5rem; }
 .voice-offer p { margin: 0; }
+/* The interview room (GAD-T231): the examiner and the student's own camera side by side, stacked on narrow screens. */
+.voice-interview { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: .75rem; align-items: start; }
+.voice-interview[hidden] { display: none; }
+.voice-party { margin: 0; display: grid; gap: .3rem; }
+.voice-party figcaption { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .75rem; color: var(--muted); font-size: .85rem; }
 .voice-stage { height: min(46vh, 380px); border-radius: var(--radius); overflow: hidden; background: #10151d; }
-.voice-stage[hidden] { display: none; }
 .voice-stage ma-avatar { display: block; width: 100%; height: 100%; }
+.voice-self-frame { position: relative; height: min(46vh, 380px); border-radius: var(--radius); overflow: hidden; background: #10151d; }
+/* A mirror: the student sees themselves the way they expect to. */
+.voice-self-frame video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+.voice-self:not([data-self-state="on"]) .voice-self-frame video { visibility: hidden; }
+.voice-self-note { position: absolute; inset: auto 0 0 0; margin: 0; padding: .6rem .75rem; color: #e8edf3; font-size: .85rem; background: rgba(16, 21, 29, .85); }
+.voice-delay { margin: 0; min-height: 1.2em; font-size: .92rem; font-variant-numeric: tabular-nums; color: var(--muted); }
+.voice-delay[data-state="final"] { color: var(--ink); font-weight: 600; }
+.voice-transcript { display: grid; gap: .35rem; }
+.voice-transcript h2 { margin: 0; }
+.voice-transcript .hint { margin: 0; }
+.voice-log { margin: 0; padding: 0; list-style: none; display: grid; gap: .4rem; max-height: 16rem; overflow-y: auto; }
+.voice-line { display: grid; gap: .1rem; padding: .4rem .6rem; border-left: 3px solid var(--line); border-radius: 4px; }
+.voice-line-you { border-left-color: var(--accent); }
+.voice-who { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.voice-said { white-space: pre-wrap; }
+.voice-line-delay { font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+    .voice-interview { grid-template-columns: minmax(0, 1fr); }
+    .voice-self-frame { height: min(30vh, 220px); }
+}
 .voice-body { display: grid; gap: .6rem; }
 .voice-status { margin: 0; color: var(--muted); font-size: .92rem; }
 .voice-caption { margin: 0; min-height: 1.5em; font-size: 1.05rem; text-align: center; color: var(--ink); }
@@ -18,5 +42,5 @@
 .voice-cue i { display: block; height: 100%; width: 0; background: var(--accent); }
 .voice-cue[data-active="true"] i { width: 100%; transition: width var(--cue-ms, 4s) linear; }
 .voice-cue[data-active="false"] i { transition: none; width: 0; }
-.voice-actions button[hidden] { display: none; }
+.voice-actions button[hidden], .voice-self button[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .voice-level i, .voice-cue[data-active="true"] i { transition: none; } }

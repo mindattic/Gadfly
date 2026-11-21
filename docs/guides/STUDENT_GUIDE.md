@@ -91,7 +91,10 @@ organization set another), and then removed. The outcome (the judgments, your re
 instructor's comment) is kept.
 
 > Voice exams and camera checks. On a voice exam you press **Start voice mode** and allow your microphone;
-> a talking examiner asks and you answer aloud, and typing is always available. Camera checks (Strict exams
+> a talking examiner asks and you answer aloud, and typing is always available. Your own camera is shown beside
+> the examiner like a mirror (it stays on your screen, is never recorded or sent, and you can hide it), the
+> questions and your spoken answers appear in a transcript as you go, and a "Response delay" shows how long you
+> took to start answering. Camera checks (Strict exams
 > only) run on your own device after you accept a notice that says what is collected: only short notes (for
 > example "face not visible for 10 seconds") are sent, never video. If you decline the camera, the exam goes
 > on and a neutral note says so.

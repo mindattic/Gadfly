@@ -29,6 +29,12 @@ public sealed class VoiceAnswerPayload
     public double? ListeningStartMs { get; set; }
     /// <summary>Wall-clock time of the first speech (Unix ms), the answer's start.</summary>
     public long? StartedAtUnixMs { get; set; }
+    /// <summary>
+    /// How long the student took to start speaking after the examiner finished, as the browser timed it and showed it live in the
+    /// interview room (GAD-T231). Display only, for the on-screen transcript: never scored or stored (the stored time to first word
+    /// is recomputed from the words by <see cref="VoiceAnswerBuilder"/>).
+    /// </summary>
+    public double? ResponseDelayMs { get; set; }
 }
 
 /// <summary>The answer the orchestrator takes, plus what the speech library advised about the transcript.</summary>
