@@ -1,0 +1,15 @@
+@* A small horizontal meter drawn with SVG geometry (the CSP forbids style attributes). Decorative: the value is always printed beside it. *@
+<svg class="meter @(Wide ? "wide" : "")" aria-hidden="true" focusable="false" preserveAspectRatio="none">
+    <rect class="track" x="0" y="0" width="100%" height="100%" rx="3" />
+    @if (Fraction > 0)
+    {
+        <rect class="fill" x="0" y="0" width="@Pct" height="100%" rx="3" />
+    }
+</svg>
+
+@code {
+    [Parameter] public double Fraction { get; set; }
+    [Parameter] public bool Wide { get; set; }
+
+    private string Pct => (Math.Clamp(Fraction, 0, 1) * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+}

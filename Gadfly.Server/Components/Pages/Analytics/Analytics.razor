@@ -1,0 +1,391 @@
+@page "/analytics"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Assessment
+@using Gadfly.Server.Analytics
+@using Gadfly.Server.Components.Pages.Admin
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+@inject NavigationManager Nav
+
+@* Educational analytics (master plan Part 12.3, GAD-T102). Aggregates only: no student is named here. *@
+
+<PageTitle>Analytics · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="analytics.css" /></HeadContent>
+<h1>Analytics <span>@(report?.ScopeTitle ?? "learning, grading and reliability")</span></h1>
+
+@if (denied)
+{
+    <p class="notice" role="alert">Your role in this organization does not include analytics (ViewAnalytics). The attempt was recorded.</p>
+}
+else if (report is null)
+{
+    <p class="hint">Loading…</p>
+}
+else
+{
+    <div class="analytics-filters">
+        <label>Scope
+            <select @bind="ScopeValue" @bind:after="ScopeChangedAsync">
+                <option value="all">All assessments</option>
+                @if (options.Any(o => o.Kind == "course"))
+                {
+                    <optgroup label="Courses">
+                        @foreach (var o in options.Where(o => o.Kind == "course"))
+                        {
+                            <option value="course:@o.Id">@o.Title</option>
+                        }
+                    </optgroup>
+                }
+                @if (options.Any(o => o.Kind == "exam"))
+                {
+                    <optgroup label="Assessments">
+                        @foreach (var o in options.Where(o => o.Kind == "exam"))
+                        {
+                            <option value="exam:@o.Id">@o.Title</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+        </label>
+        <a class="button-link" href="@AnalyticsEndpoints.CsvPath(Scope)" download data-enhance-nav="false">Export CSV</a>
+        <span class="hint">Generated @AdminDb.When(report.GeneratedAt)</span>
+    </div>
+
+    <div class="stat-tiles analytics-tiles">
+        <div class="stat"><span class="label">Assessments</span><span class="value">@report.Assessments</span></div>
+        <div class="stat"><span class="label">Examination sessions</span><span class="value">@report.Sessions</span></div>
+        <div class="stat"><span class="label">Completion</span><span class="value">@AnalyticsService.Pct(report.CompletionRate)</span>
+            <span class="hint">@report.Completed of @report.Assigned assigned</span></div>
+        <div class="stat"><span class="label">AI–human pairs</span><span class="value">@report.Agreement.Pairs</span>
+            <span class="hint">objective scores with both</span></div>
+    </div>
+
+    @* ------------------------------------------------------------ mastery by objective *@
+    <section class="analytics-section" aria-labelledby="h-mastery">
+        <h2 id="h-mastery">Mastery by learning objective</h2>
+        @if (!report.ObjectiveMastery.Any())
+        {
+            <p class="hint">No learning objectives are defined for these assessments yet. Once objectives exist and examinations are graded,
+                each objective's distribution of understanding levels (0–5) appears here.</p>
+        }
+        else
+        {
+            <div class="analytics-filters" role="group" aria-label="Level source">
+                <label class="check"><input type="radio" name="level-source" checked="@(source == LevelSource.Human)" @onchange="() => source = LevelSource.Human" /> Human examiner (latest)</label>
+                <label class="check"><input type="radio" name="level-source" checked="@(source == LevelSource.Ai)" @onchange="() => source = LevelSource.Ai" /> AI preliminary</label>
+            </div>
+            <p class="hint">Share of graded examinations at each level. Level 0 is <em>Insufficient Evidence</em>: the examination did not gather
+                enough reliable evidence, which is not the same as no understanding.@(report.Reliability.MockAiGradesExcluded > 0 ? $" {report.Reliability.MockAiGradesExcluded} mock-mode AI grade(s) are excluded." : "")</p>
+            <ul class="level-legend" aria-label="Levels">
+                @for (var l = 0; l <= 5; l++)
+                {
+                    <li><span class="swatch lv@(l)" aria-hidden="true"></span>@l @MasteryLevels.Label((MasteryLevel)l)</li>
+                }
+            </ul>
+            <div class="mastery-chart">
+                @foreach (var m in report.ObjectiveMastery.Where(m => m.Source == source))
+                {
+                    <div class="mastery-row">
+                        <div class="mastery-label">
+                            <strong>@m.Objective</strong>
+                            @if (ShowExam) { <span class="hint">@m.ExamTitle</span> }
+                        </div>
+                        @if (m.Total == 0)
+                        {
+                            <div class="mastery-bar empty"><span class="hint">not graded yet</span></div>
+                        }
+                        else
+                        {
+                            <svg class="mastery-bar" role="img" aria-label="@BarLabel(m)" preserveAspectRatio="none">
+                                @{ var x = 0.0; }
+                                @for (var l = 0; l <= 5; l++)
+                                {
+                                    var n = m.Counts[l];
+                                    if (n == 0) continue;
+                                    var w = n * 100.0 / m.Total;
+                                    <rect class="seg lv@(l)" x="@P(x)" y="0" width="@P(w)" height="100%">
+                                        <title>Level @l @MasteryLevels.Label((MasteryLevel)l): @n of @m.Total (@AnalyticsService.Pct(n / (double)m.Total))</title>
+                                    </rect>
+                                    x += w;
+                                }
+                            </svg>
+                        }
+                        <div class="mastery-n">n = @m.Total@(m.MeanConclusiveLevel is { } mean ? $" · mean {mean:0.0}" : "")</div>
+                    </div>
+                }
+            </div>
+            <details>
+                <summary>Show as table</summary>
+                <table class="grid">
+                    <thead><tr><th>Objective</th>@if (ShowExam) { <th>Assessment</th> }@for (var l = 0; l <= 5; l++) { <th>@l</th> }<th>Mean (1–5)</th><th>At 1–2</th></tr></thead>
+                    <tbody>
+                        @foreach (var m in report.ObjectiveMastery.Where(m => m.Source == source))
+                        {
+                            <tr><td>@m.Objective</td>@if (ShowExam) { <td>@m.ExamTitle</td> }@foreach (var c in m.Counts) { <td>@c</td> }
+                                <td>@(m.MeanConclusiveLevel?.ToString("0.0") ?? "—")</td><td>@AnalyticsService.Pct(m.LowShare)</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </details>
+        }
+
+        @if (report.ConceptMastery.Any())
+        {
+            <h3>Engine mastery estimate by concept</h3>
+            <p class="hint">The Socratic engine's running estimate (0–1) at the end of each session. It steers questioning; it is not a rubric level or a grade.</p>
+            <table class="grid">
+                <thead><tr><th>Concept</th>@if (ShowExam) { <th>Assessment</th> }<th>Sessions</th><th>Mean estimate</th><th>Mastered</th><th>Open</th><th>Aporia</th><th>Exhausted</th></tr></thead>
+                <tbody>
+                    @foreach (var c in report.ConceptMastery)
+                    {
+                        <tr>
+                            <td>@c.Concept</td>@if (ShowExam) { <td>@c.ExamTitle</td> }
+                            <td>@c.Sessions</td>
+                            <td><Meter Fraction="c.MeanEstimate" /> @c.MeanEstimate.ToString("0.00")</td>
+                            <td>@c.Mastered</td><td>@c.Open</td><td>@c.Aporia</td><td>@c.Exhausted</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
+    @* ------------------------------------------------------------ gaps and misconceptions *@
+    <section class="analytics-section" aria-labelledby="h-gaps">
+        <h2 id="h-gaps">Class-wide knowledge gaps</h2>
+        <p class="hint">An objective is listed when at least @AnalyticsService.Pct(AnalyticsService.GapLowShare) of its conclusive grades sit at Recognition or Basic Explanation,
+            or a concept's mean engine estimate is below @AnalyticsService.GapConceptEstimate.ToString("0.0"). Evidence gaps (many level-0 grades) mean the examination needs more questioning there.</p>
+        @if (report.Gaps.Count == 0)
+        {
+            <p class="notice">No class-wide gaps in the graded evidence so far.</p>
+        }
+        else
+        {
+            <table class="grid">
+                <thead><tr><th>Objective or concept</th>@if (ShowExam) { <th>Assessment</th> }<th>Based on</th><th>Finding</th><th>n</th></tr></thead>
+                <tbody>
+                    @foreach (var g in report.Gaps)
+                    {
+                        <tr><td>@g.Area</td>@if (ShowExam) { <td>@g.ExamTitle</td> }<td>@g.Basis</td><td>@g.Measure</td><td>@g.Evidence</td></tr>
+                    }
+                </tbody>
+            </table>
+        }
+
+        <h2 id="h-misconceptions">Recurring misconceptions</h2>
+        @if (report.Misconceptions.Count == 0)
+        {
+            <p class="hint">None recorded yet. Misconceptions come from AI objective grades and from evidence marked as a misconception.</p>
+        }
+        else
+        {
+            <table class="grid">
+                <thead><tr><th>Misconception</th><th>Objective</th><th>Examinations</th><th>Mentions</th><th>From</th></tr></thead>
+                <tbody>
+                    @foreach (var m in report.Misconceptions.Take(misconceptionLimit))
+                    {
+                        <tr><td>@m.Text</td><td>@m.Objective</td><td>@m.Sessions</td><td>@m.Mentions</td><td>@m.Sources</td></tr>
+                    }
+                </tbody>
+            </table>
+            @if (report.Misconceptions.Count > misconceptionLimit)
+            {
+                <button class="link" @onclick="() => misconceptionLimit = int.MaxValue">Show all @report.Misconceptions.Count</button>
+            }
+        }
+    </section>
+
+    @* ------------------------------------------------------------ completion *@
+    <section class="analytics-section" aria-labelledby="h-completion">
+        <h2 id="h-completion">Completion</h2>
+        @if (report.Completion.Count == 0)
+        {
+            <p class="hint">No published assessments in this scope.</p>
+        }
+        else
+        {
+            <table class="grid">
+                <thead><tr><th>Assessment</th><th>Assigned</th><th>Started</th><th>Completed</th><th>In progress</th><th>Failed sessions</th><th>Completion</th></tr></thead>
+                <tbody>
+                    @foreach (var c in report.Completion)
+                    {
+                        <tr>
+                            <td>@c.ExamTitle</td><td>@c.Assigned</td><td>@c.Started</td><td>@c.Completed</td><td>@c.InProgress</td><td>@c.Failed</td>
+                            <td><Meter Fraction="c.Rate ?? 0" /> @AnalyticsService.Pct(c.Rate)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
+    @* ------------------------------------------------------------ AI-human agreement *@
+    <section class="analytics-section" aria-labelledby="h-agreement">
+        <h2 id="h-agreement">AI–human scoring agreement</h2>
+        <p class="notice caveat"><strong>Agreement is not validity.</strong> @AnalyticsService.AgreementCaveat</p>
+        @{ var a = report.Agreement; }
+        @if (a.Pairs == 0)
+        {
+            <p class="hint">No objective has both an AI preliminary score and a human examiner score yet.</p>
+        }
+        else
+        {
+            <div class="stat-tiles analytics-tiles">
+                <div class="stat"><span class="label">Same level</span><span class="value">@AnalyticsService.Pct(a.ExactLevel)</span><span class="hint">of @a.Pairs pairs</span></div>
+                <div class="stat"><span class="label">Within one level</span><span class="value">@AnalyticsService.Pct(a.WithinOneLevel)</span></div>
+                <div class="stat"><span class="label">Mean difference</span><span class="value">@Signed(a.MeanSignedPoints)</span><span class="hint">AI minus human, points of 100</span></div>
+                <div class="stat"><span class="label">Mean absolute difference</span><span class="value">@(a.MeanAbsPoints?.ToString("0.0") ?? "—")</span><span class="hint">points of 100</span></div>
+            </div>
+            <table class="grid">
+                <thead><tr><th>Objective</th><th>Pairs</th><th>Same level</th><th>Within one</th><th>Mean AI − human</th><th>Mean |difference|</th></tr></thead>
+                <tbody>
+                    @foreach (var o in a.ByObjective)
+                    {
+                        <tr><td>@o.Objective</td><td>@o.Pairs</td><td>@AnalyticsService.Pct(o.ExactLevel)</td><td>@AnalyticsService.Pct(o.WithinOneLevel)</td>
+                            <td>@Signed(o.MeanSignedPoints)</td><td>@o.MeanAbsPoints.ToString("0.0")</td></tr>
+                    }
+                </tbody>
+            </table>
+        }
+        <p>Disagreements detected: <strong>@a.Disagreements</strong> (@a.AdditionalReview additional review, @a.MandatoryReconciliation mandatory reconciliation);
+            @a.Resolved resolved, @a.Reconciliations reconciliation record(s).</p>
+    </section>
+
+    @* ------------------------------------------------------------ transcript corrections *@
+    <section class="analytics-section" aria-labelledby="h-corrections">
+        <h2 id="h-corrections">Transcript corrections and clarifications</h2>
+        @{ var c2 = report.Corrections; }
+        @if (c2.Responses == 0)
+        {
+            <p class="hint">No verified responses recorded in this scope yet. Corrections, clarifications and verification states appear once the response-verification engine records answers.</p>
+        }
+        else
+        {
+            <p>@c2.ResponsesWithCorrections of @c2.Responses responses (@AnalyticsService.Pct(c2.ResponsesWithCorrections / (double)c2.Responses)) were corrected at least once.</p>
+            <div class="analytics-cols">
+                <table class="grid">
+                    <caption>Corrections by kind</caption>
+                    <thead><tr><th>Kind</th><th>Versions</th><th>Per 100 responses</th></tr></thead>
+                    <tbody>
+                        @foreach (var (k, v) in c2.VersionsByKind)
+                        {
+                            <tr><td>@k</td><td>@v</td><td>@((v * 100.0 / c2.Responses).ToString("0.0"))</td></tr>
+                        }
+                    </tbody>
+                </table>
+                <table class="grid">
+                    <caption>Clarification questions</caption>
+                    <thead><tr><th>Type</th><th>Asked</th></tr></thead>
+                    <tbody>
+                        @foreach (var (k, v) in c2.ClarificationsByType)
+                        {
+                            <tr><td>@k</td><td>@v</td></tr>
+                        }
+                        <tr><td>Answered</td><td>@c2.ClarificationsAnswered</td></tr>
+                    </tbody>
+                </table>
+                <table class="grid">
+                    <caption>Verification state now</caption>
+                    <thead><tr><th>State</th><th>Responses</th></tr></thead>
+                    <tbody>
+                        @foreach (var (k, v) in c2.VerificationStates.Where(x => x.Value > 0))
+                        {
+                            <tr><td>@k</td><td>@v</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    @* ------------------------------------------------------------ reliability *@
+    <section class="analytics-section" aria-labelledby="h-reliability">
+        <h2 id="h-reliability">Examination reliability indicators</h2>
+        @{ var r = report.Reliability; }
+        <div class="stat-tiles analytics-tiles">
+            <div class="stat"><span class="label">Inconclusive (AI)</span><span class="value">@AnalyticsService.Pct(r.AiInconclusiveRate)</span><span class="hint">@r.AiInconclusive of @r.AiGrades objective grades at level 0</span></div>
+            <div class="stat"><span class="label">Inconclusive (human)</span><span class="value">@AnalyticsService.Pct(r.HumanInconclusiveRate)</span><span class="hint">@r.HumanInconclusive of @r.HumanGrades</span></div>
+            <div class="stat"><span class="label">Reconciliation rate</span><span class="value">@AnalyticsService.Pct(r.ReconciliationRate)</span><span class="hint">mandatory-band pairs of @r.Pairs</span></div>
+            <div class="stat"><span class="label">Judge panel agreement</span><span class="value">@(r.MeanJudgeAgreement is { } mj ? AnalyticsService.Pct(mj) : "—")</span><span class="hint">mean over @r.JudgedAnswers judged answers</span></div>
+            <div class="stat"><span class="label">Panel disagreed</span><span class="value">@AnalyticsService.Pct(r.JudgeDisagreementRate)</span><span class="hint">@r.JudgesDisagreed answers sent to human review</span></div>
+        </div>
+        @if (r.JudgedAnswers > 0)
+        {
+            var max = Math.Max(1, r.JudgeAgreementBuckets.Max());
+            <table class="grid">
+                <caption>Judge panel agreement per answer</caption>
+                <thead><tr><th>Agreement</th><th>Answers</th><th><span class="visually-hidden">Bar</span></th></tr></thead>
+                <tbody>
+                    @for (var i = 0; i < 5; i++)
+                    {
+                        var n = r.JudgeAgreementBuckets[i];
+                        <tr><td>@(i * 20)–@(i == 4 ? 100 : i * 20 + 19)%</td><td>@n</td>
+                            <td class="bar-cell"><Meter Fraction="n / (double)max" Wide="true" /></td></tr>
+                    }
+                </tbody>
+            </table>
+        }
+        @if (r.EndReasons.Count > 0)
+        {
+            <p>How @r.SessionsEnded ended session(s) stopped:
+                @string.Join(", ", r.EndReasons.Select(e => $"{e.Key} {e.Value}")).</p>
+        }
+    </section>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "exam")] public Guid? ExamQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "course")] public Guid? CourseQuery { get; set; }
+
+    private AnalyticsReport? report;
+    private IReadOnlyList<ScopeOption> options = [];
+    private bool denied;
+    private LevelSource source = LevelSource.Human;
+    private int misconceptionLimit = 25;
+    private string ScopeValue { get; set; } = "all";
+
+    private AnalyticsScope Scope => ScopeValue switch
+    {
+        var s when s.StartsWith("exam:") && Guid.TryParse(s[5..], out var e) => new AnalyticsScope(ExamId: e),
+        var s when s.StartsWith("course:") && Guid.TryParse(s[7..], out var c) => new AnalyticsScope(CourseId: c),
+        _ => AnalyticsScope.All,
+    };
+
+    private bool ShowExam => Scope.ExamId is null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Prerendering runs this once more; check, audit and query only on the interactive render.
+        if (!RendererInfo.IsInteractive) return;
+        ScopeValue = ExamQuery is { } e ? $"exam:{e}" : CourseQuery is { } c ? $"course:{c}" : "all";
+        denied = !await AdminDb.RunAsync(Scopes, Tenant, (sp, _) => ActivatorUtilities.CreateInstance<AnalyticsAccess>(sp).RequireAsync("View analytics"));
+        if (denied) return;
+        options = await AdminDb.RunAsync(Scopes, Tenant, (_, db) => new AnalyticsService(db, Tenant.OrganizationId!.Value, Clock).ScopeOptionsAsync());
+        await LoadAsync();
+    }
+
+    private async Task ScopeChangedAsync()
+    {
+        var s = Scope;
+        Nav.NavigateTo(s.ExamId is { } e ? $"analytics?exam={e}" : s.CourseId is { } c ? $"analytics?course={c}" : "analytics", replace: true);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var scope = Scope;
+        report = await AdminDb.RunAsync(Scopes, Tenant, (_, db) => new AnalyticsService(db, Tenant.OrganizationId!.Value, Clock).BuildAsync(scope));
+        // Default to the human examiner's levels when any exist, else the AI's.
+        source = report.ObjectiveMastery.Any(m => m.Source == LevelSource.Human && m.Total > 0) ? LevelSource.Human : LevelSource.Ai;
+    }
+
+    // SVG geometry attributes, not inline styles: the CSP allows no style attributes.
+    private static string P(double percent) => Math.Clamp(percent, 0, 100).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture) + "%";
+
+    private static string Signed(double? v) => v is { } x ? (x > 0 ? "+" : "") + x.ToString("0.0") : "—";
+
+    private static string BarLabel(ObjectiveMasteryRow m) =>
+        $"{m.Objective}: " + string.Join(", ", Enumerable.Range(0, 6).Where(l => m.Counts[l] > 0)
+            .Select(l => $"level {l} {MasteryLevels.Label((MasteryLevel)l)} {m.Counts[l]}")) + $" of {m.Total}";
+}
