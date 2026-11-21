@@ -196,6 +196,8 @@ public sealed class SessionOrchestrator(
                 throw new SessionRefusedException("Please answer the request about your last answer first.");
 
             var response = await ledger.CaptureAsync(live.OrganizationId, s.Id, turnId, studentUserId, answer, ct: ct);
+            // GAD-T58: a spoken answer's speech metrics become reviewable audio annotations (never a score), saved with the answer.
+            await Gadfly.Server.Integrity.AudioIntegritySignals.RecordAsync(db, live.OrganizationId, s.Id, turnId, answer, ct);
             await db.SaveChangesAsync(ct);
             if (await VerifyAsync(live, db, ledger, response, open, answer, ct))
             {

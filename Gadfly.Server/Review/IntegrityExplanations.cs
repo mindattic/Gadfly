@@ -42,6 +42,8 @@ public static class IntegrityExplanations
             "Quiet speech was heard that wasn't the answer itself. Some students murmur while thinking; weigh it with the answers around it."),
         ["reading-cadence"] = new("Reading-aloud rhythm",
             "The answer's pace and pauses sounded like reading rather than talking. Weak evidence on its own; some people speak carefully when nervous."),
+        ["fluent-after-silence"] = new("Long wait, then a smooth answer",
+            "A long gap before the first word, followed by an answer with none of the usual hesitation. Common causes are thinking carefully before speaking, or a student who simply speaks smoothly once ready. Weak evidence: weigh it against how the student answered other questions."),
         ["tab-hidden"] = new("Exam tab hidden",
             "The exam tab was hidden (another tab or window was in front). Could be looking something up, or a notification or accident; check the time it lasted."),
         ["focus-lost"] = new("Window lost focus",
