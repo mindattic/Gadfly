@@ -133,8 +133,15 @@ public sealed class GadflyFactory(string connectionString) : WebApplicationFacto
             foreach (var d in services.Where(d => d.ServiceType == typeof(IHostedService)
                          && d.ImplementationType?.Assembly == typeof(GadflyDbContext).Assembly).ToList())
                 services.Remove(d);
+            // No test ever reaches a real LLM provider: the scripted panel answers everything, and the live client
+            // and its selection (which can probe providers) are never constructed.
             services.RemoveAll<ISocraticVotingClient>();
             services.AddSingleton<ISocraticVotingClient>(Panel);
+            services.RemoveAll<IPanelInfo>();
+            services.AddSingleton<IPanelInfo>(new TestPanelInfo());
+            services.RemoveAll<LegionVotingClient>();
+            services.AddSingleton<LegionVotingClient>(_ => throw new InvalidOperationException("Tests never construct the live LLM client."));
+            services.RemoveAll<Gadfly.Socrates.Mock.SelectedPanel>();
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
         });
@@ -170,4 +177,12 @@ public abstract class ServerTest
 
     protected static TenantSnapshot Member(Guid org, Guid user, string role) =>
         new(false, user, org, role, [new Membership(org, role)], false);
+}
+
+/// <summary>The panel the test host reports: the scripted fake, labelled mock.</summary>
+public sealed class TestPanelInfo : IPanelInfo
+{
+    public bool IsMock => true;
+    public string Mode => PanelModes.Mock;
+    public string Reason => "Tests use a scripted fake panel; no LLM provider is ever called.";
 }
