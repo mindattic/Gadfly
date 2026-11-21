@@ -82,6 +82,8 @@ dotnet build Gadfly.slnx
 dotnet run --project Gadfly.Server
 ```
 
+`.\run.ps1` does the same in one step, always in mock mode; add `-SeedDemo`, `-SeedClassroom` or `-Tour` (below).
+
 Open `https://localhost:7311` (HTTP on 5311). In Development the database `Gadfly` on
 `(localdb)\MSSQLLocalDB` is created and migrated on start, and the AI panel is the mock: every page shows
 a MOCK MODE banner and nothing calls a provider. Seed a ready-made institution to click through (see
@@ -136,7 +138,9 @@ dotnet build Gadfly.Tour\Gadfly.Tour.csproj
 dotnet run --project Gadfly.Tour -- --fresh
 ```
 
-The other options (`--keep`, `--url`, `--verbose` and more) are in [docs/TOUR.md](docs/TOUR.md).
+`.\run.ps1 -Tour` builds both and runs exactly that; `.\run.ps1 -SeedDemo` and `-SeedClassroom` start the
+server with the matching seeder (`-Password` chooses the account password). The other options (`--keep`,
+`--url`, `--verbose` and more) are in [docs/TOUR.md](docs/TOUR.md).
 
 ## Configuration
 
@@ -153,8 +157,10 @@ to MindAttic.Log's database for `Gadfly.Server`. The health check is at `/health
 
 ## Deployment
 
-Gadfly.Server deploys to Azure App Service with Azure SQL, Key Vault and a managed identity, from a
-manual GitHub Actions workflow; [docs/DEPLOY.md](docs/DEPLOY.md) has the procedure. The instance at
+Gadfly.Server deploys to Azure App Service with Azure SQL, Key Vault and a managed identity.
+`npm run deploy -- --app gadfly` in MindAttic.Deploy (which runs `tools/deploy-azure.ps1`) exports the commit
+cleanly, migrates the database first, deploys, and checks `/healthz` and `/login`; a manual GitHub Actions
+workflow does the same on a runner. [docs/DEPLOY.md](docs/DEPLOY.md) has the procedure. The instance at
 https://mindattic-gadfly.azurewebsites.net runs in mock mode.
 
 ## Using Gadfly from your own app

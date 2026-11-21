@@ -108,7 +108,7 @@ finally { Remove-Item $settingsFile -ErrorAction SilentlyContinue }
 Write-Host ""
 Write-Host "== Still to do by hand" -ForegroundColor Yellow
 Write-Host "1. Put these secrets in Key Vault $KeyVault (az keyvault secret set --vault-name $KeyVault -n <name> --value <value>):"
-Write-Host "   gadfly-pepper-v1 and gadfly-reset-token-key (each: [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))),"
+Write-Host "   gadfly-pepper-v1 and gadfly-reset-token-key (each: 32 random bytes, base64 - see New-Secret in docs/DEPLOY.md; RandomNumberGenerator.GetBytes needs PowerShell 7),"
 Write-Host "   gadfly-bootstrap-token (the first admin's initial password, 12+ chars), llm-claude, llm-openai, llm-gemini, llm-deepseek, elevenlabs"
 Write-Host "2. In the Gadfly database (Azure portal Query editor, signed in as the server's Entra admin), run:"
 Write-Host "   CREATE USER [$App] FROM EXTERNAL PROVIDER; ALTER ROLE db_datareader ADD MEMBER [$App]; ALTER ROLE db_datawriter ADD MEMBER [$App];"

@@ -13,7 +13,8 @@ plan and Azure SQL server, with a managed identity and no passwords anywhere:
 | Database | `Gadfly` on `sql-mindattic-f65744` | Serverless, auto-pause after 60 min |
 | Data Protection keys | blob container `gadfly-dp-keys`, Key Vault key `gadfly-dp-protect` | Signs cookies, launch links and webhook secrets |
 | Secrets | Key Vault `kv-tutor-f65744` | Auth pepper, reset key, bootstrap token, LLM and ElevenLabs keys |
-| Deploy | `.github/workflows/azure-deploy.yml` | Manual trigger; build, migrate (EF bundle), deploy, smoke test |
+| Deploy | `tools/deploy-azure.ps1` (via MindAttic.Deploy) | Clean export, migrate, publish, zip deploy, health and login smoke checks |
+| Deploy (CI) | `.github/workflows/azure-deploy.yml` | Manual trigger; same steps on a runner, once the repo secrets exist |
 
 ## One-time setup
 
@@ -30,8 +31,10 @@ powershell -File tools\provision-azure.ps1 -StorageAccount <tutor's storage acco
 
 # 2. Put the secrets in Key Vault (one line each; paste real values where it says so)
 $kv = 'kv-tutor-f65744'
-az keyvault secret set --vault-name $kv -n gadfly-pepper-v1       --value ([Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))) --query id -o tsv
-az keyvault secret set --vault-name $kv -n gadfly-reset-token-key --value ([Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))) --query id -o tsv
+# 32 random bytes, base64 (RNGCryptoServiceProvider works in Windows PowerShell 5.1 and 7; RandomNumberGenerator.GetBytes is 7+ only)
+function New-Secret { $b = New-Object byte[] 32; $r = New-Object Security.Cryptography.RNGCryptoServiceProvider; $r.GetBytes($b); $r.Dispose(); [Convert]::ToBase64String($b) }
+az keyvault secret set --vault-name $kv -n gadfly-pepper-v1       --value (New-Secret) --query id -o tsv
+az keyvault secret set --vault-name $kv -n gadfly-reset-token-key --value (New-Secret) --query id -o tsv
 az keyvault secret set --vault-name $kv -n gadfly-bootstrap-token --value '<first admin password, 12+ characters>' --query id -o tsv
 az keyvault secret set --vault-name $kv -n llm-claude    --value '<Anthropic API key>' --query id -o tsv
 az keyvault secret set --vault-name $kv -n llm-openai    --value '<OpenAI API key>'    --query id -o tsv
@@ -54,10 +57,49 @@ Each `az keyvault secret set` prints the secret's URL; an error instead means th
 
 ## Deploying
 
-GitHub → mindattic/Gadfly → Actions → **Build and deploy Gadfly to Azure App Service** → Run workflow.
-It builds, applies migrations, deploys and waits until `https://mindattic-gadfly.azurewebsites.net/healthz`
-and `/login` answer 200. The first sign-in is `admin` with the `gadfly-bootstrap-token` password; you're
-made to change it and set up MFA. Then rotate the `gadfly-bootstrap-token` secret to a new random value.
+Redeploys are one command, from a signed-in `az` (`az login`; your Entra account must be able to alter the `Gadfly`
+database and deploy to the app):
+
+```powershell
+cd D:\Projects\MindAttic\MindAttic.Deploy
+npm run deploy -- --app gadfly            # the real thing
+npm run deploy -- --app gadfly --dry-run  # export, restore, publish and zip; migrates and deploys nothing
+```
+
+MindAttic.Deploy registers Gadfly as the `gadfly` entry in its `projects.json` `apps[]` and runs
+`Gadfly\tools\deploy-azure.ps1` as that app's preDeploy hook (it passes `-DryRun` under `--dry-run`). The script
+can also be run directly: `powershell -NoProfile -File tools\deploy-azure.ps1 [-Ref <commit>] [-DryRun]`. It:
+
+1. refuses a commit that is not on `origin/main`, and an app whose `Gadfly__AiMode` is not `mock` (override with
+   `-AllowUnpushed`, `-AllowLive`); it only reads that one setting and never changes any app setting or secret;
+2. exports the commit with `git archive` into a clean scratch folder, so other people's uncommitted edits in the
+   working tree are never published;
+3. runs `dotnet restore`, then `dotnet ef database update` against Azure SQL with Entra auth. **If this fails the
+   script stops and nothing is deployed**: new code never runs on an old database;
+4. publishes (Release), zips, and runs `az webapp deploy --type zip --async true`, then waits for Kudu to report
+   the deployment (status 4 is success; Kudu sometimes answers a 500 timeout for a deploy that did succeed, so the
+   script reads the deployment log rather than trusting that reply);
+5. polls `https://mindattic-gadfly.azurewebsites.net/healthz` until 200, then checks that `/login` is 200.
+
+The manual GitHub workflow does the same on a runner: GitHub → mindattic/Gadfly → Actions → **Build and deploy
+Gadfly to Azure App Service** → Run workflow. The first sign-in is `admin` with the `gadfly-bootstrap-token`
+password; you're made to change it and set up MFA. Then rotate the `gadfly-bootstrap-token` secret to a new random
+value.
+
+## Running it locally
+
+`run.ps1` at the repo root starts Gadfly.Server in Development on `https://localhost:7311`, in mock mode (it sets
+`Gadfly__AiMode=mock`, so no provider is called), against LocalDB (database `Gadfly`, migrated on start):
+
+```powershell
+.\run.ps1                  # serve
+.\run.ps1 -SeedDemo        # also seed Gadfly Demo Academy (demo.owner ... demo.student)
+.\run.ps1 -SeedClassroom   # also seed the classroom (Teacher_A..C, Student_A..Z)
+.\run.ps1 -Tour            # run the demo tour (docs/TOUR.md) on its own database and print its result line
+```
+
+The seeders use `-Password <text>` (or `Gadfly:Demo:Password`) as every account's password, or generate one and
+print it once in the log.
 
 ## After the first deploy
 
