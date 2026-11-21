@@ -326,14 +326,21 @@ Answer by code, e.g. "D3: B". Until a decision is answered, work proceeds on the
 | D2 | What eye/face signals are used for | **A: integrity evidence plus "thinking" annotation only, no deception or emotion inference** · B: also show instructors raw gaze heatmaps |
 | D3 | Avatar look | **A: stylized 3D head (TalkingHead GLB), one default examiner** · B: a Socrates-like character · C: photoreal 2D from a photo (needs a GPU server) |
 | D4 | ElevenLabs usage | **A: ElevenLabs for TTS and for STT (Scribe)** · B: TTS only, OpenAI for STT. Also: which voice ID? |
-| D5 | Hosting | **A: LocalDB now, Azure App Service + Azure SQL later** (owner confirmed 2026-11-20) |
+| D5 | Hosting | Resolved: LocalDB for development, Azure App Service + Azure SQL live at mindattic-gadfly (owner confirmed 2026-11-20) |
 | D6 | First customers | **A: adults (universities, corporate training, certification)** · B: also K-12 (adds COPPA, FERPA and parental consent work) |
 | D7 | Recording retention | **A: audio + transcript kept 90 days (per-org setting), video never stored, derived events only** · B: no audio stored at all |
 | D8 | Billing | **A: none in v1, manual invoicing, usage metered anyway** · B: Stripe subscriptions in v1 |
 | D9 | New library repos public or private | **A: private until v1** · B: public (MIT) now, like EyeTracker and Legion |
-| D10 | EyeTracker → Webcam | **A: rename the repo in place (history kept, GitHub redirects old URLs)** · B: new repo that depends on EyeTracker |
+| D10 | EyeTracker → Webcam | Resolved: renamed in place to MindAttic.Webcam (ET-T12; history kept, GitHub redirects old URLs) |
 | D11 | Student identity | **A: login + same-face-throughout check** · B: photo-ID match at start |
 | D12 | Languages | **A: English only in v1** · B: multilingual (ElevenLabs and Scribe support it) |
-| D14 | Cross-repo work from the Gadfly window | **A: the owner types `/crossrepo` there** · B: open a CLI per repo, or `/allocate -repo=...` |
-| D15 | LLM provider billing | The Anthropic API key is out of credit and Legion's OpenAI Low tier uses a retired model (M.LEGN-T51); until both are fixed the panel is Gemini + DeepSeek only, and two voters can tie |
-| D13 | Who grades | **A: AI recommends, instructor finalizes** · B: AI grade is final unless contested |
+| D13 | Who grades | Resolved by the master plan: AI grades are preliminary; blind human grading, reconciliation and an authorized approval come before anything is published |
+| D14 | Cross-repo work from the Gadfly window | Resolved: the owner typed `/crossrepo all` |
+| D15 | LLM provider billing | Resolved: Anthropic credits bought (2026-11-20); OpenAI Low tier is now gpt-6-luna (M.LEGN-T51). Spending rule: mock mode everywhere, Claude pinned to Sonnet 5, no live calls without the owner's OK each time |
+| D16 | Create the Azure resources | Resolved: owner said go (2026-11-20) |
+| D18 | What a teacher sees | **A: teachers see only their own assessments and students; Owner/Admin see the whole organization** · B: every teacher sees the whole organization (today's behavior) |
+| D19 | Voice consent wording | **A: keep the wording now in the exam room (consent version .4)** · B: owner rewrites it |
+| D20 | Voice-only exams | **A: typing is always available (accessibility, broken mic); typed answers are marked as text** · B: allow an exam to require voice |
+| D21 | When webcam notes reach the reviewer | **A: also send an update every minute while an episode lasts** · B: only when an episode ends (today's behavior) |
+| D22 | 3D avatar on Azure | **A: upload the 37 MB model to blob storage and point Gadfly:Voice:AvatarModelUrl at it** · B: keep the 2D portrait on Azure |
+| D23 | Live AI | **A: stay in mock mode until the owner says go** · B: turn on the live panel (and, with D4, ElevenLabs voice) for named test sessions |
