@@ -105,18 +105,33 @@ source job has built the concept maps. Running it again completes a partial demo
 | End of exam | `Finish` ends the session and the report is written. |
 | Labels | Mock: all judge votes from `mock`, the report carries `[MOCK]`, AI grades flagged `IsMock`, no student-facing question marked. Live: no mock votes or grades. |
 | AI grading per objective (GAD-T94) | AI objective grades appear for every objective, scores within 0..max, mock grades labelled. |
-| Blind human grading, disagreement, reconciliation, approval and publication, student sees result, appeal and amendment (GAD-T95..T98) | Asserted from their tables once the features record rows for the tour's session; until the tour can drive them over HTTP they SKIP with the ticket. |
-| Report export | The reviewer's `report.md` (labelled `[MOCK]` in mock mode) and `turns.csv` export; a student is refused. The per-objective assessment report (GAD-T99) is not checked yet. |
+| Blind human grading (GAD-T95) | Once AI grading has left the grade at Human Review Pending, the **examiner** reads the grading status and gets no AI score, combined score, final percentage or disagreement (`aiVisible: false`; in mock mode no `[MOCK]` explanation either), then submits a grade for every objective over HTTP. Rows are `WasBlind`, by the examiner, audited `grade.human.recorded`; afterwards the AI's evaluation is visible. |
+| Deliberate disagreement (GAD-T96) | One objective was graded 40 points from the AI on purpose (the others agree): a `MandatoryReconciliation` disagreement of 40 points opens, the grade is Reconciliation Required, and the **teacher's** approval and publication are refused (`409`, two `grade.transition.refused` events, no approval record). |
+| Reconciliation (GAD-T97) | The teacher requests a second review by `demo.reviewer`; the **second reviewer** sees the disagreement, documents the cause and resolution with a resolved score; the reconciliation row names them as reviewer and second reviewer, the disagreement is resolved, the score is recalculated (`grade.reconciled`, `grade.recalculated`), and the grade is Awaiting Final Approval. |
+| Approval and publication (GAD-T98, Scenario J) | The **examiner** tries to approve and to publish: both `403`, two `access.denied` events, grade unchanged. The teacher approves (Finalized, Finalize record); the **student** is refused the status and the report while it is only finalized; the teacher publishes (Published, Publish record, `grade.approved` and `grade.published`). |
+| Student sees the published result (GAD-T98) | The student's status shows Published with the same final percentage as the database and no reviewer names; `/my-results/{id}`, its `report.md` and `/my-exams` show the exam. |
+| Appeal and amendment (GAD-T98, Scenario J) | The student appeals (Under Appeal, open appeal row). The examiner's amendment and publication and the student's amendment are refused and audited (`access.denied`, 2 + 1). The teacher amends a non-reconciled objective with the appeal id: Amended, the final percentage changes, a new human grade by the teacher supersedes the examiner's, an Amend record, the appeal Amended by the teacher; the student sees the amended result. |
+| Report export | The reviewer's `report.md` (labelled `[MOCK]` in mock mode) and `turns.csv` export; a student is refused. The per-objective assessment report (GAD-T99): `/grading/{id}/report.md` with its title, objectives table and a section per objective (MOCK notice in mock mode), `report.csv` with a header and one row per objective, the student refused the reviewer copy; after the grading stages the report is not preliminary and carries the approval, reconciliation and appeal history, and the student's `/my-results/{id}/report.md` downloads without reviewer names. |
 | Review pages | The review list and the session page render for the teacher. |
 | Platform API results | The attempt list and the session result (state Ended, report present). |
 | Analytics (GAD-T102) | `/analytics` and `/analytics/export.csv` answer the teacher and refuse a student. |
-| Audit trail | The audit actions recorded for the organization (and `response.*` events once verification runs). |
+| Audit trail | The audit actions recorded for the organization (and `response.*` events once verification runs); after the grading stages every grading action (`grade.human.recorded`, `grade.disagreement.detected`, `grade.transition.refused`, `reconciliation.second-review.requested`, `grade.reconciled`, `grade.approved`, `grade.published`, `grade.appeal.opened`, `grade.amended`, `grade.appeal.resolved`, `access.denied`) must be there. |
+
+## How the grading stages drive the server
+
+The human grading steps are Blazor buttons on `/grading/{id}`; the tour drives the same `GradingService` through the
+grading HTTP actions (`Gadfly.Server/Grading/GradingActionEndpoints.cs`, documented in docs/API.md, "Grading
+workflow"). Each demo user posts JSON with their own sign-in cookie and the antiforgery token from
+`GET /grading/actions/antiforgery` in the `RequestVerificationToken` header, exactly as a browser script would, so
+the permission matrix, the blind rule, the status machine and the audit trail are the ones the pages use. The tour
+reads the AI grades from the database (never through the examiner) to choose a human score 40 points away. If the
+server doesn't map the actions (`app.MapGradingActions()`), the grading stages SKIP with their ticket.
 
 ## How the tour grows
 
 A stage whose feature hasn't landed prints `SKIP (not built: <ticket>)` instead of failing. It decides by probing
 the running server: a SessionHub method that doesn't exist (`CorrectAnswer`, `ReviseAnswer`), a step without the
 `verification` field, a route that answers 404, or no rows for the tour's session in the feature's table. When a
-feature lands, its stage starts asserting automatically; a feature that needs a new user action (the human grading
-steps) also needs its step written into `Gadfly.Tour/DemoTour.cs`, ideally against an HTTP action rather than a
-Blazor-only button, so the tour can drive it the way a person would.
+feature lands, its stage starts asserting automatically; a feature that needs a new user action also needs its step
+written into `Gadfly.Tour/DemoTour.cs`, ideally against an HTTP action rather than a Blazor-only button (as the
+grading stages do), so the tour can drive it the way a person would.

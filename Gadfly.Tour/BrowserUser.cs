@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.SignalR.Client;
 
@@ -55,6 +57,42 @@ public sealed partial class BrowserUser : IDisposable
             return (response.StatusCode, body, new Uri(new Uri(_baseUrl), url).AbsolutePath);
         }
         throw new TourAssertException($"Too many redirects from {path}.");
+    }
+
+    private string? _antiforgeryToken;
+
+    /// <summary>A JSON endpoint read with this user's cookies (no redirects followed). Body is default when not JSON.</summary>
+    public async Task<(HttpStatusCode Status, JsonElement Body)> GetJsonAsync(string path)
+    {
+        using var response = await Http.GetAsync(path.TrimStart('/'));
+        if (_verbose) Console.WriteLine($"      [{UserName}] GET {path} -> {(int)response.StatusCode}");
+        return (response.StatusCode, await ReadJsonAsync(response));
+    }
+
+    /// <summary>
+    /// A JSON POST the way a signed-in browser script sends one: the cookies plus the antiforgery request token
+    /// (fetched once from <paramref name="tokenPath"/>) in the RequestVerificationToken header.
+    /// </summary>
+    public async Task<(HttpStatusCode Status, JsonElement Body)> PostJsonAsync(string path, object body, string tokenPath)
+    {
+        if (_antiforgeryToken is null)
+        {
+            var (status, token) = await GetJsonAsync(tokenPath);
+            Expect.True(status == HttpStatusCode.OK && token.ValueKind == JsonValueKind.Object, $"GET {tokenPath} answered {(int)status}");
+            _antiforgeryToken = token.GetProperty("token").GetString();
+        }
+        using var request = new HttpRequestMessage(HttpMethod.Post, path.TrimStart('/')) { Content = JsonContent.Create(body) };
+        request.Headers.Add("RequestVerificationToken", _antiforgeryToken);
+        using var response = await Http.SendAsync(request);
+        if (_verbose) Console.WriteLine($"      [{UserName}] POST {path} -> {(int)response.StatusCode}");
+        return (response.StatusCode, await ReadJsonAsync(response));
+    }
+
+    private static async Task<JsonElement> ReadJsonAsync(HttpResponseMessage response)
+    {
+        if (response.Content.Headers.ContentType?.MediaType?.Contains("json", StringComparison.OrdinalIgnoreCase) != true) return default;
+        try { return (await response.Content.ReadFromJsonAsync<JsonElement>()).Clone(); }
+        catch (JsonException) { return default; }
     }
 
     /// <summary>Signs in through the real form: GET /login, copy the antiforgery token and hidden fields, POST it.</summary>

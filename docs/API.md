@@ -627,3 +627,124 @@ response bodies as named schemas (`CollectionDetail`, `JobStatus`, `ExamCreated`
 `ApiKey` (`components.securitySchemes.ApiKey`) and requires it on every `/api/v1` operation, so generated
 clients send `Authorization: Bearer gfk_...`. The result endpoint is not given a named schema; its shape is
 documented [above](#result). `/launch` is a browser page and is not in the document.
+
+## Grading workflow
+
+The human grading workflow (master plan Parts 8-11) can be driven over HTTP as well as from the Grading pages:
+blind human grades, reconciliation, approval, publication, appeals and amendments, plus a status read. These are
+**not** `/api/v1` calls: each one is an accountable act by a person, so they take the **signed-in cookie** of a
+member of the organization (the API key is not accepted) and act in that member's role. The demo tour
+(docs/TOUR.md) drives the whole workflow through them; an integrator can use them on behalf of a person who has
+signed in.
+
+Every rule is the grading service's, the same one the pages use: the role permission from the permission matrix
+(Part 16.2), with every refused attempt written to the audit log as `access.denied`; the grade-status machine (an
+invalid move is refused and audited as `grade.transition.refused`); the blind rule; and an audit event for every
+change (`grade.human.recorded`, `grade.disagreement.detected`, `grade.reconciled`, `grade.approved`,
+`grade.published`, `grade.appeal.opened`, `grade.amended`, and so on).
+
+### Antiforgery
+
+Every `POST` needs the antiforgery request token in the `RequestVerificationToken` header, sent with the cookies of
+the same signed-in session:
+
+```
+GET /grading/actions/antiforgery
+→ 200 { "headerName": "RequestVerificationToken", "token": "CfDJ8..." }
+```
+
+A missing or wrong token answers `400` with `{ "ok": false, "message": "Missing or invalid antiforgery token: ..." }`.
+
+### Actions
+
+Every path below starts with `/grading/actions/{sessionId}`. Bodies are JSON. Each action answers
+`{ "ok": true|false, "message": "<what happened, in words>", "status": "<grade status after the call>" }`.
+
+| Method and path | Who (permission) | Body | Effect |
+|---|---|---|---|
+| `POST .../ai-grading` | Examiner, Teacher, Admin, Owner | `{}` | Starts (or retries) AI grading of an ended session |
+| `POST .../human-grades` | Examiner, Teacher (EnterHumanScore) | `{ "grades": [ { "objectiveKey" or "objectiveId", "level", "score", "comment"?, "evidenceNote"? } ] }` | Human Review Pending → Reconciliation Required or Awaiting Final Approval. One grade per objective, every objective required; earlier grades are kept and superseded |
+| `POST .../human-grades/reopen` | Examiner, Teacher | `{ "reason" }` | Back to Human Review Pending, to adjust the human grades |
+| `POST .../second-review` | Teacher, Admin, Owner, Second Reviewer (ReconcileDisagreement) | `{ "disagreementId", "reviewerUserId" }` | Asks a member holding the Second Reviewer role to reconcile |
+| `POST .../reconciliations` | ReconcileDisagreement or ActAsSecondReviewer | `{ "disagreementId", "cause", "resolution", "resolvedAiScore"?, "resolvedHumanScore"?, "secondReviewerUserId"? }` | Documents the resolution and recalculates; Awaiting Final Approval once no mandatory disagreement is open. `cause` is one of `error-in-ai`, `error-in-human`, `transcript-ambiguity`, `rubric-interpretation`, `both-defensible`. A second reviewer who acts is recorded as the second reviewer |
+| `POST .../approve` | Teacher, Admin, Owner (ApproveFinalGrade) | `{ "label"?, "note"? }` | Awaiting Final Approval → Finalized, with a Finalize approval record. Refused (`409`) while a mandatory disagreement is open |
+| `POST .../publish` | Teacher, Admin, Owner (PublishGrade) | `{ "note"? }` | Finalized → Published, with a Publish record. Refused (`409`) without a Finalize record |
+| `POST .../appeals` | The student whose published result it is (AppealOwnResult) | `{ "reason" }` | Published or Amended → Under Appeal |
+| `POST .../appeals/{appealId}/resolve` | Teacher, Admin, Owner (ResolveAppeal) | `{ "outcome": "Upheld" or "Dismissed", "resolution" }` | The grade stands: back to Published |
+| `POST .../amend` | Teacher, Admin, Owner (AmendGrade, plus ResolveAppeal with `appealId`) | `{ "grades": [ changed objectives ], "reason", "appealId"? }` | Published or Under Appeal → Amended: new human grades supersede the old ones, the combined score is recalculated under the frozen policy, and the appeal (if given) is resolved as Amended |
+
+`level` is a mastery level by name or number: `InsufficientEvidence` (0), `Recognition` (1), `BasicExplanation` (2),
+`ConceptualUnderstanding` (3), `Application` (4), `TransferAndCriticalReasoning` (5). `score` is on the objective's
+own scale (0 to its `maxScore`).
+
+| Status | When |
+|---|---|
+| `200` | Done (`ok: true`) |
+| `400` | A missing or invalid field, an unknown objective or level, a missing antiforgery token, or another rule of the action (the message says which) |
+| `403` | The caller's role lacks the permission (audited as `access.denied`), or a student appeals a result that isn't their own published one |
+| `404` | (status read) The session isn't in the organization, or a student's result isn't published yet |
+| `409` | The grade-status machine refused the move (`"Refused: ..."`, audited as `grade.transition.refused`) |
+
+Example: the examiner submits blind grades.
+
+```
+POST /grading/actions/6b72ef45-.../human-grades
+RequestVerificationToken: CfDJ8...
+Content-Type: application/json
+
+{ "grades": [
+    { "objectiveKey": "equal-groups", "level": "BasicExplanation", "score": 4, "comment": "Repeated addition only." },
+    { "objectiveKey": "factor-roles", "level": "BasicExplanation", "score": 5 },
+    { "objectiveKey": "scaling", "level": 2, "score": 5 } ] }
+
+→ 200 { "ok": true, "status": "ReconciliationRequired",
+        "message": "Human grades saved. The AI and human scores disagree substantially: reconciliation is required before this grade can be finalized." }
+```
+
+### Status
+
+`GET /grading/actions/{sessionId}`, for a reviewer (ViewTranscripts):
+
+```json
+{
+  "sessionId": "6b72ef45-...", "examTitle": "Demo: Understanding multiplication", "student": "demo.student", "attempt": 1,
+  "status": "ReconciliationRequired", "statusLabel": "Reconciliation Required",
+  "aiVisible": true, "isMock": true, "finalPercent": 46.67, "label": null,
+  "policy": { "aiWeight": 0.4, "humanWeight": 0.6, "additionalReviewAt": 10, "mandatoryReconciliationAt": 20, "blindHumanGrading": true, "source": "exam-policy" },
+  "aiGradingJob": { "state": "Succeeded", "error": null },
+  "responsesNeedingHuman": 0,
+  "objectives": [ {
+    "id": "...", "key": "equal-groups", "title": "...", "maxScore": 10, "weight": 1, "aiRecorded": true,
+    "ai": { "level": "Application", "levelNumber": 4, "score": 8, "maxScore": 10, "confidence": "...", "isMock": true, "explanation": "[MOCK] ...", "excluded": false },
+    "human": { "id": "...", "level": "BasicExplanation", "levelNumber": 2, "score": 4, "maxScore": 10, "wasBlind": true, "reviewer": "demo.examiner",
+               "reviewerRole": "Examiner", "comment": "...", "submittedAt": "...", "supersedes": null },
+    "humanHistory": 1,
+    "combined": { "aiScore": 8, "humanScore": 4, "combined": 5.6, "differencePoints": 40, "band": "MandatoryReconciliation" } } ],
+  "disagreements": [ { "id": "...", "objectiveId": "...", "objectiveKey": "equal-groups", "aiScore": 8, "humanScore": 4, "differencePoints": 40,
+                       "band": "MandatoryReconciliation", "resolved": false, "resolvedAt": null, "needsReconciliation": true, "reconciliations": [] } ],
+  "approvals": [ { "action": "Finalize", "actor": "demo.teacher", "role": "Instructor", "note": "...", "at": "..." } ],
+  "appeals": [ { "id": "...", "state": "Open", "reason": "...", "resolution": null, "openedAt": "...", "resolvedAt": null } ],
+  "secondReviewers": [ { "userId": "...", "name": "demo.reviewer" } ]
+}
+```
+
+**Blind grading.** While the policy is blind and the grade has not passed the human evaluation (Human Review
+Pending or earlier), `aiVisible` is `false` and nothing derived from the AI is returned: every objective's `ai` and
+`combined` are `null`, `finalPercent` is `null`, `disagreements` is empty and `isMock` is `false`. `aiRecorded` says
+only that an AI grade exists. Once the human grades are submitted, reviewers see the AI's evaluation.
+
+A **student** asking for their own session gets `404` until the grade is approved *and* published (the attempt is
+audited as `access.denied`). After that they get their result as the student's assessment report shows it, without
+reviewer names, voters or audit detail:
+
+```json
+{ "sessionId": "...", "examTitle": "...", "attempt": 1, "status": "Published", "statusLabel": "Published",
+  "finalPercent": 60, "label": "Tour", "isMock": true,
+  "objectives": [ { "key": "...", "title": "...", "maxScore": 10, "aiScore": 8, "aiLevel": "...", "humanScore": 8, "humanLevel": "...", "combined": 8 } ],
+  "knowledgeGaps": [ "..." ], "approvals": [ "2026-11-20 20:03 UTC · Final grade approved by Teacher" ],
+  "appeals": [ { "id": "...", "state": "Open", "resolution": null, "openedAt": "...", "resolvedAt": null } ] }
+```
+
+Other members without a reviewer permission get `403` (audited). The per-objective assessment report downloads at
+`/grading/{sessionId}/report.md` and `/grading/{sessionId}/report.csv` (reviewers) and
+`/my-results/{sessionId}/report.md` (the student, once published).

@@ -27,7 +27,7 @@ try
     {
         if (options.Fresh)
         {
-            Console.WriteLine($"Dropping database {TourOptions.TourDatabase} (--fresh)...");
+            Console.WriteLine($"Dropping database {new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(options.ConnectionString).InitialCatalog} (--fresh)...");
             await TourDb.DropDatabaseAsync(options.ConnectionString);
         }
         await server.StartAsync(options, CancellationToken.None);

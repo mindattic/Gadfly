@@ -65,12 +65,12 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
             await _list.RunAsync("End of exam: session ended and report written", EndExamAsync);
             await _list.RunAsync(Mock ? "Mock results are labelled, student text is not" : "Live results come from real providers", LabelsAsync);
             await _list.RunAsync("AI preliminary grading per objective (GAD-T94)", AiGradingAsync);
-            await _list.RunAsync("Blind human grading (GAD-T95)", () => GradingFeatureAsync("GAD-T95", "HumanObjectiveGrades", "a blind human grade"));
-            await _list.RunAsync("Deliberate disagreement detected (GAD-T96)", () => GradingFeatureAsync("GAD-T96", "GradeDisagreements", "a disagreement"));
-            await _list.RunAsync("Reconciliation (GAD-T97)", () => GradingFeatureAsync("GAD-T97", "GradeReconciliations", "a reconciliation", joinDisagreement: true));
-            await _list.RunAsync("Approval and publication (GAD-T98)", () => GradingFeatureAsync("GAD-T98", "ApprovalRecords", "an approval record"));
+            await _list.RunAsync("Blind human grading (GAD-T95)", BlindGradingAsync);
+            await _list.RunAsync("Deliberate disagreement blocks approval (GAD-T96)", DisagreementAsync);
+            await _list.RunAsync("Reconciliation by the second reviewer (GAD-T97)", ReconciliationAsync);
+            await _list.RunAsync("Approval and publication (GAD-T98; Scenario J)", ApprovalAsync);
             await _list.RunAsync("Student sees the published result (GAD-T98)", StudentResultAsync);
-            await _list.RunAsync("Appeal and amendment (GAD-T98)", () => GradingFeatureAsync("GAD-T98", "GradeAppeals", "an appeal"));
+            await _list.RunAsync("Appeal and amendment (GAD-T98; Scenario J)", AppealAsync);
             await _list.RunAsync("Report export (review export; assessment report GAD-T99)", ReportExportAsync);
             await _list.RunAsync("Review pages show the session", ReviewPagesAsync);
             await _list.RunAsync("Platform API reports the attempt and result", ApiResultAsync);
@@ -464,32 +464,348 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
         return $"{rows.Count} objective grade(s): {string.Join("; ", rows.Select(r => $"level {r["Level"]}, {r["Score"]}/{r["MaxScore"]}"))}; grade status {status ?? "(none)"}";
     }
 
-    /// <summary>
-    /// The human-grading stages need an HTTP action the tour can drive as the examiner (blind grade, reconcile,
-    /// approve, publish, appeal). Until one exists they SKIP with the ticket; once their rows appear for the tour's
-    /// session (or the actions exist), the stage asserts them.
-    /// </summary>
-    private async Task<string> GradingFeatureAsync(string ticket, string table, string what, bool joinDisagreement = false)
+    // The human grading workflow is driven through the grading HTTP actions (Gadfly.Server/Grading/GradingActionEndpoints.cs,
+    // docs/API.md "Grading workflow") as the demo examiner, reviewer, teacher and student, with their cookies and the
+    // antiforgery header, exactly as a browser script would. Every outcome is then checked in the database.
+
+    private const string Actions = "/grading/actions";
+    private bool? _actionsMapped;
+    private bool _gradingDriven;
+    private bool _studentRefusedBeforePublication;
+    private GradedObjective? _target;
+    private List<GradedObjective> _objectives = [];
+    private Guid? _disagreementId;
+
+    private sealed record GradedObjective(Guid Id, string Key, string Title, decimal Max, decimal? AiScore, string? AiLevel, decimal HumanScore, string HumanLevel);
+
+    private async Task EnsureActionsAsync(string ticket)
     {
-        if (!await _db.TableExistsAsync("gadfly", table)) throw new NotBuiltException(ticket, $"no {table} table");
-        var count = joinDisagreement
-            ? await _db.CountAsync($"SELECT COUNT(*) FROM gadfly.{table} x JOIN gadfly.GradeDisagreements d ON d.Id = x.DisagreementId WHERE d.SessionId = @s", ("@s", _sessionId))
-            : await _db.CountAsync($"SELECT COUNT(*) FROM gadfly.{table} WHERE SessionId = @s", ("@s", _sessionId));
-        if (count > 0) return $"{count} {table} row(s) for the session";
-        var examiner = _users.GetValueOrDefault("demo.examiner");
-        var page = examiner is null ? HttpStatusCode.NotFound : (await examiner.GetAsync("/grading")).Status;
-        throw new NotBuiltException(ticket, page == HttpStatusCode.OK
-            ? $"/grading exists, but there is no HTTP action the tour can drive to record {what} yet"
-            : $"nothing records {what} yet");
+        if (_actionsMapped is null)
+        {
+            var examiner = _users.GetValueOrDefault("demo.examiner") ?? throw new TourAssertException("demo.examiner is not signed in");
+            var (status, body) = await examiner.GetJsonAsync($"{Actions}/antiforgery");
+            _actionsMapped = status == HttpStatusCode.OK && body.ValueKind == JsonValueKind.Object;
+        }
+        if (_actionsMapped != true)
+            throw new NotBuiltException(ticket, $"the grading HTTP actions are not mapped ({Actions}/*; app.MapGradingActions() in GadflyEndpoints)");
+    }
+
+    private void EnsureGraded()
+    {
+        if (_target is null) throw new TourAssertException("blocked: the blind human grading stage did not complete");
+    }
+
+    private Task<string?> GradeStatusAsync() =>
+        _db.ScalarAsync<string>("SELECT Status FROM gadfly.FinalGrades WHERE SessionId = @s", ("@s", _sessionId));
+
+    private async Task ExpectStatusAsync(string expected, string when)
+    {
+        var status = await GradeStatusAsync();
+        Expect.True(status == expected, $"{when}: the grade is {status ?? "(none)"}, not {expected}");
+    }
+
+    private async Task<JsonElement> ActAsync(string who, string action, object body, HttpStatusCode expect = HttpStatusCode.OK)
+    {
+        var (status, json) = await _users[who].PostJsonAsync($"{Actions}/{_sessionId:D}/{action}", body, $"{Actions}/antiforgery");
+        Expect.True(status == expect, $"{who} POST {action} answered {(int)status}, expected {(int)expect}: {Str(json, "message")}");
+        return json;
+    }
+
+    private async Task<JsonElement> ViewAsync(string who, HttpStatusCode expect = HttpStatusCode.OK)
+    {
+        var (status, json) = await _users[who].GetJsonAsync($"{Actions}/{_sessionId:D}");
+        Expect.True(status == expect, $"{who} GET grading status answered {(int)status}, expected {(int)expect}");
+        return json;
+    }
+
+    private Task<int> AuditCountAsync(string action, string? user = null) => user is null
+        ? _db.CountAsync("SELECT COUNT(*) FROM gadfly.AuditEvents WHERE SessionId = @s AND Action = @a", ("@s", _sessionId), ("@a", action))
+        : _db.CountAsync("""
+            SELECT COUNT(*) FROM gadfly.AuditEvents a JOIN auth.AuthUsers u ON u.Id = a.ActorUserId
+            WHERE a.SessionId = @s AND a.Action = @a AND u.UserName = @u
+            """, ("@s", _sessionId), ("@a", action), ("@u", user));
+
+    private Task<Guid?> UserIdAsync(string name) => _db.ScalarAsync<Guid?>("SELECT Id FROM auth.AuthUsers WHERE UserName = @u", ("@u", name));
+
+    private static string LevelFor(decimal score, decimal max) => (max == 0 ? 0 : score / max) switch
+    {
+        >= 0.6m => "Application",
+        >= 0.3m => "BasicExplanation",
+        _ => "Recognition",
+    };
+
+    /// <summary>
+    /// Scenario: the examiner opens the session while blind grading is on and must not see the AI's evaluation
+    /// (Part 8.3), then submits a grade for every objective. One objective is graded 40 points away from the AI
+    /// on purpose (for the next stage); the others agree with the AI.
+    /// </summary>
+    private async Task<string> BlindGradingAsync()
+    {
+        await EnsureActionsAsync("GAD-T95");
+        string? status = null;
+        await TourDb.WaitAsync(async () => (status = await GradeStatusAsync()) is not (null or "ExaminationCompleted" or "AiGradingPending"),
+            TimeSpan.FromSeconds(90), TimeSpan.FromSeconds(2));
+        Expect.True(status == "HumanReviewPending", $"after AI grading the grade is {status ?? "(none)"}, not HumanReviewPending");
+
+        var view = await ViewAsync("demo.examiner");
+        Expect.True(view.GetProperty("policy").GetProperty("blindHumanGrading").GetBoolean(), "the demo policy should be blind");
+        Expect.True(!view.GetProperty("aiVisible").GetBoolean(), "the examiner was shown the AI's evaluation before submitting (aiVisible = true)");
+        Expect.True(view.GetProperty("finalPercent").ValueKind == JsonValueKind.Null, "a combined percentage leaked before the human grade");
+        Expect.True(view.GetProperty("disagreements").GetArrayLength() == 0, "disagreements leaked before the human grade");
+        var objectives = view.GetProperty("objectives").EnumerateArray().ToList();
+        Expect.True(objectives.Count == 3, $"the status lists {objectives.Count} objectives, not 3");
+        foreach (var o in objectives)
+        {
+            Expect.True(o.GetProperty("aiRecorded").GetBoolean(), $"objective {Str(o, "key")} has no AI grade to hide");
+            Expect.True(o.GetProperty("ai").ValueKind == JsonValueKind.Null && o.GetProperty("combined").ValueKind == JsonValueKind.Null,
+                $"objective {Str(o, "key")}: the AI or combined score was returned to the blind examiner");
+        }
+        if (Mock) Expect.True(!view.GetRawText().Contains("[MOCK]", StringComparison.Ordinal), "an AI explanation ([MOCK]) leaked into the blind status");
+
+        // The tour (not the examiner) reads the AI grades from the database to plan the grades.
+        var ai = (await _db.RowsAsync("""
+            SELECT g.ObjectiveId, g.Level, g.Score FROM gadfly.AiObjectiveGrades g
+            WHERE g.SessionId = @s AND g.CreatedAt = (SELECT MAX(x.CreatedAt) FROM gadfly.AiObjectiveGrades x WHERE x.SessionId = g.SessionId AND x.ObjectiveId = g.ObjectiveId)
+            """, ("@s", _sessionId))).ToDictionary(r => (Guid)r["ObjectiveId"]!);
+        var planned = new List<GradedObjective>();
+        foreach (var o in objectives)
+        {
+            var id = o.GetProperty("id").GetGuid();
+            var max = o.GetProperty("maxScore").GetDecimal();
+            var row = ai.GetValueOrDefault(id);
+            var aiScore = row?["Score"] as decimal?;
+            var aiLevel = row?["Level"] as string;
+            var usable = aiScore is not null && aiLevel != "InsufficientEvidence";
+            decimal human;
+            string level;
+            if (usable && _target is null)
+            {
+                var delta = Math.Round(max * 0.4m, 2);
+                human = aiScore >= max / 2 ? aiScore!.Value - delta : aiScore!.Value + delta;
+                level = LevelFor(human, max);
+                _target = new GradedObjective(id, Str(o, "key"), Str(o, "title"), max, aiScore, aiLevel, human, level);
+                planned.Add(_target);
+                continue;
+            }
+            human = usable ? aiScore!.Value : Math.Round(max / 2, 2);
+            level = usable ? aiLevel! : "BasicExplanation";
+            planned.Add(new GradedObjective(id, Str(o, "key"), Str(o, "title"), max, aiScore, aiLevel, human, level));
+        }
+        if (_target is null) throw new TourAssertException("every AI objective grade is Level 0 (insufficient evidence), so no disagreement can be set up");
+        _objectives = planned;
+
+        var result = await ActAsync("demo.examiner", "human-grades", new
+        {
+            grades = planned.Select(p => new
+            {
+                objectiveKey = p.Key, level = p.HumanLevel, score = p.HumanScore,
+                comment = p == _target ? "Tour: graded far from the AI on purpose." : "Tour: agrees with the evidence.",
+            }),
+        });
+        _gradingDriven = true;
+
+        var rows = await _db.RowsAsync("""
+            SELECT h.WasBlind, u.UserName, h.Score FROM gadfly.HumanObjectiveGrades h JOIN auth.AuthUsers u ON u.Id = h.ReviewerUserId WHERE h.SessionId = @s
+            """, ("@s", _sessionId));
+        Expect.True(rows.Count == planned.Count, $"{rows.Count} human grade rows for {planned.Count} objectives");
+        Expect.True(rows.All(r => (bool)r["WasBlind"]! && (string)r["UserName"]! == "demo.examiner"), "a human grade is not marked WasBlind or not by demo.examiner");
+        var recorded = await AuditCountAsync("grade.human.recorded", "demo.examiner");
+        Expect.True(recorded == planned.Count, $"{recorded} grade.human.recorded audit events for {planned.Count} grades");
+        var after = await ViewAsync("demo.examiner");
+        Expect.True(after.GetProperty("aiVisible").GetBoolean(), "the AI's evaluation is still hidden after the human grade was submitted");
+        return $"examiner saw {objectives.Count} AI grades recorded but hidden (no AI, combined or final score returned); submitted {planned.Count} blind grades " +
+               $"({string.Join(", ", planned.Select(p => $"{p.Key} {p.HumanScore:0.##}/{p.Max:0.##}"))}); AI visible afterwards; status {Str(result, "status")}";
+    }
+
+    /// <summary>Scenario G: a human score 40 points from the AI's opens a mandatory reconciliation that blocks approval and publication.</summary>
+    private async Task<string> DisagreementAsync()
+    {
+        await EnsureActionsAsync("GAD-T96");
+        EnsureGraded();
+        var t = _target!;
+        var row = (await _db.RowsAsync("""
+            SELECT TOP 1 Id, AiScore, HumanScore, DifferencePoints, Band, ResolvedAt FROM gadfly.GradeDisagreements
+            WHERE SessionId = @s AND ObjectiveId = @o ORDER BY DetectedAt DESC
+            """, ("@s", _sessionId), ("@o", t.Id))).SingleOrDefault() ?? throw new TourAssertException($"no disagreement recorded for {t.Key}");
+        var diff = (decimal)row["DifferencePoints"]!;
+        Expect.True((string)row["Band"]! == "MandatoryReconciliation" && row["ResolvedAt"] is null,
+            $"the {diff:0.##}-point disagreement is {row["Band"]} (resolved {row["ResolvedAt"] ?? "no"}), not an open mandatory reconciliation");
+        Expect.True(Math.Abs(diff) >= 39.9m && Math.Abs(diff) <= 40.1m, $"the disagreement is {diff:0.##} points, not 40");
+        var others = await _db.CountAsync("SELECT COUNT(*) FROM gadfly.GradeDisagreements WHERE SessionId = @s AND ObjectiveId <> @o AND Band = 'MandatoryReconciliation'",
+            ("@s", _sessionId), ("@o", t.Id));
+        Expect.True(others == 0, $"{others} agreeing objective(s) were flagged for mandatory reconciliation");
+        await ExpectStatusAsync("ReconciliationRequired", "after the human grade");
+        _disagreementId = (Guid)row["Id"]!;
+
+        var teacherView = await ViewAsync("demo.teacher");
+        Expect.True(teacherView.GetProperty("disagreements").EnumerateArray().Any(d => d.GetProperty("id").GetGuid() == _disagreementId && d.GetProperty("needsReconciliation").GetBoolean()),
+            "the teacher's status doesn't list the open disagreement");
+
+        var refusedBefore = await AuditCountAsync("grade.transition.refused");
+        var approve = await ActAsync("demo.teacher", "approve", new { note = "Tour: trying to approve over an open disagreement." }, HttpStatusCode.Conflict);
+        var publish = await ActAsync("demo.teacher", "publish", new { note = "Tour: trying to publish without approval." }, HttpStatusCode.Conflict);
+        await ExpectStatusAsync("ReconciliationRequired", "after the refused approval");
+        var refused = await AuditCountAsync("grade.transition.refused") - refusedBefore;
+        Expect.True(refused == 2, $"{refused} grade.transition.refused audit events for the 2 refused attempts");
+        var finalized = await _db.CountAsync("SELECT COUNT(*) FROM gadfly.ApprovalRecords WHERE SessionId = @s", ("@s", _sessionId));
+        Expect.True(finalized == 0, $"{finalized} approval record(s) exist although approval was refused");
+        return $"{t.Key}: AI {row["AiScore"]:0.##} vs human {row["HumanScore"]:0.##} = {diff:0.##} points, MandatoryReconciliation; status ReconciliationRequired; " +
+               $"teacher's approval refused (\"{Str(approve, "message")}\") and publication refused, both audited";
+    }
+
+    /// <summary>Part 10.3: the teacher asks the second reviewer, who documents the cause and resolution; the grade then awaits approval.</summary>
+    private async Task<string> ReconciliationAsync()
+    {
+        await EnsureActionsAsync("GAD-T97");
+        EnsureGraded();
+        var disagreement = _disagreementId ?? throw new TourAssertException("blocked: no open disagreement from the previous stage");
+        var reviewerId = Expect.Value(await UserIdAsync("demo.reviewer"), "no demo.reviewer account");
+        await ActAsync("demo.teacher", "second-review", new { disagreementId = disagreement, reviewerUserId = reviewerId });
+        Expect.True(await AuditCountAsync("reconciliation.second-review.requested", "demo.teacher") == 1, "the second-review request was not audited");
+
+        var reviewerView = await ViewAsync("demo.reviewer");
+        Expect.True(reviewerView.GetProperty("disagreements").EnumerateArray().Any(d => d.GetProperty("id").GetGuid() == disagreement),
+            "the second reviewer's status doesn't list the disagreement");
+        var t = _target!;
+        var result = await ActAsync("demo.reviewer", "reconciliations", new
+        {
+            disagreementId = disagreement, cause = "error-in-human",
+            resolution = "Tour: the transcript supports the AI's reading; the examiner's score was a slip.",
+            resolvedHumanScore = t.AiScore,
+        });
+        Expect.True(Str(result, "status") == "AwaitingFinalApproval", $"after reconciliation the grade is {Str(result, "status")}");
+        await ExpectStatusAsync("AwaitingFinalApproval", "after reconciliation");
+        var rec = (await _db.RowsAsync("""
+            SELECT r.Cause, r.ResolvedHumanScore, ru.UserName AS Reviewer, su.UserName AS Second, d.ResolvedAt
+            FROM gadfly.GradeReconciliations r JOIN gadfly.GradeDisagreements d ON d.Id = r.DisagreementId
+            JOIN auth.AuthUsers ru ON ru.Id = r.ReviewerUserId LEFT JOIN auth.AuthUsers su ON su.Id = r.SecondReviewerUserId
+            WHERE r.DisagreementId = @d
+            """, ("@d", disagreement))).SingleOrDefault() ?? throw new TourAssertException("no reconciliation row");
+        Expect.True((string)rec["Reviewer"]! == "demo.reviewer" && rec["Second"] as string == "demo.reviewer" && (string)rec["Cause"]! == "error-in-human",
+            $"the reconciliation was recorded by {rec["Reviewer"]} (second reviewer {rec["Second"] ?? "none"}, cause {rec["Cause"]})");
+        Expect.True(rec["ResolvedAt"] is not null, "the disagreement is still open after reconciliation");
+        Expect.True(await AuditCountAsync("grade.reconciled", "demo.reviewer") == 1 && await AuditCountAsync("grade.recalculated", "demo.reviewer") >= 1,
+            "grade.reconciled / grade.recalculated audit events missing");
+        var percent = await _db.ScalarAsync<decimal?>("SELECT FinalPercent FROM gadfly.FinalGrades WHERE SessionId = @s", ("@s", _sessionId));
+        return $"teacher requested demo.reviewer; demo.reviewer documented \"error-in-human\" with resolved human score {t.AiScore:0.##}; " +
+               $"recalculated {percent:0.##}%; status AwaitingFinalApproval; audited";
+    }
+
+    /// <summary>Part 11 and Scenario J: the examiner can neither approve nor publish; the teacher approves, then publishes.</summary>
+    private async Task<string> ApprovalAsync()
+    {
+        await EnsureActionsAsync("GAD-T98");
+        EnsureGraded();
+        var deniedBefore = await AuditCountAsync("access.denied", "demo.examiner");
+        await ActAsync("demo.examiner", "approve", new { note = "Tour: the examiner tries to approve their own grading." }, HttpStatusCode.Forbidden);
+        await ActAsync("demo.examiner", "publish", new { note = "Tour: the examiner tries to publish." }, HttpStatusCode.Forbidden);
+        var denied = await AuditCountAsync("access.denied", "demo.examiner") - deniedBefore;
+        Expect.True(denied == 2, $"{denied} access.denied audit events for the examiner's 2 refused attempts");
+        await ExpectStatusAsync("AwaitingFinalApproval", "after the examiner's refused attempts");
+
+        var approved = await ActAsync("demo.teacher", "approve", new { label = "Tour", note = "Tour: approved after reconciliation." });
+        Expect.True(Str(approved, "status") == "Finalized", $"after approval the grade is {Str(approved, "status")}");
+        await ExpectStatusAsync("Finalized", "after approval");
+
+        // Not published yet: the student sees nothing.
+        var (studentStatus, _) = await _users["demo.student"].GetJsonAsync($"{Actions}/{_sessionId:D}");
+        Expect.True(studentStatus == HttpStatusCode.NotFound, $"before publication the student's status request answered {(int)studentStatus}, not 404");
+        var (reportStatus, _, _) = await _users["demo.student"].GetAsync($"/my-results/{_sessionId:D}/report.md", follow: false);
+        Expect.True(reportStatus != HttpStatusCode.OK, "before publication the student could download the report");
+        _studentRefusedBeforePublication = true;
+
+        var published = await ActAsync("demo.teacher", "publish", new { note = "Tour: released to the student." });
+        Expect.True(Str(published, "status") == "Published", $"after publication the grade is {Str(published, "status")}");
+        await ExpectStatusAsync("Published", "after publication");
+        var approvals = await _db.RowsAsync("""
+            SELECT a.Action, u.UserName FROM gadfly.ApprovalRecords a JOIN auth.AuthUsers u ON u.Id = a.ActorUserId WHERE a.SessionId = @s ORDER BY a.At
+            """, ("@s", _sessionId));
+        Expect.True(approvals.Select(a => $"{a["Action"]}:{a["UserName"]}").SequenceEqual(["Finalize:demo.teacher", "Publish:demo.teacher"]),
+            $"approval records: {string.Join(", ", approvals.Select(a => $"{a["Action"]} by {a["UserName"]}"))}");
+        Expect.True(await AuditCountAsync("grade.approved", "demo.teacher") == 1 && await AuditCountAsync("grade.published", "demo.teacher") == 1,
+            "grade.approved / grade.published audit events missing");
+        var percent = await _db.ScalarAsync<decimal?>("SELECT FinalPercent FROM gadfly.FinalGrades WHERE SessionId = @s", ("@s", _sessionId));
+        return $"examiner's approve and publish refused (403, 2 access.denied events); teacher finalized at {percent:0.##}% (Finalize record); " +
+               "student refused before publication; teacher published (Publish record)";
     }
 
     private async Task<string> StudentResultAsync()
     {
-        var published = await _db.CountAsync("SELECT COUNT(*) FROM gadfly.FinalGrades WHERE SessionId = @s AND Status IN ('Published', 'UnderAppeal', 'Amended')", ("@s", _sessionId));
-        if (published == 0) throw new NotBuiltException("GAD-T98", "no grade is published for the session (approval and publication are not drivable yet)");
-        var (status, html, _) = await _users["demo.student"].GetAsync("/my-exams");
-        Expect.True(status == HttpStatusCode.OK && html.Contains(MathExam, StringComparison.Ordinal), "the student's exams page doesn't show the published result");
-        return "the student's page shows the published result";
+        await EnsureActionsAsync("GAD-T98");
+        await ExpectStatusAsync("Published", "when the student looks");
+        var student = _users["demo.student"];
+        var view = await ViewAsync("demo.student");
+        var percent = await _db.ScalarAsync<decimal?>("SELECT FinalPercent FROM gadfly.FinalGrades WHERE SessionId = @s", ("@s", _sessionId));
+        Expect.True(Str(view, "status") == "Published", $"the student's status says {Str(view, "status")}");
+        Expect.True(view.GetProperty("finalPercent").ValueKind == JsonValueKind.Number && view.GetProperty("finalPercent").GetDecimal() == percent,
+            $"the student sees {view.GetProperty("finalPercent")} but the grade is {percent}");
+        var raw = view.GetRawText();
+        Expect.True(!raw.Contains("demo.examiner", StringComparison.Ordinal) && !raw.Contains("demo.reviewer", StringComparison.Ordinal),
+            "the student's view names the reviewers");
+        var (s1, page, _) = await student.GetAsync($"/my-results/{_sessionId:D}");
+        Expect.True(s1 == HttpStatusCode.OK && page.Contains(MathExam, StringComparison.Ordinal), $"/my-results/{{id}} answered {(int)s1} without the exam");
+        var (s2, md, _) = await student.GetAsync($"/my-results/{_sessionId:D}/report.md");
+        Expect.True(s2 == HttpStatusCode.OK && md.Contains(MathExam, StringComparison.Ordinal), $"the student's report.md answered {(int)s2}");
+        var (s3, html, _) = await student.GetAsync("/my-exams");
+        Expect.True(s3 == HttpStatusCode.OK && html.Contains(MathExam, StringComparison.Ordinal), "the student's exams page doesn't show the exam");
+        return $"{(_studentRefusedBeforePublication ? "refused before publication; " : "")}after publication the student sees {percent:0.##}% (status, result page, " +
+               "report.md), with no reviewer names";
+    }
+
+    /// <summary>The student appeals; the examiner and the student can't amend (Scenario J); the teacher amends, resolving the appeal.</summary>
+    private async Task<string> AppealAsync()
+    {
+        await EnsureActionsAsync("GAD-T98");
+        EnsureGraded();
+        await ExpectStatusAsync("Published", "before the appeal");
+        var appealed = await ActAsync("demo.student", "appeals", new { reason = "Tour: I think my explanation of the factors deserved more credit." });
+        Expect.True(Str(appealed, "status") == "UnderAppeal", $"after the appeal the grade is {Str(appealed, "status")}");
+        var appealId = Expect.Value(await _db.ScalarAsync<Guid?>("SELECT Id FROM gadfly.GradeAppeals WHERE SessionId = @s AND State = 'Open'", ("@s", _sessionId)),
+            "no open appeal row");
+        var studentView = await ViewAsync("demo.student");
+        Expect.True(Str(studentView, "status") == "UnderAppeal", "the student doesn't see the result under appeal");
+
+        // Amend an objective that wasn't reconciled (a reconciled objective's resolved score stands).
+        var change = _objectives.First(o => o != _target);
+        var newScore = change.HumanScore + 1 <= change.Max ? change.HumanScore + 1 : change.HumanScore - 1;
+        var amendBody = new
+        {
+            grades = new[] { new { objectiveKey = change.Key, level = LevelFor(newScore, change.Max), score = newScore, comment = "Tour: credit restored on appeal." } },
+            reason = "Tour: the appeal shows the factor explanation was under-credited.", appealId,
+        };
+        var examinerDenied = await AuditCountAsync("access.denied", "demo.examiner");
+        var studentDenied = await AuditCountAsync("access.denied", "demo.student");
+        await ActAsync("demo.examiner", "amend", amendBody, HttpStatusCode.Forbidden);
+        await ActAsync("demo.examiner", "publish", new { note = "Tour: the examiner tries to publish again." }, HttpStatusCode.Forbidden);
+        await ActAsync("demo.student", "amend", amendBody, HttpStatusCode.Forbidden);
+        var e = await AuditCountAsync("access.denied", "demo.examiner") - examinerDenied;
+        var s = await AuditCountAsync("access.denied", "demo.student") - studentDenied;
+        Expect.True(e == 2 && s == 1, $"access.denied events: examiner {e} (expected 2), student {s} (expected 1)");
+        await ExpectStatusAsync("UnderAppeal", "after the refused amendments");
+
+        var before = await _db.ScalarAsync<decimal?>("SELECT FinalPercent FROM gadfly.FinalGrades WHERE SessionId = @s", ("@s", _sessionId));
+        var amended = await ActAsync("demo.teacher", "amend", amendBody);
+        Expect.True(Str(amended, "status") == "Amended", $"after the amendment the grade is {Str(amended, "status")}");
+        await ExpectStatusAsync("Amended", "after the amendment");
+        var after = await _db.ScalarAsync<decimal?>("SELECT FinalPercent FROM gadfly.FinalGrades WHERE SessionId = @s", ("@s", _sessionId));
+        Expect.True(after != before, $"the amendment left the final percentage at {after}");
+        var appeal = (await _db.RowsAsync("""
+            SELECT a.State, u.UserName FROM gadfly.GradeAppeals a LEFT JOIN auth.AuthUsers u ON u.Id = a.ResolvedByUserId WHERE a.Id = @a
+            """, ("@a", appealId))).Single();
+        Expect.True((string)appeal["State"]! == "Amended" && appeal["UserName"] as string == "demo.teacher", $"the appeal is {appeal["State"]} (resolved by {appeal["UserName"] ?? "nobody"})");
+        var superseding = await _db.CountAsync("""
+            SELECT COUNT(*) FROM gadfly.HumanObjectiveGrades h JOIN auth.AuthUsers u ON u.Id = h.ReviewerUserId
+            WHERE h.SessionId = @s AND h.ObjectiveId = @o AND h.SupersedesId IS NOT NULL AND u.UserName = 'demo.teacher'
+            """, ("@s", _sessionId), ("@o", change.Id));
+        Expect.True(superseding == 1, "the amended score is not a new human grade superseding the examiner's");
+        var amendRecords = await _db.CountAsync("SELECT COUNT(*) FROM gadfly.ApprovalRecords WHERE SessionId = @s AND Action = 'Amend'", ("@s", _sessionId));
+        Expect.True(amendRecords == 1 && await AuditCountAsync("grade.amended", "demo.teacher") == 1 && await AuditCountAsync("grade.appeal.opened", "demo.student") == 1,
+            "Amend approval record or grade.amended / grade.appeal.opened audit events missing");
+        var finalView = await ViewAsync("demo.student");
+        Expect.True(Str(finalView, "status") == "Amended" && finalView.GetProperty("appeals").EnumerateArray().Any(a => Str(a, "state") == "Amended"),
+            "the student doesn't see the amended result and resolved appeal");
+        return $"student appealed (UnderAppeal); examiner's amend/publish and the student's amend refused and audited; teacher amended {change.Key} " +
+               $"{change.HumanScore:0.##} -> {newScore:0.##}: {before:0.##}% -> {after:0.##}%, appeal Amended, the student sees it";
     }
 
     // ------------------------------------------------------------------ reports, review, API, analytics, audit
@@ -505,8 +821,35 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
         Expect.True(s2 == HttpStatusCode.OK && lines >= 2, $"turns.csv answered {(int)s2} with {lines} lines");
         var (s3, _, _) = await _users["demo.student"].GetAsync($"/review/{_sessionId:D}/report.md", follow: false);
         Expect.True(s3 != HttpStatusCode.OK, "a student could download the reviewer's report");
-        return $"report.md ({md.Length} chars{(Mock ? ", labelled [MOCK]" : "")}) and turns.csv ({lines - 1} rows) exported; student refused; " +
-               "the per-objective assessment report (GAD-T99) is not checked yet";
+        var review = $"review report.md ({md.Length} chars{(Mock ? ", labelled [MOCK]" : "")}) and turns.csv ({lines - 1} rows) exported, student refused";
+
+        // The per-objective assessment report (GAD-T99): reviewer Markdown and CSV, the student's copy only once published.
+        var (a1, report, _) = await teacher.GetAsync($"/grading/{_sessionId:D}/report.md");
+        if (a1 == HttpStatusCode.NotFound && !_gradingDriven) throw new NotBuiltException("GAD-T99", $"{review}; /grading/{{id}}/report.md answered 404");
+        Expect.True(a1 == HttpStatusCode.OK && report.Contains($"# Assessment report: {MathExam}", StringComparison.Ordinal) && report.Contains("## Learning objectives", StringComparison.Ordinal),
+            $"the assessment report.md answered {(int)a1} without its title and objectives table");
+        var titles = await _db.RowsAsync("SELECT Title FROM gadfly.LearningObjectives WHERE ExamId = @e", ("@e", _mathExamId));
+        Expect.True(titles.All(t => report.Contains($"### {t["Title"]}", StringComparison.Ordinal)), "the assessment report doesn't have a section per objective");
+        if (Mock) Expect.True(report.Contains("**MOCK**", StringComparison.Ordinal), "the assessment report doesn't carry the MOCK notice");
+        var (a2, reportCsv, _) = await teacher.GetAsync($"/grading/{_sessionId:D}/report.csv");
+        var csvRows = reportCsv.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Expect.True(a2 == HttpStatusCode.OK && csvRows.Length == titles.Count + 1 && csvRows[0].Contains("objective_key", StringComparison.Ordinal),
+            $"the assessment report.csv answered {(int)a2} with {csvRows.Length} lines (expected a header and {titles.Count} objective rows)");
+        var (a3, _, _) = await _users["demo.student"].GetAsync($"/grading/{_sessionId:D}/report.md", follow: false);
+        Expect.True(a3 != HttpStatusCode.OK, "a student could download the reviewer's assessment report");
+        var grading = "";
+        if (_gradingDriven)
+        {
+            Expect.True(!report.Contains("**Preliminary**", StringComparison.Ordinal) && report.Contains("Final grade approved", StringComparison.Ordinal)
+                        && report.Contains("Reconciliation:", StringComparison.Ordinal) && report.Contains("## Appeals", StringComparison.Ordinal),
+                "the approved, reconciled, appealed grade's report lacks the approval, reconciliation or appeal history");
+            var (a4, studentMd, _) = await _users["demo.student"].GetAsync($"/my-results/{_sessionId:D}/report.md");
+            Expect.True(a4 == HttpStatusCode.OK && studentMd.Contains("## Learning objectives", StringComparison.Ordinal)
+                        && !studentMd.Contains("demo.examiner", StringComparison.Ordinal), $"the student's assessment report answered {(int)a4} or names the examiner");
+            grading = "; approval, reconciliation and appeal history present; the student's published copy downloads without reviewer names";
+        }
+        return $"{review}; assessment report (GAD-T99) report.md ({titles.Count} objective sections{(Mock ? ", MOCK notice" : "")}) and report.csv ({csvRows.Length - 1} rows), " +
+               $"student refused the reviewer copy{grading}";
     }
 
     private async Task<string> ReviewPagesAsync()
@@ -551,6 +894,13 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
         Expect.True(rows.Any(r => (string)r["Action"]! == "demo.seeded"), "no demo.seeded audit event");
         if (_verificationBuilt)
             Expect.True(rows.Any(r => ((string)r["Action"]!).StartsWith("response.", StringComparison.Ordinal)), "verification ran but wrote no response.* audit event");
+        if (_gradingDriven)
+        {
+            string[] grading = ["grade.human.recorded", "grade.disagreement.detected", "grade.transition.refused", "reconciliation.second-review.requested",
+                "grade.reconciled", "grade.approved", "grade.published", "grade.appeal.opened", "grade.amended", "grade.appeal.resolved", "access.denied"];
+            var missing = grading.Where(a => rows.All(r => (string)r["Action"]! != a)).ToList();
+            Expect.True(missing.Count == 0, $"the grading workflow ran but these audit actions are missing: {string.Join(", ", missing)}");
+        }
         return string.Join(", ", rows.Select(r => $"{r["Action"]} x{r["N"]}"));
     }
 
