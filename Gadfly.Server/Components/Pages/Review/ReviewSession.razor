@@ -44,6 +44,36 @@ else
         <p class="notice warn">The judging panel disagreed on @view.JudgesDisagreed answer@(view.JudgesDisagreed == 1 ? "" : "s"). Those answers are marked below; please read them before grading.</p>
     }
 
+    var integrity = IntegritySummary.From(view.Integrity, view.Turns);
+    <section class="integrity-summary level-@integrity.Level" aria-labelledby="integrity-heading">
+        <h2 id="integrity-heading" class="section">Integrity summary</h2>
+        <p>@integrity.Headline</p>
+        @if (integrity.Lines.Count > 0)
+        {
+            <table class="grid">
+                <thead><tr><th>Signal</th><th>Source</th><th>Times</th><th>Total time</th><th>Turns</th><th>What it means</th></tr></thead>
+                <tbody>
+                    @foreach (var l in integrity.Lines)
+                    {
+                        <tr>
+                            <td>@l.Label</td>
+                            <td>@l.Source</td>
+                            <td>@l.Count</td>
+                            <td>@IntegritySummary.Duration(l.TotalDuration)</td>
+                            <td>@(l.Turns.Count == 0 ? "—" : string.Join(", ", l.Turns))</td>
+                            <td>@l.Explanation</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        @if (integrity.Normal.Count > 0)
+        {
+            <p class="hint">Normal behavior, not counted: @string.Join("; ", integrity.Normal.Select(n => $"{n.Label} ({n.Count}×)")). Looking away while thinking is expected.</p>
+        }
+        <p class="hint">Each signal also appears on the timeline below, next to the answer it happened during. The grade is your decision; no signal fails a student automatically.</p>
+    </section>
+
     <h2 class="section">Timeline</h2>
     @if (view.Timeline.Count == 0)
     {

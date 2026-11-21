@@ -30,3 +30,10 @@ h2.section { font-size: 1.15rem; margin: 1.75rem 0 .75rem; }
 .bar { display: inline-block; width: 80px; height: .55rem; border-radius: 999px; background: linear-gradient(90deg, var(--accent) var(--v), var(--line) var(--v)); vertical-align: middle; }
 .report { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .5rem 1.25rem; }
 .report blockquote { margin: .5rem 0; padding-left: .75rem; border-left: 3px solid var(--line); color: var(--muted); }
+
+/* Integrity summary (GAD-T60) */
+.integrity-summary { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: var(--radius); padding: .75rem 1rem 1rem; margin: 1rem 0 1.5rem; display: grid; gap: .6rem; }
+.integrity-summary h2 { margin: 0; }
+.integrity-summary p { margin: 0; }
+.integrity-summary.level-minor { border-left-color: var(--accent); }
+.integrity-summary.level-review { border-left-color: var(--error); }
