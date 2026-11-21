@@ -63,6 +63,7 @@ export function init(dotnet, cfg) {
         segments: [], partial: "", listeningStartMs: null, startedAtUnixMs: null, cueTimer: null, captionTimers: [],
         mic: null, pcm16ToBase64: null, speechConn: null, avatarConn: null, avatar: null, speech: null, avatarOk: false,
         selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null, face: null,
+        pauses: [], lastSpeechEndAt: null,   // the student's own mid-answer pauses, which the end-of-answer cue adapts to (GAD-T264)
         acoustics: new VoiceAcoustics(),   // voice strain indicators (GAD-T232): summary numbers only, never audio
     };
     S.onRemark = (e) => remarkHold(S, !!(e.detail && e.detail.active));
@@ -122,6 +123,8 @@ async function start() {
             onSpeechStart: () => {
                 s.inSpeech = true;
                 if (s.gate) return;
+                if (s.lastSpeechEndAt !== null && s.startedAtUnixMs !== null) notePause(s, performance.now() - s.lastSpeechEndAt);
+                s.lastSpeechEndAt = null;
                 s.startedAtUnixMs ??= Date.now();
                 freezeDelay(s);
                 clearCue();
@@ -133,6 +136,7 @@ async function start() {
                 try { s.acoustics.endSegment(); } catch { }
                 talking(s, false);
                 if (s.gate || !s.speechConn) return;
+                s.lastSpeechEndAt = performance.now();
                 s.speechConn.send("Commit").catch(() => { });
             },
             onLevel: (l) => {
@@ -315,6 +319,7 @@ function openMic() {
     const s = S;
     if (!s || !s.mic || !s.speechConn) return;
     s.gate = false;
+    s.lastSpeechEndAt = null;   // the wait before an answer starts is thinking time, not a pause within it
     s.listeningStartMs = s.mic.currentTimeMs;
     startDelay(s);
     s.speechConn.send("MarkListening", s.listeningStartMs).catch(() => { });
@@ -336,6 +341,7 @@ function remarkHold(s, active) {
         if (!s.running || s.gate) return;   // not listening, so nothing to close
         s.remarkClosedGate = true;
         s.gate = true;
+        s.lastSpeechEndAt = null;   // the examiner's remark is not the student's pause
         s.partial = "";
         clearCue();
         talking(s, false);
@@ -353,7 +359,7 @@ function remarkHold(s, active) {
         if (s.avatar) s.avatar.state = "listening";
         status(s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.");
         if (s.segments.length && !s.inSpeech) {   // still talking: the next pause arms the cue as usual
-            const ms = s.cfg.endCueMs || 4000;
+            const ms = endCueMs(s);
             const cue = q("cue");
             if (cue) { cue.style.setProperty("--cue-ms", ms + "ms"); cue.dataset.active = "true"; }
             s.cueTimer = setTimeout(() => void submit(false), ms);
@@ -379,10 +385,35 @@ function onFinal(seg) {
     // The end-of-answer cue: a stretch of silence after what was said. Speaking again cancels it; "Done answering" skips it.
     clearCue();
     const cue = q("cue");
-    const ms = s.cfg.endCueMs || 4000;
+    const ms = endCueMs(s);
     if (cue) { cue.style.setProperty("--cue-ms", ms + "ms"); cue.dataset.active = "true"; }
     status("Finishing your answer… keep talking to add more.");
     s.cueTimer = setTimeout(() => void submit(false), ms);
+}
+
+/**
+ * The end-of-answer silence for this student (GAD-T264). It starts at the configured floor (lengthened on the server by an
+ * extra-time accommodation) and adapts to the student's own pattern: once a few pauses within answers have been seen (silence
+ * after which the student went on speaking), it becomes half again the student's longer pauses (the 80th percentile of the
+ * last 20), never below the floor and never above the ceiling. It only ever lengthens the cue: a quick speaker keeps the floor.
+ */
+function endCueMs(s) {
+    const floor = s.cfg.endCueMs || 4000;
+    const ceiling = Math.max(floor, s.cfg.endCueMaxMs || floor);
+    if (s.pauses.length < PAUSE.minSamples) return floor;
+    const sorted = [...s.pauses].sort((a, b) => a - b);
+    const p80 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.8))];
+    return Math.round(Math.min(ceiling, Math.max(floor, p80 * PAUSE.factor)));
+}
+
+const PAUSE = { minMs: 300, minSamples: 3, keep: 20, factor: 1.5 };
+
+/** Records one pause within an answer (speech ended, then the student went on). Too short to be a pause is ignored. */
+function notePause(s, ms) {
+    if (!Number.isFinite(ms) || ms < PAUSE.minMs) return;
+    const ceiling = Math.max(s.cfg.endCueMs || 4000, s.cfg.endCueMaxMs || 0);
+    s.pauses.push(Math.min(ms, ceiling));
+    if (s.pauses.length > PAUSE.keep) s.pauses.shift();
 }
 
 function clearCue() {

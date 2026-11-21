@@ -1,5 +1,6 @@
 @implements IAsyncDisposable
 @using Gadfly.Server.Voice
+@using Microsoft.EntityFrameworkCore
 @inject IJSRuntime JS
 @inject VoiceSettings Settings
 @inject VoiceGrants Grants
@@ -222,11 +223,15 @@
         if (!armed) return;
         try
         {
+            var (cueFloorMs, cueCeilingMs) = Settings.EndCue(await TimeMultiplierAsync());
             module = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/voice-room.js");
             self = DotNetObjectReference.Create(this);
             var caps = await module.InvokeAsync<Capabilities>("init", stop.Token, self, new
             {
-                endCueMs = (int)(Settings.EndOfAnswerSeconds * 1000),
+                // The end-of-answer silence (GAD-T264): starts at the floor and adapts to the student's own pauses, up to the
+                // ceiling; both are lengthened by the extra-time accommodation.
+                endCueMs = cueFloorMs,
+                endCueMaxMs = cueCeilingMs,
                 modelUrl = Settings.AvatarModelUrl,
                 portraitUrl = Settings.PortraitUrl,
             });
@@ -246,6 +251,29 @@
             Log.LogDebug(ex, "The examiner could not load for session {SessionId}.", SessionId);
             notice = "The examiner could not start in this browser.";
             StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// The student's extra-time accommodation for this session's assignment (1 = none), which also lengthens the end-of-answer
+    /// silence (GAD-T264). Falls back to 1 when it can't be read: the cue then keeps its configured length.
+    /// </summary>
+    private async Task<double> TimeMultiplierAsync()
+    {
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
+            var db = scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>();
+            var multiplier = await (from x in db.ExamSessions
+                                    join a in db.ExamAssignments on x.AssignmentId equals a.Id
+                                    where x.Id == SessionId && x.OrganizationId == org && a.OrganizationId == org
+                                    select (decimal?)a.TimeMultiplier).FirstOrDefaultAsync(stop.Token);
+            return (double)(multiplier ?? 1m);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.LogDebug(ex, "The extra-time accommodation could not be read for session {SessionId}.", SessionId);
+            return 1;
         }
     }
 

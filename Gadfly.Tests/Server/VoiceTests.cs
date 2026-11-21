@@ -24,6 +24,20 @@ public class VoiceTests
     }
 
     [Test]
+    public void End_of_answer_cue_has_a_floor_and_ceiling_that_an_accommodation_lengthens()
+    {
+        var settings = VoiceSettings.From(Config(), true, null);
+        Assert.That(settings.EndCue(1), Is.EqualTo((4000, 12000)));
+        Assert.That(settings.EndCue(1.5), Is.EqualTo((6000, 18000)), "extra time lengthens both the floor and the ceiling");
+        Assert.That(settings.EndCue(0.5), Is.EqualTo((4000, 12000)), "never shorter than configured");
+        Assert.That(settings.EndCue(double.NaN), Is.EqualTo((4000, 12000)));
+        Assert.That(settings.EndCue(4).CeilingMs, Is.EqualTo(45000), "hard cap");
+
+        var tight = VoiceSettings.From(Config(("Gadfly:Voice:EndOfAnswerSeconds", "8"), ("Gadfly:Voice:EndOfAnswerMaxSeconds", "3")), true, null);
+        Assert.That(tight.EndOfAnswerMaxSeconds, Is.EqualTo(8), "the ceiling is never below the floor");
+    }
+
+    [Test]
     public void Grants_allow_only_texts_the_server_offered_to_an_armed_student()
     {
         var clock = new FakeClock(DateTimeOffset.Parse("2026-11-20T10:00:00Z"));

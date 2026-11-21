@@ -80,8 +80,12 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
 1. `voice-room.js` opens the microphone from the click (hands-free voice activity detection, or hold-to-talk), streams
    16 kHz PCM through `/hubs/speech` (MindAttic.SpeechRecognition relay) and shows partial and final transcript text.
 2. Audio is not sent while the examiner is speaking (no echo, no self-transcription).
-3. The end-of-answer cue: after a final segment, `Gadfly:Voice:EndOfAnswerSeconds` (default 4) of silence submits the
-   answer, with a visible countdown; speaking again cancels it; **Done answering** submits at once; **Clear** discards.
+3. The end-of-answer cue: after a final segment, a stretch of silence submits the answer, with a visible countdown;
+   speaking again cancels it; **Done answering** submits at once; **Clear** discards. The silence starts at
+   `Gadfly:Voice:EndOfAnswerSeconds` (default 4) and adapts to the student's own pauses (GAD-T264): once three pauses
+   within answers have been seen, it becomes 1.5 times the student's longer pauses (80th percentile of the last 20), never
+   below that floor and never above `Gadfly:Voice:EndOfAnswerMaxSeconds` (default 12). An extra-time accommodation
+   multiplies both the floor and the ceiling (capped at 45 s), so a student with 1.5x time waits 6 s at least.
 4. `VoiceAnswerBuilder` rebuilds the segments server-side, recomputes `SpeechMetricsCalculator` and
    `TranscriptVerification.Assess` from the words (the browser's numbers are not trusted), and hands `ExamRoom` an
    `Answer { Mode = "voice" }` with word timings, flattened metrics (`SpeechMetricKeys`) and confidence.
@@ -112,7 +116,8 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
 | `Gadfly:Voice:Mode` | `off`, `mock` or `live`. Default `mock` in Development, `off` elsewhere. |
 | `Gadfly:Voice:AvatarModelUrl` | The avatar GLB. Default `/assets/avatars/mpfb.glb` when the file exists, otherwise the 2D portrait. |
 | `Gadfly:Voice:PortraitUrl` | 2D fallback image (default `/assets/portrait.png`). |
-| `Gadfly:Voice:EndOfAnswerSeconds` | Silence that ends an answer (2 to 15, default 4). |
+| `Gadfly:Voice:EndOfAnswerSeconds` | Shortest silence that ends an answer (2 to 15, default 4). |
+| `Gadfly:Voice:EndOfAnswerMaxSeconds` | Longest the silence may adapt to for a student who pauses long (up to 30, default 12). Both are multiplied by the extra-time accommodation. |
 | `MindAttic:SpeechRecognition:Provider` | Live only: `ElevenLabs` (default in live), `OpenAI` or `Fallback`. |
 | `MindAttic:Avatar:ElevenLabs:VoiceId` | Live only, required (without it voice stays off). |
 
