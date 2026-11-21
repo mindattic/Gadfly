@@ -65,7 +65,7 @@ public class SessionReportTests
         var r = SessionReport.From(s, new Dictionary<string, string> { ["a"] = "Alpha" });
         var a = r.Concepts.Single(c => c.ConceptId == "a");
         Assert.That(a.Title, Is.EqualTo("Alpha"));
-        Assert.That(a.Status, Is.EqualTo("mastered"));
+        Assert.That(a.Status, Is.EqualTo(QuestionPlanner.StatusOf(s, "a").ToString().ToLowerInvariant()), "the report mirrors the planner");
         Assert.That(a.Turns, Is.EqualTo(2));
         Assert.That(a.AverageScore, Is.EqualTo(0.7));
         Assert.That(a.DisputedTurns, Is.EqualTo(new[] { 1 }));

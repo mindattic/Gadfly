@@ -102,7 +102,12 @@ public sealed class ScriptedPanel : ISocraticVotingClient
             Kind.Clarification => ClarificationText(question),
             _ => "",
         };
-        return Task.FromResult(new VotingResult { Question = question, QuorumType = quorum, QuorumReached = true, Consensus = consensus });
+        // Every provider "voted" the consensus text: callers that require a successful voter (GAD-T117) see one.
+        var voters = Providers.Select(p => new VoteResult { VoterName = p, ProviderId = p, Decision = consensus }).ToList();
+        return Task.FromResult(new VotingResult
+        {
+            Question = question, QuorumType = quorum, QuorumReached = true, Consensus = consensus, IndividualVotes = voters,
+        });
     }
 
     public Task<VotingResult> AskWithProfilesAsync(string question, string context, IReadOnlyList<VoterProfile> voters, CancellationToken ct = default)
