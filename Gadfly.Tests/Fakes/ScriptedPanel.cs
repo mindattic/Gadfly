@@ -12,7 +12,7 @@ namespace Gadfly.Tests.Fakes;
 /// </summary>
 public sealed class ScriptedPanel : ISocraticVotingClient
 {
-    public enum Kind { Question, Guard, Judge, Claims, Contradiction, Aporia, TextStyle, ConceptMap, Rubric, Other }
+    public enum Kind { Question, Guard, Judge, Claims, Contradiction, Aporia, TextStyle, ConceptMap, Rubric, Verification, Clarification, Other }
 
     public static Kind Classify(string prompt) =>
         prompt.Contains("You are the examiner in a spoken Socratic oral exam", StringComparison.Ordinal) ? Kind.Question
@@ -24,6 +24,8 @@ public sealed class ScriptedPanel : ISocraticVotingClient
         : prompt.Contains("Estimate how likely it is that this spoken-exam answer", StringComparison.Ordinal) ? Kind.TextStyle
         : prompt.Contains("identify the concepts a student must understand", StringComparison.Ordinal) ? Kind.ConceptMap
         : prompt.Contains("Write the grading rubric for one concept", StringComparison.Ordinal) ? Kind.Rubric
+        : prompt.Contains("You check whether the examiner understood a student's answer", StringComparison.Ordinal) ? Kind.Verification
+        : prompt.Contains("You write one neutral clarification question", StringComparison.Ordinal) ? Kind.Clarification
         : Kind.Other;
 
     /// <summary>Every call, in order: what kind of prompt it was and its full text.</summary>
@@ -40,6 +42,9 @@ public sealed class ScriptedPanel : ISocraticVotingClient
 
     /// <summary>Question drafting: the prompt in, the consensus question out.</summary>
     public Func<string, string> QuestionText { get; set; } = _ => "In your own words, how does this concept work?";
+
+    /// <summary>A drafted neutral clarification question (empty: no usable draft).</summary>
+    public Func<string, string> ClarificationText { get; set; } = _ => "";
 
     /// <summary>The guard's verdict for a candidate question (LEAKS / SAFE).</summary>
     public Func<string, string> GuardVerdict { get; set; } = _ => "SAFE";
@@ -68,6 +73,8 @@ public sealed class ScriptedPanel : ISocraticVotingClient
     private void Record(Kind kind, string prompt)
     {
         lock (Calls) Calls.Add((kind, prompt));
+        // Metered like the real panel, so usage tests see calls inside PanelUsage.Track scopes.
+        PanelUsage.Record(new PanelCall("scripted", "scripted-model", PanelUsage.Tokens(prompt.Length), 50, kind.ToString()));
         if (Fail) throw new HttpRequestException("The panel is unavailable (test).");
     }
 
@@ -89,6 +96,7 @@ public sealed class ScriptedPanel : ISocraticVotingClient
         {
             Kind.Question => QuestionText(question),
             Kind.Claims => ClaimsJson(question),
+            Kind.Clarification => ClarificationText(question),
             _ => "",
         };
         return Task.FromResult(new VotingResult { Question = question, QuorumType = quorum, QuorumReached = true, Consensus = consensus });
@@ -125,9 +133,27 @@ public sealed class ScriptedPanel : ISocraticVotingClient
         {
             Kind.Judge => Providers.Select(p => new PanelReply(p, JudgeJson(JudgeScoreFor?.Invoke(userMessage) ?? JudgeScore), Model: p + "-model")).ToList(),
             Kind.TextStyle => Providers.Select(p => new PanelReply(p, """{"score": 0.1, "reason": "Sounds spoken."}""")).ToList(),
+            Kind.Verification => Providers.Select(p => new PanelReply(p,
+                """{"clarify": false, "trigger": "none", "phrase": "", "material": false, "reason": "The answer is clear."}""")).ToList(),
             _ => Providers.Select(p => new PanelReply(p, "{}")).ToList(),
         };
         return Task.FromResult(replies);
+    }
+
+    /// <summary>The text after <paramref name="marker"/> in a prompt (e.g. "Candidate question:"), or "" when absent.</summary>
+    public static string After(string prompt, string marker)
+    {
+        var i = prompt.LastIndexOf(marker, StringComparison.Ordinal);
+        return i < 0 ? "" : prompt[(i + marker.Length)..];
+    }
+
+    /// <summary>The student's answer inside a judge prompt (the fenced block after "Student's answer:").</summary>
+    public static string StudentAnswer(string judgePrompt)
+    {
+        var tail = After(judgePrompt, "Student's answer:");
+        var open = tail.IndexOf("<student_text>", StringComparison.Ordinal);
+        var close = tail.IndexOf("</student_text>", StringComparison.Ordinal);
+        return open < 0 || close < open ? tail.Trim() : tail[(open + "<student_text>".Length)..close].Trim();
     }
 
     /// <summary>A judge reply scoring all four criteria <paramref name="score"/> (0-10), citing passage 1.</summary>

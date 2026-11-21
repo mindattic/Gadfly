@@ -64,12 +64,4 @@ internal static class EngineKit
         };
         return new SourceMaterialSubject("Biology", map, rubrics, new GroundingRetriever(passages));
     }
-
-    /// <summary>A clock tests move by hand.</summary>
-    public sealed class ManualClock(DateTimeOffset start) : TimeProvider
-    {
-        public DateTimeOffset Now { get; set; } = start;
-        public override DateTimeOffset GetUtcNow() => Now;
-        public void Advance(TimeSpan by) => Now += by;
-    }
 }
