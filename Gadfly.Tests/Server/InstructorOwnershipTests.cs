@@ -115,7 +115,9 @@ public class InstructorOwnershipTests : ServerTest
             Assert.That(await sp.GetRequiredService<Gadfly.Server.Assessments.AssessmentService>().GetAsync(w.ExamB), Is.Null);
             Assert.That(await sp.GetRequiredService<ExamService>().GetAsync(w.ExamB), Is.Null);
             Assert.That(await sp.GetRequiredService<SourceLibraryService>().GetCollectionAsync(w.Org, w.CollB), Is.Null);
-            Assert.That(await sp.GetRequiredService<Gadfly.Server.Review.ReviewService>().GetAsync(w.SessionB), Is.Null);
+            // ReviewService is built per request with the caller's organization, as the review pages and exports do (it isn't in DI).
+            var review = new Gadfly.Server.Review.ReviewService(sp.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>(), w.Org, viewerRole: OrgRoles.Instructor);
+            Assert.That(await review.GetAsync(w.SessionB), Is.Null);
             // Their own is still there, and an id that does not exist is just missing (no audit).
             Assert.That(await sp.GetRequiredService<ExamService>().GetAsync(w.ExamA), Is.Not.Null);
             Assert.That(await sp.GetRequiredService<ExamService>().GetAsync(Guid.NewGuid()), Is.Null);
