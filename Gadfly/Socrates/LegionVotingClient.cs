@@ -25,25 +25,29 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
 
     public async Task<VotingResult> AskAsync(string question, string context, Quorum quorum, CancellationToken ct = default)
     {
+        using var real = PanelUsage.CaptureReal("vote");
         var result = await service.VoteAsync(new VoteRequest { Question = question, Context = context, SynthesizeNarrative = true }, quorum, ct);
-        RecordVote(result, question.Length + context.Length, "vote");
+        if (real.Count == 0) RecordVote(result, question.Length + context.Length, "vote");
         return result;
     }
 
     public async Task<VotingResult> AskWithProfilesAsync(string question, string context, IReadOnlyList<VoterProfile> voters, CancellationToken ct = default)
     {
+        using var real = PanelUsage.CaptureReal("vote");
         var result = await service.VoteWithProfilesAsync(
             new VoteRequest { Question = question, Context = context, SynthesizeNarrative = false },
             Quorum.Plurality,
             voters,
             ct);
-        RecordVote(result, question.Length + context.Length, "vote");
+        if (real.Count == 0) RecordVote(result, question.Length + context.Length, "vote");
         return result;
     }
 
     public async Task<DecisionResult> DecideAsync(string question, IReadOnlyList<string> options, string context, CancellationToken ct = default)
     {
+        using var real = PanelUsage.CaptureReal("decide");
         var result = await service.DecideAsync(question, options, context, Quorum.Plurality, ct: ct);
+        if (real.Count == 0)
         foreach (var v in result.IndividualVotes.Where(v => !v.IsError))
             PanelUsage.Record(new PanelCall(v.ProviderId, ModelOf(v.ProviderId),
                 PanelUsage.Tokens(question.Length + context.Length + options.Sum(o => o.Length)), PanelUsage.Tokens(v.Decision.Length + v.Reasoning.Length), "decide"));
@@ -74,9 +78,11 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
             var model = ModelOf(id);
             try
             {
+                using var real = PanelUsage.CaptureReal("fan-out");
                 var text = await provider.CallAsync(id, systemPrompt, userMessage, maxTokens, temperature, null, ct);
                 Health.RecordSuccess(id, DateTimeOffset.UtcNow);
-                PanelUsage.Record(new PanelCall(id, model, PanelUsage.Tokens(systemPrompt.Length + userMessage.Length), PanelUsage.Tokens((text ?? "").Length), "fan-out"));
+                if (real.Count == 0)
+                    PanelUsage.Record(new PanelCall(id, model, PanelUsage.Tokens(systemPrompt.Length + userMessage.Length), PanelUsage.Tokens((text ?? "").Length), "fan-out"));
                 return new PanelReply(id, text ?? "", Model: model);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)

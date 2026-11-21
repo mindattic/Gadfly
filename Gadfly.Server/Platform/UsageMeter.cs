@@ -11,8 +11,9 @@ public sealed record TokenPrice(decimal InputPerMillion, decimal OutputPerMillio
 /// Turns metered panel calls into UsageEntry rows with an estimated cost (GAD-T47). Prices come from
 /// configuration (<c>Gadfly:Prices:&lt;provider&gt;:InputPerMillion</c> / <c>OutputPerMillion</c>, optionally
 /// per model as <c>Gadfly:Prices:&lt;provider&gt;:&lt;model&gt;:...</c>); a provider with no configured price
-/// uses the rough fallback below. Every figure is an estimate until Legion reports real token usage
-/// (M.LEGN-T50), and the admin console says so.
+/// uses the rough fallback below. Token counts are provider-reported (Legion 28, GAD-T154) when the
+/// call's <see cref="PanelCall.Estimated"/> is false and character estimates otherwise; the cost is always an estimate from the
+/// configured price, and the admin console says so.
 /// </summary>
 public sealed class UsageMeter(IConfiguration configuration, TimeProvider clock)
 {
