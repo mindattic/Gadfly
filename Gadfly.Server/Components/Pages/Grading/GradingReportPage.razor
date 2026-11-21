@@ -1,0 +1,42 @@
+@page "/grading/{SessionId:guid}/report"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Server.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+<PageTitle>Assessment report · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<p class="hint"><a href="grading/@SessionId">← Grading workspace</a></p>
+
+@if (loading)
+{
+    <p class="hint">Loading…</p>
+}
+else if (report is null)
+{
+    <h1>Not available</h1>
+    <p class="notice">This session isn't in the current organization, or your role does not include viewing transcripts (the attempt was recorded).</p>
+}
+else
+{
+    <h1>Assessment report <span>· reviewer view</span></h1>
+    <p class="hint">
+        <a href="@GradingSetup.ReportMarkdownPath(SessionId)" download data-enhance-nav="false">Download Markdown</a> ·
+        <a href="@GradingSetup.ReportCsvPath(SessionId)" download data-enhance-nav="false">Download CSV</a>
+    </p>
+    <AssessmentReportView Report="report" />
+}
+
+@code {
+    [Parameter] public Guid SessionId { get; set; }
+    private AssessmentReport? report;
+    private bool loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        var w = await GradingDb.RunAsync(Scopes, Tenant, g => g.WorkspaceAsync(SessionId));
+        report = w is null ? null : AssessmentReport.Build(w, forStudent: false);
+        loading = false;
+    }
+}

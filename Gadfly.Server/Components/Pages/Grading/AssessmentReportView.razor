@@ -1,0 +1,89 @@
+@using Gadfly.Server.Grading
+@* The assessment report body (Feature 10), shared by the reviewer and student pages. *@
+
+<div class="gr-report">
+    @if (Report.IsMock)
+    {
+        <p class="gr-banner mock"><span class="gr-mock">MOCK</span> AI scores in this report come from the mock panel, not a genuine AI evaluation.</p>
+    }
+    @if (!Report.IsApproved)
+    {
+        <p class="gr-banner warn">Preliminary: this grade has not been approved and is not a final grade.</p>
+    }
+    <div class="gr-summary">
+        <div><span class="hint">Exam</span>@Report.ExamTitle</div>
+        <div><span class="hint">Student</span>@Report.StudentName</div>
+        <div><span class="hint">Attempt</span>@Report.Attempt@(Report.EndedAt is { } ended ? " · " + ended.UtcDateTime.ToString("yyyy-MM-dd") : "")</div>
+        <div><span class="hint">Status</span>@Report.Status</div>
+        <div><span class="hint">Final grade</span><strong>@(Report.FinalPercent is { } f ? AssessmentReport.Pct(f) : "not available")</strong>@(Report.Label is { } l ? " (" + l + ")" : "")</div>
+    </div>
+    <p class="hint">Grading policy: @Report.Policy</p>
+
+    <h2 class="gr-section">Learning objectives</h2>
+    <div class="gr-table-wrap">
+        <table class="grid">
+            <thead><tr><th>Objective</th><th>Max</th><th>Weight</th><th>AI score</th><th>Human score</th><th>Combined</th></tr></thead>
+            <tbody>
+                @foreach (var o in Report.Objectives)
+                {
+                    <tr>
+                        <td>@o.Title</td>
+                        <td>@o.MaxScore.ToString("0.##")</td>
+                        <td>@o.Weight.ToString("0.##")</td>
+                        <td>@(o.AiExcluded ? "insufficient evidence" : o.AiScore?.ToString("0.##") ?? "—")@if (o.AiIsMock) { <text> </text><span class="gr-mock">MOCK</span> }</td>
+                        <td>@(o.HumanScore?.ToString("0.##") ?? "—")</td>
+                        <td>@(o.Combined?.ToString("0.##") ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @foreach (var o in Report.Objectives)
+    {
+        <div class="gr-objective">
+            <h3>@o.Title</h3>
+            @if (o.HumanLevel is not null) { <p><strong>Examiner:</strong> @o.HumanLevel@(o.HumanComment is { } c ? ". " + c : "")</p> }
+            @if (o.AiLevel is not null) { <p><strong>AI (preliminary):</strong> @o.AiLevel, confidence @o.AiConfidence. @o.AiExplanation</p> }
+            @if (o.Reconciliation is not null) { <p><strong>Reconciliation:</strong> @o.Reconciliation</p> }
+            @if (o.Evidence.Count > 0)
+            {
+                <p><strong>Evidence</strong> <span class="hint">(verified responses)</span></p>
+                @foreach (var ev in o.Evidence)
+                {
+                    <p class="hint">Response @ev.Sequence: @ev.Question</p>
+                    <blockquote>@ev.VerifiedText</blockquote>
+                }
+            }
+        </div>
+    }
+
+    <h2 class="gr-section">Knowledge gaps</h2>
+    @if (Report.KnowledgeGaps.Count == 0)
+    {
+        <p>None identified.</p>
+    }
+    else
+    {
+        <ul>@foreach (var g in Report.KnowledgeGaps) { <li>@g</li> }</ul>
+    }
+
+    <h2 class="gr-section">Approval</h2>
+    @if (Report.Approvals.Count == 0)
+    {
+        <p>Not approved yet.</p>
+    }
+    else
+    {
+        <ul>@foreach (var a in Report.Approvals) { <li>@a</li> }</ul>
+    }
+    @if (Report.Appeals.Count > 0)
+    {
+        <h2 class="gr-section">Appeals</h2>
+        <ul>@foreach (var a in Report.Appeals) { <li>@a</li> }</ul>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AssessmentReport Report { get; set; } = default!;
+}

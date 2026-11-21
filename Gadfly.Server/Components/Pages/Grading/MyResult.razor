@@ -1,0 +1,78 @@
+@page "/my-results/{SessionId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Student)]
+@using Gadfly.Assessment
+@using Gadfly.Server.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+<PageTitle>My result · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<p class="hint"><a href="my-exams">← My exams</a></p>
+
+@if (loading)
+{
+    <p class="hint">Loading…</p>
+}
+else if (report is null || w is null)
+{
+    <h1>Result not available</h1>
+    <p class="notice">This result hasn't been published to you.</p>
+}
+else
+{
+    <h1>Your result <span>· @report.ExamTitle</span></h1>
+    <p class="hint"><a href="@GradingSetup.StudentReportMarkdownPath(SessionId)" download data-enhance-nav="false">Download the report (Markdown)</a></p>
+    <AssessmentReportView Report="report" />
+
+    <h2 class="gr-section">Appeal</h2>
+    @if (w.OpenAppeal is { } open)
+    {
+        <p>Your appeal of @open.OpenedAt.UtcDateTime.ToString("yyyy-MM-dd") is being reviewed. Your published result stays visible meanwhile.</p>
+    }
+    else if (w.Status is GradeStatus.Published or GradeStatus.Amended)
+    {
+        <p class="hint">If you believe the grade is wrong, explain why. A teacher reviews it and either confirms the grade or amends it; you'll see the outcome here.</p>
+        <label class="gr-wide">Your reason <textarea rows="4" @bind="reason" maxlength="4000"></textarea></label>
+        <button type="button" disabled="@busy" @onclick="AppealAsync">Submit appeal</button>
+    }
+    @if (message is not null)
+    {
+        <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+    }
+}
+
+@code {
+    [Parameter] public Guid SessionId { get; set; }
+    private GradingWorkspace? w;
+    private AssessmentReport? report;
+    private bool loading = true, busy, ok;
+    private string reason = "";
+    private string? message;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        await LoadAsync();
+        loading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        w = await GradingDb.RunAsync(Scopes, Tenant, g => g.StudentWorkspaceAsync(SessionId));
+        report = w is null ? null : AssessmentReport.Build(w, forStudent: true);
+    }
+
+    private async Task AppealAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await GradingDb.RunAsync(Scopes, Tenant, g => g.AppealAsync(SessionId, reason));
+            ok = r.Ok;
+            message = r.Message;
+            if (r.Ok) { reason = ""; await LoadAsync(); }
+        }
+        finally { busy = false; }
+    }
+}
