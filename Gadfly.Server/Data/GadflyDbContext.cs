@@ -30,6 +30,14 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     // A missing HttpContext is never system work (GAD-T73).
     internal bool TenantBypass => _tenant is null || _tenant.IsSystem;
     internal Guid? TenantOrganizationId => _tenant?.OrganizationId;
+    internal Guid? TenantUserId => _tenant?.UserId;
+    internal string? TenantRole => _tenant?.Role;
+
+    // Decision D18 (GAD-T170), see OwnershipPolicy: an Instructor sees only what they created while the organization's
+    // setting is on. Read by the query filters below on every query; false for everyone else and for system work.
+    internal bool OwnerScoped => _tenant is { IsSystem: false, Role: OrgRoles.Instructor, UserId: not null, OrganizationId: not null }
+        && OwnershipPolicy.InstructorsScoped(this, _tenant.OrganizationId.Value);
+    internal Guid OwnerScopeUserId => _tenant?.UserId ?? Guid.Empty;
 
     // MindAttic.Authentication's tables, in its own "auth" schema in the same database (GAD-T41).
     public DbSet<AuthUser> AuthUsers => Set<AuthUser>();
@@ -422,6 +430,13 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
         // The audit log's organization is nullable (platform-level events have none), so it isn't ITenantOwned, but it
         // holds grades and before/after JSON: a tenant sees only its own organization's events, never another's and
         // never platform-level ones; system work sees all (GAD-T109).
+        // Decision D18 (GAD-T170): the same filter, narrowed to the caller's own items for a scoped Instructor.
+        b.Entity<Course>().HasQueryFilter(e => TenantBypass || (e.OrganizationId == TenantOrganizationId && (!OwnerScoped || e.CreatedByUserId == OwnerScopeUserId)));
+        b.Entity<SourceCollection>().HasQueryFilter(e => TenantBypass || (e.OrganizationId == TenantOrganizationId && (!OwnerScoped || e.CreatedByUserId == OwnerScopeUserId)));
+        b.Entity<Exam>().HasQueryFilter(e => TenantBypass || (e.OrganizationId == TenantOrganizationId && (!OwnerScoped || e.CreatedByUserId == OwnerScopeUserId)));
+        // Assignments and sessions belong to the exam they are for (and so to its owner).
+        b.Entity<ExamAssignment>().HasQueryFilter(e => TenantBypass || (e.OrganizationId == TenantOrganizationId && (!OwnerScoped || Exams.Any(x => x.Id == e.ExamId))));
+        b.Entity<ExamSession>().HasQueryFilter(e => TenantBypass || (e.OrganizationId == TenantOrganizationId && (!OwnerScoped || Exams.Any(x => x.Id == e.ExamId))));
         b.Entity<AuditEvent>().HasQueryFilter(a => TenantBypass || a.OrganizationId == TenantOrganizationId);
     }
 

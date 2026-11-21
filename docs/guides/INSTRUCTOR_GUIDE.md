@@ -9,6 +9,14 @@ This guide covers everything an instructor does: uploading material, checking th
 built from it, building and assigning exams, reviewing sessions, grading and releasing results.
 Owners and admins of an organization can do all of it too.
 
+> **You see what you own.** By default (decision D18, GAD-T170) an instructor sees and manages only the courses,
+> source collections and assessments *they created*, plus the assignments, sessions, review pages, grading queue
+> and analytics under them. Another instructor's items are not listed, and opening one by its address shows
+> "not found" and records the attempt in the audit log as an access refusal. Owners and admins see the whole
+> organization, so ask one if you need to share or hand over an item. Your admin can switch this off in
+> **Settings** so every instructor sees everything. Examiners and second reviewers are not limited this way:
+> grading is not assigned to individual examiners, so they see the organization's grading queue.
+
 > **Today vs later.** Students type their answers. Browser integrity signals (tab switches, pastes and
 > the like) are recorded. Voice answers, the talking examiner (avatar), webcam and audio integrity
 > signals and PDF/DOCX/EPUB/HTML uploads are planned but not built yet. Where a setting exists for one of

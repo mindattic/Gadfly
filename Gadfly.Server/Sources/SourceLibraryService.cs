@@ -1,3 +1,4 @@
+using Gadfly.Server.Tenancy;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -72,8 +73,13 @@ public sealed class SourceLibraryService(GadflyDbContext db, JobQueue jobs, Time
         }).ToList();
     }
 
-    public Task<SourceCollection?> GetCollectionAsync(Guid organizationId, Guid collectionId, CancellationToken ct = default) =>
-        db.SourceCollections.AsNoTracking().FirstOrDefaultAsync(c => c.Id == collectionId && c.OrganizationId == organizationId, ct);
+    public async Task<SourceCollection?> GetCollectionAsync(Guid organizationId, Guid collectionId, CancellationToken ct = default)
+    {
+        var found = await db.SourceCollections.AsNoTracking().FirstOrDefaultAsync(c => c.Id == collectionId && c.OrganizationId == organizationId, ct);
+        // Another instructor's collection reads as missing (decision D18) and the visit is audited as access.denied.
+        if (found is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Collection, collectionId, "Opening a source collection", ct);
+        return found;
+    }
 
     public async Task<Guid> CreateCollectionAsync(Guid organizationId, Guid userId, string title, CancellationToken ct = default)
     {

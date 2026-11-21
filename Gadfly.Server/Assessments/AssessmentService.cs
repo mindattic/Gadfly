@@ -150,7 +150,7 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
         if (!guard.Has(Permission.ManageAssessments) && !guard.Has(Permission.ApproveGradingPolicyChange)) return null;
         var org = Org;
         var e = await db.Exams.AsNoTracking().FirstOrDefaultAsync(x => x.Id == examId && x.OrganizationId == org, ct);
-        if (e is null) return null;
+        if (e is null) { await db.RefuseForeignAsync(OwnershipScope.Kind.Exam, examId, "Opening an assessment", ct); return null; }
         var p = ExamService.ReadPolicy(e.PolicyJson);
         var details = new AssessmentDetails
         {

@@ -1,3 +1,4 @@
+using Gadfly.Server.Tenancy;
 using System.Globalization;
 using System.Text.Json;
 using Gadfly.Assessment;
@@ -120,13 +121,17 @@ public sealed class AnalyticsService(GadflyDbContext db, Guid organizationId, Ti
         if (scope.ExamId is { } examId)
         {
             examQuery = examQuery.Where(e => e.Id == examId);
-            scopeTitle = await examQuery.Select(e => e.Title).FirstOrDefaultAsync(ct) ?? "Unknown assessment";
+            var found = await examQuery.Select(e => e.Title).FirstOrDefaultAsync(ct);
+            if (found is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Exam, examId, "Opening analytics for an assessment", ct);
+            scopeTitle = found ?? "Unknown assessment";
         }
         else if (scope.CourseId is { } courseId)
         {
             examQuery = examQuery.Where(e => e.CourseId == courseId);
-            scopeTitle = await db.Courses.AsNoTracking().Where(c => c.OrganizationId == organizationId && c.Id == courseId)
-                .Select(c => c.Title).FirstOrDefaultAsync(ct) is { } t ? "Course: " + t : "Unknown course";
+            var courseTitle = await db.Courses.AsNoTracking().Where(c => c.OrganizationId == organizationId && c.Id == courseId)
+                .Select(c => c.Title).FirstOrDefaultAsync(ct);
+            if (courseTitle is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Course, courseId, "Opening analytics for a course", ct);
+            scopeTitle = courseTitle is { } t ? "Course: " + t : "Unknown course";
         }
         var exams = await examQuery.Select(e => new { e.Id, e.Title, e.CollectionId }).ToListAsync(ct);
         var examIds = exams.Select(e => e.Id).ToList();

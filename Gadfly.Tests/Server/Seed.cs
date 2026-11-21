@@ -13,7 +13,11 @@ internal static class Seed
 {
     public static readonly string StrongPassword = "Correct-horse-battery-staple-" + Guid.NewGuid().ToString("N")[..8];
 
-    public static async Task<Guid> OrganizationAsync(string? name = null, decimal? quota = null)
+    /// <summary>
+    /// <paramref name="instructorsSeeOnlyOwn"/> is off by default here so scenario tests that act as an arbitrary Instructor over seeded
+    /// exams keep working; the ownership tests (GAD-T170) turn it on.
+    /// </summary>
+    public static async Task<Guid> OrganizationAsync(string? name = null, decimal? quota = null, bool instructorsSeeOnlyOwn = false)
     {
         await using var db = ServerFixture.NewContext(TenantSnapshot.System);
         var org = new MindAttic.Authentication.Entities.AuthOrganization
@@ -23,7 +27,7 @@ internal static class Seed
             CreatedUtc = DateTime.UtcNow,
         };
         db.Organizations.Add(org);
-        db.OrganizationSettings.Add(new OrganizationSettings { OrganizationId = org.Id, MonthlyCostQuotaUsd = quota, UpdatedAt = DateTimeOffset.UtcNow });
+        db.OrganizationSettings.Add(new OrganizationSettings { OrganizationId = org.Id, MonthlyCostQuotaUsd = quota, InstructorsSeeOnlyOwn = instructorsSeeOnlyOwn, UpdatedAt = DateTimeOffset.UtcNow });
         await db.SaveChangesAsync();
         return org.Id;
     }

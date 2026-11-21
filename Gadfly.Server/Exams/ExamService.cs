@@ -115,7 +115,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
     {
         var org = Org;
         var e = await db.Exams.AsNoTracking().FirstOrDefaultAsync(x => x.Id == examId && x.OrganizationId == org, ct);
-        if (e is null) return null;
+        if (e is null) { await db.RefuseForeignAsync(OwnershipScope.Kind.Exam, examId, "Opening an exam", ct); return null; }
         var p = ReadPolicy(e.PolicyJson);
         return new ExamDraft
         {
@@ -310,6 +310,8 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
     {
         var org = Org;
         var rows = await db.ExamAssignments.AsNoTracking().Where(a => a.ExamId == examId && a.OrganizationId == org).ToListAsync(ct);
+        if (rows.Count == 0 && !await db.Exams.AnyAsync(e => e.Id == examId && e.OrganizationId == org, ct))
+            await db.RefuseForeignAsync(OwnershipScope.Kind.Exam, examId, "Opening an exam's assignments", ct);
         if (rows.Count == 0) return [];
         var sessions = (await db.ExamSessions.AsNoTracking().Where(s => s.ExamId == examId && s.OrganizationId == org)
                 .Select(s => new { s.Id, s.AssignmentId, s.Attempt, s.State, s.EndedAt }).ToListAsync(ct))

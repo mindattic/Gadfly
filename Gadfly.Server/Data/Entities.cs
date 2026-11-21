@@ -30,6 +30,12 @@ public sealed class OrganizationSettings
     public decimal? MonthlyCostQuotaUsd { get; set; }
     public string? DefaultVoiceId { get; set; }
     public string? DefaultAvatarId { get; set; }
+    /// <summary>
+    /// Decision D18 (GAD-T170). True (the default): an Instructor sees and manages only the courses, collections and
+    /// assessments they created, and the assignments, sessions, grading and analytics under them; Owner and Admin keep
+    /// the whole organization. False restores the earlier behavior where every Instructor sees everything.
+    /// </summary>
+    public bool InstructorsSeeOnlyOwn { get; set; } = true;
     public DateTimeOffset UpdatedAt { get; set; }
 }
 

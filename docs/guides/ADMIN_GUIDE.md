@@ -32,7 +32,7 @@ Owners and admins manage people at **Members** (`/org/members`).
 |---|---|
 | Owner | Everything an admin can, plus add other owners. An organization always keeps at least one active owner. |
 | Admin | Add, remove and restore members; everything an instructor can. |
-| Instructor | Source material, exams, assignments, review, grading and releasing results. |
+| Instructor | Source material, exams, assignments, review, grading and releasing results, for what they created (see **What instructors see**, below). |
 | Student | Take assigned exams and see released results. |
 
 **Add a member** with a user name, an optional email, a role and a temporary password.
@@ -95,6 +95,27 @@ every attempt.
 Change the period at **Settings** (`/org/settings`): 7 to 3650 days. The page lists what is removed
 and what is kept. Shortening it applies to sessions that already ended, at the next daily run, and
 redaction can't be undone. See [Privacy](../PRIVACY.md) for the reasoning and the regulatory notes.
+
+### What instructors see
+
+Decision D18 (GAD-T170). **Settings > What instructors see** has one switch, **Instructors see and manage only what
+they created**, on by default (including for existing organizations when this was introduced).
+
+- **On:** an instructor sees only the courses, source collections and assessments whose creator is that
+  instructor, and the assignments, sessions, review pages, grading queue and analytics under those assessments.
+  They can only build an assessment on a course and collection of their own. Opening another instructor's item by
+  its address shows "not found" and writes an `access.denied` entry to the audit log (who, which item, when).
+- **Owners and admins** always see the whole organization, and so do **examiners** and **second reviewers**
+  (grading is not assigned to individual examiners, so there is nothing to scope them by) and the platform API
+  (keys are organization-level integrations). Students are unchanged: they see only their own assignments.
+- **Off:** every instructor sees everything in the organization, as before. Turning the switch on or off is written
+  to the audit log (`settings.instructor-scope.changed`) and applies within about 15 seconds.
+- Ownership is the item's creator. There is no transfer of ownership yet: to hand work to another instructor,
+  an owner or admin keeps access, or the switch is turned off. Items created through the API (for example
+  collections) have no instructor creator and are visible to owners and admins only while the switch is on.
+- Deploy note: this needs the `InstructorOwnershipScope` database migration (one new column,
+  `gadfly.OrganizationSettings.InstructorsSeeOnlyOwn`, default on). No ownership data is backfilled: courses,
+  collections and assessments already record their creator.
 
 Settings also holds the **monthly cost quota** (see Usage) and the **default voice and avatar** ids for
 voice-mode exams (voice exams aren't built yet; students of a voice exam answer by typing).

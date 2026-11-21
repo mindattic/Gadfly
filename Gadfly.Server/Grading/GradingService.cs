@@ -98,6 +98,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var p = Can(Permission.ApproveFinalGrade) ? Permission.ApproveFinalGrade : Permission.EnterHumanScore;   // examiners and approvers
         if (!await RequireAsync(p, "Starting AI grading", sessionId, ct)) return GradingResult.Fail(Denied(Permission.EnterHumanScore));
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == Org, ct);
+        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session for grading", ct);
         if (session is null) return GradingResult.Fail("That session was not found in this organization.");
         if (session.State != SessionState.Ended) return GradingResult.Fail("The examination hasn't ended yet.");
         var grade = await db.FinalGrades.AsNoTracking().FirstOrDefaultAsync(g => g.SessionId == sessionId, ct);
@@ -141,6 +142,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
     {
         var org = Org;
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == org, ct);
+        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session for grading", ct);
         if (session is null) return null;
         var exam = await db.Exams.AsNoTracking().FirstOrDefaultAsync(e => e.Id == session.ExamId && e.OrganizationId == org, ct);
         var grade = await db.FinalGrades.AsNoTracking().FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == org, ct);
@@ -337,6 +339,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (!await RequireAsync(Permission.EnterHumanScore, "Entering human scores", sessionId, ct)) return GradingResult.Fail(Denied(Permission.EnterHumanScore));
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == Org, ct);
         var grade = await db.FinalGrades.FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == Org, ct);
+        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session for grading", ct);
         if (session is null || grade is null) return GradingResult.Fail("That session has no grade record in this organization.");
         if (grade.Status != GradeStatus.HumanReviewPending)
             return GradingResult.Fail($"Human scores are entered while the grade is Human Review Pending (it is {GradeStatusMachine.Label(grade.Status)}).");
@@ -423,6 +426,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == Org, ct);
         var grade = await db.FinalGrades.FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == Org, ct);
         var d = await db.GradeDisagreements.FirstOrDefaultAsync(x => x.Id == disagreementId && x.SessionId == sessionId && x.OrganizationId == Org, ct);
+        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session for grading", ct);
         if (session is null || grade is null || d is null) return GradingResult.Fail("That disagreement was not found.");
         if (d.ResolvedAt is not null) return GradingResult.Fail("That disagreement is already resolved.");
         if (grade.Status is not (GradeStatus.ReconciliationRequired or GradeStatus.AwaitingFinalApproval))
@@ -473,6 +477,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (!await RequireAsync(Permission.ApproveFinalGrade, "Approving a final grade", sessionId, ct)) return GradingResult.Fail(Denied(Permission.ApproveFinalGrade));
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == Org, ct);
         var grade = await db.FinalGrades.FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == Org, ct);
+        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session for grading", ct);
         if (session is null || grade is null) return GradingResult.Fail("That session has no grade record in this organization.");
         // Part 10.4, checked again here: never finalize over an open mandatory disagreement.
         if (await db.GradeDisagreements.AnyAsync(x => x.SessionId == sessionId && x.OrganizationId == Org && x.ResolvedAt == null && x.Band == DisagreementBand.MandatoryReconciliation, ct))
@@ -563,6 +568,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (string.IsNullOrWhiteSpace(reason) || reason.Length > 4000) return GradingResult.Fail("Give the reason for the amendment (up to 4,000 characters).");
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == Org, ct);
         var grade = await db.FinalGrades.FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == Org, ct);
+        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session for grading", ct);
         if (session is null || grade is null) return GradingResult.Fail("That session has no grade record in this organization.");
         if (!GradeStatusMachine.CanMove(grade.Status, GradeStatus.Amended))
             return await RefuseAsync(grade, GradeStatus.Amended, "Only a published grade (or one under appeal) can be amended.", ct);

@@ -343,9 +343,9 @@ Answer by code, e.g. "D3: B". Until a decision is answered, work proceeds on the
 | D14 | Cross-repo work from the Gadfly window | Resolved: the owner typed `/crossrepo all` |
 | D15 | LLM provider billing | Resolved: Anthropic credits bought (2026-11-20); OpenAI Low tier is now gpt-6-luna (M.LEGN-T51). Spending rule: mock mode everywhere, Claude pinned to Sonnet 5, no live calls without the owner's OK each time |
 | D16 | Create the Azure resources | Resolved: owner said go (2026-11-20) |
-| D18 | What a teacher sees | **A: teachers see only their own assessments and students; Owner/Admin see the whole organization** · B: every teacher sees the whole organization (today's behavior) |
+| D18 | What a teacher sees | **A: teachers see only their own assessments and students; Owner/Admin see the whole organization** · B: every teacher sees the whole organization (today's behavior) | **Proceeding on default A (GAD-T170).**
 | D19 | Voice consent wording | **A: keep the wording now in the exam room (consent version .4)** · B: owner rewrites it |
 | D20 | Voice-only exams | **A: typing is always available (accessibility, broken mic); typed answers are marked as text** · B: allow an exam to require voice |
-| D21 | When webcam notes reach the reviewer | **A: also send an update every minute while an episode lasts** · B: only when an episode ends (today's behavior) |
+| D21 | When webcam notes reach the reviewer | **A: also send an update every minute while an episode lasts** · B: only when an episode ends (today's behavior). **Proceeding on default A (GAD-T171)** |
 | D22 | 3D avatar on Azure | **A: upload the 37 MB model to blob storage and point Gadfly:Voice:AvatarModelUrl at it** · B: keep the 2D portrait on Azure |
 | D23 | Live AI | **A: stay in mock mode until the owner says go** · B: turn on the live panel (and, with D4, ElevenLabs voice) for named test sessions |

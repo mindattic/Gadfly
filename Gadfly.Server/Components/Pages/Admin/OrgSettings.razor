@@ -2,6 +2,7 @@
 @attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
 @using System.ComponentModel.DataAnnotations
 @using Gadfly.Server.Data
+@using Gadfly.Server.Tenancy
 @using Microsoft.EntityFrameworkCore
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
@@ -52,6 +53,19 @@ else
         <ValidationMessage For="() => form.DefaultAvatarId" class="error" />
         <p class="hint">Used for new voice-mode exams unless the exam picks its own. Leave empty for the platform default.</p>
 
+        <h2>What instructors see</h2>
+        <label class="check">
+            <InputCheckbox @bind-Value="form.InstructorsSeeOnlyOwn" />
+            Instructors see and manage only what they created
+        </label>
+        <p class="hint">
+            On (the default): an instructor sees only the courses, source collections and assessments they created, and
+            the assignments, sessions, review, grading queue and analytics under them. Opening another instructor's item
+            by its address is refused and recorded. Owners and admins always see the whole organization. Off: every
+            instructor sees everything in the organization. Examiners and second reviewers see the whole organization
+            either way, because grading is not assigned to individual examiners. Applies within about 15 seconds.
+        </p>
+
         <button type="submit" disabled="@busy">Save settings</button>
         @if (message is not null)
         {
@@ -78,6 +92,8 @@ else
 
         [StringLength(100, ErrorMessage = "At most 100 characters.")]
         public string? DefaultAvatarId { get; set; }
+
+        public bool InstructorsSeeOnlyOwn { get; set; } = true;
     }
 
     private Form? form;
@@ -96,6 +112,7 @@ else
             MonthlyCostQuotaUsd = row?.MonthlyCostQuotaUsd,
             DefaultVoiceId = row?.DefaultVoiceId,
             DefaultAvatarId = row?.DefaultAvatarId,
+            InstructorsSeeOnlyOwn = row?.InstructorsSeeOnlyOwn ?? true,
         };
         updatedAt = row is null || row.UpdatedAt == default ? null : row.UpdatedAt;
     }
@@ -117,7 +134,21 @@ else
                 row.DefaultVoiceId = Clean(form.DefaultVoiceId);
                 row.DefaultAvatarId = Clean(form.DefaultAvatarId);
                 row.UpdatedAt = now;
-                return await db.SaveChangesAsync();
+                if (row.InstructorsSeeOnlyOwn != form.InstructorsSeeOnlyOwn)
+                {
+                    db.AuditEvents.Add(new AuditEvent
+                    {
+                        OrganizationId = org, ActorUserId = Tenant.UserId, ActorRole = Tenant.Role, Action = "settings.instructor-scope.changed",
+                        EntityType = "OrganizationSettings", EntityId = org.ToString(),
+                        BeforeJson = $"{{\"instructorsSeeOnlyOwn\":{(row.InstructorsSeeOnlyOwn ? "true" : "false")}}}",
+                        AfterJson = $"{{\"instructorsSeeOnlyOwn\":{(form.InstructorsSeeOnlyOwn ? "true" : "false")}}}",
+                        Reason = "Decision D18: whether instructors see only what they own.", At = now,
+                    });
+                    row.InstructorsSeeOnlyOwn = form.InstructorsSeeOnlyOwn;
+                }
+                var saved = await db.SaveChangesAsync();
+                OwnershipPolicy.Invalidate(org);
+                return saved;
             });
             updatedAt = now;
             ok = true;

@@ -1382,6 +1382,9 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<string>("DefaultVoiceId")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("InstructorsSeeOnlyOwn")
+                        .HasColumnType("bit");
+
                     b.Property<decimal?>("MonthlyCostQuotaUsd")
                         .HasPrecision(18, 6)
                         .HasColumnType("decimal(18,6)");
