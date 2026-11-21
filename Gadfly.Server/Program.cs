@@ -33,6 +33,9 @@ builder.Logging.AddAzureWebAppDiagnostics();
 // Secrets: on a dev machine MindAttic.Vault's files (the shared LLM provider keys Legion reads, the
 // Security bucket the auth stack needs: pepper, bootstrap-token); in Azure, App Service settings / Key Vault.
 builder.Configuration.AddMindAtticVaultFiles(o => o.Buckets = new[] { "LLM", "Security", "Notifications" });
+// Legion reads its provider keys through this: App Service settings (Key Vault references) first, the vault files second.
+// Without it a deployed app sees no LLM keys and the live panel finds nothing (GAD-T225).
+MindAttic.Legion.MindAtticCredentialStore.UseConfiguration(builder.Configuration);
 
 // Durable structured logs in MindAttic.Log's per-app database (GAD-T62); ILogger<T> call sites unchanged.
 builder.Services.AddMindAtticLog(o =>
