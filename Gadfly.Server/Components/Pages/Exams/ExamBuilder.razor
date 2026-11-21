@@ -103,12 +103,12 @@ else
         <label>Mode
             <select @bind="draft.Mode">
                 <option value="@ExamMode.Text">Text: questions and answers are typed</option>
-                <option value="@ExamMode.Voice">Voice (coming soon — needs the speech and avatar libraries)</option>
+                <option value="@ExamMode.Voice">Voice: the examiner speaks and the student answers aloud (typing stays available)</option>
             </select>
         </label>
         @if (draft.Mode == ExamMode.Voice)
         {
-            <p class="hint">Voice isn't built yet: until the speech and avatar libraries arrive, students taking a voice exam answer by typing.</p>
+            <p class="hint">Students speak when voice is turned on for this deployment; otherwise they answer by typing.</p>
         }
         <fieldset class="eb-list">
             <legend>Integrity monitoring</legend>
@@ -123,7 +123,7 @@ else
         </fieldset>
         <label>Examiner voice id <input @bind="draft.VoiceId" placeholder="default voice" /></label>
         <label>Examiner avatar id <input @bind="draft.AvatarId" placeholder="default examiner" /></label>
-        <p class="hint">Voice and avatar choices are free text until the voice (D4) and avatar (D3) decisions land; blank uses the defaults.</p>
+        <p class="hint">Voice and avatar choices are free text; blank uses the defaults.</p>
         <label>Instructions shown to students <textarea rows="4" @bind="draft.Instructions"></textarea></label>
 
         <div class="eb-actions">

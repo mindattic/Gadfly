@@ -27,7 +27,7 @@ OWASP ASVS 4.0 Level 2 where it applies:
 
 Out of scope: MindAttic.Authentication's own internals (Argon2id, TOTP, lockout, cookie and CSP posture;
 reviewed in that library), Azure infrastructure (docs/DEPLOY.md), and the voice/avatar pipeline (GAD-T53,
-not built yet).
+built after this review).
 
 ## Method
 

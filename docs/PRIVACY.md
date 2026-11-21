@@ -2,8 +2,8 @@
 
 Status: draft for review (GAD-T61). Not legal advice; have counsel review before the first paying
 customer. Defaults follow the open decisions in [SOCRATIC_PLATFORM.md](SOCRATIC_PLATFORM.md): adult
-learners (D6), audio and transcripts kept 90 days, video never stored (D7), the AI recommends and the
-instructor decides (D13).
+learners (D6), audio and transcripts kept 90 days, video never stored (D7), the AI's grades are preliminary and a
+human grades and an authorized person approves before a student sees a result (D13, master plan Parts 8 to 11).
 
 ## What is collected, and for how long
 
@@ -56,7 +56,7 @@ the camera, the exam continues. Nothing infers emotion or deception.
 - **EU AI Act.** Emotion recognition in education is prohibited (Art. 5(1)(f)); Gadfly infers no
   emotion and no deception. AI that evaluates learning outcomes or monitors students during tests is
   high-risk (Annex III, point 3): selling into the EU requires risk management, data governance,
-  logging (the session record and prompt-set hash), human oversight (instructor decides), accuracy
+  logging (the session record and prompt-set hash), human oversight (human grading and approval), accuracy
   documentation and registration before deployment.
 - **Illinois BIPA, Texas CUBI, Washington biometric law.** Face geometry is biometric. The webcam
   modules compute it on the device and send only derived events (counts, regions, "same person");

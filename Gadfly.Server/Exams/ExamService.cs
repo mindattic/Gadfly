@@ -22,7 +22,7 @@ public sealed class ExamDraft
     public int Difficulty { get; set; } = 3;
     /// <summary>Follow-up questions allowed per concept after the opening question.</summary>
     public int MaxFollowUps { get; set; } = 5;
-    /// <summary>Text by default: voice needs the speech and avatar libraries, which are not built yet.</summary>
+    /// <summary>Text by default; Voice adds the talking examiner and spoken answers where the deployment has voice on.</summary>
     public ExamMode Mode { get; set; } = ExamMode.Text;
     public IntegrityLevel IntegrityLevel { get; set; } = IntegrityLevel.Standard;
     public string? VoiceId { get; set; }
@@ -44,15 +44,11 @@ public sealed record StudentOption(Guid UserId, string UserName, string? Email);
 
 public sealed record AssignmentRow(Guid Id, Guid StudentUserId, string StudentName, DateTimeOffset? OpensAt, DateTimeOffset? ClosesAt,
     int AttemptsAllowed, int AttemptsUsed, SessionState? LatestState, DateTimeOffset? LatestEndedAt, DateTimeOffset AssignedAt,
-    DateTimeOffset? ResultsReleasedAt, string? ReleaseBlocker = null, decimal TimeMultiplier = 1m)
-{
-    /// <summary>True when results can be released now (<see cref="Review.ResultRelease"/>).</summary>
-    public bool CanRelease => ReleaseBlocker is null;
-}
+    DateTimeOffset? ResultsReleasedAt, decimal TimeMultiplier = 1m);
 
 /// <summary>
 /// Exam builder and assignments (GAD-T50): drafts, publishing (which freezes the policy), archiving,
-/// assigning published exams to students, and releasing results (the instructor's decision, D13).
+/// and assigning published exams to students. Results reach students through the grading workflow, not here.
 /// Everything runs inside the caller's active organization; <see cref="GadflyDbContext"/>'s tenant
 /// filter and write guard back that up.
 /// </summary>
@@ -316,41 +312,15 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
         var sessions = (await db.ExamSessions.AsNoTracking().Where(s => s.ExamId == examId && s.OrganizationId == org)
                 .Select(s => new { s.Id, s.AssignmentId, s.Attempt, s.State, s.EndedAt }).ToListAsync(ct))
             .GroupBy(s => s.AssignmentId).ToDictionary(g => g.Key, g => g.OrderByDescending(s => s.Attempt).ToList());
-        // Release rule (GAD-T70): the latest ended session of each assignment must have a grade.
-        var latestEnded = sessions.ToDictionary(kv => kv.Key, kv => kv.Value.FirstOrDefault(s => s.State == SessionState.Ended)?.Id);
-        var latestEndedIds = latestEnded.Values.OfType<Guid>().ToList();
-        var graded = latestEndedIds.Count == 0 ? [] : (await db.GradeDecisions.AsNoTracking()
-            .Where(g => g.OrganizationId == org && latestEndedIds.Contains(g.SessionId))
-            .Select(g => g.SessionId).Distinct().ToListAsync(ct)).ToHashSet();
         var names = (await directory.MembersAsync(org, ct)).GroupBy(m => m.Member.UserId).ToDictionary(g => g.Key, g => g.First().UserName);
         return rows.Select(a =>
             {
                 var list = sessions.GetValueOrDefault(a.Id) ?? [];
                 var latest = list.FirstOrDefault();
                 return new AssignmentRow(a.Id, a.StudentUserId, names.GetValueOrDefault(a.StudentUserId, "(unknown user)"), a.OpensAt, a.ClosesAt,
-                    a.AttemptsAllowed, list.Count, latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt,
-                    Review.ResultRelease.Blocker(latestEnded.GetValueOrDefault(a.Id), latestEnded.GetValueOrDefault(a.Id) is { } e && graded.Contains(e)), a.TimeMultiplier);
+                    a.AttemptsAllowed, list.Count, latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier);
             })
             .OrderBy(r => r.StudentName, StringComparer.OrdinalIgnoreCase).ToList();
-    }
-
-    /// <summary>
-    /// Releases one student's results to them. The instructor decides when (D13); the result must be
-    /// graded first, the same rule as the review page (<see cref="Review.ResultRelease"/>).
-    /// </summary>
-    public async Task<ExamResult> ReleaseResultsAsync(Guid assignmentId, CancellationToken ct = default)
-    {
-        if (await DeniedAsync(Permission.PublishGrade, "Releasing results", "ExamAssignment", assignmentId, ct) is { } denied) return denied;
-        var org = Org;
-        var a = await db.ExamAssignments.FirstOrDefaultAsync(x => x.Id == assignmentId && x.OrganizationId == org, ct);
-        if (a is null) return new(false, "That assignment no longer exists.");
-        if (a.ResultsReleasedAt is not null) return new(true, "Results were already released.", a.Id);
-        if (await Review.ResultRelease.BlockerAsync(db, org, a.Id, ct) is { } blocker) return new(false, blocker, a.Id);
-        a.ResultsReleasedAt = clock.GetUtcNow();
-        Guard.Audit("results.released", "ExamAssignment", a.Id.ToString(), after: new { a.ExamId, a.StudentUserId, a.ResultsReleasedAt });
-        await db.SaveChangesAsync(ct);
-        db.ChangeTracker.Clear();
-        return new(true, "Results released to the student.", a.Id);
     }
 
     // ------------------------------------------------------------------ policy

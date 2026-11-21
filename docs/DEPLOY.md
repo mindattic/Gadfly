@@ -1,7 +1,8 @@
 # Deploying Gadfly to Azure
 
-Status: prepared, not yet run (GAD-T63). Running it creates billable Azure resources, so it waits for
-the owner's go-ahead (decision D16 in [SOCRATIC_PLATFORM.md](SOCRATIC_PLATFORM.md)).
+Status: done (GAD-T63; the owner said go, decision D16 in [SOCRATIC_PLATFORM.md](SOCRATIC_PLATFORM.md)). The app is live at
+https://mindattic-gadfly.azurewebsites.net and runs in mock mode (D23). The steps below are how it was set up and how to
+repeat it in another subscription.
 
 Gadfly.Server runs next to Tutor in the existing **MyApps** resource group, on the existing App Service
 plan and Azure SQL server, with a managed identity and no passwords anywhere:

@@ -171,8 +171,8 @@ speech-to-text, text-to-speech, embeddings) by kind and provider, the number of 
 ended, the month's cost against the **monthly cost quota** set under Settings, and the health of each LLM
 provider on the judging panel.
 
-Cost figures appear once usage metering is on (GAD-T47); until then the page says so, and session counts
-are already live. The quota is shown for comparison but not yet enforced. The **Exams** list shows how
+Cost figures are metered per panel call (GAD-T47). When the month's cost reaches the quota, new exam sessions
+are refused with a message to contact the instructor; sessions already running finish. The **Exams** list shows how
 many students each exam is assigned to and how many sessions started and ended.
 
 ## Data export and erasure

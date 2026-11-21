@@ -2,11 +2,12 @@
 
 Gadfly Exams checks understanding by questioning a student, one question at a time, the way Socrates did.
 Each follow-up is written from the student's own previous answer, and every answer is judged against
-*your* source material by a panel of AI models, with citations. The AI recommends a result; you decide
-the grade.
+*your* source material by a panel of AI models, with citations. The AI's grades are preliminary: a human
+examiner grades independently, a second reviewer reconciles large disagreements, and an authorized person
+approves before a student sees anything.
 
 This guide covers everything an instructor does: uploading material, checking the concepts and rubrics
-built from it, building and assigning exams, reviewing sessions, grading and releasing results.
+built from it, building and assigning exams, reviewing sessions, and grading and publishing results.
 Owners and admins of an organization can do all of it too.
 
 > **You see what you own.** By default (decision D18, GAD-T170) an instructor sees and manages only the courses,
@@ -17,10 +18,10 @@ Owners and admins of an organization can do all of it too.
 > **Settings** so every instructor sees everything. Examiners and second reviewers are not limited this way:
 > grading is not assigned to individual examiners, so they see the organization's grading queue.
 
-> **Today vs later.** Students type their answers. Browser integrity signals (tab switches, pastes and
-> the like) are recorded. Voice answers, the talking examiner (avatar), webcam and audio integrity
-> signals and PDF/DOCX/EPUB/HTML uploads are planned but not built yet. Where a setting exists for one of
-> them, this guide says so.
+> **Text, voice and uploads.** Students type their answers by default; a Voice exam adds a talking examiner
+> and spoken answers, with typing always available (see [Voice](../VOICE.md)). Browser integrity signals (tab
+> switches, pastes and the like) are recorded, and Strict exams add on-device webcam signals. You can upload
+> `.txt`, Markdown, PDF, DOCX, EPUB and HTML.
 
 ## Signing in
 
@@ -113,9 +114,9 @@ Open **Exams**, then **New exam**.
 | Duration (minutes) | 1 to 240. The clock is kept on the server and runs from the first question; it doesn't pause if the student leaves the page. |
 | Difficulty | 1 gentle, 2 easy, 3 standard, 4 demanding, 5 rigorous: how hard the follow-ups push. |
 | Most follow-up questions per concept | 0 to 20, after the opening question. The examiner moves on sooner when a concept is clearly mastered or clearly not understood. The whole exam is capped at (concepts × (follow-ups + 1)) questions. |
-| Mode | **Text** (the default) or **Voice**. Voice is marked "coming soon": it needs the speech and avatar libraries, which aren't built yet. You can still choose it; students of a voice exam answer by typing, and are told so. |
-| Integrity monitoring | **Off**, **Standard** or **Strict**. **Standard** records browser signals: the exam tab hidden or the window losing focus (with how long), pastes into the answer box, copying the question, a second screen connected, and a guess that developer tools are open (information only). **Strict** also asks the browser for permission to detect extra screens (the student may decline) and offers an optional **Go full screen** button, noting when the student leaves full screen. **Strict** also turns on camera checks (the student must allow the camera; the notice they accept says exactly what is and isn't collected): a missing face, a second face, a possible change of person, a long look off-screen and reading-like eye movement are noted as low-confidence events for your review, short glances away while thinking are shown as normal, and nothing is stored but those short notes (never video). If the student declines the camera the exam goes on and a neutral note says so. Audio signals arrive with voice mode. **Off** records no browser signals. Students are told in the notice they accept what is noted. |
-| Examiner voice id / avatar id | Free text, saved for the voice and avatar features; unused today. Blank means the default. |
+| Mode | **Text** (the default) or **Voice**. On a Voice exam the examiner speaks each question and the student answers aloud with a live transcript, after pressing **Start voice mode** and allowing the microphone; typing is always one click away. Voice runs only where the deployment has voice turned on (`Gadfly:Voice:Mode`); otherwise students type, and are told so. |
+| Integrity monitoring | **Off**, **Standard** or **Strict**. **Standard** records browser signals: the exam tab hidden or the window losing focus (with how long), pastes into the answer box, copying the question, a second screen connected, and a guess that developer tools are open (information only). **Strict** also asks the browser for permission to detect extra screens (the student may decline) and offers an optional **Go full screen** button, noting when the student leaves full screen. **Strict** also turns on camera checks (the student must allow the camera; the notice they accept says exactly what is and isn't collected): a missing face, a second face, a possible change of person, a long look off-screen and reading-like eye movement are noted as low-confidence events for your review, short glances away while thinking are shown as normal, and nothing is stored but those short notes (never video). If the student declines the camera the exam goes on and a neutral note says so. Audio signals (a second voice, reading cadence) come with voice mode. **Off** records no browser signals. Students are told in the notice they accept what is noted. |
+| Examiner voice id / avatar id | Free text saved with the exam. Blank means the default; the deployment's voice and avatar settings decide what students actually hear and see ([Voice](../VOICE.md)). |
 | Instructions shown to students | Shown on the student's exam list. |
 
 **Save draft** keeps your work. **Publish** checks the exam (at least one concept, valid settings, the
@@ -136,12 +137,11 @@ A published exam shows **Assign to students** below its settings.
 | Attempts allowed | 1 to 20. |
 
 Students who already have this exam are skipped. Students must already be members of the organization
-(an admin adds them under **Members**). There are no email invitations yet: students find the exam under
-**My exams** when they sign in.
+(an admin adds or invites them under **Members**). Students find the exam under **My exams** when they sign in.
 
 The **Assignments** table shows each student's window, attempts used, their latest session's state and
-whether results were released. **Release results** there follows the same rule as the review page (see
-Grade and release): it stays off, with a hint, until the student's latest finished attempt is graded.
+whether a result was published. A finished attempt links to its grading page (see Grade and publish): results reach
+students only through the grading workflow.
 
 ## 6. What the student sees
 
@@ -160,14 +160,15 @@ The [Student guide](STUDENT_GUIDE.md) is written for students; you can share it.
 ## 7. Review a session
 
 Open **Review**. Each row is one attempt: student, exam, attempt number, state, when it ended, the AI
-recommendation, how many answers the judges disagreed on, how many integrity flags there were, and the
-grade. Filter by exam, **Needs a grade** (ended, not graded) or **Judges disagreed**.
+recommendation, how many answers the judges disagreed on, how many integrity flags there were, and any earlier
+instructor decision (the older single-grader record; current grading is in **Grading**). Filter by exam,
+**Needs a grade** (ended, not graded) or **Judges disagreed**.
 
 Open a session to read it.
 
 ### The summary
 
-State and end reason, start and end times, the AI recommendation and overall mastery, the current grade,
+State and end reason, start and end times, the AI recommendation and overall mastery, any earlier instructor decision,
 and export links. The recommendation is one of:
 
 | Recommendation | When |
@@ -234,28 +235,30 @@ are merged.
 closed (Mastered, Aporia, Exhausted, Open). The **AI report** below it is the panel's write-up: mastery
 per concept, quoted evidence with citations, and disputed answers.
 
-## 8. Grade and release
+## 8. Grade and publish
 
-Grade an attempt once it has ended.
+Grade an attempt once it has ended, from **Grading** in the navigation (the review page links to each session's
+grading workspace). Results reach students only through this workflow.
 
-| Field | Detail |
-|---|---|
-| Grade | Your words, up to 40 characters: "A", "B+", "Pass", "mastered"… **Use it** fills in the AI recommendation and its score. |
-| Score | Optional, 0 to 100. |
-| Comment | Optional, up to 4,000 characters. The student sees it. |
+1. **AI preliminary grading.** When a session ends, the AI panel grades each learning objective (levels 0 to 5, with
+   rationale and cited evidence). **Retry AI grading** appears if it fails. If an answer's transcript still needs
+   the student, the grade waits in **Transcript verification pending**.
+2. **Human grading.** An examiner (or teacher) scores every objective independently and submits all of them
+   together. Under a blind policy, the AI's evaluation stays hidden until they submit (see below).
+3. **Score comparison.** The page shows AI and human scores side by side and the combined score under the exam's
+   locked grading policy (AI and human weights). Large differences are flagged by the policy's thresholds.
+4. **Reconciliation.** When the difference needs it, the grade is held at Reconciliation required: request a second
+   review, and the second reviewer records the cause, the resolution and a resolved score. The score is recalculated.
+5. **Final approval.** An authorized person (Teacher, Admin or Owner, never the Examiner) approves the final grade, or
+   reopens human grading with a reason.
+6. **Publish.** Publishing releases the final grade and the assessment report to the student on **My exams**.
+   Republish after a change; nothing is shown to the student before this step.
+7. **Appeals and amendments.** A student can appeal a published result; the teacher resolves the appeal as upheld or
+   dismissed, and can amend the grade with a reason. The result stays visible during an appeal, and amended results are
+   marked.
 
-Before you save, the form says whether your grade **agrees with** or **overrides** the AI
-recommendation. A grade overrides when it names a different outcome (for example "B" against
-"mastered"; "A", "pass" and "proficient" agree with mastered, "B" to "C-" with partial, "D" to "F" and
-"fail" with not-demonstrated; anything else counts as an override) or when your score is more than 10
-points from the AI's. Every saved grade is kept in the **Grade history**; the newest one is the grade.
-
-**Release** decides when the student sees the result. One rule applies everywhere: a result can be
-released only when the assignment's **latest finished attempt has a grade**. On the session page,
-**Release result** stays off until then (the page says why); **Withdraw the result** hides it again. The
-exam's **Assignments** table also has **Release results** per student, with the same rule. Release is per assignment: the student sees the latest grade and comment, plus the
-AI's recommendation in plain words ("Understanding shown", "Partly shown", "Not yet shown"), on
-**My exams**.
+Every step is audited, and a refused attempt (for example an examiner trying to approve) is recorded as an access
+refusal. The AI never publishes anything.
 
 ### Grading as the blind examiner
 
@@ -275,9 +278,9 @@ From a session's summary:
 | Export | Contents |
 |---|---|
 | turns (CSV) | One row per question: session, student, exam, attempt, turn, concept, move, question, answer, answer mode, times (UTC), latency, overall score, agreement, whether judges disagreed, judge summary, criterion scores, each judge's score, text-style score, mastery after, integrity events. Opens correctly in Excel. |
-| report (Markdown) | The AI report plus your decision: grade, score, who decided and when, whether it overrides the recommendation, and your comment. |
+| report (Markdown) | The AI report plus any earlier instructor decision: grade, score, who decided and when, whether it overrides the recommendation, and the comment. |
 
-A PDF export comes later.
+A PDF export is not built.
 
 ## How long data is kept
 

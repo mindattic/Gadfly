@@ -1,6 +1,7 @@
 # Socratic Exam Platform: plan
 
-Status: planned (GAD-T25). Owner's stack decision 2026-11-20: Blazor Server, EF Core over SQL Server,
+Status: the plan the platform was built from (GAD-T25); what is built is in
+[MASTER-PLAN-STATUS.md](MASTER-PLAN-STATUS.md). Owner's stack decision 2026-11-20: Blazor Server, EF Core over SQL Server,
 LocalDB first, Azure later.
 
 ## The idea
@@ -63,7 +64,7 @@ A live spoken cross-examination is far harder to fake:
 | Gadfly.Exam: the Blazor Server exam product | Gadfly (D1) | new |
 | MindAttic.SpeechRecognition | new repo (created 2026-11-20, private) | new |
 | MindAttic.Avatar: talking head with lip sync | new repo (created 2026-11-20, private) | new |
-| MindAttic.Webcam: core and modules, with eye tracking as one module | MindAttic.EyeTracker, renamed | restructure |
+| MindAttic.Webcam: core and modules, with eye tracking as one module | MindAttic.Webcam (formerly MindAttic.EyeTracker, renamed in place) | restructure |
 | Organizations, memberships, invitations | MindAttic.Authentication | extension |
 | Tutor.Ingestion: shared parsers, chunking, embeddings | Tutor | extraction |
 | Grounded judging: citations, per-voter verdicts, usage | MindAttic.Legion | extension |
@@ -81,7 +82,7 @@ A live spoken cross-examination is far harder to fake:
   reach the browser.
 - **TalkingHead** (met4citizen/TalkingHead, MIT, three.js): browser 3D avatar with lip sync from word
   timings. ElevenLabs' `with-timestamps` TTS returns exactly the alignment it needs.
-- **MediaPipe Tasks Vision** (already used by EyeTracker): the face landmarks behind presence, head pose and
+- **MediaPipe Tasks Vision** (used by MindAttic.Webcam): the face landmarks behind presence, head pose and
   gaze.
 - **MindAttic.Components**: theme and controls. **MindAttic.Log / Telemetry**: observability.
 - **MindAttic.Deploy**: deployment.
@@ -208,7 +209,7 @@ Any application can use the Socratic method in one of two ways:
 | 1 (MS-2) | **Text-only Socratic exam in the CLI** | The engine, grounding and Legion judging work, before any UI |
 | 2 (MS-3) | **Voice and vision building blocks** | SpeechRecognition, Avatar and Webcam each work alone on a demo page (in parallel with 1) |
 | 3 (MS-4) | **Platform backend and accounts** | SQL schema, organizations, invitations, SessionHub, jobs, API |
-| 4 (MS-5) | **Voice exam web app MVP** | Instructor builds an exam from sources; a student takes it by voice with the avatar; the instructor reviews |
+| 4 (MS-5) | **Voice exam web app** | Instructor builds an exam from sources; a student takes it by voice with the avatar; the instructor reviews |
 | 5 (MS-6) | **Integrity** | Webcam, audio, browser and text signals become one reviewable integrity summary |
 | 6 (MS-7) | **Production and pilot** | Azure deploy, privacy and consent, security review, Erin's pilot |
 
@@ -218,7 +219,7 @@ and how to tell it's done.
 
 ## Tickets in build order
 
-Every ticket is approved. `requires` links enforce the order within and across repos; the queue priority follows this list. Status as of 2026-11-20.
+Every ticket is approved. `requires` links enforce the order within and across repos; the queue priority follows this list. Status as of 2026-11-20, a snapshot: the live status is in the ticket database (`tickets ticket list --repo <repo>`).
 
 
 ### MS-2 · Text-only Socratic exam in the CLI
@@ -259,12 +260,12 @@ Every ticket is approved. `requires` links enforce the order within and across r
 | 27 | MAA-T5 | MindAttic.Avatar | Default avatar asset | MAA-T4 | open |
 | 28 | MAA-T6 | MindAttic.Avatar | Avatar server integration and demo | MAA-T3, MAA-T4 | open |
 | 29 | MAA-T7 | MindAttic.Avatar | Avatar README and docs | MAA-T6, MAA-T5 | open |
-| 30 | ET-T12 | MindAttic.EyeTracker | Rename EyeTracker to MindAttic.Webcam | - | open |
-| 31 | ET-T13 | MindAttic.EyeTracker | Webcam core plus eyetracking module | ET-T12 | open |
-| 32 | ET-T14 | MindAttic.EyeTracker | Presence module | ET-T13 | open |
-| 33 | ET-T15 | MindAttic.EyeTracker | Head pose and gaze region | ET-T13 | open |
-| 34 | ET-T16 | MindAttic.EyeTracker | Integrity event stream | ET-T14, ET-T15 | open |
-| 35 | ET-T17 | MindAttic.EyeTracker | Gaze and deception research note | ET-T12 | open |
+| 30 | ET-T12 | MindAttic.Webcam | Rename EyeTracker to MindAttic.Webcam | - | open |
+| 31 | ET-T13 | MindAttic.Webcam | Webcam core plus eyetracking module | ET-T12 | open |
+| 32 | ET-T14 | MindAttic.Webcam | Presence module | ET-T13 | open |
+| 33 | ET-T15 | MindAttic.Webcam | Head pose and gaze region | ET-T13 | open |
+| 34 | ET-T16 | MindAttic.Webcam | Integrity event stream | ET-T14, ET-T15 | open |
+| 35 | ET-T17 | MindAttic.Webcam | Gaze and deception research note | ET-T12 | open |
 
 ### MS-4 · Platform backend and accounts
 
@@ -282,7 +283,7 @@ Every ticket is approved. `requires` links enforce the order within and across r
 | 45 | GAD-T46 | Gadfly | Platform API and webhooks | GAD-T44, GAD-T42 | open |
 | 46 | GAD-T47 | Gadfly | Usage metering | GAD-T44, M.LEGN-T50 | open |
 
-### MS-5 · Voice exam web app MVP
+### MS-5 · Voice exam web app
 
 | # | Ticket | Repo | What | Needs | Status |
 |---|---|---|---|---|---|
@@ -318,7 +319,7 @@ Every ticket is approved. `requires` links enforce the order within and across r
 
 Epics: Gadfly `SA` foundation, `SB` engine, `SC` sources and grounding, `SD` server and API, `SF` accounts,
 `SG` exam app, `SI` integrity, `SP` production and pilot; MindAttic.SpeechRecognition `A`; MindAttic.Avatar
-`A`; MindAttic.EyeTracker `W`; MindAttic.Authentication `O`; Tutor `I`; MindAttic.Legion `J`. Each ticket
+`A`; MindAttic.Webcam `W`; MindAttic.Authentication `O`; Tutor `I`; MindAttic.Legion `J`. Each ticket
 `implements` one of their stories.
 
 ## Open decisions
@@ -335,7 +336,7 @@ Answer by code, e.g. "D3: B". Until a decision is answered, work proceeds on the
 | D6 | First customers | **A: adults (universities, corporate training, certification)** · B: also K-12 (adds COPPA, FERPA and parental consent work) |
 | D7 | Recording retention | **A: audio + transcript kept 90 days (per-org setting), video never stored, derived events only** · B: no audio stored at all |
 | D8 | Billing | **A: none in v1, manual invoicing, usage metered anyway** · B: Stripe subscriptions in v1 |
-| D9 | New library repos public or private | **A: private until v1** · B: public (MIT) now, like EyeTracker and Legion |
+| D9 | New library repos public or private | **A: private until v1** · B: public (MIT) now, like Webcam and Legion |
 | D10 | EyeTracker → Webcam | Resolved: renamed in place to MindAttic.Webcam (ET-T12; history kept, GitHub redirects old URLs) |
 | D11 | Student identity | **A: login + same-face-throughout check** · B: photo-ID match at start |
 | D12 | Languages | **A: English only in v1** · B: multilingual (ElevenLabs and Scribe support it) |

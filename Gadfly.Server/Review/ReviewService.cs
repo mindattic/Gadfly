@@ -194,28 +194,6 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         return new(true, "Grade saved.");
     }
 
-    /// <summary>Why the assignment's result can't be released yet, or null when it can (<see cref="ResultRelease"/>).</summary>
-    public Task<string?> ReleaseBlockerAsync(Guid assignmentId, CancellationToken ct = default) =>
-        ResultRelease.BlockerAsync(db, organizationId, assignmentId, ct);
-
-    /// <summary>
-    /// Releases the result of the session's assignment to the student. Needs a grade on the assignment's
-    /// latest ended session (<see cref="ResultRelease"/>, the same rule as the assignments table).
-    /// </summary>
-    public async Task<ReviewResult> ReleaseAsync(Guid sessionId, bool release, CancellationToken ct = default)
-    {
-        var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == organizationId, ct);
-        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session review", ct);
-        if (session is null) return new(false, "That session was not found in this organization.");
-        if (release && await ResultRelease.BlockerAsync(db, organizationId, session.AssignmentId, ct) is { } blocker)
-            return new(false, blocker);
-        var assignment = await db.ExamAssignments.FirstOrDefaultAsync(a => a.Id == session.AssignmentId && a.OrganizationId == organizationId, ct);
-        if (assignment is null) return new(false, "This session's assignment no longer exists.");
-        assignment.ResultsReleasedAt = release ? _clock.GetUtcNow() : null;
-        await db.SaveChangesAsync(ct);
-        return new(true, release ? "Result released to the student." : "Result withdrawn; the student no longer sees it.");
-    }
-
     // ------------------------------------------------------------ exports
 
     /// <summary>The session as CSV, one row per turn.</summary>

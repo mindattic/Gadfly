@@ -34,7 +34,7 @@ human grading accountability; functional correctness; maintainability; performan
 | Part 16 isolation, RBAC basics, privacy | Tenant filter + write guard, org roles, MFA, retention, export/erase | Gadfly.Server |
 | Part 12.2 review (single grader) | Review timeline, evidence, integrity summary, grade, release | Components/Pages/Review |
 | Part 17 API | Platform API v1, webhooks, SessionHub | Gadfly.Server/Platform, Sessions |
-| Part 19 Phase 7 deployment | Workflow, provisioning script, guide (not yet run) | docs/DEPLOY.md |
+| Part 19 Phase 7 deployment | Workflow, provisioning script, guide; live at mindattic-gadfly.azurewebsites.net in mock mode | docs/DEPLOY.md |
 
 ## What changes because of the master plan
 
@@ -49,8 +49,9 @@ human grading accountability; functional correctness; maintainability; performan
   clarifications and typed corrections (transcription / meaning / substantive revision).
 - **Integrity signals.** Answer-text style and browser signals stay reviewer-only context; the plan forbids
   treating AI-text detection as proof, which matches how they are already shown.
-- **Voice, avatar and webcam proctoring** (MindAttic.SpeechRecognition, MindAttic.Avatar, MindAttic.Webcam)
-  move after the core product: the plan makes voice optional and proctoring a later integration.
+- **Voice, avatar and webcam signals** (MindAttic.SpeechRecognition, MindAttic.Avatar, MindAttic.Webcam) were
+  built after the core product (docs/VOICE.md, docs/PRIVACY.md): the plan makes voice optional, typing is always
+  available, and webcam signals stay reviewer-only context.
 
 ## Build order
 
@@ -68,7 +69,7 @@ the master-plan part it implements.
 | 7 | Teacher setup UI, analytics, demo assessments | Part 12, 19 |
 | 8 | Exhaustive NUnit tests (scenarios A–J and every rule) | Part 20 |
 | 9 | Azure deployment and go-live | Part 19 Phase 7 |
-| 10 | Voice, avatar, webcam, LMS integrations, billing | Part 13.3, 18.3 |
+| 10 | Voice, avatar, webcam (built); LMS integrations, billing (not built) | Part 13.3, 18.3 |
 
 Nothing here claims validity results: Part 15.3's validation studies happen with real institutions after
 launch, and the product says so.

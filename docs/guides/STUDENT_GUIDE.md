@@ -16,8 +16,8 @@ topics your instructor chose, and builds the next question from **what you just 
 - point out, politely, when two of your answers seem to disagree.
 
 That's the method Socrates used: keep asking until it's clear what you understand and what you don't.
-Every answer is checked against your course material by several AI models, not just one, and your
-instructor reads your answers and decides your result.
+Every answer is checked against your course material by several AI models, not just one. A human
+examiner then reads your answers and grades them; the AI's scores are only preliminary.
 
 ## How to prepare
 
@@ -37,8 +37,8 @@ choose a new one.) The get-ready page has three steps.
 
 1. **System check.** Your browser, cookies, internet connection and screen are checked. If something is
    marked ✗, the page tells you how to fix it; press **Check again** afterwards. A slow connection gets a
-   warning but still works for typed answers. Microphone and camera checks show "coming with voice mode":
-   you don't need either today.
+   warning but still works for typed answers. The microphone and camera checks are marked "later": the
+   microphone is checked when you turn on voice mode in the exam, and the camera only for exams that use it.
 2. **How it works.** A short explanation and one practice question. The practice isn't recorded.
 3. **Notice and consent.** A plain-language notice: what is recorded, what isn't, how long it's kept and
    who decides your result. Read it, tick the box, and press **Begin exam**. A fingerprint of the exact
@@ -90,19 +90,24 @@ Your answers are kept for your organization's retention period, shown in the not
 organization set another), and then removed. The outcome (the judgments, your result and your
 instructor's comment) is kept.
 
-> Voice answers and camera checks are planned. When they arrive, the notice will say what they record;
-> camera checks will run on your own device and only short notes (for example "face not visible for 10
-> seconds") will be sent.
+> Voice exams and camera checks. On a voice exam you press **Start voice mode** and allow your microphone;
+> a talking examiner asks and you answer aloud, and typing is always available. Camera checks (Strict exams
+> only) run on your own device after you accept a notice that says what is collected: only short notes (for
+> example "face not visible for 10 seconds") are sent, never video. If you decline the camera, the exam goes
+> on and a neutral note says so.
 
 ## Your results
 
-After the exam, your instructor reads your answers and decides your grade. The AI only recommends. When
-your instructor releases your result, **My exams** shows:
+After the exam, a human examiner grades your answers independently of the AI, large differences between
+the two are reconciled by a second reviewer, and an authorized person approves the grade. The AI's scores are
+preliminary. When your result is published, **My exams** shows:
 
-- your grade and your instructor's comment;
-- the examiner's recommendation in plain words ("Understanding shown", "Partly shown" or "Not yet shown").
+- your grade as a percentage, with its label, and a link to the assessment report;
+- a note if the grade was amended or an appeal is under review.
 
-Until then the exam shows "Your answers were submitted. Your instructor will release results."
+Until then the exam shows "Your answers were submitted. Your result appears here once examiners have graded it
+and it has been approved and published." If you disagree with a published result, you can open an appeal from the
+result page.
 
 ## Your data
 

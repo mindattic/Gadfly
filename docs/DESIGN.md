@@ -3,12 +3,12 @@
 The design pack for [MASTER-PLAN.md](MASTER-PLAN.md) Part 19 Phase 1 (GAD-T80). It describes the system as the
 code builds it, section by section, so every master-plan ticket can point at the part it implements. Where a
 piece is still being built, it says so and names the ticket; the class names given for those are the ones in
-the working tree at the time of writing (2026-11-20) and the interfaces they expose.
+`main` and the interfaces they expose.
 
 Status words used below:
 
 - **built**: on `main`.
-- **in progress (GAD-Tnn)**: code exists in the working tree under that ticket but has not landed; the
+- **in progress (GAD-Tnn)**: code exists under that ticket but is not finished; the
   description is its intended interface and may still change.
 - **planned (GAD-Tnn)**: no code yet.
 
@@ -40,41 +40,41 @@ output is schema-validated and treated as a recommendation.
 |---|---|---|---|---|
 | Part 1 | Product vision: Socratic examination, mandatory human grading | This document; [MASTER-PLAN-STATUS.md](MASTER-PLAN-STATUS.md) | GAD-T79 | built |
 | Part 2.1-2.2 | Adaptive Socratic examination | `Gadfly/Engine` (`SocraticSession`, `QuestionPlanner`), `Gadfly.Sources/SourceExamRunner.cs` (`SourceExamEngine`) | GAD-T35, T44 | built |
-| Part 2.3 | Strategies A-H | `MoveKind` (Gadfly/Engine/Moves.cs), see the table in section 3 | GAD-T90 | in progress |
-| Part 2.4 | Adaptive question selection by information value | `QuestionPlanner`, `MoveProfiles` (Gadfly/Engine/Objectives.cs) | GAD-T89, T90 | in progress |
-| Part 3 | Examination and Learning modes, assisted evidence kept apart | `AssessmentMode`, `Exam.AssessmentMode`, `GradingPolicy.AllowAssistedEvidence`, `MoveKind.Hint/GuidedExplanation`, `AssessmentEvidence.Assisted` | GAD-T93 | schema built; engine in progress |
-| Part 4.1-4.2 | Accurate, versioned transcript | `StudentResponse` (immutable original), `TranscriptVersion`, `ResponseLedger` | GAD-T86 | schema built; ledger in progress |
-| Part 4.3-4.5 | Transcription and meaning verification, non-leading confirmation, confidence triggers | `ResponseVerifier` (Component C), `ClarificationEvent` | GAD-T87, T88 | in progress |
+| Part 2.3 | Strategies A-H | `MoveKind` (Gadfly/Engine/Moves.cs), see the table in section 3 | GAD-T90 | built |
+| Part 2.4 | Adaptive question selection by information value | `QuestionPlanner`, `MoveProfiles` (Gadfly/Engine/Objectives.cs) | GAD-T89, T90 | built |
+| Part 3 | Examination and Learning modes, assisted evidence kept apart | `AssessmentMode`, `Exam.AssessmentMode`, `GradingPolicy.AllowAssistedEvidence`, `MoveKind.Hint/GuidedExplanation`, `AssessmentEvidence.Assisted` | GAD-T93 | built |
+| Part 4.1-4.2 | Accurate, versioned transcript | `StudentResponse` (immutable original), `TranscriptVersion`, `ResponseLedger` | GAD-T86 | built |
+| Part 4.3-4.5 | Transcription and meaning verification, non-leading confirmation, confidence triggers | `ResponseVerifier` (Component C), `ClarificationEvent` | GAD-T87, T88 | built |
 | Part 4.6 | Verification states | `VerificationState`, `VerificationMachine` | GAD-T86 | built |
-| Part 4.7 | Correction integrity (transcription / meaning / substantive revision) | `CorrectionKind`, `CorrectionRules`, `ResponseKind.SubstantiveRevision` | GAD-T86, T88 | rules built; flow in progress |
+| Part 4.7 | Correction integrity (transcription / meaning / substantive revision) | `CorrectionKind`, `CorrectionRules`, `ResponseKind.SubstantiveRevision` | GAD-T86, T88 | built |
 | Part 5.1 | Multidimensional assessment | `AssessmentDimension`, `RubricCriterion.Dimension` | GAD-T81 | built |
-| Part 5.2 | Evidence-based evaluation | `AssessmentEvidence`, `ResponseAnalyzer`, `ObjectiveAssessor` | GAD-T91 | schema built; analysis in progress |
+| Part 5.2 | Evidence-based evaluation | `AssessmentEvidence`, `ResponseAnalyzer`, `ObjectiveAssessor` | GAD-T91 | built |
 | Part 5.3 | Levels 0-5, level 0 = Insufficient Evidence | `MasteryLevel`, `MasteryLevels` | GAD-T81 | built |
-| Part 5.4 | Confidence as categories, never invented percentages | `AiObjectiveGrade.Confidence`, `GradingConfidence` | GAD-T94 | in progress |
-| Part 6 | Examination control and stopping, inconclusive outcomes | `QuestionPlanner`, `ObjectiveAssessor`, `ObjectiveStatus.Inconclusive`, `GradingPolicy.InconclusiveProcedure` | GAD-T89 | in progress |
-| Part 7 | AI preliminary grading per objective and criterion | `AiObjectiveGrader`, `AiGradingJob`, `AiObjectiveGrade` | GAD-T94 | schema built; grader in progress |
-| Part 8 | Mandatory, independent (blind) human grading | `HumanObjectiveGrade` (`WasBlind`, `SupersedesId`), `GradingService.SubmitHumanGradesAsync` | GAD-T95 | schema built; service in progress |
+| Part 5.4 | Confidence as categories, never invented percentages | `AiObjectiveGrade.Confidence`, `GradingConfidence` | GAD-T94 | built |
+| Part 6 | Examination control and stopping, inconclusive outcomes | `QuestionPlanner`, `ObjectiveAssessor`, `ObjectiveStatus.Inconclusive`, `GradingPolicy.InconclusiveProcedure` | GAD-T89 | built |
+| Part 7 | AI preliminary grading per objective and criterion | `AiObjectiveGrader`, `AiGradingJob`, `AiObjectiveGrade` | GAD-T94 | built |
+| Part 8 | Mandatory, independent (blind) human grading | `HumanObjectiveGrade` (`WasBlind`, `SupersedesId`), `GradingService.SubmitHumanGradesAsync` | GAD-T95 | built |
 | Part 9 | Weighted combined score | `GradingPolicyRules`, `CombinedScoring` | GAD-T82, T96 | built |
-| Part 10 | Disagreement detection and reconciliation | `CombinedScoring.Band`, `GradeDisagreement`, `GradeReconciliation`, `GradingService.ReconcileAsync` | GAD-T96, T97 | rules built; workflow in progress |
-| Part 11 | Approval, statuses, appeals, amendments | `GradeStatus`, `GradeStatusMachine`, `FinalGrade`, `ApprovalRecord`, `GradeAppeal`, `GradingService` | GAD-T98 | rules built; workflow in progress |
-| Part 12.1 | Teacher assessment setup | `/assessments` pages, `AssessmentService` | GAD-T85 | in progress |
-| Part 12.2 | Examination review | `/review` (built), `/grading` (in progress) | GAD-T54, T95 | partly built |
+| Part 10 | Disagreement detection and reconciliation | `CombinedScoring.Band`, `GradeDisagreement`, `GradeReconciliation`, `GradingService.ReconcileAsync` | GAD-T96, T97 | built |
+| Part 11 | Approval, statuses, appeals, amendments | `GradeStatus`, `GradeStatusMachine`, `FinalGrade`, `ApprovalRecord`, `GradeAppeal`, `GradingService` | GAD-T98 | built |
+| Part 12.1 | Teacher assessment setup | `/assessments` pages, `AssessmentService` | GAD-T85 | built |
+| Part 12.2 | Examination review | `/review` and `/grading` | GAD-T54, T95 | built |
 | Part 12.3 | Educational analytics | `/analytics`, `Gadfly.Server/Analytics` | GAD-T102 | built |
 | Part 13.2 | Text examination | `/exam/{id}` (`ExamRoom.razor`), `SessionHub`, `SessionOrchestrator` | GAD-T44 | built |
-| Part 13.3 | Voice examination | MindAttic.SpeechRecognition / Avatar (later) | after the core | planned |
+| Part 13.3 | Voice examination | `Gadfly.Server/Voice`, `VoiceRoom.razor`, MindAttic.SpeechRecognition and MindAttic.Avatar ([VOICE.md](VOICE.md)) | GAD-T53, T58 | built |
 | Part 14 | Course material ingestion, grounded questions, RAG | `SourceIngestor`, `ConceptMapBuilder`, `RubricBuilder`, `GroundingRetriever`, `SourceProcessingJob` | GAD-T33..T37 | built |
 | Part 15.1-15.2 | Fairness, comparable difficulty | Fixed prompt sets per session (`PromptSetSha256`), deterministic planner, policy snapshot per grade | GAD-T89 | partly built |
 | Part 15.3 | Scoring validation studies | Not a product feature: run with institutions after launch; analytics shows the agreement caveat | — | process |
 | Part 15.4 | Academic integrity (signals are context, never proof) | `IntegrityEvent`, `IntegrityRecorder`, `TextStyleAssessor`, reviewer-only display | GAD-T59 | built |
 | Part 16.1 | Institutional data protection | Tenant filter and write guard, retention, export/erase | GAD-T41, T42, T62 | built |
-| Part 16.2 | Role-based access control | `PermissionMatrix` (section 9), `OrgRoles`, `GadflyPolicies` | GAD-T83 | matrix built; enforcement in progress per feature |
+| Part 16.2 | Role-based access control | `PermissionMatrix` (section 9), `OrgRoles`, `GadflyPolicies` | GAD-T83 | built |
 | Part 16.3 | Data security | Section 10 | GAD-T64 | built |
 | Part 16.4 | Audit requirements | `AuditEvent` (append-only, enforced in `GadflyDbContext`) | GAD-T84 | built |
 | Part 17 | Architecture, AI components, data entities | Sections 2-4 | GAD-T80 | built (this document) |
-| Part 18.2 | MVP features 1-10 | Sections 3, 7, 8; the full product is the target (MASTER-PLAN-STATUS.md) | GAD-T81..T99 | in progress |
-| Part 19 Phase 7 | Deployment | [DEPLOY.md](DEPLOY.md), section 12 | GAD-T63 | prepared, not run |
-| Part 20 | Test scenarios A-J | `Gadfly.Tests` (NUnit), demo tour `Gadfly.Tour` | GAD-T101, T104, T105 | part 1 built (`ed98d83`); rest in progress |
-| Part 22 | Mock mode, honest labelling | `MockVotingClient`, `SelectedPanel`, `Gadfly:AiMode` | GAD-T100 | in progress |
+| Part 18.2 | MVP features 1-10 | Sections 3, 7, 8; the full product is the target (MASTER-PLAN-STATUS.md) | GAD-T81..T99 | built |
+| Part 19 Phase 7 | Deployment | [DEPLOY.md](DEPLOY.md), section 12 | GAD-T63 | built; live in mock mode |
+| Part 20 | Test scenarios A-J | `Gadfly.Tests` (NUnit), demo tour `Gadfly.Tour` | GAD-T101, T104, T105 | built |
+| Part 22 | Mock mode, honest labelling | `MockVotingClient`, `SelectedPanel`, `Gadfly:AiMode` | GAD-T100 | built |
 
 ---
 
@@ -129,11 +129,11 @@ flowchart LR
 |---|---|---|
 | Deterministic rules | `Gadfly/Assessment` | Mastery levels, dimensions, modes, verification and grade-status machines, grading policy, combined scoring, permission matrix. No I/O, no LLM. |
 | Examination engine | `Gadfly/Engine` | `SocraticSession` (the session record), `QuestionPlanner` (Component G), `MasteryModel` (Elo-style estimate), `ClaimLedger`/`ClaimAnalyzer` (contradictions), `QuestionGenerator` (wording + leak guard), `ExamPrompts`/`PromptSet` (versioned prompt sets, student text fenced in `<student_text>`). |
-| Panel seam | `Gadfly/Socrates` | `ISocraticVotingClient` (`AskAsync`, `AskWithProfilesAsync`, `DecideAsync`, `FanOutAsync`) over MindAttic.Legion (`LegionVotingClient`), with `ProviderHealth`, `PanelUsage`; mock panel in `Socrates/Mock` (in progress, GAD-T100). |
-| Source material and AI analysis | `Gadfly.Sources` | Ingestion and chunking, concept map, cited rubrics, hybrid retrieval, `SourceExamEngine` (the resumable step engine), `PanelAnswerJudge`, `TextStyleAssessor`; in progress: `ResponseAnalyzer`, `Verification/ResponseVerifier`, `Grading/AiObjectiveGrader`. |
+| Panel seam | `Gadfly/Socrates` | `ISocraticVotingClient` (`AskAsync`, `AskWithProfilesAsync`, `DecideAsync`, `FanOutAsync`) over MindAttic.Legion (`LegionVotingClient`), with `ProviderHealth`, `PanelUsage`; mock panel in `Socrates/Mock` (GAD-T100). |
+| Source material and AI analysis | `Gadfly.Sources` | Ingestion and chunking, concept map, cited rubrics, hybrid retrieval, `SourceExamEngine` (the resumable step engine), `PanelAnswerJudge`, `TextStyleAssessor`; `ResponseAnalyzer`, `Verification/ResponseVerifier`, `Grading/AiObjectiveGrader`. |
 | Web host | `Gadfly.Server` | Blazor Server UI, `SessionHub` (SignalR), Platform API, tenancy, jobs, privacy, review, grading, analytics. |
 | CLI | `Gadfly.Cli` | Local runs of the engine against source folders (development and corpus work). |
-| Tests and tour | `Gadfly.Tests`, `Gadfly.Tour` | NUnit suites (run only when the owner asks); the tour drives the whole workflow through the real server (GAD-T105, in progress). |
+| Tests and tour | `Gadfly.Tests`, `Gadfly.Tour` | NUnit suites (run only when the owner asks); the tour drives the whole workflow through the real server (GAD-T105). |
 
 **Runtime pieces.**
 
@@ -149,7 +149,7 @@ flowchart LR
   transcript JSON), so a session resumes exactly where it stopped.
 - **Jobs.** `JobQueue` writes rows to the `Jobs` table; `JobWorker` (hosted service) leases and runs them
   through `IJobHandler`s: `SourceProcessingJob` (ingest, concept map, rubrics), `WebhookDeliveryJob`,
-  `RetentionJob` (scheduled by `RetentionScheduler`), and `AiGradingJob` (GAD-T94, in progress, started by
+  `RetentionJob` (scheduled by `RetentionScheduler`), and `AiGradingJob` (GAD-T94, started by
   `GradingSweeper` when a session ends).
 - **SQL Server.** EF Core 10, schema `gadfly` (application) and `auth` (MindAttic.Authentication). LocalDB in
   development, Azure SQL in production; migrations in `Gadfly.Server/Data/Migrations`.
@@ -157,7 +157,7 @@ flowchart LR
   every active provider and Gadfly aggregates the schema-validated replies itself (majority, median,
   dissent), so one provider's error or bias does not decide an outcome. Usage is metered per call into
   `UsageEntry` rows (`UsageMeter`) against the organization's monthly cost quota.
-- **Mock mode (in progress, GAD-T100).** `Gadfly:AiMode` = `live` | `mock` | `auto`. `SelectedPanel` decides
+- **Mock mode (GAD-T100).** `Gadfly:AiMode` = `live` | `mock` | `auto`. `SelectedPanel` decides
   once per process (auto: live when a startup probe finds a working provider, otherwise mock) and never
   flips mid-run. `MockVotingClient` answers every prompt deterministically from content-aware rules, marks
   every reviewer-visible rationale, and the host shows a MOCK banner on every screen. Mock AI grades are
@@ -213,9 +213,9 @@ sessions) and `AssessmentEntities.cs` (master-plan assessment model).
 
 ```mermaid
 erDiagram
-    Organization ||--o{ OrganizationMember : has
-    AuthUser ||--o{ OrganizationMember : "is"
-    Organization ||--|| OrganizationSettings : has
+    AuthOrganization ||--o{ AuthMembership : has
+    AuthUser ||--o{ AuthMembership : "is"
+    AuthOrganization ||--|| OrganizationSettings : has
     Course ||--o{ Exam : groups
     SourceCollection ||--o{ SourceDocument : holds
     SourceDocument ||--o{ SourceChunk : "split into"
@@ -248,7 +248,7 @@ erDiagram
 
 | Group | Entities | Notes |
 |---|---|---|
-| Organizations and people | `Organization`, `OrganizationMember` (role per org), `OrganizationSettings` (retention days, cost quota), `auth.AuthUsers` and the auth library's tables | Accounts are shared across organizations; membership and role are per organization. |
+| Organizations and people | `auth.AuthOrganizations`, `auth.AuthMemberships` (role per org) and `auth.AuthUsers` from MindAttic.Authentication (GAD-T156; `IOrganizationDirectory` is Gadfly's facade over the library's organization and invitation services), plus `OrganizationSettings` (retention days, cost quota) | Accounts are shared across organizations; membership and role are per organization. |
 | Integration and operations | `ApiKey` (hash only), `Webhook` (secret protected), `WebhookDelivery`, `UsageEntry`, `Job` | |
 | Course material | `SourceCollection` (optional `CourseId`), `SourceDocument`, `SourceChunk` (text, location, embedding), `Concept`, `ConceptRelation`, `ConceptCitation`, `RubricPoint` (Understanding / AcceptableVariant / Misconception, versioned) | Concepts become *suggested* objectives. |
 | Assessment setup | `Course`, `Exam` (CourseId, Subject, Topic, `AssessmentMode`, policy JSON, prompt set id/version), `LearningObjective` (key, weight, max score, optional concept key), `RubricCriterion` (dimension, weight), `RubricLevelDescriptor` (0-5), `GradingPolicy` (weights, thresholds, blind flag, inconclusive procedure, assisted-evidence rule, `LockedAt`), `GradingPolicyChange` (before/after, reason, approver) | A policy is locked at publication; later changes need an approved change row. |
@@ -262,7 +262,7 @@ erDiagram
 ## 5 Examination state machine
 
 Two levels: the session's lifecycle (persisted on `ExamSession.State`) and, inside a running session, the
-control engine's per-objective status (`ObjectiveStatus`, in progress with GAD-T89).
+control engine's per-objective status (`ObjectiveStatus`, GAD-T89).
 
 ```mermaid
 stateDiagram-v2
@@ -296,7 +296,7 @@ flowchart TD
     S -- all objectives closed / time / turns --> End[End session]
 ```
 
-Per objective (in progress, GAD-T89): `NotStarted → Open → Sufficient` when corroborated, consistent and
+Per objective (GAD-T89): `NotStarted → Open → Sufficient` when corroborated, consistent and
 ceiling-tested evidence exists, or `Open → Inconclusive` when the objective's limits, the time or the
 session run out; Inconclusive is reported as Level 0, Insufficient Evidence, and follows the policy's
 `InconclusiveProcedure` (human review or additional examination).
@@ -376,8 +376,8 @@ Publication requires Finalized, which requires an approval; there is no edge fro
 
 ## 8 Grading and approval workflow
 
-Part 11.1's stages, as the code runs them (`AiGradingJob`, `GradingService`; in progress GAD-T94..T98 on the
-built rules):
+Part 11.1's stages, as the code runs them (`AiGradingJob`, `GradingService`; GAD-T94..T98 on the
+deterministic rules):
 
 ```mermaid
 sequenceDiagram
@@ -421,7 +421,7 @@ Rules that hold at every step:
 - **Accountability.** Every change writes an `AuditEvent` (`grade.ai.recorded`, `grade.human.recorded`,
   `grade.approved`, `grade.published`, ...); refusals write `access.denied`. Human adjustments are new
   rows that supersede; amendments after publication need a reason and an `ApprovalRecord` Amend.
-- **Report (GAD-T99, in progress).** Final grade, per-objective AI score, human score, combined result,
+- **Report (GAD-T99).** Final grade, per-objective AI score, human score, combined result,
   evidence, knowledge gaps and approval status; the student sees it only after publication.
 
 ---
@@ -484,7 +484,7 @@ Full review, findings and residual risks: [SECURITY_REVIEW.md](SECURITY_REVIEW.m
 | Browser | CSP with nonces (no inline scripts or style attributes), antiforgery on form posts, HSTS, HTTPS redirect; Markdown rendered by an encode-first renderer; CSV exports neutralize formula prefixes. | auth library, `SimpleMarkdown`, exports |
 | Secrets and keys | MindAttic.Vault in development; Key Vault and App Service settings in production; Data Protection key ring in Blob Storage wrapped by Key Vault, fail closed. API keys stored as SHA-256; webhook secrets protected at rest. | `Program.cs`, [DEPLOY.md](DEPLOY.md) |
 | Privacy | Consent recorded per session (text hash); retention job redacts after the organization's retention days; per-member export and erasure (org admin, typed confirmation); logs carry ids only, never answer text. | `Privacy/PrivacyService.cs`, `RetentionJob` |
-| Integrity signals | Browser, text-style and (later) webcam/audio signals are reviewer-only context with plain-language explanations, never proof and never an automatic penalty (Part 15.4). | `Integrity/`, `Review/IntegrityExplanations.cs` |
+| Integrity signals | Browser, text-style, webcam and audio signals are reviewer-only context with plain-language explanations, never proof and never an automatic penalty (Part 15.4). | `Integrity/`, `Review/IntegrityExplanations.cs` |
 
 ---
 
@@ -537,8 +537,8 @@ publish.
 
 ## 12 Deployment
 
-[DEPLOY.md](DEPLOY.md) has the full procedure (prepared, not yet run; it waits for the owner's go-ahead
-because it creates billable resources).
+[DEPLOY.md](DEPLOY.md) has the full procedure (live at https://mindattic-gadfly.azurewebsites.net, running in
+mock mode).
 
 | Piece | Choice |
 |---|---|
@@ -547,6 +547,6 @@ because it creates billable resources).
 | Keys and secrets | Key Vault (auth pepper, reset key, bootstrap token, LLM provider keys); Data Protection key ring in Blob Storage wrapped by a Key Vault key |
 | Pipeline | `.github/workflows/azure-deploy.yml`, manual trigger: build, apply migrations with an EF bundle, deploy, smoke-test `/healthz` and `/login` |
 | Health | `/healthz` (database), `/healthz/providers` (panel provider health) |
-| AI mode | `Gadfly:AiMode` (`auto` by default once GAD-T100 lands): a deployment without working provider keys runs clearly labelled mock mode rather than failing or pretending |
+| AI mode | `Gadfly:AiMode` (`live` by default outside Development, `mock` in Development; production sets it explicitly): a deployment without working provider keys runs clearly labelled mock mode rather than failing or pretending |
 
 Development runs on LocalDB with MindAttic.Vault secrets; MFA is not enforced in Development.

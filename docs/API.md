@@ -7,8 +7,9 @@ launch link into the exam room, read results, and receive a signed webhook when 
 Everything is under `/api/v1`, speaks JSON (camelCase), and acts inside one organization: the one that
 owns the API key. A machine-readable description is at [`/openapi/v1.json`](#openapi).
 
-> Voice answers, the avatar and webcam signals are not built yet; exams created through the API run in
-> the text exam room. Production hosting on Azure is pending; the examples use a local server.
+> Exams created through the API run in the text exam room unless their mode is set to Voice (see
+> [VOICE.md](VOICE.md)). The examples use a local server; the hosted instance is at
+> https://mindattic-gadfly.azurewebsites.net.
 
 ## Authentication
 
@@ -307,7 +308,7 @@ This assigns the exam to a student of your organization, creating the student if
   - a deactivated member answers `409` (an admin reactivates them in the console first);
   - a user name that belongs to an existing Gadfly account that is **not** a member of your organization
     answers `409`. Accounts are shared across organizations, and membership is granted only by your
-    organization's admins (invitations are planned), so pick a distinct user name, for example one
+    organization's admins (an invitation by email from the Members page), so pick a distinct user name, for example one
     prefixed with your app or school.
 - Assigning a student who already has this exam **updates** that assignment: `opensAt` and `closesAt` are
   set to what you send (left out or `null` means no limit), and `attemptsAllowed` is changed when you send
@@ -430,9 +431,9 @@ Finish) or `Failed`, and `null` while running. An empty array when there are non
 | `recommendation` | The AI's recommendation: `mastered` (every concept reached 80% mastery), `partial` (average at least 52.5%) or `not-demonstrated`. `null` until the attempt ends. |
 | `overallScore` | Average mastery over the examined concepts, 0 to 1. |
 | `report` | The full AI report (per-concept mastery and status, quoted evidence with source citations, disputed turns), or `null` until the attempt ends. Concept `status` is `NotStarted`, `Open`, `Mastered`, `Aporia` or `Exhausted`. |
-| `grade` | The instructor's latest decision, or `null`. The instructor decides the grade; the AI only recommends. |
+| `grade` | The latest decision of the older single-grader review, or `null`. The graded result comes from the grading workflow (see "Grading workflow" below): AI grades are preliminary, and a final grade exists only after human grading and approval. |
 
-This endpoint returns the result whether or not the instructor has released it to the student. Show
+This endpoint returns the result whether or not the grade has been published to the student. Show
 students only what your own release rules allow.
 
 ### Webhook registration
