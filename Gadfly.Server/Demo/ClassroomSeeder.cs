@@ -232,9 +232,9 @@ public static class ClassroomSeeder
         log.LogWarning("Voice exam: \"{Exam}\" (Teacher_A) is assigned to {Student}, who signs in with the same password.",
             Offerings[^1].Assessment.Title, VoiceStudentUserName);
         var lines = assignment.Select(kv => $"  {kv.Key,-10} {string.Join(", ", kv.Value)}");
-        log.LogWarning("Classroom seeded in \"{Org}\" ({New} new assignments). Sign in as {Owner}, Teacher_A..C or Student_A..Z with password {Password}{Note}.\n{Lines}",
-            OrganizationName, newAssignments, OwnerUserName, password,
-            string.IsNullOrWhiteSpace(configured) ? " (generated this run; set Gadfly:Demo:Password to choose one)" : "", string.Join("\n", lines));
+        log.LogWarning("Classroom seeded in \"{Org}\" ({New} new assignments). Sign in as {Owner}, Teacher_A..C or Student_A..Z with the classroom password{Note}.\n{Lines}",
+            OrganizationName, newAssignments, OwnerUserName,
+            string.IsNullOrWhiteSpace(configured) ? " (generated this run and not logged; set Gadfly:Demo:Password to choose a known one)" : " (from Gadfly:Demo:Password)", string.Join("\n", lines));
     }
 
     private static async Task<Guid> EnsurePersonAsync(IServiceProvider sp, GadflyDbContext db, IOrganizationDirectory directory, Guid orgId,
