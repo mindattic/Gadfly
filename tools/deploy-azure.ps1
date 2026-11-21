@@ -174,7 +174,13 @@ try {
     }
     Write-Host "   /healthz -> $code"
     if ($code -ne 200) { Fail "/healthz did not reach 200 (last $code)" }
-    $login = Get-Status "$baseUrl/login"
+    # /healthz can answer before the new instance serves pages (a 503 for a few seconds), so retry /login too.
+    $login = 0
+    while ($true) {
+        $login = Get-Status "$baseUrl/login"
+        if ($login -eq 200 -or (Get-Date) -ge $deadline) { break }
+        Start-Sleep -Seconds 10
+    }
     Write-Host "   /login   -> $login"
     if ($login -ne 200) { Fail "smoke check failed: /login is $login" }
     Say "Deployed $($sha.Substring(0,7)) to $baseUrl (healthz 200, login 200)"
