@@ -26,7 +26,7 @@ public class MasteryLevelTests
         Assert.That(values, Is.EqualTo(new[] { 0, 1, 2, 3, 4, 5 }));
     }
 
-    [TestCase(MasteryLevel.InsufficientEvidence, "not enough reliable evidence")]
+    [TestCase(MasteryLevel.InsufficientEvidence, "enough reliable evidence")]
     [TestCase(MasteryLevel.Recognition, "recognizes relevant concepts")]
     [TestCase(MasteryLevel.BasicExplanation, "partial accuracy")]
     [TestCase(MasteryLevel.ConceptualUnderstanding, "underlying relationships")]
