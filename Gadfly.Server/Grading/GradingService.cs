@@ -30,6 +30,19 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         return false;
     }
 
+    /// <summary>
+    /// True when the session is visible to the caller. A scoped instructor (decision D18, GAD-T170) never sees another
+    /// instructor's session; the refused visit is audited as access.denied. Actions that load only the grade record
+    /// (FinalGrade is organization-wide) call this first, so an id from elsewhere cannot drive another instructor's grade.
+    /// </summary>
+    private async Task<bool> SessionVisibleAsync(Guid sessionId, CancellationToken ct)
+    {
+        var org = Org;
+        if (await db.ExamSessions.AsNoTracking().AnyAsync(s => s.Id == sessionId && s.OrganizationId == org, ct)) return true;
+        await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session for grading", ct);
+        return false;
+    }
+
     private static string Denied(Permission p) => $"Your role in this organization does not allow this ({p}). The attempt was recorded.";
 
     // ================================================================== queue
@@ -121,6 +134,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var p = Can(Permission.ApproveFinalGrade) ? Permission.ApproveFinalGrade : Permission.EnterHumanScore;
         if (!await RequireAsync(p, "Proceeding to AI grading with unresolved responses", sessionId, ct)) return GradingResult.Fail(Denied(Permission.EnterHumanScore));
         if (string.IsNullOrWhiteSpace(reason)) return GradingResult.Fail("Give a reason for proceeding while responses are unresolved.");
+        if (!await SessionVisibleAsync(sessionId, ct)) return GradingResult.Fail("That session was not found in this organization.");
         var grade = await db.FinalGrades.FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == Org, ct);
         if (grade is null) return GradingResult.Fail("This session has no grade record yet.");
         var moved = await TryMoveAsync(grade, GradeStatus.AiGradingPending, "Proceed with unresolved responses flagged: " + reason.Trim(), ct);
@@ -394,6 +408,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
     {
         if (!await RequireAsync(Permission.EnterHumanScore, "Reopening human grading", sessionId, ct)) return GradingResult.Fail(Denied(Permission.EnterHumanScore));
         if (string.IsNullOrWhiteSpace(reason)) return GradingResult.Fail("Say why the human grades are being adjusted.");
+        if (!await SessionVisibleAsync(sessionId, ct)) return GradingResult.Fail("That session was not found in this organization.");
         var grade = await db.FinalGrades.FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == Org, ct);
         if (grade is null) return GradingResult.Fail("This session has no grade record yet.");
         var refused = await TryMoveAsync(grade, GradeStatus.HumanReviewPending, "Human grades reopened for adjustment: " + reason.Trim(), ct);
@@ -405,6 +420,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
     public async Task<GradingResult> RequestSecondReviewAsync(Guid sessionId, Guid disagreementId, Guid reviewerUserId, CancellationToken ct = default)
     {
         if (!await RequireAsync(Permission.ReconcileDisagreement, "Requesting a second review", sessionId, ct)) return GradingResult.Fail(Denied(Permission.ReconcileDisagreement));
+        if (!await SessionVisibleAsync(sessionId, ct)) return GradingResult.Fail("That session was not found in this organization.");
         var d = await db.GradeDisagreements.AsNoTracking().FirstOrDefaultAsync(x => x.Id == disagreementId && x.SessionId == sessionId && x.OrganizationId == Org, ct);
         if (d is null || d.ResolvedAt is not null) return GradingResult.Fail("That disagreement is not open.");
         var isSecondReviewer = await db.OrganizationMembers.AnyAsync(m => m.OrganizationId == Org && m.UserId == reviewerUserId && m.IsActive && m.Role == OrgRoles.SecondReviewer, ct);
@@ -499,6 +515,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
     public async Task<GradingResult> PublishAsync(Guid sessionId, string? note, CancellationToken ct = default)
     {
         if (!await RequireAsync(Permission.PublishGrade, "Publishing a grade", sessionId, ct)) return GradingResult.Fail(Denied(Permission.PublishGrade));
+        if (!await SessionVisibleAsync(sessionId, ct)) return GradingResult.Fail("That session has no grade record in this organization.");
         var grade = await db.FinalGrades.FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == Org, ct);
         if (grade is null) return GradingResult.Fail("That session has no grade record in this organization.");
         if (!await db.ApprovalRecords.AnyAsync(a => a.SessionId == sessionId && a.OrganizationId == Org && a.Action == ApprovalAction.Finalize, ct))
@@ -541,6 +558,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (!await RequireAsync(Permission.ResolveAppeal, "Resolving an appeal", sessionId, ct)) return GradingResult.Fail(Denied(Permission.ResolveAppeal));
         if (outcome is not (AppealState.Upheld or AppealState.Dismissed)) return GradingResult.Fail("To change the grade, amend it instead.");
         if (string.IsNullOrWhiteSpace(resolution) || resolution.Length > 4000) return GradingResult.Fail("Document the resolution (up to 4,000 characters).");
+        if (!await SessionVisibleAsync(sessionId, ct)) return GradingResult.Fail("That appeal is not open.");
         var grade = await db.FinalGrades.FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == Org, ct);
         var appeal = await db.GradeAppeals.FirstOrDefaultAsync(a => a.Id == appealId && a.SessionId == sessionId && a.OrganizationId == Org, ct);
         if (grade is null || appeal is null || appeal.State != AppealState.Open) return GradingResult.Fail("That appeal is not open.");

@@ -146,4 +146,26 @@ public class InstructorOwnershipTests : ServerTest
         var options = await scope.ServiceProvider.GetRequiredService<ExamService>().ReadyCollectionsAsync();
         Assert.That(options.Select(o => o.Id), Does.Not.Contain(w.CollB));
     }
+
+    [Test]
+    public async Task GradingActions_OnAnotherInstructorsSession_AreRefusedAndAudited()
+    {
+        var w = await NewWorldAsync();
+        await using (var sys = SystemDb())
+        {
+            sys.FinalGrades.Add(new FinalGrade { SessionId = w.SessionB, OrganizationId = w.Org, Status = Gadfly.Assessment.GradeStatus.Finalized, UpdatedAt = DateTimeOffset.UtcNow });
+            sys.ApprovalRecords.Add(new ApprovalRecord { OrganizationId = w.Org, SessionId = w.SessionB, Action = ApprovalAction.Finalize, ActorUserId = w.TeacherB, ActorRole = OrgRoles.Instructor, At = DateTimeOffset.UtcNow });
+            await sys.SaveChangesAsync();
+        }
+        await using (var scope = Scope(Member(w.Org, w.TeacherA, OrgRoles.Instructor)))
+        {
+            var grading = scope.ServiceProvider.GetRequiredService<Gadfly.Server.Grading.GradingService>();
+            Assert.That((await grading.PublishAsync(w.SessionB, null)).Ok, Is.False);
+            Assert.That((await grading.ReopenHumanReviewAsync(w.SessionB, "because")).Ok, Is.False);
+            Assert.That((await grading.ProceedWithUnresolvedAsync(w.SessionB, "because")).Ok, Is.False);
+        }
+        await using var check = SystemDb();
+        Assert.That(await check.FinalGrades.Where(g => g.SessionId == w.SessionB).Select(g => g.Status).SingleAsync(), Is.EqualTo(Gadfly.Assessment.GradeStatus.Finalized));
+        Assert.That(await check.AuditEvents.AnyAsync(a => a.OrganizationId == w.Org && a.Action == "access.denied" && a.ActorUserId == w.TeacherA && a.EntityId == w.SessionB.ToString()), Is.True);
+    }
 }
