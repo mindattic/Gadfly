@@ -78,8 +78,16 @@ builder.Services.AddMindAtticAuthentication<GadflyDbContext>(builder.Configurati
 builder.Services.AddScoped<IAuthorizationHandler, OrgRoleHandler>();
 builder.Services.AddAuthentication().AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
     ApiKeyAuthenticationHandler.SchemeName, null);
+// Organizations, memberships and email invitations come from the library (GAD-T156, M.AUTH-T34/T35): its augmentor stamps
+// the same "gadfly:org" claims at sign-in, and staff roles are flagged for MFA enrollment like OrgRoleHandler requires.
+builder.Services.AddMindAtticOrganizations<GadflyDbContext>(builder.Configuration, o =>
+{
+    o.OwnerRole = OrgRoles.Owner;
+    o.Roles = [.. OrgRoles.All];
+    o.MembershipClaimType = GadflyClaims.Membership;
+    o.MfaRequiredRoles = OrgRoleHandler.MfaRequired ? [.. OrgRoles.All.Where(OrgRoles.RequiresMfa)] : [];
+});
 builder.Services.AddScoped<IOrganizationDirectory, OrganizationDirectory>();
-builder.Services.AddScoped<IMaClaimsAugmentor, OrganizationClaimsAugmentor>();
 
 // Background work (ingestion, concept extraction, reports) on the SQL job table (GAD-T43).
 builder.Services.AddGadflyJobs();

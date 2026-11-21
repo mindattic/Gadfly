@@ -21,7 +21,7 @@
   <ItemGroup>
     <PackageReference Include="MindAttic.Vault" Version="7.0.0" />
     <PackageReference Include="MindAttic.Log" Version="3.0.0" />
-    <PackageReference Include="MindAttic.Authentication" Version="7.0.0" />
+    <PackageReference Include="MindAttic.Authentication" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.AzureAppServices" Version="10.0.15" />

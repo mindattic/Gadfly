@@ -10,10 +10,10 @@ namespace Gadfly.Tests.Server;
 [TestFixture]
 public class TenancyTests : ServerTest
 {
-    /// <summary>Tables a tenant may legitimately query across organizations (none hold another org's student data).</summary>
+    /// <summary>Gadfly tables a tenant may legitimately query across organizations (none hold another org's student data). Organizations and memberships live in the library's auth schema (GAD-T156).</summary>
     private static readonly HashSet<Type> UnfilteredByDesign =
     [
-        typeof(Organization), typeof(OrganizationMember), typeof(OrganizationSettings), typeof(Job),
+        typeof(OrganizationSettings), typeof(Job),
     ];
 
     [Test]

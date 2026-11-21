@@ -25,7 +25,7 @@
     <tbody>
         @foreach (var o in orgs)
         {
-            <tr><td>@o.Name</td><td>@o.Slug</td><td>@o.CreatedAt.ToString("yyyy-MM-dd")</td><td>@(o.IsActive ? "yes" : "no")</td></tr>
+            <tr><td>@o.Name</td><td>@o.Slug</td><td>@o.CreatedUtc.ToString("yyyy-MM-dd")</td><td>@(o.IsActive ? "yes" : "no")</td></tr>
         }
     </tbody>
 </table>
@@ -40,7 +40,7 @@
     }
 
     private Form form = new();
-    private IReadOnlyList<Gadfly.Server.Data.Organization> orgs = [];
+    private IReadOnlyList<MindAttic.Authentication.Entities.AuthOrganization> orgs = [];
     private string? message;
     private bool ok, busy;
 

@@ -1,0 +1,20 @@
+@page "/account/accept-invite"
+@using MindAttic.Authentication.Components
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout EmptyLayout
+
+@* Accepting an organization invitation (GAD-T156, M.AUTH-T35), rendered static SSR so the library's antiforgery POSTs validate.
+   The emailed link lands here with ?token=; the invitee chooses a password (a new account) or signs in (an existing account)
+   and the library's endpoints do the rest. A rejected token or password comes back with ?error=1. *@
+<PageTitle>Accept your invitation · Gadfly Exams</PageTitle>
+<section class="auth-card" aria-labelledby="invite-heading">
+    <h1 id="invite-heading">Join your organization</h1>
+    <MaAcceptInvitation Token="@Token" Error="@(Error == 1)" />
+    <p><a href="login">Back to sign in</a></p>
+</section>
+
+@code {
+    [SupplyParameterFromQuery] public string? Token { get; set; }
+    [SupplyParameterFromQuery] public int Error { get; set; }
+}

@@ -16,11 +16,11 @@ internal static class Seed
     public static async Task<Guid> OrganizationAsync(string? name = null, decimal? quota = null)
     {
         await using var db = ServerFixture.NewContext(TenantSnapshot.System);
-        var org = new Organization
+        var org = new MindAttic.Authentication.Entities.AuthOrganization
         {
             Name = name ?? "Org " + Guid.NewGuid().ToString("N")[..8],
             Slug = "org-" + Guid.NewGuid().ToString("N"),
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedUtc = DateTime.UtcNow,
         };
         db.Organizations.Add(org);
         db.OrganizationSettings.Add(new OrganizationSettings { OrganizationId = org.Id, MonthlyCostQuotaUsd = quota, UpdatedAt = DateTimeOffset.UtcNow });

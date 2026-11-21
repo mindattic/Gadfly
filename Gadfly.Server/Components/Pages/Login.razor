@@ -17,6 +17,10 @@
     {
         <p role="status">Your password was reset. Sign in with the new password.</p>
     }
+    else if (Invite == "ok")
+    {
+        <p role="status">Your invitation was accepted. Sign in to continue.</p>
+    }
     <MaLogin ReturnUrl="@ReturnUrl" Error="@(Error == 1)" />
     <p><a href="forgot-password">Forgot password?</a></p>
 </section>
@@ -25,4 +29,5 @@
     [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
     [SupplyParameterFromQuery] public int Error { get; set; }
     [SupplyParameterFromQuery] public string? Reset { get; set; }
+    [SupplyParameterFromQuery] public string? Invite { get; set; }
 }

@@ -2,6 +2,7 @@
 @attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
 @inject IOrganizationDirectory Directory
 @inject ITenantContext Tenant
+@using MindAttic.Authentication.Services
 
 <PageTitle>Members · Gadfly Exams</PageTitle>
 <h1>Members</h1>
@@ -10,6 +11,78 @@
 @if (Erased is { } erased)
 {
     <p role="status" class="notice">Erased: @erased session record(s) deleted and the membership deactivated.</p>
+}
+
+<EditForm Model="invite" OnValidSubmit="InviteAsync" FormName="invite-member" class="panel">
+    <h2>Invite by email</h2>
+    <label>Email <InputText @bind-Value="invite.Email" type="email" autocomplete="off" /></label>
+    <label>Role
+        <InputSelect @bind-Value="invite.Role">
+            @foreach (var r in InvitableRoles)
+            {
+                <option value="@r">@r</option>
+            }
+        </InputSelect>
+    </label>
+    <p class="hint">They get a single-use link by email (valid for 72 hours) to choose their own password; staff roles then set up two-step verification at first sign-in. Works for people who already have a Gadfly account too: they sign in and accept.</p>
+    <button type="submit" disabled="@busy">Send invitation</button>
+    @if (inviteMessage is not null)
+    {
+        <p role="status" class="@(inviteOk ? "ok" : "error")">@inviteMessage</p>
+    }
+</EditForm>
+
+<EditForm Model="bulk" OnValidSubmit="InviteBulkAsync" FormName="invite-bulk" class="panel">
+    <h2>Invite many (CSV)</h2>
+    <label>Rows: <code>email</code> or <code>email,role</code>, one per line (a header row is fine)
+        <InputTextArea @bind-Value="bulk.Csv" rows="5" autocomplete="off" />
+    </label>
+    <label>Role for rows without one
+        <InputSelect @bind-Value="bulk.DefaultRole">
+            @foreach (var r in InvitableRoles)
+            {
+                <option value="@r">@r</option>
+            }
+        </InputSelect>
+    </label>
+    <button type="submit" disabled="@busy">Send invitations</button>
+    @if (bulkResult is not null)
+    {
+        <p role="status" class="@(bulkResult.Invited == bulkResult.Rows.Count ? "ok" : "error")">@bulkResult.Invited of @bulkResult.Rows.Count invited.</p>
+        <ul>
+            @foreach (var row in bulkResult.Rows.Where(x => !x.Ok))
+            {
+                <li class="error">Line @row.Line @row.Email: @row.Message</li>
+            }
+        </ul>
+    }
+</EditForm>
+
+@if (invitations.Count > 0)
+{
+    <table class="grid">
+        <thead><tr><th>Invited</th><th>Role</th><th>Status</th><th>Expires</th><th></th></tr></thead>
+        <tbody>
+            @foreach (var i in invitations)
+            {
+                <tr>
+                    <td>@i.Email</td>
+                    <td>@i.Role</td>
+                    <td>@i.Status.ToString().ToLowerInvariant()</td>
+                    <td>@(i.Status == InvitationStatus.Pending ? i.ExpiresUtc.ToString("yyyy-MM-dd HH:mm") + " UTC" : "")</td>
+                    <td>
+                        @if (i.Status is InvitationStatus.Pending or InvitationStatus.Expired)
+                        {
+                            <div class="row-actions">
+                                <button class="link" @onclick="() => ResendAsync(i.Id)">Resend</button>
+                                <button class="link" @onclick="() => RevokeAsync(i.Id)">Revoke</button>
+                            </div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }
 
 <EditForm Model="form" OnValidSubmit="AddAsync" FormName="add-member" class="panel">
@@ -25,7 +98,7 @@
         </InputSelect>
     </label>
     <label>Temporary password <InputText @bind-Value="form.Password" type="password" autocomplete="new-password" /></label>
-    <p class="hint">Creates a new account (it changes this password at first sign-in; staff also set up two-step verification), or changes the role of someone already in this organization. Accounts from outside the organization can't be added here; that needs an email invitation, which arrives with M.AUTH-T35.</p>
+    <p class="hint">Creates a new account (it changes this password at first sign-in; staff also set up two-step verification), or changes the role of someone already in this organization. Accounts from outside the organization cannot be added here: invite them by email above. This temporary-password path is for accounts you create yourself.</p>
     <button type="submit" disabled="@busy">Add</button>
     @if (message is not null)
     {
@@ -81,13 +154,71 @@
     [SupplyParameterFromQuery(Name = "erased")] public int? Erased { get; set; }
 
     private Form form = new();
-    private IReadOnlyList<(Gadfly.Server.Data.OrganizationMember Member, string UserName, string? Email)> members = [];
-    private string? message;
-    private bool ok, busy;
+    private sealed class InviteForm
+    {
+        public string Email { get; set; } = "";
+        public string Role { get; set; } = OrgRoles.Student;
+    }
+
+    private sealed class BulkForm
+    {
+        public string Csv { get; set; } = "";
+        public string DefaultRole { get; set; } = OrgRoles.Student;
+    }
+
+    private InviteForm invite = new();
+    private BulkForm bulk = new();
+    private BulkInviteResult? bulkResult;
+    private IReadOnlyList<InvitationSummary> invitations = [];
+    private IReadOnlyList<(MindAttic.Authentication.Entities.AuthMembership Member, string UserName, string? Email)> members = [];
+    private string? message, inviteMessage;
+    private bool ok, inviteOk, busy;
+
+    private IEnumerable<string> InvitableRoles => OrgRoles.All.Where(r => r != OrgRoles.Owner || Tenant.Role == OrgRoles.Owner);
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
-    private async Task LoadAsync() => members = await Directory.MembersAsync(Tenant.OrganizationId!.Value);
+    private async Task LoadAsync()
+    {
+        members = await Directory.MembersAsync(Tenant.OrganizationId!.Value);
+        invitations = await Directory.InvitationsAsync(Tenant.OrganizationId!.Value);
+    }
+
+    private async Task InviteAsync()
+    {
+        busy = true;
+        var r = await Directory.InviteAsync(Tenant.OrganizationId!.Value, invite.Email, invite.Role, Tenant.Role, Tenant.UserId);
+        inviteOk = r.Ok;
+        inviteMessage = r.Message;
+        if (r.Ok) invite = new();
+        await LoadAsync();
+        busy = false;
+    }
+
+    private async Task InviteBulkAsync()
+    {
+        busy = true;
+        bulkResult = await Directory.InviteBulkAsync(Tenant.OrganizationId!.Value, bulk.Csv, bulk.DefaultRole, Tenant.Role, Tenant.UserId);
+        if (bulkResult.Rows.All(x => x.Ok)) bulk = new() { DefaultRole = bulk.DefaultRole };
+        await LoadAsync();
+        busy = false;
+    }
+
+    private async Task ResendAsync(Guid id)
+    {
+        var r = await Directory.ResendInvitationAsync(Tenant.OrganizationId!.Value, id, Tenant.UserId);
+        inviteOk = r.Ok;
+        inviteMessage = r.Message;
+        await LoadAsync();
+    }
+
+    private async Task RevokeAsync(Guid id)
+    {
+        var r = await Directory.RevokeInvitationAsync(Tenant.OrganizationId!.Value, id, Tenant.UserId);
+        inviteOk = r.Ok;
+        inviteMessage = r.Message;
+        await LoadAsync();
+    }
 
     private async Task AddAsync()
     {
@@ -98,7 +229,7 @@
             return;
         }
         busy = true;
-        var r = await Directory.AddMemberAsync(Tenant.OrganizationId!.Value, form.UserName, form.Email, form.Role, form.Password, actingRole: Tenant.Role);
+        var r = await Directory.AddMemberAsync(Tenant.OrganizationId!.Value, form.UserName, form.Email, form.Role, form.Password, actingRole: Tenant.Role, actorUserId: Tenant.UserId);
         ok = r.Ok;
         message = r.Message;
         if (r.Ok) form = new();
@@ -108,7 +239,7 @@
 
     private async Task ToggleAsync(Guid memberId, bool active)
     {
-        var r = await Directory.SetMemberActiveAsync(Tenant.OrganizationId!.Value, memberId, active, actingRole: Tenant.Role);
+        var r = await Directory.SetMemberActiveAsync(Tenant.OrganizationId!.Value, memberId, active, actingRole: Tenant.Role, actorUserId: Tenant.UserId);
         ok = r.Ok;
         message = r.Message;
         await LoadAsync();

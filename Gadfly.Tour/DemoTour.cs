@@ -104,15 +104,15 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
     {
         var timeout = o.Live ? TimeSpan.FromMinutes(20) : TimeSpan.FromMinutes(3);
         var ready = await TourDb.WaitAsync(async () =>
-            await _db.CountAsync("SELECT COUNT(*) FROM gadfly.Exams e JOIN gadfly.Organizations o ON o.Id = e.OrganizationId WHERE o.Name = @o AND e.Title IN (@a, @b)",
+            await _db.CountAsync("SELECT COUNT(*) FROM gadfly.Exams e JOIN auth.AuthOrganizations o ON o.Id = e.OrganizationId WHERE o.Name = @o AND e.Title IN (@a, @b)",
                 ("@o", Org), ("@a", MathExam), ("@b", StatsExam)) == 2, timeout, TimeSpan.FromSeconds(2));
         if (!ready && await _db.ScalarAsync<string>("SELECT TOP 1 Error FROM gadfly.Jobs WHERE State = 'Failed' ORDER BY CreatedAt DESC") is { } jobError)
             throw new TourAssertException($"The source job failed: {jobError}");
         Expect.True(ready, $"The two demo assessments did not appear within {timeout.TotalMinutes:0} minutes (is the server started with --seed-demo?).");
 
-        _orgId = Expect.Value(await _db.ScalarAsync<Guid?>("SELECT Id FROM gadfly.Organizations WHERE Name = @o", ("@o", Org)), "no demo organization");
+        _orgId = Expect.Value(await _db.ScalarAsync<Guid?>("SELECT Id FROM auth.AuthOrganizations WHERE Name = @o", ("@o", Org)), "no demo organization");
         var members = await _db.RowsAsync("""
-            SELECT u.UserName, m.Role FROM gadfly.OrganizationMembers m JOIN auth.AuthUsers u ON u.Id = m.UserId
+            SELECT u.UserName, m.Role FROM auth.AuthMemberships m JOIN auth.AuthUsers u ON u.Id = m.UserId
             WHERE m.OrganizationId = @org AND m.IsActive = 1
             """, ("@org", _orgId));
         var roles = members.ToDictionary(r => (string)r["UserName"]!, r => (string)r["Role"]!, StringComparer.OrdinalIgnoreCase);

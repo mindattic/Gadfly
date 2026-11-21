@@ -206,7 +206,7 @@ public static class ClassroomSeeder
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             db.AuditEvents.Add(new AuditEvent
             {
-                OrganizationId = orgId, Action = SeededAction, EntityType = nameof(Organization), EntityId = orgId.ToString(),
+                OrganizationId = orgId, Action = SeededAction, EntityType = "Organization", EntityId = orgId.ToString(),
                 At = scope.ServiceProvider.GetRequiredService<TimeProvider>().GetUtcNow(), Reason = $"Classroom test data seeded by {SeedArgument} (GAD-T151).",
                 AfterJson = JsonSerializer.Serialize(new { teachers = Teachers.Select(t => t.Teacher), students = Students.Count, newAssignments }),
             });

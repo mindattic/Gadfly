@@ -12,7 +12,7 @@ namespace Gadfly.Server.Data;
 /// MindAttic.Authentication tables join in their own <c>auth</c> schema from GAD-T41).
 /// Enums are stored as their names; foreign keys never cascade (see Entities.cs).
 /// </summary>
-public sealed class GadflyDbContext : DbContext, IAuthDataContext
+public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
 {
     public const string Schema = "gadfly";
 
@@ -41,8 +41,14 @@ public sealed class GadflyDbContext : DbContext, IAuthDataContext
     public DbSet<AuthPasswordHistory> AuthPasswordHistory => Set<AuthPasswordHistory>();
     public DbSet<AuthPasswordResetToken> AuthPasswordResetTokens => Set<AuthPasswordResetToken>();
 
-    public DbSet<Organization> Organizations => Set<Organization>();
-    public DbSet<OrganizationMember> OrganizationMembers => Set<OrganizationMember>();
+    // The library's opt-in organization tables (M.AUTH-T34/T35, GAD-T156), in the same "auth" schema.
+    public DbSet<AuthOrganization> AuthOrganizations => Set<AuthOrganization>();
+    public DbSet<AuthMembership> AuthMemberships => Set<AuthMembership>();
+    public DbSet<AuthInvitation> AuthInvitations => Set<AuthInvitation>();
+    public DbSet<AuthOrganizationAudit> AuthOrganizationAudit => Set<AuthOrganizationAudit>();
+    /// <summary>Gadfly's names for the library's organization and membership sets (same sets).</summary>
+    public DbSet<AuthOrganization> Organizations => AuthOrganizations;
+    public DbSet<AuthMembership> OrganizationMembers => AuthMemberships;
 
     public DbSet<OrganizationSettings> OrganizationSettings => Set<OrganizationSettings>();
     public DbSet<SourceCollection> SourceCollections => Set<SourceCollection>();
@@ -122,21 +128,7 @@ public sealed class GadflyDbContext : DbContext, IAuthDataContext
     {
         base.OnModelCreating(b);
         b.HasDefaultSchema(Schema);
-        b.ApplyMindAtticAuthConfiguration();   // the library's tables in the "auth" schema
-
-        b.Entity<Organization>(e =>
-        {
-            e.Property(x => x.Name).HasMaxLength(200);
-            e.Property(x => x.Slug).HasMaxLength(80);
-            e.HasIndex(x => x.Slug).IsUnique();
-        });
-        b.Entity<OrganizationMember>(e =>
-        {
-            e.Property(x => x.Role).HasMaxLength(20);
-            e.HasOne(x => x.Organization).WithMany().HasForeignKey(x => x.OrganizationId);
-            e.HasIndex(x => new { x.OrganizationId, x.UserId }).IsUnique();
-            e.HasIndex(x => x.UserId);
-        });
+        b.ApplyMindAtticAuthConfiguration(organizations: true);   // the library's tables (accounts and organizations) in the "auth" schema
 
         b.Entity<OrganizationSettings>().HasKey(x => x.OrganizationId);
 

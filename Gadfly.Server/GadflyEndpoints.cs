@@ -15,12 +15,12 @@ namespace Gadfly.Server;
 /// </summary>
 public static class GadflyEndpoints
 {
-    /// <summary>The library's anonymous auth posts (change-password stays signed-in only).</summary>
-    public static readonly IReadOnlyList<string> AnonymousAuthPosts = ["login", "mfa-challenge", "logout", "reset/request", "reset/confirm"];
+    /// <summary>The library's anonymous auth posts (change-password and invite/accept-existing stay signed-in only).</summary>
+    public static readonly IReadOnlyList<string> AnonymousAuthPosts = ["login", "mfa-challenge", "logout", "reset/request", "reset/confirm", "invite/accept"];
 
     /// <summary>Every route a signed-out visitor may reach.</summary>
     public static readonly IReadOnlyList<string> AnonymousRoutes =
-        ["login", "mfa", "forgot-password", "account/reset", "healthz", "launch", "openapi/{documentName}.json", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p)];
+        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "launch", "openapi/{documentName}.json", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p)];
 
     private static readonly IReadOnlyList<string> AnonymousPrefixes = ["_framework/"];
 

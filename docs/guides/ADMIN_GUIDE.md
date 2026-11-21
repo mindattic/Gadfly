@@ -38,9 +38,9 @@ Owners and admins manage people at **Members** (`/org/members`).
 **Add a member** with a user name, an optional email, a role and a temporary password.
 
 - A new user name creates an account. The person changes the temporary password at first sign-in.
-- A user name that already exists (for example someone from another organization) adds that account to
-  yours; their password doesn't change. Adding someone who is already a member changes their role and
-  restores them if they were removed.
+- Adding someone who is already a member changes their role and restores them if they were removed.
+  An account that belongs to another organization cannot be added this way: invite that person by email
+  (below), and they accept it themselves.
 - The password must meet the sign-in library's password policy; the page shows the reason if it doesn't.
 
 **Remove** deactivates a membership and signs the person out everywhere within about a minute (changing
@@ -48,8 +48,17 @@ an active member's role does the same, so the new role applies at once). **Resto
 Only an owner can add an owner, change an owner's role, or remove or erase an owner, and an organization
 always keeps one active owner. Their records are kept either way (see erasure below to delete them).
 
-There are no email invitations yet (M.AUTH-T35): give people their user name and temporary password
-yourself.
+**Invite by email** (also on Members). Enter an email address and a role, or paste a CSV (one `email` or
+`email,role` per line, a header row is fine, up to 200 rows). The person gets a single-use link, valid for
+72 hours, to choose their own password; their user name is their email address unless they pick another.
+Staff roles then set up two-step verification at first sign-in. Someone who already has a Gadfly account
+signs in and accepts, and the organization appears in their switcher. The table under the form shows each
+invitation as pending, accepted, revoked or expired, with **Resend** (a new link; the old one stops working,
+at most five sends per invitation, one a minute) and **Revoke**. The page gives the same answer whether or
+not the address already has an account. Invitations need the server's outgoing mail (SMTP) and
+`MindAttic:Auth:Reset:PublicBaseUrl` (or `MindAttic:Auth:Organizations:Invitations:PublicBaseUrl`); without
+SMTP the link is only written to the server log. The temporary-password form above stays for accounts you
+create yourself, and the API still provisions students that way.
 
 **Forgotten passwords.** The sign-in page has a **Forgot password?** link (`/forgot-password`). The person
 enters their user name or email; if an account matches, they are emailed a link to `/account/reset`,

@@ -135,6 +135,12 @@ customer organizations).
   existing Gadfly user name and add that account to their organization (the API already refuses this,
   GAD-T69). That confirms the user name exists and puts the organization in the person's switcher without
   their agreement. Options: refuse like the API, or wait for email invitations (M.AUTH-T35).
+  **Closed (GAD-T156):** the members page refuses outside accounts (as the API does) and offers "Invite by
+  email" instead: the person accepts the invitation themselves, signed in as the account that owns the
+  invited address. Organizations, memberships and invitations now live in MindAttic.Authentication 9 (single-use
+  HMAC-hashed expiring tokens, enumeration-safe answers, audit rows in `auth.AuthOrganizationAudit`); the tenant
+  filters, write guard, pinned circuit tenant and `gadfly:org` claim format are unchanged, and a role change or
+  removal still rotates the security stamp.
 - **Upload quota per collection**: the number of 20 MB files a collection may hold is unbounded (instructors
   and API keys only). Add a per-collection and per-organization byte cap with the parser sandboxing that
   arrived with PDF/DOCX ingestion (GAD-T155): per-file caps are in place (20 MB upload, 500 pages, 5M characters,

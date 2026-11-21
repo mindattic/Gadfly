@@ -12,35 +12,12 @@ public interface ITenantOwned
     Guid OrganizationId { get; set; }
 }
 
-// ---------------------------------------------------------------- organizations (interim)
+// ---------------------------------------------------------------- organizations (library)
 
-// Customer organizations and their members. Interim: these live in Gadfly until
-// MindAttic.Authentication ships organizations (M.AUTH-T34); then IOrganizationDirectory switches to the
-// library's tables and these rows migrate across. Not ITenantOwned: a user's memberships span orgs.
-
-public sealed class Organization
-{
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public string Name { get; set; } = "";
-    /// <summary>URL-safe unique name.</summary>
-    public string Slug { get; set; } = "";
-    public bool IsActive { get; set; } = true;
-    public Guid CreatedByUserId { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
-}
-
-public sealed class OrganizationMember
-{
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid OrganizationId { get; set; }
-    public Organization? Organization { get; set; }
-    /// <summary>MindAttic.Authentication AuthUser id.</summary>
-    public Guid UserId { get; set; }
-    /// <summary>One of <c>OrgRoles</c>: Owner, Admin, Instructor, Student.</summary>
-    public string Role { get; set; } = "";
-    public bool IsActive { get; set; } = true;
-    public DateTimeOffset CreatedAt { get; set; }
-}
+// Customer organizations and their members live in MindAttic.Authentication's opt-in organization tables
+// (auth.AuthOrganizations, auth.AuthMemberships; GAD-T156, M.AUTH-T34). GadflyDbContext exposes them as
+// Organizations and OrganizationMembers; IOrganizationDirectory is the facade over the library's services.
+// Not ITenantOwned: a user's memberships span organizations. OrganizationSettings below stays Gadfly's own.
 
 // ---------------------------------------------------------------- organization settings
 

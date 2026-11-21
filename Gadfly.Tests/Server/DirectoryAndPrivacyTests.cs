@@ -21,7 +21,7 @@ public class OrganizationDirectoryTests : ServerTest
     private static Task<DirectoryResult> Add(Guid org, string user, string role, string? acting = null) =>
         WithDirectory(d => d.AddMemberAsync(org, user, null, role, Seed.StrongPassword, actingRole: acting));
 
-    private static async Task<OrganizationMember> MemberRow(Guid org, Guid user)
+    private static async Task<MindAttic.Authentication.Entities.AuthMembership> MemberRow(Guid org, Guid user)
     {
         await using var db = SystemDb();
         return await db.OrganizationMembers.AsNoTracking().SingleAsync(m => m.OrganizationId == org && m.UserId == user);
@@ -319,7 +319,7 @@ public class PrivacyServiceTests : ServerTest
         await using (var db = OrgDb(w.Org))
         {
             db.UsageEntries.Add(new UsageEntry { OrganizationId = w.Org, SessionId = sessionId, Provider = "alpha", CostUsd = 0.5m, CreatedAt = DateTimeOffset.UtcNow });
-            db.OrganizationMembers.Add(new OrganizationMember { OrganizationId = w.Org, UserId = w.StudentId, Role = OrgRoles.Student, CreatedAt = DateTimeOffset.UtcNow });
+            db.OrganizationMembers.Add(new MindAttic.Authentication.Entities.AuthMembership { OrganizationId = w.Org, UserId = w.StudentId, Role = OrgRoles.Student, CreatedUtc = DateTime.UtcNow });
             await db.SaveChangesAsync();
         }
         var n = await WithPrivacy(w.Org, p => p.DeleteStudentDataAsync(w.Org, w.StudentId));
