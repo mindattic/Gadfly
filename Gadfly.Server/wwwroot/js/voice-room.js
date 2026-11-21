@@ -60,7 +60,7 @@ export function init(dotnet, cfg) {
         dotnet, cfg, running: false, allowed: false, gate: true, speaking: false, mode: "hands-free",
         segments: [], partial: "", listeningStartMs: null, startedAtUnixMs: null, cueTimer: null, captionTimers: [],
         mic: null, pcm16ToBase64: null, speechConn: null, avatarConn: null, avatar: null, speech: null, avatarOk: false,
-        selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null,
+        selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null, face: null,
         acoustics: new VoiceAcoustics(),   // voice strain indicators (GAD-T232): summary numbers only, never audio
     };
     S.onClick = (e) => {
@@ -107,10 +107,12 @@ async function start() {
                 s.startedAtUnixMs ??= Date.now();
                 freezeDelay(s);
                 clearCue();
+                talking(s, true);
                 status("Hearing you…");
             },
             onSpeechEnd: () => {
                 try { s.acoustics.endSegment(); } catch { }
+                talking(s, false);
                 if (s.gate || !s.speechConn) return;
                 s.speechConn.send("Commit").catch(() => { });
             },
@@ -168,6 +170,7 @@ async function start() {
         await s.avatarConn.start();
         await Promise.race([el.ready, new Promise((r) => setTimeout(r, 90000))]);
         s.avatarOk = true;
+        void startFaceFollow(s);   // the self-view may already be on: the examiner looks toward the student's face
         s.dotnet.invokeMethodAsync("OnAvatarMode", el.mode || "3d", "").catch(() => { });
     } catch (err) {
         s.avatarOk = false;
@@ -336,6 +339,7 @@ async function submit(immediate) {
         responseDelayMs: s.delayMs == null ? null : Math.round(s.delayMs), acoustics,
     };
     s.gate = true;
+    talking(s, false);
     status("Sending your answer…");
     try {
         await s.dotnet.invokeMethodAsync("OnVoiceAnswer", payload);
@@ -419,6 +423,7 @@ async function startSelfView(s) {
 /** Releases the camera; <paramref name="next"/> is the state to report, or null to report nothing (voice mode is stopping). */
 function stopSelfView(s, next) {
     if (!s) return;
+    stopFaceFollow(s);
     const stream = s.selfStream;
     s.selfStream = null;
     try { stream && stream.getTracks().forEach((t) => t.stop()); } catch { }
@@ -437,6 +442,97 @@ async function toggleSelfView() {
 function selfState(s, state) {
     if (S !== s) return;
     s.dotnet.invokeMethodAsync("OnSelfView", state).catch(() => { });
+}
+
+// ------------------------------------------------------------------------------------------------------- examiner presence
+// GAD-T241: the examiner looks at the student and listens visibly (ma-avatar.js: setGazeTarget, setStudentTalking). The only thing
+// read from the self-view, on the device, is where the student's face is; that position goes to <ma-avatar> and nowhere else.
+
+/** The student's voice activity, for the examiner's listening (nods, attentive look). Only while an answer is open. */
+function talking(s, on) {
+    if (!s || S !== s || !s.avatar || typeof s.avatar.setStudentTalking !== "function") return;
+    try { s.avatar.setStudentTalking(on && !s.gate); } catch { }
+}
+
+const FACE_EVERY_MS = 200;     // native FaceDetector sampling
+const FACE_LOST_MS = 1500;     // no face for this long: the examiner looks straight out of the screen again
+const FACE_SMOOTH = 0.35;      // share of each new reading taken (steadies the gaze against detector jitter)
+
+/**
+ * Follows the student's face in the camera so the 3D examiner looks at them. Runs only while the self-view is on and the examiner
+ * is the 3D model. Uses the browser's FaceDetector where it has one, else MindAttic.Webcam's self-hosted face landmarker (the same
+ * build as the camera integrity checks) on a small, slow stream. Only a smoothed face position in [-1, 1] leaves this function, and
+ * only to <ma-avatar>: no frame or position is stored or sent. Any failure just leaves her looking straight out of the screen.
+ */
+async function startFaceFollow(s) {
+    if (!s || S !== s || !s.running || s.face || !s.selfStream || !s.avatar || s.avatar.mode !== "3d") return;
+    const video = q("self");
+    if (!video) return;
+    const f = { stopped: false, timer: null, watch: null, core: null, unsub: null, x: 0, y: 0, seenAt: 0, has: false };
+    s.face = f;
+    const seen = (cx, cy) => {
+        if (f.stopped || !Number.isFinite(cx) || !Number.isFinite(cy)) return;
+        const nx = 1 - 2 * cx, ny = 2 * cy - 1;   // the camera image is unmirrored; the student sees a mirror
+        if (!f.has) { f.x = nx; f.y = ny; f.has = true; }
+        else { f.x += (nx - f.x) * FACE_SMOOTH; f.y += (ny - f.y) * FACE_SMOOTH; }
+        f.seenAt = performance.now();
+        try { s.avatar && s.avatar.setGazeTarget({ x: f.x, y: f.y }); } catch { }
+    };
+    f.watch = setInterval(() => {
+        if (f.stopped || !f.has || performance.now() - f.seenAt < FACE_LOST_MS) return;
+        f.has = false;
+        try { s.avatar && s.avatar.setGazeTarget(null); } catch { }
+    }, 500);
+
+    if ("FaceDetector" in window) {
+        try {
+            const detector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+            let busy = false;
+            f.timer = setInterval(async () => {
+                if (f.stopped || busy || video.readyState < 2 || !video.videoWidth) return;
+                busy = true;
+                try {
+                    const faces = await detector.detect(video);
+                    const b = faces && faces[0] && faces[0].boundingBox;
+                    if (b) seen((b.x + b.width / 2) / video.videoWidth, (b.y + b.height * 0.4) / video.videoHeight);
+                } catch { } finally { busy = false; }
+            }, FACE_EVERY_MS);
+            return;
+        } catch { /* listed but not usable: fall back to the landmarker */ }
+    }
+
+    try {
+        const lib = await import("/webcam/webcam.browser.js");
+        if (f.stopped) return;
+        const core = new lib.WebcamCore({
+            width: 320, height: 240, frameRate: 10, numFaces: 1,
+            wasmBaseUrl: new URL("/webcam", location.href).href, modelUrl: new URL("/webcam/face_landmarker.bin", location.href).href,
+        });
+        f.core = core;
+        f.unsub = core.subscribe((frame) => {
+            const face = frame && frame.faces && frame.faces[0];
+            const l = face && face.landmarks;
+            if (!l || !l[33] || !l[263]) return;
+            seen((l[33].x + l[263].x) / 2, (l[33].y + l[263].y) / 2);   // between the outer eye corners
+        });
+        await core.start();
+        if (f.stopped) { try { core.stop(); } catch { } }
+    } catch {
+        try { f.core && f.core.stop(); } catch { }
+        f.core = null;
+    }
+}
+
+function stopFaceFollow(s) {
+    const f = s && s.face;
+    if (!f) return;
+    s.face = null;
+    f.stopped = true;
+    if (f.timer) clearInterval(f.timer);
+    if (f.watch) clearInterval(f.watch);
+    try { f.unsub && f.unsub(); } catch { }
+    try { f.core && f.core.stop(); } catch { }
+    try { s.avatar && s.avatar.setGazeTarget(null); } catch { }
 }
 
 // ------------------------------------------------------------------------------------------------------------ captions
