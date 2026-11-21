@@ -129,9 +129,15 @@ export async function start(dotnet, video, options) {
     } catch (err) {
         if (s.stopped) return false;
         s.reported = true;
+        // The heartbeat and partial-episode timers are started before the camera is; stop() returns early once stopped is set,
+        // so a failed start has to clear them itself or they tick for the rest of the page's life (GAD-T201).
+        if (s.heartbeat) clearInterval(s.heartbeat);
+        if (s.partials) clearInterval(s.partials);
+        if (s.onHide) window.removeEventListener("pagehide", s.onHide);
         try { s.monitor && s.monitor.stop(); } catch { }
         try { s.sink && await s.sink.close(); } catch { }
         s.stopped = true;
+        if (state === s) state = null;
         await report(s, classify(err));
         return false;
     }
