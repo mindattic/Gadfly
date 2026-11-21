@@ -81,7 +81,7 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
         {
             var ask = attempt == 0 ? prompt : prompt + "\n\nYour previous draft revealed expected answer points. Ask without stating or hinting at any of them.";
             var result = await panel.AskAsync(ask, "", Quorum.Plurality, ct);
-            var question = Usable(Clean(!string.IsNullOrWhiteSpace(result.Consensus) ? result.Consensus : result.NarrativeSummary));
+            var question = Usable(Clean(PanelText(result)));
             if (question.Length == 0)
                 question = await PickDraftAsync(result, r.Decision.Move, dialogue, ct);
             if (question.Length == 0)
@@ -127,9 +127,10 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
             ["dialogue"] = dialogue.Length == 0 ? "(none)" : dialogue,
         });
         var result = await panel.AskAsync(prompt, "", Quorum.Plurality, ct);
-        var text = (!string.IsNullOrWhiteSpace(result.Consensus) ? result.Consensus : result.NarrativeSummary)?.Trim() ?? "";
+        var text = PanelText(result).Trim();
         if (text.Length == 0)
-            text = result.IndividualVotes.Where(v => !v.IsError).Select(v => v.Decision?.Trim() ?? "").FirstOrDefault(d => d.Length > 0) ?? "";
+            text = result.IndividualVotes.Where(v => !v.IsError).Select(v => v.Decision?.Trim() ?? "")
+                .FirstOrDefault(d => d.Length > 0 && !IsPanelFailureText(d)) ?? "";
         if (text.Length == 0 || text.Length > 900)
         {
             LastOutcome = "fallback: no usable assistance draft";
@@ -197,6 +198,32 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
     }
 
     /// <summary>
+    /// The panel's fused text, or "" when the panel failed (GAD-T117): no voter answered, no quorum on the
+    /// consensus, or the text is Legion's own status/error wording ("All voters failed."). Provider error text
+    /// must never reach a student; an empty draft sends the generator down its redraft/fallback path.
+    /// </summary>
+    internal static string PanelText(VotingResult result)
+    {
+        if (!result.IndividualVotes.Any(v => !v.IsError)) return "";
+        var text = result.QuorumReached && !string.IsNullOrWhiteSpace(result.Consensus) ? result.Consensus : result.NarrativeSummary;
+        return string.IsNullOrWhiteSpace(text) || IsPanelFailureText(text) ? "" : text;
+    }
+
+    /// <summary>True for Legion status and error strings rather than model output.</summary>
+    internal static bool IsPanelFailureText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return false;
+        var t = text.Trim();
+        return t.Contains("voters failed", StringComparison.OrdinalIgnoreCase)
+            || t.Contains("no quorum", StringComparison.OrdinalIgnoreCase)
+            || t.Contains("quorum not reached", StringComparison.OrdinalIgnoreCase)
+            || t.StartsWith("error", StringComparison.OrdinalIgnoreCase)
+            || t.Contains("exception", StringComparison.OrdinalIgnoreCase)
+            || t.Contains("rate limit", StringComparison.OrdinalIgnoreCase)
+            || t.Contains("api key", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// The draft when it reads as a question, else "": a reply that is only a label or the move's name (a panel
     /// sometimes answers "ScenarioVariation") or a fragment of a few words is not asked.
     /// </summary>
@@ -205,6 +232,7 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
         var words = draft.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
         if (words.Length < 4) return "";
         if (Enum.TryParse<MoveKind>(draft.Trim('.', '?', ' '), ignoreCase: true, out _)) return "";
+        if (IsPanelFailureText(draft)) return "";
         // A draft that talks about the student instead of to them ("...and ask the student to explain") is an instruction, not a question.
         if (draft.Contains("the student", StringComparison.OrdinalIgnoreCase)) return "";
         return draft;
