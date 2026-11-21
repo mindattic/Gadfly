@@ -21,8 +21,9 @@ With voice on, the exam room reads like an interview. Only the student's exam ro
 screens are untouched.
 
 - **Self-view.** The student's own camera is shown, mirrored, beside the talking examiner. The stream is attached to a
-  muted `<video>` in the page and nothing else: no frame is recorded, analysed or sent (camera integrity checks, GAD-T57,
-  are separate and unchanged). A refused or missing camera shows a short note and voice carries on; **Hide my camera**
+  muted `<video>` in the page and nothing else: no frame is recorded, stored or sent (camera integrity checks, GAD-T57,
+  are separate and unchanged). The one thing read from it, on the device, is where the student's face is, so the examiner
+  can look at them (below). A refused or missing camera shows a short note and voice carries on; **Hide my camera**
   releases it and **Show my camera** asks again.
 - **Transcript.** Every question or request the examiner speaks (in full, even when a long read-back is spoken
   shortened) and every answer the student speaks is added to an on-screen transcript, newest at the bottom. Turning voice
@@ -31,6 +32,14 @@ screens are untouched.
   when the student starts speaking; the answer's transcript line keeps it. It is the browser's timing, sent with the
   answer as `ResponseDelayMs` for display only: it is never scored or stored (the stored `timeToFirstWordSeconds` is still
   recomputed from the words on the server).
+- **Examiner presence (GAD-T241).** The 3D examiner holds eye contact while she speaks and while she listens, renewed
+  every couple of seconds so her idle wandering never takes her eyes away for long. With the self-view on, she turns
+  toward the student's face: the browser's `FaceDetector`, or else MindAttic.Webcam's self-hosted face landmarker on a
+  small 10 fps stream, finds the face on the device and only a smoothed position reaches `<ma-avatar>`
+  (`setGazeTarget`); nothing is stored or sent, and with no face she looks straight out of the screen. While the student
+  talks (the microphone's voice activity, `setStudentTalking`) she listens visibly: an attentive expression, small nods
+  while they talk and at their pauses, the odd extra blink. Only after the answer is in does she take one brief
+  (about a second) thinking look up and aside, then looks back at the student.
 
 ## Eye contact with the examiner (GAD-T240)
 

@@ -62,11 +62,6 @@ public sealed record AnswerJudgment
     public int RubricVersion { get; init; }
     /// <summary>Answer-text integrity signal (GAD-T59); null when not assessed.</summary>
     public TextStyleAssessment? TextStyle { get; init; }
-    /// <summary>
-    /// Set when the answer read as recited (close to the source's wording, or a read-out pattern) and was not accepted as the
-    /// student's own understanding (GAD-T242): left out of the evidence and mastery, for a human to review; never a cheating verdict.
-    /// </summary>
-    public RecitationFlag? Recitation { get; init; }
     public string Summary { get; init; } = "";
 }
 
