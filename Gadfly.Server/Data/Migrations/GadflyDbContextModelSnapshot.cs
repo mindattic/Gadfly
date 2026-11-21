@@ -1341,6 +1341,10 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<Guid>("ExamId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("HintLadderJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(120)

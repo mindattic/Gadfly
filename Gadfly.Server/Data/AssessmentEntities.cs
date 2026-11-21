@@ -35,6 +35,11 @@ public sealed class LearningObjective : ITenantOwned
     public decimal Weight { get; set; } = 1m;
     public decimal MaxScore { get; set; } = 100m;
     public int Ordinal { get; set; }
+    /// <summary>
+    /// Learning Mode's fixed hint ladder (GAD-T271): the instructor's rungs, weakest first, as a JSON array of strings.
+    /// Empty uses the engine's default ladder. Every student who needs help gets the same rungs in the same order.
+    /// </summary>
+    public string HintLadderJson { get; set; } = "[]";
     public List<RubricCriterion> Criteria { get; set; } = [];
 }
 

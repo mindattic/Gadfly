@@ -23,7 +23,22 @@ public static class SessionObjectives
             Weight = o.Weight,
             Criteria = o.Criteria.OrderBy(c => c.Ordinal)
                 .Select(c => new ObjectiveCriterion(c.Name, c.Dimension, c.Weight, c.Description)).ToList(),
+            HintLadder = HintLadder(o),
         }).ToList();
+
+    /// <summary>The objective's fixed hint ladder (GAD-T271); empty (the engine's default ladder) when none or unreadable.</summary>
+    public static IReadOnlyList<string> HintLadder(LearningObjective o)
+    {
+        try
+        {
+            return (System.Text.Json.JsonSerializer.Deserialize<List<string>>(string.IsNullOrWhiteSpace(o.HintLadderJson) ? "[]" : o.HintLadderJson) ?? [])
+                .Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r.Trim()).ToList();
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return [];
+        }
+    }
 
     /// <summary>The exam's objectives from SQL (with their criteria).</summary>
     public static async Task<IReadOnlyList<ExamObjective>> LoadAsync(GadflyDbContext db, Guid organizationId, Guid examId, CancellationToken ct) =>

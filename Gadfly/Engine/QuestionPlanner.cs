@@ -205,14 +205,16 @@ public sealed class QuestionPlanner
         }
 
         // 3. Learning Mode: after a weak answer or a misconception, a hint, then a guided explanation, then reassessment.
-        if (p.Mode == AssessmentMode.Learning && !MoveProfiles.IsAssistance(last.Move) && a.AssistsGiven < p.MaxAssistsPerObjective)
+        if (p.Mode == AssessmentMode.Learning && !MoveProfiles.IsAssistance(last.Move) && a.AssistsGiven < HintLadders.MaxAssists(p, o, o.Title))
         {
             var misconception = last.Analysis?.Misconceptions.FirstOrDefault(m => m.ObjectiveKey == o.Key);
             if (lastScore < ObjectiveAssessor.NegativeBelow || misconception is not null)
             {
                 var move = a.AssistsGiven == 0 ? MoveKind.Hint : MoveKind.GuidedExplanation;
                 var why = misconception is not null ? $"a misconception ({misconception.Text})" : lastAporia ? "an honest \"I don't know\"" : "a weak answer";
-                return Decide(move, $"Learning Mode: after {why}, {(move == MoveKind.Hint ? "a hint" : "a guided explanation")}; what follows is assisted evidence.");
+                var rung = HintLadders.Rung(o, o.Title, a.AssistsGiven, move);
+                return Decide(move, $"Learning Mode: after {why}, {(move == MoveKind.Hint ? "a hint" : "a guided explanation")} from the fixed ladder " +
+                    $"(rung {rung.Step} of {rung.Of}{(rung.InstructorWritten ? "" : ", default ladder")}); what follows is assisted evidence.");
             }
         }
 

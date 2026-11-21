@@ -166,7 +166,8 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
         var objectiveViews = objectives.Select(o => new ObjectiveView(o.Id, o.Key, o.Title, o.Description, o.ConceptKey,
             o.ConceptKey is { } k ? concepts.GetValueOrDefault(k) : null, o.ConceptKey is { } k2 && !concepts.ContainsKey(k2),
             o.Weight, o.MaxScore, o.Ordinal,
-            o.Criteria.OrderBy(c => c.Ordinal).Select(c => new CriterionView(c.Id, c.Dimension, c.Name, c.Description, c.Weight, c.Ordinal, LevelTexts(c))).ToList()))
+            o.Criteria.OrderBy(c => c.Ordinal).Select(c => new CriterionView(c.Id, c.Dimension, c.Name, c.Description, c.Weight, c.Ordinal, LevelTexts(c))).ToList())
+            { HintLadder = Gadfly.Server.Sessions.SessionObjectives.HintLadder(o) })
             .ToList();
 
         var policy = await db.GradingPolicies.AsNoTracking().FirstOrDefaultAsync(x => x.ExamId == examId && x.OrganizationId == org, ct);
@@ -294,6 +295,8 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
         if (description?.Length > 4000) return new(false, "Keep the description under 4000 characters.");
         if (d.Weight < 0 || d.Weight > 1000) return new(false, "The weight must be 0 to 1000.");
         if (d.MaxScore <= 0 || d.MaxScore > MaxObjectiveScore) return new(false, $"The maximum score must be above 0 and at most {MaxObjectiveScore}.");
+        var (ladder, ladderError) = Gadfly.Engine.HintLadders.Parse(d.HintLadder);
+        if (ladder is null) return new(false, ladderError!);
         if (conceptKey is not null)
         {
             var keys = (await Exams().ConceptsAsync(exam.CollectionId, ct)).Select(c => c.Key).ToHashSet(StringComparer.Ordinal);
@@ -324,6 +327,7 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
         o.ConceptKey = conceptKey;
         o.Weight = d.Weight;
         o.MaxScore = d.MaxScore;
+        o.HintLadderJson = System.Text.Json.JsonSerializer.Serialize(ladder);
         guard.Audit(before is null ? "objective.created" : "objective.updated", "LearningObjective", o.Id.ToString(), before, ObjectiveAudit(o));
         await SaveAsync(ct);
         return new(true, before is null ? "Objective added. Give it at least one rubric criterion." : "Objective saved.", o.Id);
@@ -824,7 +828,7 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
         };
     }
 
-    private static object ObjectiveAudit(LearningObjective o) => new { o.Key, o.Title, o.Description, o.ConceptKey, o.Weight, o.MaxScore, o.Ordinal };
+    private static object ObjectiveAudit(LearningObjective o) => new { o.Key, o.Title, o.Description, o.ConceptKey, o.Weight, o.MaxScore, o.Ordinal, o.HintLadderJson };
 
     private static object CriterionAudit(RubricCriterion c) => new
     {

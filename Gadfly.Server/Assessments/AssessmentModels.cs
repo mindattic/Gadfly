@@ -54,6 +54,8 @@ public sealed class ObjectiveDraft
     public string? ConceptKey { get; set; }
     public decimal Weight { get; set; } = 1m;
     public decimal MaxScore { get; set; } = 100m;
+    /// <summary>Learning Mode's fixed hint ladder (GAD-T271), one rung per line, weakest first. Blank uses the default ladder.</summary>
+    public string? HintLadder { get; set; }
 }
 
 public sealed class CriterionDraft
@@ -75,7 +77,11 @@ public sealed record CriterionView(Guid Id, AssessmentDimension Dimension, strin
     IReadOnlyList<string> Levels);
 
 public sealed record ObjectiveView(Guid Id, string Key, string Title, string? Description, string? ConceptKey, string? ConceptTitle,
-    bool ConceptMissing, decimal Weight, decimal MaxScore, int Ordinal, IReadOnlyList<CriterionView> Criteria);
+    bool ConceptMissing, decimal Weight, decimal MaxScore, int Ordinal, IReadOnlyList<CriterionView> Criteria)
+{
+    /// <summary>Learning Mode's fixed hint ladder (GAD-T271); empty means the engine's default ladder.</summary>
+    public IReadOnlyList<string> HintLadder { get; init; } = [];
+}
 
 /// <summary>The grading policy as the teacher edits it: weights as percentages (40/60), thresholds in percentage points.</summary>
 public sealed class PolicyDraft

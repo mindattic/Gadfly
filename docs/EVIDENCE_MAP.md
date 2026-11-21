@@ -18,7 +18,7 @@ to the entries in them. Nothing here changes code.
 | 5 | Voice strain | `Gadfly.Server/Voice/VoiceStrain.cs` | Not supported; legal risk; owner decision (b) | GAD-T258, GAD-T259 |
 | 6 | Time limits and the end-of-answer cue | `SessionPolicy.cs`, `voice-room.js`, `StudentExams.cs` | Time budget supported; two choices questioned | GAD-T263, GAD-T264 |
 | 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273 |
-| 8 | Learning Mode hints | `QuestionGenerator.AssistAsync`, `MoveKind.Hint` | Supported only as a fixed ladder, kept apart | GAD-T271 |
+| 8 | Learning Mode hints | `HintLadders`, `QuestionGenerator`, `MoveKind.Hint` | Supported only as a fixed ladder, kept apart | GAD-T271 |
 | - | Owner decisions (a) to (d) | see below | Recorded, not overridden | GAD-T260, GAD-T261, GAD-T258/T259, GAD-T262 |
 
 ## 1. Follow-up moves
@@ -239,7 +239,10 @@ reconciling single answers), GAD-T265 (word error rate by group, and low-confide
 ## 8. Learning Mode hints
 
 **What Gadfly does.** In Learning Mode only, Hint and GuidedExplanation moves teach, and everything after them is tagged
-as assisted evidence. The LLM writes each hint (`QuestionGenerator.AssistAsync`). Examination Mode refuses to teach.
+as assisted evidence. Since GAD-T271 each hint is the next rung of the objective's fixed, instructor-written ladder
+(`HintLadders`; a fixed default ladder when the instructor wrote none): the planner decides when, after a weak answer or a
+misconception, and no model writes or rewords the text. Reports give the hints given beside the unaided level, and no
+gain or learning-potential score is computed. Examination Mode refuses to teach.
 
 **Evidence for.**
 - Keeping hints out of the scored exam, and in a separate, labelled mode, is supported (04: Vygotsky; Haywood & Lidz;
@@ -251,8 +254,8 @@ as assisted evidence. The LLM writes each hint (`QuestionGenerator.AssistAsync`)
   cannot be compared between students. Gain and help-needed scores are confounded with starting level (04: De Beer 2006),
   and any "learning potential" number is experimental.
 
-**Proposed.** GAD-T271 (a fixed hint ladder per objective, where the LLM picks when to give a hint, never what it says,
-reported beside the unaided score).
+**Done.** GAD-T271 (approved by the owner): a fixed hint ladder per objective, where the planner picks when to give a hint,
+never what it says, reported beside the unaided score.
 
 ## Owner decisions the research questions
 

@@ -367,6 +367,7 @@ else
                                 else if (o.ConceptMissing) { <span class="error">concept @o.ConceptKey is no longer in the concept map</span> }
                                 else { <span>concept: @o.ConceptTitle</span> }
                                 · @o.Criteria.Count criteri@(o.Criteria.Count == 1 ? "on" : "a")
+                                · @(o.HintLadder.Count == 0 ? "default hint ladder" : $"{o.HintLadder.Count} hint{(o.HintLadder.Count == 1 ? "" : "s")} in its ladder")
                             </p>
                             @if (Editable)
                             {
@@ -433,11 +434,17 @@ else
             <label>Weight <input type="number" min="0" max="1000" step="0.01" @bind="d.Weight" /></label>
             <label>Maximum score <input type="number" min="0.01" max="@AssessmentService.MaxObjectiveScore" step="0.01" @bind="d.MaxScore" /></label>
         </div>
+        <label>Learning Mode hint ladder (optional: one hint per line, weakest first, at most @Gadfly.Engine.HintLadders.MaxRungs)
+            <textarea rows="3" @bind="d.HintLadder" placeholder="Leave blank to use Gadfly's default hints"></textarea>
+        </label>
+        <p class="hint">In Learning Mode a student who gives a weak answer gets these hints in this order, the same ones for every student; the AI decides
+            only when to give one, never what it says. Hints are reported beside the unaided score and never change it.</p>
     };
 
     private static ObjectiveDraft ToDraft(ObjectiveView o) => new()
     {
         Id = o.Id, Title = o.Title, Description = o.Description, ConceptKey = o.ConceptKey, Weight = o.Weight, MaxScore = o.MaxScore,
+        HintLadder = string.Join("\n", o.HintLadder),
     };
 
     private async Task SaveObjectiveAsync(ObjectiveDraft d)

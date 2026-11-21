@@ -216,6 +216,7 @@ public sealed class SourceExamEngine
             Ledger = Ledger,
             RubricForGuard = rubric.Describe(),
             ObjectiveTitle = objective?.Title,
+            Objective = objective,
             Misconception = misconception,
         }, ct);
         // An Apply question's reason carries its transfer label, so reviewers see how its situation differs from the source,

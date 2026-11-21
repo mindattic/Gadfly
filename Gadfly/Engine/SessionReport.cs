@@ -47,6 +47,11 @@ public sealed record ObjectiveReport
     public int ContradictingAnswers { get; init; }
     public int ContaminatedAnswers { get; init; }
     public int AssistedAnswers { get; init; }
+    /// <summary>
+    /// Learning Mode: rungs of the objective's fixed hint ladder given (GAD-T271), reported beside the unaided
+    /// <see cref="Level"/>, never folded into it. No gain or "learning potential" score is derived from it.
+    /// </summary>
+    public int HintsGiven { get; init; }
     public bool Consistent { get; init; } = true;
     public IReadOnlyList<string> UnresolvedMisconceptions { get; init; } = [];
     public IReadOnlyList<string> Uncertainties { get; init; } = [];
@@ -75,6 +80,7 @@ public sealed record ObjectiveReport
         ContradictingAnswers = a.ContradictingAnswers,
         ContaminatedAnswers = a.ContaminatedAnswers,
         AssistedAnswers = a.AssistedAnswers,
+        HintsGiven = a.AssistsGiven,
         Consistent = a.Consistent,
         UnresolvedMisconceptions = a.UnresolvedMisconceptions,
         Uncertainties = a.Uncertainties,
@@ -257,7 +263,9 @@ public sealed record SessionReport
             {
                 var notes = new List<string>();
                 if (o.Level == 0 && o.ProvisionalLevel > 0) notes.Add($"evidence points to level {o.ProvisionalLevel}, not yet sufficient");
-                if (o.AssistedLevel is { } al) notes.Add($"assisted level {al}");
+                if (o.HintsGiven > 0 || o.AssistedLevel is not null)
+                    notes.Add($"unaided level {o.Level}; after {o.HintsGiven} hint{(o.HintsGiven == 1 ? "" : "s")} from the fixed ladder: " +
+                        (o.AssistedLevel is { } al ? $"assisted level {al}" : "no assisted level yet"));
                 if (o.ContaminatedAnswers > 0) notes.Add($"{o.ContaminatedAnswers} contaminated answer(s) excluded");
                 if (!o.Consistent) notes.Add("inconsistent claims");
                 if (o.UnresolvedMisconceptions.Count > 0) notes.Add("misconception: " + string.Join("; ", o.UnresolvedMisconceptions));

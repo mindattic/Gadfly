@@ -20,6 +20,11 @@ public sealed record ExamObjective
     public IReadOnlyList<string> ConceptKeys { get; init; } = [];
     public IReadOnlyList<ObjectiveCriterion> Criteria { get; init; } = [];
     public decimal Weight { get; init; } = 1m;
+    /// <summary>
+    /// Learning Mode's fixed hint ladder (GAD-T271): the instructor's rungs, weakest first, given in order to every student who
+    /// needs help. Empty uses <see cref="HintLadders.Default"/>. No model writes or rewords a hint.
+    /// </summary>
+    public IReadOnlyList<string> HintLadder { get; init; } = [];
     /// <summary>True when made from a concept because the exam defines no objectives.</summary>
     public bool Implicit { get; init; }
 

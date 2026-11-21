@@ -16,7 +16,12 @@ public sealed record QuestionRequest
     public string RubricForGuard { get; init; } = "";
     /// <summary>The learning objective examined (GAD-T89); the concept title when the exam has none.</summary>
     public string? ObjectiveTitle { get; init; }
-    /// <summary>Learning Mode: a misconception the hint or explanation should address.</summary>
+    /// <summary>The objective examined, for Learning Mode's fixed hint ladder (GAD-T271); null uses the default ladder.</summary>
+    public ExamObjective? Objective { get; init; }
+    /// <summary>
+    /// Learning Mode: the misconception that prompted the hint. Recorded for context only: since GAD-T271 the hint's text
+    /// comes from the fixed ladder, never tailored to it.
+    /// </summary>
     public string? Misconception { get; init; }
 }
 
@@ -38,8 +43,9 @@ public enum LeakGuardResult
 /// the planned move and a judge fuses the sharpest one. A second panel vote guards against
 /// questions that give away rubric points; a leaking draft is redrafted once, then replaced by a
 /// plain, safe question for the move. The guard fails closed: when it cannot decide, the draft is not
-/// asked (GAD-T92). Learning Mode hints and guided explanations use their own prompt and skip the guard:
-/// they teach on purpose, and everything after them is assisted evidence (GAD-T93).
+/// asked (GAD-T92). Learning Mode hints and guided explanations are never drafted: they are the next rung of the
+/// objective's fixed, instructor-written hint ladder (GAD-T271), and skip the guard because they teach on purpose;
+/// everything after them is assisted evidence (GAD-T93).
 /// </summary>
 public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? prompts = null)
 {
@@ -63,7 +69,7 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
     public async Task<string> GenerateAsync(QuestionRequest r, CancellationToken ct = default)
     {
         var dialogue = Dialogue(r.Session);
-        if (MoveProfiles.IsAssistance(r.Decision.Move)) return await AssistAsync(r, dialogue, ct);
+        if (MoveProfiles.IsAssistance(r.Decision.Move)) return Assist(r);
         // Adaptive probing (GAD-T233): each recent answer's delay, hesitations, strain against the student's baseline and
         // hedging go into the prompt, and the last one sets how hard the question presses.
         var recent = r.Session.Turns.TakeLast(DialogueTurns).ToList();
@@ -136,33 +142,22 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
         return Fallback(r.Decision.Move, r.ConceptTitle, r.RelatedConceptTitle);
     }
 
-    /// <summary>Learning Mode: a hint or a guided explanation followed by a question (no leak guard: it teaches on purpose).</summary>
-    private async Task<string> AssistAsync(QuestionRequest r, string dialogue, CancellationToken ct)
+    /// <summary>
+    /// Learning Mode: the next rung of the objective's fixed hint ladder, then its fixed retry question (GAD-T271). The planner
+    /// chose when; no model writes or rewords the text, so every student who needs help on an objective hears the same
+    /// rungs in the same order and hint counts compare across students (research note 04). No leak guard: it teaches on purpose.
+    /// </summary>
+    private string Assist(QuestionRequest r)
     {
         LastGuard = LeakGuardResult.Skipped;
         if (r.Session.Policy.Mode != Gadfly.Assessment.AssessmentMode.Learning)
             throw new InvalidOperationException("Examination mode never teaches: hints and guided explanations are Learning Mode only.");
-        var prompt = ExamPrompts.Fill(_prompts[ExamPromptsV3.LearningQuestionKey], new Dictionary<string, string?>
-        {
-            ["move"] = r.Decision.Move.ToString(),
-            ["objective"] = r.ObjectiveTitle ?? r.ConceptTitle,
-            ["concept"] = r.ConceptTitle,
-            ["misconception"] = string.IsNullOrWhiteSpace(r.Misconception) ? "(none)" : r.Misconception,
-            ["grounding"] = r.Grounding.Text,
-            ["dialogue"] = dialogue.Length == 0 ? "(none)" : dialogue,
-        });
-        var result = await panel.AskAsync(prompt, "", Quorum.Plurality, ct);
-        var text = PanelText(result).Trim();
-        if (text.Length == 0)
-            text = result.IndividualVotes.Where(v => !v.IsError).Select(v => v.Decision?.Trim() ?? "")
-                .FirstOrDefault(d => d.Length > 0 && !IsPanelFailureText(d)) ?? "";
-        if (text.Length == 0 || text.Length > 900)
-        {
-            LastOutcome = "fallback: no usable assistance draft";
-            return Fallback(r.Decision.Move, r.ConceptTitle, null);
-        }
-        LastOutcome = "drafted (learning mode, unguarded)";
-        return text.Trim('"', '\u201c', '\u201d', ' ');
+        var key = r.Decision.ObjectiveKey ?? r.Objective?.Key;
+        var given = key is null ? 0 : ObjectiveAssessor.TurnsOn(r.Session, key).Count(t => MoveProfiles.IsAssistance(t.Move));
+        var title = r.Objective?.Title ?? r.ObjectiveTitle ?? r.ConceptTitle;
+        var rung = HintLadders.Rung(r.Objective, title, given, r.Decision.Move);
+        LastOutcome = $"hint ladder rung {rung.Step} of {rung.Of} ({(rung.InstructorWritten ? "instructor-written" : "default ladder")}; learning mode, unguarded)";
+        return rung.Text;
     }
 
     /// <summary>

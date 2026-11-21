@@ -307,7 +307,7 @@ public static class ObjectiveAssessor
                 var lastAssist = turns.Last(t => MoveProfiles.IsAssistance(t.Move)).Index;
                 var reassessed = outcomes.Any(o => o.TurnIndex > lastAssist);
                 var lastWeak = outcomes.Count > 0 && outcomes[^1].Result != AnswerResult.Positive;
-                var assistsLeft = turns.Count(t => MoveProfiles.IsAssistance(t.Move)) < p.MaxAssistsPerObjective;
+                var assistsLeft = turns.Count(t => MoveProfiles.IsAssistance(t.Move)) < HintLadders.MaxAssists(p, objective, objective.Title);
                 sufficient = all.Count >= minCorr && TopSettled(assistedLadder, minCorr) && CeilingTested(assistedLadder, all.Count, minCorr)
                              && unconfronted == 0 && unjudgedConfrontations == 0 && reassessed && !(lastWeak && assistsLeft);
             }
