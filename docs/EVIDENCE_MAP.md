@@ -138,9 +138,17 @@ reviewers as low-confidence context. Only notes leave the device, never frames.
   do worse under proctoring (06: WoldeabBrothen2019). A visual penalty adds time pressure and anxiety, which fall hardest
   on these students (02).
 
-**Proposed.** GAD-T261 keeps the decision and makes it fairer: a longer grace before the fade at the start of each answer,
-a switch to suppress it under a declared accommodation, and look-away and fade rates measured by group before anyone
-relies on them.
+**Done (GAD-T261).** The decision stands and is fairer:
+- **Thinking grace.** A look away that begins in the first 10 seconds of an answer (`GAZE.thinkingGraceMs`) starts the
+  fade only after 6 seconds (`GAZE.thinkingFadeStartMs`), not 2, and the spoken request moves later by as much.
+- **Accommodation.** An instructor can declare the eye-contact accommodation on any assignment (Exams, Assignments,
+  "Declare accommodation"; audited). The screen then never fades and the examiner never asks for eye contact or remarks
+  on reading-like eyes. Face presence and a second face are still checked. Episodes are still noted, marked as
+  accommodated and kept at Info.
+- **Rates by group.** Analytics shows look-aways, reading-like episodes, fades, time faded and spoken requests per 10
+  answering minutes, by accommodation or by a grouping the institution pastes in (used in memory, never stored). Groups
+  under 5 students are withheld, and rates that differ by more than a quarter between groups are flagged. Until they
+  have been compared, eye-contact episodes are context only.
 
 ## 5. Voice strain (owner decision (b))
 
@@ -284,8 +292,8 @@ proposed and wait for the owner.
 
 - **For** and **against:** see mechanic 4. The use is legal, but the signal is coarse, often fires on thinking, and may
   differ by group.
-- **Ticket:** GAD-T261, proposed. It keeps the decision and adds a grace period, an accommodation switch and group
-  measurement.
+- **Ticket:** GAD-T261, approved and done. It keeps the decision and adds a grace period, an accommodation switch and
+  group measurement.
 
 ### (d) Clear scores holds the attempt out of grading
 

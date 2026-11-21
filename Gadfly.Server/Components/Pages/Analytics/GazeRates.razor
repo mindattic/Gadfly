@@ -1,0 +1,120 @@
+@using Gadfly.Server.Analytics
+@using Gadfly.Server.Components.Pages.Admin
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+@* Eye-contact flag rates by group (GAD-T261, docs/EVIDENCE_MAP.md mechanic 4): how often the voice room's look-away episodes,
+   screen fades and spoken requests for eye contact happen per 10 answering minutes, by the eye-contact accommodation or by a
+   grouping pasted in for the comparison (used in memory, never stored). No student is named; small groups are withheld. *@
+
+<section class="analytics-section" aria-labelledby="h-gaze-rates">
+    <h2 id="h-gaze-rates">Eye-contact flag rates by group</h2>
+    <p class="hint">@GazeFlagRates.Caveat</p>
+    @if (report is null)
+    {
+        <p class="hint">Loading…</p>
+    }
+    else
+    {
+        <table class="grid">
+            <caption>@(grouped ? "By the grouping you supplied" : "By eye-contact accommodation") · @report.Sessions answered session(s)</caption>
+            <thead><tr><th>Group</th><th>Students</th><th>Sessions</th><th>Answering minutes</th><th>Look-aways / 10 min</th><th>Reading-like / 10 min</th><th>Fades / 10 min</th><th>Time faded</th><th>Sessions with a fade</th><th>Spoken requests / 10 min</th></tr></thead>
+            <tbody>
+                @foreach (var g in report.Groups)
+                {
+                    <tr>
+                        <td>@g.Group</td>
+                        <td>@g.Students</td>
+                        @if (g.TooFew)
+                        {
+                            <td colspan="8" class="hint">Withheld: fewer than @GazeFlagRates.MinStudents students.</td>
+                        }
+                        else
+                        {
+                            <td>@g.Sessions</td>
+                            <td>@g.AnswerMinutes.ToString("0.0")</td>
+                            <td>@Rate(g.LookAwaysPer10Min)</td>
+                            <td>@Rate(g.AnswerMinutes <= 0 ? null : g.Readings / g.AnswerMinutes * 10)</td>
+                            <td>@Rate(g.FadesPer10Min)</td>
+                            <td>@AnalyticsService.Pct(g.FadedShare)</td>
+                            <td>@AnalyticsService.Pct(g.SessionsWithFadeShare)</td>
+                            <td>@Rate(g.RemarksPer10Min)</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @foreach (var w in report.Warnings)
+        {
+            <p class="notice" role="status">@w</p>
+        }
+        @if (grouped && (report.Unplaced > 0 || unmatched > 0))
+        {
+            <p class="hint">@report.Unplaced student(s) with answered sessions had no group; @unmatched line(s) matched no member of this organization.</p>
+        }
+    }
+    <details>
+        <summary>Compare other groups</summary>
+        <p class="hint">Paste one line per student: their email or user name, a comma, and a group label (for example a self-described
+            group from a voluntary survey your institution runs). It is used only for this comparison and is never stored.</p>
+        <label>Grouping <textarea rows="6" @bind="groupingText" placeholder="student@example.edu, Group A"></textarea></label>
+        <button type="button" disabled="@busy" @onclick="CompareAsync">Compare</button>
+        @if (grouped)
+        {
+            <button type="button" class="link" disabled="@busy" @onclick="ClearAsync">Back to accommodation groups</button>
+        }
+    </details>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public AnalyticsScope Scope { get; set; } = AnalyticsScope.All;
+
+    private AnalyticsScope? loaded;
+    private GazeRatesReport? report;
+    private string? groupingText;
+    private bool grouped, busy;
+    private int unmatched;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loaded == Scope) return;
+        loaded = Scope;
+        await LoadAsync(grouped ? groupingText : null);
+    }
+
+    private async Task CompareAsync()
+    {
+        if (string.IsNullOrWhiteSpace(groupingText)) return;
+        await LoadAsync(groupingText);
+    }
+
+    private async Task ClearAsync()
+    {
+        groupingText = null;
+        await LoadAsync(null);
+    }
+
+    private async Task LoadAsync(string? grouping)
+    {
+        if (busy || Tenant.OrganizationId is not { } org) return;
+        busy = true;
+        try
+        {
+            var scope = Scope;
+            (report, unmatched) = await AdminDb.RunAsync(Scopes, Tenant, async (sp, db) =>
+            {
+                var rates = new GazeFlagRates(db, org);
+                var exams = await rates.ExamIdsAsync(scope);
+                if (grouping is null) return (await rates.BuildAsync(exams), 0);
+                var members = (await sp.GetRequiredService<IOrganizationDirectory>().MembersAsync(org))
+                    .Select(m => (m.Member.UserId, m.UserName, m.Email));
+                var (map, miss) = GazeFlagRates.ParseGrouping(grouping, members);
+                return (await rates.BuildAsync(exams, id => map.GetValueOrDefault(id)), miss);
+            });
+            grouped = grouping is not null;
+        }
+        finally { busy = false; }
+    }
+
+    private static string Rate(double? v) => v is { } x ? x.ToString("0.0") : "—";
+}

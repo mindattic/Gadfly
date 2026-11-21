@@ -68,7 +68,7 @@ else if (rows.Count == 0)
 else
 {
     <table class="grid">
-        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Latest session</th><th>Results</th></tr></thead>
+        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Eye contact</th><th>Latest session</th><th>Results</th></tr></thead>
         <tbody>
             @foreach (var r in rows)
             {
@@ -77,6 +77,13 @@ else
                     <td>@Window(r)</td>
                     <td>@r.AttemptsUsed / @r.AttemptsAllowed</td>
                     <td>@MultiplierLabel(r.TimeMultiplier)</td>
+                    <td>
+                        @(r.GazeAccommodation ? "not expected (accommodation)" : "expected")
+                        @if (CanAssign)
+                        {
+                            <button type="button" class="link" disabled="@busy" @onclick="() => GazeAccommodationAsync(r, !r.GazeAccommodation)">@(r.GazeAccommodation ? "Withdraw" : "Declare accommodation")</button>
+                        }
+                    </td>
                     <td>@(r.LatestState is { } st ? StateLabel(st) + (r.LatestEndedAt is { } end ? $" {Local(end)}" : "") : "not started")</td>
                     <td>
                         @if (r.ResultsReleasedAt is { } rel)
@@ -96,6 +103,7 @@ else
             }
         </tbody>
     </table>
+    <p class="hint">Eye contact: in the voice interview, looking away from the examiner while answering fades the screen and the examiner asks for eye contact. Declare the accommodation for a student who should not be held to eye contact (for example autism, low vision, nystagmus or a cultural norm): the screen won't fade and the examiner won't ask. It applies from their next answer.</p>
     <p class="hint">Results reach a student only through Grading: AI and human grades, reconciliation when they disagree, then an authorized approval and publication.</p>
     @if (!CanAssign && message is not null)
     {
@@ -194,6 +202,23 @@ else
             ok = r.Ok;
             message = r.Message;
             if (r.Ok) picked.Clear();
+            await LoadLockedAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task GazeAccommodationAsync(AssignmentRow row, bool on)
+    {
+        if (busy) return;   // one operation at a time on the shared DbContext (GAD-T189)
+        busy = true;
+        try
+        {
+            ExamResult r;
+            if (Gate is { } g) await g.WaitAsync();
+            try { r = await Service.SetGazeAccommodationAsync(row.Id, on); }
+            finally { Gate?.Release(); }
+            ok = r.Ok;
+            message = r.Ok ? $"{row.StudentName}: {r.Message}" : r.Message;
             await LoadLockedAsync();
         }
         finally { busy = false; }

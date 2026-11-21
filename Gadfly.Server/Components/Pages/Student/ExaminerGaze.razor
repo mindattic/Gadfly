@@ -4,7 +4,8 @@
    away fades the exam screen with a warning to look back (restored when they do), and a longer one, a reading pattern, no face
    or a second face makes the examiner ask out loud for eye contact. Each episode is stored as a webcam integrity event with its
    start and end (WebcamIntegrityRecorder.RecordExaminerGazeAsync), for a person to review; never a frame, never a verdict.
-   Renders nothing for an exam whose integrity level is Off. *@
+   Renders nothing for an exam whose integrity level is Off. The fade waits longer at the start of each answer, when looking away
+   is usually thinking, and an eye-contact accommodation on the assignment turns off the fade and the spoken request (GAD-T261). *@
 @implements IAsyncDisposable
 @using Gadfly.Server.Integrity
 @using Gadfly.Server.Sessions
@@ -23,7 +24,14 @@
         <span class="examiner-gaze-dot" aria-hidden="true"></span>
         <span class="examiner-gaze-label" data-examiner-gaze-label></span>
         <button type="button" class="link" data-examiner-gaze-action="calibrate" hidden>Set up eye contact again</button>
-        <p class="examiner-gaze-note">Your camera checks, on your device only, that you are looking at the examiner while you answer. If you look away for a couple of seconds the screen fades until you look back. If you keep looking away, your eyes move as if reading, your face is out of view or a second face appears, the examiner will say so out loud (for example, "Please look at me while you answer"). Her remark is not recorded as part of your answer. A short note of when it happened is kept for a person to review.</p>
+        @if (accommodated)
+        {
+            <p class="examiner-gaze-note">You have an eye-contact accommodation: you don't need to look at the examiner, the screen won't fade and she won't ask you to look at her. Your camera still checks, on your device only, that your face is in view and that you are on your own; if not, the examiner will say so. A short note of when it happened is kept for a person to review.</p>
+        }
+        else
+        {
+            <p class="examiner-gaze-note">Your camera checks, on your device only, that you are looking at the examiner while you answer. Looking away to think is fine: at the start of an answer you have several seconds, later a couple of seconds, before the screen starts to fade, and it clears as soon as you look back. If you keep looking away, your eyes move as if reading, your face is out of view or a second face appears, the examiner will say so out loud (for example, "Please look at me while you answer"). Her remark is not recorded as part of your answer. A short note of when it happened is kept for a person to review. If you can't keep eye contact (for example for a disability), ask your instructor for the eye-contact accommodation.</p>
+        }
     </div>
     <div class="examiner-fade" data-examiner-fade data-active="false" aria-hidden="true">
         <p class="examiner-fade-warning">Please look at the examiner.</p>
@@ -33,7 +41,7 @@
 @code {
     [Parameter, EditorRequired] public Guid SessionId { get; set; }
 
-    private bool enabled, started;
+    private bool enabled, started, accommodated;
     private Guid org, user;
     private IJSObjectReference? module;
     private DotNetObjectReference<ExaminerGaze>? self;
@@ -51,10 +59,12 @@
             await using (var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org)))
                 enabled = await WebcamIntegrityRecorder.Create(scope.ServiceProvider).ExaminerGazeEnabledAsync(org, user, SessionId, stop.Token);
             if (!enabled) return;
+            await using (var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org)))
+                accommodated = await WebcamIntegrityRecorder.Create(scope.ServiceProvider).ExaminerGazeAccommodationAsync(org, user, SessionId, stop.Token);
             await InvokeAsync(StateHasChanged);   // renders the indicator and the fade before the module needs them
             self = DotNetObjectReference.Create(this);
             module = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/examiner-gaze.js");
-            await module.InvokeVoidAsync("start", stop.Token, self, new { basePath = "webcam/" });
+            await module.InvokeVoidAsync("start", stop.Token, self, new { basePath = "webcam/", accommodation = accommodated });
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
         {
@@ -92,6 +102,8 @@
     public Task<string?> Remark(string? kind)
     {
         if (!enabled || kind is null || !WebcamIntegrityRecorder.ExaminerRemarks.TryGetValue(kind, out var text)) return Task.FromResult<string?>(null);
+        // Under the eye-contact accommodation the examiner never asks for eye contact, whatever the browser asks for (GAD-T261).
+        if (accommodated && WebcamIntegrityRecorder.AccommodatedTypes.Contains("examiner-" + kind)) return Task.FromResult<string?>(null);
         return Task.FromResult(Grants.Offer(user, SessionId, text) ? text : null);
     }
 

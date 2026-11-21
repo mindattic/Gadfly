@@ -4,9 +4,13 @@
 // avatar's on-screen position), and the reading-pattern detector. A live indicator says whether the student is looking at the
 // examiner. While the student is answering (the examiner's avatar is listening):
 //   - looking away for GAZE.fadeStartMs starts fading the exam screen toward a heavy dim and blur over GAZE.fadeRampMs, with a
-//     warning to look back at the examiner; it restores smoothly as soon as the gaze returns;
-//   - a longer look away (GAZE.remarkAfterMs), a reading pattern, no face or a second face makes the examiner say so out loud
-//     ("Please look at me while you answer"), at most once every GAZE.remarkGapMs;
+//     warning to look back at the examiner; it restores smoothly as soon as the gaze returns. A look away that begins in the
+//     first GAZE.thinkingGraceMs of an answer gets GAZE.thinkingFadeStartMs instead: people look away to think, most of all
+//     when they start to explain (GAD-T261, docs/EVIDENCE_MAP.md mechanic 4);
+//   - a longer look away (GAZE.remarkAfterMs past the fade start), a reading pattern, no face or a second face makes the
+//     examiner say so out loud ("Please look at me while you answer"), at most once every GAZE.remarkGapMs;
+//   - with an eye-contact accommodation on the assignment (options.accommodation, GAD-T261), the screen never fades and the
+//     examiner never asks for eye contact or remarks on reading-like eyes; face presence is still checked and spoken about;
 //   - each episode (look-away, reading, face absent, second face, and each fade with its peak) is sent to the server with its
 //     start and end, for review. Only those notes leave the device: never a frame, an image, a landmark or a face signature.
 // Nothing here infers emotion or deception, and nothing blocks the answer. If the camera or the face model can't start, the
@@ -30,6 +34,10 @@ export const GAZE = Object.freeze({
     switchMs: 200,
     /** The screen starts to fade after this much continuous look-away while answering (also when a look-away episode starts)... */
     fadeStartMs: 2000,
+    /** ...but a look away that begins within this long of the answer starting is thinking time (GAD-T261)... */
+    thinkingGraceMs: 10000,
+    /** ...and starts to fade only after this much. */
+    thinkingFadeStartMs: 6000,
     /** ...and reaches its heaviest dim and blur this much later. */
     fadeRampMs: 3000,
     /** The heaviest fade: how dark (0..1) and how blurred (px). */
@@ -37,7 +45,7 @@ export const GAZE = Object.freeze({
     fadeMaxBlurPx: 12,
     /** How long the screen takes to restore once the gaze is back. */
     fadeRestoreMs: 600,
-    /** A look away this long makes the examiner say "Please look at me while you answer". */
+    /** A look away this long makes the examiner say "Please look at me while you answer" (the thinking grace moves it later by as much). */
     remarkAfterMs: 5000,
     /** The examiner speaks up at most once in this long. */
     remarkGapMs: 15000,
@@ -74,6 +82,7 @@ const TEXT = {
     reading: "Your eyes are moving as if reading. Please look at the examiner.",
     "no-face": "Your face isn't in view of the camera.",
     "two-faces": "More than one face is in view of the camera.",
+    accommodated: "Eye contact isn't required for you (accommodation). The camera only checks that your face is in view.",
     unavailable: "Eye contact isn't being checked: the camera check couldn't start on this device. The exam carries on.",
 };
 
@@ -308,10 +317,12 @@ function tick(g) {
     if (answering && !g.answering) g.answeringSince = Date.now();
     g.answering = answering;
     const awayMs = g.awayPerf == null ? 0 : now - g.awayPerf;
+    const fadeStart = fadeStartFor(g, now);
+    const accommodated = !!g.options.accommodation;
 
     // Episodes, only while answering.
     const active = {
-        "look-away": awayMs >= GAZE.fadeStartMs ? epochOf(g.awayPerf) : null,
+        "look-away": awayMs >= fadeStart ? epochOf(g.awayPerf) : null,
         reading: g.cond.reading,
         "face-absent": g.cond["face-absent"],
         "second-face": g.cond["second-face"],
@@ -326,16 +337,18 @@ function tick(g) {
         for (const kind of KINDS) {
             const ep = g.episodes[kind];
             if (!ep || ep.remarked) continue;
-            if (kind === "look-away" && awayMs < GAZE.remarkAfterMs) continue;
+            // The accommodation: no spoken request about where the student looks (face presence still counts).
+            if (accommodated && (kind === "look-away" || kind === "reading")) continue;
+            if (kind === "look-away" && awayMs < GAZE.remarkAfterMs + (fadeStart - GAZE.fadeStartMs)) continue;
             if (remark(g, kind)) ep.remarked = true;
             break;
         }
     }
 
-    // The fade: from GAZE.fadeStartMs of continuous look-away, to the heaviest over GAZE.fadeRampMs.
-    const level = answering && awayMs >= GAZE.fadeStartMs ? clamp((awayMs - GAZE.fadeStartMs) / GAZE.fadeRampMs, 0, 1) : 0;
+    // The fade: from the fade start of continuous look-away, to the heaviest over GAZE.fadeRampMs; never under the accommodation.
+    const level = answering && !accommodated && awayMs >= fadeStart ? clamp((awayMs - fadeStart) / GAZE.fadeRampMs, 0, 1) : 0;
     if (level > 0) {
-        if (!g.fade) g.fade = { start: epochOf(g.awayPerf + GAZE.fadeStartMs), peak: 0 };
+        if (!g.fade) g.fade = { start: epochOf(g.awayPerf + fadeStart), peak: 0 };
         g.fade.peak = Math.max(g.fade.peak, level);
     } else closeFade(g);
     applyFade(g, level);
@@ -343,10 +356,21 @@ function tick(g) {
     show(g, indicatorState(g, awayMs));
 }
 
+/**
+ * How much continuous look-away starts the fade (and a look-away episode): longer when the look away began in the first
+ * GAZE.thinkingGraceMs of the answer, when looking away is most often thinking (GAD-T261).
+ */
+function fadeStartFor(g, now) {
+    if (g.awayPerf == null || !g.answering) return GAZE.fadeStartMs;
+    const answerStartPerf = now - (Date.now() - g.answeringSince);
+    return Math.max(g.awayPerf, answerStartPerf) - answerStartPerf < GAZE.thinkingGraceMs ? GAZE.thinkingFadeStartMs : GAZE.fadeStartMs;
+}
+
 function indicatorState(g, awayMs) {
     if (g.calibrating) return "calibrating";
     if (g.faces === 0) return "no-face";
     if (g.faces > 1) return "two-faces";
+    if (g.options.accommodation) return "accommodated";
     if (g.cond.reading != null) return "reading";
     if (awayMs > 0) return "away";
     return "on";

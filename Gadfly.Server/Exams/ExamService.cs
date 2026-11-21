@@ -44,7 +44,7 @@ public sealed record StudentOption(Guid UserId, string UserName, string? Email);
 
 public sealed record AssignmentRow(Guid Id, Guid StudentUserId, string StudentName, DateTimeOffset? OpensAt, DateTimeOffset? ClosesAt,
     int AttemptsAllowed, int AttemptsUsed, SessionState? LatestState, DateTimeOffset? LatestEndedAt, DateTimeOffset AssignedAt,
-    DateTimeOffset? ResultsReleasedAt, decimal TimeMultiplier = 1m);
+    DateTimeOffset? ResultsReleasedAt, decimal TimeMultiplier = 1m, bool GazeAccommodation = false);
 
 /// <summary>
 /// Exam builder and assignments (GAD-T50): drafts, publishing (which freezes the policy), archiving,
@@ -298,6 +298,29 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
         return new(true, msg, examId);
     }
 
+    /// <summary>
+    /// Declares or withdraws the eye-contact accommodation on one assignment (GAD-T261): while it is on, looking away never fades
+    /// the voice interview screen and the examiner never asks out loud for eye contact. It takes effect from the next answer of an
+    /// attempt already open. Works on any assignment, including those Open exams created on their own. Audited.
+    /// </summary>
+    public async Task<ExamResult> SetGazeAccommodationAsync(Guid assignmentId, bool on, CancellationToken ct = default)
+    {
+        var org = Org;
+        var a = await db.ExamAssignments.FirstOrDefaultAsync(x => x.Id == assignmentId && x.OrganizationId == org, ct);
+        if (await DeniedAsync(Permission.AssignExaminations, "Changing an eye-contact accommodation", "Exam", a?.ExamId, ct) is { } denied) return denied;
+        if (a is null) return new(false, "That assignment no longer exists.");
+        if (a.GazeAccommodation == on) return new(true, on ? "The eye-contact accommodation is already on." : "The eye-contact accommodation is already off.", a.ExamId);
+        var was = a.GazeAccommodation;
+        a.GazeAccommodation = on;
+        Guard.Audit("assessment.accommodation.gaze", "ExamAssignment", a.Id.ToString(),
+            before: new { GazeAccommodation = was }, after: new { GazeAccommodation = on, a.StudentUserId, a.ExamId });
+        await db.SaveChangesAsync(ct);
+        db.ChangeTracker.Clear();
+        return new(true, on
+            ? "Eye-contact accommodation on: the screen won't fade and the examiner won't ask for eye contact."
+            : "Eye-contact accommodation off.", a.ExamId);
+    }
+
     /// <summary>The extra-time accommodations offered when assigning (Part 13 accessibility): none, 1.25x, 1.5x, 2x.</summary>
     public static readonly IReadOnlyList<decimal> TimeMultipliers = [1m, 1.25m, 1.5m, 2m];
 
@@ -318,7 +341,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
                 var list = sessions.GetValueOrDefault(a.Id) ?? [];
                 var latest = list.FirstOrDefault();
                 return new AssignmentRow(a.Id, a.StudentUserId, names.GetValueOrDefault(a.StudentUserId, "(unknown user)"), a.OpensAt, a.ClosesAt,
-                    a.AttemptsAllowed, list.Count(x => x.EndReason != nameof(Gadfly.Engine.EndReason.PromptSetChanged)), latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier);
+                    a.AttemptsAllowed, list.Count(x => x.EndReason != nameof(Gadfly.Engine.EndReason.PromptSetChanged)), latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier, a.GazeAccommodation);
             })
             .OrderBy(r => r.StudentName, StringComparer.OrdinalIgnoreCase).ToList();
     }

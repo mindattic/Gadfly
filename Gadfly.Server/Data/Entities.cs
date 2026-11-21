@@ -205,6 +205,12 @@ public sealed class ExamAssignment : ITenantOwned
     /// (1 = none, 1.25, 1.5, 2; at most 4). Copied into the session's policy when the attempt starts (GAD-T120).
     /// </summary>
     public decimal TimeMultiplier { get; set; } = 1m;
+    /// <summary>
+    /// Accommodation (GAD-T261): eye contact is not expected of this student in the voice interview room (for example autism,
+    /// low vision, nystagmus or a cultural norm). The screen never fades for looking away and the examiner never asks out loud for
+    /// eye contact or remarks on reading-like eyes; the episodes are still noted, marked as accommodated and kept at Info.
+    /// </summary>
+    public bool GazeAccommodation { get; set; }
 }
 
 public enum SessionState { Created, ConsentGiven, Running, Paused, Ended, Failed }

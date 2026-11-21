@@ -148,6 +148,31 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
     }
 
     /// <summary>
+    /// Whether the student's assignment declares the eye-contact accommodation (GAD-T261): the browser then never fades the screen
+    /// for looking away and the examiner never asks for eye contact. False when the session isn't the student's.
+    /// </summary>
+    public async Task<bool> ExaminerGazeAccommodationAsync(Guid organizationId, Guid studentUserId, Guid sessionId, CancellationToken ct = default) =>
+        await (from s in db.ExamSessions.AsNoTracking()
+               join a in db.ExamAssignments.AsNoTracking() on s.AssignmentId equals a.Id
+               where s.Id == sessionId && s.OrganizationId == organizationId && s.StudentUserId == studentUserId && a.OrganizationId == organizationId
+               select a.GazeAccommodation).FirstOrDefaultAsync(ct);
+
+    /// <summary>The gaze-direction episodes an eye-contact accommodation covers (GAD-T261): face presence still counts as usual.</summary>
+    public static readonly IReadOnlySet<string> AccommodatedTypes = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "examiner-look-away", "examiner-reading",
+    };
+
+    /// <summary>What an accommodated episode's summary adds, so a reviewer reads it in that light.</summary>
+    public const string AccommodationNote = " An eye-contact accommodation was declared for this student: the screen did not fade and the examiner did not ask for eye contact. Not a concern in itself.";
+
+    /// <summary>An episode under the eye-contact accommodation: marked as such and kept at Info (GAD-T261).</summary>
+    public static Clean Accommodated(Clean c) =>
+        AccommodatedTypes.Contains(c.Type) && !c.Summary.EndsWith(AccommodationNote, StringComparison.Ordinal)
+            ? c with { Summary = c.Summary + AccommodationNote, Severity = IntegritySeverity.Info }
+            : c;
+
+    /// <summary>
     /// Stores the voice interview room's eye-contact episodes (GAD-T240): only <see cref="ExaminerTypes"/>, with the same
     /// bounds, rate limits, cap, confidence ceiling and server-decided severity as every webcam event; any exam whose
     /// integrity level isn't Off. KeepGoing is false when the client should stop sending.
@@ -160,7 +185,7 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         var now = clock.GetUtcNow();
         var session = await db.ExamSessions.AsNoTracking()
             .Where(s => s.Id == sessionId && s.OrganizationId == organizationId && s.StudentUserId == studentUserId)
-            .Select(s => new { s.State, s.ExamId, s.StartedAt, s.ConsentRecordedAt, s.CreatedAt, s.EndedAt })
+            .Select(s => new { s.State, s.ExamId, s.AssignmentId, s.StartedAt, s.ConsentRecordedAt, s.CreatedAt, s.EndedAt })
             .FirstOrDefaultAsync(ct);
         if (session is null) return new(false, 0);
         var accepting = session.State is SessionState.Running or SessionState.ConsentGiven or SessionState.Paused
@@ -177,9 +202,12 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         var windowStart = session.ConsentRecordedAt ?? session.CreatedAt;
         var windowEnd = session.EndedAt is { } e2 && e2 < now ? e2 : now;
 
+        // The eye-contact accommodation (GAD-T261) is read here, never taken from the browser.
+        var accommodated = examinerRoom && await db.ExamAssignments.AsNoTracking()
+            .AnyAsync(a => a.Id == session.AssignmentId && a.OrganizationId == organizationId && a.GazeAccommodation, ct);
         var accepted = new List<Clean>();
         foreach (var e in events.Take(MaxBatch))
-            if (Clean.From(e, windowStart, windowEnd) is { } c) accepted.Add(c);
+            if (Clean.From(e, windowStart, windowEnd) is { } c) accepted.Add(accommodated ? Accommodated(c) : c);
         if (accepted.Count == 0) return new(session.State != SessionState.Ended, 0);
 
         // Rate limits per session: a misbehaving page can't flood the record. Partial updates of an ongoing episode

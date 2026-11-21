@@ -641,6 +641,9 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<Guid>("ExamId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("GazeAccommodation")
+                        .HasColumnType("bit");
+
                     b.Property<DateTimeOffset?>("OpensAt")
                         .HasColumnType("datetimeoffset");
 

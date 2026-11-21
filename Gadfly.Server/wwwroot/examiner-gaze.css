@@ -5,6 +5,8 @@
 .examiner-gaze[data-state="on"] { color: var(--ink); }
 .examiner-gaze[data-state="on"] .examiner-gaze-dot { background: var(--ok); }
 .examiner-gaze[data-state="calibrating"] .examiner-gaze-dot { background: var(--accent); }
+.examiner-gaze[data-state="accommodated"] { color: var(--ink); }
+.examiner-gaze[data-state="accommodated"] .examiner-gaze-dot { background: var(--ok); }
 .examiner-gaze:is([data-state="away"], [data-state="reading"], [data-state="no-face"], [data-state="two-faces"]) { color: var(--error); border-color: var(--error); }
 .examiner-gaze:is([data-state="away"], [data-state="reading"], [data-state="no-face"], [data-state="two-faces"]) .examiner-gaze-dot { background: var(--error); }
 .examiner-gaze button[hidden] { display: none; }
