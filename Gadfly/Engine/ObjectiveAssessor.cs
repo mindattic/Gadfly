@@ -143,9 +143,6 @@ public static class ObjectiveAssessor
         return dimension is { } d && !LeakResistantDimensions.Contains(d);
     }
 
-    /// <summary>True when the answer read as recited and was not accepted as the student's own understanding (GAD-T242).</summary>
-    public static bool IsRecited(Turn turn) => turn.Judgment?.Recitation is not null;
-
     public static bool IsAssisted(SocraticSession session, Turn turn, string objectiveKey) =>
         FirstAssist(session, objectiveKey) is { } a && turn.Index >= a;
 
@@ -168,7 +165,7 @@ public static class ObjectiveAssessor
             {
                 list.Add(new CollectedEvidence(t.Index, e.ObjectiveKey, e.Polarity, e.Dimension, e.Quote, e.Note, e.Support,
                     Assisted: IsAssisted(session, t, e.ObjectiveKey) || MoveProfiles.IsAssistance(t.Move),
-                    Contaminated: IsContaminated(session, t, e.ObjectiveKey, e.Dimension) || IsRecited(t), t.Move));
+                    Contaminated: IsContaminated(session, t, e.ObjectiveKey, e.Dimension), t.Move));
             }
         }
         return list;
@@ -199,8 +196,7 @@ public static class ObjectiveAssessor
         {
             if (t.Judgment is null || t.Answer is null || IsUnjudged(t.Judgment)) continue;
             if (t.Move is MoveKind.Contradiction or MoveKind.Close) { previousJudged = t; continue; }
-            // A recited answer (GAD-T242) is not the student's own understanding: left out like a leaked one.
-            var contaminated = (leak is { } l && t.Index >= l && (!t.IsReplacement || t.Leak is not null)) || IsRecited(t);
+            var contaminated = leak is { } l && t.Index >= l && (!t.IsReplacement || t.Leak is not null);
             var assisted = (assist is { } a && t.Index >= a) || MoveProfiles.IsAssistance(t.Move);
             var score = t.Judgment.OverallScore;
             if (t.Move == MoveKind.Clarify)
@@ -212,8 +208,7 @@ public static class ObjectiveAssessor
                     outcomes[^1] = prior with
                     {
                         Score = score, Result = ResultOf(score), Aporia = IsAporia(t.Judgment),
-                        // Saying a recited answer differently is exactly what the examiner asked for: only a leak carries over.
-                        Contaminated = (prior.Contaminated && !IsRecited(previousJudged)) || contaminated, Assisted = prior.Assisted || assisted,
+                        Contaminated = prior.Contaminated || contaminated, Assisted = prior.Assisted || assisted,
                     };
                 }
                 previousJudged = t;
