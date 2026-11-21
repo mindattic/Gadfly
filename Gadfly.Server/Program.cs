@@ -11,6 +11,7 @@ using Gadfly.Server.Privacy;
 using Gadfly.Server.Sessions;
 using Gadfly.Server.Sources;
 using Gadfly.Server.Tenancy;
+using Gadfly.Server.Voice;
 using Gadfly.Socrates;
 using Gadfly.Socrates.Mock;
 using Gadfly.Sources;
@@ -105,6 +106,8 @@ builder.Services.AddSingleton<SessionOrchestrator>();
 builder.Services.AddScoped<HubIntegrityRecorder>();
 builder.Services.AddScoped<Gadfly.Server.Integrity.IntegrityRecorder>();
 builder.Services.AddSignalR(o => o.MaximumReceiveMessageSize = 256 * 1024);
+// Voice exam room (GAD-T53): speech recognition relay and the examiner avatar, behind Gadfly:Voice:Mode (mock | live | off).
+builder.AddVoiceExam();
 
 // Platform API (GAD-T46): organization API keys, webhooks with signed deliveries.
 builder.Services.AddScoped<ApiKeyService>();
@@ -174,12 +177,13 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 app.UseHttpsRedirection();
-app.UseStaticFiles();
+app.UseStaticFiles(VoiceServices.StaticFiles());   // adds .glb (the examiner avatar) and .mjs (GAD-T53)
 app.UseMindAtticAuthentication();   // authn + authz + forced steps (change password, enroll MFA) + CSP
 app.UseRateLimiter();
 app.UseAntiforgery();
 
 GadflyEndpoints.Map(app);
+app.MapVoiceExam();
 app.MapGrading();
 app.MapGradingActions();   // HTTP grading workflow for integrators and the demo tour (GAD-T105)
 

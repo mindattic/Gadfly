@@ -8,6 +8,9 @@
     <title>Gadfly Exams</title>
     <link rel="stylesheet" href="app.css" />
     <link rel="icon" href="data:," />
+    @* Import map for the voice exam room's talking head (three.js, TalkingHead, MindAttic.Avatar), GAD-T53. Always present because
+       Blazor navigates between pages without reloading the head. Carries the CSP nonce on the sign-in pages that send one. *@
+    <script type="importmap" nonce="@CspNonce">{"imports":{"three":"/lib/voice/three/build/three.module.js","three/addons/":"/lib/voice/three/examples/jsm/","@@met4citizen/talkinghead":"/lib/voice/talkinghead/modules/talkinghead.mjs","@@mindattic/avatar":"/lib/voice/avatar/index.js"}}</script>
     <HeadOutlet @rendermode="PageRenderMode" />
 </head>
 <body>
@@ -20,6 +23,7 @@
     // Interactive Server everywhere EXCEPT pages marked [ExcludeFromInteractiveRouting] (the sign-in
     // pages), which render static SSR so the library's antiforgery form POSTs validate.
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    private string? CspNonce => HttpContext.Items[MindAttic.Authentication.Web.MindAtticAuthAppExtensions.CspNonceItem] as string;
 
     private IComponentRenderMode? PageRenderMode =>
         HttpContext.AcceptsInteractiveRouting() ? InteractiveServer : null;

@@ -22,6 +22,9 @@
     <PackageReference Include="MindAttic.Vault" Version="7.0.0" />
     <PackageReference Include="MindAttic.Log" Version="3.0.0" />
     <PackageReference Include="MindAttic.Authentication" Version="9.0.0" />
+    <!-- Voice exam room (GAD-T53): streaming speech-to-text relay and the talking-head avatar's TTS hub. -->
+    <PackageReference Include="MindAttic.SpeechRecognition.AspNetCore" Version="1.0.0" />
+    <PackageReference Include="MindAttic.Avatar.AspNetCore" Version="1.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.AzureAppServices" Version="10.0.15" />
@@ -42,5 +45,16 @@
     <!-- Demo and classroom source notes, used by the demo and classroom seeders (GAD-T103, GAD-T151). -->
     <None Include="Demo\Material\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- The default examiner avatar (mpfb.glb, CC0, 36.8 MB) is not committed: it is copied from the MindAttic.Avatar checkout next to
+       this repo when present (a dev box). Without it (CI) the exam room shows the 2D portrait; in production host the model on
+       blob storage or a CDN and set Gadfly:Voice:AvatarModelUrl. See tools/sync-voice-assets.ps1 (GAD-T53). -->
+  <PropertyGroup>
+    <MindAtticAvatarRoot Condition="'$(MindAtticAvatarRoot)' == ''">$(MSBuildThisFileDirectory)..\..\MindAttic.Avatar</MindAtticAvatarRoot>
+  </PropertyGroup>
+  <Target Name="CopyAvatarModel" BeforeTargets="BeforeBuild;BeforePublish"
+          Condition="Exists('$(MindAtticAvatarRoot)\web\assets\avatars\mpfb.glb') And !Exists('$(MSBuildThisFileDirectory)wwwroot\assets\avatars\mpfb.glb')">
+    <Copy SourceFiles="$(MindAtticAvatarRoot)\web\assets\avatars\mpfb.glb" DestinationFolder="$(MSBuildThisFileDirectory)wwwroot\assets\avatars" />
+  </Target>
 
 </Project>

@@ -1,0 +1,37 @@
+using Gadfly.Server.Tenancy;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
+using MindAttic.Avatar.AspNetCore;
+
+namespace Gadfly.Server.Voice;
+
+/// <summary>
+/// Guards the library hubs (GAD-T53). Both are also mapped with the Student policy, so only a signed-in student reaches them;
+/// this filter adds the exam checks the libraries can't know about: the student must have been armed by their own exam room
+/// (<see cref="VoiceGrants"/>), the avatar hub speaks only texts the server offered for that student, and the recognizer opens
+/// only while a session is armed.
+/// </summary>
+public sealed class VoiceHubFilter(VoiceGrants grants) : IHubFilter
+{
+    private static Guid Student(HubCallerContext context)
+    {
+        var tenant = TenantSnapshot.FromPrincipal(context.User, context.GetHttpContext()?.Request.Cookies[ITenantContext.ActiveOrgCookie]);
+        return tenant is { UserId: { } user, Role: OrgRoles.Student } ? user : throw new HubException("Sign in as a student to use voice.");
+    }
+
+    public async Task OnConnectedAsync(HubLifetimeContext context, Func<HubLifetimeContext, Task> next)
+    {
+        if (!grants.IsArmed(Student(context.Context))) throw new HubException("Voice is only available inside your own exam.");
+        await next(context);
+    }
+
+    public ValueTask<object?> InvokeMethodAsync(HubInvocationContext invocation, Func<HubInvocationContext, ValueTask<object?>> next)
+    {
+        var user = Student(invocation.Context);
+        if (!grants.IsArmed(user)) throw new HubException("Voice is only available inside your own exam.");
+        if (invocation.Hub is AvatarSpeechHub && invocation.HubMethodName == nameof(AvatarSpeechHub.Speak)
+            && !grants.MaySpeak(user, invocation.HubMethodArguments.FirstOrDefault() as string))
+            throw new HubException("The examiner can only say what the exam asked.");
+        return next(invocation);
+    }
+}

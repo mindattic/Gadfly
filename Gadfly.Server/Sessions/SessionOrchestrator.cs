@@ -393,10 +393,12 @@ public sealed class SessionOrchestrator(
         if (response.Modality == "voice")
         {
             var low = hints.FirstOrDefault(h => h.Trigger == ClarificationTrigger.LowSpeechConfidence);
-            ledger.MovePath(response, "transcript-confirmation: spoken answers are confirmed by the student" + (low is null ? "" : "; " + low.Reason),
+            // The speech library's own advice (TranscriptVerification.Assess, GAD-T53) is recorded with the request; it never skips the confirmation.
+            var advised = answer.SpeechMetrics.TryGetValue("verification.recommended", out var rec) && rec == 1 ? " The recognizer advised checking this transcript." : "";
+            ledger.MovePath(response, "transcript-confirmation: spoken answers are confirmed by the student" + (low is null ? "" : "; " + low.Reason) + advised,
                 null, "System", VerificationState.VerificationRequired, VerificationState.AwaitingStudentConfirmation);
             ledger.Ask(response, ClarificationType.Transcription, $"I recorded your answer as: \"{text}\" Is this what you said?", true,
-                low is null ? "Voice answer." : $"Voice answer; {low.Reason}");
+                (low is null ? "Voice answer." : $"Voice answer; {low.Reason}") + advised);
             return true;
         }
 

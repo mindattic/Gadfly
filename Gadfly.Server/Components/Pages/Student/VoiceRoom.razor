@@ -1,0 +1,280 @@
+@implements IAsyncDisposable
+@using Gadfly.Server.Voice
+@inject IJSRuntime JS
+@inject VoiceSettings Settings
+@inject VoiceGrants Grants
+@inject ITenantContext Tenant
+@inject ILogger<VoiceRoom> Log
+
+@* Voice mode for the exam room (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
+   out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js; text mode is untouched and one click away. *@
+<HeadContent><link rel="stylesheet" href="voice.css" /></HeadContent>
+
+<section class="voice-room" aria-label="Voice mode" data-state="@state.ToString().ToLowerInvariant()">
+    @if (state == VoiceState.Off || state == VoiceState.Failed)
+    {
+        <div class="voice-offer">
+            <p><strong>Answer by voice.</strong> The examiner speaks each question and you answer out loud; your words appear as you speak. Turn it on with the button, and you can switch to typing at any time.</p>
+            @if (Settings.Mode == VoiceMode.Mock)
+            {
+                <p class="notice" role="note">Practice voice: speech recognition is simulated here, so your words will appear as the placeholder "speech".</p>
+            }
+            @if (notice is not null)
+            {
+                <p class="notice" role="status">@notice</p>
+            }
+            @if (supported)
+            {
+                <button type="button" data-voice-action="start">Start voice mode</button>
+                <p class="hint">Your browser will ask to use your microphone. Audio is sent to the speech service to be turned into text; no recording is kept.</p>
+            }
+        </div>
+    }
+
+    <div class="voice-stage" data-voice-stage hidden="@(state is not (VoiceState.On or VoiceState.Starting))"></div>
+
+    @if (state is VoiceState.Starting or VoiceState.On)
+    {
+        <div class="voice-body">
+            <p class="voice-status" role="status" aria-live="polite" data-voice-status>Starting voice mode…</p>
+            <div class="voice-level" data-voice-level aria-hidden="true"><i></i></div>
+            <p class="voice-caption" data-voice-caption aria-hidden="true"></p>
+            @if (avatarNote is not null)
+            {
+                <p class="hint" role="note">@avatarNote</p>
+            }
+            <div class="voice-answer">
+                <p class="verify-label">What I heard</p>
+                <p class="voice-draft" data-voice-draft aria-live="polite"></p>
+                <p class="voice-live" data-voice-live aria-live="off"></p>
+                <div class="voice-cue" data-voice-cue data-active="false" aria-hidden="true"><i></i></div>
+            </div>
+            <div class="actions voice-actions">
+                <button type="button" data-voice-action="done" data-voice-needs-draft disabled>Done answering</button>
+                <button type="button" class="secondary" data-voice-action="clear" data-voice-needs-draft disabled>Clear and answer again</button>
+                <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
+                <button type="button" class="secondary" data-voice-action="mode">Switch to hold-to-talk</button>
+                <button type="button" class="secondary" data-voice-action="ptt" hidden>Hold to talk</button>
+                <button type="button" class="link" @onclick="TypeInsteadAsync">Type my answers instead</button>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private enum VoiceState { Off, Starting, On, Failed }
+
+    /// <summary>The exam session (already checked by the exam room to be this student's, and running).</summary>
+    [Parameter, EditorRequired] public Guid SessionId { get; set; }
+    /// <summary>Identifies the question being asked (a new value means a new question to speak).</summary>
+    [Parameter] public int? TurnIndex { get; set; }
+    [Parameter] public string? Question { get; set; }
+    /// <summary>A pending request about the last answer (transcript read-back or clarification); spoken instead of the question.</summary>
+    [Parameter] public string? Prompt { get; set; }
+    /// <summary>Stable identity of the pending request, so a changed prompt is spoken once.</summary>
+    [Parameter] public Guid? PromptId { get; set; }
+    /// <summary>True while an answer may be given by voice (a question or a request is waiting and nothing is being judged).</summary>
+    [Parameter] public bool CanAnswer { get; set; }
+    /// <summary>True while voice mode is on and typing the main answer is off.</summary>
+    [Parameter] public bool Active { get; set; }
+    [Parameter] public EventCallback<bool> ActiveChanged { get; set; }
+    [Parameter] public EventCallback<VoiceAnswerPayload> OnAnswer { get; set; }
+
+    private VoiceState state;
+    private bool supported = true, armed;
+    private string? notice, avatarNote;
+    private string? spokenKey;
+    private bool lastAllowed;
+    private IJSObjectReference? module;
+    private DotNetObjectReference<VoiceRoom>? self;
+    private Guid org, user;
+    private readonly CancellationTokenSource stop = new();
+
+    private bool CanRepeat => state == VoiceState.On && !string.IsNullOrWhiteSpace(SpokenText);
+
+    /// <summary>The prompt for a request, else the question. A long recorded answer is not read back in full (it is shown on screen).</summary>
+    private string? SpokenText => Prompt is { Length: > 0 } p
+        ? (p.Length <= 700 ? p : "I've put your recorded answer on the screen. Is this what you said?")
+        : Question;
+
+    protected override void OnInitialized()
+    {
+        if (Tenant.OrganizationId is { } o && Tenant.UserId is { } u)
+        {
+            org = o;
+            user = u;
+            Grants.Arm(user, org, SessionId);
+            armed = true;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !armed) return;
+        try
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/voice-room.js");
+            self = DotNetObjectReference.Create(this);
+            var caps = await module.InvokeAsync<Capabilities>("init", stop.Token, self, new
+            {
+                endCueMs = (int)(Settings.EndOfAnswerSeconds * 1000),
+                modelUrl = Settings.AvatarModelUrl,
+                portraitUrl = Settings.PortraitUrl,
+            });
+            if (!caps.Microphone || !caps.AudioContext)
+            {
+                supported = false;
+                notice = "This browser can't use the microphone for voice mode (it needs a current browser and a secure connection). You can answer by typing.";
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
+        {
+            supported = false;
+            Log.LogDebug(ex, "Voice mode could not load for session {SessionId}.", SessionId);
+            notice = "Voice mode could not start in this browser. You can answer by typing.";
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (module is null || state != VoiceState.On) return;
+        await SyncAsync();
+    }
+
+    /// <summary>Speaks a new question or request once, and tells the browser whether an answer is wanted.</summary>
+    private async Task SyncAsync()
+    {
+        var text = SpokenText;
+        var key = $"{TurnIndex}|{PromptId}|{text}";
+        try
+        {
+            var spoke = false;
+            if (!string.IsNullOrWhiteSpace(text) && key != spokenKey)
+            {
+                spokenKey = key;
+                spoke = true;
+                await SpeakAsync(text);
+            }
+            if (spoke || CanAnswer != lastAllowed)
+            {
+                lastAllowed = CanAnswer;
+                await module!.InvokeVoidAsync("setAllowed", stop.Token, CanAnswer);
+            }
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
+        {
+            Log.LogDebug(ex, "Voice prompt could not be sent to the browser.");
+        }
+    }
+
+    private async Task SpeakAsync(string text)
+    {
+        // The hub speaks only what the server offered for this student's own session.
+        if (!Grants.Offer(user, SessionId, text)) return;
+        await module!.InvokeVoidAsync("speak", stop.Token, text, false);
+    }
+
+    private async Task RepeatAsync()
+    {
+        if (SpokenText is { Length: > 0 } text && module is not null) await SpeakAsync(text);
+    }
+
+    private async Task TypeInsteadAsync()
+    {
+        await StopVoiceAsync();
+        notice = "Voice mode is off. You can answer by typing, and start voice mode again whenever you like.";
+        await SetStateAsync(VoiceState.Off);
+    }
+
+    private async Task StopVoiceAsync()
+    {
+        if (module is null) return;
+        try { await module.InvokeVoidAsync("stop"); }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
+    }
+
+    private async Task SetStateAsync(VoiceState next)
+    {
+        var wasActive = state == VoiceState.On;
+        state = next;
+        if (wasActive != (next == VoiceState.On)) await ActiveChanged.InvokeAsync(next == VoiceState.On);
+        StateHasChanged();
+    }
+
+    // ----------------------------------------------------------------------------------- called by voice-room.js
+
+    [JSInvokable]
+    public Task OnVoiceStarting() => InvokeAsync(async () =>
+    {
+        notice = null;
+        avatarNote = null;
+        await SetStateAsync(VoiceState.Starting);
+    });
+
+    [JSInvokable]
+    public Task OnVoiceStarted(string vad) => InvokeAsync(async () =>
+    {
+        spokenKey = null;
+        lastAllowed = false;
+        await SetStateAsync(VoiceState.On);
+        await SyncAsync();
+    });
+
+    [JSInvokable]
+    public Task OnAvatarMode(string mode, string reason) => InvokeAsync(() =>
+    {
+        avatarNote = mode switch
+        {
+            "portrait" => "Showing the examiner's picture instead of the 3D head" + (reason switch
+            {
+                "no-webgl" => " because this browser has no 3D graphics.",
+                "reduced-motion" => " because your device asks for reduced motion.",
+                "no-src" => ".",
+                _ => ".",
+            }) + " Questions are still spoken and shown as text.",
+            "none" => reason.Length > 0 ? reason : "The examiner's picture could not start; questions are shown as text.",
+            _ => null,
+        };
+        StateHasChanged();
+    });
+
+    /// <summary>The browser could not start or lost voice: fall back to typing, never leave the student without a way to answer.</summary>
+    [JSInvokable]
+    public Task OnVoiceProblem(string kind, string message, bool fatal) => InvokeAsync(async () =>
+    {
+        if (!fatal) return;
+        Log.LogInformation("Voice mode stopped for session {SessionId}: {Kind}.", SessionId, kind);
+        await StopVoiceAsync();
+        notice = kind switch
+        {
+            "mic-denied" => "The microphone wasn't allowed, so voice mode is off. You can answer by typing, or allow the microphone in your browser and try again.",
+            "hub" or "recognizer" => "Voice mode lost its connection, so it is off. You can answer by typing, or try voice mode again.",
+            _ => "Voice mode couldn't start, so it is off. You can answer by typing.",
+        };
+        await SetStateAsync(VoiceState.Failed);
+    });
+
+    [JSInvokable]
+    public Task OnVoiceAnswer(VoiceAnswerPayload payload) => InvokeAsync(() => OnAnswer.InvokeAsync(payload));
+
+    private sealed record Capabilities(bool Microphone, bool Webgl, bool AudioContext);
+
+    public async ValueTask DisposeAsync()
+    {
+        stop.Cancel();
+        if (armed) Grants.Disarm(user, SessionId);
+        if (module is not null)
+        {
+            try
+            {
+                await module.InvokeVoidAsync("dispose");
+                await module.DisposeAsync();
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or ObjectDisposedException) { }
+        }
+        self?.Dispose();
+        stop.Dispose();
+    }
+}

@@ -1,0 +1,22 @@
+/* Voice mode in the exam room (GAD-T53). Tokens come from app.css. */
+.voice-room { display: grid; gap: .75rem; margin: 0 0 1rem; padding: .85rem 1.1rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+.voice-offer { display: grid; gap: .5rem; }
+.voice-offer p { margin: 0; }
+.voice-stage { height: min(46vh, 380px); border-radius: var(--radius); overflow: hidden; background: #10151d; }
+.voice-stage[hidden] { display: none; }
+.voice-stage ma-avatar { display: block; width: 100%; height: 100%; }
+.voice-body { display: grid; gap: .6rem; }
+.voice-status { margin: 0; color: var(--muted); font-size: .92rem; }
+.voice-caption { margin: 0; min-height: 1.5em; font-size: 1.05rem; text-align: center; color: var(--ink); }
+.voice-level { --level: 0; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.voice-level i { display: block; height: 100%; width: calc(var(--level) * 100%); background: var(--accent); transition: width 80ms linear; }
+.voice-answer { display: grid; gap: .25rem; }
+.voice-answer .verify-label { margin: 0; }
+.voice-draft { margin: 0; min-height: 1.5em; font-size: 1.05rem; }
+.voice-live { margin: 0; min-height: 1.2em; color: var(--muted); font-style: italic; }
+.voice-cue { height: 4px; border-radius: 2px; background: transparent; overflow: hidden; }
+.voice-cue i { display: block; height: 100%; width: 0; background: var(--accent); }
+.voice-cue[data-active="true"] i { width: 100%; transition: width var(--cue-ms, 4s) linear; }
+.voice-cue[data-active="false"] i { transition: none; width: 0; }
+.voice-actions button[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .voice-level i, .voice-cue[data-active="true"] i { transition: none; } }
