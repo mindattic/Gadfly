@@ -5,6 +5,8 @@
 @inject VoiceGrants Grants
 @inject ITenantContext Tenant
 @inject ILogger<VoiceRoom> Log
+@inject IServiceScopeFactory Scopes
+@inject TimeProvider Clock
 
 @* Voice mode for the exam room (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js; text mode is untouched and one click away.
@@ -84,6 +86,10 @@
                                 {
                                     <span class="voice-line-delay">Response delay: @FormatDelay(delay)</span>
                                 }
+                                @if (line.Voice is { } voice)
+                                {
+                                    <span class="voice-line-delay voice-line-strain">@voice</span>
+                                }
                             </li>
                         }
                     </ol>
@@ -142,7 +148,7 @@
     private Guid org, user;
     private readonly CancellationTokenSource stop = new();
 
-    private sealed record TranscriptLine(int Id, bool Examiner, string Text, double? DelaySeconds);
+    private sealed record TranscriptLine(int Id, bool Examiner, string Text, double? DelaySeconds, string? Voice = null);
 
     /// <summary>The longest response delay worth showing; anything longer is a clock problem, not a pause.</summary>
     private const double MaxDelaySeconds = 6 * 60 * 60;
@@ -157,10 +163,32 @@
 
     private static string FormatDelay(double seconds) => seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s";
 
-    private void AddLine(bool examiner, string text, double? delaySeconds)
+    private void AddLine(bool examiner, string text, double? delaySeconds, string? voice = null)
     {
         if (string.IsNullOrWhiteSpace(text)) return;
-        transcript.Add(new TranscriptLine(transcript.Count + 1, examiner, text.Trim(), delaySeconds));
+        transcript.Add(new TranscriptLine(transcript.Count + 1, examiner, text.Trim(), delaySeconds, voice));
+    }
+
+    /// <summary>
+    /// The answer's voice against the student's own first spoken answers (GAD-T232), as the exam room will store it, in a short
+    /// descriptive line for the student's transcript. Null when it can't be measured; never blocks the answer.
+    /// </summary>
+    private async Task<string?> VoiceLineAsync(VoiceAnswerPayload? payload)
+    {
+        if (payload?.Acoustics is null) return null;
+        try
+        {
+            var built = VoiceAnswerBuilder.Build(payload, Clock.GetUtcNow());
+            if (built is null) return null;
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
+            var answer = await VoiceStrain.ApplyAsync(scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>(), SessionId, built.Answer, stop.Token);
+            return VoiceStrain.Describe(answer.SpeechMetrics)?.Brief;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.LogDebug(ex, "Voice strain line could not be computed for session {SessionId}.", SessionId);
+            return null;
+        }
     }
 
     private bool CanRepeat => state == VoiceState.On && !string.IsNullOrWhiteSpace(SpokenText);
@@ -364,7 +392,7 @@
         // The words as heard, joined the way VoiceAnswerBuilder joins them; the delay is the one the student watched (display only).
         var said = string.Join(' ', (payload?.Segments ?? []).Select(s => (s.Text ?? "").Trim()).Where(t => t.Length > 0));
         var delay = payload?.ResponseDelayMs is { } ms && double.IsFinite(ms) && ms >= 0 && ms / 1000 <= MaxDelaySeconds ? ms / 1000 : (double?)null;
-        AddLine(false, said, delay);
+        AddLine(false, said, delay, await VoiceLineAsync(payload));
         StateHasChanged();
         await OnAnswer.InvokeAsync(payload);
     });

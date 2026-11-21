@@ -35,6 +35,8 @@ public sealed class VoiceAnswerPayload
     /// is recomputed from the words by <see cref="VoiceAnswerBuilder"/>).
     /// </summary>
     public double? ResponseDelayMs { get; set; }
+    /// <summary>The browser's measurements of the student's voice during this answer (GAD-T232), or null; see <see cref="VoiceAcousticKeys"/>.</summary>
+    public VoiceAcoustics? Acoustics { get; set; }
 }
 
 /// <summary>The answer the orchestrator takes, plus what the speech library advised about the transcript.</summary>
@@ -85,7 +87,7 @@ public static class VoiceAnswerBuilder
         var answer = new Answer
         {
             Text = text, Mode = "voice", Words = timed, StartedAt = startedAt, CompletedAt = now,
-            SpeechMetrics = SpeechMetricKeys.Flatten(metrics, verification),
+            SpeechMetrics = VoiceAcousticKeys.Add(SpeechMetricKeys.Flatten(metrics, verification), payload.Acoustics),
         };
         return new VoiceAnswerResult(answer, verification, metrics);
     }

@@ -75,6 +75,9 @@ public sealed record TurnView(
 {
     /// <summary>Seconds from the question to the first word of the answer, when known.</summary>
     public double? LatencySeconds => AnswerStartedAt is { } s ? Math.Max(0, (s - AskedAt).TotalSeconds) : null;
+
+    /// <summary>The spoken answer's voice against the student's own first answers (GAD-T232); descriptive only, null when unknown or blinded.</summary>
+    public Gadfly.Server.Voice.VoiceStrainReading? Strain { get; init; }
 }
 
 /// <summary>An integrity event, with a plain-language reading of what it does and doesn't mean.</summary>

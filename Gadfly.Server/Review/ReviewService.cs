@@ -123,9 +123,14 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
             }
             var contradictions = claims.Where(c => c.TurnId == t.Id && c.ContradictsClaimId is { } other && claimsById.ContainsKey(other))
                 .Select(c => new ContradictionView(c.Quote, claimsById[c.ContradictsClaimId!.Value].Quote)).ToList();
+            var metrics = ParseMetrics(t.SpeechMetricsJson);
             return new TurnView(t.Id, t.Index, t.ConceptKey, Title(t.ConceptKey), t.Move, t.Question, blinded ? null : t.PlannerReason, t.AskedAt,
                 t.AnswerText, t.AnswerMode, t.AnswerStartedAt, t.AnswerCompletedAt, !string.IsNullOrEmpty(t.AudioRef), blinded ? null : t.MasteryAfter,
-                ParseMetrics(t.SpeechMetricsJson), jv, contradictions);
+                metrics, jv, contradictions)
+            {
+                // Voice strain (GAD-T232) is kept from a blinded grader like the planner's reasoning: it must not prime the grade.
+                Strain = blinded || t.AnswerMode != "voice" ? null : Gadfly.Server.Voice.VoiceStrain.Describe(metrics),
+            };
         }).ToList();
 
         var integrity = (await db.IntegrityEvents.AsNoTracking().Where(e => e.SessionId == sessionId && e.OrganizationId == organizationId)

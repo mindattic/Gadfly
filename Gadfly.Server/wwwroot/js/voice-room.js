@@ -14,6 +14,8 @@
 // microphone is open the response delay (examiner finished, student starts speaking) counts up live and freezes when the student
 // speaks; it rides along with the answer so the on-screen transcript can show it. It is display only and never scored.
 
+import { VoiceAcoustics } from "./voice-acoustics.js";
+
 const LIB = "/lib/voice";
 const SPEECH_HUB = "/hubs/speech";
 const AVATAR_HUB = "/hubs/avatar";
@@ -59,6 +61,7 @@ export function init(dotnet, cfg) {
         segments: [], partial: "", listeningStartMs: null, startedAtUnixMs: null, cueTimer: null, captionTimers: [],
         mic: null, pcm16ToBase64: null, speechConn: null, avatarConn: null, avatar: null, speech: null, avatarOk: false,
         selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null,
+        acoustics: new VoiceAcoustics(),   // voice strain indicators (GAD-T232): summary numbers only, never audio
     };
     S.onClick = (e) => {
         const el = e.target.closest && e.target.closest("[data-voice-action]");
@@ -96,6 +99,7 @@ async function start() {
             mode: "hands-free",
             onChunk: (c) => {
                 if (s.gate || !s.speechConn) return;
+                try { s.acoustics.push(c.pcm); } catch { }
                 s.speechConn.send("SendAudio", s.pcm16ToBase64(c.pcm), c.captureStartMs).catch(() => { });
             },
             onSpeechStart: () => {
@@ -106,6 +110,7 @@ async function start() {
                 status("Hearing you…");
             },
             onSpeechEnd: () => {
+                try { s.acoustics.endSegment(); } catch { }
                 if (s.gate || !s.speechConn) return;
                 s.speechConn.send("Commit").catch(() => { });
             },
@@ -188,6 +193,7 @@ export function speak(what, cacheable) {
     s.segments = [];
     s.partial = "";
     s.startedAtUnixMs = null;
+    s.acoustics.reset();
     resetDelay(s);
     drawTranscript();
     showCaption(what);
@@ -314,6 +320,7 @@ function discard() {
     S.segments = [];
     S.partial = "";
     S.startedAtUnixMs = null;
+    S.acoustics.reset();
     drawTranscript();
     status("Cleared. Answer again whenever you're ready.");
 }
@@ -322,15 +329,17 @@ async function submit(immediate) {
     const s = S;
     if (!s || s.gate || s.segments.length === 0) return;
     clearCue();
+    let acoustics = null;
+    try { acoustics = s.acoustics.summary(); } catch { }
     const payload = {
         segments: s.segments, listeningStartMs: s.listeningStartMs, startedAtUnixMs: s.startedAtUnixMs,
-        responseDelayMs: s.delayMs == null ? null : Math.round(s.delayMs),
+        responseDelayMs: s.delayMs == null ? null : Math.round(s.delayMs), acoustics,
     };
     s.gate = true;
     status("Sending your answer…");
     try {
         await s.dotnet.invokeMethodAsync("OnVoiceAnswer", payload);
-        if (S === s) { s.segments = []; s.partial = ""; s.startedAtUnixMs = null; drawTranscript(); }
+        if (S === s) { s.segments = []; s.partial = ""; s.startedAtUnixMs = null; s.acoustics.reset(); drawTranscript(); }
     } catch {
         // The answer is still in the box: let the student try again or switch to typing.
         if (S === s) { s.gate = false; status("That did not go through. Press Done answering to try again."); }

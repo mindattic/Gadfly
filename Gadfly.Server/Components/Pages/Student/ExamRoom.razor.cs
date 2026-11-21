@@ -53,6 +53,22 @@ public partial class ExamRoom
 
     private void OnVoiceActive(bool on) => voiceOn = on;
 
+    /// <summary>Adds the strain-vs-baseline comparison to a spoken answer; on any failure the answer goes on without it.</summary>
+    private async Task<Answer> WithVoiceStrainAsync(Guid org, Answer answer)
+    {
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            return await VoiceStrain.ApplyAsync(db, SessionId, answer, stop.Token);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.LogDebug(ex, "Voice strain could not be compared for session {SessionId}.", SessionId);
+            return answer;
+        }
+    }
+
     /// <summary>A finished spoken answer from the browser: it joins the ledger as a voice response, then goes through the transcript read-back.</summary>
     private async Task OnVoiceAnswerAsync(VoiceAnswerPayload payload)
     {
@@ -69,10 +85,12 @@ public partial class ExamRoom
         switch (step.Verification)
         {
             case null:
+                // Voice strain indicators (GAD-T232): the answer's voice against the student's own first spoken answers, stored with it.
+                var answer = await WithVoiceStrainAsync(org, built.Answer);
                 pendingAnswer = text;
-                pendingVoiceAnswer = built.Answer;
-                answerStartedAt = built.Answer.StartedAt;
-                await RunStepAsync(ThinkingAbout.Answer, () => Sessions.AnswerAsync(org, SessionId, user, built.Answer));
+                pendingVoiceAnswer = answer;
+                answerStartedAt = answer.StartedAt;
+                await RunStepAsync(ThinkingAbout.Answer, () => Sessions.AnswerAsync(org, SessionId, user, answer));
                 break;
             case { Kind: ResponseLedger.TranscriptKind }:
                 // "Repeat my answer", said out loud: the new recognition replaces the doubtful one (the original stays on record).

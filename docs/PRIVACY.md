@@ -51,10 +51,27 @@ bounded, volume is rate-limited and capped, confidence is capped at 0.4, and sev
 and never above Low: reviewers see them as low-confidence annotations, never a penalty. If the student declines
 the camera, the exam continues. Nothing infers emotion or deception.
 
+### Voice strain indicators (voice exams, GAD-T232)
+
+During each spoken answer the exam room's browser measures the student's own voice from the same audio it
+streams to the speech service: pitch level and variability, frame-to-frame jitter, loudness and how much of
+the audio was voiced. Only those summary numbers are sent, with the answer; no audio, frame, pitch contour or
+voice print is kept or sent for them. The server compares each answer with the student's own first two spoken
+answers in that session (with the speech rate and pause ratio it already computes from the words) and stores
+the differences with the answer's speech metrics. Reviewers see one descriptive line per answer on the review
+transcript ("possible vocal strain / hesitation compared with this student's first answers: pitch +2.1
+semitones, speech 30% slower ..."), always with the caveat that effort, nerves, a hard question, tiredness or
+the room change the voice. It is never a lie, deception or emotion verdict, never an integrity event, never
+part of the grade, hidden from blinded graders, and the student sees the same comparison in short on their own live transcript. The owner lifted the earlier
+blanket drop of audio stress signals for this descriptive use (2026-11-21). The one score it yields (`strain.vsBaseline`) may make the examiner probe harder (GAD-T233), never change a grade; the EU note below still applies.
+Erasure removes it with the rest of the speech metrics.
+
 ## Regulatory notes
 
 - **EU AI Act.** Emotion recognition in education is prohibited (Art. 5(1)(f)); Gadfly infers no
-  emotion and no deception. AI that evaluates learning outcomes or monitors students during tests is
+  emotion and no deception. The voice strain indicators (GAD-T232) describe acoustic change against the
+  student's own baseline and name no emotion, but they are derived from voice data: before selling into the EU,
+  have counsel confirm they stay outside Art. 5(1)(f), or switch them off for EU tenants. AI that evaluates learning outcomes or monitors students during tests is
   high-risk (Annex III, point 3): selling into the EU requires risk management, data governance,
   logging (the session record and prompt-set hash), human oversight (human grading and approval), accuracy
   documentation and registration before deployment.

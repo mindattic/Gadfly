@@ -112,6 +112,10 @@ else
                             @if (t.HasAudio) { <text> · audio recorded (playback arrives with media storage)</text> }
                             @foreach (var m in t.SpeechMetrics.Take(6)) { <text> · @m.Key @m.Value.ToString("0.##")</text> }
                         </p>
+                        @if (t.Strain is { } strain)
+                        {
+                            <p class="hint voice-strain" title="Voice strain indicators (descriptive only): pitch, pitch variability, jitter, loudness, speech rate and pausing, compared with this student's first spoken answers.">Voice: @strain.Summary</p>
+                        }
                     }
                     else
                     {

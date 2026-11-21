@@ -106,3 +106,30 @@ speech, so a whisper cannot be told from silence. A whisper that the recognizer 
 `second-speaker`. The review page already has wording for a `whispering` event for when a source exists (for example a level
 feature in the speech library). Accent, language background, nerves and accommodations all move these numbers (master plan
 15.1), which is why the review wording calls them weak evidence.
+
+## Voice strain indicators (GAD-T232)
+
+During each spoken answer `wwwroot/js/voice-acoustics.js` measures the student's own voice from the same 16 kHz audio that is
+streamed to the recognizer (40 ms frames, autocorrelation pitch tracking between 75 and 400 Hz): median pitch, pitch
+variability (SD in semitones), jitter (mean frame-to-frame pitch-period change, a proxy for cycle-to-cycle jitter), loudness
+(mean and SD of dBFS over voiced frames; the microphone runs without automatic gain) and voiced time. Only these numbers go
+with the answer (`VoiceAnswerPayload.Acoustics`); no audio, frame or contour. The server range-checks them and stores them as
+`voice.*` speech metrics (`VoiceAcousticKeys`).
+
+`VoiceStrain.ApplyAsync` (called by the exam room before the answer is captured) compares each answer with the student's first
+two spoken answers in the session and stores the differences as `strain.*` metrics:
+
+| Key | Meaning | Notable at |
+|---|---|---|
+| `strain.isBaseline` | 1 for the first two answers (the baseline), else 0 | |
+| `strain.pitchSemitones` | pitch change | +2 semitones |
+| `strain.pitchVariabilityRatio` | pitch SD against baseline | 1.5x or 0.67x |
+| `strain.jitterRatio` | jitter against baseline | 1.5x |
+| `strain.loudnessDb` | loudness change | +/-4 dB |
+| `strain.speechRatePercent` | words per minute change | 25% slower |
+| `strain.pauseRatioDelta` | share of the answer spent pausing | +0.10 |
+| `strain.vsBaseline` | mean of the rises, each scaled so its notable point is 1: 0 at baseline, 1 clearly above | read by `AnswerDelivery` (GAD-T233), cue at 0.5 |
+
+The review transcript shows one descriptive line per spoken answer ("possible vocal strain / hesitation compared with this
+student's first answers: ...") with its caveat, hidden from blinded graders; the student's live interview transcript shows a
+short form. These describe the voice, never emotion, honesty or deception; they are not integrity events and never change a grade.
