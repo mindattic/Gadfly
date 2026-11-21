@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- Gadfly sample (GAD-T168): a third-party LMS using Gadfly through the hosted platform API (docs/API.md) with an
+       organization API key. It needs no Gadfly package at all: HTTP, JSON and an HMAC check. The only dependency is
+       the SignalR client the optional "student simulator" uses to stand in for the student's browser. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\InProcess\multiplication.md" Link="multiplication.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

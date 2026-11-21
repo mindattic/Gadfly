@@ -19,6 +19,9 @@
     <PackageTags>mindattic;gadfly;socratic;legion;introspection;cli</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Copyright>Copyright (c) 2026 MindAttic</Copyright>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/mindattic/Gadfly</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/mindattic/Gadfly</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +30,10 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Gadfly.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

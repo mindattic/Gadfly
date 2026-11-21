@@ -454,7 +454,10 @@ students only what your own release rules allow.
 }
 ```
 
-Store `secret`: it is shown only here. `400` `{ "error": "Webhook URLs must be absolute https URLs." }`,
+Store `secret`: it is shown only here. A runnable receiver that verifies the signature is
+[samples/HostedApi](../samples/HostedApi). For local development only, a server running in the Development
+environment accepts `https://localhost` and other private targets when `Gadfly:Webhooks:AllowPrivateTargets` is
+`true`; production never does. `400` `{ "error": "Webhook URLs must be absolute https URLs." }`,
 `{ "error": "Webhook URLs must be at most 1000 characters." }`,
 `{ "error": "Webhook URLs must name a public host." }` (localhost, `.local`, `.internal` and single-label
 names), `{ "error": "Webhook URLs must not point at private, loopback or link-local addresses." }` or

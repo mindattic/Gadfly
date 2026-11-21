@@ -17,6 +17,9 @@
     <PackageTags>mindattic;gadfly;socratic;rag;rubric</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Copyright>Copyright (c) 2026 MindAttic</Copyright>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/mindattic/Gadfly</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/mindattic/Gadfly</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,5 +34,17 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Gadfly.Tests" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Tutor.Ingestion's OCR data arrives as a content file of the reference; consumers get it from Tutor.Ingestion itself,
+       so it must not be repacked into this package (4 MB). -->
+  <Target Name="DropRepackedOcrData" BeforeTargets="_GetPackageFiles">
+    <ItemGroup>
+      <Content Remove="@(Content)" Condition="'%(Filename)%(Extension)' == 'eng.traineddata'" />
+    </ItemGroup>
+  </Target>
 
 </Project>

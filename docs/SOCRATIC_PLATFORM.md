@@ -191,10 +191,15 @@ Roles per organization: **Owner, Admin, Instructor, Student**. MindAttic staff h
 Any application can use the Socratic method in one of two ways:
 
 - **NuGet**: reference `Gadfly.Core` (plus `Gadfly.Sources`) and supply an `ISubjectMatter`. This is how
-  the CLI and the server use it.
+  the CLI and the server use it. Both packages are 1.0.0 (`dotnet pack`; the feed copies are in
+  `lib/local-packages`), and [samples/InProcess](../samples/InProcess) consumes them as packages, not projects,
+  and runs a scripted session against the mock panel with no keys.
 - **Hosted API**: a tenant API key creates exams from uploaded sources, assigns students, gets a
   **signed, expiring launch URL** to embed the exam room, and receives a `session.completed` webhook
-  with the report. OpenAPI is published on the docs site.
+  with the report. OpenAPI is served at `/openapi/v1.json`. [samples/HostedApi](../samples/HostedApi) plays a
+  third-party LMS through the whole flow, including a verified webhook, against a local server in mock mode.
+
+[samples/README.md](../samples/README.md) explains both paths in plain language.
 
 ## Milestones (build order)
 

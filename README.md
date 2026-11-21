@@ -28,6 +28,17 @@ Underneath is a general **Socratic engine** that other apps can use, and the ori
 introspection CLI** (`gadfly`), which cross-examines you about your own Claude Code transcripts and
 claude.ai export. It is documented further down.
 
+## Using Gadfly from your own app
+
+Two ways, each with a runnable sample that works offline in mock mode (no keys, no cost); see
+[samples/README.md](samples/README.md):
+
+- **As packages:** `Gadfly.Core` (the engine, `ISubjectMatter`, `ISocraticVotingClient` and the mock panel) and
+  `Gadfly.Sources` (documents to concepts, rubrics and the step-driven exam), both 1.0.0.
+  [samples/InProcess](samples/InProcess) runs a scripted session over a markdown file with `dotnet run`.
+- **As a hosted service:** the [platform API](docs/API.md) with an organization API key, signed launch links and
+  signed webhooks. [samples/HostedApi](samples/HostedApi) is a stand-in LMS that does the whole flow.
+
 ## Gadfly Exams
 
 | What | Where |
