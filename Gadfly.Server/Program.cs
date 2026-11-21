@@ -2,6 +2,7 @@ using Gadfly.Server;
 using Gadfly.Server.Components;
 using Gadfly.Server.Data;
 using Gadfly.Server.Analytics;
+using Gadfly.Server.Verification;
 using Gadfly.Server.Assessments;
 using Gadfly.Server.Jobs;
 using Gadfly.Server.Platform;
@@ -10,6 +11,7 @@ using Gadfly.Server.Sessions;
 using Gadfly.Server.Sources;
 using Gadfly.Server.Tenancy;
 using Gadfly.Socrates;
+using Gadfly.Socrates.Mock;
 using Gadfly.Sources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -79,17 +81,8 @@ builder.Services.AddScoped<IMaClaimsAugmentor, OrganizationClaimsAugmentor>();
 // Background work (ingestion, concept extraction, reports) on the SQL job table (GAD-T43).
 builder.Services.AddGadflyJobs();
 
-// The Legion panel every question, judgment, concept map and rubric goes through.
-builder.Services.AddSingleton<LegionVotingClient>(sp =>
-{
-    var client = new LegionVotingClient(Gadfly.GadflyConfiguration.Build());
-    var log = sp.GetRequiredService<ILoggerFactory>().CreateLogger("Gadfly.Panel");
-    client.Health.BecameFailing += s => log.LogError(
-        "LLM provider {Provider} has failed {Count} calls in a row; the panel is running without it. Last error: {Error}",
-        s.ProviderId, s.ConsecutiveFailures, s.LastError);
-    return client;
-});
-builder.Services.AddSingleton<ISocraticVotingClient>(sp => sp.GetRequiredService<LegionVotingClient>());
+// The AI panel: live Legion or the clearly labelled mock (Gadfly:AiMode = live | mock | auto) (GAD-T100).
+builder.Services.AddGadflyPanel(builder.Configuration, builder.Environment.IsDevelopment());
 
 // Source material: text extractors (PDF/DOCX/EPUB/HTML join with Tutor.Ingestion) and processing jobs.
 builder.Services.AddSingleton<IDocumentTextExtractor, PlainTextExtractor>();
@@ -122,6 +115,7 @@ builder.Services.AddHostedService<RetentionScheduler>();
 builder.Services.AddScoped<SourceLibraryService>();
 builder.Services.AddAnalytics();
 builder.Services.AddAssessments();
+builder.Services.AddVerification();   // backfills original-response records for older turns (GAD-T86)
 builder.Services.AddScoped<Gadfly.Server.Exams.ExamService>();
 
 // The Gadfly Exams web app (GAD-T48): Blazor Server.
@@ -138,6 +132,10 @@ using (var scope = app.Services.GetRequiredService<IServiceScopeFactory>().Creat
         await sp.GetRequiredService<GadflyDbContext>().Database.MigrateAsync();
     await sp.GetRequiredService<AuthBootstrapper>().SeedAdminAsync();
 }
+
+_ = app.Services.GetRequiredService<IPanelInfo>();   // decide live/mock at startup (GAD-T100)
+// Demo institution for pilots and the tour (GAD-T103); --seed-demo must be the last argument.
+if (args.Contains(Gadfly.Server.Demo.DemoSeeder.SeedArgument)) await Gadfly.Server.Demo.DemoSeeder.RunAsync(app);
 
 var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto };
 forwarded.KnownIPNetworks.Clear();
