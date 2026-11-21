@@ -108,9 +108,11 @@ public sealed class SessionOrchestrator(
 
         var sessions = await db.ExamSessions.Where(s => s.AssignmentId == assignmentId && s.OrganizationId == organizationId)
             .OrderBy(s => s.Attempt).ToListAsync(ct);
+        // A session ended because the prompt set changed under it is not a used attempt (GAD-T235).
+        var usedAttempts = sessions.Count(s => s.EndReason != nameof(EndReason.PromptSetChanged));
         var active = sessions.FirstOrDefault(s => s.State is not (SessionState.Ended or SessionState.Failed));
         if (active is not null) return active.Id;
-        if (sessions.Count >= assignment.AttemptsAllowed) throw new SessionRefusedException("You have used every attempt for this exam.");
+        if (usedAttempts >= assignment.AttemptsAllowed) throw new SessionRefusedException("You have used every attempt for this exam.");
         var (spent, quota) = await meter.MonthAsync(db, organizationId, ct);
         if (quota is { } q && spent >= q)
             throw new SessionRefusedException("Your organization has reached its monthly usage limit. Please contact your instructor.");
@@ -125,7 +127,7 @@ public sealed class SessionOrchestrator(
             AssignmentId = assignmentId,
             ExamId = exam.Id,
             StudentUserId = studentUserId,
-            Attempt = sessions.Count + 1,
+            Attempt = (sessions.Count == 0 ? 0 : sessions.Max(s => s.Attempt)) + 1,
             State = SessionState.Created,
             CreatedAt = now,
             PolicyJson = JsonSerializer.Serialize(policy, Json),
@@ -643,6 +645,18 @@ public sealed class SessionOrchestrator(
             if (row.TranscriptJson is { Length: > 0 } transcript)
             {
                 var session = SessionTranscriptSerializer.Deserialize(transcript);
+                if (session.PromptSetSha256 != subject.PromptSet.Sha256)
+                {
+                    // Started under older wording: it can never resume. End it cleanly (not a used attempt) so the student can start afresh (GAD-T235).
+                    var endedAt = clock.GetUtcNow();
+                    await db.ExamSessions.Where(x => x.Id == sessionId && x.OrganizationId == organizationId)
+                        .ExecuteUpdateAsync(u => u.SetProperty(x => x.State, SessionState.Ended)
+                            .SetProperty(x => x.EndReason, nameof(EndReason.PromptSetChanged))
+                            .SetProperty(x => x.EndedAt, endedAt), ct);
+                    log.LogWarning("Ended exam session {SessionId}: it ran prompt set {Old}, this build has {New}.",
+                        sessionId, session.PromptSetSha256[..12], subject.PromptSet.Sha256[..12]);
+                    throw new SessionRefusedException("The exam was updated while your attempt was open, so that attempt could not continue and does not count against your attempts. Please start the exam again.");
+                }
                 engine = await SourceExamEngine.ResumeAsync(panel, subject, session, ClaimLedger.FromJson(row.LedgerJson), clock, ct);
                 log.LogInformation("Resumed exam session {SessionId} at turn {Turn}.", sessionId, session.Turns.Count);
             }

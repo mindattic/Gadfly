@@ -58,4 +58,6 @@ public enum EndReason
     Failed,
     /// <summary>Every learning objective closed: sufficient evidence, or an explicit inconclusive result (GAD-T89).</summary>
     EvidenceComplete,
+    /// <summary>The session started under an older prompt set than this build runs, so it cannot resume; it is not a used attempt (GAD-T235).</summary>
+    PromptSetChanged,
 }

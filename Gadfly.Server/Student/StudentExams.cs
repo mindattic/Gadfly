@@ -72,7 +72,7 @@ public static class StudentExams
         var ids = assignments.Select(a => a.Id).ToList();
         var sessions = await db.ExamSessions.AsNoTracking()
             .Where(s => s.OrganizationId == organizationId && s.StudentUserId == studentUserId && ids.Contains(s.AssignmentId))
-            .Select(s => new { s.Id, s.AssignmentId, s.Attempt, s.State, s.EndedAt })
+            .Select(s => new { s.Id, s.AssignmentId, s.Attempt, s.State, s.EndedAt, s.EndReason })
             .ToListAsync(ct);
 
         // Results only for assignments the instructor released.
@@ -91,7 +91,7 @@ public static class StudentExams
         {
             var mine = sessions.Where(s => s.AssignmentId == a.Id).OrderBy(s => s.Attempt).ToList();
             var active = mine.FirstOrDefault(s => s.State is not (SessionState.Ended or SessionState.Failed));
-            var used = mine.Count;
+            var used = mine.Count(x => x.EndReason != nameof(Gadfly.Engine.EndReason.PromptSetChanged));
 
             ReleasedResult? result = null;
             if (a.ResultsReleasedAt is { } released)

@@ -310,7 +310,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
             await db.RefuseForeignAsync(OwnershipScope.Kind.Exam, examId, "Opening an exam's assignments", ct);
         if (rows.Count == 0) return [];
         var sessions = (await db.ExamSessions.AsNoTracking().Where(s => s.ExamId == examId && s.OrganizationId == org)
-                .Select(s => new { s.Id, s.AssignmentId, s.Attempt, s.State, s.EndedAt }).ToListAsync(ct))
+                .Select(s => new { s.Id, s.AssignmentId, s.Attempt, s.State, s.EndedAt, s.EndReason }).ToListAsync(ct))
             .GroupBy(s => s.AssignmentId).ToDictionary(g => g.Key, g => g.OrderByDescending(s => s.Attempt).ToList());
         var names = (await directory.MembersAsync(org, ct)).GroupBy(m => m.Member.UserId).ToDictionary(g => g.Key, g => g.First().UserName);
         return rows.Select(a =>
@@ -318,7 +318,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
                 var list = sessions.GetValueOrDefault(a.Id) ?? [];
                 var latest = list.FirstOrDefault();
                 return new AssignmentRow(a.Id, a.StudentUserId, names.GetValueOrDefault(a.StudentUserId, "(unknown user)"), a.OpensAt, a.ClosesAt,
-                    a.AttemptsAllowed, list.Count, latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier);
+                    a.AttemptsAllowed, list.Count(x => x.EndReason != nameof(Gadfly.Engine.EndReason.PromptSetChanged)), latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier);
             })
             .OrderBy(r => r.StudentName, StringComparer.OrdinalIgnoreCase).ToList();
     }
