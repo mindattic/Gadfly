@@ -1,9 +1,70 @@
 # Gadfly
 
-A CLI that mines your own [Claude Code](https://claude.com/claude-code) transcripts and your
-claude.ai conversation export into one local corpus, then cross-examines you about it,
-Socrates-style, through [MindAttic.Legion](https://github.com/mindattic/MindAttic.Legion)'s
-multi-LLM voting — until you declare *Aporia*.
+A Socratic engine. Gadfly questions a person one turn at a time and writes each follow-up from their
+own previous answer: it asks them to clarify, probes the reasoning, offers counterexamples, keeps a
+ledger of their claims and puts contradictions back to them, until they show understanding or reach
+*aporia*, honest puzzlement. Every question and every judgment goes through
+[MindAttic.Legion](https://github.com/mindattic/MindAttic.Legion)'s multi-LLM voting, so no single model's
+opinion is the verdict.
+
+Two things run on the engine:
+
+- **Gadfly Exams**, a web platform for Socratic oral-style exams. Instructors upload source material;
+  the panel turns it into concepts and rubrics they can edit; students are questioned on it; each answer
+  is judged against the material with citations; the AI recommends and the instructor grades. Other apps
+  can use it through a platform API with signed webhooks.
+- **The personal introspection CLI** (`gadfly`), which mines your own Claude Code transcripts and
+  claude.ai export and cross-examines you about them. It is documented further down.
+
+## Gadfly Exams
+
+| What | Where |
+|---|---|
+| Instructors: material, concepts and rubrics, exams, review and grading | [Instructor guide](docs/guides/INSTRUCTOR_GUIDE.md) |
+| Students: how the exam works, what is recorded, results | [Student guide](docs/guides/STUDENT_GUIDE.md) |
+| Owners and admins: organizations, members, MFA, retention, keys, webhooks | [Admin guide](docs/guides/ADMIN_GUIDE.md) |
+| Integrators: the platform API v1, launch links, webhook signatures | [API reference](docs/API.md) |
+| The plan, milestones and open decisions | [Socratic exam platform](docs/SOCRATIC_PLATFORM.md) |
+| What is collected, for how long, and the regulatory notes | [Privacy](docs/PRIVACY.md) |
+
+Built today: organizations and roles with MFA for staff, source upload (`.txt`/Markdown) and processing
+into an editable concept map and versioned rubrics, the exam builder and assignments, the student
+dashboard with system check and consent, the text exam room, instructor review (timeline, citations,
+each judge's verdict, integrity notes) with grading, release and CSV/Markdown export, data retention,
+export and erasure, and the platform API. Pending: voice answers, the talking avatar, webcam, audio and
+browser integrity signals, PDF/DOCX/EPUB/HTML upload, usage metering, the org admin console, email
+invitations, and Azure hosting.
+
+### Running the server locally
+
+```powershell
+dotnet build Gadfly.slnx
+dotnet run --project Gadfly.Server
+```
+
+Then open `https://localhost:7311` (HTTP on 5311).
+
+| Needs | Detail |
+|---|---|
+| .NET 10 SDK | |
+| SQL Server Express LocalDB | The default connection is `(localdb)\MSSQLLocalDB`, database `Gadfly`. In Development the database is created and migrated on start. Set `ConnectionStrings__Gadfly` to use another server; outside Development, run once with `--migrate`. |
+| MindAttic.Vault files | The `Security` bucket (the sign-in library's pepper and `bootstrap-token`) and the `LLM` bucket (provider keys for the Legion panel). Sign-in fails closed without the Security secrets. |
+
+**First sign-in.** When the database has no accounts, the server creates the platform SuperAdmin:
+user name `admin`, password the Vault's `Security:bootstrap-token`. Sign in, choose a new password, set
+up an authenticator app, and rotate the bootstrap token in the Vault. Then open **Organizations** to
+create a customer organization and its owner, who adds instructors and students under **Members**.
+
+In Development, organization staff aren't asked for MFA unless `Gadfly:RequireMfaInDevelopment` is
+`true`. Uploaded files are kept under `%APPDATA%\MindAttic\Gadfly\uploads\<organization>\<collection>\`.
+Logs go to MindAttic.Log's database for `Gadfly.Server`. The OpenAPI document is at `/openapi/v1.json`
+and the health check at `/healthz`.
+
+## The personal introspection CLI
+
+`gadfly` mines your own [Claude Code](https://claude.com/claude-code) transcripts and your claude.ai
+conversation export into one local corpus, then cross-examines you about it, Socrates-style, through
+Legion's multi-LLM voting, until you declare *Aporia*. Everything from here down is about the CLI.
 
 ## Why
 
@@ -50,7 +111,7 @@ dotnet run --project Gadfly.Cli -- interrogate
 
 ## What it is and is not
 
-Gadfly is a personal introspection tool, not a product. It does not psychoanalyze you on its
+The CLI is a personal introspection tool, not a product. It does not psychoanalyze you on its
 own — the belief-identification is deliberately left to the LLM panel, the same way Prompt 1
 asks for it. `ClaimExtractor` only surfaces phrases you've repeated verbatim across distinct
 sessions, as a hint, not a verdict.
@@ -119,9 +180,9 @@ synthesized consensus, since the point is three voices, not one merged one.
 
 ### `gadfly exam`
 
-A text-only Socratic exam over source material, the first step of the
-[Socratic exam platform](docs/SOCRATIC_PLATFORM.md). Point it at a folder (or file) of `.txt` or
-Markdown notes: the panel builds a concept map and a rubric per concept (kept under
+A text-only Socratic exam over source material in the terminal: the same engine Gadfly Exams runs,
+without the web app (see [Socratic exam platform](docs/SOCRATIC_PLATFORM.md)). Point it at a folder (or
+file) of `.txt` or Markdown notes: the panel builds a concept map and a rubric per concept (kept under
 `%APPDATA%\MindAttic\Gadfly\sources\<collection>\`, editable, reused while the material is unchanged),
 then examines you concept by concept. Each question is drafted by the panel for a planned move
 (elicit, clarify, probe, counterexample, apply, contradiction, synthesize) from your previous answer;
@@ -130,10 +191,8 @@ claims are put back to you. It ends at mastery, aporia, the time budget or the t
 Markdown and JSON report plus the full session transcript under `%APPDATA%\MindAttic\Gadfly\exams\`.
 
 ```powershell
-dotnet run --project Gadfly.Cli -- exam --source path	o
-otes --list-concepts
-dotnet run --project Gadfly.Cli -- exam --source path	o
-otes --concepts calvin-cycle --minutes 10 --verbose
+dotnet run --project Gadfly.Cli -- exam --source path\to\notes --list-concepts
+dotnet run --project Gadfly.Cli -- exam --source path\to\notes --concepts calvin-cycle --minutes 10 --verbose
 ```
 
 PDF, DOCX, EPUB and HTML arrive when Tutor's parsers are shared as `Tutor.Ingestion`.
@@ -184,22 +243,29 @@ quality isn't NUnit's job.
 ## Project layout
 
 ```
-Gadfly/                  Gadfly.Core: the subject-agnostic Socratic engine (Legion voting client, tier resolver, configuration)
+Gadfly/                  Gadfly.Core: the subject-agnostic Socratic engine (session, moves, claim ledger, planner, question generator, report; Legion voting client, tier resolver, configuration)
+Gadfly.Sources/           Source material as a subject: ingestion and passages, concept map and rubric builders, grounding retrieval, the panel answer judge, text-style assessment
+Gadfly.Server/            Gadfly Exams: the Blazor Server web app, EF Core/SQL Server data, accounts and tenancy, background jobs, session orchestration, review, privacy, the platform API and webhooks
 Gadfly.Personal/          The personal introspection subject: ingestion, corpus, mining, the three irrevocable prompts and their runners
 Gadfly.Cli/               The `gadfly` executable and its command classes
 Gadfly.Tests/             NUnit tests + fixtures
 ```
 
-Gadfly is becoming a general Socratic engine that any app can embed, with the personal tool above as one
-consumer. The first new consumer is a spoken Socratic exam platform: see
-[docs/SOCRATIC_PLATFORM.md](docs/SOCRATIC_PLATFORM.md).
+The engine knows nothing about where its subject comes from: `Gadfly.Personal` (your transcripts) and
+`Gadfly.Sources` (an instructor's material) are two implementations of its `ISubjectMatter`, and the CLI
+and `Gadfly.Server` are two hosts. The full plan is in [docs/SOCRATIC_PLATFORM.md](docs/SOCRATIC_PLATFORM.md).
 
 ## Glossary
 
 - **Corpus** — the local, deduped store of your own normalized messages from both ingestion sources.
 - **Corpus digest** — the map-reduced summary of the corpus actually handed to the three prompts.
-- **Aporia** — the state of productive puzzlement Prompt 1's interrogation is built to reach.
+- **Aporia** — the state of productive puzzlement Prompt 1's interrogation is built to reach; in an exam,
+  an honest "I don't know".
 - **Trusted four** — claude, openai, gemini, deepseek; the only providers Gadfly's panel will ever use.
+- **Concept map** — the concepts the panel finds in a source collection, with definitions, key facts,
+  misconceptions and the passages they come from.
+- **Rubric** — per concept: the points a real understanding covers (weighted), acceptable variants and
+  misconceptions, each citing its passages. Versioned; an instructor's edit is never overwritten.
 
 ## License
 
