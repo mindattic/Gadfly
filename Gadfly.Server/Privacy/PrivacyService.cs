@@ -69,6 +69,15 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
             }
             await db.SaveChangesAsync(ct);
             await RedactResponseLedgerAsync([sessionId], allAuditJson: false, ct);
+            // The AI's per-objective grades quote the answers verbatim (criterion quotes, rationales, noted misconceptions): keep levels and scores (GAD-T182).
+            foreach (var g in await db.AiObjectiveGrades.Where(g => g.SessionId == sessionId).ToListAsync(ct))
+            {
+                g.Explanation = Redacted;
+                g.CriteriaJson = RedactAiDetail(g.CriteriaJson);
+                g.MisconceptionsJson = "[]";
+                g.AmbiguitiesJson = "[]";
+            }
+            await db.SaveChangesAsync(ct);
             await db.IntegrityEvents.Where(e => e.SessionId == sessionId).ExecuteUpdateAsync(u => u.SetProperty(e => e.DataJson, (string?)null), ct);
             await db.ExamSessions.Where(s => s.Id == sessionId).ExecuteUpdateAsync(u => u
                 .SetProperty(s => s.TranscriptJson, (string?)null)
@@ -104,6 +113,16 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
             .SetProperty(r => r.SpeechRecognitionText, (string?)null), ct);
         await db.AuditEvents.Where(a => a.SessionId != null && sessionIds.Contains(a.SessionId.Value) && (allAuditJson || a.Action.StartsWith("response.") || a.Action.StartsWith("clarification.")))
             .ExecuteUpdateAsync(u => u.SetProperty(a => a.BeforeJson, (string?)null).SetProperty(a => a.AfterJson, (string?)null), ct);
+    }
+
+    /// <summary>The AI objective grade's stored detail without the words: criterion levels and scores stay, quotes and rationales go.</summary>
+    internal static string RedactAiDetail(string criteriaJson)
+    {
+        var detail = Gadfly.Server.Grading.GradingJson.Read<Gadfly.Server.Grading.StoredAiDetail>(criteriaJson);
+        if (detail is null) return "[]";
+        return Gadfly.Server.Grading.GradingJson.Write(new Gadfly.Server.Grading.StoredAiDetail(
+            [.. detail.Criteria.Select(c => c with { Rationale = "", Quotes = [] })],
+            [.. detail.Voters.Select(v => v with { Explanation = "" })]));
     }
 
     /// <summary>Keeps each criterion's name and score; drops rationales and quoted passages tied to the answer.</summary>

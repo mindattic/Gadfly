@@ -290,6 +290,36 @@ public class PrivacyServiceTests : ServerTest
     }
 
     [Test]
+    public async Task Redaction_RemovesTheQuotesFromAiObjectiveGrades_KeepsLevelsAndScores()
+    {
+        var (w, sessionId, _) = await Seed.EndedSessionAsync(Words);
+        var objective = new LearningObjective { OrganizationId = w.Org, ExamId = w.ExamId, Key = "obj-1", Title = "Photosynthesis", MaxScore = 10m, Weight = 1m };
+        var detail = new Gadfly.Server.Grading.StoredAiDetail(
+            [new Gadfly.Sources.Grading.CriterionGrade("Conceptual understanding", Gadfly.Assessment.AssessmentDimension.ConceptualUnderstanding,
+                Gadfly.Assessment.MasteryLevel.Application, 7m, 10m, "They said " + Words, [], [Words], [3], false)],
+            [new Gadfly.Sources.Grading.VoterGrade("mock", "mock", 7m, Gadfly.Assessment.MasteryLevel.Application, "Quoted: " + Words, false)]);
+        await using (var db = OrgDb(w.Org))
+        {
+            db.LearningObjectives.Add(objective);
+            db.AiObjectiveGrades.Add(new AiObjectiveGrade
+            {
+                OrganizationId = w.Org, SessionId = sessionId, ObjectiveId = objective.Id, Level = Gadfly.Assessment.MasteryLevel.Application, Score = 7m, MaxScore = 10m,
+                Explanation = "The student wrote: " + Words, CriteriaJson = System.Text.Json.JsonSerializer.Serialize(detail, new System.Text.Json.JsonSerializerOptions
+                    { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase, Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } }),
+                MisconceptionsJson = "[{\"text\":\"" + Words + "\",\"voters\":1}]", AmbiguitiesJson = "[\"" + Words + "\"]", CreatedAt = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+        await WithPrivacy(w.Org, async p => { await p.RedactSessionAsync(sessionId); return 0; });
+        await using var check = SystemDb();
+        var row = await check.AiObjectiveGrades.AsNoTracking().SingleAsync(g => g.SessionId == sessionId);
+        Assert.That(row.Explanation + row.CriteriaJson + row.MisconceptionsJson + row.AmbiguitiesJson, Does.Not.Contain("chlorophyll"));
+        Assert.That(row.Score, Is.EqualTo(7m));
+        Assert.That(row.Level, Is.EqualTo(Gadfly.Assessment.MasteryLevel.Application));
+        Assert.That(row.CriteriaJson, Does.Contain("Conceptual understanding"));
+    }
+
+    [Test]
     public async Task Retention_RedactsOnlySessionsPastTheirOrganizationsPeriod()
     {
         var old = await Seed.EndedSessionAsync(Words, endedAt: DateTimeOffset.UtcNow.AddDays(-91));
