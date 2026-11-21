@@ -250,7 +250,9 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var scores = new List<ObjectiveScores>();
         foreach (var s in states)
         {
-            decimal? human = s.Rec?.ResolvedHumanScore ?? s.Human?.Score;
+            // A human grade submitted after the reconciliation (an amendment) supersedes its resolved score (GAD-T148).
+            var amendedAfterRec = s.Rec is not null && s.Human is not null && s.Human.SubmittedAt > s.Rec.At;
+            decimal? human = amendedAfterRec ? s.Human!.Score : s.Rec?.ResolvedHumanScore ?? s.Human?.Score;
             decimal? ai = s.Rec?.ResolvedAiScore;
             if (ai is null)
             {
