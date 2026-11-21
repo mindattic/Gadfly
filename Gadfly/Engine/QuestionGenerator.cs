@@ -14,17 +14,36 @@ public sealed record QuestionRequest
     public required ClaimLedger Ledger { get; init; }
     /// <summary>The rubric's expected points, for the leak guard. Empty skips the guard.</summary>
     public string RubricForGuard { get; init; } = "";
+    /// <summary>The learning objective examined (GAD-T89); the concept title when the exam has none.</summary>
+    public string? ObjectiveTitle { get; init; }
+    /// <summary>Learning Mode: a misconception the hint or explanation should address.</summary>
+    public string? Misconception { get; init; }
+}
+
+/// <summary>What the leak guard said about the last question (GAD-T92).</summary>
+public enum LeakGuardResult
+{
+    /// <summary>The guard judged the question safe.</summary>
+    Safe,
+    /// <summary>Every draft leaked; the plain fallback question was used.</summary>
+    LeakedReplaced,
+    /// <summary>The guard could not decide; the plain fallback question was used instead (fail closed).</summary>
+    UndecidedReplaced,
+    /// <summary>No guard ran: no rubric, or a Learning Mode hint/explanation, which teaches on purpose.</summary>
+    Skipped,
 }
 
 /// <summary>
 /// Words each question through the Legion panel (GAD-T35): several providers draft a question for
 /// the planned move and a judge fuses the sharpest one. A second panel vote guards against
 /// questions that give away rubric points; a leaking draft is redrafted once, then replaced by a
-/// plain, safe question for the move.
+/// plain, safe question for the move. The guard fails closed: when it cannot decide, the draft is not
+/// asked (GAD-T92). Learning Mode hints and guided explanations use their own prompt and skip the guard:
+/// they teach on purpose, and everything after them is assisted evidence (GAD-T93).
 /// </summary>
 public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? prompts = null)
 {
-    private readonly PromptSet _prompts = prompts ?? ExamPrompts.Set;
+    private readonly PromptSet _prompts = prompts ?? ExamPromptsV3.Set;
 
     public const string Leaks = "LEAKS";
     public const string Safe = "SAFE";
@@ -32,17 +51,22 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
     /// <summary>How the last question was produced: "drafted", "redrafted", or "fallback: ..." with the reason.</summary>
     public string LastOutcome { get; private set; } = "";
 
+    /// <summary>What the leak guard decided about the last question.</summary>
+    public LeakGuardResult LastGuard { get; private set; } = LeakGuardResult.Skipped;
+
     /// <summary>Turns of dialogue included in the prompt.</summary>
     public int DialogueTurns { get; init; } = 8;
 
     public async Task<string> GenerateAsync(QuestionRequest r, CancellationToken ct = default)
     {
         var dialogue = Dialogue(r.Session);
+        if (MoveProfiles.IsAssistance(r.Decision.Move)) return await AssistAsync(r, dialogue, ct);
         var targets = string.Join("\n", r.Decision.TargetClaimIds.Select(id => r.Ledger.Find(id))
             .Where(c => c is not null).Select(c => $"- (turn {c!.TurnIndex + 1}) {ExamPrompts.Student(c.Quote)}"));
         var prompt = ExamPrompts.Fill(_prompts[ExamPrompts.QuestionKey], new Dictionary<string, string?>
         {
             ["move"] = r.Decision.Move.ToString(),
+            ["objective"] = r.ObjectiveTitle ?? r.ConceptTitle,
             ["concept"] = r.ConceptTitle,
             ["related_concept"] = r.RelatedConceptTitle ?? "(none)",
             ["difficulty"] = r.Session.Policy.Difficulty.ToString(),
@@ -52,11 +76,12 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
         });
 
         var reasons = new List<string>();
+        var undecided = false;
         for (var attempt = 0; attempt < 2; attempt++)
         {
             var ask = attempt == 0 ? prompt : prompt + "\n\nYour previous draft revealed expected answer points. Ask without stating or hinting at any of them.";
             var result = await panel.AskAsync(ask, "", Quorum.Plurality, ct);
-            var question = Clean(!string.IsNullOrWhiteSpace(result.Consensus) ? result.Consensus : result.NarrativeSummary);
+            var question = Usable(Clean(!string.IsNullOrWhiteSpace(result.Consensus) ? result.Consensus : result.NarrativeSummary));
             if (question.Length == 0)
                 question = await PickDraftAsync(result, r.Decision.Move, dialogue, ct);
             if (question.Length == 0)
@@ -65,15 +90,72 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
                 reasons.Add($"empty draft ({(result.QuorumReached ? "quorum reached" : "no quorum")}{string.Concat(errors)})");
                 continue;
             }
-            if (string.IsNullOrWhiteSpace(r.RubricForGuard) || !await LeaksAsync(question, r.RubricForGuard, dialogue, ct))
+            if (string.IsNullOrWhiteSpace(r.RubricForGuard))
             {
                 LastOutcome = attempt == 0 ? "drafted" : "redrafted";
+                LastGuard = LeakGuardResult.Skipped;
                 return question;
             }
-            reasons.Add($"leaked: \"{question}\"");
+            var verdict = await CheckLeakAsync(question, r.RubricForGuard, dialogue, ct);
+            if (verdict == false)
+            {
+                LastOutcome = attempt == 0 ? "drafted" : "redrafted";
+                LastGuard = LeakGuardResult.Safe;
+                return question;
+            }
+            reasons.Add(verdict == true ? $"leaked: \"{question}\"" : "leak guard undecided");
+            undecided = verdict is null;
         }
         LastOutcome = "fallback: " + string.Join(" | ", reasons);
+        LastGuard = undecided ? LeakGuardResult.UndecidedReplaced : LeakGuardResult.LeakedReplaced;
         return Fallback(r.Decision.Move, r.ConceptTitle, r.RelatedConceptTitle);
+    }
+
+    /// <summary>Learning Mode: a hint or a guided explanation followed by a question (no leak guard: it teaches on purpose).</summary>
+    private async Task<string> AssistAsync(QuestionRequest r, string dialogue, CancellationToken ct)
+    {
+        LastGuard = LeakGuardResult.Skipped;
+        if (r.Session.Policy.Mode != Gadfly.Assessment.AssessmentMode.Learning)
+            throw new InvalidOperationException("Examination mode never teaches: hints and guided explanations are Learning Mode only.");
+        var prompt = ExamPrompts.Fill(_prompts[ExamPromptsV3.LearningQuestionKey], new Dictionary<string, string?>
+        {
+            ["move"] = r.Decision.Move.ToString(),
+            ["objective"] = r.ObjectiveTitle ?? r.ConceptTitle,
+            ["concept"] = r.ConceptTitle,
+            ["misconception"] = string.IsNullOrWhiteSpace(r.Misconception) ? "(none)" : r.Misconception,
+            ["grounding"] = r.Grounding.Text,
+            ["dialogue"] = dialogue.Length == 0 ? "(none)" : dialogue,
+        });
+        var result = await panel.AskAsync(prompt, "", Quorum.Plurality, ct);
+        var text = (!string.IsNullOrWhiteSpace(result.Consensus) ? result.Consensus : result.NarrativeSummary)?.Trim() ?? "";
+        if (text.Length == 0)
+            text = result.IndividualVotes.Where(v => !v.IsError).Select(v => v.Decision?.Trim() ?? "").FirstOrDefault(d => d.Length > 0) ?? "";
+        if (text.Length == 0 || text.Length > 900)
+        {
+            LastOutcome = "fallback: no usable assistance draft";
+            return Fallback(r.Decision.Move, r.ConceptTitle, null);
+        }
+        LastOutcome = "drafted (learning mode, unguarded)";
+        return text.Trim('"', '\u201c', '\u201d', ' ');
+    }
+
+    /// <summary>
+    /// The leak guard on any examiner text (a question or a verification clarification): true when it states or
+    /// strongly hints at expected answer points the student has not said, false when safe, null when the panel
+    /// could not decide (callers fail closed, or flag the turn when the text was already shown).
+    /// </summary>
+    public async Task<bool?> CheckLeakAsync(string text, string rubric, string dialogue, CancellationToken ct = default)
+    {
+        var guard = ExamPrompts.Fill(_prompts[ExamPrompts.QuestionGuardKey], new Dictionary<string, string?>
+        {
+            ["rubric"] = rubric,
+            ["dialogue"] = dialogue.Length == 0 ? "(none)" : dialogue,
+            ["question"] = text,
+        });
+        var d = await panel.DecideAsync(guard, [Leaks, Safe], "", ct);
+        if (string.Equals(d.Choice, Leaks, StringComparison.OrdinalIgnoreCase)) return true;
+        if (string.Equals(d.Choice, Safe, StringComparison.OrdinalIgnoreCase)) return false;
+        return null;
     }
 
     /// <summary>
@@ -83,7 +165,7 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
     /// </summary>
     private async Task<string> PickDraftAsync(VotingResult result, MoveKind move, string dialogue, CancellationToken ct)
     {
-        var drafts = result.IndividualVotes.Where(v => !v.IsError).Select(v => Clean(v.Decision))
+        var drafts = result.IndividualVotes.Where(v => !v.IsError).Select(v => Usable(Clean(v.Decision)))
             .Where(d => d.Length > 0).Distinct(StringComparer.Ordinal).ToList();
         if (drafts.Count <= 1) return drafts.FirstOrDefault() ?? "";
         var ballot = $"""
@@ -98,19 +180,8 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
         return drafts.FirstOrDefault(x => string.Equals(x, d.Choice, StringComparison.Ordinal)) ?? drafts[0];
     }
 
-    private async Task<bool> LeaksAsync(string question, string rubric, string dialogue, CancellationToken ct)
-    {
-        var guard = ExamPrompts.Fill(_prompts[ExamPrompts.QuestionGuardKey], new Dictionary<string, string?>
-        {
-            ["rubric"] = rubric,
-            ["dialogue"] = dialogue.Length == 0 ? "(none)" : dialogue,
-            ["question"] = question,
-        });
-        var d = await panel.DecideAsync(guard, [Leaks, Safe], "", ct);
-        return string.Equals(d.Choice, Leaks, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private string Dialogue(SocraticSession s) =>
+    /// <summary>The recent dialogue as prompt text, student answers fenced.</summary>
+    public string Dialogue(SocraticSession s) =>
         string.Join("\n", s.Turns.TakeLast(DialogueTurns).SelectMany(t => t.Answer is null
             ? new[] { $"Examiner: {t.Question}" }
             : new[] { $"Examiner: {t.Question}", $"Student: {ExamPrompts.Student(t.Answer.Text)}" }));
@@ -125,6 +196,20 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
         return line.Trim('"', '“', '”', '*', ' ');
     }
 
+    /// <summary>
+    /// The draft when it reads as a question, else "": a reply that is only a label or the move's name (a panel
+    /// sometimes answers "ScenarioVariation") or a fragment of a few words is not asked.
+    /// </summary>
+    internal static string Usable(string draft)
+    {
+        var words = draft.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length < 4) return "";
+        if (Enum.TryParse<MoveKind>(draft.Trim('.', '?', ' '), ignoreCase: true, out _)) return "";
+        // A draft that talks about the student instead of to them ("...and ask the student to explain") is an instruction, not a question.
+        if (draft.Contains("the student", StringComparison.OrdinalIgnoreCase)) return "";
+        return draft;
+    }
+
     internal static string Fallback(MoveKind move, string concept, string? related) => move switch
     {
         MoveKind.Clarify => $"Could you say more precisely what you mean, in your own words, when you talk about {concept}?",
@@ -133,6 +218,12 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
         MoveKind.Contradiction => "Earlier you said something that seems to conflict with what you just said. How do both fit together?",
         MoveKind.Apply => $"Imagine a situation you haven't seen before where {concept} matters. What would you expect to happen, and why?",
         MoveKind.Synthesize => $"How does {concept} relate to {related ?? "the other ideas we have discussed"}?",
+        MoveKind.CausalReasoning => "What do you think causes that to happen? Explain the chain of cause and effect.",
+        MoveKind.ScenarioVariation => "Suppose one of the conditions in that situation changed while everything else stayed the same. What would change, and why?",
+        MoveKind.AssumptionTesting => "What has to be true for your explanation to hold? Which of those assumptions could fail?",
+        MoveKind.IndependentExplanation => $"Without using a textbook definition, how would you explain {concept} from your own reasoning?",
+        MoveKind.Hint => $"Here is a hint: think about what {concept} needs in order to happen. With that in mind, how would you explain it now?",
+        MoveKind.GuidedExplanation => $"Let's look at {concept} step by step, starting from what you already said. Which step do you think comes first, and why?",
         _ => $"In your own words, what is {concept}?",
     };
 }

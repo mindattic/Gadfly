@@ -26,6 +26,11 @@ public static class MasteryModel
             MoveKind.Synthesize => 0.65,
             MoveKind.Apply => 0.7,
             MoveKind.Contradiction => 0.7,
+            MoveKind.IndependentExplanation => 0.45,
+            MoveKind.CausalReasoning => 0.5,
+            MoveKind.ScenarioVariation => 0.65,
+            MoveKind.AssumptionTesting => 0.65,
+            MoveKind.Hint or MoveKind.GuidedExplanation => 0.3,
             _ => 0.5,
         };
         var shift = (Math.Clamp(policyDifficulty, 1, 5) - 3) * 0.05;
