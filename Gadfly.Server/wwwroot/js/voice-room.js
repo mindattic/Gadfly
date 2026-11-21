@@ -5,12 +5,14 @@
 // server decides what may be said (VoiceHubFilter) and what an answer is (VoiceAnswerBuilder). Nothing here talks to a provider
 // directly and no key ever reaches the browser.
 //
-// Everything degrades to typing: if the microphone is refused, the browser lacks the pieces, or a hub fails, the page is told
-// through OnVoiceProblem and the exam room goes back to the answer box. The buttons use one delegated listener (data-voice-action)
-// because the microphone may only be opened from the click itself, not from a round trip to the server.
+// Voice and camera are mandatory (GAD-T239): there is no typed answer mode. The examiner starts on its own when the exam room opens
+// (autoStart; the Begin exam click on the start page is the user gesture the browser's audio needs). If the microphone or the camera
+// is refused, missing or lost mid-exam, or a hub fails, the page is told through OnVoiceProblem and the exam room pauses until the
+// student restores it and presses Try again. The buttons use one delegated listener (data-voice-action) because the microphone may
+// only be opened from the click itself, not from a round trip to the server.
 //
-// The interview room (GAD-T231): beside the examiner the student sees their own camera, as a mirror. The self-view stream stays in
-// this page: no frame is recorded, analysed or sent anywhere, and a refused or missing camera changes nothing else. While the
+// The interview room (GAD-T231): beside the examiner the student sees their own camera. The self-view stream stays in this page:
+// no frame is recorded or sent from here (camera checks, when the exam uses them, are webcam-integrity.js). While the
 // microphone is open the response delay (examiner finished, student starts speaking) counts up live and freezes when the student
 // speaks; it rides along with the answer so the on-screen transcript can show it. It is display only and never scored.
 
@@ -71,7 +73,6 @@ export function init(dotnet, cfg) {
         else if (action === "done") void submit(true);
         else if (action === "clear") discard();
         else if (action === "mode") toggleMode(el);
-        else if (action === "self") void toggleSelfView();
     };
     S.onDown = (e) => { if (e.target.closest?.('[data-voice-action="ptt"]') && S?.mic && S.mode === "push-to-talk" && !S.gate) S.mic.pttDown(); };
     S.onUp = () => { if (S?.mic && S.mode === "push-to-talk") S.mic.pttUp(); };
@@ -85,12 +86,26 @@ export function init(dotnet, cfg) {
     };
 }
 
+/**
+ * Starts the examiner without a click of its own (GAD-T239). The click on Begin exam counts as the page's user activation, which
+ * the browser needs before audio may play; a page opened fresh (a reload) has none, and is asked for one click instead.
+ */
+export function autoStart() {
+    const s = S;
+    if (!s || s.running) return;
+    if (navigator.userActivation && navigator.userActivation.hasBeenActive === false) {
+        problem("gesture", "The browser needs a click before audio can play.", true);
+        return;
+    }
+    void start();
+}
+
 async function start() {
     const s = S;
     if (!s || s.running) return;
     s.running = true;
     s.dotnet.invokeMethodAsync("OnVoiceStarting").catch(() => { });   // shows the stage before the avatar is created in it
-    status("Starting voice mode…");
+    status("Connecting you to the examiner…");
     try {
         // 1. The microphone first, inside the click that asked for it.
         const speechPkg = await import(`${LIB}/speech/index.js`);
@@ -123,11 +138,19 @@ async function start() {
             onError: (err) => problem("microphone", err && err.message ? err.message : String(err), true),
         });
         await s.mic.start();
-        void startSelfView(s);   // the camera is only a mirror for the student: never awaited, never required
+        watchTracks(s, s.mic.stream, "mic-lost", "The microphone stopped working.");
     } catch (err) {
         const denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
         return fail(denied ? "mic-denied" : "microphone",
             denied ? "The microphone was not allowed." : "The microphone could not be opened.", s);
+    }
+
+    // 1b. The camera is required too (GAD-T239): no camera, no exam.
+    const camera = await startSelfView(s);
+    if (S !== s || !s.running) return;
+    if (camera !== "on") {
+        return fail(camera === "denied" ? "camera-denied" : "camera",
+            camera === "denied" ? "The camera was not allowed." : "The camera could not be opened.", s);
     }
 
     try {
@@ -178,7 +201,7 @@ async function start() {
     }
 
     s.gate = true;
-    status("Voice mode is on.");
+    status("The examiner is ready.");
     await s.dotnet.invokeMethodAsync("OnVoiceStarted", s.mic.vadKind || "energy");
 }
 
@@ -345,7 +368,7 @@ async function submit(immediate) {
         await s.dotnet.invokeMethodAsync("OnVoiceAnswer", payload);
         if (S === s) { s.segments = []; s.partial = ""; s.startedAtUnixMs = null; s.acoustics.reset(); drawTranscript(); }
     } catch {
-        // The answer is still in the box: let the student try again or switch to typing.
+        // The answer is still held here: let the student try again.
         if (S === s) { s.gate = false; status("That did not go through. Press Done answering to try again."); }
     }
 }
@@ -401,23 +424,44 @@ function drawDelay(s) {
 
 // ----------------------------------------------------------------------------------------------------------- self-view
 
-/** Shows the student's own camera beside the examiner. Local only: the stream is attached to a muted <video> and nothing else. */
+/**
+ * Shows the student's own camera beside the examiner. The stream is attached to a muted <video> and nothing else. Returns the
+ * outcome ("on", "denied" or "unavailable"); the camera is required, so anything but "on" pauses the exam (GAD-T239).
+ */
 async function startSelfView(s) {
-    if (!s || s.selfStream || !s.running) return;
+    if (!s || !s.running) return "unavailable";
+    if (s.selfStream) return "on";
     const video = q("self");
-    if (!video || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return selfState(s, "unavailable");
+    if (!video || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { selfState(s, "unavailable"); return "unavailable"; }
     selfState(s, "starting");
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
-        if (S !== s || !s.running) { stream.getTracks().forEach((t) => t.stop()); return; }
+        if (S !== s || !s.running) { stream.getTracks().forEach((t) => t.stop()); return "unavailable"; }
+        if (!stream.getVideoTracks().some((t) => t.readyState === "live")) { stream.getTracks().forEach((t) => t.stop()); selfState(s, "unavailable"); return "unavailable"; }
         s.selfStream = stream;
         video.srcObject = stream;
         try { await video.play(); } catch { }
+        watchTracks(s, stream, "camera-lost", "The camera stopped working.");
         selfState(s, "on");
+        return "on";
     } catch (err) {
         const denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
-        selfState(s, denied ? "denied" : "unavailable");
+        const outcome = denied ? "denied" : "unavailable";
+        selfState(s, outcome);
+        return outcome;
     }
+}
+
+/**
+ * A microphone or camera that ends mid-exam (unplugged, permission revoked, taken by another app) pauses the exam and asks the
+ * student to restore it (GAD-T239). Tracks stopped by stop() itself are ignored: s.running is already false then.
+ */
+function watchTracks(s, stream, kind, message) {
+    if (!stream) return;
+    stream.getTracks().forEach((t) => t.addEventListener("ended", () => {
+        if (S !== s || !s.running) return;
+        fail(kind, message, s);
+    }));
 }
 
 /** Releases the camera; <paramref name="next"/> is the state to report, or null to report nothing (voice mode is stopping). */
@@ -430,13 +474,6 @@ function stopSelfView(s, next) {
     const video = q("self");
     if (video) { try { video.srcObject = null; } catch { } }
     if (next) selfState(s, next);
-}
-
-async function toggleSelfView() {
-    const s = S;
-    if (!s || !s.running) return;
-    if (s.selfStream) stopSelfView(s, "hidden");
-    else await startSelfView(s);
 }
 
 function selfState(s, state) {

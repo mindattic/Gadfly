@@ -28,8 +28,9 @@ public sealed class SocraticSession
     /// <summary>For the serializer: restores a session exactly as recorded.</summary>
     internal SocraticSession(Guid id, string subjectId, SessionPolicy policy, string promptSetId, int promptSetVersion,
         string promptSetSha256, DateTimeOffset startedAt, DateTimeOffset? endedAt, EndReason endReason,
-        IEnumerable<Turn> turns, IEnumerable<MasterySnapshot> mastery)
+        IEnumerable<Turn> turns, IEnumerable<MasterySnapshot> mastery, bool clockHeld = false)
     {
+        ClockHeld = clockHeld;
         Id = id;
         SubjectId = subjectId;
         Policy = policy;
@@ -49,7 +50,36 @@ public sealed class SocraticSession
     public string PromptSetId { get; }
     public int PromptSetVersion { get; }
     public string PromptSetSha256 { get; }
-    public DateTimeOffset StartedAt { get; }
+    /// <summary>When the exam clock started: when the session was created, or when a held clock was started (<see cref="StartClock"/>).</summary>
+    public DateTimeOffset StartedAt { get; private set; }
+
+    /// <summary>
+    /// True while the exam clock waits for the examiner to begin the first question (GAD-T239): the server's voice exam room holds
+    /// it so planning the first question and connecting the microphone and camera don't use the student's time. Until it starts,
+    /// <see cref="Remaining"/> still counts from <see cref="StartedAt"/>, so a clock that never starts can't give unlimited time.
+    /// </summary>
+    public bool ClockHeld { get; private set; }
+
+    /// <summary>Holds the clock until <see cref="StartClock"/>. Only before any answer was recorded.</summary>
+    public void HoldClock()
+    {
+        EnsureRunning();
+        if (_turns.Any(t => t.Answer is not null)) throw new InvalidOperationException("The clock can only be held before the first answer.");
+        ClockHeld = true;
+    }
+
+    /// <summary>
+    /// Starts a held clock at <paramref name="at"/> (the examiner begins the first question); the open first question counts as asked
+    /// then. Returns false when the clock was not held: it starts once, so a reload can't restart it.
+    /// </summary>
+    public bool StartClock(DateTimeOffset at)
+    {
+        if (!ClockHeld || IsEnded || at < StartedAt) return false;
+        ClockHeld = false;
+        StartedAt = at;
+        if (OpenTurn is { } open && _turns.All(t => t.Answer is null)) Replace(open with { AskedAt = at });
+        return true;
+    }
     public DateTimeOffset? EndedAt { get; private set; }
     public EndReason EndReason { get; private set; } = EndReason.None;
     public bool IsEnded => EndedAt is not null;

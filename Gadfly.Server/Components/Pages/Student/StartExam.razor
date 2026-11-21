@@ -10,6 +10,7 @@
 @inject SessionOrchestrator Sessions
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject Gadfly.Server.Voice.VoiceSettings VoiceConfig
 
 <HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
 <PageTitle>Get ready · Gadfly Exams</PageTitle>
@@ -52,8 +53,13 @@ else
             }
             else
             {
+                @* Voice and camera are mandatory (GAD-T239): the camera preview and the microphone meter prove both work. *@
+                <div class="syscheck-media">
+                    <video @ref="preview" class="syscheck-camera" muted playsinline autoplay aria-label="Your camera"></video>
+                    <div class="syscheck-level" @ref="meter" aria-hidden="true"><i></i></div>
+                </div>
                 <ul class="syschecks">
-                    @foreach (var c in checks)
+                    @foreach (var c in AllChecks)
                     {
                         <li class="syscheck syscheck-@c.Status.ToString().ToLowerInvariant()">
                             <span class="syscheck-mark" aria-hidden="true">@Mark(c.Status)</span>
@@ -70,7 +76,7 @@ else
                 <button type="button" class="secondary" @onclick="RunChecksAsync" disabled="@checking">Check again</button>
                 @if (!ChecksPass)
                 {
-                    <p class="error" role="status">Fix the items marked ✗ above, then press "Check again".</p>
+                    <p class="error" role="status">Begin exam stays off until every check above is ✓: fix the items marked ✗ (or finish the ones marked …), then press "Check again" if needed.</p>
                 }
             }
         </section>
@@ -79,8 +85,10 @@ else
             <h2>2. How Socratic questioning works</h2>
             <p>This isn't a multiple-choice test. The examiner asks one question at a time and builds the next question from <em>your own answer</em>: it may ask you to clarify a word you used, give an example, test your idea against a tricky case, or point out when two of your answers seem to disagree.</p>
             <ul>
+                <li>The exam is spoken. The examiner talks to you and you answer out loud; there is no typing. Your microphone and camera must stay on for the whole exam. If either stops working, the exam pauses until you bring it back.</li>
+                <li>Your time starts when the examiner asks the first question, not when you press Begin exam.</li>
                 <li>Answer in your own words. Short, honest answers are better than long copied ones.</li>
-                <li>If you genuinely don't know, press <strong>I don't know</strong>. Admitting it is a real answer, not a failure, and the examiner moves on.</li>
+                <li>If you genuinely don't know, say so or press <strong>I don't know</strong>. Admitting it is a real answer, not a failure, and the examiner moves on.</li>
                 <li>The clock is kept on the server; if you reload the page, you return to the same question.</li>
                 <li>You won't see scores during the exam. Your result is published once it has been graded and approved.</li>
             </ul>
@@ -89,11 +97,16 @@ else
                 <p class="question">@practiceQuestion</p>
                 @if (practiceFollowUp is null)
                 {
-                    <textarea rows="3" @bind="practiceAnswer" @bind:event="oninput" aria-label="Practice answer" placeholder="Type a sentence or two…"></textarea>
+                    @* Spoken, like the exam (GAD-T239): nothing is recorded; the button waits until the microphone has heard you. *@
+                    <p class="hint">Answer out loud in a sentence or two, then press the button. Nothing is recorded.</p>
                     <div class="actions">
-                        <button type="button" @onclick="PracticeAnswer" disabled="@string.IsNullOrWhiteSpace(practiceAnswer)">Submit practice answer</button>
+                        <button type="button" @onclick="PracticeAnswer" disabled="@(microphone != "ok")">I've said my answer</button>
                         <button type="button" class="secondary" @onclick="PracticeDontKnow">I don't know</button>
                     </div>
+                    @if (microphone != "ok")
+                    {
+                        <p class="hint">The button turns on once the system check above has heard your microphone.</p>
+                    }
                 }
                 else
                 {
@@ -143,7 +156,11 @@ else
         public int ScreenWidth { get; set; }
     }
 
-    private bool loading = true, checking, agreed, starting;
+    private bool loading = true, checking, agreed, starting, mediaStarted;
+    private ElementReference preview, meter;
+    private DotNetObjectReference<StartExam>? self;
+    /// <summary>The microphone and camera as system-check.js reports them: waiting, listening, ok, denied, missing, busy, lost, unsupported or error.</summary>
+    private string microphone = "waiting", camera = "waiting";
     private StudentAssignmentView? assignment;
     private ConsentNotice? notice;
     private List<Check>? checks;
@@ -151,10 +168,42 @@ else
     private IJSObjectReference? module;
 
     private const string practiceQuestion = "Practice: in your own words, what is a habit?";
-    private string practiceAnswer = "";
     private string? practiceFollowUp, practiceExplain;
 
-    private bool ChecksPass => checks is not null && checks.All(c => c.Status != CheckStatus.Fail);
+    /// <summary>Every check must pass (a warning is fine): a check still waiting, like a microphone not yet heard, keeps Begin exam off.</summary>
+    private bool ChecksPass => checks is not null && AllChecks.All(c => c.Status is CheckStatus.Pass or CheckStatus.Warn);
+
+    private IEnumerable<Check> AllChecks => (checks ?? []).Concat([MicrophoneCheck, CameraCheck]);
+
+    private Check MicrophoneCheck => microphone switch
+    {
+        "ok" => new Check("Microphone", CheckStatus.Pass, "working: we heard you"),
+        "listening" => new Check("Microphone", CheckStatus.Later, "say a few words out loud",
+            "The meter above should move when you speak. If it doesn't, click anywhere on this page and speak again."),
+        "denied" => new Check("Microphone", CheckStatus.Fail, "not allowed",
+            "Allow the microphone for this site (the icon in your browser's address bar), then press \"Check again\"."),
+        "missing" => new Check("Microphone", CheckStatus.Fail, "none found", "Connect a microphone or headset, then press \"Check again\"."),
+        "busy" => new Check("Microphone", CheckStatus.Fail, "in use by another app", "Close other apps that use the microphone, then press \"Check again\"."),
+        "lost" => new Check("Microphone", CheckStatus.Fail, "stopped working", "Plug it back in or allow it again, then press \"Check again\"."),
+        "unsupported" => new Check("Microphone", CheckStatus.Fail, "this browser can't use it",
+            "Use a current Chrome, Edge, Firefox or Safari over a secure (https) connection."),
+        "error" => new Check("Microphone", CheckStatus.Fail, "couldn't be opened", "Check your microphone, then press \"Check again\"."),
+        _ => new Check("Microphone", CheckStatus.Later, "waiting for your browser", "Allow the microphone when your browser asks."),
+    };
+
+    private Check CameraCheck => camera switch
+    {
+        "ok" => new Check("Camera", CheckStatus.Pass, "working"),
+        "denied" => new Check("Camera", CheckStatus.Fail, "not allowed",
+            "Allow the camera for this site (the icon in your browser's address bar), then press \"Check again\"."),
+        "missing" => new Check("Camera", CheckStatus.Fail, "none found", "Connect a webcam, then press \"Check again\"."),
+        "busy" => new Check("Camera", CheckStatus.Fail, "in use by another app", "Close other apps that use the camera, then press \"Check again\"."),
+        "lost" => new Check("Camera", CheckStatus.Fail, "stopped working", "Plug it back in or allow it again, then press \"Check again\"."),
+        "unsupported" => new Check("Camera", CheckStatus.Fail, "this browser can't use it",
+            "Use a current Chrome, Edge, Firefox or Safari over a secure (https) connection."),
+        "error" => new Check("Camera", CheckStatus.Fail, "shows no picture", "Check that the camera is uncovered and not used by another app, then press \"Check again\"."),
+        _ => new Check("Camera", CheckStatus.Later, "waiting for your browser", "Allow the camera when your browser asks."),
+    };
     private bool Done(int step) => step switch
     {
         1 => ChecksPass,
@@ -182,8 +231,40 @@ else
         {
             await RunChecksAsync();
             StateHasChanged();
+            return;
+        }
+        // The preview and the meter exist once the checks are shown: open the microphone and camera then.
+        if (checks is not null && !mediaStarted && module is not null)
+        {
+            mediaStarted = true;
+            await StartMediaAsync();
         }
     }
+
+    private async Task StartMediaAsync()
+    {
+        try
+        {
+            self ??= DotNetObjectReference.Create(this);
+            await module!.InvokeVoidAsync("startMedia", self, preview, meter);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        {
+            microphone = camera = "error";
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Called by system-check.js when the microphone or the camera changes state (GAD-T239).</summary>
+    [JSInvokable]
+    public Task OnMedia(string device, string state) => InvokeAsync(() =>
+    {
+        if (state is not ("waiting" or "listening" or "ok" or "denied" or "missing" or "busy" or "lost" or "unsupported" or "error")) return;
+        if (device == "microphone") microphone = state;
+        else if (device == "camera") camera = state;
+        else return;
+        StateHasChanged();
+    });
 
     private async Task RunChecksAsync()
     {
@@ -191,7 +272,10 @@ else
         var list = new List<Check>();
         try
         {
+            var reopen = module is not null && mediaStarted && (microphone != "ok" || camera != "ok");
             module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/system-check.js");
+            // "Check again" reopens a microphone or camera that failed (the click also lets the page's audio run).
+            if (reopen) await StartMediaAsync();
             var r = await module.InvokeAsync<BrowserReport>("check");
             clientInfo = r.UserAgent;
 
@@ -212,17 +296,18 @@ else
                 {
                     < 400 => new Check("Connection", CheckStatus.Pass, $"good ({ms:0} ms round trip)"),
                     < 1500 => new Check("Connection", CheckStatus.Warn, $"slow ({ms:0} ms round trip)",
-                        "Typed answers will still work. Move closer to your Wi-Fi router or close other downloads if pages feel sluggish."),
+                        "The examiner may be slow to respond. Move closer to your Wi-Fi router or close other downloads if pages feel sluggish."),
                     _ => new Check("Connection", CheckStatus.Fail, $"too slow ({ms:0} ms round trip)",
                         "Move closer to your Wi-Fi router, use a wired connection, or stop other downloads and streams, then check again."),
                 }
                 : new Check("Connection", CheckStatus.Fail, "offline", "Reconnect to the internet, then check again."));
             list.Add(r.ScreenWidth is > 0 and < 360
-                ? new Check("Screen", CheckStatus.Warn, "very narrow", "A larger window or a tablet or computer is easier to type on.")
+                ? new Check("Screen", CheckStatus.Warn, "very narrow", "A larger window or a tablet or computer shows the examiner and your camera better.")
                 : new Check("Screen", CheckStatus.Pass, "fine"));
-            list.Add(new Check("Microphone level", CheckStatus.Later, "checked when you turn on voice mode in the exam",
-                r.MediaDevices ? null : "Voice mode needs a browser that allows microphone access; without one you can still answer by typing."));
-            list.Add(new Check("Camera and face visible", CheckStatus.Later, "only for exams that use the camera; your browser asks when the exam starts"));
+            list.Add(VoiceConfig.Available
+                ? new Check("Spoken examiner", CheckStatus.Pass, "available")
+                : new Check("Spoken examiner", CheckStatus.Fail, "not turned on for this site",
+                    "Exams are spoken, and the talking examiner is switched off here. Tell your instructor; you can't take the exam until it is on."));
         }
         catch (JSException ex)
         {
@@ -248,9 +333,7 @@ else
 
     private void PracticeAnswer()
     {
-        var words = practiceAnswer.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        var quote = string.Join(' ', words.Take(14)) + (words.Length > 14 ? "…" : "");
-        practiceFollowUp = $"You said: \"{quote}\". Can you think of something that fits that description but that you wouldn't call a habit?";
+        practiceFollowUp = "Can you think of something that fits your description, but that you wouldn't call a habit?";
         practiceExplain = "That's a counterexample move: the examiner tests your definition against a case built from your own words. In the real exam the follow-ups are written live from what you say.";
     }
 
@@ -262,7 +345,6 @@ else
 
     private void ResetPractice()
     {
-        practiceAnswer = "";
         practiceFollowUp = practiceExplain = null;
     }
 
@@ -279,6 +361,8 @@ else
             var sessionId = assignment.ActiveSessionId
                             ?? await Sessions.CreateOrResumeAsync(org, assignment.AssignmentId, user, clientInfo);
             await Sessions.RecordConsentAsync(org, sessionId, user, notice.Sha256);
+            // Hand the microphone and camera over to the exam room, which opens them again straight away (GAD-T239).
+            await StopMediaAsync();
             Nav.NavigateTo($"exam/{sessionId}");
         }
         catch (SessionRefusedException ex)
@@ -288,12 +372,21 @@ else
         }
     }
 
+    private async Task StopMediaAsync()
+    {
+        if (module is null) return;
+        try { await module.InvokeVoidAsync("stopMedia"); }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (module is not null)
         {
+            await StopMediaAsync();
             try { await module.DisposeAsync(); }
             catch (JSDisconnectedException) { }
         }
+        self?.Dispose();
     }
 }

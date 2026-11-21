@@ -35,6 +35,7 @@ public static class SessionTranscriptSerializer
             StartedAt = session.StartedAt,
             EndedAt = session.EndedAt,
             EndReason = session.EndReason,
+            ClockHeld = session.ClockHeld ? true : null,
             Turns = [.. session.Turns],
             Mastery = [.. session.Mastery.Values.OrderBy(m => m.ConceptId, StringComparer.Ordinal)],
         };
@@ -53,7 +54,7 @@ public static class SessionTranscriptSerializer
             if (dto.Turns[i].Index != i)
                 throw new JsonException($"Turn {i} is recorded with index {dto.Turns[i].Index}.");
         return new SocraticSession(dto.Id, dto.SubjectId, dto.Policy, dto.PromptSetId, dto.PromptSetVersion,
-            dto.PromptSetSha256, dto.StartedAt, dto.EndedAt, dto.EndReason, dto.Turns, dto.Mastery);
+            dto.PromptSetSha256, dto.StartedAt, dto.EndedAt, dto.EndReason, dto.Turns, dto.Mastery, dto.ClockHeld == true);
     }
 
     private sealed class Dto
@@ -68,6 +69,8 @@ public static class SessionTranscriptSerializer
         public DateTimeOffset StartedAt { get; set; }
         public DateTimeOffset? EndedAt { get; set; }
         public EndReason EndReason { get; set; }
+        /// <summary>Written only while the clock waits for the first question (GAD-T239); absent means it is running.</summary>
+        public bool? ClockHeld { get; set; }
         public List<Turn> Turns { get; set; } = [];
         public List<MasterySnapshot> Mastery { get; set; } = [];
     }

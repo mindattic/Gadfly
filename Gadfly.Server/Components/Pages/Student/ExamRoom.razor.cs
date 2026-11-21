@@ -1,6 +1,5 @@
 using Gadfly.Engine;
 using Gadfly.Server.Data;
-using Gadfly.Server.Integrity;
 using Gadfly.Server.Tenancy;
 using Gadfly.Server.Verification;
 using Gadfly.Server.Voice;
@@ -9,33 +8,58 @@ using Microsoft.AspNetCore.Components;
 namespace Gadfly.Server.Components.Pages.Student;
 
 /// <summary>
-/// The exam room's voice mode (GAD-T53): which exams get it, and how a spoken answer joins the same ledger, verification and
-/// judging steps a typed one uses. The browser side is wwwroot/js/voice-room.js and <see cref="VoiceRoom"/>.
+/// The exam room's talking examiner (GAD-T53): how a spoken answer joins the ledger, verification and judging steps. Voice and camera
+/// are mandatory for every exam (GAD-T239): there is no typed answer mode, and the exam clock starts when the examiner begins the first
+/// question. The browser side is wwwroot/js/voice-room.js and <see cref="VoiceRoom"/>.
 /// </summary>
 public partial class ExamRoom
 {
     [Inject] private VoiceSettings VoiceConfig { get; set; } = default!;
 
-    /// <summary>Voice is offered: it is switched on for the server and this exam is a voice exam. Typing stays available until the student turns voice on.</summary>
+    /// <summary>The talking examiner is switched on for this server. Without it a spoken exam can't run (there is no typed mode).</summary>
     private bool voiceAvailable;
-    /// <summary>Voice mode is running: the main answer box is replaced by speaking (corrections can still be typed).</summary>
+    /// <summary>The examiner, microphone and camera are running; while they aren't, the exam is paused and the question hidden.</summary>
     private bool voiceOn;
+    /// <summary>The examiner has spoken at least once on this page (a later pause is a lost device, not a first connection).</summary>
+    private bool examinerHasSpoken;
+    private bool clockStarting;
     /// <summary>The spoken answer to resend, with its word timings and metrics, if a step failed partway.</summary>
     private Answer? pendingVoiceAnswer;
 
-    /// <summary>Only exams the instructor set up for voice offer it; a text exam's consent never covered sending audio to a speech service.</summary>
-    private async Task LoadVoiceAsync(Guid org, Guid user)
+    /// <summary>
+    /// Every exam is spoken (GAD-T239), whatever mode it was built with: the consent notice every student accepts describes the
+    /// microphone and the camera. The only question is whether this server has the talking examiner turned on.
+    /// </summary>
+    private void LoadVoice() => voiceAvailable = VoiceConfig.Available;
+
+    /// <summary>
+    /// The examiner is beginning to speak. The first time, the held exam clock starts (GAD-T239): the student's time begins with the
+    /// first spoken question, not with the click on Begin exam. The server starts it once, so a reload can't restart it.
+    /// </summary>
+    private async Task OnExaminerSpeaksAsync()
     {
-        if (!VoiceConfig.Available || voiceAvailable) return;
+        examinerHasSpoken = true;
+        if (step is not { ClockStarted: false } || clockStarting) return;
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        clockStarting = true;
         try
         {
-            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
-            var settings = await IntegrityRecorder.Create(scope.ServiceProvider).SettingsAsync(org, user, SessionId, stop.Token);
-            voiceAvailable = settings?.Mode == ExamMode.Voice;
+            var next = await Sessions.StartClockAsync(org, SessionId, user, stop.Token);
+            // Only the clock changed: keep whatever this page shows now (a newer step may have arrived meanwhile).
+            if (step is { } current && next.State != SessionState.Ended && next.TurnIndex == current.TurnIndex)
+            {
+                step = current with { Remaining = next.Remaining, ClockStarted = next.ClockStarted };
+                deadline = Clock.GetUtcNow() + next.Remaining;
+            }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            Log.LogWarning(ex, "Voice mode could not be checked for session {SessionId}; the exam stays in text mode.", SessionId);
+            // The server's clock still counts from when the session started, so a failure here never gives extra time.
+            Log.LogWarning(ex, "The exam clock could not be started for session {SessionId}.", SessionId);
+        }
+        finally
+        {
+            clockStarting = false;
         }
     }
 
@@ -77,7 +101,7 @@ public partial class ExamRoom
         var built = VoiceAnswerBuilder.Build(payload, Clock.GetUtcNow());
         if (built is null)
         {
-            error = "I didn't catch an answer to record. Please try again, or type it.";
+            error = "I didn't catch an answer to record. Please say it again.";
             return;
         }
         var text = built.Answer.Text;

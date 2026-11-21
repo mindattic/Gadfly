@@ -22,6 +22,12 @@ button.secondary, a.button.secondary { background: none; color: var(--accent); b
 .syscheck-pass .syscheck-mark { color: var(--ok); border-color: var(--ok); }
 .syscheck-warn .syscheck-mark { color: var(--accent); border-color: var(--accent); }
 .syscheck-fail .syscheck-mark { color: var(--error); border-color: var(--error); }
+/* Microphone and camera preflight (GAD-T239): a live camera preview and a microphone level meter. */
+.syscheck-media { display: flex; flex-wrap: wrap; gap: .75rem 1rem; align-items: center; margin: .5rem 0; }
+.syscheck-camera { width: 200px; max-width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); background: var(--line); transform: scaleX(-1); }
+.syscheck-level { --level: 0; flex: 1 1 160px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.syscheck-level i { display: block; height: 100%; width: calc(var(--level) * 100%); background: var(--accent); transition: width 80ms linear; }
+@media (prefers-reduced-motion: reduce) { .syscheck-level i { transition: none; } }
 .practice { border: 1px dashed var(--line); border-radius: var(--radius); padding: .75rem 1rem; display: grid; gap: .5rem; }
 .question { font-size: 1.05rem; font-weight: 600; }
 label.inline { display: flex; gap: .5rem; align-items: flex-start; font-size: .95rem; }

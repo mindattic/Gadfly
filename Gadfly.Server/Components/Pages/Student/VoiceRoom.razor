@@ -8,30 +8,36 @@
 @inject IServiceScopeFactory Scopes
 @inject TimeProvider Clock
 
-@* Voice mode for the exam room (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
-   out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js; text mode is untouched and one click away.
-   The interview room (GAD-T231): the student's own camera beside the examiner (a local mirror, never recorded or sent), an
-   on-screen transcript of every question and spoken answer, and each answer's response delay as it happens. *@
+@* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
+   out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
+   The interview room (GAD-T231): the student's own camera beside the examiner, an on-screen transcript of every question and
+   spoken answer, and each answer's response delay as it happens.
+   Voice and camera are mandatory (GAD-T239): there is no typed answer mode. The examiner starts on its own when the page opens
+   (no separate click), and while the microphone or camera is missing or lost the exam is paused here until it is restored. *@
 <HeadContent><link rel="stylesheet" href="voice.css" /></HeadContent>
 
-<section class="voice-room" aria-label="Voice mode" data-state="@state.ToString().ToLowerInvariant()">
+<section class="voice-room" aria-label="The examiner" data-state="@state.ToString().ToLowerInvariant()">
     @if (state == VoiceState.Off || state == VoiceState.Failed)
     {
         <div class="voice-offer">
-            <p><strong>Answer by voice.</strong> The examiner speaks each question and you answer out loud; your words appear as you speak. Turn it on with the button, and you can switch to typing at any time.</p>
             @if (Settings.Mode == VoiceMode.Mock)
             {
                 <p class="notice" role="note">Practice voice: speech recognition is simulated here, so your words will appear as the placeholder "speech".</p>
             }
-            @if (notice is not null)
+            @if (!supported)
             {
-                <p class="notice" role="status">@notice</p>
+                <p class="error" role="alert">@(notice ?? "This browser can't run the spoken exam.")</p>
+                <p class="hint">This exam is spoken and needs a microphone and a camera. Use a current Chrome, Edge, Firefox or Safari on a secure connection, then reload this page.</p>
             }
-            @if (supported)
+            else if (state == VoiceState.Failed)
             {
-                <button type="button" data-voice-action="start">Start voice mode</button>
-                <p class="hint">Your browser will ask to use your microphone. Audio is sent to the speech service to be turned into text; no recording is kept.</p>
-                <p class="hint">It will also ask for your camera, so you can see yourself beside the examiner like a mirror. Your picture stays on this screen: it is never recorded or sent, and you can hide it or decline it.</p>
+                <p class="error" role="alert"><strong>@(needsClick ? "One click to go." : "The exam is paused.")</strong> @notice</p>
+                <button type="button" data-voice-action="start">@(needsClick ? "Continue to the examiner" : "Try again")</button>
+                <p class="hint">Your microphone and camera must stay on for the whole exam: you answer the examiner out loud, and your camera shows you during the exam. Once the first question has been asked, the clock keeps running while the exam is paused.</p>
+            }
+            else
+            {
+                <p class="hint" role="status">Connecting you to the examiner… Your browser may ask to use your microphone and camera: allow both.</p>
             }
         </div>
     }
@@ -49,17 +55,14 @@
                     <p class="voice-self-note">@selfNote</p>
                 }
             </div>
-            <figcaption>
-                You
-                <button type="button" class="link" data-voice-action="self" hidden="@(selfState == "starting")">@(selfState == "on" ? "Hide my camera" : "Show my camera")</button>
-            </figcaption>
+            <figcaption>You</figcaption>
         </figure>
     </div>
 
     @if (state is VoiceState.Starting or VoiceState.On)
     {
         <div class="voice-body">
-            <p class="voice-status" role="status" aria-live="polite" data-voice-status>Starting voice mode…</p>
+            <p class="voice-status" role="status" aria-live="polite" data-voice-status>Connecting you to the examiner…</p>
             <p class="voice-delay" data-voice-delay data-state="idle" aria-live="off"></p>
             <div class="voice-level" data-voice-level aria-hidden="true"><i></i></div>
             <p class="voice-caption" data-voice-caption aria-hidden="true"></p>
@@ -107,7 +110,6 @@
                 <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
                 <button type="button" class="secondary" data-voice-action="mode">Switch to hold-to-talk</button>
                 <button type="button" class="secondary" data-voice-action="ptt" hidden>Hold to talk</button>
-                <button type="button" class="link" @onclick="TypeInsteadAsync">Type my answers instead</button>
             </div>
         </div>
     }
@@ -131,9 +133,11 @@
     [Parameter] public bool Active { get; set; }
     [Parameter] public EventCallback<bool> ActiveChanged { get; set; }
     [Parameter] public EventCallback<VoiceAnswerPayload> OnAnswer { get; set; }
+    /// <summary>The examiner is beginning to speak a question or request (the exam room starts the held clock on the first, GAD-T239).</summary>
+    [Parameter] public EventCallback OnExaminerSpeaks { get; set; }
 
     private VoiceState state;
-    private bool supported = true, armed;
+    private bool supported = true, armed, needsClick;
     private string? notice, avatarNote;
     private string? spokenKey;
     private bool lastAllowed;
@@ -155,9 +159,8 @@
 
     private string? SelfNote => selfState switch
     {
-        "denied" => "The camera wasn't allowed, so your picture isn't shown. Voice answers work without it.",
-        "unavailable" => "No camera is available, so your picture isn't shown. Voice answers work without it.",
-        "hidden" => "Your camera is hidden.",
+        "denied" => "The camera wasn't allowed.",
+        "unavailable" => "No camera is available.",
         _ => null,
     };
 
@@ -230,15 +233,18 @@
             if (!caps.Microphone || !caps.AudioContext)
             {
                 supported = false;
-                notice = "This browser can't use the microphone for voice mode (it needs a current browser and a secure connection). You can answer by typing.";
+                notice = "This browser can't use the microphone and camera (it needs a current browser and a secure connection).";
                 StateHasChanged();
+                return;
             }
+            // Begin exam goes straight into the talking examiner (GAD-T239): no separate click to start voice.
+            await module.InvokeVoidAsync("autoStart", stop.Token);
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
         {
             supported = false;
-            Log.LogDebug(ex, "Voice mode could not load for session {SessionId}.", SessionId);
-            notice = "Voice mode could not start in this browser. You can answer by typing.";
+            Log.LogDebug(ex, "The examiner could not load for session {SessionId}.", SessionId);
+            notice = "The examiner could not start in this browser.";
             StateHasChanged();
         }
     }
@@ -276,6 +282,7 @@
                     loggedKey = key;
                     AddLine(true, Prompt is { Length: > 0 } p ? p : Question ?? text, null);
                 }
+                await OnExaminerSpeaks.InvokeAsync();
                 await SpeakAsync(text);
             }
             if (spoke || CanAnswer != lastAllowed)
@@ -302,13 +309,6 @@
         if (SpokenText is { Length: > 0 } text && module is not null) await SpeakAsync(text);
     }
 
-    private async Task TypeInsteadAsync()
-    {
-        await StopVoiceAsync();
-        notice = "Voice mode is off. You can answer by typing, and start voice mode again whenever you like.";
-        await SetStateAsync(VoiceState.Off);
-    }
-
     private async Task StopVoiceAsync()
     {
         if (module is null) return;
@@ -330,6 +330,7 @@
     public Task OnVoiceStarting() => InvokeAsync(async () =>
     {
         notice = null;
+        needsClick = false;
         avatarNote = null;
         selfState = "starting";
         await SetStateAsync(VoiceState.Starting);
@@ -362,18 +363,28 @@
         StateHasChanged();
     });
 
-    /// <summary>The browser could not start or lost voice: fall back to typing, never leave the student without a way to answer.</summary>
+    /// <summary>
+    /// The browser could not start, or lost, the microphone, the camera or the examiner's connection: the exam pauses here and asks for it
+    /// to be restored (GAD-T239). There is no typed fallback; "Try again" starts everything again and the examiner repeats the question.
+    /// </summary>
     [JSInvokable]
     public Task OnVoiceProblem(string kind, string message, bool fatal) => InvokeAsync(async () =>
     {
         if (!fatal) return;
-        Log.LogInformation("Voice mode stopped for session {SessionId}: {Kind}.", SessionId, kind);
+        Log.LogInformation("The examiner paused for session {SessionId}: {Kind}.", SessionId, kind);
         await StopVoiceAsync();
+        needsClick = kind == "gesture";
         notice = kind switch
         {
-            "mic-denied" => "The microphone wasn't allowed, so voice mode is off. You can answer by typing, or allow the microphone in your browser and try again.",
-            "hub" or "recognizer" => "Voice mode lost its connection, so it is off. You can answer by typing, or try voice mode again.",
-            _ => "Voice mode couldn't start, so it is off. You can answer by typing.",
+            "gesture" => "Your browser needs one click before the examiner can speak.",
+            "mic-denied" => "The microphone wasn't allowed. Allow the microphone for this site in your browser (the icon in the address bar), then press Try again.",
+            "microphone" => "The microphone couldn't be opened. Check that it is plugged in and not used by another app, then press Try again.",
+            "mic-lost" => "Your microphone stopped working. Plug it back in or allow it again, then press Try again.",
+            "camera-denied" => "The camera wasn't allowed. Allow the camera for this site in your browser (the icon in the address bar), then press Try again.",
+            "camera" => "No camera could be opened. Check that it is connected, uncovered and not used by another app, then press Try again.",
+            "camera-lost" => "Your camera stopped working. Plug it back in or allow it again, then press Try again.",
+            "hub" or "recognizer" => "The connection to the examiner was lost. Check your internet connection, then press Try again.",
+            _ => "The examiner couldn't start. Press Try again; if it keeps failing, reload the page.",
         };
         await SetStateAsync(VoiceState.Failed);
     });

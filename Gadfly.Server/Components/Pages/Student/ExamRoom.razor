@@ -46,12 +46,20 @@
         </div>
     }
 
-    @if (voiceAvailable && phase is Phase.Answering or Phase.Thinking)
+    @if (phase is Phase.Answering or Phase.Thinking)
     {
-        @* Voice mode (GAD-T53): kept outside the phase switch so the microphone and the examiner persist from question to question. *@
-        <VoiceRoom SessionId="SessionId" TurnIndex="step?.TurnIndex" Question="@step?.Question" Prompt="@VoicePrompt"
-                   PromptId="step?.Verification?.ResponseId" CanAnswer="VoiceCanAnswer" Active="voiceOn" ActiveChanged="OnVoiceActive"
-                   OnAnswer="OnVoiceAnswerAsync" />
+        if (voiceAvailable)
+        {
+            @* The talking examiner (GAD-T53, mandatory since GAD-T239): kept outside the phase switch so the microphone, the camera and
+               the examiner persist from question to question. *@
+            <VoiceRoom SessionId="SessionId" TurnIndex="step?.TurnIndex" Question="@step?.Question" Prompt="@VoicePrompt"
+                       PromptId="step?.Verification?.ResponseId" CanAnswer="VoiceCanAnswer" Active="voiceOn" ActiveChanged="OnVoiceActive"
+                       OnAnswer="OnVoiceAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaksAsync" />
+        }
+        else
+        {
+            <p class="error" role="alert">This exam is spoken, but the talking examiner isn't turned on on this server, so the exam can't go ahead. Please tell your instructor.</p>
+        }
     }
 
     @switch (phase)
@@ -87,6 +95,16 @@
 
         case Phase.Answering:
             <section class="panel wide exam-card">
+                @if (!voiceOn)
+                {
+                    @* No microphone, camera or examiner connection (not yet, or lost): the exam is paused (GAD-T239). The question
+                       is not shown until the examiner asks it, so time before the clock starts can't be spent reading it. *@
+                    <p class="notice" role="status">@(examinerHasSpoken
+                        ? "The exam is paused until your microphone, camera and the examiner are working again. Follow the steps above."
+                        : "The examiner will ask the first question as soon as your microphone and camera are working. Your time starts then.")</p>
+                }
+                else
+                {
                 @if (!string.IsNullOrWhiteSpace(step?.ConceptTitle))
                 {
                     <p class="concept">@step.ConceptTitle</p>
@@ -103,15 +121,23 @@
                             <h2 id="verify-title" class="verify-title">Check the recording</h2>
                             <p class="verify-prompt" aria-live="polite">@v.Prompt</p>
                             <p class="hint">Confirming only says the recording matches what you said. It doesn't mean your answer is right or wrong.</p>
-                            @if (verifyMode is VerifyMode.Correct or VerifyMode.Repeat)
+                            @if (verifyMode == VerifyMode.Repeat)
+                            {
+                                @* Said again out loud, never typed (GAD-T239): the new recognition replaces the doubtful one. *@
+                                <p class="hint" role="status">Say your answer again now. Your original recording is kept, and repeating it never lowers your score.</p>
+                                <div class="actions">
+                                    <button type="button" class="secondary" @onclick="() => verifyMode = VerifyMode.None">Back</button>
+                                </div>
+                            }
+                            else if (verifyMode == VerifyMode.Correct)
                             {
                                 <label>
-                                    @(verifyMode == VerifyMode.Correct ? "Correct the recording" : "Say or type your answer again")
+                                    Correct the recording
                                     <textarea rows="5" @bind="extraText" @bind:event="oninput" aria-describedby="correct-hint"></textarea>
                                 </label>
-                                <p id="correct-hint" class="hint">Your original recording is kept. Correcting a recording error never lowers your score.</p>
+                                <p id="correct-hint" class="hint">Fix words the recording got wrong. Your original recording is kept. Correcting a recording error never lowers your score.</p>
                                 <div class="actions">
-                                    <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="() => CorrectPendingAsync(verifyMode == VerifyMode.Repeat)">Save</button>
+                                    <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="() => CorrectPendingAsync(false)">Save</button>
                                     <button type="button" class="secondary" @onclick="() => verifyMode = VerifyMode.None">Back</button>
                                 </div>
                             }
@@ -128,7 +154,7 @@
                         {
                             <h2 id="verify-title" class="verify-title">A quick clarification</h2>
                             <p class="verify-prompt" aria-live="polite">@v.Prompt</p>
-                            <p class="hint">This only checks what you meant, so your answer is understood the way you intended. It doesn't mean your answer is right or wrong, and your answer stays exactly as you wrote it.</p>
+                            <p class="hint">This only checks what you meant, so your answer is understood the way you intended. It doesn't mean your answer is right or wrong, and your answer stays exactly as recorded.</p>
                             @if (verifyMode == VerifyMode.Correct)
                             {
                                 <label>
@@ -143,12 +169,9 @@
                             }
                             else
                             {
-                                <label>
-                                    Your clarification
-                                    <textarea id="clarify-box" rows="4" @bind="extraText" @bind:event="oninput" placeholder="In your own words…"></textarea>
-                                </label>
+                                @* Clarified out loud, never typed (GAD-T239). *@
+                                <p class="hint" role="status">Answer the examiner out loud to clarify.</p>
                                 <div class="actions">
-                                    <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="() => ClarifyAsync(v, extraText)">Send clarification</button>
                                     <button type="button" class="secondary" @onclick="() => ClarifyAsync(v, null)">I'd rather not add anything</button>
                                     <button type="button" class="link" @onclick="() => StartVerify(VerifyMode.Correct, v.RecordedText)">Fix a typo in my answer instead</button>
                                 </div>
@@ -156,22 +179,14 @@
                         }
                     </div>
                 }
-                else if (voiceOn)
-                {
-                    <p class="hint" role="status">Voice mode is on: answer out loud. You can switch to typing at any time with "Type my answers instead".</p>
-                }
                 else
                 {
-                    <label>
-                        Your answer
-                        <textarea id="answer-box" rows="7" @bind="answer" @bind:event="oninput" @bind:after="OnTyped" @onkeydown="OnKeyDown"
-                                  placeholder="Answer in your own words…" aria-describedby="answer-hint"></textarea>
-                    </label>
-                    <p id="answer-hint" class="hint">Ctrl+Enter submits.</p>
+                    @* Spoken answers only (GAD-T239): there is no typed answer box. *@
+                    <p class="hint" role="status">Answer the examiner out loud.</p>
                     <div class="actions">
-                        <button type="button" @onclick="SubmitAsync" disabled="@string.IsNullOrWhiteSpace(answer)">Submit answer</button>
-                        <button type="button" class="secondary" @onclick="DontKnowAsync">I don't know</button>
+                        <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@busy">I don't know</button>
                     </div>
+                }
                 }
                 @if (step?.Notice is { } note && error is null)
                 {
@@ -183,7 +198,8 @@
                 }
             </section>
 
-            @if (step?.Verification is null && step?.LastAnswer is { } last && (last.CanCorrectTypo || last.CanRevise))
+            @* A changed answer would be typed, so it isn't offered (GAD-T239): only a small fix to how the last answer was recorded. *@
+            @if (voiceOn && step?.Verification is null && step?.LastAnswer is { } last && last.CanCorrectTypo)
             {
                 <section class="panel wide last-answer" aria-labelledby="last-title">
                     <p id="last-title" class="verify-label">Your last answer</p>
@@ -194,37 +210,16 @@
                             Correct a typo in your last answer
                             <textarea rows="5" @bind="extraText" @bind:event="oninput" aria-describedby="last-typo-hint"></textarea>
                         </label>
-                        <p id="last-typo-hint" class="hint">Small spelling fixes only. Your original answer stays on record, and a typo fix never lowers your score. To change what your answer says, use "I want to change my answer".</p>
+                        <p id="last-typo-hint" class="hint">Small fixes to words the recording got wrong only. Your original answer stays on record, and a fix never lowers your score.</p>
                         <div class="actions">
-                            <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="CorrectLastAsync">Save typo fix</button>
-                            <button type="button" class="secondary" @onclick="CancelLast">Cancel</button>
-                        </div>
-                    }
-                    else if (lastMode == LastMode.Revise)
-                    {
-                        <p class="hint">Question: @last.Question</p>
-                        <blockquote class="recorded-answer">@last.Text</blockquote>
-                        <p class="notice">@last.RevisionRule</p>
-                        <label>
-                            Your changed answer
-                            <textarea rows="6" @bind="extraText" @bind:event="oninput"></textarea>
-                        </label>
-                        <div class="actions">
-                            <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="ReviseLastAsync">Record my changed answer</button>
+                            <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="CorrectLastAsync">Save fix</button>
                             <button type="button" class="secondary" @onclick="CancelLast">Cancel</button>
                         </div>
                     }
                     else
                     {
                         <div class="actions">
-                            @if (last.CanCorrectTypo)
-                            {
-                                <button type="button" class="link" @onclick="() => StartLast(LastMode.Typo, last.Text)">Correct a typo in my last answer</button>
-                            }
-                            @if (last.CanRevise)
-                            {
-                                <button type="button" class="link" @onclick="() => StartLast(LastMode.Revise, last.Text)">I want to change my answer</button>
-                            }
+                            <button type="button" class="link" @onclick="() => StartLast(LastMode.Typo, last.Text)">Correct a word in how my last answer was recorded</button>
                         </div>
                     }
                     @if (error is not null && lastMode != LastMode.None)
@@ -282,18 +277,17 @@
     private enum Phase { Loading, NotFound, Thinking, Answering, Ended, Error }
     private enum ThinkingAbout { Question, Answer, Finish, Saving }
     private enum VerifyMode { None, Correct, Repeat }
-    private enum LastMode { None, Typo, Revise }
+    private enum LastMode { None, Typo }
 
     private VerifyMode verifyMode;
     private LastMode lastMode;
-    /// <summary>The text of whichever side box is open: a clarification, a correction or a changed answer.</summary>
+    /// <summary>The text of whichever side box is open: a correction of how an answer was recorded.</summary>
     private string extraText = "";
 
     private Phase phase = Phase.Loading;
     private ThinkingAbout thinkingAbout;
     private SessionStep? step;
     private string? examTitle, error, endNote;
-    private string answer = "";
     private DateTimeOffset? answerStartedAt;
     private DateTimeOffset deadline;
     private bool busy, confirmFinish, timeUpHandled;
@@ -307,6 +301,8 @@
     {
         get
         {
+            // Held until the examiner begins the first question (GAD-T239): shown, but not counting down.
+            if (step is { ClockStarted: false } held) return held.Remaining;
             var left = deadline - Clock.GetUtcNow();
             return left < TimeSpan.Zero ? TimeSpan.Zero : left;
         }
@@ -335,7 +331,7 @@
             return;
         }
         examTitle = s.ExamTitle;
-        await LoadVoiceAsync(org, user);   // voice exams only (GAD-T53)
+        LoadVoice();   // every exam is spoken (GAD-T239)
         switch (s.State)
         {
             case SessionState.Created:
@@ -383,8 +379,8 @@
             {
                 sessionId = SessionId,
                 level = settings.Level.ToString(),
-                // Pastes matter where answers are typed; voice exams will block typing (ET voice mode).
-                recordPaste = settings.Mode == ExamMode.Text,
+                // Answers are spoken (GAD-T239): there is no answer box to paste into.
+                recordPaste = false,
             });
             fullscreen = await integrityModule.InvokeAsync<bool>("isFullscreen", stop.Token);
             await InvokeAsync(StateHasChanged);
@@ -437,7 +433,6 @@
     private static string IntegrityNotice(IntegritySettings s)
     {
         var what = new List<string> { "switch to another tab or window" };
-        if (s.Mode == ExamMode.Text) what.Add("paste into the answer box");
         what.Add("copy the question");
         if (s.Level == IntegrityLevel.Strict) what.AddRange(["leave full screen", "have more than one screen connected"]);
         var list = what.Count == 1 ? what[0] : string.Join(", ", what.Take(what.Count - 1)) + " or " + what[^1];
@@ -503,10 +498,9 @@
             extraText = "";
             shownRequest = next.Verification?.ResponseId;
         }
-        // A new question clears the answer box; the same question (a resume) keeps what was typed.
+        // A new question starts a new answer.
         if (next.TurnIndex != shownTurn)
         {
-            answer = "";
             answerStartedAt = null;
             shownTurn = next.TurnIndex;
         }
@@ -557,21 +551,6 @@
     private Task CorrectLastAsync() =>
         VerifyStepAsync(ThinkingAbout.Saving, (org, user) => Sessions.CorrectAnswerAsync(org, SessionId, user, extraText.Trim()));
 
-    private Task ReviseLastAsync() =>
-        VerifyStepAsync(ThinkingAbout.Saving, (org, user) => Sessions.ReviseAnswerAsync(org, SessionId, user, extraText.Trim()));
-
-    private void OnTyped()
-    {
-        if (answerStartedAt is null && answer.Length > 0) answerStartedAt = Clock.GetUtcNow();
-    }
-
-    private async Task OnKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter" && (e.CtrlKey || e.MetaKey) && !string.IsNullOrWhiteSpace(answer)) await SubmitAsync();
-    }
-
-    private Task SubmitAsync() => SendAsync(answer.Trim());
-
     private Task DontKnowAsync() => SendAsync(SourceExamEngine.AporiaWord);
 
     private async Task SendAsync(string text)
@@ -615,7 +594,7 @@
                 await InvokeAsync(async () =>
                 {
                     if (phase is not (Phase.Answering or Phase.Thinking)) return;
-                    if (phase == Phase.Answering && !busy && !timeUpHandled && step is not null && TimeLeft <= TimeSpan.Zero)
+                    if (phase == Phase.Answering && !busy && !timeUpHandled && step is { ClockStarted: true } && TimeLeft <= TimeSpan.Zero)
                     {
                         timeUpHandled = true;
                         await TimeUpAsync();
@@ -628,14 +607,12 @@
         catch (ObjectDisposedException) { }
     }
 
-    /// <summary>Time's up: hand in what's typed (the server then ends the session), or end it outright.</summary>
+    /// <summary>Time's up: the session ends (an answer still being spoken is not handed in; answers are spoken, never typed).</summary>
     private async Task TimeUpAsync()
     {
         if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
         // A request about the last answer still open: the server judges that answer as recorded and flags it for a human.
-        if (step?.Verification is not null) await RunStepAsync(ThinkingAbout.Finish, () => Sessions.EndAsync(org, SessionId, user, EndReason.TimeUp));
-        else if (!string.IsNullOrWhiteSpace(answer)) await SendAsync(answer.Trim());
-        else await RunStepAsync(ThinkingAbout.Finish, () => Sessions.EndAsync(org, SessionId, user, EndReason.TimeUp));
+        await RunStepAsync(ThinkingAbout.Finish, () => Sessions.EndAsync(org, SessionId, user, EndReason.TimeUp));
     }
 
     private static string Format(TimeSpan t) =>

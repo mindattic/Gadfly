@@ -35,21 +35,27 @@ Sign in, open **My exams** and press **Start**. (Forgot your password? Press **F
 sign-in page and enter your user name or email; if an account matches, you'll get an email with a link to
 choose a new one.) The get-ready page has three steps.
 
-1. **System check.** Your browser, cookies, internet connection and screen are checked. If something is
-   marked ✗, the page tells you how to fix it; press **Check again** afterwards. A slow connection gets a
-   warning but still works for typed answers. The microphone and camera checks are marked "later": the
-   microphone is checked when you turn on voice mode in the exam, and the camera only for exams that use it.
-2. **How it works.** A short explanation and one practice question. The practice isn't recorded.
+1. **System check.** Your browser, cookies, internet connection and screen are checked, and so are your
+   **microphone and camera**: every exam is spoken and your camera must be on, so allow both when your
+   browser asks. You see your camera on the page; say a few words so the microphone meter moves and the
+   check turns ✓. If something is marked ✗, the page tells you how to fix it; press **Check again**
+   afterwards. **Begin exam** stays off until every check passes.
+2. **How it works.** A short explanation and one practice question you answer out loud. The practice isn't recorded.
 3. **Notice and consent.** A plain-language notice: what is recorded, what isn't, how long it's kept and
    who decides your result. Read it, tick the box, and press **Begin exam**. A fingerprint of the exact
    wording you agreed to is saved with your exam, so there's a record of what you were told.
 
 ## During the exam
 
-- You see one question at a time, the topic it's about, a countdown and how many topics are finished.
-- **Answer in your own words.** Short, honest answers are better than long copied ones. Type your answer
-  and press **Submit answer** (or Ctrl+Enter). You can't change an answer after submitting it.
-- **"I don't know" is a real answer.** If you genuinely don't know, press **I don't know**. Socrates
+- **Begin exam** takes you straight to a talking examiner: there is nothing else to press. It asks one
+  question at a time out loud (also shown as text, with the topic, a countdown and how many topics are finished).
+- **Answer out loud, in your own words.** There is no typing. Short, honest answers are better than long
+  recited ones. Your words appear as you speak; a short silence (or **Done answering**) ends the answer, and
+  the examiner may read it back so you can confirm or fix how it was heard.
+- **Your microphone and camera must stay on.** If either stops working (unplugged, blocked, taken by another
+  app), the exam pauses and tells you how to bring it back; press **Try again** and the examiner repeats the
+  question. The clock keeps running while the exam is paused.
+- **"I don't know" is a real answer.** If you genuinely don't know, say so or press **I don't know**. Socrates
   called that moment *aporia*: honest puzzlement, the start of real learning. It isn't a failure; the
   examiner notes it and tries another angle or moves on.
 - After each answer the examiner takes a few seconds to think. Keep the page open.
@@ -57,9 +63,10 @@ choose a new one.) The get-ready page has three steps.
 
 ## Time
 
+- Your time starts when the examiner begins asking the first question, not when you press **Begin exam**.
 - The time limit is set by your instructor and kept on the server, so the clock **keeps running** if you
   close the page. If you reload or lose your connection, sign back in and you return to the same question.
-- When time runs out, whatever you've typed in the box is handed in and the exam ends. An answer that
+- When time runs out the exam ends; an answer you are still speaking is not handed in. An answer that
   arrives more than about 20 seconds after time is up isn't judged.
 - The exam can also end early when every topic is covered.
 - **Finish and leave the exam** ends it now. What you've answered so far is submitted and that attempt is
@@ -74,11 +81,11 @@ window closes).
 
 | Recorded | Not recorded |
 |---|---|
-| Every question and your typed answers | Video: none is stored |
+| Every question and a transcript of your spoken answers | Video and audio: none is stored |
 | When each question was asked and when you started and finished answering | Your screen |
 | The AI panel's judgment of each answer | Any guess about your emotions or honesty: the platform never tries |
 | Integrity notes for your instructor, such as an answer that reads very differently from your others | |
-| Browser notes, unless your instructor turned them off: switching to another tab or window (and for how long), pasting into the answer box, copying the question, and on some exams leaving full screen or having a second screen connected | |
+| Browser notes, unless your instructor turned them off: switching to another tab or window (and for how long), copying the question, and on some exams leaving full screen or having a second screen connected | |
 | Your consent (the time and a fingerprint of the notice you accepted) | |
 
 Integrity notes are for a person to read in context. They never fail you automatically, and nothing is
@@ -90,14 +97,13 @@ Your answers are kept for your organization's retention period, shown in the not
 organization set another), and then removed. The outcome (the judgments, your result and your
 instructor's comment) is kept.
 
-> Voice exams and camera checks. On a voice exam you press **Start voice mode** and allow your microphone;
-> a talking examiner asks and you answer aloud, and typing is always available. Your own camera is shown beside
-> the examiner like a mirror (it stays on your screen, is never recorded or sent, and you can hide it), the
-> questions and your spoken answers appear in a transcript as you go, and a "Response delay" shows how long you
+> The spoken exam and the camera. Every exam is spoken: a talking examiner asks and you answer aloud.
+> Your own camera is shown beside the examiner (the picture stays on your screen and is never recorded or sent),
+> the questions and your spoken answers appear in a transcript as you go, and a "Response delay" shows how long you
 > took to start answering. Camera checks (Strict exams
 > only) run on your own device after you accept a notice that says what is collected: only short notes (for
-> example "face not visible for 10 seconds") are sent, never video. If you decline the camera, the exam goes
-> on and a neutral note says so.
+> example "face not visible for 10 seconds") are sent, never video. The camera can't be declined: the exam
+> needs it on, and pauses if it stops.
 
 ## Your results
 

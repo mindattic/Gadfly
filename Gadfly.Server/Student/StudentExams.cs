@@ -208,33 +208,33 @@ public static class StudentExams
 public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraphs)
 {
     /// <summary>Bumped whenever the wording changes; part of the hashed text.</summary>
-    public const string Version = "2026-11-21.1";
+    public const string Version = "2026-11-21.2";
 
+    /// <remarks>Every exam is spoken with the camera on (GAD-T239), so <paramref name="mode"/> no longer changes the wording.</remarks>
     public static ConsentNotice For(string organizationName, string examTitle, int retentionDays, ExamMode mode,
         IntegrityLevel integrity = IntegrityLevel.Standard)
     {
         var paragraphs = new List<string>
         {
             $"This is an oral-style exam for {organizationName}: \"{examTitle}\". An AI examiner asks you questions and follows up on your own answers to see how well you understand the material.",
-            "What is recorded: every question and your answers (typed text, or spoken transcripts if you use voice mode), when each question was asked and answered, and integrity signals such as an answer that reads like copied text. These are notes for a person to review, never an automatic fail.",
-            "What is not recorded: no video is stored. In voice mode, any camera checks run on your own device and only short event notes (for example \"face not visible for 10 seconds\") are sent.",
+            "What is recorded: every question and a transcript of your spoken answers (with any corrections you make to it), when each question was asked and answered, and integrity signals such as an answer that reads like copied text. These are notes for a person to review, never an automatic fail.",
+            "What is not recorded: no video and no audio is stored. Your camera shows you on your own screen beside the examiner; the picture is not recorded or sent.",
             $"How long it is kept: {organizationName} keeps your answers and transcripts for {retentionDays} days, then they are deleted.",
             "Who decides: the AI only gives a preliminary assessment. People grade your answers, any large disagreement with the AI is reconciled by a reviewer, and an authorized person approves and publishes your result. You can appeal a published result.",
             "Your choice: you can leave the exam at any time with \"Finish\". Leaving early submits what you have answered so far and uses this attempt.",
         };
-        paragraphs.InsertRange(2, BrowserSignals(integrity, mode));
+        paragraphs.InsertRange(2, BrowserSignals(integrity));
         if (integrity == IntegrityLevel.Strict)
         {
             // The camera is on for this exam: say plainly what is and isn't collected (GAD-T57), instead of the voice-mode line.
             paragraphs.RemoveAll(p => p.StartsWith("What is not recorded:", StringComparison.Ordinal));
             paragraphs.InsertRange(paragraphs.FindIndex(p => p.StartsWith("How long it is kept:", StringComparison.Ordinal)), CameraNotice());
         }
-        if (mode == ExamMode.Voice)
-            paragraphs.Add("This exam is set up for voice. If you turn voice mode on, the examiner speaks the questions and you answer out loud. "
-                + "Your microphone audio is streamed to a speech-to-text service to make a transcript, and the audio itself is not recorded or kept. "
-                + "What is kept is the transcript (with how confident the recognizer was), how it was spoken (pace, pauses, hesitations, and whether more than one voice was heard), and what you confirm. "
-                + "Notes such as \"a second voice was heard\" are for your instructor to read as weak evidence, never an automatic fail. "
-                + "You can type your answers instead at any time, and the microphone is only used while voice mode is on.");
+        paragraphs.Add("This exam is spoken, and your microphone and camera must be on for the whole exam. The examiner speaks the questions and you answer out loud; there is no typed answer. "
+            + "Your microphone audio is streamed to a speech-to-text service to make a transcript, and the audio itself is not recorded or kept. "
+            + "What is kept is the transcript (with how confident the recognizer was), how it was spoken (pace, pauses, hesitations, and whether more than one voice was heard), and what you confirm. "
+            + "Notes such as \"a second voice was heard\" are for your instructor to read as weak evidence, never an automatic fail. "
+            + "If your microphone or camera stops working during the exam, the exam pauses until you bring it back; the clock keeps running. Your time starts when the examiner asks the first question.");
         return new ConsentNotice("Before you begin", paragraphs);
     }
 
@@ -242,11 +242,10 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
     /// The browser integrity signals this exam notes (GAD-T56), in the same words the exam room shows;
     /// none when the exam's integrity level is Off.
     /// </summary>
-    private static IEnumerable<string> BrowserSignals(IntegrityLevel integrity, ExamMode mode)
+    private static IEnumerable<string> BrowserSignals(IntegrityLevel integrity)
     {
         if (integrity == IntegrityLevel.Off) yield break;
         var what = "switching to another tab or window"
-            + (mode == ExamMode.Text ? ", pasting into the answer box" : "")
             + (integrity == IntegrityLevel.Strict
                 ? ", copying the question, leaving full screen, and having more than one screen connected (your browser may ask to allow screen detection; you can decline)"
                 : ", and copying the question");
@@ -261,7 +260,7 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
     {
         yield return "Camera: this exam uses your camera. Your browser will ask you to allow it. The camera is analysed on your own device only. No video, photo, screenshot, audio or image of your face is recorded, stored or sent anywhere, and the face data used for the checks is held in your browser's memory and discarded when the exam ends.";
         yield return "What is sent and kept from the camera: only short event notes, each with a type, a start and end time, a confidence and one plain sentence, for example \"no face in view for 12 seconds\", \"a second face appeared\", \"looked to the left for 8 seconds\", \"eye movements like reading something off-screen\", or \"the camera was not used\". The device also checks that the same face is in front of the camera throughout; that check is never sent. Short glances away while you think are noted as normal. Nothing is made of your emotions, mood or honesty: the camera is not used to judge any of that.";
-        yield return "Camera notes are for your instructor to read alongside your answers, as low-confidence evidence, never an automatic fail. You can say no when your browser asks to use the camera: the exam goes ahead normally and a neutral note records that the camera was not used.";
+        yield return "Camera notes are for your instructor to read alongside your answers, as low-confidence evidence, never an automatic fail. The camera must be on to take this exam: without it the exam can't start, and it pauses if the camera stops.";
     }
 
     /// <summary>The exact text the student accepted, as hashed.</summary>

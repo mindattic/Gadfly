@@ -38,6 +38,8 @@ public sealed record SessionStep
     public LastAnswer? LastAnswer { get; init; }
     /// <summary>A one-line confirmation of what the student's last action did, e.g. "Your correction was saved."</summary>
     public string? Notice { get; init; }
+    /// <summary>False while the exam clock waits for the examiner to begin the first question (GAD-T239); the student's time isn't counting yet.</summary>
+    public bool ClockStarted { get; init; } = true;
 }
 
 /// <summary>Why a session could not be started or advanced, in words a student can read.</summary>
@@ -167,6 +169,18 @@ public sealed class SessionOrchestrator(
     /// <summary>The current question (asking it again after a reconnect), planning a new one if needed.</summary>
     public Task<SessionStep> CurrentAsync(Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct = default) =>
         StepAsync(organizationId, sessionId, studentUserId, async live => await live.Engine.NextQuestionAsync(ct), ct);
+
+    /// <summary>
+    /// The examiner has begun speaking the first question (GAD-T239): the held exam clock starts now, so the student's time begins
+    /// with the talking examiner, not with the click on Begin exam. Once only; a later call (a reload) changes nothing.
+    /// </summary>
+    public Task<SessionStep> StartClockAsync(Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct = default) =>
+        StepAsync(organizationId, sessionId, studentUserId, live =>
+        {
+            var s = live.Engine.Session;
+            if (s.StartClock(clock.GetUtcNow())) log.LogInformation("Exam clock started with the examiner's first question.");
+            return Task.FromResult(s.IsEnded ? null : s.OpenTurn);
+        }, ct);
 
     /// <summary>Meaning clarifications per session: beyond this, an unclear answer goes to a human instead of interrupting again.</summary>
     public const int MaxMeaningClarificationsPerSession = 3;
@@ -608,6 +622,7 @@ public sealed class SessionOrchestrator(
             Verification = pending,
             LastAnswer = last,
             Notice = live.Notice,
+            ClockStarted = !s.ClockHeld,
         };
     }
 
@@ -669,6 +684,8 @@ public sealed class SessionOrchestrator(
                 if (policy.ConceptIds.Count == 0)
                     policy = policy with { ConceptIds = subject.Map.Concepts.Select(c => c.Key).ToList() };
                 engine = await SourceExamEngine.StartAsync(panel, subject, policy, clock, sessionId, ct);
+                // Voice and camera are mandatory (GAD-T239): the clock waits for the examiner to begin the first question.
+                engine.Session.HoldClock();
                 var recorded = JsonSerializer.Serialize(policy, Json);
                 if (recorded != row.PolicyJson)
                     await db.ExamSessions.Where(x => x.Id == sessionId).ExecuteUpdateAsync(u => u.SetProperty(x => x.PolicyJson, recorded), ct);
@@ -719,7 +736,7 @@ public sealed class SessionOrchestrator(
         meter.Stage(db, org, s.Id, calls, "exam-step");   // GAD-T47: estimated LLM usage of this step
         row.TranscriptJson = SessionTranscriptSerializer.Serialize(s);
         row.LedgerJson = live.Engine.Ledger.ToJson();
-        row.StartedAt ??= s.StartedAt;
+        row.StartedAt = s.StartedAt;   // moves once, when a held clock starts (GAD-T239)
         row.State = s.IsEnded ? SessionState.Ended : SessionState.Running;
         row.EndedAt = s.EndedAt;
         row.EndReason = s.IsEnded ? s.EndReason.ToString() : null;

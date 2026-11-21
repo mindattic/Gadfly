@@ -2,18 +2,31 @@
 
 A voice exam is taken out loud: the examiner (a talking head, `<ma-avatar>`) speaks each question with lip sync and
 captions, the student answers by voice with a live transcript, and the answer goes through the same response ledger,
-transcript read-back and judging as a typed one. Typing stays the default for every exam and is one click away.
+transcript read-back and judging. Since GAD-T239 every exam is taken this way: voice and camera are mandatory and there is
+no typed answer mode.
 
 ## Who gets it
 
-- Only exams the instructor set to **Voice** mode offer it (a text exam's consent never covered sending audio to a speech
-  service). The student still has to press **Start voice mode** and allow the microphone.
-- A voice exam shows the answer box until voice is on. With voice on, the main answer box is replaced by speaking;
-  **Type my answers instead** is always there (accessibility, a broken microphone, a student who cannot speak). A typed
-  answer is recorded as `text` modality, so the review page shows which answers were spoken.
-- Voice degrades to typing, with a plain notice, when the browser has no microphone API, the microphone is refused, or a
-  hub cannot connect. No 3D graphics (or reduced motion) shows the 2D portrait and the examiner still speaks. If the
-  avatar fails entirely, questions are shown as text and answers can still be spoken.
+- Every exam, whatever mode the instructor picked (GAD-T239). The consent notice every student accepts describes the
+  microphone, the speech-to-text service and the camera. Where the deployment has voice off (`Gadfly:Voice:Mode`), the
+  start page's system check fails ("Spoken examiner") and the exam can't begin.
+- **Preflight.** The start page opens the microphone and the camera (`system-check.js` `startMedia`): the camera must
+  deliver a picture and the microphone must hear the student speak before **Begin exam** is enabled. The practice
+  question is answered out loud too.
+- **No extra click.** **Begin exam** goes straight into the talking examiner: the exam room starts it on load
+  (`voice-room.js` `autoStart`, which relies on the Begin exam click as the page's user activation; a page opened fresh,
+  such as a reload, asks for one **Continue to the examiner** click).
+- **The clock.** A new session holds its clock (`SocraticSession.HoldClock`) and the exam room starts it
+  (`SessionOrchestrator.StartClockAsync`) when the examiner begins the first question, so planning it and connecting the
+  devices don't use the student's time. It starts once; until then `Remaining` still counts from session creation, so a
+  clock that never starts can't give extra time. The question is not shown until the examiner asks it.
+- **Pause.** A refused, missing or lost microphone or camera (a track that ends mid-exam), or a lost hub, pauses the
+  exam: the question and answer controls are hidden and the student is told how to restore it, then presses **Try
+  again**; the examiner repeats the question. The clock keeps running while paused. No 3D graphics (or reduced motion)
+  shows the 2D portrait and the examiner still speaks. If the avatar fails entirely, questions are shown as text and
+  answers are still spoken.
+- Only small transcript corrections are typed (fixing words the recognizer got wrong); "I want to change my answer"
+  (a typed substantive revision) is not offered in the exam room.
 
 ## The interview room (GAD-T231)
 
