@@ -411,6 +411,9 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<Guid>("StudentUserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("SubjectSnapshotJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("TranscriptJson")
                         .HasColumnType("nvarchar(max)");
 

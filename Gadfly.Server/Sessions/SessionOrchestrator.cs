@@ -50,6 +50,8 @@ public sealed class SessionOrchestrator(
         public SemaphoreSlim Gate { get; } = new(1, 1);
     }
 
+    private sealed record SubjectSnapshot(ConceptMap Map, IReadOnlyList<ConceptRubric> Rubrics);
+
     private readonly ConcurrentDictionary<Guid, Live> _live = new();
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _loadGates = new();
     private readonly ConcurrentDictionary<(Guid Collection, int Version), SourceMaterialSubject> _subjects = new();
@@ -216,7 +218,20 @@ public sealed class SessionOrchestrator(
             if (row.State == SessionState.Failed) throw new SessionRefusedException("This exam session could not continue; ask your instructor to reset it.");
 
             var exam = await db.Exams.AsNoTracking().FirstAsync(e => e.Id == row.ExamId && e.OrganizationId == organizationId, ct);
-            var subject = await SubjectAsync(db, organizationId, exam.CollectionId, exam.Title, ct);
+            // Pinned subject (GAD-T72): a session runs on the concept map and rubrics it started with.
+            SourceMaterialSubject subject;
+            if (row.SubjectSnapshotJson is { Length: > 0 } snapshotJson && JsonSerializer.Deserialize<SubjectSnapshot>(snapshotJson, Json) is { } snapshot)
+            {
+                var passages = await new SqlSourceStore(db, organizationId, Guid.Empty, clock).GetPassagesAsync(exam.CollectionId.ToString(), ct);
+                subject = new SourceMaterialSubject(exam.Title, snapshot.Map, snapshot.Rubrics, new GroundingRetriever(passages));
+            }
+            else
+            {
+                subject = await SubjectAsync(db, organizationId, exam.CollectionId, exam.Title, ct);
+                var rubrics = subject.Map.Concepts.Select(c => subject.Rubric(c.Key)).ToList();
+                await db.ExamSessions.Where(x => x.Id == sessionId)
+                    .ExecuteUpdateAsync(u => u.SetProperty(x => x.SubjectSnapshotJson, JsonSerializer.Serialize(new SubjectSnapshot(subject.Map, rubrics), Json)), ct);
+            }
 
             SourceExamEngine engine;
             if (row.TranscriptJson is { Length: > 0 } transcript)
