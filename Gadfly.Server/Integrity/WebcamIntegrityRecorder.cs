@@ -37,6 +37,21 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
     public const int MaxPerWindow = 40;
     public static readonly TimeSpan RateWindow = TimeSpan.FromMinutes(1);
 
+    /// <summary>
+    /// Partial updates of an ongoing episode (D21, GAD-T171) have a bucket of their own so they can never crowd
+    /// out the real events: one update a minute per open episode needs only a few slots.
+    /// </summary>
+    public const int MaxPartialPerWindow = 20;
+
+    /// <summary>The types that can be ongoing: the ones with a start and an end (not the "no camera" note or a glance).</summary>
+    public static readonly IReadOnlySet<string> PartialTypes = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "face-absent", "multiple-faces", "identity-drift", "gaze-off-screen", "reading-pattern",
+    };
+
+    /// <summary>The longest episode key a client may send.</summary>
+    public const int MaxEpisodeKey = 80;
+
     /// <summary>A span signal arriving this long after the session ended is still accepted (it started before the end).</summary>
     public static readonly TimeSpan LateGrace = TimeSpan.FromMinutes(15);
 
@@ -61,6 +76,7 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
     };
 
     private static readonly ConcurrentDictionary<Guid, Queue<DateTimeOffset>> Recent = new();
+    private static readonly ConcurrentDictionary<Guid, Queue<DateTimeOffset>> Partials = new();
 
     public static WebcamIntegrityRecorder Create(IServiceProvider services) =>
         services.GetService<WebcamIntegrityRecorder>() ?? ActivatorUtilities.CreateInstance<WebcamIntegrityRecorder>(services);
@@ -119,21 +135,31 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
             if (Clean.From(e, windowStart, windowEnd) is { } c) accepted.Add(c);
         if (accepted.Count == 0) return new(session.State != SessionState.Ended, 0);
 
-        // Rate limit per session: a misbehaving page can't flood the record.
-        var allowed = TakeRate(sessionId, now, accepted.Count);
-        if (allowed < accepted.Count)
-        {
-            log.LogWarning("Webcam events over the rate limit for session {SessionId}: {Dropped} dropped.", sessionId, accepted.Count - allowed);
-            accepted = accepted.Take(allowed).ToList();
-        }
+        // Rate limits per session: a misbehaving page can't flood the record. Partial updates of an ongoing episode
+        // spend their own bucket, so they never use up the room real events need.
+        var partials = accepted.Where(x => x.Ongoing).ToList();
+        var finals = accepted.Where(x => !x.Ongoing).ToList();
+        var allowedPartials = TakeRate(Partials, sessionId, now, partials.Count, MaxPartialPerWindow);
+        var allowedFinals = TakeRate(Recent, sessionId, now, finals.Count, MaxPerWindow);
+        if (allowedPartials < partials.Count || allowedFinals < finals.Count)
+            log.LogWarning("Webcam events over the rate limit for session {SessionId}: {Dropped} dropped.", sessionId,
+                partials.Count - allowedPartials + finals.Count - allowedFinals);
+        accepted = [.. finals.Take(allowedFinals), .. partials.Take(allowedPartials)];
         if (accepted.Count == 0) return new(true, 0);
 
-        var mine = db.IntegrityEvents.Where(x => x.SessionId == sessionId && x.OrganizationId == organizationId && x.Source == Source);
-        var stored = await mine.Select(x => new { x.Type, x.StartedAt }).ToListAsync(ct);
+        var stored = await db.IntegrityEvents
+            .Where(x => x.SessionId == sessionId && x.OrganizationId == organizationId && x.Source == Source).ToListAsync(ct);
         if (stored.Any(x => x.Type == CappedType)) return new(true, 0);
         var rows = stored.Count;
         var added = 0;
-        var seen = stored.Select(x => (x.Type, x.StartedAt)).ToHashSet();
+        // One row per episode: found by its episode key, or (rows from before partial updates) by type and start.
+        var byKey = new Dictionary<string, IntegrityEvent>(StringComparer.Ordinal);
+        var byStart = new Dictionary<(string, DateTimeOffset), IntegrityEvent>();
+        foreach (var x in stored)
+        {
+            if (EpisodeData.Parse(x.DataJson) is { } d) byKey.TryAdd(d.Episode, x);
+            byStart.TryAdd((x.Type, x.StartedAt), x);
+        }
         var unavailable = stored.Count(x => x.Type == UnavailableType);
 
         var turns = await db.SessionTurns.AsNoTracking()
@@ -141,10 +167,17 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
             .Select(t => new { t.Id, t.AskedAt, t.AnswerCompletedAt })
             .ToListAsync(ct);
 
-        foreach (var c in accepted.OrderBy(x => x.Start))
+        // Within a batch an episode's partial updates come before its closing event.
+        foreach (var c in accepted.OrderBy(x => x.Start).ThenBy(x => x.End ?? DateTimeOffset.MaxValue))
         {
-            // A retried batch (the client re-sends what a failed call may have stored) is stored once.
-            if (!seen.Add((c.Type, c.Start))) continue;
+            var existing = c.EpisodeKey is { } k && byKey.TryGetValue(k, out var byK) ? byK
+                : byStart.GetValueOrDefault((c.Type, c.Start));
+            if (existing is not null)
+            {
+                // A retried batch, the next partial update or the closing event: the same row grows, never a second row.
+                if (Apply(existing, c)) added++;
+                continue;
+            }
             if (c.Type == UnavailableType && unavailable++ >= 3) continue;
             if (rows >= MaxEventsPerSession - 1)
             {
@@ -159,12 +192,16 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
             }
             var turn = turns.Where(t => t.AskedAt <= c.Start && (t.AnswerCompletedAt is null || t.AnswerCompletedAt >= c.Start))
                 .OrderByDescending(t => t.AskedAt).Select(t => (Guid?)t.Id).FirstOrDefault();
-            db.IntegrityEvents.Add(new IntegrityEvent
+            var row = new IntegrityEvent
             {
                 OrganizationId = organizationId, SessionId = sessionId, Source = Source, Type = c.Type,
                 StartedAt = c.Start, EndedAt = c.End, TurnId = turn,
                 Confidence = c.Confidence, Severity = c.Severity, Summary = c.Summary,
-            });
+                DataJson = c.EpisodeKey is { } key ? EpisodeData.Json(key, c.Ongoing) : null,
+            };
+            db.IntegrityEvents.Add(row);
+            if (c.EpisodeKey is { } rk) byKey[rk] = row;
+            byStart[(row.Type, row.StartedAt)] = row;
             rows++;
             added++;
         }
@@ -179,30 +216,99 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         return new(session.State != SessionState.Ended, added);
     }
 
-    /// <summary>Counts how many of <paramref name="want"/> still fit in the session's rate window, and spends them.</summary>
-    public static int TakeRate(Guid sessionId, DateTimeOffset now, int want)
+    /// <summary>
+    /// Folds an update into the episode's one row. A partial update only extends an episode that is still open
+    /// (a late or retried partial never reopens or shrinks a closed one); the closing event sets the final end
+    /// and summary. Returns true when the row changed.
+    /// </summary>
+    public static bool Apply(IntegrityEvent row, Clean c)
     {
-        var q = Recent.GetOrAdd(sessionId, _ => new Queue<DateTimeOffset>());
+        var data = EpisodeData.Parse(row.DataJson);
+        var open = data?.Ongoing ?? false;
+        if (c.Ongoing)
+        {
+            if (!open || c.End is not { } end || (row.EndedAt is { } have && end <= have)) return false;
+            row.EndedAt = end;
+            row.Summary = c.Summary;
+            row.Confidence = Math.Max(row.Confidence, c.Confidence);
+            row.Severity = c.Severity;
+            return true;
+        }
+        // The closing event. An identical retry changes nothing.
+        var key = data?.Episode ?? c.EpisodeKey;
+        var endAt = c.End ?? row.EndedAt;
+        if (!open && row.EndedAt == endAt && row.Summary == c.Summary) return false;
+        row.EndedAt = endAt;
+        row.Summary = c.Summary;
+        row.Confidence = c.Confidence;
+        row.Severity = c.Severity;
+        if (key is not null) row.DataJson = EpisodeData.Json(key, false);
+        return true;
+    }
+
+    /// <summary>Counts how many of <paramref name="want"/> still fit in the session's rate window, and spends them.</summary>
+    public static int TakeRate(Guid sessionId, DateTimeOffset now, int want) => TakeRate(Recent, sessionId, now, want, MaxPerWindow);
+
+    private static int TakeRate(ConcurrentDictionary<Guid, Queue<DateTimeOffset>> buckets, Guid sessionId, DateTimeOffset now, int want, int max)
+    {
+        var q = buckets.GetOrAdd(sessionId, _ => new Queue<DateTimeOffset>());
         lock (q)
         {
             while (q.Count > 0 && now - q.Peek() > RateWindow) q.Dequeue();
-            var room = Math.Max(0, MaxPerWindow - q.Count);
+            var room = Math.Max(0, max - q.Count);
             var take = Math.Min(room, want);
             for (var i = 0; i < take; i++) q.Enqueue(now);
-            if (Recent.Count > 2000) Prune(now);
+            if (buckets.Count > 2000) Prune(buckets, now);
             return take;
         }
     }
 
-    private static void Prune(DateTimeOffset now)
+    private static void Prune(ConcurrentDictionary<Guid, Queue<DateTimeOffset>> buckets, DateTimeOffset now)
     {
-        foreach (var (id, q) in Recent)
+        foreach (var (id, q) in buckets)
             lock (q)
-                if (q.Count == 0 || now - q.Peek() > RateWindow) Recent.TryRemove(id, out _);
+                if (q.Count == 0 || now - q.Peek() > RateWindow) buckets.TryRemove(id, out _);
+    }
+
+    /// <summary>What is kept in an episode event's DataJson: its episode key and whether it is still open.</summary>
+    public sealed record EpisodeData(string Episode, bool Ongoing)
+    {
+        public static string Json(string episode, bool ongoing) => System.Text.Json.JsonSerializer.Serialize(new EpisodeData(episode, ongoing));
+
+        public static EpisodeData? Parse(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json)) return null;
+            try { return System.Text.Json.JsonSerializer.Deserialize<EpisodeData>(json) is { Episode.Length: > 0 } d ? d : null; }
+            catch (System.Text.Json.JsonException) { return null; }
+        }
+    }
+
+    /// <summary>The episode key: the browser's id if it is a short plain token, else type and start (which the browser builds too).</summary>
+    public static string KeyOf(string type, DateTimeOffset start, string? sent)
+    {
+        var id = (sent ?? "").Trim();
+        if (id.Length is > 0 and <= MaxEpisodeKey && id.All(ch => char.IsAsciiLetterOrDigit(ch) || ch is '@' or ':' or '.' or '_' or '-')) return id;
+        return $"{type}@{start.ToUnixTimeMilliseconds()}";
+    }
+
+    /// <summary>Plain words for an episode still going, written by the server from what it knows (type and how long so far).</summary>
+    public static string PartialSummary(string type, TimeSpan span)
+    {
+        var so = span.TotalMinutes >= 1 ? $"{(int)span.TotalMinutes} min {span.Seconds} s" : $"{Math.Max(0, (int)span.TotalSeconds)} s";
+        return type switch
+        {
+            "face-absent" => $"No face has been in view for {so} so far; still going.",
+            "multiple-faces" => $"More than one face has been in view for {so} so far; still going. It may be a person, a photo or a reflection.",
+            "identity-drift" => $"The face in view has looked different from the one at the start for {so} so far; still going. Face geometry is a weak signal.",
+            "gaze-off-screen" => $"The student has looked away from the screen for {so} so far; still going. Long looks away can be thinking, reading something, or a distraction.",
+            "reading-pattern" => $"Reading-like eye movement has been seen for {so} so far; still going.",
+            _ => $"Camera event \"{type}\" for {so} so far; still going.",
+        };
     }
 
     /// <summary>An event after validation: allow-listed type, bounded text and times, server-decided confidence and severity.</summary>
-    public sealed record Clean(string Type, DateTimeOffset Start, DateTimeOffset? End, double Confidence, IntegritySeverity Severity, string Summary)
+    public sealed record Clean(string Type, DateTimeOffset Start, DateTimeOffset? End, double Confidence, IntegritySeverity Severity, string Summary,
+        string? EpisodeKey = null, bool Ongoing = false)
     {
         public static Clean? From(HubIntegrityEvent? e, DateTimeOffset windowStart, DateTimeOffset windowEnd)
         {
@@ -211,6 +317,7 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
             if (!Types.Contains(type)) return null;
 
             var start = e.StartedAt;
+            var sentStart = start;
             // Wholly after the session (a few seconds of slack for clock differences): not part of it.
             if (start > windowEnd.AddSeconds(5)) return null;
             if (start > windowEnd) start = windowEnd;
@@ -227,14 +334,19 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
                 end = en < start ? null : en - start > MaxSpan ? start + MaxSpan : en;
             }
 
+            // A partial update of an episode still going: only for types that have a span, and it needs an end ("so far").
+            var ongoing = e.Ongoing;
+            if (ongoing && (!PartialTypes.Contains(type) || end is null)) return null;
             var span = end is { } x ? x - start : TimeSpan.Zero;
             var confidence = double.IsFinite(e.Confidence) ? Math.Clamp(e.Confidence, 0, MaxConfidence) : 0;
             confidence = Math.Round(type is "thinking-glance" or UnavailableType ? Math.Min(confidence, 0.3) : confidence, 2);
             var summary = type == UnavailableType
                 ? UnavailableReasons.GetValueOrDefault(ReasonOf(e.Summary), UnavailableReasons["error"])
                 : Text(e.Summary, MaxSummary);
+            if (ongoing) summary = PartialSummary(type, span);
             if (summary.Length == 0) summary = IntegrityExplanationsFallback(type);
-            return new Clean(type, start, type == UnavailableType ? null : end, confidence, SeverityOf(type, span), summary);
+            var key = PartialTypes.Contains(type) ? KeyOf(type, sentStart, e.EpisodeId) : null;
+            return new Clean(type, start, type == UnavailableType ? null : end, confidence, SeverityOf(type, span), summary, key, ongoing);
         }
     }
 

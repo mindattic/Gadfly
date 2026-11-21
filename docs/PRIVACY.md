@@ -40,6 +40,12 @@ reads landmark numbers in memory; the only pixels it touches are a 16x9 brightne
 number. The same-person face signature stays in browser memory and has no export. What is sent: type, start,
 end, confidence and one sentence per event (face absent, a second face, a possible change of person, a long
 look off-screen, reading-like eye movement, a short glance annotated as thinking, or "camera not used").
+While one of those situations is still going on (a face out of view for the whole exam, say), the browser also
+sends a short update about once a minute: the same type, a start time, a "so far" end time and a flag saying it
+is ongoing, plus a plain episode id built from the type and start time (GAD-T171). The server keeps one record
+per episode and grows it; the sentence for an unfinished episode is written by the server. If the browser never
+sends a closing note (tab closed, crash, lost connection) the reviewer sees the episode marked as still ongoing
+when the exam ended. Nothing else is added: still no frame, image, landmark or face signature.
 Server side only an allow-list of those types is stored (`WebcamIntegrityRecorder`), text and times are
 bounded, volume is rate-limited and capped, confidence is capped at 0.4, and severity is decided by the server
 and never above Low: reviewers see them as low-confidence annotations, never a penalty. If the student declines

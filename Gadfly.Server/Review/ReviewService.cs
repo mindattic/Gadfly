@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Gadfly.Engine;
 using Gadfly.Server.Data;
+using Gadfly.Server.Integrity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gadfly.Server.Review;
@@ -128,7 +129,8 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
             {
                 var (label, explanation, normal) = IntegrityExplanations.For(e.Type, e.Source);
                 return new IntegrityView(e.Id, e.Source, e.Type, label, explanation, normal, e.StartedAt, e.EndedAt, e.Confidence,
-                    e.Severity, e.Summary, e.TurnId);
+                    e.Severity, e.Summary, e.TurnId, Ongoing: WebcamIntegrityRecorder.EpisodeData.Parse(e.DataJson)?.Ongoing ?? false,
+                    SessionOver: session.State is SessionState.Ended or SessionState.Failed);
             }).ToList();
 
         var mastery = (await db.ConceptMastery.AsNoTracking().Where(m => m.SessionId == sessionId && m.OrganizationId == organizationId).ToListAsync(ct))

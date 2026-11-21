@@ -10,7 +10,13 @@ const BATCH = 10;      // small batches keep each interop message well under the
 const EVERY_MS = 5000;
 const HEARTBEAT_MS = 15000;   // asks whether the exam is still running; the camera stops when it isn't
 
+const PARTIAL_MS = 60000;       // an episode still going is reported about once a minute (D21, GAD-T171)
+const PARTIAL_TICK_MS = 5000;   // how often to look for an episode that is due an update
+
 let state = null;
+
+/** A stable id for one episode: its type and start, so the server keeps ONE record that grows. */
+function episodeId(type, startMs) { return type + "@" + Math.round(startMs); }
 
 function classify(err) {
     const name = err && err.name;
@@ -64,8 +70,18 @@ export async function start(dotnet, video, options) {
         });
         // Quality hints (lighting, framing) are for the student only: includeQuality stays off, so they are never sent.
         s.monitor = new lib.IntegrityMonitor({ includeQuality: false, includeAnnotations: true });
+        // Episodes that have started and not ended (the library's "begin" hook). Each gets a partial note every PARTIAL_MS.
+        s.open = new Map();
+        s.monitor.on("begin", (b) => {
+            if (s.stopped) return;
+            const id = episodeId(b.type, b.start);
+            if (!s.open.has(id)) s.open.set(id, { type: b.type, start: Math.round(b.start), sentAt: Date.now() });
+        });
+        s.monitor.on("event", (e) => { s.open.delete(episodeId(e.type, e.start)); });
         s.sink = s.monitor.sink(async (events) => {
-            const keepGoing = await dotnet.invokeMethodAsync("RecordWebcam", events);
+            // The closing event of an episode carries the same id as its partial notes, so it closes the same record.
+            const tagged = events.map((h) => ({ ...h, episodeId: episodeId(h.type, Date.parse(h.startedAt)) }));
+            const keepGoing = await dotnet.invokeMethodAsync("RecordWebcam", tagged);
             // The session ended: stop after this call returns, so the events still queued are sent on the way out.
             if (keepGoing === false) setTimeout(() => { void stop(true); }, 0);
         }, { everyMs: EVERY_MS, maxBatch: BATCH });
@@ -73,6 +89,21 @@ export async function start(dotnet, video, options) {
             if (s.stopped) return;
             dotnet.invokeMethodAsync("RecordWebcam", []).then((keep) => { if (keep === false) void stop(true); }).catch(() => { });
         }, HEARTBEAT_MS);
+        s.partials = setInterval(() => {
+            if (s.stopped) return;
+            const now = Date.now();
+            const due = [];
+            for (const [id, ep] of s.open) {
+                if (now - ep.sentAt < (options && options.partialMs || PARTIAL_MS)) continue;
+                ep.sentAt = now;
+                due.push({
+                    source: "webcam", type: ep.type, startedAt: new Date(ep.start).toISOString(), endedAt: new Date(now).toISOString(),
+                    confidence: 0.4, summary: "", episodeId: id, ongoing: true,
+                });
+            }
+            if (due.length === 0) return;
+            dotnet.invokeMethodAsync("RecordWebcam", due).then((keep) => { if (keep === false) void stop(true); }).catch(() => { });
+        }, PARTIAL_TICK_MS);
         s.monitor.presence?.on("status", (status) => {
             if (s.stopped) return;
             const hint = hintOf(status);
@@ -114,6 +145,7 @@ export async function stop(flush = true, notify = true) {
     state = null;
     if (s.onHide) window.removeEventListener("pagehide", s.onHide);
     if (s.heartbeat) clearInterval(s.heartbeat);
+    if (s.partials) clearInterval(s.partials);
     try { s.monitor && s.monitor.stop(); } catch { }
     if (flush) { try { s.sink && await s.sink.close(); } catch { } }
     else { try { s.sink && s.sink.close(); } catch { } }

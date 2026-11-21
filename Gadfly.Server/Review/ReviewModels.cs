@@ -90,7 +90,9 @@ public sealed record IntegrityView(
     double Confidence,
     IntegritySeverity Severity,
     string Summary,
-    Guid? TurnId);
+    Guid? TurnId,
+    bool Ongoing = false,
+    bool SessionOver = false);
 
 /// <summary>One entry of the review timeline: a turn, or an integrity event that happened between turns.</summary>
 public sealed record TimelineItem(DateTimeOffset At, TurnView? Turn, IntegrityView? Event, IReadOnlyList<IntegrityView> DuringTurn);

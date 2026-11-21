@@ -11,6 +11,19 @@
             @if (!Event.IsNormalBehavior) { <text> · @Event.Severity.ToString().ToLowerInvariant() · confidence @($"{Event.Confidence * 100:0}%")</text> }
         </span>
     </div>
+    @if (Event.Ongoing)
+    {
+        <div class="hint" data-ongoing="true">
+            @if (Event.SessionOver)
+            {
+                <text>Still ongoing when the exam ended: the camera checks last reported it at @(Event.EndedAt is { } last ? last.ToLocalTime().ToString("T") : Event.StartedAt.ToLocalTime().ToString("T")), and the browser never sent a closing note (the tab may have closed or lost its connection). The end time shown is the last update, not a measured end.</text>
+            }
+            else
+            {
+                <text>Still going at the last update (@(Event.EndedAt is { } now ? now.ToLocalTime().ToString("T") : "just now")); the length shown is so far.</text>
+            }
+        </div>
+    }
     <div>@Event.Explanation</div>
     @if (!string.IsNullOrWhiteSpace(Event.Summary) && Event.Summary != Event.Explanation)
     {

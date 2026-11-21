@@ -11,7 +11,7 @@ public sealed record HubAnswer(string Text, string Mode = "text", DateTimeOffset
 
 /// <summary>A batch of client-side integrity signals (browser, webcam, audio modules).</summary>
 public sealed record HubIntegrityEvent(string Source, string Type, DateTimeOffset StartedAt, DateTimeOffset? EndedAt,
-    double Confidence, string Summary);
+    double Confidence, string Summary, string? EpisodeId = null, bool Ongoing = false);
 
 /// <summary>
 /// The live exam channel for clients outside the Blazor app (GAD-T45): embedded exam rooms in other
