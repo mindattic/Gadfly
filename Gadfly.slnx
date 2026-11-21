@@ -5,4 +5,5 @@
   <Project Path="Gadfly.Server/Gadfly.Server.csproj" />
   <Project Path="Gadfly.Cli/Gadfly.Cli.csproj" />
   <Project Path="Gadfly.Tests/Gadfly.Tests.csproj" />
+  <Project Path="Gadfly.Tour/Gadfly.Tour.csproj" />
 </Solution>
