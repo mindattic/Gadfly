@@ -4,6 +4,7 @@ using Gadfly.Server.Data;
 using Gadfly.Server.Analytics;
 using Gadfly.Server.Verification;
 using Gadfly.Server.Assessments;
+using Gadfly.Server.Grading;
 using Gadfly.Server.Jobs;
 using Gadfly.Server.Platform;
 using Gadfly.Server.Privacy;
@@ -115,6 +116,7 @@ builder.Services.AddHostedService<RetentionScheduler>();
 builder.Services.AddScoped<SourceLibraryService>();
 builder.Services.AddAnalytics();
 builder.Services.AddAssessments();
+builder.Services.AddGrading();
 builder.Services.AddVerification();   // backfills original-response records for older turns (GAD-T86)
 builder.Services.AddScoped<Gadfly.Server.Exams.ExamService>();
 
@@ -153,6 +155,7 @@ app.UseRateLimiter();
 app.UseAntiforgery();
 
 GadflyEndpoints.Map(app);
+app.MapGrading();
 
 app.Run();
 

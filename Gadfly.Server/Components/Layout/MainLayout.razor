@@ -16,6 +16,10 @@
                         <NavLink href="review">Review</NavLink>
                         <NavLink href="analytics">Analytics</NavLink>
                     }
+                    @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor or OrgRoles.Examiner or OrgRoles.SecondReviewer)
+                    {
+                        <NavLink href="grading">Grading</NavLink>
+                    }
                     @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin)
                     {
                         <NavLink href="org/members">Members</NavLink>
