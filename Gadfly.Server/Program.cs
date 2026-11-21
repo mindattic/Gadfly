@@ -26,6 +26,8 @@ using MindAttic.Vault.Configuration;
 
 // Gadfly.Server — the hosted Socratic platform and the Gadfly Exams web app (docs/SOCRATIC_PLATFORM.md).
 var builder = WebApplication.CreateBuilder(args);
+// On Azure App Service, application logs go to LogFiles/Application and the log stream (no-op elsewhere).
+builder.Logging.AddAzureWebAppDiagnostics();
 
 // Secrets: on a dev machine MindAttic.Vault's files (the shared LLM provider keys Legion reads, the
 // Security bucket the auth stack needs: pepper, bootstrap-token); in Azure, App Service settings / Key Vault.
