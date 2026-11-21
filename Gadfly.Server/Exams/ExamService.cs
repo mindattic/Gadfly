@@ -1,5 +1,7 @@
 using System.Text.Json;
+using Gadfly.Assessment;
 using Gadfly.Engine;
+using Gadfly.Server.Assessments;
 using Gadfly.Server.Data;
 using Gadfly.Server.Sources;
 using Gadfly.Server.Tenancy;
@@ -65,6 +67,12 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
 
     private Guid Org => tenant.OrganizationId ?? throw new InvalidOperationException("No active organization.");
     private Guid User => tenant.UserId ?? throw new InvalidOperationException("No signed-in user.");
+
+    /// <summary>Permission checks (GAD-T83): every change names a <see cref="Permission"/>; refusals are audited.</summary>
+    private AssessmentGuard Guard => field ??= new AssessmentGuard(db, tenant, clock);
+
+    private async Task<ExamResult?> DeniedAsync(Permission permission, string action, string entityType, Guid? id, CancellationToken ct) =>
+        await Guard.RequireAsync(permission, action, entityType, id?.ToString(), ct) ? null : new ExamResult(false, AssessmentGuard.Denied(permission));
 
     // ------------------------------------------------------------------ reading
 
@@ -136,6 +144,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
     /// </summary>
     public async Task<ExamResult> SaveDraftAsync(ExamDraft draft, CancellationToken ct = default)
     {
+        if (await DeniedAsync(Permission.ManageAssessments, "Saving an exam draft", "Exam", draft.Id, ct) is { } denied) return denied;
         var org = Org;
         if (string.IsNullOrWhiteSpace(draft.Title)) return new(false, "Give the exam a title.");
         if (draft.Title.Trim().Length > 200) return new(false, "Keep the title under 200 characters.");
@@ -178,6 +187,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
     /// <summary>Publishes a draft after validating its policy against the collection's current concept map.</summary>
     public async Task<ExamResult> PublishAsync(Guid examId, CancellationToken ct = default)
     {
+        if (await DeniedAsync(Permission.ManageAssessments, "Publishing an exam", "Exam", examId, ct) is { } denied) return denied;
         var org = Org;
         var exam = await db.Exams.FirstOrDefaultAsync(e => e.Id == examId && e.OrganizationId == org, ct);
         if (exam is null) return new(false, "That exam no longer exists.");
@@ -205,6 +215,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
         exam.PublishedAt = clock.GetUtcNow();
         exam.PromptSetId = ExamPrompts.SetId;
         exam.PromptSetVersion = ExamPrompts.Version;
+        Guard.Audit("assessment.published", "Exam", exam.Id.ToString(), after: new { exam.Title, SessionPolicy = policy }, reason: "Published from the older exam builder");
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
         return new(true, "Published. Its settings are now frozen; assign it to students below.", exam.Id);
@@ -213,11 +224,14 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
     /// <summary>Archives an exam: no new attempts start; existing sessions and results stay.</summary>
     public async Task<ExamResult> ArchiveAsync(Guid examId, CancellationToken ct = default)
     {
+        if (await DeniedAsync(Permission.ManageAssessments, "Archiving an exam", "Exam", examId, ct) is { } denied) return denied;
         var org = Org;
         var exam = await db.Exams.FirstOrDefaultAsync(e => e.Id == examId && e.OrganizationId == org, ct);
         if (exam is null) return new(false, "That exam no longer exists.");
         if (exam.Status == ExamStatus.Archived) return new(true, "Already archived.", exam.Id);
+        var wasStatus = exam.Status;
         exam.Status = ExamStatus.Archived;
+        Guard.Audit("assessment.archived", "Exam", exam.Id.ToString(), new { Status = wasStatus.ToString() }, new { Status = exam.Status.ToString() });
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
         return new(true, "Archived. Students can no longer start it; existing results are kept.", exam.Id);
@@ -240,6 +254,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
     public async Task<ExamResult> AssignAsync(Guid examId, IReadOnlyCollection<Guid>? studentUserIds, DateTimeOffset? opensAt,
         DateTimeOffset? closesAt, int attemptsAllowed, CancellationToken ct = default)
     {
+        if (await DeniedAsync(Permission.AssignExaminations, "Assigning an exam", "Exam", examId, ct) is { } denied) return denied;
         var org = Org;
         var exam = await db.Exams.AsNoTracking().FirstOrDefaultAsync(e => e.Id == examId && e.OrganizationId == org, ct);
         if (exam is null) return new(false, "That exam no longer exists.");
@@ -271,7 +286,12 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
             });
             added++;
         }
-        if (added > 0) await db.SaveChangesAsync(ct);
+        if (added > 0)
+        {
+            Guard.Audit("assessment.assigned", "Exam", examId.ToString(),
+                after: new { Students = wanted.Where(s => !already.Contains(s)).ToList(), opensAt, closesAt, attemptsAllowed });
+            await db.SaveChangesAsync(ct);
+        }
         db.ChangeTracker.Clear();
         var skipped = wanted.Count - added;
         var msg = $"Assigned to {added} student{(added == 1 ? "" : "s")}.";
@@ -312,12 +332,14 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
     /// </summary>
     public async Task<ExamResult> ReleaseResultsAsync(Guid assignmentId, CancellationToken ct = default)
     {
+        if (await DeniedAsync(Permission.PublishGrade, "Releasing results", "ExamAssignment", assignmentId, ct) is { } denied) return denied;
         var org = Org;
         var a = await db.ExamAssignments.FirstOrDefaultAsync(x => x.Id == assignmentId && x.OrganizationId == org, ct);
         if (a is null) return new(false, "That assignment no longer exists.");
         if (a.ResultsReleasedAt is not null) return new(true, "Results were already released.", a.Id);
         if (await Review.ResultRelease.BlockerAsync(db, org, a.Id, ct) is { } blocker) return new(false, blocker, a.Id);
         a.ResultsReleasedAt = clock.GetUtcNow();
+        Guard.Audit("results.released", "ExamAssignment", a.Id.ToString(), after: new { a.ExamId, a.StudentUserId, a.ResultsReleasedAt });
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
         return new(true, "Results released to the student.", a.Id);
