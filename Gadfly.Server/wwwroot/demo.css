@@ -1,0 +1,35 @@
+/* Mock mode and demo labelling (GAD-T100). Uses app.css tokens; the banner stays visible while scrolling. */
+:root {
+    --mock-bg: #fff3cd; --mock-ink: #5c4400; --mock-line: #e0b84d; --mock-tag-bg: #8a5a00; --mock-tag-ink: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --mock-bg: #3a2f10; --mock-ink: #f5dc9a; --mock-line: #8a6d1f; --mock-tag-bg: #f0c050; --mock-tag-ink: #1d1d1f;
+    }
+}
+
+.mock-banner {
+    position: sticky; top: 0; z-index: 1000;
+    display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: baseline;
+    padding: .55rem 1rem; margin: 0;
+    background: var(--mock-bg); color: var(--mock-ink);
+    border-bottom: 2px solid var(--mock-line);
+    font-size: .92rem; line-height: 1.4;
+}
+
+.mock-banner .mock-tag {
+    padding: .1rem .5rem; border-radius: 4px;
+    background: var(--mock-tag-bg); color: var(--mock-tag-ink);
+    font-weight: 700; letter-spacing: .06em; white-space: nowrap;
+}
+
+/* For any page that labels a single mock-produced grade, judgment or report. */
+.mock-label {
+    display: inline-block; padding: 0 .4rem; border-radius: 4px;
+    background: var(--mock-tag-bg); color: var(--mock-tag-ink);
+    font-size: .78rem; font-weight: 700; letter-spacing: .05em; vertical-align: middle;
+}
+
+@media print {
+    .mock-banner { position: static; }
+}

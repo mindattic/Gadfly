@@ -1,0 +1,13 @@
+@* The persistent MOCK banner (docs/MASTER-PLAN.md Part 22, GAD-T100): shown on every screen while the AI panel is the
+   deterministic mock, so nothing on the page can be mistaken for a genuine AI evaluation. Renders nothing in live mode. *@
+@inject Gadfly.Socrates.IPanelInfo Panel
+
+@if (Panel.IsMock)
+{
+    <HeadContent><link rel="stylesheet" href="demo.css" /></HeadContent>
+    <div class="mock-banner" role="status" aria-live="polite">
+        <strong class="mock-tag">MOCK MODE</strong>
+        <span>No AI provider is in use. Questions, scores, grades and reports on this site are simulated by fixed rules
+            to test the workflow; they are not genuine AI evaluations and must not be used to grade anyone.</span>
+    </div>
+}
