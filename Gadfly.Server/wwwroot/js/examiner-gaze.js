@@ -166,7 +166,8 @@ async function resume(g, avatar) {
             else if (e.type === "multiple-faces") g.cond["second-face"] = null;
         });
         g.offs.push(g.presence.connect(g.core), g.headpose.connect(g.core));
-        await g.core.retain();
+        const unshare = await shareSelfCamera(g);
+        try { await g.core.retain(); } finally { unshare(); }
         if (g.stopped || !g.starting) { releaseCore(g); return; }
         g.running = true;
         calibrate(g);
@@ -179,6 +180,37 @@ async function resume(g, avatar) {
     } finally {
         g.starting = false;
     }
+}
+
+/**
+ * Uses the camera the voice room already opened for the student's self-view instead of asking for a second stream (GAD-T245):
+ * the core's one getUserMedia call (until the returned function restores it) is answered with a clone of that stream's video track. The clone is this module's own, so
+ * stopping the core never stops the self-view. If the self-view isn't on after a short wait, the core opens the camera itself.
+ */
+async function shareSelfCamera(g) {
+    const live = () => {
+        const v = document.querySelector("video[data-voice-self]");
+        const st = v && v.srcObject;
+        return st && st.getVideoTracks && st.getVideoTracks().some((t) => t.readyState === "live") ? st : null;
+    };
+    let stream = live();
+    for (let i = 0; !stream && i < 30 && !g.stopped && g.starting; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        stream = live();
+    }
+    const md = navigator.mediaDevices;
+    if (!stream || !md || !md.getUserMedia) return () => { };
+    const original = md.getUserMedia;
+    const restore = () => { if (md.getUserMedia !== original) { try { delete md.getUserMedia; } catch { } if (md.getUserMedia !== original) md.getUserMedia = original; } };
+    md.getUserMedia = function (constraints) {
+        restore();
+        if (constraints && constraints.video && !constraints.audio) {
+            const src = live() || stream;
+            return Promise.resolve(new MediaStream(src.getVideoTracks().filter((t) => t.readyState === "live").map((t) => t.clone())));
+        }
+        return original.call(md, constraints);
+    };
+    return restore;   // the caller restores it once the core has opened its camera
 }
 
 /** Stops the camera; closes and sends every open episode first. */
@@ -348,20 +380,30 @@ function remark(g, kind) {
     g.lastRemark = Date.now();
     g.remarking = true;
     void (async () => {
+        let held = false;
         try {
             const what = await g.dotnet.invokeMethodAsync("Remark", kind);
             if (!what || G !== g || !avatar.isConnected) return;
             const speech = await avatarSpeech(g, avatar);
             if (!speech) return;
+            // The voice room stops capturing the microphone while the examiner speaks, so the remark isn't transcribed into the answer.
+            held = true;
+            holdMic(true);
             await Promise.race([speech.speak(what, undefined, true), new Promise((r) => setTimeout(r, GAZE.remarkTimeoutMs))]);
         } catch { /* never the student's problem */ }
         finally {
             g.remarking = false;
+            if (held) holdMic(false);
             // Back to listening: the answer goes on (the avatar idles after speaking).
             if (avatar.isConnected && avatar.dataset.state === "idle") { try { avatar.state = "listening"; } catch { } }
         }
     })();
     return true;
+}
+
+/** Tells voice-room.js a remark is (or is no longer) being spoken: it closes and reopens its microphone gate (GAD-T245). */
+function holdMic(active) {
+    try { document.dispatchEvent(new CustomEvent("gadfly-examiner-remark", { detail: { active } })); } catch { }
 }
 
 /** This module's own connection to the avatar hub, attached to the examiner on screen. */

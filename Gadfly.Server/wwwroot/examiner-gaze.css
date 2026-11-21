@@ -22,3 +22,5 @@
 .examiner-fade[data-active="false"] { visibility: hidden; transition: opacity var(--fade-ms, 600ms) ease-out, visibility 0s linear var(--fade-ms, 600ms); }
 .examiner-fade-warning { margin: 0; padding: .9rem 1.3rem; border-radius: var(--radius); background: rgba(16, 21, 29, .9); color: #f3f4f6; font-size: 1.35rem; font-weight: 600; text-align: center; }
 @media (prefers-reduced-motion: reduce) { .examiner-fade { transition: none; } }
+
+.examiner-gaze-note { flex-basis: 100%; margin: .25rem 0 0; font-size: .85em; opacity: .8; }

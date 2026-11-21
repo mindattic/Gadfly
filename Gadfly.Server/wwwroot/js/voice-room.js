@@ -65,6 +65,8 @@ export function init(dotnet, cfg) {
         selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null, face: null,
         acoustics: new VoiceAcoustics(),   // voice strain indicators (GAD-T232): summary numbers only, never audio
     };
+    S.onRemark = (e) => remarkHold(S, !!(e.detail && e.detail.active));
+    document.addEventListener("gadfly-examiner-remark", S.onRemark);
     S.onClick = (e) => {
         const el = e.target.closest && e.target.closest("[data-voice-action]");
         if (!el || !S) return;
@@ -182,7 +184,9 @@ async function start() {
         el.setAttribute("camera-x", "-0.2");
         el.setAttribute("aria-hidden", "true");
         el.addEventListener("fallback", (e) => s.dotnet.invokeMethodAsync("OnAvatarMode", "portrait", (e.detail && e.detail.reason) || "").catch(() => { }));
-        el.addEventListener("speaking-start", () => { s.speaking = true; });
+        // A gaze remark (examiner-gaze.js speaks through the same avatar) is not one of this room's own utterances: its flag is
+        // never set here, so it can't stay set and keep the microphone from reopening (GAD-T245).
+        el.addEventListener("speaking-start", () => { if (!s.remarkHold) s.speaking = true; });
         stage.appendChild(el);
         s.avatar = el;
         s.avatarConn = new signalR.HubConnectionBuilder().withUrl(AVATAR_HUB).build();
@@ -261,6 +265,7 @@ export function scrollTranscript() {
 export function dispose() {
     stop();
     if (S) {
+        document.removeEventListener("gadfly-examiner-remark", S.onRemark);
         document.removeEventListener("click", S.onClick);
         document.removeEventListener("pointerdown", S.onDown);
         document.removeEventListener("pointerup", S.onUp);
@@ -301,6 +306,36 @@ function openMic() {
     s.speechConn.send("MarkListening", s.listeningStartMs).catch(() => { });
     if (s.avatar) s.avatar.state = "listening";
     status(s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.");
+}
+
+/**
+ * The examiner is giving a gaze remark (examiner-gaze.js tells us): close the gate so the microphone is not captured, sent or
+ * transcribed into the answer while she speaks, and reopen it, without resetting the answer so far, when she has finished (GAD-T245).
+ */
+function remarkHold(s, active) {
+    if (!s || !s.running) return;
+    if (active) {
+        if (s.remarkHold || s.gate) return;   // not listening, so nothing to hold
+        s.remarkHold = true;
+        s.gate = true;
+        s.partial = "";
+        clearCue();
+        talking(s, false);
+        drawTranscript();
+        status("The examiner is speaking…");
+    } else if (s.remarkHold) {
+        s.remarkHold = false;
+        if (!s.allowed || s.speaking) return;
+        s.gate = false;
+        if (s.avatar) s.avatar.state = "listening";
+        status(s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.");
+        if (s.segments.length) {
+            const ms = s.cfg.endCueMs || 4000;
+            const cue = q("cue");
+            if (cue) { cue.style.setProperty("--cue-ms", ms + "ms"); cue.dataset.active = "true"; }
+            s.cueTimer = setTimeout(() => void submit(false), ms);
+        }
+    }
 }
 
 function onFinal(seg) {
