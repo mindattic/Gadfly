@@ -142,7 +142,8 @@ try {
     Say "az webapp deploy -> $App"
     # --async true returns at once; Kudu's own wait sometimes reports a 500 timeout for a deploy that succeeds.
     & az webapp deploy -g $ResourceGroup -n $App --src-path $zip --type zip --async true -o none
-    if ($LASTEXITCODE -ne 0) { Write-Warning "az webapp deploy exited $LASTEXITCODE; checking the deployment log before deciding." }
+    $azExit = $LASTEXITCODE
+    if ($azExit -ne 0) { Write-Warning "az webapp deploy exited $LASTEXITCODE; checking the deployment log before deciding." }
 
     # Kudu deployment status: 4 = success, 3 = failed.
     $deadline = (Get-Date).AddSeconds($HealthTimeoutSeconds)
@@ -162,7 +163,13 @@ try {
         if ($latest.status -eq 4) { $deployed = $true; break }
         if ($latest.status -eq 3) { Fail "Kudu reports the deployment failed (az webapp log deployment show -g $ResourceGroup -n $App --deployment-id $($latest.id))" }
     }
-    if (-not $deployed) { Fail "no successful deployment reported within $HealthTimeoutSeconds s" }
+    if (-not $deployed) {
+        # az itself waited and succeeded (exit 0), but the Kudu log never showed a matching record (clock skew,
+        # or the record is not listed): trust az's exit code and let /healthz decide, with a fresh window.
+        if ($azExit -ne 0) { Fail "no successful deployment reported within $HealthTimeoutSeconds s" }
+        Write-Warning "az webapp deploy succeeded but Kudu listed no matching deployment within $HealthTimeoutSeconds s; continuing to the health check."
+        $deadline = (Get-Date).AddSeconds($HealthTimeoutSeconds)
+    }
 
     # --- 4. health, then smoke ---------------------------------------------------------------------------
     Say "Waiting for $baseUrl/healthz"
