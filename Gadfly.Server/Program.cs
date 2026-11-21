@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using MindAttic.Authentication.Services;
 using MindAttic.Authentication.Web;
 using MindAttic.Log.Extensions;
@@ -34,7 +35,10 @@ builder.Services.AddMindAtticLog(o =>
 
 // Who is calling, and in which organization (GAD-T41/T42). Scoped: one per request or circuit.
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<TenantScope>();
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
+// A circuit pins its tenant when it opens and never falls back to the (often absent) HttpContext (GAD-T73).
+builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, TenantCircuitHandler>());
 
 // One SQL Server database: Gadfly's "gadfly" schema plus MindAttic.Authentication's "auth" schema.
 var connectionString = GadflyDatabase.Resolve(builder.Configuration);
@@ -119,7 +123,7 @@ var app = builder.Build();
 
 // Startup: migrate (development; production migrates as a deploy step, GAD-T63), then seed the first
 // MindAttic SuperAdmin from Vault Security:bootstrap-token if no account exists yet.
-using (var scope = app.Services.CreateScope())
+using (var scope = app.Services.GetRequiredService<IServiceScopeFactory>().CreateSystemScope())
 {
     var sp = scope.ServiceProvider;
     if (app.Environment.IsDevelopment() || args.Contains("--migrate"))

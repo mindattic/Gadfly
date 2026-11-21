@@ -114,7 +114,7 @@ else
     private async Task LoadAsync()
     {
         if (Tenant.OrganizationId is not { } org) return;
-        keys = await AdminDb.RunAsync(Scopes, (_, db) => db.ApiKeys.AsNoTracking()
+        keys = await AdminDb.RunAsync(Scopes, Tenant, (_, db) => db.ApiKeys.AsNoTracking()
             .Where(k => k.OrganizationId == org)
             .OrderBy(k => k.RevokedAt != null).ThenByDescending(k => k.CreatedAt)
             .ToListAsync());
@@ -127,7 +127,7 @@ else
         message = null;
         try
         {
-            var (row, key) = await AdminDb.RunAsync(Scopes, (sp, _) =>
+            var (row, key) = await AdminDb.RunAsync(Scopes, Tenant, (sp, _) =>
                 sp.GetRequiredService<ApiKeyService>().CreateAsync(org, user, form.Name));
             created = new Created(row.Name, key);
             copied = false;
@@ -166,7 +166,7 @@ else
     {
         if (Tenant.OrganizationId is not { } org) return;
         var now = Clock.GetUtcNow();
-        var n = await AdminDb.RunAsync(Scopes, (_, db) => db.ApiKeys
+        var n = await AdminDb.RunAsync(Scopes, Tenant, (_, db) => db.ApiKeys
             .Where(k => k.Id == id && k.OrganizationId == org && k.RevokedAt == null)
             .ExecuteUpdateAsync(u => u.SetProperty(k => k.RevokedAt, now)));
         confirming = null;

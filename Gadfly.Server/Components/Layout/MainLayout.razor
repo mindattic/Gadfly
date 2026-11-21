@@ -66,7 +66,7 @@
         // Its own scope: the page below shares the circuit's DbContext and may be querying it right now.
         if (Tenant.UserId is { } uid)
         {
-            using var scope = Scopes.CreateScope();
+            using var scope = Scopes.CreateScopeFor(TenantSnapshot.Of(Tenant));
             var directory = scope.ServiceProvider.GetRequiredService<IOrganizationDirectory>();
             orgNames = (await directory.MembershipsOfAsync(uid)).Select(m => (m.Org.Id, m.Org.Name, m.Role)).ToList();
         }

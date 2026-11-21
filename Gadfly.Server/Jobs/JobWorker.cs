@@ -1,4 +1,5 @@
 using Gadfly.Server.Data;
+using Gadfly.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gadfly.Server.Jobs;
@@ -65,7 +66,7 @@ public sealed class JobWorker(
     /// <summary>Claims and runs one due job. Returns false when nothing was due.</summary>
     internal async Task<bool> TryRunOneAsync(CancellationToken stop)
     {
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.CreateSystemScope();
         var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
         var now = clock.GetUtcNow();
 
@@ -158,7 +159,7 @@ public sealed class JobWorker(
 
         public async Task ReportAsync(double fraction, string? message = null, CancellationToken ct = default)
         {
-            using var scope = scopes.CreateScope();
+            using var scope = scopes.CreateSystemScope();
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             var until = clock.GetUtcNow() + lease;
             var p = Math.Clamp(fraction, 0, 1);

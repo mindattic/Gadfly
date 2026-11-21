@@ -24,8 +24,10 @@ public sealed class GadflyDbContext : DbContext, IAuthDataContext
     }
 
     // Tenant isolation (GAD-T42). Read by the global query filters below on every query: system work
-    // (no request) sees every organization; a request sees only its active organization, and a request
-    // with no organization (signed out, or no membership) sees no tenant-owned rows at all.
+    // (a scope opened with CreateSystemScope, or a context built without a tenant: design time, tests)
+    // sees every organization; anything else sees only its organization, and a caller with no
+    // organization (signed out, no membership, no request inside a circuit) sees no tenant-owned rows.
+    // A missing HttpContext is never system work (GAD-T73).
     internal bool TenantBypass => _tenant is null || _tenant.IsSystem;
     internal Guid? TenantOrganizationId => _tenant?.OrganizationId;
 

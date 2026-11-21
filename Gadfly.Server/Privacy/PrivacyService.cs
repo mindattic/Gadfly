@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Gadfly.Server.Data;
 using Gadfly.Server.Jobs;
+using Gadfly.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gadfly.Server.Privacy;
@@ -191,7 +192,7 @@ public sealed class RetentionScheduler(IServiceScopeFactory scopes, TimeProvider
         {
             try
             {
-                using var scope = scopes.CreateScope();
+                using var scope = scopes.CreateSystemScope();
                 var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
                 var waiting = await db.Jobs.AnyAsync(j => j.Kind == RetentionJob.JobKind && (j.State == JobState.Queued || j.State == JobState.Running), stoppingToken);
                 if (!waiting)

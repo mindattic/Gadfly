@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Gadfly.Server.Data;
+using Gadfly.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gadfly.Server.Student;
@@ -49,15 +50,16 @@ public sealed record StudentAssignmentView
 /// </summary>
 public static class StudentExams
 {
-    private static async Task<T> WithDbAsync<T>(IServiceScopeFactory scopes, Func<GadflyDbContext, Task<T>> work)
+    // The scope acts for the organization it reads (GAD-T73): never the possibly-absent HttpContext of a circuit.
+    private static async Task<T> WithDbAsync<T>(IServiceScopeFactory scopes, Guid organizationId, Func<GadflyDbContext, Task<T>> work)
     {
-        await using var scope = scopes.CreateAsyncScope();
+        await using var scope = scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(organizationId));
         return await work(scope.ServiceProvider.GetRequiredService<GadflyDbContext>());
     }
 
     public static Task<IReadOnlyList<StudentAssignmentView>> ListAsync(
         IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, DateTimeOffset now, CancellationToken ct = default) =>
-        WithDbAsync(scopes, db => ListAsync(db, organizationId, studentUserId, now, ct));
+        WithDbAsync(scopes, organizationId, db => ListAsync(db, organizationId, studentUserId, now, ct));
 
     private static async Task<IReadOnlyList<StudentAssignmentView>> ListAsync(
         GadflyDbContext db, Guid organizationId, Guid studentUserId, DateTimeOffset now, CancellationToken ct)
@@ -175,7 +177,7 @@ public static class StudentExams
     /// <summary>The session's owner-checked state, or null when it isn't the student's.</summary>
     public static Task<(SessionState State, Guid AssignmentId, string ExamTitle)?> SessionAsync(
         IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, Guid sessionId, CancellationToken ct = default) =>
-        WithDbAsync(scopes, async db =>
+        WithDbAsync(scopes, organizationId, async db =>
     {
         var row = await db.ExamSessions.AsNoTracking()
             .Where(s => s.Id == sessionId && s.OrganizationId == organizationId && s.StudentUserId == studentUserId)
@@ -189,7 +191,7 @@ public static class StudentExams
 
     /// <summary>How many days the organization keeps answers and transcripts (decision D7 default 90).</summary>
     public static Task<(string OrganizationName, int RetentionDays)> OrganizationAsync(IServiceScopeFactory scopes, Guid organizationId, CancellationToken ct = default) =>
-        WithDbAsync(scopes, async db =>
+        WithDbAsync(scopes, organizationId, async db =>
     {
         var name = await db.Organizations.AsNoTracking().Where(o => o.Id == organizationId).Select(o => o.Name).FirstOrDefaultAsync(ct);
         var days = await db.OrganizationSettings.AsNoTracking().Where(s => s.OrganizationId == organizationId)

@@ -69,7 +69,7 @@ public sealed class ApiKeyAuthenticationHandler(
         var key = header["Bearer ".Length..].Trim();
         var hash = ApiKeyService.Hash(key);
 
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.CreateSystemScope();
         var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
         // System lookup (no tenant yet): ApiKeys is tenant-owned, so bypass explicitly.
         var row = await db.ApiKeys.IgnoreQueryFilters().AsNoTracking()

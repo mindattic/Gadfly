@@ -3,6 +3,7 @@ using System.Text.Json;
 using Gadfly.Engine;
 using Gadfly.Server.Data;
 using Gadfly.Server.Sources;
+using Gadfly.Server.Tenancy;
 using Gadfly.Socrates;
 using Gadfly.Sources;
 using Microsoft.EntityFrameworkCore;
@@ -68,7 +69,7 @@ public sealed class SessionOrchestrator(
     /// </summary>
     public async Task<Guid> CreateOrResumeAsync(Guid organizationId, Guid assignmentId, Guid studentUserId, string? clientInfo, CancellationToken ct = default)
     {
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(organizationId));
         var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
         var assignment = await db.ExamAssignments.Include(a => a.Exam)
             .FirstOrDefaultAsync(a => a.Id == assignmentId && a.OrganizationId == organizationId && a.StudentUserId == studentUserId, ct)
@@ -118,7 +119,7 @@ public sealed class SessionOrchestrator(
     /// <summary>Records the student's consent (hash of the exact text shown). Required before the first question.</summary>
     public async Task RecordConsentAsync(Guid organizationId, Guid sessionId, Guid studentUserId, string consentTextSha256, CancellationToken ct = default)
     {
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(organizationId));
         var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
         var row = await Owned(db, organizationId, sessionId, studentUserId, ct);
         if (row.State != SessionState.Created) return;
@@ -222,7 +223,7 @@ public sealed class SessionOrchestrator(
         try
         {
             if (_live.TryGetValue(sessionId, out cached) && cached.OrganizationId == organizationId) return cached;
-            using var scope = scopes.CreateScope();
+            using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(organizationId));
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             var row = await Owned(db, organizationId, sessionId, studentUserId, ct);
             if (row.State == SessionState.Created) throw new SessionRefusedException("Please read and accept the exam notice first.");
@@ -292,9 +293,9 @@ public sealed class SessionOrchestrator(
     /// <summary>Writes the engine's state to SQL: the resume point plus the review rows for every turn not yet stored.</summary>
     private async Task PersistAsync(Live live, Guid studentUserId, IReadOnlyList<Gadfly.Socrates.PanelCall> calls, CancellationToken ct)
     {
-        using var scope = scopes.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
         var org = live.OrganizationId;
+        using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(org));
+        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
         var s = live.Engine.Session;
         var row = await Owned(db, org, s.Id, studentUserId, ct);
         var now = clock.GetUtcNow();

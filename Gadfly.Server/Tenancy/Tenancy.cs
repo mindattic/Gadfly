@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 using MindAttic.Authentication;
 
 namespace Gadfly.Server.Tenancy;
@@ -72,39 +74,76 @@ public interface ITenantContext
     public const string ActiveOrgCookie = "gadfly-org";
 }
 
-/// <summary>
-/// Reads the tenant from the request's signed-in user; no request means system work. Re-evaluated
-/// whenever the request's principal changes (an endpoint policy that authenticates with another scheme,
-/// such as the API key, replaces <c>HttpContext.User</c> after this scoped object may already exist).
-/// </summary>
-public sealed class HttpTenantContext(IHttpContextAccessor accessor) : ITenantContext
+/// <summary>An immutable view of who is calling and in which organization.</summary>
+public sealed record TenantSnapshot(bool IsSystem, Guid? UserId, Guid? OrganizationId, string? Role,
+    IReadOnlyList<Membership> Memberships, bool IsSuperAdmin)
 {
-    private sealed record State(bool IsSystem, Guid? UserId, Guid? OrganizationId, string? Role, IReadOnlyList<Membership> Memberships, bool IsSuperAdmin);
+    /// <summary>Explicit system work (background jobs, startup): tenant filters off. Never a fallback.</summary>
+    public static readonly TenantSnapshot System = new(true, null, null, null, [], false);
 
+    /// <summary>No caller: sees no tenant-owned rows and may write none.</summary>
+    public static readonly TenantSnapshot Nobody = new(false, null, null, null, [], false);
+
+    /// <summary>Server code acting for one organization (no person, no role): filtered and guarded to it.</summary>
+    public static TenantSnapshot ForOrganization(Guid organizationId) => new(false, null, organizationId, null, [], false);
+
+    /// <summary>A copy of <paramref name="tenant"/>, for a child scope that must act exactly as its parent.</summary>
+    public static TenantSnapshot Of(ITenantContext tenant) => tenant.IsSystem ? System
+        : new(false, tenant.UserId, tenant.OrganizationId, tenant.Role, tenant.Memberships, tenant.IsSuperAdmin);
+
+    /// <summary>
+    /// The tenant of a signed-in principal: the organization named by the active-org cookie value when the
+    /// principal holds a membership in it, else its only membership. Unauthenticated means <see cref="Nobody"/>.
+    /// </summary>
+    public static TenantSnapshot FromPrincipal(ClaimsPrincipal? user, string? activeOrgCookie)
+    {
+        if (user?.Identity?.IsAuthenticated != true) return Nobody;
+        var userId = Guid.TryParse(user.FindFirst(MaClaims.UserId)?.Value, out var uid) ? uid : (Guid?)null;
+        var memberships = HttpTenantContext.Parse(user);
+        var wanted = Guid.TryParse(activeOrgCookie, out var w) ? w : (Guid?)null;
+        var active = memberships.FirstOrDefault(m => m.OrganizationId == wanted) ?? (memberships.Count == 1 ? memberships[0] : null);
+        return new(false, userId, active?.OrganizationId, active?.Role, memberships, user.IsInRole(MaRoles.Admin));
+    }
+}
+
+/// <summary>
+/// Scoped holder for a tenant pinned to the current DI scope (GAD-T73). Set by whoever opens the scope:
+/// <see cref="TenantScopes.CreateSystemScope"/> for background work, <see cref="TenantScopes.CreateScopeFor"/>
+/// for a child scope acting for a known tenant, <see cref="TenantCircuitHandler"/> for a Blazor circuit.
+/// </summary>
+public sealed class TenantScope
+{
+    public TenantSnapshot? Pinned { get; private set; }
+
+    public void Pin(TenantSnapshot tenant) => Pinned = tenant;
+}
+
+/// <summary>
+/// Who is calling (GAD-T41/T42/T73). In order: the tenant pinned to this DI scope; else the request's
+/// signed-in user (re-evaluated whenever the request's principal changes: an endpoint policy that
+/// authenticates with another scheme, such as the API key, replaces <c>HttpContext.User</c> after this
+/// scoped object may already exist); else <see cref="TenantSnapshot.Nobody"/>. A missing HttpContext is
+/// never system work: inside a Blazor circuit it is routinely absent (ASP.NET Core documents that
+/// IHttpContextAccessor must not be relied on in interactive components), and treating that as system
+/// would switch the tenant filter and write guard off. System work opts in with
+/// <see cref="TenantScopes.CreateSystemScope"/>.
+/// </summary>
+public sealed class HttpTenantContext(IHttpContextAccessor accessor, TenantScope? scope = null) : ITenantContext
+{
     private ClaimsPrincipal? _seen;
-    private State? _state;
+    private TenantSnapshot? _state;
 
-    private State Current
+    private TenantSnapshot Current
     {
         get
         {
+            if (scope?.Pinned is { } pinned) return pinned;
             var http = accessor.HttpContext;
-            if (http is null) return _state ??= new State(true, null, null, null, [], false);
+            if (http is null) return TenantSnapshot.Nobody;
             if (_state is not null && ReferenceEquals(_seen, http.User)) return _state;
             _seen = http.User;
-            return _state = Read(http);
+            return _state = TenantSnapshot.FromPrincipal(http.User, http.Request.Cookies[ITenantContext.ActiveOrgCookie]);
         }
-    }
-
-    private static State Read(HttpContext http)
-    {
-        var user = http.User;
-        if (user.Identity?.IsAuthenticated != true) return new State(false, null, null, null, [], false);
-        var userId = Guid.TryParse(user.FindFirst(MaClaims.UserId)?.Value, out var uid) ? uid : (Guid?)null;
-        var memberships = Parse(user);
-        var wanted = Guid.TryParse(http.Request.Cookies[ITenantContext.ActiveOrgCookie], out var w) ? w : (Guid?)null;
-        var active = memberships.FirstOrDefault(m => m.OrganizationId == wanted) ?? (memberships.Count == 1 ? memberships[0] : null);
-        return new State(false, userId, active?.OrganizationId, active?.Role, memberships, user.IsInRole(MaRoles.Admin));
     }
 
     public bool IsSystem => Current.IsSystem;
@@ -119,6 +158,63 @@ public sealed class HttpTenantContext(IHttpContextAccessor accessor) : ITenantCo
             .Where(p => p.Length == 2 && Guid.TryParse(p[0], out _) && OrgRoles.IsValid(p[1]))
             .Select(p => new Membership(Guid.Parse(p[0]), p[1]))
             .ToList();
+}
+
+/// <summary>Opening DI scopes with an explicit tenant (GAD-T73).</summary>
+public static class TenantScopes
+{
+    /// <summary>A scope for background/system work that must see every organization (jobs, startup).</summary>
+    public static IServiceScope CreateSystemScope(this IServiceScopeFactory scopes) => CreateScopeFor(scopes, TenantSnapshot.System);
+
+    /// <summary>A scope acting as <paramref name="tenant"/> (e.g. a component's own scope inheriting the circuit's tenant).</summary>
+    public static IServiceScope CreateScopeFor(this IServiceScopeFactory scopes, TenantSnapshot tenant)
+    {
+        var scope = scopes.CreateScope();
+        scope.ServiceProvider.GetService<TenantScope>()?.Pin(tenant);
+        return scope;
+    }
+
+    /// <inheritdoc cref="CreateScopeFor"/>
+    public static AsyncServiceScope CreateAsyncScopeFor(this IServiceScopeFactory scopes, TenantSnapshot tenant)
+    {
+        var scope = scopes.CreateAsyncScope();
+        scope.ServiceProvider.GetService<TenantScope>()?.Pin(tenant);
+        return scope;
+    }
+}
+
+/// <summary>
+/// Pins a Blazor Server circuit's tenant when the circuit opens (GAD-T73): the user from the circuit's
+/// <see cref="AuthenticationStateProvider"/> (kept current by the auth library's revalidation) and the
+/// active-org cookie as the hub connection presented it. From then on the circuit never consults
+/// IHttpContextAccessor, so a missing or different HttpContext can't change or widen what it sees.
+/// </summary>
+public sealed class TenantCircuitHandler(TenantScope scope, AuthenticationStateProvider auth, IHttpContextAccessor accessor)
+    : CircuitHandler, IDisposable
+{
+    private string? _activeOrgCookie;
+    private bool _subscribed;
+
+    public override async Task OnCircuitOpenedAsync(Circuit circuit, CancellationToken cancellationToken)
+    {
+        scope.Pin(TenantSnapshot.Nobody);   // until the user is known: never system, never the ambient HttpContext
+        _activeOrgCookie = accessor.HttpContext?.Request.Cookies[ITenantContext.ActiveOrgCookie];
+        var state = await auth.GetAuthenticationStateAsync();
+        scope.Pin(TenantSnapshot.FromPrincipal(state.User, _activeOrgCookie));
+        auth.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        _subscribed = true;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        try { scope.Pin(TenantSnapshot.FromPrincipal((await task).User, _activeOrgCookie)); }
+        catch { scope.Pin(TenantSnapshot.Nobody); }
+    }
+
+    public void Dispose()
+    {
+        if (_subscribed) auth.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+    }
 }
 
 /// <summary>Requires the caller's role in the active organization to be one of <see cref="Roles"/>.</summary>

@@ -227,7 +227,7 @@
     {
         try
         {
-            await using (var scope = Scopes.CreateAsyncScope())
+            await using (var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org)))
                 integrity = await IntegrityRecorder.Create(scope.ServiceProvider).SettingsAsync(org, user, SessionId, stop.Token);
             if (integrity is not { Level: not IntegrityLevel.Off } settings) return;
             integrityOrg = org;
@@ -264,7 +264,7 @@
         try
         {
             bool keepGoing;
-            await using (var scope = Scopes.CreateAsyncScope())
+            await using (var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(integrityOrg)))
                 keepGoing = await IntegrityRecorder.Create(scope.ServiceProvider).RecordAsync(integrityOrg, integrityUser, SessionId, batch, clockSkew: clientSkew);
             if (fullscreen && batch.Events.Any(e => e.Type == "fullscreen-exit"))
             {

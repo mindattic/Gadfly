@@ -88,7 +88,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         if (Tenant.OrganizationId is not { } org) return;
-        var row = await AdminDb.RunAsync(Scopes, (_, db) =>
+        var row = await AdminDb.RunAsync(Scopes, Tenant, (_, db) =>
             db.OrganizationSettings.AsNoTracking().FirstOrDefaultAsync(s => s.OrganizationId == org));
         form = new Form
         {
@@ -108,7 +108,7 @@ else
         try
         {
             var now = Clock.GetUtcNow();
-            await AdminDb.RunAsync(Scopes, async (_, db) =>
+            await AdminDb.RunAsync(Scopes, Tenant, async (_, db) =>
             {
                 var row = await db.OrganizationSettings.FirstOrDefaultAsync(s => s.OrganizationId == org);
                 if (row is null) db.OrganizationSettings.Add(row = new OrganizationSettings { OrganizationId = org });

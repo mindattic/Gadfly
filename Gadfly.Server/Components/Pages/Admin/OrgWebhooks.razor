@@ -148,7 +148,7 @@ else
     private async Task LoadAsync()
     {
         if (Tenant.OrganizationId is not { } org) return;
-        (hooks, deliveries) = await AdminDb.RunAsync(Scopes, async (_, db) =>
+        (hooks, deliveries) = await AdminDb.RunAsync(Scopes, Tenant, async (_, db) =>
         {
             var h = await db.Webhooks.AsNoTracking().Where(w => w.OrganizationId == org)
                 .OrderByDescending(w => w.IsActive).ThenByDescending(w => w.CreatedAt).ToListAsync();
@@ -171,7 +171,7 @@ else
         message = null;
         try
         {
-            var (row, secret) = await AdminDb.RunAsync(Scopes, (sp, _) =>
+            var (row, secret) = await AdminDb.RunAsync(Scopes, Tenant, (sp, _) =>
                 sp.GetRequiredService<WebhookService>().CreateAsync(org, form.Url.Trim(), form.Events));
             created = new Created(row.Url, secret);
             copied = false;
@@ -214,7 +214,7 @@ else
     private async Task DeactivateAsync(Guid id)
     {
         if (Tenant.OrganizationId is not { } org) return;
-        var n = await AdminDb.RunAsync(Scopes, (_, db) => db.Webhooks
+        var n = await AdminDb.RunAsync(Scopes, Tenant, (_, db) => db.Webhooks
             .Where(w => w.Id == id && w.OrganizationId == org && w.IsActive)
             .ExecuteUpdateAsync(u => u.SetProperty(w => w.IsActive, false)));
         confirming = null;

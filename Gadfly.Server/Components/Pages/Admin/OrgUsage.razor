@@ -140,7 +140,7 @@ else
         var thisMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
         var start = thisMonth.AddMonths(-(Months - 1));
 
-        var (usage, sessions, q) = await AdminDb.RunAsync(Scopes, async (_, db) =>
+        var (usage, sessions, q) = await AdminDb.RunAsync(Scopes, Tenant, async (_, db) =>
         {
             var u = await db.UsageEntries.AsNoTracking()
                 .Where(x => x.OrganizationId == org && x.CreatedAt >= start)

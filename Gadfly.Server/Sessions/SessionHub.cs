@@ -22,14 +22,20 @@ public sealed record HubIntegrityEvent(string Source, string Type, DateTimeOffse
 /// question), <c>Thinking</c> (judging has started), <c>Refused</c> (a readable reason).
 /// </summary>
 [Authorize(Policy = GadflyPolicies.Student)]
-public sealed class SessionHub(SessionOrchestrator orchestrator, ITenantContext tenant, IServiceScopeFactory scopes) : Hub
+public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFactory scopes) : Hub
 {
     public const string Path = "/hubs/session";
 
-    private (Guid Org, Guid User) Caller() =>
-        tenant.OrganizationId is { } org && tenant.UserId is { } user
+    // The caller comes from the hub connection itself (its user and the active-org cookie it connected with),
+    // never from IHttpContextAccessor, which is absent on some transports (GAD-T73).
+    private (Guid Org, Guid User) Caller()
+    {
+        var tenant = TenantSnapshot.FromPrincipal(Context.User,
+            Context.GetHttpContext()?.Request.Cookies[ITenantContext.ActiveOrgCookie]);
+        return tenant is { OrganizationId: { } org, UserId: { } user, Role: OrgRoles.Student }
             ? (org, user)
             : throw new HubException("Sign in as a student of this organization.");
+    }
 
     /// <summary>Starts (or resumes) the attempt for an assignment; returns the session id. Consent must be recorded first.</summary>
     public async Task<Guid> Start(Guid assignmentId, string consentTextSha256)
@@ -91,7 +97,7 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, ITenantContext 
     {
         var (org, user) = Caller();
         if (events is null || events.Count == 0) return 0;
-        using var scope = scopes.CreateScope();
+        using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(org));
         var recorder = scope.ServiceProvider.GetRequiredService<HubIntegrityRecorder>();
         return await recorder.RecordAsync(org, user, sessionId, events.Take(50).ToList(), Context.ConnectionAborted);
     }
