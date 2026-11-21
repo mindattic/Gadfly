@@ -229,6 +229,8 @@ public static class ClassroomSeeder
             await db.SaveChangesAsync(ct);
         }
 
+        log.LogWarning("Voice exam: \"{Exam}\" (Teacher_A) is assigned to {Student}, who signs in with the same password.",
+            Offerings[^1].Assessment.Title, VoiceStudentUserName);
         var lines = assignment.Select(kv => $"  {kv.Key,-10} {string.Join(", ", kv.Value)}");
         log.LogWarning("Classroom seeded in \"{Org}\" ({New} new assignments). Sign in as {Owner}, Teacher_A..C or Student_A..Z with password {Password}{Note}.\n{Lines}",
             OrganizationName, newAssignments, OwnerUserName, password,
