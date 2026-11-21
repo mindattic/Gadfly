@@ -50,6 +50,13 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel, Random? shuff
 
         var (usable, excludedFlags, ambiguities) = Partition(input);
         var flags = new List<string>(excludedFlags);
+        // Words the recognizer was unsure of, in transcripts the student never checked (GAD-T265): told to the panel
+        // and to the human, so a transcription error is not scored as wrong content.
+        foreach (var e in usable.Where(e => e.UncertainWords is { Count: > 0 }))
+        {
+            flags.Add(ReviewFlags.LowConfidenceSpeech);
+            ambiguities.Add($"Response {e.Sequence}: speech recognition was unsure of {string.Join(", ", e.UncertainWords!.Take(5).Select(w => $"\"{w}\""))}; these words may be mis-heard. Check them before scoring.");
+        }
         if (input.Evidence.Any(e => e.Stance == EvidenceStanceHint.Contradicts)) flags.Add(ReviewFlags.ContradictingEvidence);
         var mock = panel is IPanelInfo { IsMock: true };
 
@@ -147,6 +154,10 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel, Random? shuff
             sb.AppendLine($"[{i + 1}] Question: {e.Question}");
             if (e.Stance is { } stance) sb.AppendLine($"    Reviewer note: {stance}{(string.IsNullOrWhiteSpace(e.Note) ? "" : " - " + e.Note)}");
             sb.AppendLine($"    Answer: {ExamPrompts.Student(e.VerifiedText)}");
+            if (e.TranscriptCorrected)
+                sb.AppendLine("    Transcript: the student corrected what the speech recognizer wrote (a recording fix, not a new answer).");
+            if (e.UncertainWords is { Count: > 0 } unsure)
+                sb.AppendLine($"    Speech recognition was unsure of: {string.Join("; ", unsure.Take(8).Select(w => $"\"{w}\""))}. These words may be mis-heard.");
         }
         if (excluded.Count > 0)
             sb.AppendLine($"({excluded.Count} other response(s) on this objective were excluded by policy: unverified, contaminated by a leading question, or assisted. Do not speculate about them.)");
@@ -159,6 +170,7 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel, Random? shuff
             - The answers are transcribed speech. Never penalize grammar, accent, fluency, filler words, false starts or non-native phrasing, and never reward polish: judge the ideas.
             - For each criterion, first find the evidence: give the evidence numbers and quote the words that support it, then the rationale, and only then the level. Every level above 0 needs that quote.
             - A quote must be copied exactly from one cited answer, or left empty.
+            - Words marked as unsure speech recognition may be mis-heard: never treat them as wrong content or a misconception. Judge on the reliable words; if a level depends on the unsure words, say so under ambiguities.
             - Note misconceptions only when an answer actually shows them. Note ambiguities where an answer could be read in ways that would be graded differently.
             Return JSON only, keeping the field order (evidence and quote before the level):
             {"criteria":[{"criterion":"<criterion name exactly as given>","evidence":[<numbers>],"quote":"<exact words or empty>","rationale":"<one or two sentences>","level":<0-5>}],

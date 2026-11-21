@@ -37,3 +37,9 @@
 @media (max-width: 640px) {
     .gr-summary { grid-template-columns: 1fr 1fr; }
 }
+
+/* Speech-recognition notes on voice responses (GAD-T265). */
+.gr-speech { margin: .3rem 0; font-size: .9rem; }
+.gr-speech.corrected { color: var(--ink); border-left: 3px solid var(--accent); padding-left: .6rem; }
+.gr-speech.unsure { color: var(--ink); border-left: 3px solid var(--error); padding-left: .6rem; }
+.gr-speech mark { background: color-mix(in srgb, var(--error) 22%, transparent); color: inherit; padding: 0 .15rem; border-radius: 3px; }

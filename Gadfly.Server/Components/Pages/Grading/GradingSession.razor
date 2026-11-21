@@ -3,6 +3,8 @@
 @using Gadfly.Assessment
 @using Gadfly.Server.Data
 @using Gadfly.Server.Grading
+@using Gadfly.Server.Verification
+@using Gadfly.Server.Components.Pages.Admin
 @using Gadfly.Sources.Grading
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
@@ -198,6 +200,7 @@ else
                             <p><strong>#@r.Response.Sequence</strong> @r.Question</p>
                             <blockquote>@r.Response.VerifiedText</blockquote>
                             @if (r.TextChanged) { <blockquote class="original">Original: @r.Response.OriginalText</blockquote> }
+                            @SpeechNote(r)
                         }
                     </div>
                 </div>
@@ -452,9 +455,10 @@ else
             {
                 <blockquote class="original">Original (preserved): @r.Response.OriginalText</blockquote>
             }
+            @SpeechNote(r)
             @if (r.Versions.Count > 1)
             {
-                <details>
+                <details open="@(Speech(r)?.Corrected == true)">
                     <summary>Transcript versions (@r.Versions.Count)</summary>
                     <ul class="gr-flags">@foreach (var v in r.Versions) { <li>v@v.Version · @v.Source@(v.CorrectionKind is { } ck ? $" · {ck}" : "") · @v.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm"): @v.Text</li> }</ul>
                 </details>
@@ -536,6 +540,7 @@ else
     }
 
     private GradingWorkspace? w;
+    private IReadOnlyDictionary<Guid, SpeechMark> speech = new Dictionary<Guid, SpeechMark>();
     private bool loading = true, busy, ok;
     private string? message, approveLabel, approveNote;
     private string proceedReason = "", reopenReason = "", appealResolution = "", amendReason = "";
@@ -553,8 +558,47 @@ else
     private async Task LoadAsync()
     {
         w = await GradingDb.RunAsync(Scopes, Tenant, g => g.WorkspaceAsync(SessionId));
+        // What speech recognition was unsure of, and what the student corrected (GAD-T265); loaded only after the
+        // workspace passed its permission check.
+        var loaded = w;
+        speech = loaded is null ? new Dictionary<Guid, SpeechMark>()
+            : await AdminDb.RunAsync(Scopes, Tenant, (_, db) => SpeechMarks.LoadAsync(db, loaded.Session.OrganizationId, loaded.Responses.Select(r => r.Response).ToList()));
         amendForms.Clear();
     }
+
+    private SpeechMark? Speech(ResponseView r) => speech.GetValueOrDefault(r.Response.Id);
+
+    /// <summary>
+    /// The speech-recognition note under a voice response (GAD-T265): a transcript correction is shown plainly, and
+    /// words the recognizer was unsure of are named so a mis-heard word is not graded as wrong content.
+    /// </summary>
+    private RenderFragment SpeechNote(ResponseView r) => __builder =>
+    {
+        if (Speech(r) is not { } m) return;
+        if (m.Corrected)
+        {
+            <p class="gr-speech corrected">Transcript corrected by the student: @m.ChangedWords word@(m.ChangedWords == 1 ? "" : "s") changed from what speech recognition heard. A correction is a recording fix, not a new answer, and never lowers the score.</p>
+        }
+        else if (m.TranscriptChecked)
+        {
+            <p class="gr-speech hint">The student confirmed this transcript matches what they said.</p>
+        }
+        if (m.Unchecked.Count > 0)
+        {
+            <p class="gr-speech unsure">Speech recognition was unsure of these words and the student did not check them:
+                @for (var i = 0; i < m.Unchecked.Count; i++)
+                {
+                    var seg = m.Unchecked[i];
+                    var sep = i == 0 ? "" : "; ";
+                    <text>@sep</text><mark title="Lowest word confidence @seg.MinConfidence.ToString("0.00")">@seg.Text</mark>
+                }.
+                They may be mis-heard: do not grade them as wrong content.</p>
+        }
+        else if (m.Segments.Count > 0 && m.TranscriptChecked)
+        {
+            <p class="gr-speech hint">Speech recognition was unsure of @m.Segments.Count passage@(m.Segments.Count == 1 ? "" : "s"); the student checked the transcript afterwards.</p>
+        }
+    };
 
     private bool Can(Permission p) => Tenant.UserId is not null && PermissionMatrix.Has(Tenant.Role, p);
 

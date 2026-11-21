@@ -1,0 +1,126 @@
+@using Gadfly.Server.Analytics
+@using Gadfly.Server.Components.Pages.Admin
+@using Gadfly.Sources.Verification
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+@* Speech-recognition accuracy by group (GAD-T265, docs/EVIDENCE_MAP.md mechanic 7): word error rate against the transcripts
+   students checked, how often they had to correct one, and how often the recognizer was unsure, by a proxy grouping read from
+   the transcripts or by a grouping pasted in for the comparison (used in memory, never stored). No student is named; small
+   groups are withheld. *@
+
+<section class="analytics-section" aria-labelledby="h-speech-recognition">
+    <h2 id="h-speech-recognition">Speech recognition accuracy by group</h2>
+    <p class="hint">@SpeechRecognitionAudit.Caveat</p>
+    @if (report is null)
+    {
+        <p class="hint">Loading…</p>
+    }
+    else if (report.Responses == 0)
+    {
+        <p class="hint">No spoken answers in this scope yet.</p>
+    }
+    else
+    {
+        <table class="grid">
+            <caption>@(grouped ? "By the grouping you supplied" : "By fillers and repetitions in the recognized answers (a proxy, not a diagnosis)") · @report.Responses spoken answer(s)</caption>
+            <thead><tr><th>Group</th><th>Students</th><th>Answers</th><th>Checked by the student</th><th>Word error rate</th><th>Answers corrected</th><th>Words the recognizer was unsure of</th><th>Mean recognizer confidence</th></tr></thead>
+            <tbody>
+                @foreach (var g in report.Groups)
+                {
+                    <tr>
+                        <td>@g.Group</td>
+                        <td>@g.Students</td>
+                        @if (!g.Reportable)
+                        {
+                            <td colspan="6" class="hint">Withheld: fewer than @SpeechAccuracy.MinStudentsPerGroup students.</td>
+                        }
+                        else
+                        {
+                            <td>@g.Responses</td>
+                            <td>@g.CheckedResponses</td>
+                            <td>@AnalyticsService.Pct(g.WordErrorRate)@(g.ReferenceWords > 0 ? $" ({g.WordErrors} of {g.ReferenceWords} words)" : "")</td>
+                            <td>@AnalyticsService.Pct(g.CorrectedShare)</td>
+                            <td>@AnalyticsService.Pct(g.LowConfidenceShare)</td>
+                            <td>@(g.MeanConfidence is { } c ? c.ToString("0.00") : "—")</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @foreach (var w in report.Warnings)
+        {
+            <p class="notice" role="status">@w</p>
+        }
+        @if (!grouped)
+        {
+            <p class="hint">Recognizers often drop the repetitions a stutter produces, so a student in the first group may still stutter. Paste a grouping below to compare accents, dialects or a self-described group.</p>
+        }
+        @if (grouped && (report.Unplaced > 0 || unmatched > 0))
+        {
+            <p class="hint">@report.Unplaced student(s) with spoken answers had no group; @unmatched line(s) matched no member of this organization.</p>
+        }
+    }
+    <details>
+        <summary>Compare other groups</summary>
+        <p class="hint">Paste one line per student: their email or user name, a comma, and a group label (for example an accent, dialect
+            or speech group from a voluntary survey your institution runs). It is used only for this comparison and is never stored.</p>
+        <label>Grouping <textarea rows="6" @bind="groupingText" placeholder="student@example.edu, Group A"></textarea></label>
+        <button type="button" disabled="@busy" @onclick="CompareAsync">Compare</button>
+        @if (grouped)
+        {
+            <button type="button" class="link" disabled="@busy" @onclick="ClearAsync">Back to the transcript-based groups</button>
+        }
+    </details>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public AnalyticsScope Scope { get; set; } = AnalyticsScope.All;
+
+    private AnalyticsScope? loaded;
+    private SpeechAuditReport? report;
+    private string? groupingText;
+    private bool grouped, busy;
+    private int unmatched;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loaded == Scope) return;
+        loaded = Scope;
+        await LoadAsync(grouped ? groupingText : null);
+    }
+
+    private async Task CompareAsync()
+    {
+        if (string.IsNullOrWhiteSpace(groupingText)) return;
+        await LoadAsync(groupingText);
+    }
+
+    private async Task ClearAsync()
+    {
+        groupingText = null;
+        await LoadAsync(null);
+    }
+
+    private async Task LoadAsync(string? grouping)
+    {
+        if (busy || Tenant.OrganizationId is not { } org) return;
+        busy = true;
+        try
+        {
+            var scope = Scope;
+            (report, unmatched) = await AdminDb.RunAsync(Scopes, Tenant, async (sp, db) =>
+            {
+                var audit = new SpeechRecognitionAudit(db, org);
+                var exams = await audit.ExamIdsAsync(scope);
+                if (grouping is null) return (await audit.BuildAsync(exams), 0);
+                var members = (await sp.GetRequiredService<IOrganizationDirectory>().MembersAsync(org))
+                    .Select(m => (m.Member.UserId, m.UserName, m.Email));
+                var (map, miss) = SpeechRecognitionAudit.ParseGrouping(grouping, members);
+                return (await audit.BuildAsync(exams, id => map.GetValueOrDefault(id)), miss);
+            });
+            grouped = grouping is not null;
+        }
+        finally { busy = false; }
+    }
+}

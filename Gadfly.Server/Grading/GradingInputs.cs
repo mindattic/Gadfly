@@ -2,6 +2,7 @@ using System.Text.Json;
 using Gadfly.Assessment;
 using Gadfly.Engine;
 using Gadfly.Server.Data;
+using Gadfly.Server.Verification;
 using Gadfly.Sources.Grading;
 using Microsoft.EntityFrameworkCore;
 
@@ -131,6 +132,11 @@ internal static class GradingInputs
         var evidenceRows = await db.AssessmentEvidence.AsNoTracking()
             .Where(e => e.SessionId == session.Id && e.ObjectiveId == objective.Id && e.OrganizationId == session.OrganizationId).ToListAsync(ct);
         var byId = responses.ToDictionary(r => r.Id);
+        // Words speech recognition was unsure of, in transcripts the student never checked, are named to the panel
+        // so a mis-heard word is not scored as wrong content (GAD-T265).
+        var speech = await SpeechMarks.LoadAsync(db, session.OrganizationId, responses, ct);
+        IReadOnlyList<string>? Unsure(Guid id) => speech.TryGetValue(id, out var m) && m.Unchecked.Count > 0 ? m.Unchecked.Select(s => s.Text).ToList() : null;
+        bool Fixed(Guid id) => speech.TryGetValue(id, out var m) && m.Corrected;
 
         List<EvidenceItem> items;
         if (evidenceRows.Count > 0)
@@ -143,7 +149,7 @@ internal static class GradingInputs
                 return new EvidenceItem(r.Id, r.Sequence, turns.TryGetValue(r.TurnId, out var t) ? t.Question : "", r.VerifiedText, r.VerificationState,
                     Assisted: r.Assisted || g.Any(e => e.Assisted), Contaminated: g.Any(e => e.Contaminated),
                     Note: string.Join("; ", g.Select(e => e.Note).Where(n => !string.IsNullOrWhiteSpace(n))),
-                    Stance: (EvidenceStanceHint)(int)first.Stance);
+                    Stance: (EvidenceStanceHint)(int)first.Stance, UncertainWords: Unsure(r.Id), TranscriptCorrected: Fixed(r.Id));
             }).ToList();
         }
         else
@@ -151,7 +157,8 @@ internal static class GradingInputs
             // Otherwise the session's responses on the objective's concept.
             items = objective.ConceptKey is not { Length: > 0 } key ? []
                 : responses.Where(r => turns.TryGetValue(r.TurnId, out var t) && t.ConceptKey == key)
-                    .Select(r => new EvidenceItem(r.Id, r.Sequence, turns[r.TurnId].Question, r.VerifiedText, r.VerificationState, Assisted: r.Assisted))
+                    .Select(r => new EvidenceItem(r.Id, r.Sequence, turns[r.TurnId].Question, r.VerifiedText, r.VerificationState, Assisted: r.Assisted,
+                        UncertainWords: Unsure(r.Id), TranscriptCorrected: Fixed(r.Id)))
                     .ToList();
         }
 

@@ -37,6 +37,12 @@ These are the questions the pilot exists to answer:
 - **Does cheating get harder?** Was there anything a student could paste from another AI that passed? Did the webcam
   and audio notes help or just add noise?
 - **Is the voice usable?** Speech recognition errors, the "is this what you said?" check, the talking head.
+- **Does speech recognition treat every student alike?** Analytics' "Speech recognition accuracy by group" section shows
+  word error rate against the transcripts students checked, how often they had to correct one, and how often the
+  recognizer was unsure, by a transcript-based proxy or by a grouping pasted in (accent, dialect, a self-described
+  speech group; never stored). In grading, words the recognizer was unsure of and the student never checked are marked
+  for the AI panel and the human so they are not scored as wrong content, and a student's correction is shown with how
+  many words it changed (GAD-T265).
 - **Workload:** how long did setup, each session and each grading take?
 
 ## Feedback form

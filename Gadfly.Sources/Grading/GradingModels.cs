@@ -14,9 +14,13 @@ public sealed record GradingObjective(string Key, string Title, string? Descript
 /// One student response offered as evidence. <see cref="VerifiedText"/> is the only text the grader is shown and
 /// the only text a quote may come from. Responses that may not count (contaminated, assisted, needing a human)
 /// are still passed so the grader can explain what was excluded; it never sees their text.
+/// <see cref="UncertainWords"/> are runs of words the speech recognizer was unsure of in a transcript the student
+/// never checked (GAD-T265): they may be mis-heard, so they are not to be scored as wrong content.
+/// <see cref="TranscriptCorrected"/> is true when the student corrected the recognizer's transcript (a recording fix).
 /// </summary>
 public sealed record EvidenceItem(Guid ResponseId, int Sequence, string Question, string VerifiedText, VerificationState State,
-    bool Assisted = false, bool Contaminated = false, string? Note = null, EvidenceStanceHint? Stance = null);
+    bool Assisted = false, bool Contaminated = false, string? Note = null, EvidenceStanceHint? Stance = null,
+    IReadOnlyList<string>? UncertainWords = null, bool TranscriptCorrected = false);
 
 /// <summary>A reviewer-recorded stance on a piece of evidence (AssessmentEvidence), passed through as a hint.</summary>
 public enum EvidenceStanceHint { Supports, Contradicts, Misconception, Uncertain }
@@ -104,6 +108,7 @@ public static class ReviewFlags
     public const string PanelFailed = "ai-panel-failed";
     public const string Mock = "mock-panel";
     public const string ContradictingEvidence = "contradicting-evidence";
+    public const string LowConfidenceSpeech = "low-confidence-speech";
 
     public static string Describe(string flag) => flag switch
     {
@@ -116,6 +121,7 @@ public static class ReviewFlags
         PanelFailed => "The AI panel returned no valid evaluation; this objective needs human grading alone.",
         Mock => "Produced by the mock panel: not a genuine AI evaluation.",
         ContradictingEvidence => "A reviewer marked evidence that contradicts mastery on this objective.",
+        LowConfidenceSpeech => "Speech recognition was unsure of some words in the evidence and the student did not check them; they may be mis-heard, not wrong. Check them before scoring.",
         _ => flag,
     };
 }
