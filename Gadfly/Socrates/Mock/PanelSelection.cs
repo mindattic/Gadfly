@@ -93,15 +93,17 @@ public static class PanelServiceCollectionExtensions
     /// <summary>
     /// Registers the AI panel (GAD-T100): <see cref="LegionVotingClient"/> (always, for provider health), the
     /// <see cref="MockVotingClient"/>, and <see cref="SelectedPanel"/> as both <see cref="ISocraticVotingClient"/> and
-    /// <see cref="IPanelInfo"/>, chosen by <c>Gadfly:AiMode</c> ("live" | "mock" | "auto"). Unset means "auto" in
-    /// development and "live" elsewhere, so production never silently runs on the mock.
+    /// <see cref="IPanelInfo"/>, chosen by <c>Gadfly:AiMode</c> ("live" | "mock" | "auto"). Unset means "mock" in
+    /// development (no provider credit is spent unless someone opts in: owner, 2026-11-21) and "live" elsewhere;
+    /// production sets it explicitly. Claude, when live, runs on <c>Gadfly:ClaudeModel</c> (default Sonnet 5).
     /// </summary>
     public static IServiceCollection AddGadflyPanel(this IServiceCollection services, IConfiguration configuration, bool isDevelopment = false)
     {
-        var mode = PanelModes.Parse(configuration[PanelModes.Setting], isDevelopment ? PanelModes.Auto : PanelModes.Live);
+        var mode = PanelModes.Parse(configuration[PanelModes.Setting], isDevelopment ? PanelModes.Mock : PanelModes.Live);
+        var claudeModel = configuration["Gadfly:ClaudeModel"];
         services.AddSingleton<LegionVotingClient>(sp =>
         {
-            var client = new LegionVotingClient(GadflyConfiguration.Build());
+            var client = new LegionVotingClient(GadflyConfiguration.Build(claudeModel: claudeModel));
             var log = sp.GetService<ILoggerFactory>()?.CreateLogger("Gadfly.Panel");
             client.Health.BecameFailing += s => log?.LogError(
                 "LLM provider {Provider} has failed {Count} calls in a row; the panel is running without it. Last error: {Error}",

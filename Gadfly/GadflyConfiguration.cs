@@ -13,10 +13,14 @@ namespace Gadfly;
 /// </summary>
 public static class GadflyConfiguration
 {
+    /// <summary>The Claude model Gadfly uses unless configured otherwise.</summary>
+    public const string DefaultClaudeModel = "claude-sonnet-5";
+
     public static VotingConfiguration Build(
         ModelTier tier = LegionTierResolver.DefaultTier,
         string? projectDir = null,
-        IEnumerable<string>? providerOverride = null)
+        IEnumerable<string>? providerOverride = null,
+        string? claudeModel = null)
     {
         var config = new VotingConfiguration
         {
@@ -35,6 +39,10 @@ public static class GadflyConfiguration
         // should narrow the panel even if legion.json's own voter list is broader.
         foreach (var kv in LegionTierResolver.BuildTierModelOverrides(tier))
             config.ModelOverrides[kv.Key] = kv.Value;
+        // Claude is pinned to Sonnet 5 at every tier unless told otherwise (owner, 2026-11-21: spend credits sparingly).
+        config.ModelOverrides["claude"] = !string.IsNullOrWhiteSpace(claudeModel) ? claudeModel
+            : Environment.GetEnvironmentVariable("GADFLY_CLAUDE_MODEL") is { Length: > 0 } env ? env
+            : DefaultClaudeModel;
         if (providerOverride is not null)
             config.AllowedProviderIds = LegionTierResolver.IntersectWithTrustedSet(providerOverride);
 
