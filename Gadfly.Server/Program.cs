@@ -145,9 +145,15 @@ if (args.Contains(Gadfly.Server.Demo.DemoSeeder.SeedArgument)) await Gadfly.Serv
 if (args.Contains(Gadfly.Server.Demo.ClassroomSeeder.SeedArgument) || app.Configuration["Gadfly:Demo:SeedClassroomOnStartup"] == "true")
 {
     // Test data must never stop the site from starting: a failure is logged and the server carries on.
-    try { await Gadfly.Server.Demo.ClassroomSeeder.RunAsync(app); }
-    catch (Exception ex) { app.Logger.LogError(ex, "Classroom seeding failed; the server starts without it."); }
-    if (args.Contains("--then-exit")) return;
+    async Task SeedClassroomAsync()
+    {
+        try { await Gadfly.Server.Demo.ClassroomSeeder.RunAsync(app); }
+        catch (Exception ex) { app.Logger.LogError(ex, "Classroom seeding failed; the server starts without it."); }
+    }
+    if (args.Contains("--then-exit")) { await SeedClassroomAsync(); return; }
+    // As a server, seed once it is listening: 30 Argon2id hashes take minutes on a small App Service plan, longer than
+    // its startup time limit, which would otherwise restart the app mid-seed forever (GAD-T157).
+    app.Lifetime.ApplicationStarted.Register(() => _ = Task.Run(SeedClassroomAsync));
 }
 
 var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto };
