@@ -48,12 +48,16 @@
 
     private async Task CreateAsync()
     {
+        if (busy) return;   // the directory shares the circuit's DbContext: one operation at a time (GAD-T205)
         busy = true;
-        var r = await Directory.CreateOrganizationAsync(form.Name, form.OwnerUserName, form.OwnerEmail, form.Password, Tenant.UserId ?? Guid.Empty);
-        ok = r.Ok;
-        message = r.Message;
-        if (r.Ok) form = new();
-        orgs = await Directory.ListOrganizationsAsync();
-        busy = false;
+        try
+        {
+            var r = await Directory.CreateOrganizationAsync(form.Name, form.OwnerUserName, form.OwnerEmail, form.Password, Tenant.UserId ?? Guid.Empty);
+            ok = r.Ok;
+            message = r.Message;
+            if (r.Ok) form = new();
+            orgs = await Directory.ListOrganizationsAsync();
+        }
+        finally { busy = false; }
     }
 }
