@@ -47,11 +47,7 @@ public partial class ExamRoom
             var next = await Sessions.StartClockAsync(org, SessionId, user, stop.Token);
             // Only the clock changed: keep whatever this page shows now (a newer step may have arrived meanwhile), but always take the
             // server's clock state, whichever turn its step names.
-            if (step is { } current && next.State != SessionState.Ended)
-            {
-                step = current with { Remaining = next.Remaining, ClockStarted = next.ClockStarted };
-                deadline = Clock.GetUtcNow() + next.Remaining;
-            }
+            TakeClock(next);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -76,7 +72,72 @@ public partial class ExamRoom
             || (s.Verification.Kind == ResponseLedger.TranscriptKind && verifyMode == VerifyMode.Repeat)
             || (s.Verification.Kind == ResponseLedger.MeaningKind && verifyMode == VerifyMode.None));
 
-    private void OnVoiceActive(bool on) => voiceOn = on;
+    /// <summary>
+    /// Takes only the server's clock state from <paramref name="next"/>: keep whatever this page shows now (a newer step may have
+    /// arrived meanwhile), whichever turn the step names.
+    /// </summary>
+    private void TakeClock(Gadfly.Server.Sessions.SessionStep next)
+    {
+        if (step is not { } current || next.State == SessionState.Ended) return;
+        step = current with
+        {
+            Remaining = next.Remaining,
+            ClockStarted = next.ClockStarted,
+            ClockPaused = next.ClockPaused,
+            PauseAllowanceLeft = next.PauseAllowanceLeft,
+        };
+        deadline = Clock.GetUtcNow() + next.Remaining;
+    }
+
+    private async Task OnVoiceActive(bool on)
+    {
+        voiceOn = on;
+        await SyncPauseAsync();
+    }
+
+    private bool pauseSyncing;
+
+    /// <summary>The exam is paused and the clock is stopped for it right now (the pause allowance isn't spent yet).</summary>
+    private bool PauseStopsClock => step is { ClockPaused: true } p
+        && Clock.GetUtcNow() - (deadline - p.Remaining) < p.PauseAllowanceLeft;
+
+    /// <summary>
+    /// A lost microphone, camera or examiner connection pauses the exam clock on the server, and getting them back resumes it
+    /// (GAD-T263): the pause doesn't cost exam time, up to the exam's pause allowance. Only once the clock has started, and only for a
+    /// device lost after the examiner spoke on this page; a reload with a pause still open resumes it when the devices are back.
+    /// </summary>
+    private async Task SyncPauseAsync()
+    {
+        if (pauseSyncing) return;
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        pauseSyncing = true;
+        try
+        {
+            // Loop until the server's clock matches the room: the devices may come and go again while a call is in flight.
+            for (var tries = 0; tries < 4; tries++)
+            {
+                if (phase is not (Phase.Answering or Phase.Thinking) || step is not { ClockStarted: true } s) return;
+                var wantPaused = !voiceOn && examinerHasSpoken;
+                if (wantPaused == s.ClockPaused) return;
+                if (wantPaused && s.PauseAllowanceLeft <= TimeSpan.Zero) return;
+                var next = wantPaused
+                    ? await Sessions.PauseClockAsync(org, SessionId, user, stop.Token)
+                    : await Sessions.ResumeClockAsync(org, SessionId, user, stop.Token);
+                TakeClock(next);
+                // The server declined (allowance spent, exam ended): stop asking.
+                if (next.State == SessionState.Ended || next.ClockPaused != wantPaused) return;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The server's clock simply keeps running: a failure here never gives extra time.
+            Log.LogWarning(ex, "The exam clock could not be paused or resumed for session {SessionId}.", SessionId);
+        }
+        finally
+        {
+            pauseSyncing = false;
+        }
+    }
 
     /// <summary>Adds the strain-vs-baseline comparison to a spoken answer; on any failure the answer goes on without it.</summary>
     private async Task<Answer> WithVoiceStrainAsync(Guid org, Answer answer)

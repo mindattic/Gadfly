@@ -100,7 +100,9 @@
                     @* No microphone, camera or examiner connection (not yet, or lost): the exam is paused (GAD-T239). The question
                        is not shown until the examiner asks it, so time before the clock starts can't be spent reading it. *@
                     <p class="notice" role="status">@(examinerHasSpoken
-                        ? "The exam is paused until your microphone, camera and the examiner are working again. Follow the steps above."
+                        ? (PauseStopsClock
+                            ? "The exam is paused until your microphone, camera and the examiner are working again. Follow the steps above. The clock is stopped while you do."
+                            : "The exam is paused until your microphone, camera and the examiner are working again. Follow the steps above.")
                         : "The examiner will ask the first question as soon as your microphone and camera are working. Your time starts then.")</p>
                 }
                 else
@@ -303,6 +305,14 @@
         {
             // Held until the examiner begins the first question (GAD-T239): shown, but not counting down.
             if (step is { ClockStarted: false } held) return held.Remaining;
+            // Paused for a lost microphone or camera (GAD-T263): standing still until the pause allowance is spent, then counting again.
+            if (step is { ClockPaused: true } paused)
+            {
+                var pausedFor = Clock.GetUtcNow() - (deadline - paused.Remaining);
+                var over = pausedFor - paused.PauseAllowanceLeft;
+                var stillLeft = over > TimeSpan.Zero ? paused.Remaining - over : paused.Remaining;
+                return stillLeft < TimeSpan.Zero ? TimeSpan.Zero : stillLeft;
+            }
             var left = deadline - Clock.GetUtcNow();
             return left < TimeSpan.Zero ? TimeSpan.Zero : left;
         }

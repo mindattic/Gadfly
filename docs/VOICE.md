@@ -22,7 +22,11 @@ no typed answer mode.
   clock that never starts can't give extra time. The question is not shown until the examiner asks it.
 - **Pause.** A refused, missing or lost microphone or camera (a track that ends mid-exam), or a lost hub, pauses the
   exam: the question and answer controls are hidden and the student is told how to restore it, then presses **Try
-  again**; the examiner repeats the question. The clock keeps running while paused. No 3D graphics (or reduced motion)
+  again**; the examiner repeats the question. The clock stops while paused (GAD-T263): the exam room calls
+  `SessionOrchestrator.PauseClockAsync` when the devices go and `ResumeClockAsync` when they are back, and the paused
+  time is added back to `Remaining`. A pause is reported by the student's browser, so the time added back is capped per
+  exam (`SocraticSession.PauseAllowance`: 10 minutes, or half the budget if shorter), it only counts after the clock
+  started, and any answer ends an open pause by the server's clock. No 3D graphics (or reduced motion)
   shows the 2D portrait and the examiner still speaks. If the avatar fails entirely, questions are shown as text and
   answers are still spoken.
 - Only small transcript corrections are typed (fixing words the recognizer got wrong); "I want to change my answer"

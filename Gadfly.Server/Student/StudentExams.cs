@@ -316,7 +316,7 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
             + "Your microphone audio is streamed to a speech-to-text service to make a transcript, and the audio itself is not recorded or kept. "
             + "What is kept is the transcript (with how confident the recognizer was), how it was spoken (pace, pauses, hesitations, and whether more than one voice was heard), and what you confirm. "
             + "Notes such as \"a second voice was heard\" are for your instructor to read as weak evidence, never an automatic fail. "
-            + "If your microphone or camera stops working during the exam, the exam pauses until you bring it back; the clock keeps running. Your time starts when the examiner asks the first question.");
+            + "If your microphone or camera stops working during the exam, the exam pauses until you bring it back, and the clock stops while it is paused (for up to 10 minutes in all, or half the exam time if that is shorter; after that it keeps running). Your time starts when the examiner asks the first question.");
         return new ConsentNotice("Before you begin", paragraphs);
     }
 

@@ -40,6 +40,13 @@ public sealed record SessionStep
     public string? Notice { get; init; }
     /// <summary>False while the exam clock waits for the examiner to begin the first question (GAD-T239); the student's time isn't counting yet.</summary>
     public bool ClockStarted { get; init; } = true;
+    /// <summary>
+    /// True while the exam is paused for a lost microphone, camera or examiner connection (GAD-T263): <see cref="Remaining"/> stands
+    /// still for up to <see cref="PauseAllowanceLeft"/> more, then counts down again.
+    /// </summary>
+    public bool ClockPaused { get; init; }
+    /// <summary>How much more paused time can still be added back to this exam (GAD-T263).</summary>
+    public TimeSpan PauseAllowanceLeft { get; init; }
 }
 
 /// <summary>Why a session could not be started or advanced, in words a student can read.</summary>
@@ -193,6 +200,38 @@ public sealed class SessionOrchestrator(
             return Task.FromResult(s.IsEnded ? null : s.OpenTurn);
         }, ct);
 
+    /// <summary>
+    /// The exam room lost the microphone, the camera or the examiner's connection after the clock started (GAD-T263): the clock stops
+    /// until <see cref="ResumeClockAsync"/>, so the pause doesn't cost exam time. The paused time added back is capped per exam
+    /// (<see cref="SocraticSession.PauseAllowance"/>), and any answer from the student ends the pause, so a pause reported by the
+    /// browser can't buy unlimited time.
+    /// </summary>
+    public Task<SessionStep> PauseClockAsync(Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct = default) =>
+        StepAsync(organizationId, sessionId, studentUserId, live =>
+        {
+            var s = live.Engine.Session;
+            if (s.PauseClock(clock.GetUtcNow()))
+                log.LogInformation("Exam clock paused for a lost device; {Left} of pause allowance left.", s.PauseAllowanceLeft(clock.GetUtcNow()));
+            return Task.FromResult(s.IsEnded ? null : s.OpenTurn);
+        }, ct);
+
+    /// <summary>The microphone, camera and examiner are working again (GAD-T263): a paused clock runs again, with the paused time added back.</summary>
+    public Task<SessionStep> ResumeClockAsync(Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct = default) =>
+        StepAsync(organizationId, sessionId, studentUserId, live =>
+        {
+            var s = live.Engine.Session;
+            ResumeOnActivity(live);
+            return Task.FromResult(s.IsEnded ? null : s.OpenTurn);
+        }, ct);
+
+    /// <summary>The student did something only a working exam room can do: an open pause ends now, by the server's clock (GAD-T263).</summary>
+    private void ResumeOnActivity(Live live)
+    {
+        var s = live.Engine.Session;
+        if (s.ResumeClock(clock.GetUtcNow()))
+            log.LogInformation("Exam clock resumed; {Credit} of paused time added back in all.", s.PausedTotal);
+    }
+
     /// <summary>Meaning clarifications per session: beyond this, an unclear answer goes to a human instead of interrupting again.</summary>
     public const int MaxMeaningClarificationsPerSession = 3;
 
@@ -211,6 +250,7 @@ public sealed class SessionOrchestrator(
             var s = live.Engine.Session;
             if (s.IsEnded)
                 throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            ResumeOnActivity(live);
             if (s.OpenTurn is null && s.AwaitingJudgment is not null)
             {
                 // A crash between recording and judging: finish judging what was recorded.
@@ -303,6 +343,7 @@ public sealed class SessionOrchestrator(
         {
             var s = live.Engine.Session;
             if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            ResumeOnActivity(live);
             var text = (corrected ?? "").Trim();
             if (text.Length == 0 || text.Length > 20_000) throw new SessionRefusedException("The corrected answer needs text.");
             // A step failed between recording and judging: finish judging what was recorded first (it is the answer on record).
@@ -361,6 +402,7 @@ public sealed class SessionOrchestrator(
         {
             var s = live.Engine.Session;
             if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            ResumeOnActivity(live);
             var text = (revised ?? "").Trim();
             if (text.Length == 0 || text.Length > 20_000) throw new SessionRefusedException("Your changed answer needs text.");
             // A step failed between recording and judging: finish judging that answer before anything can be changed.
@@ -408,7 +450,9 @@ public sealed class SessionOrchestrator(
     private bool TooLate(Live live)
     {
         var s = live.Engine.Session;
-        return s.Remaining(clock.GetUtcNow()) <= TimeSpan.Zero && clock.GetUtcNow() - (s.StartedAt + s.Policy.EffectiveTimeBudget) > AnswerGrace;
+        var now = clock.GetUtcNow();
+        // The deadline moves with the paused time added back (GAD-T263).
+        return s.Remaining(now) <= TimeSpan.Zero && now - (s.StartedAt + s.Policy.EffectiveTimeBudget + s.PausedCredit(now)) > AnswerGrace;
     }
 
     private static Task<Guid?> TurnIdAsync(GadflyDbContext db, Guid sessionId, int index, CancellationToken ct) =>
@@ -511,6 +555,7 @@ public sealed class SessionOrchestrator(
         {
             var s = live.Engine.Session;
             if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            ResumeOnActivity(live);
             // A step failed between recording and judging: the request was already resolved, so finish judging and move on.
             if (s.OpenTurn is null && s.AwaitingJudgment is not null) return await NextAsync(live, ct);
             var open = s.OpenTurn ?? throw new SessionRefusedException("There is nothing waiting for you to confirm.");
@@ -649,6 +694,8 @@ public sealed class SessionOrchestrator(
             LastAnswer = last,
             Notice = live.Notice,
             ClockStarted = !s.ClockHeld,
+            ClockPaused = s.IsPaused && !s.IsEnded,
+            PauseAllowanceLeft = s.PauseAllowanceLeft(clock.GetUtcNow()),
         };
     }
 

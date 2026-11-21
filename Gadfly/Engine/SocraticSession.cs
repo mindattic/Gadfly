@@ -28,9 +28,12 @@ public sealed class SocraticSession
     /// <summary>For the serializer: restores a session exactly as recorded.</summary>
     internal SocraticSession(Guid id, string subjectId, SessionPolicy policy, string promptSetId, int promptSetVersion,
         string promptSetSha256, DateTimeOffset startedAt, DateTimeOffset? endedAt, EndReason endReason,
-        IEnumerable<Turn> turns, IEnumerable<MasterySnapshot> mastery, bool clockHeld = false)
+        IEnumerable<Turn> turns, IEnumerable<MasterySnapshot> mastery, bool clockHeld = false,
+        TimeSpan pausedTotal = default, DateTimeOffset? pausedSince = null)
     {
         ClockHeld = clockHeld;
+        PausedTotal = pausedTotal < TimeSpan.Zero ? TimeSpan.Zero : pausedTotal;
+        PausedSince = pausedSince;
         Id = id;
         SubjectId = subjectId;
         Policy = policy;
@@ -86,6 +89,68 @@ public sealed class SocraticSession
         if (OpenTurn is { } open && _turns.All(t => t.Answer is null)) Replace(open with { AskedAt = at });
         return true;
     }
+
+    /// <summary>
+    /// The most paused time that can be added back to one exam (GAD-T263): ten minutes, and never more than half the time budget. A
+    /// pause is reported by the student's own browser, so the cap keeps a microphone pulled on purpose from buying unlimited time.
+    /// </summary>
+    public static readonly TimeSpan MaxPauseAllowance = TimeSpan.FromMinutes(10);
+
+    /// <summary>The paused time this exam can have added back in all (see <see cref="MaxPauseAllowance"/>).</summary>
+    public TimeSpan PauseAllowance
+    {
+        get
+        {
+            var half = Policy.EffectiveTimeBudget / 2;
+            return half < MaxPauseAllowance ? half : MaxPauseAllowance;
+        }
+    }
+
+    /// <summary>Paused time from pauses that have ended, already capped at <see cref="PauseAllowance"/>.</summary>
+    public TimeSpan PausedTotal { get; private set; }
+
+    /// <summary>
+    /// When the current pause began (the microphone, the camera or the examiner's connection was lost after the clock started), or
+    /// null while the clock runs (GAD-T263). While paused, the clock stops until the pause allowance is spent.
+    /// </summary>
+    public DateTimeOffset? PausedSince { get; private set; }
+
+    public bool IsPaused => PausedSince is not null;
+
+    /// <summary>The paused time added back at <paramref name="now"/>: ended pauses plus the open one, capped at <see cref="PauseAllowance"/>.</summary>
+    public TimeSpan PausedCredit(DateTimeOffset now)
+    {
+        var total = PausedTotal;
+        if (PausedSince is { } since && now > since) total += now - since;
+        var cap = PauseAllowance;
+        return total > cap ? cap : total;
+    }
+
+    /// <summary>The pause allowance still unused at <paramref name="now"/>.</summary>
+    public TimeSpan PauseAllowanceLeft(DateTimeOffset now) => PauseAllowance - PausedCredit(now);
+
+    /// <summary>
+    /// Stops the exam clock at <paramref name="at"/> because the microphone, camera or examiner connection was lost (GAD-T263). Only
+    /// once the clock has started and while the exam runs; returns false when nothing changed (already paused, held, ended, or the
+    /// allowance is spent).
+    /// </summary>
+    public bool PauseClock(DateTimeOffset at)
+    {
+        if (IsEnded || ClockHeld || PausedSince is not null || at < StartedAt) return false;
+        if (PausedTotal >= PauseAllowance) return false;
+        PausedSince = at;
+        return true;
+    }
+
+    /// <summary>Restarts a paused exam clock at <paramref name="at"/>, adding the paused time back (up to the allowance). False when not paused.</summary>
+    public bool ResumeClock(DateTimeOffset at)
+    {
+        if (PausedSince is null) return false;
+        PausedTotal = PausedCredit(at < PausedSince.Value ? PausedSince.Value : at);
+        PausedSince = null;
+        return true;
+    }
+
     public DateTimeOffset? EndedAt { get; private set; }
     public EndReason EndReason { get; private set; } = EndReason.None;
     public bool IsEnded => EndedAt is not null;
@@ -102,10 +167,11 @@ public sealed class SocraticSession
     /// personal introspection tool) leave every turn here; exam subjects judge before planning on.</summary>
     public Turn? AwaitingJudgment => _turns.Count > 0 && _turns[^1].Answer is not null && _turns[^1].Judgment is null ? _turns[^1] : null;
 
-    /// <summary>Time left in the budget (with any accommodation multiplier) at <paramref name="now"/> (never negative).</summary>
+    /// <summary>Time left in the budget (with any accommodation multiplier and paused time added back) at <paramref name="now"/> (never negative).</summary>
     public TimeSpan Remaining(DateTimeOffset now)
     {
-        var left = Policy.EffectiveTimeBudget - (now - StartedAt);
+        // Paused time (a lost microphone or camera, GAD-T263) is added back, up to the pause allowance.
+        var left = Policy.EffectiveTimeBudget - (now - StartedAt) + PausedCredit(now);
         return left < TimeSpan.Zero ? TimeSpan.Zero : left;
     }
 
@@ -145,6 +211,9 @@ public sealed class SocraticSession
         var open = OpenTurn ?? throw new InvalidOperationException("There is no open turn to answer.");
         // The first answer releases a held clock where it stands (counting from StartedAt); it can no longer be restarted.
         ClockHeld = false;
+        // An answer means the microphone works again, so an open pause ends. The answer's times are the browser's clock, so none of
+        // the open pause is added back here; the server resumes the clock with its own time first (GAD-T263).
+        if (PausedSince is { } since) ResumeClock(since);
         return Replace(open with { Answer = answer });
     }
 
@@ -180,6 +249,7 @@ public sealed class SocraticSession
     {
         EnsureRunning();
         if (reason == EndReason.None) throw new ArgumentException("Give a real end reason.", nameof(reason));
+        if (PausedSince is not null) ResumeClock(endedAt);
         EndReason = reason;
         EndedAt = endedAt;
     }

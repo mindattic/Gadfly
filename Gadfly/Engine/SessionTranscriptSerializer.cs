@@ -36,6 +36,8 @@ public static class SessionTranscriptSerializer
             EndedAt = session.EndedAt,
             EndReason = session.EndReason,
             ClockHeld = session.ClockHeld ? true : null,
+            PausedTotal = session.PausedTotal > TimeSpan.Zero ? session.PausedTotal : null,
+            PausedSince = session.PausedSince,
             Turns = [.. session.Turns],
             Mastery = [.. session.Mastery.Values.OrderBy(m => m.ConceptId, StringComparer.Ordinal)],
         };
@@ -54,7 +56,8 @@ public static class SessionTranscriptSerializer
             if (dto.Turns[i].Index != i)
                 throw new JsonException($"Turn {i} is recorded with index {dto.Turns[i].Index}.");
         return new SocraticSession(dto.Id, dto.SubjectId, dto.Policy, dto.PromptSetId, dto.PromptSetVersion,
-            dto.PromptSetSha256, dto.StartedAt, dto.EndedAt, dto.EndReason, dto.Turns, dto.Mastery, dto.ClockHeld == true);
+            dto.PromptSetSha256, dto.StartedAt, dto.EndedAt, dto.EndReason, dto.Turns, dto.Mastery, dto.ClockHeld == true,
+            dto.PausedTotal ?? TimeSpan.Zero, dto.PausedSince);
     }
 
     private sealed class Dto
@@ -71,6 +74,10 @@ public static class SessionTranscriptSerializer
         public EndReason EndReason { get; set; }
         /// <summary>Written only while the clock waits for the first question (GAD-T239); absent means it is running.</summary>
         public bool? ClockHeld { get; set; }
+        /// <summary>Paused time already added back (GAD-T263); absent means none.</summary>
+        public TimeSpan? PausedTotal { get; set; }
+        /// <summary>When the open pause began (GAD-T263); absent while the clock runs.</summary>
+        public DateTimeOffset? PausedSince { get; set; }
         public List<Turn> Turns { get; set; } = [];
         public List<MasterySnapshot> Mastery { get; set; } = [];
     }

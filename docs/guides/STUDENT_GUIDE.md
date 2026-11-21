@@ -54,7 +54,8 @@ choose a new one.) The get-ready page has three steps.
   the examiner may read it back so you can confirm or fix how it was heard.
 - **Your microphone and camera must stay on.** If either stops working (unplugged, blocked, taken by another
   app), the exam pauses and tells you how to bring it back; press **Try again** and the examiner repeats the
-  question. The clock keeps running while the exam is paused.
+  question. The clock stops while the exam is paused, for up to 10 minutes in all (or half the exam time, if
+  that is shorter); after that it keeps running.
 - **"I don't know" is a real answer.** If you genuinely don't know, say so or press **I don't know**. Socrates
   called that moment *aporia*: honest puzzlement, the start of real learning. It isn't a failure; the
   examiner notes it and tries another angle or moves on.
