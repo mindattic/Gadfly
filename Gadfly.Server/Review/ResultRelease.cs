@@ -4,20 +4,20 @@ using Microsoft.EntityFrameworkCore;
 namespace Gadfly.Server.Review;
 
 /// <summary>
-/// The one rule for releasing a student's result (GAD-T70), used by the review page and the exam's
-/// assignments table alike: a result can be released only when the assignment's latest ended session
-/// has a grade (a <see cref="GradeDecision"/>). Withdrawing a release is always allowed.
+/// The old assignment-level "release results" path (GAD-T70), retired by the grading workflow (GAD-T98):
+/// a result now reaches a student only when its FinalGrade has a Finalize approval record and has been
+/// published (Grading pages). Release is therefore always blocked here; withdrawing an old release is
+/// still allowed, and students no longer see instructor GradeDecisions through it.
 /// </summary>
 public static class ResultRelease
 {
     public const string NoEndedSession = "The student hasn't finished an attempt yet, so there is no result to release.";
     public const string NeedsGrade = "Grade the student's latest finished attempt before releasing the result.";
+    public const string UseGrading = "Results reach students only through Grading: approve the final grade, then publish it.";
 
     /// <summary>Why the result can't be released yet, or null when it can.</summary>
     public static string? Blocker(Guid? latestEndedSessionId, bool latestEndedIsGraded) =>
-        latestEndedSessionId is null ? NoEndedSession
-        : !latestEndedIsGraded ? NeedsGrade
-        : null;
+        latestEndedSessionId is null ? NoEndedSession : UseGrading;
 
     /// <summary>Why the assignment's result can't be released yet, or null when it can.</summary>
     public static async Task<string?> BlockerAsync(GadflyDbContext db, Guid organizationId, Guid assignmentId, CancellationToken ct = default)

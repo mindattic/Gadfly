@@ -31,7 +31,7 @@ else
             @if (view.Report is { } rep) { <span class="tag rec-@rep.Recommendation">@rep.Recommendation</span> @Pct(rep.OverallScore) }
             else { <span>none yet</span> }
         </div>
-        <div><span class="hint">Grade</span> @(view.LatestGrade?.Grade ?? "not graded")</div>
+        <div><span class="hint">Grading</span> <a href="grading/@s.Id">open the grading workspace</a></div>
         <div><span class="hint">Exports</span>
             <a href="@ReviewExportEndpoints.CsvPath(s.Id)" download target="_blank" data-enhance-nav="false">turns (CSV)</a> ·
             <a href="@ReviewExportEndpoints.MarkdownPath(s.Id)" download target="_blank" data-enhance-nav="false">report (Markdown)</a>
@@ -231,67 +231,18 @@ else
         <p class="notice">The AI report is written when the session ends.</p>
     }
 
-    <h2 class="section">Grade</h2>
-    <EditForm Model="form" OnValidSubmit="SaveAsync" FormName="grade" class="panel">
-        @if (s.State != SessionState.Ended)
-        {
-            <p class="hint">This session hasn't ended; you can grade it once it has.</p>
-        }
-        @if (view.Report is { } r)
-        {
-            <p class="hint">
-                The AI recommends <strong>@r.Recommendation</strong> (@Pct(r.OverallScore)).
-                <button type="button" class="link" @onclick="UseRecommendation">Use it</button>
-            </p>
-        }
-        <label>Grade <InputText @bind-Value="form.Grade" placeholder="A, B+, Pass, mastered…" /></label>
-        <label>Score (0–100, optional) <InputNumber @bind-Value="form.Score" step="any" /></label>
-        <label>Comment <InputTextArea @bind-Value="form.Comment" rows="4" /></label>
-        @if (view.Report is { } r2 && !string.IsNullOrWhiteSpace(form.Grade))
-        {
-            var overrides = GradePolicy.Overrides(form.Grade, form.Score, r2.Recommendation, r2.OverallScore);
-            <p class="hint">
-                @if (overrides)
-                {
-                    <text>This will be recorded as <strong>overriding</strong> the AI recommendation.</text>
-                }
-                else
-                {
-                    <text>This agrees with the AI recommendation.</text>
-                }
-            </p>
-        }
-        <button type="submit" disabled="@(busy || s.State != SessionState.Ended)">Save grade</button>
-        @if (message is not null)
-        {
-            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
-        }
-    </EditForm>
-
-    @if (view.Assignment is { } a)
-    {
-        <div class="panel">
-            <h2>Release to the student</h2>
-            @if (a.ResultsReleasedAt is { } rel)
-            {
-                <p>Released @rel.ToLocalTime().ToString("g"). The student sees the latest grade and comment.</p>
-                <button type="button" class="link" disabled="@busy" @onclick="() => ReleaseAsync(false)">Withdraw the result</button>
-            }
-            else
-            {
-                <p class="hint">Students see their result only after you release it. Releasing needs a grade on the student's latest finished attempt.</p>
-                <button type="button" disabled="@(busy || releaseBlocker is not null)" title="@releaseBlocker" @onclick="() => ReleaseAsync(true)">Release result</button>
-                @if (releaseBlocker is not null)
-                {
-                    <p class="hint">@releaseBlocker</p>
-                }
-            }
-        </div>
-    }
+    <h2 class="section">Grading</h2>
+    <div class="panel">
+        <p>
+            Grading happens in the <a href="grading/@s.Id">grading workspace</a>: the AI grades each learning objective,
+            a human examiner grades independently (blind when the policy says so), disagreements are reconciled,
+            and an authorized teacher approves and publishes the final grade. Nothing reaches the student without that approval.
+        </p>
+    </div>
 
     @if (view.Grades.Count > 0)
     {
-        <h2 class="section">Grade history</h2>
+        <h2 class="section">Earlier instructor decisions</h2>
         <table class="grid">
             <thead><tr><th>When</th><th>By</th><th>Grade</th><th>Score</th><th>Override</th><th>Comment</th></tr></thead>
             <tbody>
@@ -308,77 +259,23 @@ else
                 }
             </tbody>
         </table>
-        <p class="hint">The newest decision is the grade; earlier ones are kept for the record.</p>
+        <p class="hint">Decisions recorded before the grading workflow, kept for the record. They are not shown to the student.</p>
     }
 }
 
 @code {
     [Parameter] public Guid SessionId { get; set; }
 
-    private sealed class GradeForm
-    {
-        public string Grade { get; set; } = "";
-        public double? Score { get; set; }
-        public string? Comment { get; set; }
-    }
-
     private SessionReviewView? view;
-    private GradeForm form = new();
-    private bool loading = true, busy, ok;
-    private string? message, releaseBlocker;
+    private bool loading = true;
 
     private ReviewService Service => new(Db, Tenant.OrganizationId!.Value);
 
     protected override async Task OnParametersSetAsync()
     {
         loading = true;
-        await LoadAsync();
-        if (view?.LatestGrade is { } g)
-            form = new GradeForm { Grade = g.Grade, Score = g.Score, Comment = g.Comment };
-        loading = false;
-    }
-
-    private async Task LoadAsync()
-    {
         view = await Service.GetAsync(SessionId);
-        releaseBlocker = view?.Assignment is { } a ? await Service.ReleaseBlockerAsync(a.Id) : null;
-    }
-
-    private void UseRecommendation()
-    {
-        if (view?.Report is { } r)
-        {
-            form.Grade = r.Recommendation;
-            form.Score ??= Math.Round(r.OverallScore * 100);
-        }
-    }
-
-    private async Task SaveAsync()
-    {
-        if (busy) return;
-        busy = true;
-        try
-        {
-            var result = await Service.SaveGradeAsync(SessionId, Tenant.UserId!.Value, new GradeInput(form.Grade, form.Score, form.Comment));
-            ok = result.Ok;
-            message = result.Message;
-            if (result.Ok) await LoadAsync();
-        }
-        finally { busy = false; }
-    }
-
-    private async Task ReleaseAsync(bool release)
-    {
-        if (busy) return;
-        busy = true;
-        try
-        {
-            var result = await Service.ReleaseAsync(SessionId, release);
-            ok = result.Ok;
-            message = result.Message;
-            await LoadAsync();
-        }
-        finally { busy = false; }
+        loading = false;
     }
 
     private static string Pct(double? v) => v is { } x ? $"{x * 100:0}%" : "—";

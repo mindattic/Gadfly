@@ -1,0 +1,39 @@
+/* Grading workflow (GAD-T94..T99): queue, workspace, reconciliation, report. Uses app.css tokens. */
+.gr-filters { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: end; margin-bottom: 1rem; }
+.gr-filters label { margin: 0; }
+.gr-status { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-size: .8rem; border: 1px solid var(--line); white-space: nowrap; }
+.gr-status.s-HumanReviewPending, .gr-status.s-AwaitingFinalApproval { border-color: var(--accent); color: var(--accent); }
+.gr-status.s-ReconciliationRequired, .gr-status.s-TranscriptVerificationPending, .gr-status.s-UnderAppeal { border-color: var(--error); color: var(--error); }
+.gr-status.s-Finalized, .gr-status.s-Published, .gr-status.s-Amended { border-color: var(--ok); color: var(--ok); }
+.gr-mock { display: inline-block; padding: .1rem .45rem; border-radius: 4px; background: #8a6d00; color: #fff; font-weight: 700; font-size: .75rem; letter-spacing: .04em; }
+.gr-banner { padding: .75rem 1rem; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); margin: 0 0 1rem; }
+.gr-banner.warn { border-color: var(--error); }
+.gr-banner.mock { border-color: #8a6d00; }
+.gr-summary { display: grid; gap: .5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); margin-bottom: 1rem; }
+.gr-summary .hint { display: block; }
+.gr-section { margin-top: 2rem; }
+.gr-response { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: .75rem 1rem; margin-bottom: .75rem; }
+.gr-response.needs-human { border-color: var(--error); }
+.gr-response .q { margin: .25rem 0; font-weight: 600; }
+.gr-response blockquote { margin: .4rem 0; padding: .4rem .75rem; border-left: 3px solid var(--accent); white-space: pre-wrap; }
+.gr-response blockquote.original { border-left-color: var(--line); color: var(--muted); }
+.gr-objective { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 1rem; margin-bottom: 1rem; }
+.gr-objective h3 { margin: 0 0 .25rem; }
+.gr-two { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.gr-two > div { min-width: 0; }
+.gr-form-row { display: grid; gap: .5rem 1rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; }
+.gr-form-row label { margin: 0; }
+.gr-form-row textarea, .gr-wide textarea { width: 100%; }
+.gr-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .75rem; }
+.gr-flags { margin: .25rem 0; padding-left: 1.1rem; }
+.gr-flags li { font-size: .9rem; }
+.gr-dissent { color: var(--error); }
+.gr-band-MandatoryReconciliation { color: var(--error); font-weight: 600; }
+.gr-band-AdditionalReview { color: var(--accent); }
+.gr-audit td { font-size: .85rem; vertical-align: top; }
+.gr-hidden { padding: .75rem 1rem; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); }
+.gr-report .gr-objective { break-inside: avoid; }
+.gr-table-wrap { overflow-x: auto; }
+@media (max-width: 640px) {
+    .gr-summary { grid-template-columns: 1fr 1fr; }
+}

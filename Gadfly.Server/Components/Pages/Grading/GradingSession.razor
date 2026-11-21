@@ -1,0 +1,635 @@
+@page "/grading/{SessionId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Assessment
+@using Gadfly.Server.Data
+@using Gadfly.Server.Grading
+@using Gadfly.Sources.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+<PageTitle>Grading workspace · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<p class="hint"><a href="grading">← Grading queue</a></p>
+
+@if (loading)
+{
+    <p class="hint">Loading…</p>
+}
+else if (w is null)
+{
+    <h1>Not available</h1>
+    <p class="notice">This session isn't in the current organization, or your role does not include viewing transcripts (the attempt was recorded).</p>
+}
+else
+{
+    var status = w.Status;
+    <h1>@w.StudentName <span>· @w.ExamTitle · attempt @w.Session.Attempt</span></h1>
+
+    @if (w.AnyMock)
+    {
+        <p class="gr-banner mock"><span class="gr-mock">MOCK</span> The AI grades on this page come from the mock panel. They are not a genuine AI evaluation.</p>
+    }
+
+    <div class="gr-summary">
+        <div><span class="hint">Status</span>@if (status is { } st) { <span class="gr-status s-@st">@GradeStatusMachine.Label(st)</span> } else { <span>Not started</span> }</div>
+        <div><span class="hint">Combined grade</span>@(w.AiVisible && w.Grade?.FinalPercent is { } fp ? AssessmentReport.Pct(fp) : "—")@(w.Grade?.LetterOrLabel is { } lbl ? $" ({lbl})" : "")</div>
+        <div><span class="hint">Policy</span>AI @Pct(w.Policy.Rules.AiWeight) · human @Pct(w.Policy.Rules.HumanWeight) · reconcile at @w.Policy.Rules.MandatoryReconciliationAt.ToString("0.##") pts@(w.Policy.Rules.BlindHumanGrading ? " · blind" : "")</div>
+        <div><span class="hint">Ended</span>@(w.Session.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm") ?? "—") UTC</div>
+        <div><span class="hint">Report</span><a href="grading/@w.Session.Id/report">view</a> · <a href="@GradingSetup.ReportMarkdownPath(w.Session.Id)" download data-enhance-nav="false">Markdown</a> · <a href="@GradingSetup.ReportCsvPath(w.Session.Id)" download data-enhance-nav="false">CSV</a></div>
+    </div>
+    @if (w.Policy.Source != "exam-policy")
+    {
+        <p class="hint">This exam has no grading policy of its own, so the platform defaults apply (frozen for this session when AI grading began).</p>
+    }
+
+    @if (message is not null)
+    {
+        <p role="status" class="gr-banner @(ok ? "" : "warn")"><span class="@(ok ? "ok" : "error")">@message</span></p>
+    }
+
+    @* ------------------------------------------------------------ status actions *@
+    @switch (status)
+    {
+        case null:
+        case GradeStatus.ExaminationCompleted:
+        case GradeStatus.AiGradingPending:
+            <div class="panel">
+                <h2>AI preliminary grading</h2>
+                @if (w.JobState is "Failed")
+                {
+                    <p class="error">AI grading failed: @w.JobError</p>
+                    <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.StartAiGradingAsync(SessionId))">Retry AI grading</button>
+                }
+                else if (w.JobState is "Queued" or "Running")
+                {
+                    <p>The AI panel is grading each learning objective. <button type="button" class="link" @onclick="LoadAsync">Refresh</button></p>
+                }
+                else
+                {
+                    <p>AI grading has not started.</p>
+                    <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.StartAiGradingAsync(SessionId))">Start AI grading</button>
+                }
+            </div>
+            break;
+        case GradeStatus.TranscriptVerificationPending:
+            <div class="panel">
+                <h2>Transcript verification pending</h2>
+                <p>@w.ResponsesNeedingHuman response(s) have unresolved transcript or meaning questions. AI grading waits until they are resolved (it resumes automatically).</p>
+                <p class="hint">If they cannot be resolved, you may proceed: those responses are then excluded from the evidence and flagged as unresolved ambiguities for the human examiner.</p>
+                <label class="gr-wide">Reason for proceeding <textarea rows="2" @bind="proceedReason"></textarea></label>
+                <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.ProceedWithUnresolvedAsync(SessionId, proceedReason))">Proceed with unresolved responses flagged</button>
+            </div>
+            break;
+        case GradeStatus.HumanReviewPending:
+            <div class="panel">
+                <h2>Your evaluation</h2>
+                @if (!w.AiVisible)
+                {
+                    <p class="gr-hidden">Blind grading: the AI's preliminary evaluation is hidden until you submit scores for every objective (Part 8.3). Grade from the transcript, the evidence and the rubric below.</p>
+                }
+                @foreach (var o in w.Objectives)
+                {
+                    var f = Form(o.Objective.Id);
+                    <div class="gr-objective">
+                        <h3>@o.Objective.Title <span class="hint">· max @o.Objective.MaxScore.ToString("0.##") · weight @o.Objective.Weight.ToString("0.##")</span></h3>
+                        <div class="gr-form-row">
+                            <label>Level
+                                <select @bind="f.Level">
+                                    @foreach (var l in Enum.GetValues<MasteryLevel>())
+                                    {
+                                        <option value="@((int)l)">@((int)l) @MasteryLevels.Label(l)</option>
+                                    }
+                                </select>
+                            </label>
+                            <label>Score (0–@o.Objective.MaxScore.ToString("0.##")) <input type="number" step="any" min="0" max="@o.Objective.MaxScore" @bind="f.Score" /></label>
+                        </div>
+                        <div class="gr-form-row">
+                            <label>Comment <textarea rows="2" @bind="f.Comment"></textarea></label>
+                            <label>Supporting evidence (response numbers, quotes) <textarea rows="2" @bind="f.EvidenceNote"></textarea></label>
+                        </div>
+                    </div>
+                }
+                @if (Can(Permission.EnterHumanScore))
+                {
+                    <button type="button" disabled="@busy" @onclick="SubmitHumanAsync">Submit evaluation for all objectives</button>
+                }
+                else
+                {
+                    <p class="hint">Your role cannot enter human scores.</p>
+                }
+            </div>
+            break;
+    }
+
+    @if (status is GradeStatus.ReconciliationRequired or GradeStatus.AwaitingFinalApproval or GradeStatus.Finalized or GradeStatus.Published or GradeStatus.UnderAppeal or GradeStatus.Amended)
+    {
+        <h2 class="gr-section">Score comparison</h2>
+        <div class="gr-table-wrap">
+            <table class="grid">
+                <thead><tr><th>Objective</th><th>Max</th><th>Weight</th><th>AI</th><th>Human</th><th>Difference</th><th>Combined</th></tr></thead>
+                <tbody>
+                    @foreach (var o in w.Objectives)
+                    {
+                        var c = o.Combined;
+                        <tr>
+                            <td>@o.Objective.Title</td>
+                            <td>@o.Objective.MaxScore.ToString("0.##")</td>
+                            <td>@o.Objective.Weight.ToString("0.##")</td>
+                            <td>@(o.AiExcluded ? "insufficient evidence" : N(c?.AiScore))@if (o.Ai?.Row.IsMock == true) { <text> </text><span class="gr-mock">MOCK</span> }</td>
+                            <td>@N(c?.HumanScore)</td>
+                            <td>@if (c?.DifferencePoints is { } d) { <span class="gr-band-@c.Band">@d.ToString("0.##") pts · @BandLabel(c.Band)</span> } else { <span class="hint">—</span> }</td>
+                            <td>@N(c?.Combined)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (w.Combined?.FinalPercent is { } total)
+        {
+            <p>Weighted combined grade: <strong>@AssessmentReport.Pct(total)</strong> <span class="hint">(AI × @w.Policy.Rules.AiWeight.ToString("0.##") + human × @w.Policy.Rules.HumanWeight.ToString("0.##") per objective, then weighted by objective)</span></p>
+        }
+        @if (w.Objectives.Any(o => o.AiExcluded))
+        {
+            <p class="hint">Where the AI found insufficient evidence, its score is left out and the human score stands alone for that objective.</p>
+        }
+    }
+
+    @if (status == GradeStatus.ReconciliationRequired || w.Objectives.Any(o => o.NeedsReconciliation))
+    {
+        <h2 class="gr-section">Reconciliation</h2>
+        <p class="gr-banner warn">Pending Grade Reconciliation: the AI and human scores differ by at least the institution's threshold. This grade cannot be finalized until an authorized reviewer documents a resolution (Part 10.4).</p>
+        @foreach (var o in w.Objectives.Where(o => o.NeedsReconciliation))
+        {
+            var d = o.Disagreement!;
+            var rf = Rec(d.Id);
+            <div class="gr-objective">
+                <h3>@o.Objective.Title <span class="hint">· AI @d.AiScore.ToString("0.##") vs human @d.HumanScore.ToString("0.##") · @d.DifferencePoints.ToString("0.##") points</span></h3>
+                <div class="gr-two">
+                    <div>
+                        <h4>AI rationale</h4>
+                        @if (o.Ai is { } ai)
+                        {
+                            <p>@ai.Row.Explanation</p>
+                            <table class="grid">
+                                <thead><tr><th>Criterion</th><th>AI level</th><th>Human level</th></tr></thead>
+                                <tbody>
+                                    @foreach (var c in ai.Criteria)
+                                    {
+                                        <tr class="@(o.Human is { } hh && Math.Abs((int)c.Level - (int)hh.Level) >= 2 ? "gr-dissent" : "")">
+                                            <td>@c.Criterion</td><td>@((int)c.Level) @MasteryLevels.Label(c.Level)</td><td>@(o.Human is { } h2 ? $"{(int)h2.Level} (objective)" : "—")</td>
+                                        </tr>
+                                        <tr><td colspan="3" class="hint">@c.Rationale @foreach (var q in c.Quotes) { <q>@q</q> }</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                    <div>
+                        <h4>Human rationale</h4>
+                        @if (o.Human is { } h)
+                        {
+                            <p><strong>@((int)h.Level) @MasteryLevels.Label(h.Level)</strong>, @h.Score.ToString("0.##") / @h.MaxScore.ToString("0.##") by @w.Name(h.ReviewerUserId)@(h.WasBlind ? " (graded blind)" : "")</p>
+                            @if (h.Comment is { } hc) { <p>@hc</p> }
+                            @if (h.EvidenceNote is { } he) { <p class="hint">Evidence: @he</p> }
+                        }
+                        <h4>Evidence responses</h4>
+                        @foreach (var r in EvidenceFor(o))
+                        {
+                            <p><strong>#@r.Response.Sequence</strong> @r.Question</p>
+                            <blockquote>@r.Response.VerifiedText</blockquote>
+                            @if (r.TextChanged) { <blockquote class="original">Original: @r.Response.OriginalText</blockquote> }
+                        }
+                    </div>
+                </div>
+                @if (w.RequestedSecondReviews.TryGetValue(d.Id, out var requested))
+                {
+                    <p class="hint">Second review requested from @w.Name(requested).</p>
+                }
+                @if (Can(Permission.ReconcileDisagreement) || Can(Permission.ActAsSecondReviewer))
+                {
+                    <div class="gr-form-row">
+                        <label>Cause
+                            <select @bind="rf.Cause">
+                                <option value="">Choose…</option>
+                                @foreach (var (causeCode, causeLabel) in ReconciliationCauses.All) { <option value="@causeCode">@causeLabel</option> }
+                            </select>
+                        </label>
+                        <label>Resolved AI score (optional) <input type="number" step="any" @bind="rf.Ai" /></label>
+                        <label>Resolved human score (optional) <input type="number" step="any" @bind="rf.Human" /></label>
+                        @if (Tenant.Role != OrgRoles.SecondReviewer && w.SecondReviewers.Count > 0)
+                        {
+                            <label>Second reviewer
+                                <select @bind="rf.Second">
+                                    <option value="">None</option>
+                                    @foreach (var (uid, name) in w.SecondReviewers) { <option value="@uid">@name</option> }
+                                </select>
+                            </label>
+                        }
+                    </div>
+                    <label class="gr-wide">Resolution (what was found and why the scores stand or change) <textarea rows="3" @bind="rf.Resolution"></textarea></label>
+                    <div class="gr-actions">
+                        <button type="button" disabled="@busy" @onclick="() => ReconcileAsync(d.Id)">Record resolution and recalculate</button>
+                        @if (Can(Permission.ReconcileDisagreement) && Guid.TryParse(rf.Second, out var sr))
+                        {
+                            <button type="button" class="link" disabled="@busy" @onclick="() => RunAsync(g => g.RequestSecondReviewAsync(SessionId, d.Id, sr))">Request a second review instead</button>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    @if (status is GradeStatus.AwaitingFinalApproval or GradeStatus.ReconciliationRequired)
+    {
+        <div class="panel">
+            <h2>Final approval</h2>
+            @if (status == GradeStatus.ReconciliationRequired)
+            {
+                <p class="hint">Approval is blocked until every mandatory disagreement is reconciled.</p>
+            }
+            <div class="gr-form-row">
+                <label>Grade label (optional) <input @bind="approveLabel" placeholder="A, Pass, Distinction…" /></label>
+                <label>Approval note <input @bind="approveNote" /></label>
+            </div>
+            <div class="gr-actions">
+                <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.ApproveAsync(SessionId, approveLabel, approveNote))">Approve final grade</button>
+                <span class="hint">Needs the ApproveFinalGrade permission (Teacher, Admin, Owner).</span>
+            </div>
+            <details>
+                <summary>Adjust the human grades instead</summary>
+                <label class="gr-wide">Reason <input @bind="reopenReason" /></label>
+                <button type="button" class="link" disabled="@busy" @onclick="() => RunAsync(g => g.ReopenHumanReviewAsync(SessionId, reopenReason))">Reopen human grading</button>
+            </details>
+        </div>
+    }
+
+    @if (status == GradeStatus.Finalized)
+    {
+        <div class="panel">
+            <h2>Publish to the student</h2>
+            <p>The final grade is approved. Publishing releases it and the assessment report to the student.</p>
+            <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.PublishAsync(SessionId, null))">Publish</button>
+        </div>
+    }
+
+    @if (status == GradeStatus.Amended)
+    {
+        <div class="panel">
+            <h2>Republish</h2>
+            <p class="hint">The amended grade is visible to the student. Republishing records that the amendment is the published result.</p>
+            <button type="button" disabled="@busy" @onclick="RepublishAsync">Republish</button>
+        </div>
+    }
+
+    @if (w.OpenAppeal is { } appeal)
+    {
+        <div class="panel">
+            <h2>Appeal</h2>
+            <p>Opened @appeal.OpenedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm") UTC by @w.Name(appeal.StudentUserId):</p>
+            <blockquote>@appeal.Reason</blockquote>
+            <label class="gr-wide">Resolution <textarea rows="2" @bind="appealResolution"></textarea></label>
+            <div class="gr-actions">
+                <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.ResolveAppealAsync(SessionId, appeal.Id, AppealState.Upheld, appealResolution))">Grade stands (appeal upheld as reviewed)</button>
+                <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.ResolveAppealAsync(SessionId, appeal.Id, AppealState.Dismissed, appealResolution))">Dismiss</button>
+                <span class="hint">To change the grade, amend it below.</span>
+            </div>
+        </div>
+    }
+
+    @if (status is GradeStatus.Published or GradeStatus.UnderAppeal or GradeStatus.Amended)
+    {
+        <details class="panel" open="@(w.OpenAppeal is not null)">
+            <summary>Amend the grade</summary>
+            <p class="hint">Change the human score or level of any objective; the combined grade is recalculated under the frozen policy and the change is recorded with your reason.</p>
+            @foreach (var o in w.Objectives)
+            {
+                var f = Amend(o);
+                <div class="gr-form-row">
+                    <span>@o.Objective.Title <span class="hint">(now @N(o.Combined?.HumanScore))</span></span>
+                    <label>Level
+                        <select @bind="f.Level">
+                            @foreach (var l in Enum.GetValues<MasteryLevel>()) { <option value="@((int)l)">@((int)l) @MasteryLevels.Label(l)</option> }
+                        </select>
+                    </label>
+                    <label>Score <input type="number" step="any" min="0" max="@o.Objective.MaxScore" @bind="f.Score" /></label>
+                </div>
+            }
+            <label class="gr-wide">Reason for the amendment <textarea rows="2" @bind="amendReason"></textarea></label>
+            <button type="button" disabled="@busy" @onclick="AmendAsync">Amend@(w.OpenAppeal is not null ? " and resolve the appeal" : "")</button>
+        </details>
+    }
+
+    @* ------------------------------------------------------------ objectives, rubrics, evidence, AI grades *@
+    <h2 class="gr-section">Learning objectives, rubrics and evidence</h2>
+    @if (w.Objectives.Count == 0)
+    {
+        <p class="notice">This exam has no learning objectives yet; AI grading derives one per concept when it runs.</p>
+    }
+    @foreach (var o in w.Objectives)
+    {
+        <div class="gr-objective">
+            <h3>@o.Objective.Title <span class="hint">· @o.Objective.Key · max @o.Objective.MaxScore.ToString("0.##") · weight @o.Objective.Weight.ToString("0.##")</span></h3>
+            @if (!string.IsNullOrWhiteSpace(o.Objective.Description)) { <p class="hint">@o.Objective.Description</p> }
+            <details>
+                <summary>Rubric (@o.Objective.Criteria.Count criteria)</summary>
+                @foreach (var c in o.Objective.Criteria.OrderBy(c => c.Ordinal))
+                {
+                    <p><strong>@c.Name</strong> <span class="hint">@c.Dimension · weight @c.Weight.ToString("0.##")</span>@(c.Description is { } cd ? $": {cd}" : "")</p>
+                    <ul class="gr-flags">
+                        @foreach (var l in Enum.GetValues<MasteryLevel>())
+                        {
+                            <li>@((int)l) @MasteryLevels.Label(l): @(c.Levels.FirstOrDefault(x => x.Level == l)?.Descriptor ?? MasteryLevels.DefaultDescriptor(l))</li>
+                        }
+                    </ul>
+                }
+            </details>
+            @if (o.Evidence.Count > 0)
+            {
+                <p class="hint">Recorded evidence: @string.Join("; ", o.Evidence.Select(e => $"#{Seq(e.ResponseId)} {e.Stance}{(e.Contaminated ? " (contaminated)" : "")}{(e.Assisted ? " (assisted)" : "")}{(string.IsNullOrWhiteSpace(e.Note) ? "" : ": " + e.Note)}"))</p>
+            }
+
+            @if (o.Ai is { } ai)
+            {
+                @if (!w.AiVisible)
+                {
+                    <p class="gr-hidden">AI evaluation hidden until the human evaluation is submitted (blind grading).</p>
+                }
+                else
+                {
+                    <h4>AI preliminary evaluation @if (ai.Row.IsMock) { <span class="gr-mock">MOCK</span> }</h4>
+                    <p>
+                        <strong>@((int)ai.Row.Level) @MasteryLevels.Label(ai.Row.Level)</strong> · @ai.Row.Score.ToString("0.##") / @ai.Row.MaxScore.ToString("0.##")
+                        · confidence <span title="@GradingConfidence.Describe(ai.Row.Confidence)">@ai.Row.Confidence</span>
+                    </p>
+                    <p class="hint">@GradingConfidence.Describe(ai.Row.Confidence)</p>
+                    @if (!string.IsNullOrWhiteSpace(ai.Row.Explanation)) { <p>@ai.Row.Explanation</p> }
+                    @if (ai.Criteria.Count > 0)
+                    {
+                        <div class="gr-table-wrap">
+                            <table class="grid">
+                                <thead><tr><th>Criterion</th><th>Level</th><th>Score</th><th>Rationale and evidence</th></tr></thead>
+                                <tbody>
+                                    @foreach (var c in ai.Criteria)
+                                    {
+                                        <tr>
+                                            <td>@c.Criterion</td>
+                                            <td>@((int)c.Level)@if (c.Dissent) { <span class="gr-dissent" title="Voters: @string.Join(", ", c.VoterLevels)"> dissent</span> }</td>
+                                            <td>@c.Score.ToString("0.##") / @c.MaxScore.ToString("0.##")</td>
+                                            <td>@c.Rationale @if (c.EvidenceRefs.Count > 0) { <span class="hint">(responses @string.Join(", ", c.EvidenceRefs.Select(Seq)))</span> } @foreach (var q in c.Quotes) { <q>@q</q> }</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    @if (ai.Flags.Count > 0)
+                    {
+                        <p><strong>Review flags</strong></p>
+                        <ul class="gr-flags">@foreach (var f in ai.Flags) { <li>@ReviewFlags.Describe(f)</li> }</ul>
+                    }
+                    @if (ai.Misconceptions.Count > 0)
+                    {
+                        <p><strong>Misconceptions</strong></p>
+                        <ul class="gr-flags">@foreach (var m in ai.Misconceptions) { <li>@m.Text <span class="hint">(@m.Voters voter@(m.Voters == 1 ? "" : "s"))</span></li> }</ul>
+                    }
+                    @if (ai.Ambiguities.Count > 0)
+                    {
+                        <p><strong>Unresolved ambiguities</strong></p>
+                        <ul class="gr-flags">@foreach (var a in ai.Ambiguities) { <li>@a</li> }</ul>
+                    }
+                    @if (ai.Voters.Count > 0)
+                    {
+                        <details>
+                            <summary>Each AI voter (@ai.Voters.Count)</summary>
+                            <ul class="gr-flags">
+                                @foreach (var v in ai.Voters)
+                                {
+                                    <li class="@(v.Dissents ? "gr-dissent" : "")"><strong>@v.ProviderId</strong> <span class="hint">@v.Model</span> · @v.Score.ToString("0.##") · level @((int)v.Level)@(v.Dissents ? " · dissents" : "") <div class="hint">@v.Explanation</div></li>
+                                }
+                            </ul>
+                        </details>
+                    }
+                }
+            }
+            else if (status is not (null or GradeStatus.ExaminationCompleted or GradeStatus.TranscriptVerificationPending or GradeStatus.AiGradingPending))
+            {
+                <p class="hint">No AI grade for this objective.</p>
+            }
+
+            @if (o.HumanHistory.Count > 0 && (w.AiVisible || status != GradeStatus.HumanReviewPending))
+            {
+                <h4>Human grades</h4>
+                <ul class="gr-flags">
+                    @foreach (var h in o.HumanHistory)
+                    {
+                        <li class="@(h.Id == o.Human?.Id ? "" : "hint")">
+                            @h.SubmittedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm") · @w.Name(h.ReviewerUserId) (@AssessmentReport.RoleLabel(h.ReviewerRole)) · level @((int)h.Level) · @h.Score.ToString("0.##")@(h.WasBlind ? " · blind" : "")@(h.SupersedesId is not null ? " · adjustment" : "")@(h.Id == o.Human?.Id ? " · current" : "")
+                            @if (h.Comment is { } hc) { <div>@hc</div> }
+                        </li>
+                    }
+                </ul>
+            }
+            @foreach (var rec in o.Reconciliations)
+            {
+                <p class="hint">Reconciled @rec.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm") by @w.Name(rec.ReviewerUserId)@(rec.SecondReviewerUserId is { } s2 ? $" with second reviewer {w.Name(s2)}" : ""): @ReconciliationCauses.Label(rec.Cause). @rec.Resolution@(rec.ResolvedAiScore is { } ra ? $" (AI → {ra:0.##})" : "")@(rec.ResolvedHumanScore is { } rh ? $" (human → {rh:0.##})" : "")</p>
+            }
+        </div>
+    }
+
+    @* ------------------------------------------------------------ transcript *@
+    <h2 class="gr-section">Transcript and verified responses</h2>
+    @if (w.Responses.Count == 0)
+    {
+        <p class="notice">No response records yet (they are built when AI grading starts).</p>
+    }
+    @foreach (var r in w.Responses)
+    {
+        <div class="gr-response @(r.NeedsHuman ? "needs-human" : "")" id="response-@r.Response.Sequence">
+            <div><strong>#@r.Response.Sequence</strong> <span class="hint">Q@(r.TurnIndex + 1) · @r.ConceptKey · @r.Response.Modality · @r.Response.Kind · @r.Response.VerificationState@(r.Response.Assisted ? " · assisted" : "")</span></div>
+            <p class="q">@r.Question</p>
+            <blockquote>@r.Response.VerifiedText</blockquote>
+            @if (r.TextChanged)
+            {
+                <blockquote class="original">Original (preserved): @r.Response.OriginalText</blockquote>
+            }
+            @if (r.Versions.Count > 1)
+            {
+                <details>
+                    <summary>Transcript versions (@r.Versions.Count)</summary>
+                    <ul class="gr-flags">@foreach (var v in r.Versions) { <li>v@v.Version · @v.Source@(v.CorrectionKind is { } ck ? $" · {ck}" : "") · @v.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm"): @v.Text</li> }</ul>
+                </details>
+            }
+            @if (r.History.Count > 0)
+            {
+                <details>
+                    <summary>Verification history (@r.History.Count)</summary>
+                    <ul class="gr-flags">@foreach (var h in r.History) { <li>@h.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm") · @h.From → @h.To: @h.Reason</li> }</ul>
+                </details>
+            }
+            @foreach (var c in r.Clarifications)
+            {
+                <p class="hint">Clarification (@c.Type@(c.NonLeadingChecked ? ", checked non-leading" : "")): “@c.Question” → @(c.StudentReply is { } reply ? $"“{reply}”" : "no reply")</p>
+            }
+        </div>
+    }
+
+    @* ------------------------------------------------------------ approvals, appeals, audit *@
+    @if (w.Approvals.Count > 0)
+    {
+        <h2 class="gr-section">Approval records</h2>
+        <ul class="gr-flags">
+            @foreach (var (a, actor) in w.Approvals)
+            {
+                <li>@a.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm") UTC · @AssessmentReport.ActionLabel(a.Action) by @actor (@AssessmentReport.RoleLabel(a.ActorRole))@(a.Note is { } n ? $": {n}" : "")</li>
+            }
+        </ul>
+    }
+    @if (w.Appeals.Count > 0)
+    {
+        <h2 class="gr-section">Appeals</h2>
+        <ul class="gr-flags">
+            @foreach (var (a, student) in w.Appeals)
+            {
+                <li>@a.OpenedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm") · @student · @a.State: @a.Reason@(a.Resolution is { } res ? $" → {res}" : "")</li>
+            }
+        </ul>
+    }
+    <details class="gr-section">
+        <summary>Audit trail (@w.Audit.Count)</summary>
+        <div class="gr-table-wrap">
+            <table class="grid gr-audit">
+                <thead><tr><th>When (UTC)</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead>
+                <tbody>
+                    @foreach (var (e, actor) in w.Audit)
+                    {
+                        <tr>
+                            <td>@e.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>@actor@(e.ActorRole is { } role ? $" ({role})" : "")</td>
+                            <td>@e.Action</td>
+                            <td>@e.Reason @(e.BeforeJson is { } b ? $"before {b}" : "") @(e.AfterJson is { } af ? $"after {af}" : "")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </details>
+}
+
+@code {
+    [Parameter] public Guid SessionId { get; set; }
+
+    private sealed class HumanForm
+    {
+        public int Level { get; set; } = (int)MasteryLevel.ConceptualUnderstanding;
+        public decimal? Score { get; set; }
+        public string? Comment { get; set; }
+        public string? EvidenceNote { get; set; }
+    }
+
+    private sealed class RecForm
+    {
+        public string Cause { get; set; } = "";
+        public string Resolution { get; set; } = "";
+        public decimal? Ai { get; set; }
+        public decimal? Human { get; set; }
+        public string Second { get; set; } = "";
+    }
+
+    private GradingWorkspace? w;
+    private bool loading = true, busy, ok;
+    private string? message, approveLabel, approveNote;
+    private string proceedReason = "", reopenReason = "", appealResolution = "", amendReason = "";
+    private readonly Dictionary<Guid, HumanForm> forms = [];
+    private readonly Dictionary<Guid, HumanForm> amendForms = [];
+    private readonly Dictionary<Guid, RecForm> recForms = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        await LoadAsync();
+        loading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        w = await GradingDb.RunAsync(Scopes, Tenant, g => g.WorkspaceAsync(SessionId));
+        amendForms.Clear();
+    }
+
+    private bool Can(Permission p) => Tenant.UserId is not null && PermissionMatrix.Has(Tenant.Role, p);
+
+    private HumanForm Form(Guid objectiveId)
+    {
+        if (!forms.TryGetValue(objectiveId, out var f)) forms[objectiveId] = f = new HumanForm();
+        return f;
+    }
+
+    private HumanForm Amend(ObjectiveView o)
+    {
+        if (!amendForms.TryGetValue(o.Objective.Id, out var f))
+            amendForms[o.Objective.Id] = f = new HumanForm { Level = (int)(o.Human?.Level ?? MasteryLevel.ConceptualUnderstanding), Score = o.Combined?.HumanScore ?? o.Human?.Score };
+        return f;
+    }
+
+    private RecForm Rec(Guid disagreementId)
+    {
+        if (!recForms.TryGetValue(disagreementId, out var f)) recForms[disagreementId] = f = new RecForm();
+        return f;
+    }
+
+    private int Seq(Guid responseId) => w?.Responses.FirstOrDefault(r => r.Response.Id == responseId)?.Response.Sequence ?? 0;
+
+    private IEnumerable<ResponseView> EvidenceFor(ObjectiveView o)
+    {
+        if (w is null) return [];
+        var ids = (o.Ai?.EvidenceRefs ?? []).Concat(o.Evidence.Select(e => e.ResponseId)).ToHashSet();
+        if (ids.Count == 0 && o.Objective.ConceptKey is { } key) return w.Responses.Where(r => r.ConceptKey == key);
+        return w.Responses.Where(r => ids.Contains(r.Response.Id));
+    }
+
+    private async Task RunAsync(Func<GradingService, Task<GradingResult>> action)
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await GradingDb.RunAsync(Scopes, Tenant, action);
+            ok = r.Ok;
+            message = r.Message;
+            await LoadAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private Task RepublishAsync() => RunAsync(g => g.PublishAsync(SessionId, "Amended grade republished."));
+
+    private Task SubmitHumanAsync()
+    {
+        var inputs = forms.Select(kv => new HumanGradeInput(kv.Key, (MasteryLevel)kv.Value.Level, kv.Value.Score, kv.Value.Comment, kv.Value.EvidenceNote)).ToList();
+        return RunAsync(g => g.SubmitHumanGradesAsync(SessionId, inputs));
+    }
+
+    private Task ReconcileAsync(Guid disagreementId)
+    {
+        var f = Rec(disagreementId);
+        Guid? second = Guid.TryParse(f.Second, out var s) ? s : null;
+        return RunAsync(g => g.ReconcileAsync(SessionId, disagreementId, f.Cause, f.Resolution, f.Ai, f.Human, second));
+    }
+
+    private Task AmendAsync()
+    {
+        var changes = amendForms.Select(kv => new HumanGradeInput(kv.Key, (MasteryLevel)kv.Value.Level, kv.Value.Score, null, null)).ToList();
+        var appealId = w?.OpenAppeal?.Id;
+        return RunAsync(g => g.AmendAsync(SessionId, changes, amendReason, appealId));
+    }
+
+    private static string Pct(decimal fraction) => (fraction * 100m).ToString("0.##") + "%";
+    private static string N(decimal? v) => v is { } x ? x.ToString("0.##") : "—";
+    private static string BandLabel(DisagreementBand? b) => b switch
+    {
+        DisagreementBand.Standard => "standard",
+        DisagreementBand.AdditionalReview => "additional review",
+        DisagreementBand.MandatoryReconciliation => "reconciliation required",
+        _ => "",
+    };
+}

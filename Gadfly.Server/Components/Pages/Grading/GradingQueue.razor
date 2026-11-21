@@ -1,0 +1,120 @@
+@page "/grading"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Assessment
+@using Gadfly.Server.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+<PageTitle>Grading · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<h1>Grading <span>AI preliminary grades, human examination, reconciliation and approval</span></h1>
+
+@if (denied)
+{
+    <p class="notice">Your role in this organization does not include grading. The attempt was recorded.</p>
+}
+else
+{
+    <div class="gr-filters">
+        <label>Status
+            <select @bind="StatusFilter" @bind:after="LoadAsync">
+                <option value="">All</option>
+                @foreach (var s in Enum.GetValues<GradeStatus>().Where(s => s != GradeStatus.ExaminationInProgress))
+                {
+                    <option value="@s">@GradeStatusMachine.Label(s)</option>
+                }
+            </select>
+        </label>
+        <label class="check"><input type="checkbox" @bind="showUnstarted" @bind:after="LoadAsync" /> Include ended sessions not started</label>
+    </div>
+    @if (message is not null)
+    {
+        <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+    }
+    @if (rows is null)
+    {
+        <p class="hint">Loading…</p>
+    }
+    else if (rows.Count == 0)
+    {
+        <p class="notice">Nothing to grade with these filters. A session enters the queue when its examination ends.</p>
+    }
+    else
+    {
+        <div class="gr-table-wrap">
+            <table class="grid">
+                <thead><tr><th>Student</th><th>Exam</th><th>Attempt</th><th>Ended</th><th>Status</th><th>Final</th><th>Attention</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var r in rows)
+                    {
+                        <tr>
+                            <td>@r.StudentName</td>
+                            <td>@r.ExamTitle</td>
+                            <td>@r.Attempt</td>
+                            <td>@(r.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+                            <td>
+                                @if (r.Status is { } st)
+                                {
+                                    <span class="gr-status s-@st">@GradeStatusMachine.Label(st)</span>
+                                }
+                                else
+                                {
+                                    <span class="hint">Not started</span>
+                                }
+                                @if (r.IsMock) { <text> </text><span class="gr-mock">MOCK</span> }
+                            </td>
+                            <td>@(r.FinalPercent is { } f && r.Status is not (GradeStatus.HumanReviewPending or GradeStatus.AiGradingPending) ? AssessmentReport.Pct(f) : "—")</td>
+                            <td>
+                                @if (r.OpenDisagreements > 0) { <span class="gr-band-MandatoryReconciliation">@r.OpenDisagreements to reconcile</span> }
+                                @if (r.OpenAppeal) { <span class="gr-band-MandatoryReconciliation">appeal open</span> }
+                                @if (r.JobState is "Failed") { <span class="error" title="@r.JobError">AI grading failed</span> }
+                                else if (r.JobState is "Queued" or "Running") { <span class="hint">AI grading @r.JobState.ToLowerInvariant()</span> }
+                            </td>
+                            <td>
+                                @if (r.Status is null || r.JobState == "Failed")
+                                {
+                                    <button type="button" class="link" disabled="@busy" @onclick="() => StartAsync(r.SessionId)">@(r.Status is null ? "Start grading" : "Retry AI grading")</button>
+                                }
+                                @if (r.Status is not null)
+                                {
+                                    <a href="grading/@r.SessionId">Open</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="hint">@rows.Count session@(rows.Count == 1 ? "" : "s"). AI grades are preliminary; nothing reaches a student until a final grade is approved and published.</p>
+    }
+}
+
+@code {
+    private IReadOnlyList<GradingQueueRow>? rows;
+    private string StatusFilter { get; set; } = "";
+    private bool showUnstarted = true, denied, busy, ok;
+    private string? message;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        GradeStatus? status = Enum.TryParse<GradeStatus>(StatusFilter, out var s) ? s : null;
+        rows = await GradingDb.RunAsync(Scopes, Tenant, g => g.QueueAsync(status, showUnstarted));
+        denied = rows is null;
+    }
+
+    private async Task StartAsync(Guid sessionId)
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await GradingDb.RunAsync(Scopes, Tenant, g => g.StartAiGradingAsync(sessionId));
+            ok = r.Ok;
+            message = r.Message;
+            await LoadAsync();
+        }
+        finally { busy = false; }
+    }
+}

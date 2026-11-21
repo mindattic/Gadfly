@@ -60,27 +60,20 @@ else
                         }
                     </div>
                 }
-                @if (r.Result is { } result)
+                @foreach (var pub in Published(r.AssignmentId))
                 {
                     <div class="result">
-                        <h3>Your result</h3>
-                        @if (!string.IsNullOrWhiteSpace(result.Grade))
-                        {
-                            <p><strong>Grade:</strong> @result.Grade</p>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(result.Comment))
-                        {
-                            <p><strong>Instructor's comment:</strong> @result.Comment</p>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(result.Recommendation))
-                        {
-                            <p class="hint">Examiner's recommendation: @StudentExams.DescribeRecommendation(result.Recommendation). Your instructor decided the grade.</p>
-                        }
+                        <h3>Your result@(r.AttemptsAllowed > 1 ? $" (attempt {pub.Attempt})" : "")</h3>
+                        <p><strong>Grade:</strong> @(pub.FinalPercent is { } fp ? fp.ToString("0.##") + "%" : "—")@(pub.Label is { } lbl ? $" ({lbl})" : "")
+                            @if (pub.Status == Gadfly.Assessment.GradeStatus.Amended) { <span class="hint"> · amended</span> }
+                            @if (pub.OpenAppeal) { <span class="hint"> · appeal under review</span> }
+                        </p>
+                        <p><a href="my-results/@pub.SessionId">See the assessment report</a></p>
                     </div>
                 }
-                else if (r.Standing == AssignmentStanding.Completed)
+                @if (!Published(r.AssignmentId).Any() && r.Standing == AssignmentStanding.Completed)
                 {
-                    <p class="hint">Your answers were submitted. Your instructor will release results.</p>
+                    <p class="hint">Your answers were submitted. Your result appears here once examiners have graded it and it has been approved and published.</p>
                 }
             </section>
         }
@@ -89,6 +82,11 @@ else
 
 @code {
     private IReadOnlyList<StudentAssignmentView>? rows;
+    private IReadOnlyList<Gadfly.Server.Grading.StudentResultRow> published = [];
+
+    // Results reach students only through the grading workflow: approved and published (GAD-T98).
+    private IEnumerable<Gadfly.Server.Grading.StudentResultRow> Published(Guid assignmentId) =>
+        published.Where(p => p.AssignmentId == assignmentId).OrderByDescending(p => p.Attempt).Take(1);
 
     protected override async Task OnInitializedAsync()
     {
@@ -98,6 +96,7 @@ else
             return;
         }
         rows = await StudentExams.ListAsync(Scopes, org, user, Clock.GetUtcNow());
+        published = await Gadfly.Server.Grading.GradingDb.RunAsync(Scopes, Tenant, g => g.MyResultsAsync());
     }
 
     private static string Window(StudentAssignmentView r) => (r.OpensAt, r.ClosesAt) switch
