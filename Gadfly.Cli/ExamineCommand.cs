@@ -15,30 +15,10 @@ public static class ExamineCommand
             return 0;
         }
 
-        var tier = LegionTierResolver.DefaultTier;
-        List<string>? providerOverride = null;
-        string? outPath = null;
-
-        for (var i = 0; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--tier":
-                    if (i + 1 < args.Length && Enum.TryParse<ModelTier>(args[++i], ignoreCase: true, out var parsedTier)) tier = parsedTier;
-                    break;
-                case "--voters":
-                    if (i + 1 < args.Length)
-                    {
-                        var requested = args[++i].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-                        if (requested.Length == 3) providerOverride = requested.ToList();
-                        else Console.Error.WriteLine("examine: --voters needs exactly 3 provider ids (Socrates, Confucius, Buddha in order); ignoring, using defaults.");
-                    }
-                    break;
-                case "--out":
-                    if (i + 1 < args.Length) outPath = args[++i];
-                    break;
-            }
-        }
+        var options = ExamineOptions.Parse(args);
+        var tier = options.Tier;
+        var providerOverride = options.Providers;
+        var outPath = options.OutPath;
 
         var untrusted = LegionTierResolver.UntrustedIds(providerOverride);
         if (untrusted.Count > 0)
@@ -78,6 +58,40 @@ public static class ExamineCommand
         }
 
         return 0;
+    }
+
+    /// <summary>The parsed <c>examine</c> flags. Invalid values keep the defaults; --voters with other than 3 ids warns and is ignored.</summary>
+    internal sealed record ExamineOptions(ModelTier Tier, List<string>? Providers, string? OutPath)
+    {
+        public static ExamineOptions Parse(string[] args)
+        {
+            var tier = LegionTierResolver.DefaultTier;
+            List<string>? providerOverride = null;
+            string? outPath = null;
+
+            for (var i = 0; i < args.Length; i++)
+            {
+                switch (args[i].ToLowerInvariant())
+                {
+                    case "--tier":
+                        if (i + 1 < args.Length && Enum.TryParse<ModelTier>(args[++i], ignoreCase: true, out var parsedTier)) tier = parsedTier;
+                        break;
+                    case "--voters":
+                        if (i + 1 < args.Length)
+                        {
+                            var requested = args[++i].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+                            if (requested.Length == 3) providerOverride = requested.ToList();
+                            else Console.Error.WriteLine("examine: --voters needs exactly 3 provider ids (Socrates, Confucius, Buddha in order); ignoring, using defaults.");
+                        }
+                        break;
+                    case "--out":
+                        if (i + 1 < args.Length) outPath = args[++i];
+                        break;
+                }
+            }
+
+            return new ExamineOptions(tier, providerOverride, outPath);
+        }
     }
 
     private static void PrintUsage()

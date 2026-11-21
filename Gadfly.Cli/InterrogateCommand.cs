@@ -15,33 +15,11 @@ public static class InterrogateCommand
             return 0;
         }
 
-        var tier = LegionTierResolver.DefaultTier;
-        var maxTurns = 20;
-        var quorum = Quorum.Plurality;
-        List<string>? providerOverride = null;
-
-        for (var i = 0; i < args.Length; i++)
-        {
-            switch (args[i].ToLowerInvariant())
-            {
-                case "--tier":
-                    if (i + 1 < args.Length && Enum.TryParse<ModelTier>(args[++i], ignoreCase: true, out var parsedTier)) tier = parsedTier;
-                    break;
-                case "--max-turns":
-                    if (i + 1 < args.Length && int.TryParse(args[++i], out var mt) && mt > 0) maxTurns = mt;
-                    break;
-                case "--quorum":
-                    if (i + 1 < args.Length && Enum.TryParse<Quorum>(args[++i], ignoreCase: true, out var q)) quorum = q;
-                    break;
-                case "--voters":
-                    if (i + 1 < args.Length)
-                        providerOverride = args[++i].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
-                    break;
-                case "--single-voter":
-                    if (i + 1 < args.Length) providerOverride = new List<string> { args[++i] };
-                    break;
-            }
-        }
+        var options = InterrogateOptions.Parse(args);
+        var tier = options.Tier;
+        var maxTurns = options.MaxTurns;
+        var quorum = options.Quorum;
+        var providerOverride = options.Providers;
 
         var untrusted = LegionTierResolver.UntrustedIds(providerOverride);
         if (untrusted.Count > 0)
@@ -86,6 +64,43 @@ public static class InterrogateCommand
         Console.WriteLine();
         Console.WriteLine($"Session saved to {path}. Run 'gadfly reflect --last' to continue.");
         return 0;
+    }
+
+    /// <summary>The parsed <c>interrogate</c> flags. An invalid --tier/--max-turns/--quorum value keeps the default.</summary>
+    internal sealed record InterrogateOptions(ModelTier Tier, int MaxTurns, Quorum Quorum, List<string>? Providers)
+    {
+        public static InterrogateOptions Parse(string[] args)
+        {
+            var tier = LegionTierResolver.DefaultTier;
+            var maxTurns = 20;
+            var quorum = Quorum.Plurality;
+            List<string>? providerOverride = null;
+
+            for (var i = 0; i < args.Length; i++)
+            {
+                switch (args[i].ToLowerInvariant())
+                {
+                    case "--tier":
+                        if (i + 1 < args.Length && Enum.TryParse<ModelTier>(args[++i], ignoreCase: true, out var parsedTier)) tier = parsedTier;
+                        break;
+                    case "--max-turns":
+                        if (i + 1 < args.Length && int.TryParse(args[++i], out var mt) && mt > 0) maxTurns = mt;
+                        break;
+                    case "--quorum":
+                        if (i + 1 < args.Length && Enum.TryParse<Quorum>(args[++i], ignoreCase: true, out var q)) quorum = q;
+                        break;
+                    case "--voters":
+                        if (i + 1 < args.Length)
+                            providerOverride = args[++i].Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList();
+                        break;
+                    case "--single-voter":
+                        if (i + 1 < args.Length) providerOverride = new List<string> { args[++i] };
+                        break;
+                }
+            }
+
+            return new InterrogateOptions(tier, maxTurns, quorum, providerOverride);
+        }
     }
 
     private static void PrintUsage()
