@@ -259,6 +259,37 @@ public class PrivacyServiceTests : ServerTest
     }
 
     [Test]
+    public async Task Redaction_RemovesTheClarificationQuestionsRepliesAndTheirAuditJson()
+    {
+        var (w, sessionId, turnId) = await Seed.EndedSessionAsync(Words);
+        var response = new StudentResponse
+        {
+            OrganizationId = w.Org, SessionId = sessionId, TurnId = turnId, Sequence = 1, OriginalText = Words, VerifiedText = Words,
+            SubmittedAt = DateTimeOffset.UtcNow,
+        };
+        await using (var db = OrgDb(w.Org))
+        {
+            db.StudentResponses.Add(response);
+            db.ClarificationEvents.Add(new ClarificationEvent
+            {
+                OrganizationId = w.Org, SessionId = sessionId, ResponseId = response.Id, Type = ClarificationType.Transcription,
+                Question = "I recorded your answer as: \"" + Words + "\" Is this what you said?", StudentReply = Words, AskedAt = DateTimeOffset.UtcNow,
+            });
+            foreach (var action in new[] { "clarification.asked", "clarification.answered" })
+                db.AuditEvents.Add(new AuditEvent
+                {
+                    OrganizationId = w.Org, SessionId = sessionId, Action = action, EntityType = nameof(StudentResponse), EntityId = response.Id.ToString(),
+                    AfterJson = "{\"text\":\"" + Words + "\"}", At = DateTimeOffset.UtcNow,
+                });
+            await db.SaveChangesAsync();
+        }
+        await WithPrivacy(w.Org, async p => { await p.RedactSessionAsync(sessionId); return 0; });
+        await using var check = SystemDb();
+        Assert.That(await check.ClarificationEvents.AnyAsync(c => c.SessionId == sessionId && (c.Question.Contains("chlorophyll") || (c.StudentReply ?? "").Contains("chlorophyll"))), Is.False);
+        Assert.That(await check.AuditEvents.AnyAsync(a => a.SessionId == sessionId && a.Action.StartsWith("clarification.") && a.AfterJson != null), Is.False);
+    }
+
+    [Test]
     public async Task Retention_RedactsOnlySessionsPastTheirOrganizationsPeriod()
     {
         var old = await Seed.EndedSessionAsync(Words, endedAt: DateTimeOffset.UtcNow.AddDays(-91));

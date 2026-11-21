@@ -84,7 +84,7 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
     /// <summary>
     /// Removes the student's words from the response ledger (GAD-T86) of the given sessions: original and verified
     /// text, transcript versions, clarification replies, evidence notes, and the before/after JSON of the
-    /// "response.*" audit events (or of every audit event of those sessions, when <paramref name="allAuditJson"/>).
+    /// "response.*" and "clarification.*" audit events (or of every audit event of those sessions, when <paramref name="allAuditJson"/>).
     /// This is the one deliberate exception to the ledger's immutability and the audit log's append-only rule: it
     /// runs as set-based updates that bypass the SaveChanges guards, and audit rows keep who did what and when (GAD-T110).
     /// </summary>
@@ -94,12 +94,15 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
         await db.TranscriptVersions.Where(v => responseIds.Contains(v.ResponseId)).ExecuteUpdateAsync(u => u.SetProperty(v => v.Text, Redacted), ct);
         await db.ClarificationEvents.Where(c => sessionIds.Contains(c.SessionId) && c.StudentReply != null)
             .ExecuteUpdateAsync(u => u.SetProperty(c => c.StudentReply, (string?)Redacted), ct);
+        // The question quotes the student ("I recorded your answer as: ...") or paraphrases the answer (GAD-T179).
+        await db.ClarificationEvents.Where(c => sessionIds.Contains(c.SessionId))
+            .ExecuteUpdateAsync(u => u.SetProperty(c => c.Question, Redacted), ct);
         await db.AssessmentEvidence.Where(e => sessionIds.Contains(e.SessionId)).ExecuteUpdateAsync(u => u.SetProperty(e => e.Note, Redacted), ct);
         await db.StudentResponses.Where(r => sessionIds.Contains(r.SessionId)).ExecuteUpdateAsync(u => u
             .SetProperty(r => r.OriginalText, Redacted)
             .SetProperty(r => r.VerifiedText, Redacted)
             .SetProperty(r => r.SpeechRecognitionText, (string?)null), ct);
-        await db.AuditEvents.Where(a => a.SessionId != null && sessionIds.Contains(a.SessionId.Value) && (allAuditJson || a.Action.StartsWith("response.")))
+        await db.AuditEvents.Where(a => a.SessionId != null && sessionIds.Contains(a.SessionId.Value) && (allAuditJson || a.Action.StartsWith("response.") || a.Action.StartsWith("clarification.")))
             .ExecuteUpdateAsync(u => u.SetProperty(a => a.BeforeJson, (string?)null).SetProperty(a => a.AfterJson, (string?)null), ct);
     }
 
