@@ -42,6 +42,17 @@ public class SessionOrchestratorTests : ServerTest
         Assert.That(row.ClientInfo, Is.EqualTo("ua"));
     }
 
+    /// <summary>GAD-T207: two starts at once (a double click on Begin exam) get the same attempt, not a unique-index failure.</summary>
+    [Test]
+    public async Task TwoStartsAtOnce_ShareOneAttempt()
+    {
+        var w = await Seed.ExamAsync(attempts: 2);
+        var ids = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => Orchestrator.CreateOrResumeAsync(w.Org, w.AssignmentId, w.StudentId, "ua")));
+        Assert.That(ids.Distinct().Count(), Is.EqualTo(1));
+        await using var db = SystemDb();
+        Assert.That(await db.ExamSessions.CountAsync(s => s.AssignmentId == w.AssignmentId), Is.EqualTo(1));
+    }
+
     [Test]
     public async Task ClientInfo_IsCappedAt500()
     {

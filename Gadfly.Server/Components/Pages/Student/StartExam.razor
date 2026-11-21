@@ -268,7 +268,8 @@ else
 
     private async Task BeginAsync()
     {
-        if (assignment is null || notice is null || Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        // A double click must not start twice: two concurrent CreateOrResume calls both insert attempt 1 and the second dies on the unique index (GAD-T207).
+        if (starting || assignment is null || notice is null || Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
         starting = true;
         error = null;
         try

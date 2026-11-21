@@ -134,7 +134,18 @@ public sealed class SessionOrchestrator(
             ClientInfo = clientInfo is { Length: > 500 } ci ? ci[..500] : clientInfo,
         };
         db.ExamSessions.Add(session);
-        await db.SaveChangesAsync(ct);
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateException)
+        {
+            // Two starts at once (a double click, a second tab) both insert attempt N and the unique (AssignmentId, Attempt) index
+            // refuses the second: that attempt is the winner's, so resume it instead of failing (GAD-T207).
+            db.Entry(session).State = EntityState.Detached;
+            var winner = await db.ExamSessions.AsNoTracking().Where(s => s.AssignmentId == assignmentId && s.OrganizationId == organizationId
+                    && s.State != SessionState.Ended && s.State != SessionState.Failed)
+                .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
+            if (winner is { } id) return id;
+            throw;
+        }
         return session.Id;
     }
 
