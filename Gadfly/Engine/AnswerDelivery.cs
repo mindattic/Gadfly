@@ -12,6 +12,11 @@ public enum ProbePressure
     Some,
     /// <summary>Two or more cues together: probe harder until the concept is clearly understood or clearly not.</summary>
     Shaky,
+    /// <summary>
+    /// The answer read as recited (GAD-T242: close to the source's wording, or a read-out pattern) and was not accepted: ask for
+    /// it differently, applied to a new case, or why.
+    /// </summary>
+    Recited,
 }
 
 /// <summary>
@@ -41,6 +46,8 @@ public sealed record AnswerDelivery
     /// <summary>The cues that fired, in plain words for the prompt and the reviewer.</summary>
     public IReadOnlyList<string> Cues { get; init; } = [];
     public ProbePressure Pressure { get; init; }
+    /// <summary>The recitation check's finding on this answer (GAD-T242); null when it read as the student's own.</summary>
+    public RecitationFlag? Recitation { get; init; }
 
     /// <summary>Speech metric names read here; they match the server's SpeechMetricKeys (the engine cannot reference the server).</summary>
     public const string TimeToFirstWordKey = "timeToFirstWordSeconds", DisfluencyPer100Key = "disfluency.per100Words",
@@ -87,12 +94,16 @@ public sealed record AnswerDelivery
             cues.Add($"voice strain above the student's own baseline ({Num(s)})");
         if (hedges.Count >= HedgesCue)
             cues.Add($"hedging ({string.Join(", ", hedges.Select(x => $"\"{x}\""))})");
+        var recited = turn.Judgment?.Recitation;
+        if (recited is not null) cues.Add($"recited, not accepted ({recited.Reason})");
 
         return new AnswerDelivery
         {
             TurnIndex = turn.Index, DelaySeconds = delay, BaselineDelaySeconds = baseDelay, HesitationsPer100 = hes,
             BaselineHesitationsPer100 = baseHes, LongPauses = longPauses, StrainVsBaseline = strain, Hedges = hedges, Cues = cues,
-            Pressure = cues.Count switch { 0 => ProbePressure.Steady, 1 => ProbePressure.Some, _ => ProbePressure.Shaky },
+            Recitation = recited,
+            Pressure = recited is not null ? ProbePressure.Recited
+                : cues.Count switch { 0 => ProbePressure.Steady, 1 => ProbePressure.Some, _ => ProbePressure.Shaky },
         };
     }
 
@@ -106,6 +117,7 @@ public sealed record AnswerDelivery
     /// <summary>The prompt's guidance for the next question, from the last answer's delivery.</summary>
     public static string Guidance(AnswerDelivery? last) => last?.Pressure switch
     {
+        ProbePressure.Recited => RecitationCheck.Guidance,
         ProbePressure.Shaky => "Understanding in the last answer looks shaky. Probe harder within this move: ask for a concrete example, "
             + "challenge an assumption the answer relies on, ask why once more, or pose a counterfactual, so the next answer shows clearly "
             + "whether the concept is understood or not.",
