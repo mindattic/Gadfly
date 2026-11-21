@@ -26,6 +26,29 @@ public sealed record RecitationFlag
 }
 
 /// <summary>
+/// How often the read-out pattern fired over a set of sessions (GAD-T272, <see cref="RecitationCheck.Measure"/>). Over
+/// sessions from honest students every fire is a false flag.
+/// </summary>
+/// <param name="Sessions">Sessions measured.</param>
+/// <param name="SessionsFlagged">Sessions with at least one fire.</param>
+/// <param name="VoiceAnswers">Spoken answers seen.</param>
+/// <param name="EligibleAnswers">Spoken answers long enough for the pattern to apply.</param>
+/// <param name="Fires">Answers the pattern fired on, whether or not it was active.</param>
+/// <param name="SuppressedFires">Fires that did not flag because the check was off or the student had an accommodation.</param>
+/// <param name="AccommodatedEligible">Eligible answers from students with an extra-time accommodation.</param>
+/// <param name="AccommodatedFires">Fires on students with an extra-time accommodation.</param>
+public sealed record ReadOutMeasurement(int Sessions, int SessionsFlagged, int VoiceAnswers, int EligibleAnswers, int Fires,
+    int SuppressedFires, int AccommodatedEligible, int AccommodatedFires)
+{
+    /// <summary>Fires per eligible answer (0..1); null when no answer was eligible.</summary>
+    public double? FireRate => EligibleAnswers == 0 ? null : (double)Fires / EligibleAnswers;
+    /// <summary>Share of sessions with at least one fire (0..1); null when there were none.</summary>
+    public double? SessionRate => Sessions == 0 ? null : (double)SessionsFlagged / Sessions;
+    /// <summary>Fires per eligible answer among accommodated students; null when none was eligible.</summary>
+    public double? AccommodatedFireRate => AccommodatedEligible == 0 ? null : (double)AccommodatedFires / AccommodatedEligible;
+}
+
+/// <summary>
 /// Deterministic recitation check on one answer (GAD-T242). It compares the answer's words with the source passages the
 /// judge saw, and its delivery (wait, length, fluency) with the student's own earlier answers through <see cref="AnswerDelivery"/>.
 /// It never scores and never accuses: a flagged answer is left out of the evidence and the next question presses for
@@ -62,16 +85,9 @@ public static class RecitationCheck
         var (overlap, longest, start) = Compare(words, Words(sourceText));
         var matches = words.Count >= MinWordsForSourceMatch && (overlap >= SourceOverlapCue || longest >= LongestCopiedCue);
 
-        var readOut = false;
-        string? readOutReason = null;
-        if (answer.Mode == "voice" && words.Count >= ReadOutMinWords && AnswerDelivery.Read(session, turn) is { DelaySeconds: { } delay } d
-            && delay >= ReadOutDelaySeconds && (d.BaselineDelaySeconds is not { } usual || delay >= ReadOutDelayFactor * Math.Max(usual, 1))
-            && d.LongPauses == 0 && (d.HesitationsPer100 ?? 0) <= FluentHesitationsPer100)
-        {
-            readOut = true;
-            readOutReason = $"a long ({words.Count} words), fluent answer ({Num(d.HesitationsPer100 ?? 0)} hesitations per 100 words, no long pauses) "
-                + $"that started after a {Num(delay)}s silent wait" + (d.BaselineDelaySeconds is { } b ? $" (usually {Num(b)}s)" : "");
-        }
+        // The timing half is skipped when the exam switched it off or the student has an accommodation (GAD-T272).
+        var readOutReason = session.Policy.ReadOutCheckActive ? ReadOutReason(session, turn, words.Count) : null;
+        var readOut = readOutReason is not null;
 
         if (!matches && !readOut) return null;
         var reasons = new List<string>();
@@ -84,6 +100,55 @@ public static class RecitationCheck
             CopiedText = longest >= RunWords ? Clip(string.Join(' ', words.Skip(start).Take(longest)), 240) : null,
             Reason = string.Join("; ", reasons),
         };
+    }
+
+    /// <summary>
+    /// The read-out pattern on its own, ignoring the policy switch and any accommodation: a voice answer of at least
+    /// <see cref="ReadOutMinWords"/> words, fluent, that started after a long silent wait. Returns the reason, or null.
+    /// </summary>
+    internal static string? ReadOutReason(SocraticSession session, Turn turn, int wordCount)
+    {
+        if (turn.Answer is not { Mode: "voice" } || wordCount < ReadOutMinWords) return null;
+        if (AnswerDelivery.Read(session, turn) is not { DelaySeconds: { } delay } d) return null;
+        if (delay < ReadOutDelaySeconds || (d.BaselineDelaySeconds is { } usual && delay < ReadOutDelayFactor * Math.Max(usual, 1))) return null;
+        if (d.LongPauses != 0 || (d.HesitationsPer100 ?? 0) > FluentHesitationsPer100) return null;
+        return $"a long ({wordCount} words), fluent answer ({Num(d.HesitationsPer100 ?? 0)} hesitations per 100 words, no long pauses) "
+            + $"that started after a {Num(delay)}s silent wait" + (d.BaselineDelaySeconds is { } b ? $" (usually {Num(b)}s)" : "");
+    }
+
+    /// <summary>
+    /// Measures how often the read-out pattern fires (GAD-T272). Run it over sessions from students known to be answering
+    /// honestly (a pilot, a practice run, an instructor-observed exam) and every fire is a false flag, so the rates are the
+    /// pattern's false flag rate. It counts what the pattern would flag whether or not it was switched off or suppressed by an
+    /// accommodation, so accommodated students are measured too. It looks at timing only; the source-overlap half is a content
+    /// check and is not measured here.
+    /// </summary>
+    public static ReadOutMeasurement Measure(IEnumerable<SocraticSession> sessions)
+    {
+        ArgumentNullException.ThrowIfNull(sessions);
+        int sessionCount = 0, sessionsFlagged = 0, voice = 0, eligible = 0, fires = 0, suppressed = 0, accommodatedEligible = 0, accommodatedFires = 0;
+        foreach (var session in sessions)
+        {
+            sessionCount++;
+            var accommodated = session.Policy.TimeMultiplier > 1.0;
+            var flagged = false;
+            foreach (var turn in session.Turns)
+            {
+                if (turn.Answer is not { Mode: "voice" } answer || string.IsNullOrWhiteSpace(answer.Text)) continue;
+                voice++;
+                var count = Words(answer.Text).Count;
+                if (count < ReadOutMinWords) continue;
+                eligible++;
+                if (accommodated) accommodatedEligible++;
+                if (ReadOutReason(session, turn, count) is null) continue;
+                fires++;
+                flagged = true;
+                if (accommodated) accommodatedFires++;
+                if (!session.Policy.ReadOutCheckActive) suppressed++;
+            }
+            if (flagged) sessionsFlagged++;
+        }
+        return new ReadOutMeasurement(sessionCount, sessionsFlagged, voice, eligible, fires, suppressed, accommodatedEligible, accommodatedFires);
     }
 
     /// <summary>The note added to the judgment summary, for the reviewer.</summary>

@@ -82,6 +82,49 @@ public class RecitationCheckTests
         Assert.That(RecitationCheck.Check(s, t, ""), Is.Null);
     }
 
+    private static Turn ReadOutTurn(SocraticSession s)
+    {
+        Answered(s, 0, "Light drives it.", 3, 4);
+        Answered(s, 2, "The water is split.", 4, 5);
+        return Answered(s, 4, string.Join(' ', Enumerable.Repeat("energy moves from one stage of the process to the next one", 7)), 25, 0.5);
+    }
+
+    [Test]
+    public void ReadOutPattern_IsSuppressedUnderAnAccommodation()
+    {
+        var s = Session(new SessionPolicy { TimeMultiplier = 1.5 });
+        Assert.That(RecitationCheck.Check(s, ReadOutTurn(s), ""), Is.Null);
+    }
+
+    [Test]
+    public void ReadOutPattern_IsSuppressedWhenTheExamSwitchesItOff_ButSourceOverlapStillFlags()
+    {
+        var s = Session(new SessionPolicy { ReadOutCheck = false });
+        Assert.That(RecitationCheck.Check(s, ReadOutTurn(s), ""), Is.Null);
+        var copied = Answered(s, 6, "In the light-dependent reactions, chlorophyll absorbs light energy, water molecules are split, and oxygen is released as a by-product.", 3);
+        Assert.That(RecitationCheck.Check(s, copied, Source)?.MatchesSource, Is.True);
+    }
+
+    [Test]
+    public void Measure_CountsFiresIncludingSuppressedOnes()
+    {
+        var plain = Session();
+        ReadOutTurn(plain);
+        var accommodated = Session(new SessionPolicy { TimeMultiplier = 1.5 });
+        ReadOutTurn(accommodated);
+        var quiet = Session();
+        Answered(quiet, 0, "Light drives it.", 3, 4);
+
+        var m = RecitationCheck.Measure([plain, accommodated, quiet]);
+        Assert.That(m.Sessions, Is.EqualTo(3));
+        Assert.That(m.EligibleAnswers, Is.EqualTo(2));
+        Assert.That(m.Fires, Is.EqualTo(2));
+        Assert.That(m.SuppressedFires, Is.EqualTo(1));
+        Assert.That(m.AccommodatedFires, Is.EqualTo(1));
+        Assert.That(m.SessionsFlagged, Is.EqualTo(2));
+        Assert.That(m.FireRate, Is.EqualTo(1.0));
+    }
+
     [Test]
     public void RecitedAnswer_SetsRecitedProbing_AndIsLeftOutOfTheEvidence()
     {

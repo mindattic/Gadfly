@@ -105,8 +105,11 @@ It is never a cheating verdict.
 - Direct evidence that conversational follow-up reduces cheating was not verified (06: Sotiriadou2020 found but not read).
   Do not claim that Gadfly detects cheating.
 
-**Proposed.** GAD-T272 (measure how often the read-out pattern fires on honest students, and switch it off under an
-accommodation). Keep the source-overlap check.
+**Done.** GAD-T272: the read-out pattern no longer flags a student with an extra-time accommodation (`TimeMultiplier`
+above 1), and an exam can switch it off (`SessionPolicy.ReadOutCheck`). `RecitationCheck.Measure` and
+`gadfly readout-rate <transcripts>` count how often it fires over session transcripts, including where it was suppressed;
+over sessions from honest students every fire is a false flag. The rate stays unknown until it is run on pilot data. The
+source-overlap check is kept as is.
 
 ## 4. Gaze fade and "look at me" (owner decision (c))
 

@@ -22,6 +22,7 @@ public static class GadflyCli
             "reflect" => await ReflectCommand.RunAsync(rest),
             "examine" => await ExamineCommand.RunAsync(rest),
             "exam" => await ExamCommand.RunAsync(rest),
+            "readout-rate" => await ReadOutRateCommand.RunAsync(rest),
             "version" => PrintVersion(),
             _ => Unknown(command),
         };
@@ -58,6 +59,7 @@ public static class GadflyCli
         Console.WriteLine("  reflect [opts]       Prompt 2 — one-shot Final Reflection.");
         Console.WriteLine("  examine [opts]       Prompt 3 — Socrates/Confucius/Buddha, three perspectives.");
         Console.WriteLine("  exam --source <path> A Socratic exam over your own source material, judged by the panel.");
+        Console.WriteLine("  readout-rate <files> How often the read-out pattern fires over session transcripts.");
         Console.WriteLine("  version              Print the gadfly version.");
         Console.WriteLine();
         Console.WriteLine("Run 'gadfly <command> --help' for command-specific options.");

@@ -73,7 +73,7 @@ public static class IntegrityExplanations
         ["text-reads-as-written"] = new("Answer reads like written text",
             "This answer reads more like text read aloud than the student's other answers. Weak evidence: never a score, and never meaningful on its own."),
         [RecitationView.EventType] = new("Possibly recited",
-            "The recitation check found this answer closely follows the source material's wording, or was a long, fluent spoken answer that began only after a long silent wait (a read-out pattern); the turn shows the overlap, the copied stretch and which pattern fired. The examiner did not count it as evidence of the student's own understanding, either way, and asked them to say it differently, apply it, or explain why; read the next answer. Students quote and memorize honestly, so this is never a verdict of cheating."),
+            "The recitation check found this answer closely follows the source material's wording, or was a long, fluent spoken answer that began only after a long silent wait (a read-out pattern; never applied to a student with extra time or on an exam that switched it off, since thinking before speaking looks the same); the turn shows the overlap, the copied stretch and which pattern fired. The examiner did not count it as evidence of the student's own understanding, either way, and asked them to say it differently, apply it, or explain why; read the next answer. Students quote and memorize honestly, so this is never a verdict of cheating."),
     };
 
     /// <summary>A short label, an explanation, and whether this is normal behavior rather than a flag.</summary>

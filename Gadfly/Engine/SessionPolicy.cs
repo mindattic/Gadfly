@@ -47,6 +47,21 @@ public sealed record SessionPolicy
     /// <summary>Accessibility accommodation: the time budget is multiplied by this (1 = none, 1.5 = time and a half).</summary>
     public double TimeMultiplier { get; init; } = 1.0;
 
+    /// <summary>
+    /// Whether the recitation check's timing-based read-out pattern (a long, fluent answer after a long silent wait) runs at
+    /// all (GAD-T272). Its false flag rate on honest students is unknown and timing varies with anxiety, language background
+    /// and careful thinking, so an exam can switch it off. The source-overlap half of the check always runs.
+    /// </summary>
+    public bool ReadOutCheck { get; init; } = true;
+
+    /// <summary>
+    /// True when the read-out pattern may flag an answer: <see cref="ReadOutCheck"/> is on and the student has no
+    /// accommodation (an extra-time <see cref="TimeMultiplier"/> above 1 suppresses it, since a slow start is what the
+    /// accommodation is for). GAD-T272.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool ReadOutCheckActive => ReadOutCheck && TimeMultiplier <= 1.0;
+
     /// <summary>Independent supporting answers needed before a level counts as shown (Part 6.3: never one answer).</summary>
     public int MinCorroboratingAnswers { get; init; } = 2;
 
