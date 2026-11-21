@@ -149,7 +149,7 @@ else
 
     @if (draft.Id is { } examId && draft.Status != ExamStatus.Draft)
     {
-        <ExamAssignments @key="examId" Service="svc" ExamId="examId" CanAssign="@(draft.Status == ExamStatus.Published)" />
+        <ExamAssignments @key="examId" Service="svc" Gate="gate" ExamId="examId" CanAssign="@(draft.Status == ExamStatus.Published)" />
     }
 }
 
@@ -158,6 +158,11 @@ else
     [Parameter] public Guid? Id { get; set; }
 
     private ExamService svc = default!;
+    /// <summary>
+    /// The service (and the directory behind it) shares the circuit's DbContext, which allows one operation at a time. The builder's own
+    /// operations and the assignments panel's loads all take this gate, so a save can't overlap the panel reloading on a re-render (GAD-T189).
+    /// </summary>
+    private readonly SemaphoreSlim gate = new(1, 1);
     private ExamDraft? draft;
     private IReadOnlyList<CollectionOption> collections = [];
     private IReadOnlyList<ConceptOption> concepts = [];
@@ -169,6 +174,13 @@ else
     protected override void OnInitialized() => svc = new ExamService(Db, Tenant, Directory, Clock);
 
     protected override async Task OnParametersSetAsync()
+    {
+        await gate.WaitAsync();
+        try { await LoadAsync(); }
+        finally { gate.Release(); }
+    }
+
+    private async Task LoadAsync()
     {
         // New exams are built in the assessment setup (GAD-T85); this builder only opens existing ones.
         if (Id is null)
@@ -200,7 +212,9 @@ else
         if (draft is null) return;
         draft.CollectionId = Guid.TryParse(e.Value?.ToString(), out var g) ? g : Guid.Empty;
         draft.ConceptKeys.Clear();
-        concepts = draft.CollectionId == Guid.Empty ? [] : await svc.ConceptsAsync(draft.CollectionId);
+        await gate.WaitAsync();
+        try { concepts = draft.CollectionId == Guid.Empty ? [] : await svc.ConceptsAsync(draft.CollectionId); }
+        finally { gate.Release(); }
     }
 
     private void ToggleConcept(string key, bool on)
@@ -221,6 +235,7 @@ else
         // One operation at a time: the builder shares the circuit's DbContext, so a second click while one is in flight must wait (GAD-T189).
         if (draft is null || busy) return;
         busy = true;
+        await gate.WaitAsync();
         try
         {
             var r = await svc.SaveDraftAsync(draft);
@@ -238,31 +253,33 @@ else
                 draft = await svc.GetAsync(same) ?? draft;
             }
         }
-        finally { busy = false; }
+        finally { gate.Release(); busy = false; }
     }
 
     private async Task PublishAsync()
     {
         if (draft?.Id is not { } id || busy) return;
         busy = true;
+        await gate.WaitAsync();
         try
         {
             Show(await svc.PublishAsync(id));
             draft = await svc.GetAsync(id) ?? draft;
         }
-        finally { busy = false; }
+        finally { gate.Release(); busy = false; }
     }
 
     private async Task ArchiveAsync()
     {
         if (draft?.Id is not { } id || busy) return;
         busy = true;
+        await gate.WaitAsync();
         try
         {
             Show(await svc.ArchiveAsync(id));
             draft = await svc.GetAsync(id) ?? draft;
         }
-        finally { busy = false; }
+        finally { gate.Release(); busy = false; }
     }
 
     private void Show(ExamResult r)

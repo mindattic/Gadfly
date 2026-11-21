@@ -107,6 +107,11 @@ else
     [Parameter, EditorRequired] public ExamService Service { get; set; } = default!;
     [Parameter, EditorRequired] public Guid ExamId { get; set; }
     [Parameter] public bool CanAssign { get; set; }
+    /// <summary>The builder's gate over the circuit's DbContext (one operation at a time); loads and assigns wait on it (GAD-T189).</summary>
+    [Parameter] public SemaphoreSlim? Gate { get; set; }
+
+    private Guid loadedFor;
+    private bool loadedCanAssign;
 
     private IReadOnlyList<StudentOption>? students;
     private IReadOnlyList<AssignmentRow>? rows;
@@ -122,7 +127,22 @@ else
 
     private string OffsetLabel => offset == TimeSpan.Zero ? "(UTC)" : $"(UTC{(offset < TimeSpan.Zero ? "-" : "+")}{offset.Duration():hh\\:mm})";
 
-    protected override async Task OnParametersSetAsync() => await LoadAsync();
+    protected override async Task OnParametersSetAsync()
+    {
+        // Every parent re-render sets the parameters again: reload only for a different exam or when assigning becomes possible,
+        // never on each render (that overlapped the parent's own saves on the shared DbContext).
+        if (loadedFor == ExamId && (loadedCanAssign || !CanAssign)) return;
+        loadedFor = ExamId;
+        loadedCanAssign = CanAssign;
+        await LoadLockedAsync();
+    }
+
+    private async Task LoadLockedAsync()
+    {
+        if (Gate is { } g) await g.WaitAsync();
+        try { await LoadAsync(); }
+        finally { Gate?.Release(); }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -163,11 +183,14 @@ else
         busy = true;
         try
         {
-            var r = await Service.AssignAsync(ExamId, allStudents ? null : picked.ToList(), ToUtc(opensLocal), ToUtc(closesLocal), attempts, timeMultiplier);
+            ExamResult r;
+            if (Gate is { } g) await g.WaitAsync();
+            try { r = await Service.AssignAsync(ExamId, allStudents ? null : picked.ToList(), ToUtc(opensLocal), ToUtc(closesLocal), attempts, timeMultiplier); }
+            finally { Gate?.Release(); }
             ok = r.Ok;
             message = r.Message;
             if (r.Ok) picked.Clear();
-            await LoadAsync();
+            await LoadLockedAsync();
         }
         finally { busy = false; }
     }
