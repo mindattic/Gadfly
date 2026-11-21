@@ -91,8 +91,20 @@ public sealed class ClaimAnalyzer(ISocraticVotingClient panel, PromptSet prompts
         ArgumentNullException.ThrowIfNull(ledger);
         if (turn.Answer is null || string.IsNullOrWhiteSpace(turn.Answer.Text)) return [];
 
-        var earlier = ledger.Claims.Where(c => c.ConceptId == turn.ConceptId && c.TurnIndex < turn.Index).ToList();
         var extracted = await ExtractAsync(turn, conceptTitle, ct);
+        return await AddClaimsAsync(ledger, turn, extracted, ct);
+    }
+
+    /// <summary>
+    /// Adds claims already extracted elsewhere (the response analysis, GAD-T91) to the ledger and checks them
+    /// against earlier claims on the same concept; returns the new contradictions.
+    /// </summary>
+    public async Task<IReadOnlyList<ClaimContradiction>> AddClaimsAsync(ClaimLedger ledger, Turn turn,
+        IReadOnlyList<(string Quote, string Text)> extracted, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(ledger);
+        if (turn.Answer is null || string.IsNullOrWhiteSpace(turn.Answer.Text)) return [];
+        var earlier = ledger.Claims.Where(c => c.ConceptId == turn.ConceptId && c.TurnIndex < turn.Index).ToList();
         var found = new List<ClaimContradiction>();
         foreach (var (quote, text) in extracted)
         {

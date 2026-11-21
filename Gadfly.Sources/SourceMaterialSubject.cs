@@ -21,7 +21,8 @@ public sealed class SourceMaterialSubject : ISubjectMatter
 
     public string Id => _map.CollectionId;
     public string Title { get; }
-    public PromptSet PromptSet => ExamPrompts.Set;
+    /// <summary>The exam prompt set with the objective-driven prompts merged (GAD-T89..T93; see <see cref="ExamPromptsV3"/>).</summary>
+    public PromptSet PromptSet => ExamPromptsV3.Set;
     public GroundingRetriever Retriever { get; }
     public ConceptMap Map => _map;
 
