@@ -1,0 +1,112 @@
+@* Eye contact with the examiner in the voice interview room (GAD-T240). Runs wwwroot/js/examiner-gaze.js while the talking
+   examiner is on screen: the camera is analysed on the student's device only (MindAttic.Webcam), calibrated on the avatar's
+   on-screen position, and a live indicator says whether the student is looking at the examiner. While they answer, a long look
+   away fades the exam screen with a warning to look back (restored when they do), and a longer one, a reading pattern, no face
+   or a second face makes the examiner ask out loud for eye contact. Each episode is stored as a webcam integrity event with its
+   start and end (WebcamIntegrityRecorder.RecordExaminerGazeAsync), for a person to review; never a frame, never a verdict.
+   Renders nothing for an exam whose integrity level is Off. *@
+@implements IAsyncDisposable
+@using Gadfly.Server.Integrity
+@using Gadfly.Server.Sessions
+@using Gadfly.Server.Voice
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject VoiceGrants Grants
+@inject IJSRuntime JS
+@inject ILogger<ExaminerGaze> Log
+
+<HeadContent><link rel="stylesheet" href="examiner-gaze.css" /></HeadContent>
+
+@if (enabled)
+{
+    <div class="examiner-gaze" data-examiner-gaze data-state="off" role="status" aria-live="polite">
+        <span class="examiner-gaze-dot" aria-hidden="true"></span>
+        <span class="examiner-gaze-label" data-examiner-gaze-label></span>
+        <button type="button" class="link" data-examiner-gaze-action="calibrate" hidden>Set up eye contact again</button>
+    </div>
+    <div class="examiner-fade" data-examiner-fade data-active="false" aria-hidden="true">
+        <p class="examiner-fade-warning">Please look at the examiner.</p>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public Guid SessionId { get; set; }
+
+    private bool enabled, started;
+    private Guid org, user;
+    private IJSObjectReference? module;
+    private DotNetObjectReference<ExaminerGaze>? self;
+    private readonly CancellationTokenSource stop = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || started) return;
+        started = true;
+        if (Tenant.OrganizationId is not { } o || Tenant.UserId is not { } u) return;
+        org = o;
+        user = u;
+        try
+        {
+            await using (var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org)))
+                enabled = await WebcamIntegrityRecorder.Create(scope.ServiceProvider).ExaminerGazeEnabledAsync(org, user, SessionId, stop.Token);
+            if (!enabled) return;
+            await InvokeAsync(StateHasChanged);   // renders the indicator and the fade before the module needs them
+            self = DotNetObjectReference.Create(this);
+            module = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/examiner-gaze.js");
+            await module.InvokeVoidAsync("start", stop.Token, self, new { basePath = "webcam/" });
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
+        {
+            Log.LogDebug(ex, "The eye-contact check did not start for session {SessionId}.", SessionId);
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "The eye-contact check did not start for session {SessionId}.", SessionId);
+        }
+    }
+
+    /// <summary>Called by examiner-gaze.js with finished episodes. False tells the browser to stop sending.</summary>
+    [JSInvokable]
+    public async Task<bool> Record(HubIntegrityEvent[]? events)
+    {
+        if (!enabled || org == Guid.Empty) return false;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
+            return (await WebcamIntegrityRecorder.Create(scope.ServiceProvider).RecordExaminerGazeAsync(org, user, SessionId, events ?? [], stop.Token)).KeepGoing;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Never the student's problem: log and let the browser carry on.
+            Log.LogWarning(ex, "Could not record eye-contact episodes for session {SessionId}.", SessionId);
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// The words the examiner says for an episode (a fixed sentence chosen here, never text from the browser), offered to the
+    /// avatar hub for this student's session. Null when there is nothing to say or voice isn't armed.
+    /// </summary>
+    [JSInvokable]
+    public Task<string?> Remark(string? kind)
+    {
+        if (!enabled || kind is null || !WebcamIntegrityRecorder.ExaminerRemarks.TryGetValue(kind, out var text)) return Task.FromResult<string?>(null);
+        return Task.FromResult(Grants.Offer(user, SessionId, text) ? text : null);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        stop.Cancel();
+        if (module is not null)
+        {
+            try
+            {
+                await module.InvokeVoidAsync("stop");
+                await module.DisposeAsync();
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
+        }
+        self?.Dispose();
+        stop.Dispose();
+    }
+}

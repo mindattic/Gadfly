@@ -1,0 +1,24 @@
+/* Eye contact with the examiner (GAD-T240). Tokens come from app.css; thresholds live in js/examiner-gaze.js (GAZE). */
+.examiner-gaze { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .6rem; margin: 0 0 .75rem; padding: .4rem .75rem; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: .88rem; }
+.examiner-gaze[data-state="off"] { display: none; }
+.examiner-gaze-dot { width: .6rem; height: .6rem; border-radius: 50%; background: var(--line); flex: none; }
+.examiner-gaze[data-state="on"] { color: var(--ink); }
+.examiner-gaze[data-state="on"] .examiner-gaze-dot { background: var(--ok); }
+.examiner-gaze[data-state="calibrating"] .examiner-gaze-dot { background: var(--accent); }
+.examiner-gaze:is([data-state="away"], [data-state="reading"], [data-state="no-face"], [data-state="two-faces"]) { color: var(--error); border-color: var(--error); }
+.examiner-gaze:is([data-state="away"], [data-state="reading"], [data-state="no-face"], [data-state="two-faces"]) .examiner-gaze-dot { background: var(--error); }
+.examiner-gaze button[hidden] { display: none; }
+/* Calibration: the examiner's face is the spot to look at. */
+.voice-stage[data-gaze-calibrating] { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* The fade: the whole exam screen dims and blurs while the student looks away from the examiner while answering. Its opacity is
+   driven by examiner-gaze.js (0 = clear, 1 = the heaviest); it never takes clicks. */
+.examiner-fade {
+    position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; pointer-events: none; opacity: 0;
+    background: rgba(10, 12, 16, var(--fade-dim, .85));
+    backdrop-filter: blur(var(--fade-blur, 12px)); -webkit-backdrop-filter: blur(var(--fade-blur, 12px));
+    transition: opacity var(--fade-ms, 100ms) linear;
+}
+.examiner-fade[data-active="false"] { visibility: hidden; transition: opacity var(--fade-ms, 600ms) ease-out, visibility 0s linear var(--fade-ms, 600ms); }
+.examiner-fade-warning { margin: 0; padding: .9rem 1.3rem; border-radius: var(--radius); background: rgba(16, 21, 29, .9); color: #f3f4f6; font-size: 1.35rem; font-weight: 600; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .examiner-fade { transition: none; } }

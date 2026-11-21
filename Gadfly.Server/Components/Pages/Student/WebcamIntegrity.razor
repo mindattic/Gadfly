@@ -14,6 +14,10 @@
 
 <HeadContent><link rel="stylesheet" href="webcam.css" /></HeadContent>
 
+@* Eye contact with the talking examiner (GAD-T240): its own camera use, any exam whose integrity level isn't Off, active only
+   while the voice interview room's examiner is on screen. Hosted here, with the other camera checks of the exam room. *@
+<ExaminerGaze SessionId="SessionId" />
+
 @if (shown)
 {
     <div class="webcam-indicator webcam-@state" role="status" aria-live="polite" data-webcam-state="@state">

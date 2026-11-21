@@ -32,6 +32,27 @@ screens are untouched.
   answer as `ResponseDelayMs` for display only: it is never scored or stored (the stored `timeToFirstWordSeconds` is still
   recomputed from the words on the server).
 
+## Eye contact with the examiner (GAD-T240)
+
+`ExaminerGaze` (hosted by `WebcamIntegrity` in the exam room, `wwwroot/js/examiner-gaze.js`) runs while the talking examiner
+is on screen, for any exam whose integrity level isn't Off. It uses its own camera stream, analysed on the device only by
+MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, image or landmark leaves the browser.
+
+- **Calibration.** When it starts (and on **Set up eye contact again**), the examiner's stage is outlined and the student is
+  asked to look at the examiner's face; that direction becomes "looking at the examiner". The allowed region is sized from the
+  avatar's on-screen size.
+- **Live indicator.** "Looking at the examiner", "Looking away from the examiner", reading, no face, or more than one face.
+- **While answering** (the avatar is listening): after `fadeStartMs` (2 s) of continuous look-away the whole exam screen starts
+  fading toward a heavy dim and blur over `fadeRampMs` (3 s) with "Please look at the examiner", and restores smoothly
+  (`fadeRestoreMs`) when the gaze returns. After `remarkAfterMs` (5 s), or at once for a reading pattern, no face or a second
+  face, the examiner says so out loud ("Please look at me while you answer"), at most once per `remarkGapMs` (15 s). The words
+  are fixed server-side (`WebcamIntegrityRecorder.ExaminerRemarks`) and offered to the avatar hub like any question.
+- **Recorded for review.** Each episode is a webcam integrity event with start and end: `examiner-look-away`,
+  `examiner-reading`, `examiner-face-absent`, `examiner-second-face`, and `examiner-fade` (with its peak). Summaries are
+  written by the server (the browser sends only "remarked" or "peak:NN"); confidence at most 0.4, severity at most Low, never
+  a penalty (`WebcamIntegrityRecorder.RecordExaminerGazeAsync`).
+- All thresholds are in one place: the `GAZE` object at the top of `examiner-gaze.js`.
+
 ## How an answer flows
 
 1. `voice-room.js` opens the microphone from the click (hands-free voice activity detection, or hold-to-talk), streams

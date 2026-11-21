@@ -58,11 +58,29 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
     /// <summary>Longest span an event may claim (a face missing for the whole exam is still one honest span).</summary>
     private static readonly TimeSpan MaxSpan = TimeSpan.FromHours(4);
 
-    /// <summary>The types the library emits for the record (setup-quality hints stay on the device) plus the neutral "no camera" note.</summary>
-    public static readonly IReadOnlySet<string> Types = new HashSet<string>(StringComparer.Ordinal)
+    /// <summary>
+    /// The voice interview room's eye-contact episodes (GAD-T240): while the student is answering, the camera, analysed
+    /// on the device, checks that they are looking at the examiner's face. Each is a span with a start and an end, recorded from any
+    /// exam whose integrity level isn't Off (the voice-mode notice says camera checks run on the device and send short notes).
+    /// </summary>
+    public static readonly IReadOnlySet<string> ExaminerTypes = new HashSet<string>(StringComparer.Ordinal)
     {
-        "face-absent", "multiple-faces", "identity-drift", "gaze-off-screen", "thinking-glance", "reading-pattern", UnavailableType,
+        "examiner-look-away", "examiner-reading", "examiner-face-absent", "examiner-second-face", "examiner-fade",
     };
+
+    /// <summary>What the examiner says out loud when an eye-contact episode starts while the student answers (GAD-T240).</summary>
+    public static readonly IReadOnlyDictionary<string, string> ExaminerRemarks = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["look-away"] = "Please look at me while you answer.",
+        ["reading"] = "Please look at me while you answer, rather than reading.",
+        ["face-absent"] = "I can't see your face. Please come back into view while you answer.",
+        ["second-face"] = "I can see someone else on camera. Please make sure you are answering on your own.",
+    };
+
+    /// <summary>The types the library emits for the record (setup-quality hints stay on the device) plus the neutral "no camera" note.</summary>
+    public static readonly IReadOnlySet<string> Types = new HashSet<string>(
+        new[] { "face-absent", "multiple-faces", "identity-drift", "gaze-off-screen", "thinking-glance", "reading-pattern", UnavailableType }
+            .Concat(ExaminerTypes), StringComparer.Ordinal);
 
     /// <summary>Why the camera was not used, as the browser reports it; each maps to a fixed, neutral sentence.</summary>
     public static readonly IReadOnlyDictionary<string, string> UnavailableReasons = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -111,7 +129,33 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
     /// Validates and stores a batch. KeepGoing is false when the client should stop sending (not the student's
     /// session, exam not watching by camera, session over); true otherwise, even when some events were dropped.
     /// </summary>
-    public async Task<WebcamRecordResult> RecordAsync(Guid organizationId, Guid studentUserId, Guid sessionId, IReadOnlyList<HubIntegrityEvent>? events, CancellationToken ct = default)
+    public Task<WebcamRecordResult> RecordAsync(Guid organizationId, Guid studentUserId, Guid sessionId, IReadOnlyList<HubIntegrityEvent>? events, CancellationToken ct = default) =>
+        RecordCoreAsync(organizationId, studentUserId, sessionId, events, examinerRoom: false, ct);
+
+    /// <summary>
+    /// Whether the voice interview room should check eye contact with the examiner (GAD-T240): the session is the student's and
+    /// the exam's integrity level isn't Off. The checks run on the device; only <see cref="ExaminerTypes"/> episodes are sent.
+    /// </summary>
+    public async Task<bool> ExaminerGazeEnabledAsync(Guid organizationId, Guid studentUserId, Guid sessionId, CancellationToken ct = default)
+    {
+        var examId = await db.ExamSessions.AsNoTracking()
+            .Where(x => x.Id == sessionId && x.OrganizationId == organizationId && x.StudentUserId == studentUserId)
+            .Select(x => (Guid?)x.ExamId).FirstOrDefaultAsync(ct);
+        if (examId is null) return false;
+        var level = await db.Exams.AsNoTracking().Where(e => e.Id == examId && e.OrganizationId == organizationId)
+            .Select(e => (IntegrityLevel?)e.IntegrityLevel).FirstOrDefaultAsync(ct);
+        return level is { } l && l != IntegrityLevel.Off;
+    }
+
+    /// <summary>
+    /// Stores the voice interview room's eye-contact episodes (GAD-T240): only <see cref="ExaminerTypes"/>, with the same
+    /// bounds, rate limits, cap, confidence ceiling and server-decided severity as every webcam event; any exam whose
+    /// integrity level isn't Off. KeepGoing is false when the client should stop sending.
+    /// </summary>
+    public Task<WebcamRecordResult> RecordExaminerGazeAsync(Guid organizationId, Guid studentUserId, Guid sessionId, IReadOnlyList<HubIntegrityEvent>? events, CancellationToken ct = default) =>
+        RecordCoreAsync(organizationId, studentUserId, sessionId, events, examinerRoom: true, ct);
+
+    private async Task<WebcamRecordResult> RecordCoreAsync(Guid organizationId, Guid studentUserId, Guid sessionId, IReadOnlyList<HubIntegrityEvent>? events, bool examinerRoom, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
         var session = await db.ExamSessions.AsNoTracking()
@@ -124,7 +168,9 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         if (!accepting) return new(false, 0);
         var level = await db.Exams.AsNoTracking().Where(e => e.Id == session.ExamId && e.OrganizationId == organizationId)
             .Select(e => (IntegrityLevel?)e.IntegrityLevel).FirstOrDefaultAsync(ct);
-        if (level != IntegrityLevel.Strict) return new(false, 0);
+        if (examinerRoom ? level is null or IntegrityLevel.Off : level != IntegrityLevel.Strict) return new(false, 0);
+        // The camera integrity checks (Strict) don't store the interview room's types, and the interview room stores nothing else.
+        events = events?.Where(e => e is not null && ExaminerTypes.Contains((e.Type ?? "").Trim()) == examinerRoom).ToList();
         if (events is null || events.Count == 0) return new(session.State != SessionState.Ended, 0);
 
         var windowStart = session.StartedAt ?? session.ConsentRecordedAt ?? session.CreatedAt;
@@ -306,6 +352,33 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         };
     }
 
+    /// <summary>
+    /// Plain words for an eye-contact episode in the voice interview room (GAD-T240), written by the server from the type, how
+    /// long it lasted and whether the examiner spoke up (the browser sends only the code "remarked"). Never a verdict.
+    /// </summary>
+    public static string ExaminerSummary(string type, TimeSpan span, bool remarked, int? fadePeakPercent = null)
+    {
+        var so = span.TotalMinutes >= 1 ? $"{(int)span.TotalMinutes} min {span.Seconds} s" : $"{Math.Max(0, (int)Math.Round(span.TotalSeconds))} s";
+        var said = remarked ? " The examiner asked out loud for eye contact." : "";
+        return type switch
+        {
+            "examiner-look-away" => $"Looked away from the examiner for {so} while answering.{said} Looking away can be thinking; read it with the answer given.",
+            "examiner-reading" => $"Eye movement like reading, away from the examiner, for {so} while answering.{said} It can have other explanations (re-reading the transcript on screen); check it against the answer.",
+            "examiner-face-absent" => $"No face in view for {so} while answering.{said} Often harmless (leaning out of frame, the camera moved); check whether the answer continued.",
+            "examiner-second-face" => $"More than one face in view for {so} while answering.{said} It may be a person, a photo or a reflection.",
+            "examiner-fade" => $"The exam screen dimmed for {so} (at most {fadePeakPercent ?? 0}% faded) because the student looked away from the examiner while answering, with a warning to look back; it cleared when they did.",
+            _ => $"Camera event \"{type}\" for {so}.",
+        };
+    }
+
+    /// <summary>The fade episode's peak (GAD-T240): the browser sends only the code "peak:NN", NN a whole percent 0..100.</summary>
+    public static int? FadePeakOf(string? summary)
+    {
+        var s = ReasonOf(summary);
+        return s.StartsWith("peak:", StringComparison.Ordinal) && int.TryParse(s.AsSpan(5), System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture, out var n) ? Math.Clamp(n, 0, 100) : null;
+    }
+
     /// <summary>An event after validation: allow-listed type, bounded text and times, server-decided confidence and severity.</summary>
     public sealed record Clean(string Type, DateTimeOffset Start, DateTimeOffset? End, double Confidence, IntegritySeverity Severity, string Summary,
         string? EpisodeKey = null, bool Ongoing = false)
@@ -344,6 +417,7 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
                 ? UnavailableReasons.GetValueOrDefault(ReasonOf(e.Summary), UnavailableReasons["error"])
                 : Text(e.Summary, MaxSummary);
             if (ongoing) summary = PartialSummary(type, span);
+            if (ExaminerTypes.Contains(type)) summary = ExaminerSummary(type, span, ReasonOf(e.Summary) == "remarked", FadePeakOf(e.Summary));
             if (summary.Length == 0) summary = IntegrityExplanationsFallback(type);
             var key = PartialTypes.Contains(type) ? KeyOf(type, sentStart, e.EpisodeId) : null;
             return new Clean(type, start, type == UnavailableType ? null : end, confidence, SeverityOf(type, span), summary, key, ongoing);
@@ -362,6 +436,9 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         "thinking-glance" or UnavailableType => IntegritySeverity.Info,
         "reading-pattern" or "identity-drift" => IntegritySeverity.Low,
         "face-absent" or "multiple-faces" or "gaze-off-screen" => span >= TimeSpan.FromSeconds(15) ? IntegritySeverity.Low : IntegritySeverity.Info,
+        "examiner-reading" or "examiner-second-face" => IntegritySeverity.Low,
+        "examiner-fade" => IntegritySeverity.Info,
+        "examiner-look-away" or "examiner-face-absent" => span >= TimeSpan.FromSeconds(10) ? IntegritySeverity.Low : IntegritySeverity.Info,
         _ => IntegritySeverity.Info,
     };
 
