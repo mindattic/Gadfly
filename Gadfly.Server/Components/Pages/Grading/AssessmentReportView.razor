@@ -6,6 +6,10 @@
     {
         <p class="gr-banner mock"><span class="gr-mock">MOCK</span> AI scores in this report come from the mock panel, not a genuine AI evaluation.</p>
     }
+    @if (Report.IsFormative)
+    {
+        <p class="gr-banner warn">Formative scores: @Report.ScoreUseReason</p>
+    }
     @if (!Report.IsApproved)
     {
         <p class="gr-banner warn">Preliminary: this grade has not been approved and is not a final grade.</p>
@@ -22,7 +26,7 @@
     <h2 class="gr-section">Learning objectives</h2>
     <div class="gr-table-wrap">
         <table class="grid">
-            <thead><tr><th>Objective</th><th>Max</th><th>Weight</th><th>AI score</th><th>Human score</th><th>Combined</th></tr></thead>
+            <thead><tr><th>Objective</th><th>Max</th><th>Weight</th><th>AI score</th><th>Human score</th><th>Combined</th>@if (ShowFollowUps) { <th>Follow-ups</th> }</tr></thead>
             <tbody>
                 @foreach (var o in Report.Objectives)
                 {
@@ -33,6 +37,7 @@
                         <td>@(o.AiExcluded ? "insufficient evidence" : o.AiScore?.ToString("0.##") ?? "—")@if (o.AiIsMock) { <text> </text><span class="gr-mock">MOCK</span> }</td>
                         <td>@(o.HumanScore?.ToString("0.##") ?? "—")</td>
                         <td>@(o.Combined?.ToString("0.##") ?? "—")</td>
+                        @if (ShowFollowUps) { <td>@Report.FollowUps.GetValueOrDefault(o.Key)</td> }
                     </tr>
                 }
             </tbody>
@@ -86,4 +91,7 @@
 
 @code {
     [Parameter, EditorRequired] public AssessmentReport Report { get; set; } = default!;
+
+    /// <summary>Reviewers see how many follow-ups each objective got (GAD-T267); students do not.</summary>
+    private bool ShowFollowUps => !Report.ForStudent && Report.FollowUps.Count > 0;
 }

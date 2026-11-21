@@ -68,6 +68,14 @@ public sealed record SessionPolicy
     /// <summary>Learning Mode: most hints or guided explanations per objective.</summary>
     public int MaxAssistsPerObjective { get; init; } = 2;
 
+    /// <summary>
+    /// Fewest objectives an Examination session must actually examine before its per-objective scores are reported as
+    /// summative (GAD-T267). Oral-exam reliability comes from sampling many content areas, not from one long thread
+    /// (research note 02: Wass2003, VanderVleuten2010), so a session that examined fewer is labelled formative. No source
+    /// gives an exact count: 4 is a starting floor the instructor can raise or lower.
+    /// </summary>
+    public int MinSummativeObjectives { get; init; } = ExamObjectives.DefaultMinSummativeObjectives;
+
     /// <summary>The budget the session actually runs under: <see cref="TimeBudget"/> times <see cref="TimeMultiplier"/>.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public TimeSpan EffectiveTimeBudget => TimeSpan.FromTicks((long)(TimeBudget.Ticks * Math.Max(1.0, TimeMultiplier)));
@@ -82,6 +90,7 @@ public sealed record SessionPolicy
             throw new ArgumentException("TimeMultiplier must be between 1 and 4.");
         if (MinCorroboratingAnswers is < 2 or > 5) throw new ArgumentException("MinCorroboratingAnswers must be 2 to 5.");
         if (MaxAssistsPerObjective is < 0 or > 5) throw new ArgumentException("MaxAssistsPerObjective must be 0 to 5.");
+        if (MinSummativeObjectives is < 1 or > 50) throw new ArgumentException("MinSummativeObjectives must be 1 to 50.");
         var keys = Objectives.Select(o => o.Key).ToList();
         if (keys.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Every objective needs a key.");
         if (keys.Distinct(StringComparer.Ordinal).Count() != keys.Count) throw new ArgumentException("Objective keys must be unique.");

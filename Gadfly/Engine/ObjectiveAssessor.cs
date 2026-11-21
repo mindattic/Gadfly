@@ -46,6 +46,8 @@ public sealed record ObjectiveAssessment
     /// <summary>Learning Mode: the level including answers given after hints or explanations; null when none were given.</summary>
     public MasteryLevel? AssistedLevel { get; init; }
     public int Questions { get; init; }
+    /// <summary>Follow-up questions after the opening one (GAD-T267): reported so thread length never silently becomes a score.</summary>
+    public int FollowUps { get; init; }
     public int IndependentAnswers { get; init; }
     public int SupportingAnswers { get; init; }
     public int ContradictingAnswers { get; init; }
@@ -331,6 +333,7 @@ public static class ObjectiveAssessor
             ProvisionalLevel = provisional,
             AssistedLevel = assistedLevel,
             Questions = turns.Count,
+            FollowUps = turns.Count(t => MoveProfiles.IsFollowUp(t.Move)),
             IndependentAnswers = independent.Count,
             SupportingAnswers = independent.Count(o => o.Result == AnswerResult.Positive),
             ContradictingAnswers = independent.Count(o => o.Result == AnswerResult.Negative),

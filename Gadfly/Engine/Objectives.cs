@@ -57,6 +57,29 @@ public static class ExamObjectives
 
     /// <summary>The objective a turn belongs to (older transcripts have none recorded: their concept is the objective).</summary>
     public static string KeyOf(Turn turn) => turn.ObjectiveKey ?? turn.ConceptId;
+
+    /// <summary>Default for <see cref="SessionPolicy.MinSummativeObjectives"/> (GAD-T267).</summary>
+    public const int DefaultMinSummativeObjectives = 4;
+
+    public const string Summative = "summative";
+    public const string Formative = "formative";
+
+    /// <summary>
+    /// Whether a session's per-objective scores may be used summatively (GAD-T267). Learning Mode is always formative.
+    /// An examination that examined fewer than <see cref="SessionPolicy.MinSummativeObjectives"/> objectives is formative
+    /// too: one short oral samples too little content to be reliable whatever the scorers (research note 02).
+    /// </summary>
+    public static (string Use, string Reason) ScoreUse(SessionPolicy policy, int objectivesExamined)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        if (policy.Mode == AssessmentMode.Learning)
+            return (Formative, "Learning Mode session: scores include help given and are for practice, not grading.");
+        var min = Math.Max(1, policy.MinSummativeObjectives);
+        if (objectivesExamined < min)
+            return (Formative, $"Only {objectivesExamined} of the minimum {min} objectives were examined. One short oral samples too " +
+                               "little content for a reliable grade, so treat these per-objective scores as formative feedback.");
+        return (Summative, $"{objectivesExamined} objectives examined (minimum {min} for summative use).");
+    }
 }
 
 /// <summary>
@@ -96,6 +119,12 @@ public static class MoveProfiles
         MoveKind.Contradiction => [AssessmentDimension.Consistency],
         _ => [],
     };
+
+    /// <summary>
+    /// True for a follow-up question: any examining move after the objective's opening Elicit (not Close, and not Learning
+    /// Mode's hints). Counted per objective so a long thread is visible to reviewers instead of quietly shaping a score (GAD-T267).
+    /// </summary>
+    public static bool IsFollowUp(MoveKind move) => move is not (MoveKind.Elicit or MoveKind.Close) && !IsAssistance(move);
 
     /// <summary>True for Learning Mode's instruction moves: what follows them is assisted evidence.</summary>
     public static bool IsAssistance(MoveKind move) => move is MoveKind.Hint or MoveKind.GuidedExplanation;

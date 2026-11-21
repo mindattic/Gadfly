@@ -38,6 +38,10 @@ public sealed record ObjectiveReport
     /// <summary>Learning Mode: the level including answers after assistance (reported separately).</summary>
     public int? AssistedLevel { get; init; }
     public int Questions { get; init; }
+    /// <summary>Follow-up questions after the opening one (GAD-T267), so a reviewer sees how hard each objective was probed.</summary>
+    public int FollowUps { get; init; }
+    /// <summary>True when this score is formative only: see <see cref="SessionReport.ScoreUse"/> (GAD-T267).</summary>
+    public bool Formative { get; init; }
     public int IndependentAnswers { get; init; }
     public int SupportingAnswers { get; init; }
     public int ContradictingAnswers { get; init; }
@@ -65,6 +69,7 @@ public sealed record ObjectiveReport
         ProvisionalLevel = (int)a.ProvisionalLevel,
         AssistedLevel = a.AssistedLevel is { } al ? (int)al : null,
         Questions = a.Questions,
+        FollowUps = a.FollowUps,
         IndependentAnswers = a.IndependentAnswers,
         SupportingAnswers = a.SupportingAnswers,
         ContradictingAnswers = a.ContradictingAnswers,
@@ -106,6 +111,17 @@ public sealed record SessionReport
     public IReadOnlyList<ObjectiveReport> Objectives { get; init; } = [];
     /// <summary>"Examination" or "Learning": learning-session evidence is never examination evidence (Part 3).</summary>
     public string Mode { get; init; } = nameof(Gadfly.Assessment.AssessmentMode.Examination);
+    /// <summary>
+    /// "summative" or "formative" (GAD-T267): a Learning session, or an examination that examined fewer objectives than
+    /// the policy's minimum, gives formative per-objective scores. Reports made before GAD-T267 read as summative.
+    /// </summary>
+    public string ScoreUse { get; init; } = ExamObjectives.Summative;
+    /// <summary>Why <see cref="ScoreUse"/> is what it is, in plain words.</summary>
+    public string ScoreUseReason { get; init; } = "";
+    /// <summary>Objectives that received at least one question.</summary>
+    public int ObjectivesExamined { get; init; }
+    /// <summary>The policy's <see cref="SessionPolicy.MinSummativeObjectives"/> when the report was made.</summary>
+    public int MinSummativeObjectives { get; init; }
 
     public const string Mastered = "mastered";
     public const string Partial = "partial";
@@ -183,6 +199,14 @@ public sealed record SessionReport
             : NotDemonstrated;
 
         var judgedTurns = session.Turns.Where(t => t.Judgment is not null).ToList();
+        var objectiveReports = (objectives ?? ObjectiveAssessor.AssessAll(session, ExamObjectives.Resolve(p, conceptIds,
+                id => conceptTitles is not null && conceptTitles.TryGetValue(id, out var t) ? t : id)))
+            .Select(ObjectiveReport.From).ToList();
+        var objectivesExamined = objectiveReports.Count > 0
+            ? objectiveReports.Count(o => o.Questions > 0)
+            : session.Turns.Select(ExamObjectives.KeyOf).Distinct(StringComparer.Ordinal).Count();
+        var (scoreUse, scoreUseReason) = ExamObjectives.ScoreUse(p, objectivesExamined);
+        var formative = scoreUse == ExamObjectives.Formative;
         return new SessionReport
         {
             SessionId = session.Id,
@@ -196,10 +220,12 @@ public sealed record SessionReport
             Concepts = concepts,
             TurnsJudged = judgedTurns.Count,
             TurnsNeedingReview = judgedTurns.Count(t => t.Judgment!.NeedsHumanReview),
-            Objectives = (objectives ?? ObjectiveAssessor.AssessAll(session, ExamObjectives.Resolve(p, conceptIds,
-                    id => conceptTitles is not null && conceptTitles.TryGetValue(id, out var t) ? t : id)))
-                .Select(ObjectiveReport.From).ToList(),
+            Objectives = objectiveReports.Select(o => o with { Formative = formative }).ToList(),
             Mode = p.Mode.ToString(),
+            ScoreUse = scoreUse,
+            ScoreUseReason = scoreUseReason,
+            ObjectivesExamined = objectivesExamined,
+            MinSummativeObjectives = p.MinSummativeObjectives,
         };
     }
 
@@ -224,7 +250,9 @@ public sealed record SessionReport
         if (Objectives.Count > 0)
         {
             sb.AppendLine($"## Learning objectives ({Mode} mode)").AppendLine();
-            sb.AppendLine("| Objective | Level | Status | Questions | Independent answers | Notes |").AppendLine("|---|---|---|---|---|---|");
+            if (ScoreUse == ExamObjectives.Formative)
+                sb.AppendLine($"> **Formative scores.** {ScoreUseReason}").AppendLine();
+            sb.AppendLine("| Objective | Level | Status | Questions | Follow-ups | Independent answers | Notes |").AppendLine("|---|---|---|---|---|---|---|");
             foreach (var o in Objectives)
             {
                 var notes = new List<string>();
@@ -233,7 +261,7 @@ public sealed record SessionReport
                 if (o.ContaminatedAnswers > 0) notes.Add($"{o.ContaminatedAnswers} contaminated answer(s) excluded");
                 if (!o.Consistent) notes.Add("inconsistent claims");
                 if (o.UnresolvedMisconceptions.Count > 0) notes.Add("misconception: " + string.Join("; ", o.UnresolvedMisconceptions));
-                sb.AppendLine($"| {Escape(o.Title)} | {o.Level} {o.LevelLabel} | {o.Status} | {o.Questions} | {o.IndependentAnswers} | {Escape(string.Join("; ", notes))} |");
+                sb.AppendLine($"| {Escape(o.Title)} | {o.Level} {o.LevelLabel} | {o.Status} | {o.Questions} | {o.FollowUps} | {o.IndependentAnswers} | {Escape(string.Join("; ", notes))} |");
             }
             sb.AppendLine();
             foreach (var o in Objectives.Where(o => o.Status == "inconclusive"))

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Gadfly.Assessment;
+using Gadfly.Engine;
 using Gadfly.Server.Data;
 using Gadfly.Sources.Grading;
 
@@ -38,6 +39,18 @@ public sealed record AssessmentReport
     public required bool IsMock { get; init; }
     public required bool ForStudent { get; init; }
     public required bool IsApproved { get; init; }
+    /// <summary>
+    /// "summative" or "formative" (GAD-T267): a Learning session, or an examination that examined fewer objectives than its
+    /// policy's minimum, gives formative per-objective scores. One short oral samples too little content to grade reliably.
+    /// </summary>
+    public string ScoreUse { get; init; } = ExamObjectives.Summative;
+    public string ScoreUseReason { get; init; } = "";
+    public bool IsFormative => ScoreUse == ExamObjectives.Formative;
+    /// <summary>
+    /// Reviewers only: follow-up questions each objective received after its opening one, by objective key (GAD-T267), so a
+    /// long thread is seen rather than silently shaping a score. Empty for students and when the transcript is gone.
+    /// </summary>
+    public IReadOnlyDictionary<string, int> FollowUps { get; init; } = new Dictionary<string, int>();
 
     /// <summary>An objective scoring below this share of its maximum is reported as a knowledge gap.</summary>
     public const decimal GapBelowPercent = 60m;
@@ -77,6 +90,9 @@ public sealed record AssessmentReport
         }
 
         var p = w.Policy.Rules;
+        var (followUps, examined) = ThreadLengths(w.Session);
+        var sessionPolicy = GradingJson.Read<SessionPolicy>(w.Session.PolicyJson) ?? new SessionPolicy();
+        var (scoreUse, scoreUseReason) = ExamObjectives.ScoreUse(sessionPolicy, examined ?? w.Objectives.Count);
         return new AssessmentReport
         {
             SessionId = w.Session.Id, StudentName = w.StudentName, ExamTitle = w.ExamTitle, Attempt = w.Session.Attempt, EndedAt = w.Session.EndedAt,
@@ -91,6 +107,7 @@ public sealed record AssessmentReport
             Appeals = w.Appeals.Select(a => $"{When(a.Appeal.OpenedAt)} · appeal {a.Appeal.State.ToString().ToLowerInvariant()}" +
                                             (a.Appeal.Resolution is { } r ? $": {r}" : "")).ToList(),
             IsMock = w.AiVisible && w.AnyMock, ForStudent = forStudent, IsApproved = w.HasFinalizeApproval,
+            ScoreUse = scoreUse, ScoreUseReason = scoreUseReason, FollowUps = forStudent ? new Dictionary<string, int>() : followUps,
         };
     }
 
@@ -110,10 +127,13 @@ public sealed record AssessmentReport
         sb.AppendLine();
         sb.AppendLine("## Learning objectives");
         sb.AppendLine();
-        sb.AppendLine("| Objective | Max | Weight | AI | Human | Combined | Agreement |");
-        sb.AppendLine("|---|---|---|---|---|---|---|");
+        if (IsFormative) sb.AppendLine($"> **Formative scores**: {ScoreUseReason}").AppendLine();
+        var showFollowUps = !ForStudent && FollowUps.Count > 0;
+        sb.AppendLine("| Objective | Max | Weight | AI | Human | Combined | Agreement |" + (showFollowUps ? " Follow-ups |" : ""));
+        sb.AppendLine("|---|---|---|---|---|---|---|" + (showFollowUps ? "---|" : ""));
         foreach (var o in Objectives)
-            sb.AppendLine($"| {Cell(o.Title)} | {N(o.MaxScore)} | {N(o.Weight)} | {(o.AiExcluded ? "insufficient evidence" : N(o.AiScore))}{(o.AiIsMock ? " (MOCK)" : "")} | {N(o.HumanScore)} | {N(o.Combined)} | {o.Band ?? ""} |");
+            sb.AppendLine($"| {Cell(o.Title)} | {N(o.MaxScore)} | {N(o.Weight)} | {(o.AiExcluded ? "insufficient evidence" : N(o.AiScore))}{(o.AiIsMock ? " (MOCK)" : "")} | {N(o.HumanScore)} | {N(o.Combined)} | {o.Band ?? ""} |" +
+                          (showFollowUps ? $" {FollowUps.GetValueOrDefault(o.Key)} |" : ""));
         foreach (var o in Objectives)
         {
             sb.AppendLine().AppendLine($"### {o.Title}");
@@ -156,6 +176,24 @@ public sealed record AssessmentReport
         var clean = new string(raw.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '-').ToArray()).Trim('-');
         while (clean.Contains("--")) clean = clean.Replace("--", "-");
         return clean.Length == 0 ? SessionId.ToString("N") : clean[..Math.Min(clean.Length, 90)];
+    }
+
+    /// <summary>
+    /// Follow-up questions per objective key and the number of objectives examined, from the session's transcript
+    /// (GAD-T267); null examined when there is no readable transcript.
+    /// </summary>
+    private static (IReadOnlyDictionary<string, int> FollowUps, int? Examined) ThreadLengths(ExamSession session)
+    {
+        if (string.IsNullOrWhiteSpace(session.TranscriptJson)) return (new Dictionary<string, int>(), null);
+        try
+        {
+            var turns = SessionTranscriptSerializer.Deserialize(session.TranscriptJson).Turns.GroupBy(ExamObjectives.KeyOf, StringComparer.Ordinal).ToList();
+            return (turns.ToDictionary(g => g.Key, g => g.Count(t => MoveProfiles.IsFollowUp(t.Move)), StringComparer.Ordinal), turns.Count);
+        }
+        catch (Exception e) when (e is System.Text.Json.JsonException or NotSupportedException or ArgumentException or InvalidOperationException)
+        {
+            return (new Dictionary<string, int>(), null);
+        }
     }
 
     public static string Pct(decimal v) => v.ToString("0.##", CultureInfo.InvariantCulture) + "%";
