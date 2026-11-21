@@ -71,6 +71,14 @@ public sealed class SqlSourceStore(GadflyDbContext db, Guid organizationId, Guid
         db.ChangeTracker.Clear();
         await using var tx = await db.Database.BeginTransactionAsync(ct);
 
+        // Concepts cite passages by chunk id (a foreign key, no cascade): lift the citations of this document's chunks first,
+        // and put back the ones whose chunk id exists again (ids are stable per document and ordinal) after the new chunks are in (GAD-T187).
+        var cited = await db.ConceptCitations.AsNoTracking()
+            .Where(c => c.OrganizationId == organizationId && db.SourceChunks.Any(ch => ch.Id == c.ChunkId && ch.DocumentId == docGuid))
+            .Select(c => new { c.ConceptId, c.ChunkId, c.Quote }).ToListAsync(ct);
+        if (cited.Count > 0)
+            await db.ConceptCitations.Where(c => c.OrganizationId == organizationId && db.SourceChunks.Any(ch => ch.Id == c.ChunkId && ch.DocumentId == docGuid))
+                .ExecuteDeleteAsync(ct);
         await db.SourceChunks.Where(ch => ch.DocumentId == docGuid && ch.OrganizationId == organizationId).ExecuteDeleteAsync(ct);
         var doc = await db.SourceDocuments.FirstOrDefaultAsync(d => d.Id == docGuid && d.OrganizationId == organizationId, ct);
         if (doc is null)
@@ -106,6 +114,9 @@ public sealed class SqlSourceStore(GadflyDbContext db, Guid organizationId, Guid
                 Embedding = p.Embedding is null ? null : ToBytes(p.Embedding),
             });
         }
+        var newChunkIds = passages.Select(p => StableGuid($"{docGuid:N}/{p.Ordinal}")).ToHashSet();
+        foreach (var c in cited.Where(c => newChunkIds.Contains(c.ChunkId)))
+            db.ConceptCitations.Add(new ConceptCitation { OrganizationId = organizationId, ConceptId = c.ConceptId, ChunkId = c.ChunkId, Quote = c.Quote });
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         });
