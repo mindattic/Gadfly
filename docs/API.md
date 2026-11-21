@@ -25,14 +25,16 @@ Authorization: Bearer gfk_3f9a1c07_q2mJ0b4Xw6...
 | Storage | Only a SHA-256 hash is stored. The key is shown once at creation. |
 | Refused | A missing, unknown or revoked key, or a key of a deactivated organization: `401 Unauthorized` with no body. |
 
-There is no screen or endpoint to create keys yet; the organization admin console will add one. Until
-then MindAttic staff issue keys. See the [Admin guide](guides/ADMIN_GUIDE.md#api-keys).
+Organization admins create and revoke keys at `/org/api-keys` in the admin console. See the
+[Admin guide](guides/ADMIN_GUIDE.md#api-keys).
 
 ## Endpoints
 
 | Method | Path | Does |
 |---|---|---|
+| GET | `/api/v1/collections` | List source collections |
 | POST | `/api/v1/collections` | Create a source collection |
+| GET | `/api/v1/collections/{id}` | One collection: status, documents, concept map version |
 | POST | `/api/v1/collections/{id}/documents` | Upload documents (multipart) |
 | POST | `/api/v1/collections/{id}/process` | Queue processing |
 | GET | `/api/v1/jobs/{id}` | Processing job status |
@@ -63,7 +65,79 @@ Ids are GUIDs. Times are ISO 8601 with an offset (UTC).
 { "id": "6b1f0a52-7c1e-4a43-9d8e-2f1c5b7e9a10", "title": "Biology 101: cells" }
 ```
 
-`400` `{ "error": "title is required" }` when the title is blank.
+`400` `{ "error": "title is required" }` when the title is missing or blank, or
+`{ "error": "title must be at most 300 characters" }`. The title is trimmed.
+
+### List collections
+
+`GET /api/v1/collections`
+
+```json
+[
+  {
+    "id": "6b1f0a52-7c1e-4a43-9d8e-2f1c5b7e9a10",
+    "title": "Biology 101: cells",
+    "status": "Ready",
+    "documentCount": 2,
+    "conceptCount": 9,
+    "conceptMapVersion": 3,
+    "createdAt": "2026-11-28T09:12:00+00:00",
+    "latestJob": {
+      "id": "0d6c2b9e-41f7-4b55-9a5e-8c3d7f210b6a",
+      "state": "Succeeded",
+      "progress": 1,
+      "progressMessage": "9 concepts ready",
+      "error": null,
+      "createdAt": "2026-11-28T09:13:10+00:00",
+      "completedAt": "2026-11-28T09:15:42+00:00"
+    }
+  }
+]
+```
+
+Newest first. `status` is `Pending`, `Processing`, `Ready` or `Failed`. `documentCount` counts uploaded and
+processed documents once each; `conceptCount` leaves out archived concepts. `latestJob` is the most recent
+processing job (its `state` as in [Job status](#job-status)), or `null` if the collection was never
+processed. An empty array when there are none.
+
+### Get a collection
+
+`GET /api/v1/collections/{id}` (the `Location` returned when the collection was created)
+
+```json
+{
+  "id": "6b1f0a52-7c1e-4a43-9d8e-2f1c5b7e9a10",
+  "title": "Biology 101: cells",
+  "status": "Ready",
+  "conceptMapVersion": 3,
+  "createdAt": "2026-11-28T09:12:00+00:00",
+  "documents": [
+    {
+      "fileName": "chapter1.md",
+      "sizeBytes": 18234,
+      "uploaded": true,
+      "ingested": true,
+      "changedSinceIngest": false,
+      "passageCount": 14,
+      "uploadedAt": "2026-11-28T09:12:30+00:00",
+      "ingestedAt": "2026-11-28T09:14:02+00:00",
+      "error": null
+    }
+  ],
+  "latestJob": null
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `conceptMapVersion` | Goes up whenever the concept map or a rubric changes; `0` before the first processing. |
+| `documents[].uploaded` | The file is in the upload folder (`sizeBytes` and `uploadedAt` are `null` otherwise). |
+| `documents[].ingested` | The document was processed successfully. |
+| `documents[].changedSinceIngest` | The uploaded file differs from what was processed; process again to pick it up. |
+| `documents[].error` | Why processing this document failed, or `null`. |
+| `latestJob` | As in [List collections](#list-collections). |
+
+`404` when the collection isn't in your organization.
 
 ### Upload documents
 
@@ -81,15 +155,26 @@ curl -X POST https://localhost:7311/api/v1/collections/6b1f0a52-7c1e-4a43-9d8e-2
 { "saved": ["chapter1.md", "chapter2.md"] }
 ```
 
+- Only `.txt`, `.text`, `.md` and `.markdown` files are accepted for now. PDF, DOCX, EPUB and HTML arrive
+  with Tutor.Ingestion.
 - Each file must be 1 byte to 20 MB. Keep each request under the server's request size limit (about
   28 MB by default); send large sets in several requests.
-- File names are cleaned (characters not allowed in file names become `_`). A file with the same name
-  as one already uploaded replaces it.
-- Only `.txt`, `.text`, `.md` and `.markdown` files are read when processing; other files are stored but
-  skipped. PDF, DOCX, EPUB and HTML arrive with Tutor.Ingestion.
+- Reserved Windows device names are refused whatever the extension: `CON`, `PRN`, `AUX`, `NUL`,
+  `COM1`-`COM9` and `LPT1`-`LPT9` (so `con.txt` and `com1.notes.md` are refused too).
+- File names are cleaned: folder parts are dropped and characters not allowed in file names become `_`.
+  A file with the same name as one already uploaded replaces it.
+- Every file in the request is checked before any is saved: if one is refused, nothing from that request
+  is stored. Each file is written under a temporary name and then moved into place, so processing never
+  reads a half-written file.
 
-`404` when the collection isn't in your organization. `400` `{ "error": "send multipart/form-data with one or more files" }`
-or `{ "error": "<file>: files must be 1 byte to 20 MB" }`.
+`404` when the collection isn't in your organization. `400` with one of:
+
+- `{ "error": "send multipart/form-data with one or more files" }`
+- `{ "error": "<file>: only .txt, .text, .md, .markdown files are accepted for now" }`
+- `{ "error": "<file>: CON is a reserved device name; rename the file" }`
+- `{ "error": "<file>: files must be 1 byte to 20 MB" }`
+- `{ "error": "<file>: the file needs a name" }`
+- `{ "error": "the upload could not be read: ..." }` (a malformed multipart body)
 
 ### Process a collection
 
@@ -108,6 +193,12 @@ writes a rubric per concept. Concepts and rubrics an instructor edited are kept.
 ```json
 { "jobId": "0d6c2b9e-41f7-4b55-9a5e-8c3d7f210b6a" }
 ```
+
+`404` when the collection isn't in your organization.
+`409` `{ "error": "this collection is already being processed (job <jobId>, Queued)" }` while a processing
+job for it is `Queued` or `Running`: poll that job instead of queuing another.
+`400` `{ "error": "upload at least one document first (.txt, .text, .md, .markdown)" }` when the collection
+has no readable, non-empty uploaded file.
 
 ### Job status
 
@@ -168,12 +259,12 @@ Archived concepts are left out. `404` until the collection has been processed.
 | Field | Default | Rules |
 |---|---|---|
 | `collectionId` | required | A processed collection of your organization. |
-| `title` | required | |
-| `conceptKeys` | every current concept | In the order they should be examined. |
+| `title` | required | 1–300 characters after trimming. |
+| `conceptKeys` | every current concept | In the order they should be examined; no blank keys; duplicates are dropped. |
 | `minutes` | 20 | Clamped to 1–240. |
 | `difficulty` | 3 | Clamped to 1–5 (gentle to rigorous). |
 | `maxTurns` | 30 | Questions in the whole exam, clamped to 1–200. |
-| `mode` | `"Text"` | `"Text"` or `"Voice"`. Voice is stored; students type until voice mode is built. |
+| `mode` | `"Text"` | `"Text"` or `"Voice"` (any case). Voice is stored; students type until voice mode is built. |
 | `instructions` | none | Shown to students. |
 
 The exam is **published immediately**, so its settings are frozen. Each concept gets up to six
@@ -185,8 +276,11 @@ questions; integrity monitoring is Standard.
 { "id": "a4e2d5c8-0b3f-4d91-8e7a-5c6b1f2e3d40", "conceptKeys": ["diffusion", "osmosis"] }
 ```
 
-`400` `{ "error": "the collection has no concept map yet; process it first" }`,
-`{ "error": "unknown concept keys", "unknown": ["mitosis"] }`, or a settings error.
+`400` with one of `{ "error": "title is required" }`, `{ "error": "title must be at most 300 characters" }`,
+`{ "error": "collectionId is required" }`, `{ "error": "conceptKeys must not contain blank keys" }`,
+`{ "error": "mode must be \"Text\" or \"Voice\"" }`,
+`{ "error": "the collection has no concept map yet; process it first" }` (also for a collection that isn't
+yours), `{ "error": "unknown concept keys", "unknown": ["mitosis"] }`, or a settings error.
 
 ### Assign a student
 
@@ -202,14 +296,24 @@ questions; integrity monitoring is Standard.
 }
 ```
 
-This provisions the student and assigns the exam in one call:
+This assigns the exam to a student of your organization, creating the student if the user name is new:
 
-- An unknown `userName` creates an account with a **temporary password**, returned once in the
-  response. The student must change it at first sign-in.
-- A `userName` that already exists is added to your organization as a **Student** (an existing member of
-  your organization becomes a Student). Its password is unchanged and `temporaryPassword` is `null`.
-- If the student already has this exam, the existing assignment is returned unchanged.
-- `opensAt` and `closesAt` are optional; `attemptsAllowed` defaults to 1 (at least 1).
+- An unknown `userName` creates an account, adds it to your organization as a **Student**, and returns a
+  **temporary password** once in the response. The student must change it at first sign-in.
+- A `userName` that is already an active **Student** of your organization is assigned as is; its
+  password is unchanged and `temporaryPassword` is `null`.
+- The API never changes anyone's role and never pulls an existing account into your organization:
+  - a member of your organization with another role (Owner, Admin, Instructor) answers `409`;
+  - a deactivated member answers `409` (an admin reactivates them in the console first);
+  - a user name that belongs to an existing Gadfly account that is **not** a member of your organization
+    answers `409`. Accounts are shared across organizations, and membership is granted only by your
+    organization's admins (invitations are planned), so pick a distinct user name, for example one
+    prefixed with your app or school.
+- Assigning a student who already has this exam **updates** that assignment: `opensAt` and `closesAt` are
+  set to what you send (left out or `null` means no limit), and `attemptsAllowed` is changed when you send
+  it (left out keeps the current number). `created` tells you which happened.
+- `opensAt` and `closesAt` are optional; `closesAt` must be after `opensAt`. `attemptsAllowed` defaults to 1
+  for a new assignment and must be at least 1. `email` is used only when an account is created.
 
 `200 OK`
 
@@ -217,12 +321,17 @@ This provisions the student and assigns the exam in one call:
 {
   "assignmentId": "c2f7e1a9-5d64-4b0e-9f3a-71b8d2c4e605",
   "studentUserId": "9e3b6a1d-2c4f-4e58-b7a0-d1f6c8e2a934",
+  "created": true,
   "temporaryPassword": "Gf-q8Zk2xyP0LmA3rT9vB1sWdE4"
 }
 ```
 
-`404` when the exam doesn't exist or isn't published. `400` `{ "error": "..." }` when the account can't be
-created (for example a user name the sign-in library rejects).
+`404` when the exam doesn't exist or isn't published. `400` `{ "error": "userName is required" }`,
+`{ "error": "attemptsAllowed must be at least 1" }`, `{ "error": "closesAt must be after opensAt" }`, or the
+reason the account can't be created (for example a user name the sign-in library rejects). `409` with an
+`error` for the cases above, for example
+`{ "error": "the user name 'jsmith' belongs to an existing Gadfly account that is not a member of your organization; use a distinct user name (...)" }`
+or `{ "error": "'jsmith' has the Instructor role in your organization; only students can be assigned exams, and the API never changes a member's role" }`.
 
 ### Launch link
 
@@ -345,8 +454,10 @@ students only what your own release rules allow.
 }
 ```
 
-Store `secret`: it is shown only here. `400` `{ "error": "Webhook URLs must be absolute https URLs." }` or
-`{ "error": "Subscribe to at least one of: session.completed." }`. Unknown event names are ignored.
+Store `secret`: it is shown only here. `400` `{ "error": "Webhook URLs must be absolute https URLs." }`,
+`{ "error": "Webhook URLs must be at most 1000 characters." }` or
+`{ "error": "Subscribe to at least one of: session.completed." }` (also when `events` is missing). Unknown
+event names are ignored.
 
 `GET /api/v1/webhooks`
 
@@ -355,14 +466,15 @@ Store `secret`: it is shown only here. `400` `{ "error": "Webhook URLs must be a
   {
     "id": "e8b4c1d6-9a2f-4b3e-8d7c-6f5a4e3d2c1b",
     "url": "https://lms.example.edu/hooks/gadfly",
-    "events": "session.completed",
+    "events": ["session.completed"],
     "isActive": true,
     "createdAt": "2026-11-28T09:30:00+00:00"
   }
 ]
 ```
 
-Here `events` is a comma-separated string. Secrets are never listed.
+Oldest first, including deactivated webhooks (`isActive: false`). `events` is an array, as everywhere in
+the API. Secrets are never listed.
 
 `DELETE /api/v1/webhooks/{id}` deactivates the webhook: `204 No Content`, or `404`. Deliveries still
 waiting for it are dropped.
@@ -492,6 +604,7 @@ export function verifyGadflySignature(secret, header, rawBody, toleranceSeconds 
 | `400 Bad Request` | The body isn't valid JSON or is missing | No JSON body |
 | `401 Unauthorized` | Missing, unknown or revoked key; deactivated organization | Empty |
 | `404 Not Found` | The id doesn't exist in your organization | Empty |
+| `409 Conflict` | The request clashes with current state: processing already queued or running; assigning a non-student, a deactivated member, or an account outside your organization | `{ "error": "<what to do>" }` |
 | `500 Internal Server Error` | An unexpected server error | No stable shape |
 
 Every id is checked against your organization, so another organization's ids answer `404`, never their
@@ -500,5 +613,9 @@ data. There is no pagination and no rate limit yet.
 ## OpenAPI
 
 The OpenAPI document is served anonymously at `/openapi/v1.json` (for example
-`https://localhost:7311/openapi/v1.json`). It lists every route and request body; this page documents
-the response bodies, which the generated document doesn't describe in detail.
+`https://localhost:7311/openapi/v1.json`). It lists every `/api/v1` route with its request body and its
+response bodies as named schemas (`CollectionDetail`, `JobStatus`, `ExamCreated`, `AssignmentResult`,
+`WebhookView`, `ApiError` and so on). It declares the API key as an HTTP bearer security scheme named
+`ApiKey` (`components.securitySchemes.ApiKey`) and requires it on every `/api/v1` operation, so generated
+clients send `Authorization: Bearer gfk_...`. The result endpoint is not given a named schema; its shape is
+documented [above](#result). `/launch` is a browser page and is not in the document.

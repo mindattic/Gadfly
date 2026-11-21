@@ -19,14 +19,23 @@ public sealed class WebhookService(GadflyDbContext db, JobQueue jobs, IDataProte
     public const string SessionCompleted = "session.completed";
     public static readonly IReadOnlyList<string> Events = [SessionCompleted];
 
+    /// <summary>The longest URL the webhook table stores.</summary>
+    public const int MaxUrlLength = 1000;
+
     private IDataProtector Protector => protection.CreateProtector("Gadfly.Webhooks.Secret");
 
+    /// <summary>A webhook's subscribed events as a list (stored comma-separated); the API always returns this array.</summary>
+    public static IReadOnlyList<string> EventList(string? stored) =>
+        (stored ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
     /// <summary>Registers a webhook for the caller's organization and returns its signing secret (shown once).</summary>
-    public async Task<(Webhook Row, string Secret)> CreateAsync(Guid organizationId, string url, IEnumerable<string> events, CancellationToken ct = default)
+    public async Task<(Webhook Row, string Secret)> CreateAsync(Guid organizationId, string? url, IEnumerable<string?>? events, CancellationToken ct = default)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps)
             throw new ArgumentException("Webhook URLs must be absolute https URLs.");
-        var wanted = events.Where(e => Events.Contains(e)).Distinct().ToList();
+        if (uri.ToString().Length > MaxUrlLength)
+            throw new ArgumentException($"Webhook URLs must be at most {MaxUrlLength} characters.");
+        var wanted = (events ?? []).OfType<string>().Select(e => e.Trim()).Where(e => Events.Contains(e)).Distinct().ToList();
         if (wanted.Count == 0) throw new ArgumentException($"Subscribe to at least one of: {string.Join(", ", Events)}.");
         var secret = "whsec_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(24));
         var row = new Webhook
@@ -46,7 +55,7 @@ public sealed class WebhookService(GadflyDbContext db, JobQueue jobs, IDataProte
             .Where(w => w.OrganizationId == organizationId && w.IsActive).ToListAsync(ct);
         var payload = JsonSerializer.Serialize(new { type = eventType, createdAt = clock.GetUtcNow(), data },
             new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-        foreach (var hook in hooks.Where(h => h.Events.Split(',').Contains(eventType)))
+        foreach (var hook in hooks.Where(h => EventList(h.Events).Contains(eventType)))
         {
             var delivery = new WebhookDelivery
             {
