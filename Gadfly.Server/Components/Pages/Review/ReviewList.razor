@@ -2,7 +2,7 @@
 @attribute [Authorize(Policy = GadflyPolicies.Instructor)]
 @using Gadfly.Server.Data
 @using Gadfly.Server.Review
-@inject GadflyDbContext Db
+@inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
 
 <PageTitle>Review · Gadfly Exams</PageTitle>
@@ -100,17 +100,28 @@ else
     private string ExamFilter { get; set; } = "";
     private bool needsGrade, needsReview;
 
-    private ReviewService Service => new(Db, Tenant.OrganizationId!.Value);
+    /// <summary>
+    /// Each query runs in its own scope (never the circuit's shared DbContext, which allows one operation at a time), and only the
+    /// newest filter's answer is shown: two quick filter changes used to overlap on that context and end the circuit (GAD-T208).
+    /// </summary>
+    private Task<T> InScopeAsync<T>(Func<ReviewService, Task<T>> work) =>
+        Gadfly.Server.Components.Pages.Admin.AdminDb.RunAsync(Scopes, Tenant, (_, db) => work(new ReviewService(db, Tenant.OrganizationId!.Value)));
+
+    private int loadSequence;
 
     protected override async Task OnInitializedAsync()
     {
-        exams = await Service.ExamsWithSessionsAsync();
+        exams = await InScopeAsync(s => s.ExamsWithSessionsAsync());
         await LoadAsync();
     }
 
-    private async Task LoadAsync() =>
-        rows = await Service.ListAsync(new ReviewListFilter(
-            Guid.TryParse(ExamFilter, out var id) ? id : null, needsGrade, needsReview));
+    private async Task LoadAsync()
+    {
+        var mine = ++loadSequence;
+        var filter = new ReviewListFilter(Guid.TryParse(ExamFilter, out var id) ? id : null, needsGrade, needsReview);
+        var result = await InScopeAsync(s => s.ListAsync(filter));
+        if (mine == loadSequence) rows = result;
+    }
 
     private static string Pct(double? v) => v is { } x ? $"{x * 100:0}%" : "";
 }
