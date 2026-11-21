@@ -419,6 +419,10 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
         // Tenant isolation: every ITenantOwned entity gets the organization filter.
         foreach (var type in b.Model.GetEntityTypes().Where(t => typeof(ITenantOwned).IsAssignableFrom(t.ClrType)))
             b.Entity(type.ClrType).HasQueryFilter(TenantFilter(type.ClrType));
+        // The audit log's organization is nullable (platform-level events have none), so it isn't ITenantOwned, but it
+        // holds grades and before/after JSON: a tenant sees only its own organization's events, never another's and
+        // never platform-level ones; system work sees all (GAD-T109).
+        b.Entity<AuditEvent>().HasQueryFilter(a => TenantBypass || a.OrganizationId == TenantOrganizationId);
     }
 
     private LambdaExpression TenantFilter(Type entity)

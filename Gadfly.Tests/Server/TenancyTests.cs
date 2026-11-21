@@ -14,6 +14,9 @@ public class TenancyTests : ServerTest
     private static readonly HashSet<Type> UnfilteredByDesign =
     [
         typeof(OrganizationSettings), typeof(Job),
+        // Not ITenantOwned (its organization is nullable) but it has its own organization filter, checked by
+        // AuditEvents_OfOrgB_AreNotVisibleToOrgA (GAD-T109).
+        typeof(AuditEvent),
     ];
 
     [Test]
