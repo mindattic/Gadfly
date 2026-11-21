@@ -208,7 +208,7 @@ public static class StudentExams
 public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraphs)
 {
     /// <summary>Bumped whenever the wording changes; part of the hashed text.</summary>
-    public const string Version = "2026-11-20.4";
+    public const string Version = "2026-11-21.1";
 
     public static ConsentNotice For(string organizationName, string examTitle, int retentionDays, ExamMode mode,
         IntegrityLevel integrity = IntegrityLevel.Standard)
@@ -219,7 +219,7 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
             "What is recorded: every question and your answers (typed text, or spoken transcripts if you use voice mode), when each question was asked and answered, and integrity signals such as an answer that reads like copied text. These are notes for a person to review, never an automatic fail.",
             "What is not recorded: no video is stored. In voice mode, any camera checks run on your own device and only short event notes (for example \"face not visible for 10 seconds\") are sent.",
             $"How long it is kept: {organizationName} keeps your answers and transcripts for {retentionDays} days, then they are deleted.",
-            "Who decides: the AI only recommends. Your instructor reads your answers and decides your result, and releases it to you when ready.",
+            "Who decides: the AI only gives a preliminary assessment. People grade your answers, any large disagreement with the AI is reconciled by a reviewer, and an authorized person approves and publishes your result. You can appeal a published result.",
             "Your choice: you can leave the exam at any time with \"Finish\". Leaving early submits what you have answered so far and uses this attempt.",
         };
         paragraphs.InsertRange(2, BrowserSignals(integrity, mode));
