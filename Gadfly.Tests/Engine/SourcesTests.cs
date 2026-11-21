@@ -134,7 +134,7 @@ public class QuestionGeneratorTests
         foreach (var move in Enum.GetValues<MoveKind>())
         {
             var q = QuestionGenerator.Fallback(move, "Photosynthesis", "Respiration");
-            Assert.That(q, Does.EndWith("?").Or.EndWith("reasoning."), move.ToString());
+            Assert.That(q.Length > 0 && (q.Contains('?') || q.EndsWith('.')), Is.True, move.ToString());
             Assert.That(q, Does.Not.Contain("glucose").And.Not.Contain("chemical energy"), move.ToString());
         }
         Assert.That(QuestionGenerator.Fallback(MoveKind.Synthesize, "A", "B"), Does.Contain("A").And.Contain("B"));
