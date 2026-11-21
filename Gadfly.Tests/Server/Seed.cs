@@ -40,6 +40,24 @@ internal static class Seed
 
     public static string UserName() => "u" + Guid.NewGuid().ToString("N")[..12];
 
+    /// <summary>
+    /// A bare sign-in account row (no membership, unusable password) so a seeded student id is a real user: the
+    /// library's memberships have a foreign key to AuthUsers since GAD-T156 (GAD-T167).
+    /// </summary>
+    public static async Task<Guid> AccountAsync()
+    {
+        await using var db = ServerFixture.NewContext(TenantSnapshot.System);
+        var name = UserName();
+        var user = new MindAttic.Authentication.Entities.AuthUser
+        {
+            UserName = name, NormalizedUserName = name.ToUpperInvariant(), PasswordHash = "!seeded-no-password",
+            PasswordUpdatedUtc = DateTime.UtcNow, CreatedUtc = DateTime.UtcNow,
+        };
+        db.AuthUsers.Add(user);
+        await db.SaveChangesAsync();
+        return user.Id;
+    }
+
     public static readonly SourcePassage[] Passages =
     [
         new() { Id = "p0", DocumentId = "doc", Ordinal = 0, Text = "Photosynthesis converts light energy into chemical energy stored in glucose, releasing oxygen." },
@@ -88,7 +106,7 @@ internal static class Seed
             ]);
         }
         var p = policy ?? new SessionPolicy { ConceptIds = ["photosynthesis"], MaxTurns = 6, TimeBudget = TimeSpan.FromMinutes(20) };
-        var studentId = Guid.NewGuid();
+        var studentId = await AccountAsync();
         await using (var db = ServerFixture.NewContext(TenantSnapshot.ForOrganization(org)))
         {
             var exam = new Exam
