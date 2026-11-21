@@ -1,0 +1,8 @@
+/* Camera indicator in the exam room (GAD-T57). The CSP allows no style attributes, so it all lives here. */
+.webcam-indicator { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .6rem; margin: 0 0 .75rem; padding: .4rem .75rem; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: .85rem; }
+.webcam-dot { width: .6rem; height: .6rem; border-radius: 50%; background: var(--muted); flex: none; }
+.webcam-on .webcam-dot { background: #2e9e5b; box-shadow: 0 0 0 3px rgba(46, 158, 91, .2); }
+.webcam-starting .webcam-dot { background: #c99a1a; }
+.webcam-hint { font-weight: 600; color: inherit; }
+/* The frames are analysed on the device and never shown or sent; the element only has to stay in the page. */
+.webcam-video { position: fixed; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

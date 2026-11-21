@@ -1,0 +1,162 @@
+@* Camera integrity checks in the exam room (GAD-T57). Self-contained: renders nothing unless the exam is Strict
+   and the student's recorded consent was to a notice that describes the camera. Then it starts MindAttic.Webcam
+   (presence, gaze region, reading pattern) in the browser via wwwroot/js/webcam-integrity.js and sends only its
+   sanitized events (type, start, end, confidence, one sentence), never a frame, to WebcamIntegrityRecorder.
+   The student sees a small camera-on indicator and a framing or light hint, never an accusation. If the camera
+   is denied or missing the exam carries on and a neutral note is recorded. *@
+@implements IAsyncDisposable
+@using Gadfly.Server.Integrity
+@using Gadfly.Server.Sessions
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject IJSRuntime JS
+@inject ILogger<WebcamIntegrity> Log
+
+<HeadContent><link rel="stylesheet" href="webcam.css" /></HeadContent>
+
+@if (shown)
+{
+    <div class="webcam-indicator webcam-@state" role="status" aria-live="polite" data-webcam-state="@state">
+        <span class="webcam-dot" aria-hidden="true"></span>
+        <span class="webcam-label">@Label</span>
+        @if (Hint is { } hint)
+        {
+            <span class="webcam-hint">@hint</span>
+        }
+    </div>
+    <video @ref="video" class="webcam-video" muted playsinline aria-hidden="true" tabindex="-1"></video>
+}
+
+@code {
+    [Parameter, EditorRequired] public Guid SessionId { get; set; }
+
+    private ElementReference video;
+    private IJSObjectReference? module;
+    private DotNetObjectReference<WebcamIntegrity>? self;
+    private Guid org, user;
+    private bool shown;
+    private bool started;
+    private string state = "starting";
+    private string? hintCode;
+    private readonly CancellationTokenSource stop = new();
+
+    private string Label => state switch
+    {
+        "on" => "Camera on. Checks run on this device; no video is recorded or sent.",
+        "unavailable" => "Camera not in use. The exam continues normally.",
+        "stopped" => "Camera off.",
+        "off" => "Camera checks are off for this attempt.",
+        _ => "Camera starting. Your browser may ask to use it.",
+    };
+
+    private string? Hint => state != "on" ? null : hintCode switch
+    {
+        "no-face" => "We can't see your face. Check that the camera is pointing at you.",
+        "low-light" => "It's quite dark. A light in front of you would help.",
+        "too-small" => "You look far from the camera. Move a little closer.",
+        "cut-off" => "Part of your face is out of frame.",
+        "off-center" => "Try centering your face in the camera.",
+        _ => null,
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || started) return;
+        started = true;
+        if (Tenant.OrganizationId is not { } o || Tenant.UserId is not { } u) return;
+        org = o;
+        user = u;
+        try
+        {
+            WebcamPlan? plan;
+            await using (var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org)))
+                plan = await WebcamIntegrityRecorder.Create(scope.ServiceProvider).PlanAsync(org, user, SessionId, stop.Token);
+            if (plan is not { Required: true }) return;
+
+            shown = true;
+            if (!plan.Consented)
+            {
+                // The notice this student accepted didn't describe the camera: don't turn it on.
+                state = "off";
+                await RecordAsync([Unavailable("no-consent")]);
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+            await InvokeAsync(StateHasChanged);   // renders the <video> before the module needs it
+            self = DotNetObjectReference.Create(this);
+            module = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/webcam-integrity.js");
+            await module.InvokeVoidAsync("start", stop.Token, self, video, new { sessionId = SessionId, basePath = "webcam/" });
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
+        {
+            Log.LogDebug(ex, "Webcam integrity did not start for session {SessionId}.", SessionId);
+            await SetStateAsync("unavailable", null);
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Webcam integrity did not start for session {SessionId}.", SessionId);
+            await SetStateAsync("unavailable", null);
+        }
+    }
+
+    /// <summary>Called by webcam-integrity.js with a small batch of sanitized events. False tells the browser to stop sending.</summary>
+    [JSInvokable]
+    public async Task<bool> RecordWebcam(HubIntegrityEvent[]? events)
+    {
+        if (org == Guid.Empty) return false;
+        // An empty call is the browser's heartbeat: it asks whether the session is still running, so the camera stops when the exam ends.
+        return await RecordAsync(events ?? []);
+    }
+
+    /// <summary>Called by webcam-integrity.js when the camera state or the framing hint changes.</summary>
+    [JSInvokable]
+    public Task OnStatus(string newState, string? hint)
+    {
+        if (newState is not ("starting" or "on" or "unavailable" or "stopped")) return Task.CompletedTask;
+        return SetStateAsync(newState, hint is { Length: <= 20 } ? hint : null);
+    }
+
+    private async Task SetStateAsync(string newState, string? hint)
+    {
+        if (state == newState && hintCode == hint) return;
+        state = newState;
+        hintCode = hint;
+        try { await InvokeAsync(StateHasChanged); }
+        catch (ObjectDisposedException) { }
+    }
+
+    private async Task<bool> RecordAsync(IReadOnlyList<HubIntegrityEvent> events)
+    {
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
+            return (await WebcamIntegrityRecorder.Create(scope.ServiceProvider).RecordAsync(org, user, SessionId, events)).KeepGoing;
+        }
+        catch (Exception ex)
+        {
+            // Never the student's problem: log and let the browser keep its queue moving.
+            Log.LogWarning(ex, "Could not record webcam events for session {SessionId}.", SessionId);
+            return true;
+        }
+    }
+
+    private static HubIntegrityEvent Unavailable(string reason) =>
+        new(WebcamIntegrityRecorder.Source, WebcamIntegrityRecorder.UnavailableType, DateTimeOffset.UtcNow, null, 0.3, reason);
+
+    public async ValueTask DisposeAsync()
+    {
+        stop.Cancel();
+        if (module is not null)
+        {
+            try
+            {
+                // Closes open events so each has an end, flushes them, and releases the camera.
+                await module.InvokeVoidAsync("stop", true, false);
+                await module.DisposeAsync();
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
+        }
+        self?.Dispose();
+        stop.Dispose();
+    }
+}

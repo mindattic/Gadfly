@@ -30,6 +30,21 @@ only, how long data is kept, that integrity signals are evidence for a person an
 result, and that an instructor decides the grade. The SHA-256 of the exact text is stored with the
 session, so changing the wording is visible in the record.
 
+### Camera checks (Strict exams, GAD-T57)
+
+Only exams set to **Strict** integrity use the camera, and only after the student accepted a notice that
+says so (the exam room compares the stored notice hash with the current wording, so an attempt consented
+under older wording never turns the camera on; a neutral "camera not used" note is recorded instead). The
+MindAttic.Webcam library runs in the browser from a self-hosted build (no CDN request at exam time). It
+reads landmark numbers in memory; the only pixels it touches are a 16x9 brightness thumbnail averaged to one
+number. The same-person face signature stays in browser memory and has no export. What is sent: type, start,
+end, confidence and one sentence per event (face absent, a second face, a possible change of person, a long
+look off-screen, reading-like eye movement, a short glance annotated as thinking, or "camera not used").
+Server side only an allow-list of those types is stored (`WebcamIntegrityRecorder`), text and times are
+bounded, volume is rate-limited and capped, confidence is capped at 0.4, and severity is decided by the server
+and never above Low: reviewers see them as low-confidence annotations, never a penalty. If the student declines
+the camera, the exam continues. Nothing infers emotion or deception.
+
 ## Regulatory notes
 
 - **EU AI Act.** Emotion recognition in education is prohibited (Art. 5(1)(f)); Gadfly infers no

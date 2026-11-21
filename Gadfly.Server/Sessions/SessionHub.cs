@@ -179,12 +179,17 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
 public sealed class HubIntegrityRecorder(Data.GadflyDbContext db, TimeProvider clock)
 {
     public const int MaxEventsPerSession = 500;
-    private static readonly HashSet<string> Sources = ["browser", "webcam", "audio"];
+    private static readonly HashSet<string> Sources = ["browser", "audio"];
 
     public async Task<int> RecordAsync(Guid org, Guid student, Guid sessionId, IReadOnlyList<HubIntegrityEvent> events, CancellationToken ct)
     {
+        // Webcam events (GAD-T57) get their own allow-list, rate limit and severity rules, whichever channel carried them.
+        var webcamStored = 0;
+        if (events.Any(e => e.Source == Integrity.WebcamIntegrityRecorder.Source))
+            webcamStored = (await new Integrity.WebcamIntegrityRecorder(db, clock, Microsoft.Extensions.Logging.Abstractions.NullLogger<Integrity.WebcamIntegrityRecorder>.Instance)
+                .RecordAsync(org, student, sessionId, events.Where(e => e.Source == Integrity.WebcamIntegrityRecorder.Source).ToList(), ct)).Stored;
         var session = db.ExamSessions.FirstOrDefault(s => s.Id == sessionId && s.OrganizationId == org && s.StudentUserId == student);
-        if (session is null || session.State != Data.SessionState.Running) return 0;
+        if (session is null || session.State != Data.SessionState.Running) return webcamStored;
         var existing = db.IntegrityEvents.Count(e => e.SessionId == sessionId);
         var room = Math.Max(0, MaxEventsPerSession - existing);
         var openTurn = db.SessionTurns.Where(t => t.SessionId == sessionId && t.AnswerText == null).OrderByDescending(t => t.Index)
@@ -210,7 +215,7 @@ public sealed class HubIntegrityRecorder(Data.GadflyDbContext db, TimeProvider c
             added++;
         }
         await db.SaveChangesAsync(ct);
-        return added;
+        return added + webcamStored;
     }
 
     private static string Clip(string? s, int max) => string.IsNullOrEmpty(s) ? "" : s.Length <= max ? s : s[..max];
