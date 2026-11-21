@@ -54,6 +54,19 @@ public static class ClassroomSeeder
         }),
     ];
 
+    /// <summary>The student who sits the Civil War voice exam (GAD-T225).</summary>
+    public const string VoiceStudentUserName = "ryan";
+
+    /// <summary>
+    /// Every course the seeder builds: each teacher's own, plus Teacher_A's Civil War voice exam (the demo assessment with its
+    /// notes), assigned only to <see cref="VoiceStudentUserName"/> so the talking examiner can be tried live (GAD-T225).
+    /// </summary>
+    private static readonly IReadOnlyList<(string Teacher, DemoAssessment Assessment, string? OnlyStudent)> Offerings =
+    [
+        .. Teachers.Select(t => (t.Teacher, t.Assessment, (string?)null)),
+        ("Teacher_A", DemoSeeder.Assessments.First(x => x.MaterialFile == "civil-war.md"), VoiceStudentUserName),
+    ];
+
     /// <summary>Student_A .. Student_Z.</summary>
     public static IReadOnlyList<string> Students => [.. Enumerable.Range('A', 26).Select(c => $"Student_{(char)c}")];
 
@@ -114,6 +127,7 @@ public static class ClassroomSeeder
             var people = new List<(string, string)> { (OwnerUserName, OrgRoles.Owner) };
             people.AddRange(Teachers.Select(t => (t.Teacher, OrgRoles.Instructor)));
             people.AddRange(Students.Select(s => (s, OrgRoles.Student)));
+            people.Add((VoiceStudentUserName, OrgRoles.Student));
             foreach (var (userName, role) in people)
                 ids[userName] = await EnsurePersonAsync(sp, db, directory, orgId, userName, role, password, ct);
         }
@@ -121,14 +135,16 @@ public static class ClassroomSeeder
         // ---- each teacher's course, notes (processed here) and assessment
         var assignment = Assign();
         var newAssignments = 0;
-        foreach (var (teacher, a) in Teachers)
+        foreach (var (teacher, a, onlyStudent) in Offerings)
         {
             using var scope = scopes.CreateSystemScope();
             var sp = scope.ServiceProvider;
             var db = sp.GetRequiredService<GadflyDbContext>();
             var clock = sp.GetRequiredService<TimeProvider>();
             var teacherId = ids[teacher];
-            var studentIds = assignment.Where(kv => kv.Value.Contains(teacher)).Select(kv => ids[kv.Key]).ToList();
+            var studentIds = onlyStudent is not null
+                ? [ids[onlyStudent]]
+                : assignment.Where(kv => kv.Value.Contains(teacher)).Select(kv => ids[kv.Key]).ToList();
 
             var course = await db.Courses.FirstOrDefaultAsync(c => c.OrganizationId == orgId && c.Title == a.Course, ct);
             if (course is null)
