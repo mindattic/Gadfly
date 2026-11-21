@@ -98,7 +98,7 @@
             return;
         }
         busy = true;
-        var r = await Directory.AddMemberAsync(Tenant.OrganizationId!.Value, form.UserName, form.Email, form.Role, form.Password);
+        var r = await Directory.AddMemberAsync(Tenant.OrganizationId!.Value, form.UserName, form.Email, form.Role, form.Password, actingRole: Tenant.Role);
         ok = r.Ok;
         message = r.Message;
         if (r.Ok) form = new();
@@ -108,7 +108,7 @@
 
     private async Task ToggleAsync(Guid memberId, bool active)
     {
-        var r = await Directory.SetMemberActiveAsync(Tenant.OrganizationId!.Value, memberId, active);
+        var r = await Directory.SetMemberActiveAsync(Tenant.OrganizationId!.Value, memberId, active, actingRole: Tenant.Role);
         ok = r.Ok;
         message = r.Message;
         await LoadAsync();

@@ -43,8 +43,10 @@ Owners and admins manage people at **Members** (`/org/members`).
   restores them if they were removed.
 - The password must meet the sign-in library's password policy; the page shows the reason if it doesn't.
 
-**Remove** deactivates a membership; the person loses access at their next sign-in. **Restore** brings
-them back. Their records are kept either way (see erasure below to delete them).
+**Remove** deactivates a membership and signs the person out everywhere within about a minute (changing
+an active member's role does the same, so the new role applies at once). **Restore** brings them back.
+Only an owner can add an owner, change an owner's role, or remove or erase an owner, and an organization
+always keeps one active owner. Their records are kept either way (see erasure below to delete them).
 
 There are no email invitations yet (M.AUTH-T35): give people their user name and temporary password
 yourself.

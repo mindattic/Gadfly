@@ -3,6 +3,7 @@ using Gadfly.Server.Data;
 using Gadfly.Server.Tenancy;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Routing.Patterns;
+using Microsoft.EntityFrameworkCore;
 using MindAttic.Authentication.Web;
 
 namespace Gadfly.Server;
@@ -81,10 +82,17 @@ public static class GadflyEndpoints
 
         // Erasure is an org-admin decision, confirmed by re-typing the word DELETE.
         app.MapPost("/privacy/erase/{userId:guid}", async (Guid userId, [Microsoft.AspNetCore.Mvc.FromForm] string confirm,
-            ITenantContext tenant, Privacy.PrivacyService privacy, CancellationToken ct) =>
+            ITenantContext tenant, Privacy.PrivacyService privacy, GadflyDbContext db, CancellationToken ct) =>
         {
             if (confirm != "DELETE") return Results.BadRequest("Type DELETE to confirm.");
-            var n = await privacy.DeleteStudentDataAsync(tenant.OrganizationId!.Value, userId, ct);
+            var org = tenant.OrganizationId!.Value;
+            // Erasing deactivates the membership: an owner is only erased by an owner, never the last one (GAD-T76).
+            var target = await db.OrganizationMembers.AsNoTracking().FirstOrDefaultAsync(m => m.OrganizationId == org && m.UserId == userId, ct);
+            if (target?.Role == OrgRoles.Owner && (tenant.Role != OrgRoles.Owner
+                || await db.OrganizationMembers.CountAsync(m => m.OrganizationId == org && m.Role == OrgRoles.Owner && m.IsActive, ct) <= 1))
+                return Results.Forbid();
+            var n = await privacy.DeleteStudentDataAsync(org, userId, ct);
+            if (target is not null) await OrganizationDirectory.RevokeSessionsAsync(db, userId, ct);
             return Results.LocalRedirect($"/org/members?erased={n}");
         }).RequireAuthorization(GadflyPolicies.OrgAdmin);
     }

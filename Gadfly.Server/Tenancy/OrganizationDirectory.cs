@@ -25,11 +25,16 @@ public interface IOrganizationDirectory
     Task<DirectoryResult> CreateOrganizationAsync(string name, string ownerUserName, string ownerEmail, string ownerTemporaryPassword,
         Guid createdByUserId, CancellationToken ct = default);
 
-    /// <summary>Adds a member, creating their account when the user name is new (temporary password, must change it).</summary>
+    /// <summary>
+    /// Adds a member, creating their account when the user name is new (temporary password, must change it).
+    /// <paramref name="actingRole"/> is the caller's role in the organization (null for platform staff and
+    /// system callers): only an Owner may grant Owner or change an Owner's role (GAD-T76).
+    /// </summary>
     Task<DirectoryResult> AddMemberAsync(Guid organizationId, string userName, string? email, string role, string temporaryPassword,
-        CancellationToken ct = default);
+        CancellationToken ct = default, string? actingRole = null);
 
-    Task<DirectoryResult> SetMemberActiveAsync(Guid organizationId, Guid memberId, bool active, CancellationToken ct = default);
+    /// <summary>Removes or restores a member; only an Owner may remove an Owner (GAD-T76).</summary>
+    Task<DirectoryResult> SetMemberActiveAsync(Guid organizationId, Guid memberId, bool active, CancellationToken ct = default, string? actingRole = null);
 }
 
 public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdminService users, TimeProvider clock) : IOrganizationDirectory
@@ -82,9 +87,10 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
     }
 
     public async Task<DirectoryResult> AddMemberAsync(Guid organizationId, string userName, string? email, string role, string temporaryPassword,
-        CancellationToken ct = default)
+        CancellationToken ct = default, string? actingRole = null)
     {
         if (!OrgRoles.IsValid(role)) return new(false, $"'{role}' is not a role.");
+        if (role == OrgRoles.Owner && !ActsAsOwner(actingRole)) return new(false, "Only an owner can add another owner.");
         if (!await db.Organizations.AnyAsync(o => o.Id == organizationId && o.IsActive, ct)) return new(false, "That organization does not exist.");
         userName = userName.Trim();
         if (userName.Length == 0) return new(false, "Give a user name.");
@@ -108,8 +114,16 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
         }
 
         var existing = await db.OrganizationMembers.FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == userId, ct);
+        var roleChanged = false;
         if (existing is not null)
         {
+            if (existing.Role == OrgRoles.Owner && role != OrgRoles.Owner)
+            {
+                if (!ActsAsOwner(actingRole)) return new(false, "Only an owner can change an owner's role.");
+                if (existing.IsActive && await ActiveOwnersAsync(organizationId, ct) <= 1)
+                    return new(false, "An organization keeps at least one active owner.");
+            }
+            roleChanged = existing.IsActive && existing.Role != role;
             existing.Role = role;
             existing.IsActive = true;
         }
@@ -121,20 +135,39 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
             });
         }
         await db.SaveChangesAsync(ct);
+        // The old role rides on their sign-in cookie: end their sessions so it takes effect now (GAD-T76).
+        if (roleChanged) await RevokeSessionsAsync(db, userId, ct);
         return new(true, account is null ? $"Created {userName} as {role}." : $"{userName} is now {role}.", userId);
     }
 
-    public async Task<DirectoryResult> SetMemberActiveAsync(Guid organizationId, Guid memberId, bool active, CancellationToken ct = default)
+    public async Task<DirectoryResult> SetMemberActiveAsync(Guid organizationId, Guid memberId, bool active, CancellationToken ct = default, string? actingRole = null)
     {
         var m = await db.OrganizationMembers.FirstOrDefaultAsync(x => x.Id == memberId && x.OrganizationId == organizationId, ct);
         if (m is null) return new(false, "That member was not found.");
-        if (!active && m.Role == OrgRoles.Owner
-            && await db.OrganizationMembers.CountAsync(x => x.OrganizationId == organizationId && x.Role == OrgRoles.Owner && x.IsActive, ct) <= 1)
+        if (m.Role == OrgRoles.Owner && !ActsAsOwner(actingRole)) return new(false, "Only an owner can remove or restore an owner.");
+        if (!active && m.Role == OrgRoles.Owner && m.IsActive && await ActiveOwnersAsync(organizationId, ct) <= 1)
             return new(false, "An organization keeps at least one active owner.");
+        var removed = m.IsActive && !active;
         m.IsActive = active;
         await db.SaveChangesAsync(ct);
-        return new(true, active ? "Member restored." : "Member removed. They lose access at their next sign-in.");
+        if (removed) await RevokeSessionsAsync(db, m.UserId, ct);
+        return new(true, active ? "Member restored." : "Member removed. Their open sessions end within a minute.");
     }
+
+    private static bool ActsAsOwner(string? actingRole) => actingRole is null or OrgRoles.Owner;
+
+    private Task<int> ActiveOwnersAsync(Guid organizationId, CancellationToken ct) =>
+        db.OrganizationMembers.CountAsync(x => x.OrganizationId == organizationId && x.Role == OrgRoles.Owner && x.IsActive, ct);
+
+    /// <summary>
+    /// Memberships ride on the sign-in cookie (stamped once at sign-in), so a removal or role change only
+    /// bites once the cookie is re-issued. Rotating the account's security stamp makes the auth library's
+    /// revalidation (HTTP and Blazor circuits, about a minute) sign every session of that account out;
+    /// the next sign-in carries the current memberships (GAD-T76).
+    /// </summary>
+    public static Task RevokeSessionsAsync(GadflyDbContext db, Guid userId, CancellationToken ct) =>
+        db.AuthUsers.Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.SecurityStamp, Guid.NewGuid().ToString("N")), ct);
 
     internal static string Slug(string name)
     {
