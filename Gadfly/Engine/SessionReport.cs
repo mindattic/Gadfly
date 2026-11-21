@@ -20,6 +20,64 @@ public sealed record ConceptReport
     public IReadOnlyList<int> DisputedTurns { get; init; } = [];
 }
 
+/// <summary>
+/// Per-objective result (GAD-T89): the level the evidence supports, or Level 0 (Insufficient Evidence for
+/// Reliable Assessment) when it is not sufficient, with what was shown and what remains uncertain.
+/// </summary>
+public sealed record ObjectiveReport
+{
+    public required string ObjectiveKey { get; init; }
+    public string Title { get; init; } = "";
+    /// <summary>"sufficient", "inconclusive", "open" or "not-started".</summary>
+    public required string Status { get; init; }
+    /// <summary>0-5; 0 is Insufficient Evidence, never zero understanding.</summary>
+    public required int Level { get; init; }
+    public required string LevelLabel { get; init; }
+    /// <summary>What the independent evidence points to, for the reviewer, even when the level is 0.</summary>
+    public int ProvisionalLevel { get; init; }
+    /// <summary>Learning Mode: the level including answers after assistance (reported separately).</summary>
+    public int? AssistedLevel { get; init; }
+    public int Questions { get; init; }
+    public int IndependentAnswers { get; init; }
+    public int SupportingAnswers { get; init; }
+    public int ContradictingAnswers { get; init; }
+    public int ContaminatedAnswers { get; init; }
+    public int AssistedAnswers { get; init; }
+    public bool Consistent { get; init; } = true;
+    public IReadOnlyList<string> UnresolvedMisconceptions { get; init; } = [];
+    public IReadOnlyList<string> Uncertainties { get; init; } = [];
+    public IReadOnlyList<int> LeakedTurns { get; init; } = [];
+    public string Explanation { get; init; } = "";
+
+    public static ObjectiveReport From(ObjectiveAssessment a) => new()
+    {
+        ObjectiveKey = a.ObjectiveKey,
+        Title = a.Title,
+        Status = a.Status switch
+        {
+            ObjectiveStatus.Sufficient => "sufficient",
+            ObjectiveStatus.Inconclusive => "inconclusive",
+            ObjectiveStatus.Open => "open",
+            _ => "not-started",
+        },
+        Level = (int)a.Level,
+        LevelLabel = Gadfly.Assessment.MasteryLevels.Label(a.Level),
+        ProvisionalLevel = (int)a.ProvisionalLevel,
+        AssistedLevel = a.AssistedLevel is { } al ? (int)al : null,
+        Questions = a.Questions,
+        IndependentAnswers = a.IndependentAnswers,
+        SupportingAnswers = a.SupportingAnswers,
+        ContradictingAnswers = a.ContradictingAnswers,
+        ContaminatedAnswers = a.ContaminatedAnswers,
+        AssistedAnswers = a.AssistedAnswers,
+        Consistent = a.Consistent,
+        UnresolvedMisconceptions = a.UnresolvedMisconceptions,
+        Uncertainties = a.Uncertainties,
+        LeakedTurns = a.LeakedTurns,
+        Explanation = a.Explanation,
+    };
+}
+
 /// <summary>A quoted answer with the judgment that scored it and its source citations.</summary>
 public sealed record EvidenceQuote(int TurnIndex, MoveKind Move, string Question, string Quote, double Score,
     string JudgeSummary, IReadOnlyList<Citation> Citations);
@@ -44,6 +102,10 @@ public sealed record SessionReport
     public required IReadOnlyList<ConceptReport> Concepts { get; init; }
     public int TurnsJudged { get; init; }
     public int TurnsNeedingReview { get; init; }
+    /// <summary>Per-objective levels and evidence sufficiency (GAD-T89); empty in reports made before objectives.</summary>
+    public IReadOnlyList<ObjectiveReport> Objectives { get; init; } = [];
+    /// <summary>"Examination" or "Learning": learning-session evidence is never examination evidence (Part 3).</summary>
+    public string Mode { get; init; } = nameof(Gadfly.Assessment.AssessmentMode.Examination);
 
     public const string Mastered = "mastered";
     public const string Partial = "partial";
@@ -74,7 +136,7 @@ public sealed record SessionReport
     /// display titles (missing ids show the id). <paramref name="evidencePerConcept"/> caps quotes.
     /// </summary>
     public static SessionReport From(SocraticSession session, IReadOnlyDictionary<string, string>? conceptTitles = null,
-        int evidencePerConcept = 3)
+        int evidencePerConcept = 3, IReadOnlyList<ObjectiveAssessment>? objectives = null)
     {
         ArgumentNullException.ThrowIfNull(session);
         var p = session.Policy;
@@ -131,6 +193,10 @@ public sealed record SessionReport
             Concepts = concepts,
             TurnsJudged = judgedTurns.Count,
             TurnsNeedingReview = judgedTurns.Count(t => t.Judgment!.NeedsHumanReview),
+            Objectives = (objectives ?? ObjectiveAssessor.AssessAll(session, ExamObjectives.Resolve(p, conceptIds,
+                    id => conceptTitles is not null && conceptTitles.TryGetValue(id, out var t) ? t : id)))
+                .Select(ObjectiveReport.From).ToList(),
+            Mode = p.Mode.ToString(),
         };
     }
 
@@ -151,6 +217,25 @@ public sealed record SessionReport
         sb.AppendLine($"| Answers judged | {TurnsJudged} |");
         sb.AppendLine($"| Answers needing human review | {TurnsNeedingReview} |");
         sb.AppendLine($"| Prompt set | `{PromptSetSha256[..Math.Min(12, PromptSetSha256.Length)]}` |").AppendLine();
+
+        if (Objectives.Count > 0)
+        {
+            sb.AppendLine($"## Learning objectives ({Mode} mode)").AppendLine();
+            sb.AppendLine("| Objective | Level | Status | Questions | Independent answers | Notes |").AppendLine("|---|---|---|---|---|---|");
+            foreach (var o in Objectives)
+            {
+                var notes = new List<string>();
+                if (o.Level == 0 && o.ProvisionalLevel > 0) notes.Add($"evidence points to level {o.ProvisionalLevel}, not yet sufficient");
+                if (o.AssistedLevel is { } al) notes.Add($"assisted level {al}");
+                if (o.ContaminatedAnswers > 0) notes.Add($"{o.ContaminatedAnswers} contaminated answer(s) excluded");
+                if (!o.Consistent) notes.Add("inconsistent claims");
+                if (o.UnresolvedMisconceptions.Count > 0) notes.Add("misconception: " + string.Join("; ", o.UnresolvedMisconceptions));
+                sb.AppendLine($"| {Escape(o.Title)} | {o.Level} {o.LevelLabel} | {o.Status} | {o.Questions} | {o.IndependentAnswers} | {Escape(string.Join("; ", notes))} |");
+            }
+            sb.AppendLine();
+            foreach (var o in Objectives.Where(o => o.Status == "inconclusive"))
+                sb.AppendLine($"> **{Escape(o.Title)}: Level 0, Insufficient Evidence.** {o.Explanation} Follow the institution's procedure (human review or further examination).").AppendLine();
+        }
 
         sb.AppendLine("## Concepts").AppendLine();
         sb.AppendLine("| Concept | Mastery | Status | Turns | Avg. score |").AppendLine("|---|---|---|---|---|");

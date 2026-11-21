@@ -85,4 +85,12 @@ public sealed record Turn
     public AnswerJudgment? Judgment { get; init; }
     /// <summary>The concept's mastery right after this turn was judged.</summary>
     public MasterySnapshot? MasteryAfter { get; init; }
+    /// <summary>The learning objective examined (GAD-T89); null in older transcripts, where the concept is the objective.</summary>
+    public string? ObjectiveKey { get; init; }
+    /// <summary>The planner asked this to replace a question that revealed the answer (GAD-T92).</summary>
+    public bool IsReplacement { get; init; }
+    /// <summary>The panel's analysis of the answer: claims, misconceptions, uncertainties, evidence (GAD-T91).</summary>
+    public ResponseAnalysis? Analysis { get; init; }
+    /// <summary>Set when this turn's question or a clarification on it was found to reveal the answer (GAD-T92).</summary>
+    public LeakFlag? Leak { get; init; }
 }

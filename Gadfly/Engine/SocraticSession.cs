@@ -66,10 +66,10 @@ public sealed class SocraticSession
     /// personal introspection tool) leave every turn here; exam subjects judge before planning on.</summary>
     public Turn? AwaitingJudgment => _turns.Count > 0 && _turns[^1].Answer is not null && _turns[^1].Judgment is null ? _turns[^1] : null;
 
-    /// <summary>Time left in the budget at <paramref name="now"/> (never negative).</summary>
+    /// <summary>Time left in the budget (with any accommodation multiplier) at <paramref name="now"/> (never negative).</summary>
     public TimeSpan Remaining(DateTimeOffset now)
     {
-        var left = Policy.TimeBudget - (now - StartedAt);
+        var left = Policy.EffectiveTimeBudget - (now - StartedAt);
         return left < TimeSpan.Zero ? TimeSpan.Zero : left;
     }
 
@@ -78,8 +78,10 @@ public sealed class SocraticSession
 
     /// <summary>Asks a new question. The previous turn must be answered first.</summary>
     public Turn Ask(string conceptId, MoveKind move, string question, DateTimeOffset askedAt, IReadOnlyList<string>? targetClaimIds = null,
-        string reason = "")
+        string reason = "", string? objectiveKey = null, bool isReplacement = false)
     {
+        if (MoveProfiles.IsAssistance(move) && Policy.Mode != Gadfly.Assessment.AssessmentMode.Learning)
+            throw new InvalidOperationException("Examination mode never teaches: hints and guided explanations are Learning Mode only.");
         EnsureRunning();
         if (OpenTurn is not null) throw new InvalidOperationException("The previous turn has not been answered yet.");
         if (string.IsNullOrWhiteSpace(question)) throw new ArgumentException("A turn needs a question.", nameof(question));
@@ -92,6 +94,8 @@ public sealed class SocraticSession
             AskedAt = askedAt,
             TargetClaimIds = targetClaimIds ?? [],
             Reason = reason,
+            ObjectiveKey = objectiveKey,
+            IsReplacement = isReplacement,
         };
         _turns.Add(turn);
         return turn;
@@ -107,14 +111,30 @@ public sealed class SocraticSession
     }
 
     /// <summary>Records the judgment of the last turn's answer and the concept's new mastery estimate.</summary>
-    public Turn RecordJudgment(AnswerJudgment judgment, double masteryEstimate)
+    public Turn RecordJudgment(AnswerJudgment judgment, double masteryEstimate, ResponseAnalysis? analysis = null)
     {
         EnsureRunning();
         ArgumentNullException.ThrowIfNull(judgment);
         var open = AwaitingJudgment ?? throw new InvalidOperationException("There is no answered, unjudged turn to judge.");
         var snapshot = new MasterySnapshot(open.ConceptId, Math.Clamp(masteryEstimate, 0, 1), TurnsOn(open.ConceptId));
         _mastery[open.ConceptId] = snapshot;
-        return Replace(open with { Judgment = judgment, MasteryAfter = snapshot });
+        return Replace(open with { Judgment = judgment, MasteryAfter = snapshot, Analysis = analysis ?? open.Analysis });
+    }
+
+    /// <summary>
+    /// Records that turn <paramref name="turnIndex"/>'s question (or a clarification on it) revealed the answer
+    /// (GAD-T92). The first flag on a turn stands; later ones are ignored. Allowed after the session ended,
+    /// because a leak can be found in review: answers on that objective from this turn on become contaminated.
+    /// Returns false when the turn was already flagged.
+    /// </summary>
+    public bool FlagLeak(int turnIndex, LeakFlag flag)
+    {
+        ArgumentNullException.ThrowIfNull(flag);
+        if (turnIndex < 0 || turnIndex >= _turns.Count) throw new ArgumentOutOfRangeException(nameof(turnIndex));
+        var turn = _turns[turnIndex];
+        if (turn.Leak is not null) return false;
+        Replace(turn with { Leak = flag });
+        return true;
     }
 
     /// <summary>Ends the session. An unanswered open turn is kept as asked.</summary>

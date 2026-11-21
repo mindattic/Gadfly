@@ -1,3 +1,5 @@
+using Gadfly.Assessment;
+
 namespace Gadfly.Engine;
 
 /// <summary>
@@ -33,9 +35,38 @@ public sealed record SessionPolicy
     /// <summary>Seed for every random choice the planner makes, so a session can be replayed for audit.</summary>
     public int Seed { get; init; }
 
+    /// <summary>
+    /// Learning objectives to examine (GAD-T89), in the instructor's order. Empty means one implicit
+    /// objective per concept in <see cref="ConceptIds"/>, so concept-only exams keep working.
+    /// </summary>
+    public IReadOnlyList<ExamObjective> Objectives { get; init; } = [];
+
+    /// <summary>Examination (never teaches) or Learning (hints and guided explanations; assisted evidence). Part 3.</summary>
+    public AssessmentMode Mode { get; init; } = AssessmentMode.Examination;
+
+    /// <summary>Accessibility accommodation: the time budget is multiplied by this (1 = none, 1.5 = time and a half).</summary>
+    public double TimeMultiplier { get; init; } = 1.0;
+
+    /// <summary>Independent supporting answers needed before a level counts as shown (Part 6.3: never one answer).</summary>
+    public int MinCorroboratingAnswers { get; init; } = 2;
+
+    /// <summary>Learning Mode: most hints or guided explanations per objective.</summary>
+    public int MaxAssistsPerObjective { get; init; } = 2;
+
+    /// <summary>The budget the session actually runs under: <see cref="TimeBudget"/> times <see cref="TimeMultiplier"/>.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public TimeSpan EffectiveTimeBudget => TimeSpan.FromTicks((long)(TimeBudget.Ticks * Math.Max(1.0, TimeMultiplier)));
+
     /// <summary>Throws when the policy is not usable.</summary>
     public void Validate()
     {
+        if (double.IsNaN(TimeMultiplier) || TimeMultiplier < 1 || TimeMultiplier > 4)
+            throw new ArgumentException("TimeMultiplier must be between 1 and 4.");
+        if (MinCorroboratingAnswers is < 2 or > 5) throw new ArgumentException("MinCorroboratingAnswers must be 2 to 5.");
+        if (MaxAssistsPerObjective is < 0 or > 5) throw new ArgumentException("MaxAssistsPerObjective must be 0 to 5.");
+        var keys = Objectives.Select(o => o.Key).ToList();
+        if (keys.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Every objective needs a key.");
+        if (keys.Distinct(StringComparer.Ordinal).Count() != keys.Count) throw new ArgumentException("Objective keys must be unique.");
         if (TimeBudget <= TimeSpan.Zero) throw new ArgumentException("TimeBudget must be positive.");
         if (MaxTurns < 1) throw new ArgumentException("MaxTurns must be at least 1.");
         if (MaxTurnsPerConcept < 1) throw new ArgumentException("MaxTurnsPerConcept must be at least 1.");

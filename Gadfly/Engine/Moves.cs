@@ -23,6 +23,20 @@ public enum MoveKind
     Synthesize,
     /// <summary>Ends the current concept: mastery shown, aporia reached, or its budget spent.</summary>
     Close,
+    // Strategies B, D, G and H of the master plan (Part 2.3), and Learning Mode's assistance moves (Part 3.2).
+    // Appended so the numeric values of the older moves never change; transcripts store names anyway.
+    /// <summary>"What causes this outcome?" Tests cause-and-effect understanding (strategy B).</summary>
+    CausalReasoning,
+    /// <summary>Changes one relevant condition and asks what changes and why (strategy D).</summary>
+    ScenarioVariation,
+    /// <summary>"What must be true for your explanation to hold?" (strategy G).</summary>
+    AssumptionTesting,
+    /// <summary>Reconstruct the explanation in their own reasoning, without the textbook wording (strategy H).</summary>
+    IndependentExplanation,
+    /// <summary>Learning Mode only: a hint, then the student tries again. Everything after it is assisted evidence.</summary>
+    Hint,
+    /// <summary>Learning Mode only: a short guided explanation, then a reassessment question. Assisted evidence.</summary>
+    GuidedExplanation,
 }
 
 /// <summary>Why a session (or one concept within it) ended.</summary>
@@ -42,4 +56,6 @@ public enum EndReason
     Abandoned,
     /// <summary>The session stopped on an unrecoverable error.</summary>
     Failed,
+    /// <summary>Every learning objective closed: sufficient evidence, or an explicit inconclusive result (GAD-T89).</summary>
+    EvidenceComplete,
 }
