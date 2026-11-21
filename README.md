@@ -42,6 +42,39 @@ claude.ai export. It is documented further down.
 - Try it without spending anything: the default development setup runs a clearly labelled mock panel, so
   no provider key or credit is needed.
 
+## The science behind Gadfly
+
+Gadfly's examiner follows the Socratic *elenchus*: it examines only what the student actually said, and
+tests whether those answers hold together. In Plato's *Apology*, Socrates questions a man who "thinks he
+knows something when he does not" (21d). Piaget turned the same habit into a research method, the clinical
+interview: vary the questions, offer counter-suggestions, give up "all idea of a fixed questionnaire", and
+never dictate an answer (Piaget 1929, pp. 4, 13). One correct answer can be recalled, guessed or pasted;
+explaining it, defending it against a counterexample and using it somewhere new is much harder without
+understanding it. Prompting learners to explain also helps them learn (Bisra et al. 2018), so an exam like
+this teaches as well as measures.
+
+The research also sets limits, and Gadfly is built around them:
+
+- **A contradiction shows inconsistency, not which claim is wrong** (Vlastos 1983, via Wolfsdorf 2013;
+  Benson 1995). "Can both be true?" quotes the student's own two claims; the rubric and the cited course
+  material decide which is right.
+- **Explaining to a listener changes and slows the explainer** (Fox, Ericsson & Best 2011), so pauses and
+  speech rate never enter the grade.
+- **Oral exams are reliable through sampling** (van der Vleuten et al. 2010; Wass et al. 2003), and LLM
+  judges carry biases (Zheng et al. 2023): several objectives, a panel of models from different families,
+  blind human grading, reconciliation and human approval. Human oversight is a legal requirement for this
+  use in the EU (AI Act, Annex III point 3).
+- **Speech recognition errs more on some dialects and on stuttered speech** (Koenecke et al. 2020; Mujtaba
+  et al. 2024): judges ignore transcription slips and never penalize accent or fluency.
+- **Webcam gaze is too coarse to tell reading from thinking** (Papoutsaki et al. 2016; Rayner 2009), and
+  **voice-stress analysis performs at chance** (Harnsberger et al. 2009; NRC 2003): both are low-confidence
+  reviewer notes, never a verdict and never part of the grade. The research recommends going further on voice
+  strain than Gadfly does today; that gap is stated on the full page.
+
+Gadfly makes no validity claims until its own pilot measures them. The full explanation, with the
+verification level of every source, is in [docs/SCIENCE.md](docs/SCIENCE.md); the research notes and
+citation ledger are in [docs/research/](docs/research/README.md).
+
 ## Features
 
 Gadfly Exams, the web platform (`Gadfly.Server`):
@@ -403,6 +436,7 @@ and `Gadfly.Server` are two hosts. The full plan is in [docs/SOCRATIC_PLATFORM.m
 |---|---|
 | Instructors: material, concepts and rubrics, exams, review and grading | [Instructor guide](docs/guides/INSTRUCTOR_GUIDE.md) |
 | Students: how the exam works, what is recorded, results | [Student guide](docs/guides/STUDENT_GUIDE.md) |
+| The science behind Gadfly: the elenchus, why follow-ups reveal understanding, the limits, citations | [Science](docs/SCIENCE.md), [research notes](docs/research/README.md) |
 | Owners and admins: organizations, members, MFA, retention, keys, webhooks | [Admin guide](docs/guides/ADMIN_GUIDE.md) |
 | Integrators: the platform API v1, launch links, webhook signatures | [API reference](docs/API.md) |
 | The owner's product plan, and what is built against it | [Master plan](docs/MASTER-PLAN.md), [status](docs/MASTER-PLAN-STATUS.md) |
