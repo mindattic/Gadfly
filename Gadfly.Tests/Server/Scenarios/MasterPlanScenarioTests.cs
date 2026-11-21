@@ -265,10 +265,34 @@ public class MasterPlanScenarioTests
     }
 
     [Test]
-    [Ignore("waiting on GAD-T92 (leading-question contamination): evidence after a revealed answer must be marked contaminated and excluded from independent mastery")]
     public void Scenario_I_ContaminatedEvidence_IsNotTreatedAsIndependentMastery()
     {
-        Assert.Fail("Implement against GAD-T92's contamination flag once it lands.");
+        // A question that revealed the answer is flagged (by the analysis, the guard or a reviewer): every answer on
+        // that objective from then on is contaminated, and only a leak-resistant replacement can count again.
+        var s = Session();
+        s.Judged("photosynthesis", MoveKind.Elicit, 0.95, 0.65);
+        s.Judged("photosynthesis", MoveKind.Probe, 0.95, 0.75);
+        s.Judged("photosynthesis", MoveKind.CausalReasoning, 0.95, 0.85);
+        s.FlagLeak(0, new LeakFlag(LeakSource.Reviewer, "The opening question stated the definition.", T0));
+        var objective = ExamObjectives.Implicit("photosynthesis", "Photosynthesis");
+        var a = ObjectiveAssessor.Assess(s, objective);
+        Assert.That(a.ContaminatedAnswers, Is.EqualTo(3));
+        Assert.That(a.IndependentAnswers, Is.Zero, "contaminated evidence is never independent");
+        Assert.That(a.Level, Is.EqualTo(MasteryLevel.InsufficientEvidence), "no mastery from contaminated answers");
+        Assert.That(a.Explanation, Does.Contain("excluded"));
+
+        // The planner asks a replacement question that needs reasoning the leak did not give away...
+        var d = new QuestionPlanner([new PlannerConcept("photosynthesis")]).Next(s, T0.AddMinutes(1));
+        Assert.That(d.IsReplacement, Is.True);
+        Assert.That(ObjectiveAssessor.LeakResistantMoves, Does.Contain(d.Move));
+        // ...whose answer counts again for the dimensions a leak can't supply.
+        s.Ask("photosynthesis", d.Move, "Replacement?", T0.AddMinutes(1), isReplacement: true);
+        s.RecordAnswer(new Answer { Text = "x", CompletedAt = T0.AddMinutes(2) });
+        s.RecordJudgment(Judgment(0.9), 0.85);
+        var replacement = s.Turns[^1];
+        Assert.That(ObjectiveAssessor.IsContaminated(s, replacement, objective.Key, AssessmentDimension.Application), Is.False);
+        Assert.That(ObjectiveAssessor.IsContaminated(s, replacement, objective.Key, AssessmentDimension.FactualKnowledge), Is.True);
+        Assert.That(ObjectiveAssessor.Assess(s, objective).IndependentAnswers, Is.EqualTo(1));
     }
 }
 
