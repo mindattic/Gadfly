@@ -58,7 +58,7 @@ else
                     <td>@r.ExamTitle</td>
                     <td>@r.Attempt</td>
                     <td>@r.State</td>
-                    <td>@(r.EndedAt?.ToLocalTime().ToString("g") ?? "—")</td>
+                    <td>@(r.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "—")</td>
                     <td>
                         @if (r.Recommendation is not null)
                         {

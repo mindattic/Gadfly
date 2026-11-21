@@ -157,7 +157,7 @@ else
     {
         JobState.Queued => "Queued",
         JobState.Running => $"{j.Progress:P0} · {j.Message ?? "Working"}",
-        JobState.Succeeded => $"Done {j.CompletedAt?.ToLocalTime():g}" + (j.Message is { } m ? $" · {m}" : ""),
+        JobState.Succeeded => $"Done {j.CompletedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'")}" + (j.Message is { } m ? $" · {m}" : ""),
         JobState.Failed => $"Failed: {j.Error ?? "unknown error"}",
         JobState.Cancelled => "Cancelled",
         _ => j.State.ToString(),

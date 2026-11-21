@@ -90,7 +90,7 @@ else if (collection is not null)
                             else if (!d.Uploaded) { <span>Processed (original not on this server)</span> }
                             else if (!d.Ingested) { <span class="hint">Waiting to be processed</span> }
                             else if (d.ChangedSinceIngest) { <span class="hint">Changed; process again</span> }
-                            else { <span class="ok">Processed @d.IngestedAt?.ToLocalTime().ToString("g")</span> }
+                            else { <span class="ok">Processed @d.IngestedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'")</span> }
                         </td>
                     </tr>
                 }

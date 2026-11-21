@@ -25,8 +25,9 @@ else
 
     <div class="review-summary">
         <div><span class="hint">State</span> @s.State@(s.EndReason is { } er ? $" ({er})" : "")</div>
-        <div><span class="hint">Started</span> @(s.StartedAt?.ToLocalTime().ToString("g") ?? "—")</div>
-        <div><span class="hint">Ended</span> @(s.EndedAt?.ToLocalTime().ToString("g") ?? "—")</div>
+        <div><span class="hint">Started</span> @(s.StartedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "—")</div>
+        <div><span class="hint">Times on this page</span> UTC</div>
+        <div><span class="hint">Ended</span> @(s.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "—")</div>
         <div><span class="hint">AI recommendation</span>
             @if (view.Report is { } rep) { <span class="tag rec-@rep.Recommendation">@rep.Recommendation</span> @Pct(rep.OverallScore) }
             else { <span>none yet</span> }
@@ -89,7 +90,7 @@ else
                         <strong>Q@(t.Index + 1)</strong>
                         <span class="tag">@t.Move</span>
                         <span>@t.ConceptTitle</span>
-                        <span class="hint">@t.AskedAt.ToLocalTime().ToString("T")</span>
+                        <span class="hint">@t.AskedAt.UtcDateTime.ToString("HH:mm:ss")</span>
                     </div>
                     @if (t.Judgment?.NeedsHumanReview == true)
                     {
@@ -106,7 +107,7 @@ else
                         <p class="hint">
                             @(t.AnswerMode ?? "answer")
                             @if (t.LatencySeconds is { } lat) { <text> · started after @lat.ToString("0.#") s</text> }
-                            @if (t.AnswerCompletedAt is { } done) { <text> · finished @done.ToLocalTime().ToString("T")</text> }
+                            @if (t.AnswerCompletedAt is { } done) { <text> · finished @done.UtcDateTime.ToString("HH:mm:ss")</text> }
                             @if (t.HasAudio) { <text> · audio recorded (playback arrives with media storage)</text> }
                             @foreach (var m in t.SpeechMetrics.Take(6)) { <text> · @m.Key @m.Value.ToString("0.##")</text> }
                         </p>
@@ -249,7 +250,7 @@ else
                 @foreach (var (g, by) in view.Grades)
                 {
                     <tr>
-                        <td>@g.DecidedAt.ToLocalTime().ToString("g")</td>
+                        <td>@g.DecidedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'")</td>
                         <td>@by</td>
                         <td><strong>@g.Grade</strong></td>
                         <td>@(g.Score?.ToString("0.##") ?? "—")</td>
