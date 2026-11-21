@@ -40,6 +40,7 @@ public class CorpusSummarizer
             return cached;
 
         var chunkDigests = new List<string>();
+        var panelFailed = false;
         foreach (var chunk in ChunkByCharBudget(humanMessages, ChunkCharBudget))
         {
             var result = await client.AskAsync(
@@ -50,7 +51,8 @@ public class CorpusSummarizer
                 context: string.Join("\n---\n", chunk.Select(m => m.Text)),
                 quorum: Quorum.Plurality,
                 ct: ct);
-            chunkDigests.Add(PickText(result));
+            if (PanelText.Of(result) is { } chunkDigest) chunkDigests.Add(chunkDigest);
+            else panelFailed = true;
         }
 
         var hintsBlock = hintPhrases.Count > 0
@@ -67,14 +69,21 @@ public class CorpusSummarizer
             quorum: Quorum.Plurality,
             ct: ct);
 
-        var digest = PickText(reduceResult);
-        cache[corpusHash] = digest;
-        SaveCache(cache);
+        var digest = PanelText.Of(reduceResult);
+        if (digest is null)
+        {
+            panelFailed = true;
+            digest = string.Join("\n\n", chunkDigests);
+        }
+        // A digest built while the panel was failing (or the panel's own failure wording) is returned for this run but
+        // never cached: it would stand in for the real digest on every later run until the corpus changed (GAD-T180).
+        if (!panelFailed && digest.Length > 0)
+        {
+            cache[corpusHash] = digest;
+            SaveCache(cache);
+        }
         return digest;
     }
-
-    private static string PickText(VotingResult result) =>
-        !string.IsNullOrWhiteSpace(result.Consensus) ? result.Consensus : result.NarrativeSummary;
 
     internal static List<List<CorpusMessage>> ChunkByCharBudget(IReadOnlyList<CorpusMessage> messages, int charBudget)
     {

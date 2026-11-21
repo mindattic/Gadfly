@@ -36,6 +36,41 @@ public class CorpusSummarizerTests
         Assert.That(CorpusSummarizer.ChunkByCharBudget(Array.Empty<CorpusMessage>(), charBudget: 100), Is.Empty);
     }
 
+    private sealed class DownPanel : Gadfly.Socrates.ISocraticVotingClient
+    {
+        public int Calls;
+        public Task<MindAttic.Legion.VotingResult> AskAsync(string question, string context, MindAttic.Legion.Quorum quorum, CancellationToken ct = default)
+        {
+            Calls++;
+            // What Legion returns when every voter fails.
+            return Task.FromResult(new MindAttic.Legion.VotingResult { Question = question, QuorumReached = false, Consensus = "All voters failed." });
+        }
+        public Task<MindAttic.Legion.VotingResult> AskWithProfilesAsync(string q, string c, IReadOnlyList<MindAttic.Legion.VoterProfile> v, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<MindAttic.Legion.DecisionResult> DecideAsync(string q, IReadOnlyList<string> o, string c, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<Gadfly.Socrates.PanelReply>> FanOutAsync(string s, string u, int m = 4096, double t = 0.2, CancellationToken ct = default) => throw new NotSupportedException();
+    }
+
+    [Test]
+    public async Task SummarizeAsync_DoesNotCacheOrReturnTheFailureWording_WhenThePanelIsDown()
+    {
+        var panel = new DownPanel();
+        var cachePath = Path.Combine(Path.GetTempPath(), "gadfly-digest-cache-test-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var summarizer = new CorpusSummarizer(panel, cachePath);
+            var digest = await summarizer.SummarizeAsync(new[] { Msg("hello") }, "hash-down", Array.Empty<string>());
+            await summarizer.SummarizeAsync(new[] { Msg("hello") }, "hash-down", Array.Empty<string>());
+
+            Assert.That(digest, Does.Not.Contain("All voters failed"));
+            Assert.That(File.Exists(cachePath), Is.False, "a failed digest must not be cached");
+            Assert.That(panel.Calls, Is.EqualTo(4), "the second run asked the panel again instead of reusing a poisoned cache");
+        }
+        finally
+        {
+            if (File.Exists(cachePath)) File.Delete(cachePath);
+        }
+    }
+
     [Test]
     public async Task SummarizeAsync_CachesByCorpusHash_SkippingFurtherCallsOnRepeat()
     {
