@@ -53,6 +53,42 @@ public sealed record JudgmentView(
 /// <summary>A claim the student made that contradicts an earlier one.</summary>
 public sealed record ContradictionView(string Quote, string EarlierQuote);
 
+/// <summary>
+/// The recitation check's finding on one answer (GAD-T242), as the reviewer sees it (GAD-T248): how much of the answer follows
+/// the source word for word, the longest copied stretch, and which pattern fired. Stored on the turn's "possibly-recited"
+/// integrity event. It explains why the examiner asked for the answer differently; it is never a verdict of cheating.
+/// </summary>
+public sealed record RecitationView(double SourceOverlap, int LongestCopiedWords, string? CopiedText, bool MatchesSource,
+    bool ReadOutPattern, string Reason)
+{
+    /// <summary>The integrity event type a recited answer is recorded under.</summary>
+    public const string EventType = "possibly-recited";
+
+    private static readonly System.Text.Json.JsonSerializerOptions Json = new(System.Text.Json.JsonSerializerDefaults.Web);
+
+    public static RecitationView From(Gadfly.Engine.RecitationFlag flag) => new(flag.SourceOverlap, flag.LongestCopiedWords,
+        flag.CopiedText, flag.MatchesSource, flag.ReadOutPattern, flag.Reason);
+
+    public string ToJson() => System.Text.Json.JsonSerializer.Serialize(this, Json);
+
+    /// <summary>The finding stored on an event, or null when there is none or it can't be read.</summary>
+    public static RecitationView? Parse(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try { return System.Text.Json.JsonSerializer.Deserialize<RecitationView>(json, Json); }
+        catch (System.Text.Json.JsonException) { return null; }
+    }
+
+    /// <summary>Which pattern(s) fired, in plain words.</summary>
+    public string Patterns => (MatchesSource, ReadOutPattern) switch
+    {
+        (true, true) => "close to the source's wording, and a read-out pattern (long, fluent answer after a long silent wait)",
+        (true, false) => "close to the source's wording",
+        (false, true) => "read-out pattern (long, fluent answer after a long silent wait)",
+        _ => "none recorded",
+    };
+}
+
 /// <summary>One question and answer.</summary>
 public sealed record TurnView(
     Guid TurnId,
@@ -78,6 +114,9 @@ public sealed record TurnView(
 
     /// <summary>The spoken answer's voice against the student's own first answers (GAD-T232); descriptive only, null when unknown or blinded.</summary>
     public Gadfly.Server.Voice.VoiceStrainReading? Strain { get; init; }
+
+    /// <summary>The recitation check's finding when this answer read as possibly recited (GAD-T248); null otherwise.</summary>
+    public RecitationView? Recitation { get; init; }
 }
 
 /// <summary>An integrity event, with a plain-language reading of what it does and doesn't mean.</summary>

@@ -109,6 +109,14 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                 .Select(c => new { c.Id, c.Text, c.Location, Document = c.Document!.FileName }).ToListAsync(ct))
             .ToDictionary(c => c.Id, c => (c.Text, c.Location, (string?)c.Document));
 
+        var integrityRows = await db.IntegrityEvents.AsNoTracking().Where(e => e.SessionId == sessionId && e.OrganizationId == organizationId)
+            .OrderBy(e => e.StartedAt).ToListAsync(ct);
+        // The recitation check's finding on each turn (GAD-T248), from its "possibly-recited" integrity event.
+        var recitations = integrityRows.Where(e => e.Type == RecitationView.EventType && e.TurnId is not null)
+            .GroupBy(e => e.TurnId!.Value)
+            .Select(g => (TurnId: g.Key, View: RecitationView.Parse(g.First().DataJson)))
+            .Where(r => r.View is not null).ToDictionary(r => r.TurnId, r => r.View!);
+
         var turnViews = turns.Select(t =>
         {
             JudgmentView? jv = null;
@@ -130,11 +138,11 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
             {
                 // Voice strain (GAD-T232) is kept from a blinded grader like the planner's reasoning: it must not prime the grade.
                 Strain = blinded || t.AnswerMode != "voice" ? null : Gadfly.Server.Voice.VoiceStrain.Describe(metrics),
+                Recitation = recitations.GetValueOrDefault(t.Id),
             };
         }).ToList();
 
-        var integrity = (await db.IntegrityEvents.AsNoTracking().Where(e => e.SessionId == sessionId && e.OrganizationId == organizationId)
-                .OrderBy(e => e.StartedAt).ToListAsync(ct))
+        var integrity = integrityRows
             .Select(e =>
             {
                 var (label, explanation, normal) = IntegrityExplanations.For(e.Type, e.Source);

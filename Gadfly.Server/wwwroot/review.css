@@ -27,6 +27,10 @@ h2.section { font-size: 1.15rem; margin: 1.75rem 0 .75rem; }
 .integrity.normal, .integrity.sev-info { border-left-color: var(--ok); }
 .integrity.sev-low { border-left-color: var(--muted); }
 .integrity.sev-medium, .integrity.sev-high { border-left-color: var(--error); }
+/* Possibly recited answer (GAD-T248): a reading aid, deliberately not styled as an error. */
+.recitation { margin: .5rem 0; padding: .45rem .7rem; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; display: grid; gap: .3rem; font-size: .9rem; }
+.tag.recited { border-color: var(--accent); color: var(--accent); }
+.recitation .copied { margin: 0; padding: .3rem .6rem; border-left: 3px solid var(--line); background: var(--bg); border-radius: 4px; white-space: pre-wrap; }
 .bar { display: inline-block; width: 80px; height: .55rem; border-radius: 999px; background: linear-gradient(90deg, var(--accent) var(--v), var(--line) var(--v)); vertical-align: middle; }
 .report { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .5rem 1.25rem; }
 .report blockquote { margin: .5rem 0; padding-left: .75rem; border-left: 3px solid var(--line); color: var(--muted); }

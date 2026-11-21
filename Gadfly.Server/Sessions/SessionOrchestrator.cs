@@ -820,6 +820,23 @@ public sealed class SessionOrchestrator(
             });
         }
 
+        // Recitation check (GAD-T242): a possibly recited answer is recorded for the reviewer with its overlap, copied stretch and
+        // which pattern fired (GAD-T248). Evidence the examiner acted on (she asked for it differently), never a verdict.
+        foreach (var turn in s.Turns.Where(t => t.Judgment?.Recitation is not null && t.Answer is not null))
+        {
+            var turnRow = stored[turn.Index];
+            if (await db.IntegrityEvents.AnyAsync(e => e.SessionId == s.Id && e.TurnId == turnRow.Id && e.Type == Review.RecitationView.EventType, ct)) continue;
+            var flag = turn.Judgment!.Recitation!;
+            db.IntegrityEvents.Add(new IntegrityEvent
+            {
+                OrganizationId = org, SessionId = s.Id, TurnId = turnRow.Id, Source = "answer", Type = Review.RecitationView.EventType,
+                StartedAt = turn.Answer!.StartedAt ?? turn.Answer.CompletedAt, EndedAt = turn.Answer.CompletedAt,
+                Confidence = flag.MatchesSource ? Math.Clamp(flag.SourceOverlap, 0, 1) : 0.5, Severity = IntegritySeverity.Low,
+                Summary = $"Possibly recited: {flag.Reason}. Not counted as the student's own understanding; the examiner asked for it differently. Not a verdict.",
+                DataJson = Review.RecitationView.From(flag).ToJson(),
+            });
+        }
+
         var knownClaims = (await db.SessionClaims.Where(c => c.SessionId == s.Id).Select(c => c.Normalized).ToListAsync(ct)).ToHashSet();
         foreach (var claim in live.Engine.Ledger.Claims.Where(c => !knownClaims.Contains(c.Id + "|" + c.Text)))
         {

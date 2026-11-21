@@ -116,6 +116,22 @@ else
                         {
                             <p class="hint voice-strain" title="Voice strain indicators (descriptive only): pitch, pitch variability, jitter, loudness, speech rate and pausing, compared with this student's first spoken answers.">Voice: @strain.Summary</p>
                         }
+                        @if (t.Recitation is { } rec)
+                        {
+                            @* GAD-T248: the recitation check's finding (GAD-T242), shown as a reading aid, never a verdict. *@
+                            <div class="recitation" role="note">
+                                <div><span class="tag recited">possibly recited</span> <span class="hint">@rec.Patterns</span></div>
+                                <div class="hint">
+                                    Source overlap @Pct(rec.SourceOverlap) of the answer's word runs · longest copied stretch @rec.LongestCopiedWords word@(rec.LongestCopiedWords == 1 ? "" : "s")
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(rec.CopiedText))
+                                {
+                                    <blockquote class="copied" title="The longest stretch of the answer found word for word in the source material">“@rec.CopiedText”</blockquote>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(rec.Reason)) { <div class="hint">What the check saw: @rec.Reason.</div> }
+                                <div class="hint">Not counted as evidence of the student's own understanding; the examiner asked them to say it differently, apply it, or explain why. Students quote and memorize honestly: this is not a finding of cheating.</div>
+                            </div>
+                        }
                     }
                     else
                     {
