@@ -653,6 +653,10 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<Guid>("StudentUserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal>("TimeMultiplier")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExamId", "StudentUserId")

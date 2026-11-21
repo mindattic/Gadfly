@@ -217,6 +217,11 @@ public sealed class ExamAssignment : ITenantOwned
     public DateTimeOffset AssignedAt { get; set; }
     /// <summary>Set when the instructor releases results to the student.</summary>
     public DateTimeOffset? ResultsReleasedAt { get; set; }
+    /// <summary>
+    /// Accessibility accommodation (extra time): the exam's time budget is multiplied by this for this student
+    /// (1 = none, 1.25, 1.5, 2; at most 4). Copied into the session's policy when the attempt starts (GAD-T120).
+    /// </summary>
+    public decimal TimeMultiplier { get; set; } = 1m;
 }
 
 public enum SessionState { Created, ConsentGiven, Running, Paused, Ended, Failed }
