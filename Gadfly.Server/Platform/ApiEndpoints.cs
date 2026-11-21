@@ -59,6 +59,8 @@ public static class ApiEndpoints
     private static readonly JsonSerializerOptions Camel = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private const long MaxUploadBytes = SourceLibraryService.MaxFileBytes;
     private const int MaxTitleLength = 300;
+    /// <summary>The same cap the assessment editor puts on the instructions students see (GAD-T210).</summary>
+    private const int MaxInstructionsLength = 4000;
     private const string SecuritySchemeId = "ApiKey";
 
     private static IResult Error(string message, int status = StatusCodes.Status400BadRequest) =>
@@ -179,6 +181,7 @@ public static class ApiEndpoints
             if (title.Length == 0) return Error("title is required");
             if (title.Length > MaxTitleLength) return Error($"title must be at most {MaxTitleLength} characters");
             if (body.CollectionId == Guid.Empty) return Error("collectionId is required");
+            if (body.Instructions?.Length > MaxInstructionsLength) return Error($"instructions must be at most {MaxInstructionsLength} characters");
             if (body.ConceptKeys is not null && body.ConceptKeys.Any(string.IsNullOrWhiteSpace)) return Error("conceptKeys must not contain blank keys");
             var mode = body.Mode?.Trim();
             if (!string.IsNullOrEmpty(mode) && !mode.Equals("Text", StringComparison.OrdinalIgnoreCase) && !mode.Equals("Voice", StringComparison.OrdinalIgnoreCase))

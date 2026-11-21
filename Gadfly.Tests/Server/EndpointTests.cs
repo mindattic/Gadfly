@@ -361,6 +361,8 @@ public class ApiEndpointTests : ServerTest
             Assert.That(await Post(new { collectionId = w.CollectionId, title = "" }), Is.EqualTo((HttpStatusCode.BadRequest, "title is required")));
             Assert.That((await Post(new { collectionId = w.CollectionId, title = new string('x', 301) })).Status, Is.EqualTo(HttpStatusCode.BadRequest));
             Assert.That(await Post(new { collectionId = Guid.Empty, title = "T" }), Is.EqualTo((HttpStatusCode.BadRequest, "collectionId is required")));
+            Assert.That((await Post(new { collectionId = w.CollectionId, title = "T", instructions = new string('i', 4001) })).Error, Does.Contain("instructions must be at most 4000"));
+            Assert.That((await Post(new { collectionId = w.CollectionId, title = "T", instructions = new string('i', 4000) })).Status, Is.EqualTo(HttpStatusCode.Created));
             Assert.That(await Post(new { collectionId = w.CollectionId, title = "T", conceptKeys = new[] { "photosynthesis", " " } }),
                 Is.EqualTo((HttpStatusCode.BadRequest, "conceptKeys must not contain blank keys")));
             Assert.That((await Post(new { collectionId = w.CollectionId, title = "T", mode = "Hologram" })).Error, Does.Contain("mode must be"));
