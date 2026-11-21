@@ -14,11 +14,34 @@ internal static class PanelJson
     public static JsonDocument? ParseObject(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
-        var start = raw.IndexOf('{');
-        var end = raw.LastIndexOf('}');
-        if (start < 0 || end <= start) return null;
-        try { return JsonDocument.Parse(raw[start..(end + 1)]); }
-        catch (JsonException) { return null; }
+        // Parse the first complete object (balanced braces, string-aware), so prose with braces after it does not break the reply.
+        for (var start = raw.IndexOf('{'); start >= 0; start = raw.IndexOf('{', start + 1))
+        {
+            var end = EndOfObject(raw, start);
+            if (end < 0) continue;
+            try { return JsonDocument.Parse(raw[start..(end + 1)]); }
+            catch (JsonException) { }
+        }
+        return null;
+    }
+
+    private static int EndOfObject(string s, int start)
+    {
+        var depth = 0;
+        var inString = false;
+        for (var i = start; i < s.Length; i++)
+        {
+            var c = s[i];
+            if (inString)
+            {
+                if (c == '\\') i++;
+                else if (c == '"') inString = false;
+            }
+            else if (c == '"') inString = true;
+            else if (c == '{') depth++;
+            else if (c == '}' && --depth == 0) return i;
+        }
+        return -1;
     }
 
     public static string Str(JsonElement e, string name) =>

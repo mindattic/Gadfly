@@ -29,6 +29,8 @@
   <ItemGroup>
     <!-- PDF, DOCX, EPUB and HTML parsers (GAD-T155); the feed copy is in lib/local-packages for CI. -->
     <PackageReference Include="Tutor.Ingestion" Version="1.0.0" />
+    <!-- NU1902 GHSA-pgww-w46g-26qg: pin patched AngleSharp over the 1.4.0 that Tutor.Ingestion/SmartReader bring in. -->
+    <PackageReference Include="AngleSharp" Version="1.10.5" />
   </ItemGroup>
 
   <ItemGroup>

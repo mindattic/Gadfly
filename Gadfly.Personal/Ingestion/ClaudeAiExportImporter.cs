@@ -73,7 +73,7 @@ public static class ClaudeAiExportImporter
             {
                 conversationCount++;
 
-                var sessionId = TryGetString(conversation, "uuid") ?? TryGetString(conversation, "id") ?? Guid.NewGuid().ToString("N");
+                var sessionId = TryGetString(conversation, "uuid") ?? TryGetString(conversation, "id") ?? StableConversationId(conversation);
 
                 var messagesProp = TryGetProperty(conversation, "chat_messages") ?? TryGetProperty(conversation, "messages");
                 if (messagesProp is not { ValueKind: JsonValueKind.Array }) continue;
@@ -146,6 +146,15 @@ public static class ClaudeAiExportImporter
         }
 
         return null;
+    }
+
+    // No uuid/id: derive one from the conversation's own stable fields so re-importing the same export reuses the ids.
+    private static string StableConversationId(JsonElement conversation)
+    {
+        var messages = TryGetProperty(conversation, "chat_messages") ?? TryGetProperty(conversation, "messages");
+        var first = messages is { ValueKind: JsonValueKind.Array } m && m.GetArrayLength() > 0 ? m[0].GetRawText() : "";
+        var basis = $"{TryGetString(conversation, "name")}|{TryGetString(conversation, "created_at")}|{first}";
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(basis)))[..32].ToLowerInvariant();
     }
 
     private static JsonElement? TryGetProperty(JsonElement element, string property) =>

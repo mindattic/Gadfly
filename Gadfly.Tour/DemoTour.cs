@@ -257,7 +257,7 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
         {
             var job = await _api.GetFromJsonAsync<JsonElement>($"api/v1/jobs/{jobId}");
             state = job.GetProperty("state").GetString() ?? "";
-            if (state is "Failed" or "Cancelled") throw new TourAssertException($"the job ended {state}: {job.GetProperty("error")}");
+            if (state is "Failed" or "Cancelled") throw new TourAssertException($"the job ended {state}: {(job.TryGetProperty("error", out var jobError) ? jobError.ToString() : "(no error given)")}");
             return state == "Succeeded";
         }, o.Live ? TimeSpan.FromMinutes(15) : TimeSpan.FromMinutes(2), TimeSpan.FromSeconds(1));
         Expect.True(done, $"the processing job is still {state}");
@@ -591,7 +591,7 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
         var ai = (await _db.RowsAsync("""
             SELECT g.ObjectiveId, g.Level, g.Score FROM gadfly.AiObjectiveGrades g
             WHERE g.SessionId = @s AND g.CreatedAt = (SELECT MAX(x.CreatedAt) FROM gadfly.AiObjectiveGrades x WHERE x.SessionId = g.SessionId AND x.ObjectiveId = g.ObjectiveId)
-            """, ("@s", _sessionId))).ToDictionary(r => (Guid)r["ObjectiveId"]!);
+            """, ("@s", _sessionId))).GroupBy(r => (Guid)r["ObjectiveId"]!).ToDictionary(g => g.Key, g => g.First());
         var planned = new List<GradedObjective>();
         foreach (var o in objectives)
         {

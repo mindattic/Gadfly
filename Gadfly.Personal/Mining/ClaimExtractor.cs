@@ -44,7 +44,7 @@ public static class ClaimExtractor
 
     internal static IEnumerable<string> ExtractPhrases(string text)
     {
-        var words = Normalize(text).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var words = Normalize(text).Split(' ', StringSplitOptions.RemoveEmptyEntries); // Normalize leaves single spaces only
         for (var len = MinWordsPerPhrase; len <= MaxWordsPerPhrase; len++)
         {
             for (var start = 0; start + len <= words.Length; start++)
@@ -56,6 +56,6 @@ public static class ClaimExtractor
     {
         var chars = text.ToLowerInvariant().Select(c => char.IsLetterOrDigit(c) || char.IsWhiteSpace(c) ? c : ' ');
         var collapsed = string.Concat(chars);
-        return string.Join(' ', collapsed.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        return string.Join(' ', collapsed.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
     }
 }

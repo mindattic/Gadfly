@@ -143,9 +143,16 @@ public sealed class GradingSweeper(IServiceScopeFactory scopes, TimeProvider clo
             await GradingStarter.StartAsync(db, queue, s, GradingActor.System, now, ct);
 
         // Waiting on transcript verification, now resolved; or stuck without any job (e.g. created by hand).
+        // Rows the loop below would skip are filtered out here, so 50 stuck grades cannot starve the eligible ones (oldest first).
         var pending = await db.FinalGrades.AsNoTracking()
             .Where(g => g.Status == GradeStatus.TranscriptVerificationPending || g.Status == GradeStatus.ExaminationCompleted
                         || g.Status == GradeStatus.AiGradingPending)
+            .Where(g => !db.Jobs.Any(j => j.Kind == AiGradingJob.JobKind && j.PayloadJson.Contains(g.SessionId.ToString().ToLower())
+                        && (g.Status != GradeStatus.TranscriptVerificationPending || j.State == JobState.Queued || j.State == JobState.Running)))
+            .Where(g => g.Status != GradeStatus.TranscriptVerificationPending
+                        || !db.StudentResponses.Any(r => r.SessionId == g.SessionId
+                            && (r.VerificationState == VerificationState.Unresolved || r.VerificationState == VerificationState.FlaggedForHumanReview)))
+            .OrderBy(g => g.UpdatedAt)
             .Select(g => new { g.SessionId, g.OrganizationId, g.Status }).Take(50).ToListAsync(ct);
         foreach (var g in pending)
         {

@@ -142,8 +142,10 @@ async function start() {
             onError: (err) => problem("microphone", err && err.message ? err.message : String(err), true),
         });
         await s.mic.start();
+        if (S !== s || !s.running) return;
         watchTracks(s, s.mic.stream, "mic-lost", "The microphone stopped working.");
     } catch (err) {
+        if (S !== s || !s.running) return;
         const denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
         return fail(denied ? "mic-denied" : "microphone",
             denied ? "The microphone was not allowed." : "The microphone could not be opened.", s);
@@ -160,7 +162,8 @@ async function start() {
     try {
         // 2. The two hubs. Both need the signed-in student's cookie and the server's grant for this exam.
         await loadScript(`${LIB}/signalr/signalr.min.js`);
-        s.speechConn = new signalR.HubConnectionBuilder().withUrl(SPEECH_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
+        if (S !== s || !s.running) return;
+        s.speechConn =new signalR.HubConnectionBuilder().withUrl(SPEECH_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
         s.speechConn.on("partial", (t) => { s.partial = t || ""; drawTranscript(); });
         s.speechConn.on("final", onFinal);
         s.speechConn.on("problem", (kind, message, fatal) => { if (fatal) problem("recognizer", message, true); });
@@ -172,13 +175,16 @@ async function start() {
         await s.speechConn.start();
         await s.speechConn.invoke("StartSession", { language: "en", diarize: true });
     } catch (err) {
+        if (S !== s || !s.running) return;
         return fail("hub", "Speech recognition could not be reached.", s);
     }
+    if (S !== s || !s.running) return;
 
     // 3. The talking head. Voice answers work without it: the question is then only shown as text.
     try {
         const stage = q("stage");
         const pkg = await import(`${LIB}/avatar/index.js`);
+        if (S !== s || !s.running) return;
         const el = document.createElement("ma-avatar");
         if (s.cfg.modelUrl) el.setAttribute("src", s.cfg.modelUrl);
         if (s.cfg.portraitUrl) el.setAttribute("portrait", s.cfg.portraitUrl);
@@ -188,7 +194,9 @@ async function start() {
         el.addEventListener("fallback", (e) => s.dotnet.invokeMethodAsync("OnAvatarMode", "portrait", (e.detail && e.detail.reason) || "").catch(() => { }));
         // A gaze remark (examiner-gaze.js speaks through the same avatar) is not one of this room's own utterances: its flag is
         // never set here, so it can't stay set and keep the microphone from reopening (GAD-T245).
-        el.addEventListener("speaking-start", () => { if (!s.remarkHold) s.speaking = true; });
+        // Only while one of this room's own speak() calls is still waiting: a late start after its allowance ran out, or a remark's
+        // start, must not set the flag after the call has cleared it (nothing would clear it again).
+        el.addEventListener("speaking-start", () => { if (!s.remarkHold && s.speakToken) s.speaking = true; });
         stage.appendChild(el);
         s.avatar = el;
         s.avatarConn = new signalR.HubConnectionBuilder().withUrl(AVATAR_HUB).build();
@@ -198,10 +206,12 @@ async function start() {
         s.avatarConn.on("speechEnd", () => { showFullCaption(); });
         await s.avatarConn.start();
         await Promise.race([el.ready, new Promise((r) => setTimeout(r, 90000))]);
+        if (S !== s || !s.running) return;
         s.avatarOk = true;
         void startFaceFollow(s);   // the self-view may already be on: the examiner looks toward the student's face
         s.dotnet.invokeMethodAsync("OnAvatarMode", el.mode || "3d", "").catch(() => { });
     } catch (err) {
+        if (S !== s || !s.running) return;
         s.avatarOk = false;
         s.dotnet.invokeMethodAsync("OnAvatarMode", "none", "The examiner's picture could not start; questions are shown as text.").catch(() => { });
     }
@@ -222,6 +232,7 @@ export function speak(what, cacheable) {
     if (!s || !s.running) return;
     clearCue();
     s.gate = true;
+    s.remarkCommitPending = false;   // a remark's late final belongs to the last answer, not to this question's
     s.segments = [];
     s.partial = "";
     s.startedAtUnixMs = null;
@@ -230,7 +241,8 @@ export function speak(what, cacheable) {
     drawTranscript();
     showCaption(what);
     status("The examiner is speaking…");
-    const done = () => { s.speaking = false; if (S === s && s.allowed) openMic(); else if (S === s) status("Waiting."); };
+    const token = s.speakToken = {};
+    const done = () => { if (s.speakToken === token) s.speakToken = null; s.speaking = false; if (S === s && s.allowed) openMic(); else if (S === s) status("Waiting."); };
     if (!s.avatarOk || !s.speech) { done(); return; }
     s.avatar.state = "idle";
     s.speaking = true;
@@ -328,7 +340,8 @@ function remarkHold(s, active) {
         clearCue();
         talking(s, false);
         // Words already spoken are finalized now (the gate would swallow the speech-end commit), so none is lost to the remark.
-        if (s.inSpeech && s.speechConn) s.speechConn.send("Commit").catch(() => { });
+        // The final answering this commit arrives while the gate is closed: let exactly that one through (onFinal).
+        if (s.inSpeech && s.speechConn) { s.remarkCommitPending = true; s.speechConn.send("Commit").catch(() => { }); }
         drawTranscript();
         status("The examiner is speaking...");
     } else if (s.remarkHold) {
@@ -350,7 +363,10 @@ function remarkHold(s, active) {
 
 function onFinal(seg) {
     const s = S;
-    if (!s || s.gate || !seg || !seg.text || !seg.text.trim()) return;
+    if (!s) return;
+    const remarkFinal = s.remarkCommitPending;   // the next final answers the remark's commit, whatever the gate says
+    s.remarkCommitPending = false;
+    if ((s.gate && !remarkFinal) || !seg || !seg.text || !seg.text.trim()) return;
     s.partial = "";
     s.segments.push({
         text: seg.text,
@@ -359,6 +375,7 @@ function onFinal(seg) {
         })),
     });
     drawTranscript();
+    if (s.gate) return;   // the remark is still on: its end arms the cue for these words
     // The end-of-answer cue: a stretch of silence after what was said. Speaking again cancels it; "Done answering" skips it.
     clearCue();
     const cue = q("cue");

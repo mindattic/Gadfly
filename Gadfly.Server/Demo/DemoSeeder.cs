@@ -24,7 +24,7 @@ namespace Gadfly.Server.Demo;
 /// Development only. Run with <c>Gadfly.Server --seed-demo</c>: the accounts, courses and source collections are
 /// created before the server starts; the assessments are created as soon as the source job has built the concept
 /// maps (the job runs on the server's own worker). Idempotent: an existing demo is completed, never duplicated, and
-/// its accounts get the configured password again. Passwords come from <c>Gadfly:Demo:Password</c> or are
+/// accounts that already exist keep their password (only accounts a run creates get the demo password). Passwords come from <c>Gadfly:Demo:Password</c> or are
 /// generated and printed once; <c>Gadfly:Demo:ApiKey</c> (a <c>gfk_...</c> string) pins the demo API key.
 /// </para>
 /// </summary>
@@ -139,6 +139,11 @@ public static class DemoSeeder
         var configuredPassword = config[PasswordSetting];
         var password = string.IsNullOrWhiteSpace(configuredPassword) ? GeneratePassword() : configuredPassword.Trim();
 
+        // Accounts that exist before this run (a real account such as 'ryan', or one seeded earlier) keep their password and flags.
+        var normalizedNames = Accounts.Select(a => MindAttic.Authentication.Services.IUserStore.Normalize(a.UserName)).ToList();
+        var preexisting = (await db.AuthUsers.AsNoTracking().Where(u => normalizedNames.Contains(u.NormalizedUserName))
+            .Select(u => u.NormalizedUserName).ToListAsync(ct)).ToHashSet(StringComparer.Ordinal);
+
         var org = await db.Organizations.FirstOrDefaultAsync(o => o.Name == OrganizationName, ct);
         if (org is null)
         {
@@ -154,7 +159,8 @@ public static class DemoSeeder
             var added = await directory.AddMemberAsync(org.Id, userName, $"{userName}@demo.gadfly.invalid", role, password, ct);
             if (!added.Ok || added.Id is null) throw new InvalidOperationException($"Demo account {userName} not created: {added.Message}");
             ids[userName] = added.Id.Value;
-            // A demo account signs straight in with the demo password (no forced change); development only.
+            if (preexisting.Contains(MindAttic.Authentication.Services.IUserStore.Normalize(userName))) continue;
+            // A demo account this run created signs straight in with the demo password (no forced change); development only.
             await users.ResetPasswordAsync(added.Id.Value, password, false, ct);
             await db.AuthUsers.Where(u => u.Id == added.Id.Value).ExecuteUpdateAsync(s => s
                 .SetProperty(u => u.MustChangePassword, false)
@@ -224,8 +230,20 @@ public static class DemoSeeder
             using var scope = scopes.CreateSystemScope();
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             var clock = scope.ServiceProvider.GetRequiredService<TimeProvider>();
-            if (await db.Exams.AnyAsync(e => e.OrganizationId == plan.OrganizationId && e.Title == assessment.Title, ct))
+            var existing = await db.Exams.FirstOrDefaultAsync(e => e.OrganizationId == plan.OrganizationId && e.Title == assessment.Title, ct);
+            if (existing is not null)
+            {
+                // Already created on an earlier run: add the assignments of demo students it doesn't have yet (as ClassroomSeeder does).
+                var have = await db.ExamAssignments.Where(x => x.ExamId == existing.Id).Select(x => x.StudentUserId).ToListAsync(ct);
+                foreach (var sid in new[] { plan.StudentId }.Concat(plan.OtherStudentIds ?? []).Distinct().Except(have))
+                    db.ExamAssignments.Add(new ExamAssignment
+                    {
+                        OrganizationId = plan.OrganizationId, ExamId = existing.Id, StudentUserId = sid, AttemptsAllowed = 50,
+                        AssignedByUserId = plan.TeacherId, AssignedAt = clock.GetUtcNow(),
+                    });
+                await db.SaveChangesAsync(ct);
                 continue;
+            }
             var map = await new SqlConceptMapStore(db, plan.OrganizationId).LoadMapAsync(collectionId.ToString(), ct);
             if (map is null || map.Concepts.Count == 0)
             {

@@ -186,9 +186,10 @@ public sealed class QuestionPlanner
 
         // 1. The elenchus: a contradiction between the student's own claims not yet put to them, never twice running.
         var concepts = new HashSet<string>(o.ConceptKeys.Count > 0 ? o.ConceptKeys : [o.Key], StringComparer.Ordinal);
-        var confronted = new HashSet<string>(session.Turns.Where(t => t.Move == MoveKind.Contradiction).SelectMany(t => t.TargetClaimIds), StringComparer.Ordinal);
+        // Confronted per claim pair, as the assessor counts it: one turn that targets both claims.
+        var confronting = session.Turns.Where(t => t.Move == MoveKind.Contradiction).ToList();
         var pending = last.Move == MoveKind.Contradiction ? null : contradictions?.FirstOrDefault(c => concepts.Contains(c.ConceptId)
-            && !confronted.Contains(c.FirstClaimId) && !confronted.Contains(c.SecondClaimId));
+            && !confronting.Any(t => t.TargetClaimIds.Contains(c.FirstClaimId) && t.TargetClaimIds.Contains(c.SecondClaimId)));
         if (pending is not null)
             return Decide(MoveKind.Contradiction, "Two of the student's own claims conflict: consistency must be settled before any level is stated.",
                 targets: [pending.FirstClaimId, pending.SecondClaimId], concept: pending.ConceptId);

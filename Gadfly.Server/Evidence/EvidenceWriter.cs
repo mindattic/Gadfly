@@ -74,8 +74,8 @@ public static class EvidenceWriter
     /// <summary>
     /// Writes the session's evidence: new rows for items not yet stored, and contamination/assistance flags turned
     /// on for stored rows the engine now marks. Objectives are matched by key among the exam's LearningObjective
-    /// rows (an exam without objective rows stores no evidence rows); responses by turn index (the latest response
-    /// event on the turn). Writes one audit event per kind of change. Does not save.
+    /// rows (an exam without objective rows stores no evidence rows); responses by turn index (the turn's original
+    /// response, not a substantive revision). Writes one audit event per kind of change. Does not save.
     /// </summary>
     public static async Task<EvidenceSyncResult> SyncAsync(GadflyDbContext db, Guid organizationId, Guid sessionId, Guid examId,
         IReadOnlyList<CollectedEvidence> evidence, DateTimeOffset now, CancellationToken ct = default)
@@ -90,7 +90,10 @@ public static class EvidenceWriter
         var turnIds = await db.SessionTurns.Where(t => t.OrganizationId == organizationId && t.SessionId == sessionId)
             .ToDictionaryAsync(t => t.Index, t => t.Id, ct);
         var responses = await db.StudentResponses.Where(r => r.OrganizationId == organizationId && r.SessionId == sessionId).ToListAsync(ct);
-        var latestByTurn = responses.GroupBy(r => r.TurnId).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.Sequence).First());
+        // The turn's original answer (the one the engine judged and drew evidence from), never a later substantive revision;
+        // among duplicate originals, the verified one.
+        var latestByTurn = responses.Where(r => r.Kind == ResponseKind.Original).GroupBy(r => r.TurnId).ToDictionary(g => g.Key,
+            g => g.OrderByDescending(r => VerificationMachine.IsVerified(r.VerificationState)).ThenByDescending(r => r.Sequence).First());
         var responseIds = responses.Select(r => r.Id).ToList();
         var versions = await db.TranscriptVersions.Where(v => v.OrganizationId == organizationId && responseIds.Contains(v.ResponseId))
             .Select(v => new { v.ResponseId, v.Id, v.Version }).ToListAsync(ct);

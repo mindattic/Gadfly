@@ -61,6 +61,12 @@ public class CorpusStore
             // from the records that actually survive, so that message is appended again.
             manifest.IngestedMessageIds = new HashSet<string>(ReadAll().Select(m => m.Id));
         }
+        else
+        {
+            // A crash after the lines were written but before the manifest was saved leaves lines the manifest doesn't know:
+            // count every id already in the file so they are not appended a second time.
+            manifest.IngestedMessageIds.UnionWith(ReadAll().Select(m => m.Id));
+        }
         var appended = 0;
 
         using (var writer = new StreamWriter(messagesPath, append: true))

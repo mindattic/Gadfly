@@ -311,9 +311,18 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
     private static string Stem(string w)
     {
         foreach (var suffix in new[] { "ing", "ed", "es", "s", "ly" })
-            if (w.Length > suffix.Length + 3 && w.EndsWith(suffix, StringComparison.Ordinal)) return w[..^suffix.Length];
-        return w;
+        {
+            if (w.Length <= suffix.Length + 3 || !w.EndsWith(suffix, StringComparison.Ordinal)) continue;
+            // "es" is a plural ending only after s, x, z, ch, sh; elsewhere ("enzymes") it is "e" + "s", handled by the "s" rule.
+            if (suffix == "es" && !(w.EndsWith("ses", StringComparison.Ordinal) || w.EndsWith("xes", StringComparison.Ordinal) || w.EndsWith("zes", StringComparison.Ordinal)
+                                    || w.EndsWith("ches", StringComparison.Ordinal) || w.EndsWith("shes", StringComparison.Ordinal))) continue;
+            return DropFinalE(w[..^suffix.Length]);
+        }
+        return DropFinalE(w);
     }
+
+    // So "enzyme" and "enzymes" (or "divide" and "dividing") reach the same stem.
+    private static string DropFinalE(string w) => w.Length > 4 && w.EndsWith('e') ? w[..^1] : w;
 
     private static readonly HashSet<string> NeutralWords = new(StringComparer.Ordinal)
     {

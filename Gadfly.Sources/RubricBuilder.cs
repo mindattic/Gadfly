@@ -85,8 +85,11 @@ public sealed class RubricBuilder(ISocraticVotingClient panel, PromptSet? prompt
         int needed, bool withWeight)
     {
         var merged = new List<(string Text, List<double> Weights, HashSet<string> Passages, int Support)>();
+        var voted = new List<HashSet<int>>();
+        var voter = -1;
         foreach (var doc in docs)
         {
+            voter++;
             foreach (var item in PanelJson.Arr(doc.RootElement, property))
             {
                 var text = PanelJson.Str(item, "text");
@@ -97,13 +100,15 @@ public sealed class RubricBuilder(ISocraticVotingClient panel, PromptSet? prompt
                 if (i < 0)
                 {
                     merged.Add((text, [weight], [.. refs], 1));
+                    voted.Add([voter]);
                 }
                 else
                 {
                     var m = merged[i];
                     m.Weights.Add(weight);
                     m.Passages.UnionWith(refs);
-                    merged[i] = (m.Text.Length >= text.Length ? m.Text : text, m.Weights, m.Passages, m.Support + 1);
+                    voted[i].Add(voter);
+                    merged[i] = (m.Text.Length >= text.Length ? m.Text : text, m.Weights, m.Passages, voted[i].Count);
                 }
             }
         }

@@ -275,7 +275,7 @@ else
                         <td>@by</td>
                         <td><strong>@g.Grade</strong></td>
                         <td>@(g.Score?.ToString("0.##") ?? "—")</td>
-                        <td>@(g.OverridesRecommendation ? "yes" : "no")</td>
+                        <td>@(view.Blinded ? "hidden (blind grading)" : g.OverridesRecommendation ? "yes" : "no")</td>
                         <td>@g.Comment</td>
                     </tr>
                 }

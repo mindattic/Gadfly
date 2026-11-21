@@ -140,16 +140,15 @@ public sealed record AnswerDelivery
     private static double? Delay(Turn t)
     {
         if (t.Answer is not { } a) return null;
-        if (Metric(a, TimeToFirstWordKey) is { } m) return m;
-        if (a.StartedAt is { } started && started >= t.AskedAt) return Math.Round((started - t.AskedAt).TotalSeconds, 1);
-        return null;
+        // Only the recognizer's same-clock measure: Answer.StartedAt is the browser's clock and Turn.AskedAt the server's,
+        // so their difference is clock skew as much as delay. Unknown otherwise.
+        return Metric(a, TimeToFirstWordKey);
     }
 
     private static double? Hesitations(Answer a)
     {
-        var dis = Metric(a, DisfluencyPer100Key);
-        var filled = Metric(a, FilledPausesPer100Key);
-        return dis is null && filled is null ? null : (dis ?? 0) + (filled ?? 0);
+        // Disfluency already counts filled pauses (fillers + repetitions + fragments): filled pauses alone only when it is missing.
+        return Metric(a, DisfluencyPer100Key) ?? Metric(a, FilledPausesPer100Key);
     }
 
     /// <summary>More pausing and slower speech than the student's own earlier spoken answers, as a 0.. rise; null without both.</summary>

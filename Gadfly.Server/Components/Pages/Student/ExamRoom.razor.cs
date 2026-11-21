@@ -45,8 +45,9 @@ public partial class ExamRoom
         try
         {
             var next = await Sessions.StartClockAsync(org, SessionId, user, stop.Token);
-            // Only the clock changed: keep whatever this page shows now (a newer step may have arrived meanwhile).
-            if (step is { } current && next.State != SessionState.Ended && next.TurnIndex == current.TurnIndex)
+            // Only the clock changed: keep whatever this page shows now (a newer step may have arrived meanwhile), but always take the
+            // server's clock state, whichever turn its step names.
+            if (step is { } current && next.State != SessionState.Ended)
             {
                 step = current with { Remaining = next.Remaining, ClockStarted = next.ClockStarted };
                 deadline = Clock.GetUtcNow() + next.Remaining;
@@ -110,7 +111,11 @@ public partial class ExamRoom
         {
             case null:
                 // Voice strain indicators (GAD-T232): the answer's voice against the student's own first spoken answers, stored with it.
-                var answer = await WithVoiceStrainAsync(org, built.Answer);
+                // Busy before the first await, so a second answer arriving meanwhile is turned away instead of overwriting this one.
+                busy = true;
+                Answer answer;
+                try { answer = await WithVoiceStrainAsync(org, built.Answer); }
+                finally { busy = false; }   // RunStepAsync sets it again at once, with no await in between
                 pendingAnswer = text;
                 pendingVoiceAnswer = answer;
                 answerStartedAt = answer.StartedAt;

@@ -92,13 +92,15 @@ public sealed class SourceExamEngine
         return new SourceExamEngine(panel, subject, session, new ClaimLedger(), concepts, c);
     }
 
+    private static string Short(string? hash) => hash is null ? "" : hash.Length <= 12 ? hash : hash[..12];
+
     /// <summary>Resumes a persisted session. The prompt set must be the one it started with.</summary>
     public static async Task<SourceExamEngine> ResumeAsync(ISocraticVotingClient panel, SourceMaterialSubject subject, SocraticSession session,
         ClaimLedger ledger, TimeProvider? clock = null, CancellationToken ct = default)
     {
         if (session.PromptSetSha256 != subject.PromptSet.Sha256)
             throw new InvalidOperationException(
-                $"Session {session.Id} ran prompt set {session.PromptSetSha256[..12]}, but this build has {subject.PromptSet.Sha256[..12]}; it cannot resume on different wording.");
+                $"Session {session.Id} ran prompt set {Short(session.PromptSetSha256)}, but this build has {Short(subject.PromptSet.Sha256)}; it cannot resume on different wording.");
         var concepts = await subject.GetConceptsAsync(ct);
         return new SourceExamEngine(panel, subject, session, ledger, concepts, clock ?? TimeProvider.System);
     }

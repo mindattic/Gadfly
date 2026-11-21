@@ -157,33 +157,43 @@ public static class StudentExams
             .ToListAsync(ct);
         var missing = await db.Exams.AsNoTracking()
             .Where(e => e.OrganizationId == organizationId && e.Status == ExamStatus.Published && !assigned.Contains(e.Id))
-            .Select(e => new { e.Id, e.CreatedByUserId })
+            // An exam created by API key may have no creator: fall back to whoever created its notes collection.
+            .Select(e => new
+            {
+                e.Id,
+                AssignedBy = e.CreatedByUserId != Guid.Empty ? e.CreatedByUserId
+                    : db.SourceCollections.Where(c => c.Id == e.CollectionId).Select(c => (Guid?)c.CreatedByUserId).FirstOrDefault() ?? Guid.Empty,
+            })
             .ToListAsync(ct);
         if (missing.Count == 0) return 0;
 
+        var created = 0;
         foreach (var exam in missing)
         {
+            if (exam.AssignedBy == Guid.Empty) continue;   // no real user to name as the assigner: leave it unassigned
             db.ExamAssignments.Add(new ExamAssignment
             {
                 OrganizationId = organizationId,
                 ExamId = exam.Id,
                 StudentUserId = studentUserId,
                 AttemptsAllowed = OpenExamAttempts,
-                AssignedByUserId = exam.CreatedByUserId,
+                AssignedByUserId = exam.AssignedBy,
                 AssignedAt = now,
             });
+            // One at a time, so a duplicate refuses only itself.
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                created++;
+            }
+            catch (DbUpdateException)
+            {
+                // Another load of the page (or an instructor) assigned this one at the same moment: the unique
+                // (exam, student) index refused the duplicate. Whatever exists now is what the student sees.
+                db.ChangeTracker.Clear();
+            }
         }
-        try
-        {
-            await db.SaveChangesAsync(ct);
-            return missing.Count;
-        }
-        catch (DbUpdateException)
-        {
-            // Another load of the page (or an instructor) assigned one of these at the same moment: the unique
-            // (exam, student) index refused the duplicate. Whatever exists now is what the student sees.
-            return 0;
-        }
+        return created;
     });
 
     /// <summary>One of the student's own assignments, or null when it isn't theirs.</summary>

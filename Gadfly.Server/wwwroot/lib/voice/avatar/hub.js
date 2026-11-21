@@ -9,19 +9,42 @@ export function attachSpeechHub(avatar, hub) {
     let buffered = [];
     let bufferedWords = [];
     let contentType = 'audio/mpeg';
+    // SignalR does not wait for an async handler before running the next message: chunks and the end that arrive while
+    // beginStream is still starting (the first one loads a worklet) are held here and replayed in order once it has.
+    let pending = null;
     const handlers = {
         speechStart: async (m) => {
             activeId = m.id;
             buffered = [];
             bufferedWords = [];
+            pending = null;
             pcm = m.format.startsWith('pcm_');
             contentType = m.format.startsWith('opus') ? 'audio/ogg' : m.format.startsWith('wav') ? 'audio/wav' : 'audio/mpeg';
-            if (pcm)
-                await avatar.beginStream(m.sampleRate ?? 22050);
+            if (pcm) {
+                const held = pending = [];
+                try {
+                    await avatar.beginStream(m.sampleRate ?? 22050);
+                }
+                finally {
+                    if (pending === held) {
+                        pending = null;
+                        for (const run of held) {
+                            try {
+                                run();
+                            }
+                            catch { /* one bad chunk must not drop the rest or the end */ }
+                        }
+                    }
+                }
+            }
         },
         speechChunk: (m) => {
             if (m.id !== activeId)
                 return;
+            if (pending) {
+                pending.push(() => handlers.speechChunk(m));
+                return;
+            }
             const bytes = base64ToBytes(m.audio);
             if (pcm) {
                 avatar.pushChunk({
@@ -39,6 +62,10 @@ export function attachSpeechHub(avatar, hub) {
         speechEnd: async (m) => {
             if (m.id !== activeId)
                 return;
+            if (pending) {
+                pending.push(() => { void handlers.speechEnd(m).catch(() => undefined); });
+                return;
+            }
             if (pcm)
                 avatar.endStream();
             else {
@@ -73,6 +100,8 @@ export function attachSpeechHub(avatar, hub) {
             return finished;
         },
         async stop() {
+            activeId = null; // later chunks of the stopped utterance are ignored
+            pending = null;
             avatar.stop();
             await hub.invoke('Stop');
         },

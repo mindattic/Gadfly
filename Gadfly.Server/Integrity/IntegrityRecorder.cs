@@ -107,7 +107,8 @@ public sealed class IntegrityRecorder(GadflyDbContext db, TimeProvider clock, IL
 
         // Client clock to server clock: the batch was sent just now.
         var skew = clockSkew ?? ObservedSkew(batch, now) ?? TimeSpan.Zero;
-        var windowStart = session.StartedAt ?? session.ConsentRecordedAt ?? session.CreatedAt;
+        // From consent (or creation), not StartedAt: that moves to when a held exam clock starts (GAD-T239), after the room is already open.
+        var windowStart = session.ConsentRecordedAt ?? session.CreatedAt;
         var windowEnd = session.EndedAt is { } e && e < now ? e : now;
         DateTimeOffset Clamp(DateTimeOffset t) => t < windowStart ? windowStart : t > windowEnd ? windowEnd : t;
 

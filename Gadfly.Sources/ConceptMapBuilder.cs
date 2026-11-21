@@ -28,6 +28,7 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
         var found = new List<(ConceptEntry Concept, int Support)>();
         var relations = new List<(string FromTitle, string ToTitle, string Kind)>();
         var anyUsableReply = false;
+        var failedBatches = 0;
 
         for (var b = 0; b < batches.Count; b++)
         {
@@ -36,12 +37,23 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
             var prompt = ExamPrompts.Fill(_prompts[ExamPrompts.ConceptMapKey],
                 new Dictionary<string, string?> { ["passages"] = PanelJson.Number(batch) });
             var replies = await panel.FanOutAsync(PanelJson.JsonOnlySystem, prompt, maxTokens: 6000, ct: ct);
-            var parsed = replies.Where(r => !r.IsError).Select(r => PanelJson.ParseObject(r.Text)).Where(d => d is not null).ToList();
-            foreach (var r in replies.Where(r => r.IsError))
-                progress?.Report($"{r.ProviderId} failed: {r.Error}");
-            foreach (var r in replies.Where(r => !r.IsError && PanelJson.ParseObject(r.Text) is null))
-                progress?.Report($"{r.ProviderId} returned no JSON: {Snippet(r.Text)}");
-            if (parsed.Count == 0) continue;
+            var parsed = new List<JsonDocument>();
+            foreach (var r in replies)
+            {
+                if (r.IsError)
+                {
+                    progress?.Report($"{r.ProviderId} failed: {r.Error}");
+                    continue;
+                }
+                var doc = PanelJson.ParseObject(r.Text);
+                if (doc is null) progress?.Report($"{r.ProviderId} returned no JSON: {Snippet(r.Text)}");
+                else parsed.Add(doc);
+            }
+            if (parsed.Count == 0)
+            {
+                failedBatches++;
+                continue;
+            }
             anyUsableReply = true;
             var needed = parsed.Count <= 2 ? 1 : (parsed.Count + 1) / 2;
 
@@ -49,7 +61,8 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
             foreach (var doc in parsed)
             {
                 using var _ = doc;
-                var root = doc!.RootElement;
+                var root = doc.RootElement;
+                var voterConcepts = new List<(ConceptEntry Concept, int Support)>();
                 var keyByLocal = new Dictionary<string, string>(StringComparer.Ordinal);
                 foreach (var c in PanelJson.Arr(root, "concepts"))
                 {
@@ -65,7 +78,7 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
                         PassageIds = PanelJson.PassageRefs(c, batch),
                     };
                     keyByLocal[PanelJson.Str(c, "key")] = title;
-                    MergeInto(batchConcepts, entry);
+                    MergeInto(voterConcepts, entry);
                 }
                 foreach (var r in PanelJson.Arr(root, "relations"))
                 {
@@ -74,6 +87,8 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
                     var kind = PanelJson.Str(r, "kind");
                     if (from is not null && to is not null && kind.Length > 0) relations.Add((from, to, kind));
                 }
+                // One vote per provider: its near-duplicates were merged above, so each concept counts once for this voter.
+                foreach (var (concept, _) in voterConcepts) MergeInto(batchConcepts, concept);
             }
             foreach (var (concept, support) in batchConcepts.Where(x => x.Support >= needed))
                 MergeInto(found, concept, support);
@@ -82,6 +97,15 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
         // The panel gave nothing usable for any batch (providers down, malformed replies): that is not "the material has
         // no concepts", so keep the map as it was rather than replacing it with only the instructor-edited ones (GAD-T177).
         if (!anyUsableReply && previous is not null) return previous;
+
+        // A batch the panel could not answer would silently drop that part of the material and the map would be saved as
+        // complete. Keep the earlier map, or fail the build when there is none.
+        if (failedBatches > 0 && anyUsableReply)
+        {
+            if (previous is not null) return previous;
+            throw new InvalidOperationException(
+                $"The panel gave nothing usable for {failedBatches} of {batches.Count} batches of the material; the concept map would be incomplete. Try again.");
+        }
 
         var ranked = found.OrderByDescending(x => x.Support).ThenByDescending(x => x.Concept.PassageIds.Count).Select(x => x.Concept);
         if (MaxConcepts > 0) ranked = ranked.Take(MaxConcepts);

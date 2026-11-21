@@ -115,6 +115,14 @@ public static class ClassroomSeeder
             var sp = scope.ServiceProvider;
             var db = sp.GetRequiredService<GadflyDbContext>();
             var directory = sp.GetRequiredService<IOrganizationDirectory>();
+            var people = new List<(string, string)> { (OwnerUserName, OrgRoles.Owner) };
+            people.AddRange(Teachers.Select(t => (t.Teacher, OrgRoles.Instructor)));
+            people.AddRange(Students.Select(s => (s, OrgRoles.Student)));
+            people.Add((VoiceStudentUserName, OrgRoles.Student));
+            // Accounts that exist before this run (a real account such as 'ryan', or one seeded earlier) keep their password and flags.
+            var normalizedNames = people.Select(p => MindAttic.Authentication.Services.IUserStore.Normalize(p.Item1)).ToList();
+            var preexisting = (await db.AuthUsers.AsNoTracking().Where(u => normalizedNames.Contains(u.NormalizedUserName))
+                .Select(u => u.NormalizedUserName).ToListAsync(ct)).ToHashSet(StringComparer.Ordinal);
             var org = await db.Organizations.FirstOrDefaultAsync(o => o.Name == OrganizationName, ct);
             if (org is null)
             {
@@ -124,12 +132,9 @@ public static class ClassroomSeeder
                 org = await db.Organizations.FirstAsync(o => o.Id == created.Id, ct);
             }
             orgId = org.Id;
-            var people = new List<(string, string)> { (OwnerUserName, OrgRoles.Owner) };
-            people.AddRange(Teachers.Select(t => (t.Teacher, OrgRoles.Instructor)));
-            people.AddRange(Students.Select(s => (s, OrgRoles.Student)));
-            people.Add((VoiceStudentUserName, OrgRoles.Student));
             foreach (var (userName, role) in people)
-                ids[userName] = await EnsurePersonAsync(sp, db, directory, orgId, userName, role, password, ct);
+                ids[userName] = await EnsurePersonAsync(sp, db, directory, orgId, userName, role, password,
+                    createdThisRun: !preexisting.Contains(MindAttic.Authentication.Services.IUserStore.Normalize(userName)), ct);
         }
 
         // ---- each teacher's course, notes (processed here) and assessment
@@ -238,7 +243,7 @@ public static class ClassroomSeeder
     }
 
     private static async Task<Guid> EnsurePersonAsync(IServiceProvider sp, GadflyDbContext db, IOrganizationDirectory directory, Guid orgId,
-        string userName, string role, string password, CancellationToken ct)
+        string userName, string role, string password, bool createdThisRun, CancellationToken ct)
     {
         var normalized = MindAttic.Authentication.Services.IUserStore.Normalize(userName);
         var existing = await db.AuthUsers.AsNoTracking().FirstOrDefaultAsync(u => u.NormalizedUserName == normalized, ct);
@@ -253,7 +258,9 @@ public static class ClassroomSeeder
             if (!added.Ok || added.Id is null) throw new InvalidOperationException($"{userName} not created: {added.Message}");
             id = added.Id.Value;
         }
-        // Test accounts sign straight in with the classroom password: no forced change, no MFA enrollment.
+        // Test accounts this run created sign straight in with the classroom password: no forced change, no MFA enrollment.
+        // An account that already existed (a real one such as 'ryan', or one seeded before) is left as it is.
+        if (!createdThisRun) return id;
         await sp.GetRequiredService<IUserAdminService>().ResetPasswordAsync(id, password, false, ct);
         await db.AuthUsers.Where(u => u.Id == id).ExecuteUpdateAsync(s => s
             .SetProperty(u => u.MustChangePassword, false)

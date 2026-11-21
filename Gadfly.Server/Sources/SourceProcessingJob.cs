@@ -72,7 +72,7 @@ public sealed class SourceProcessingJob(GadflyDbContext db, ISocraticVotingClien
         {
             await progress.ReportAsync(0.15, $"Finding concepts in {passages.Count} passages", ct);
             map = await new ConceptMapBuilder(panel).BuildAsync(collectionId, passages, map,
-                new Progress<string>(_ => { }), ct);
+                new Progress<string>(message => _ = HeartbeatAsync(progress, message, ct)), ct);
             if (map.Concepts.Count == 0)
                 throw new InvalidOperationException("The panel found no concepts; check the LLM provider keys and the material.");
             await maps.SaveMapAsync(map, ct);
@@ -102,5 +102,15 @@ public sealed class SourceProcessingJob(GadflyDbContext db, ISocraticVotingClien
         }
         await maps.SaveRubricsAsync(collectionId, updated, ct);
         await progress.ReportAsync(1, $"{map.Concepts.Count} concepts ready", ct);
+    }
+
+    /// <summary>
+    /// The concept-map builder's batch messages, passed on as job progress so the worker's lease is renewed during a
+    /// long extraction. A cancellation it notices cancels the job's token; the builder stops at its next await.
+    /// </summary>
+    private static async Task HeartbeatAsync(IJobProgress progress, string message, CancellationToken ct)
+    {
+        try { await progress.ReportAsync(0.15, message, ct); }
+        catch (Exception) { /* a missed heartbeat is retried at the next batch */ }
     }
 }

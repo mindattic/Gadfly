@@ -84,8 +84,14 @@ export class MaAvatarElement extends HTMLElement {
         clearInterval(this.gazeTimer);
         clearTimeout(this.thinkTimer);
         clearTimeout(this.listenTimer);
+        const headCtx = this.head?.audioCtx; // TalkingHead's dispose leaves its AudioContext open
         try {
             this.head?.dispose();
+        }
+        catch { /* already gone */ }
+        try {
+            if (headCtx && headCtx.state !== 'closed')
+                void headCtx.close().catch(() => undefined);
         }
         catch { /* already gone */ }
         this.head = null;
@@ -410,7 +416,8 @@ export class MaAvatarElement extends HTMLElement {
         else {
             this.playBuffer(buffer, 0);
             this.speechStarted();
-            window.setTimeout(() => this.speechEnded(), buffer.duration * 1000 + 50);
+            window.setTimeout(() => { if (gen === this.speechGen)
+                this.speechEnded(); }, buffer.duration * 1000 + 50);
         }
         return done;
     }
@@ -420,6 +427,7 @@ export class MaAvatarElement extends HTMLElement {
         await this._ready;
         this.stop();
         const gen = ++this.speechGen;
+        this.streamGen = gen;
         if (this.head) {
             await this.head.audioCtx.resume();
             await this.head.streamStart({ sampleRate, lipsyncType: 'words', lipsyncLang: this.getAttribute('lang') || 'en' }, () => { if (gen === this.speechGen)
@@ -435,8 +443,11 @@ export class MaAvatarElement extends HTMLElement {
         }
     }
     streamRate = 22050;
+    streamGen = -1; // the speechGen of the current stream; stop() or a newer utterance makes it stale
     /** Feeds one PCM chunk (and any word timings that finished in it, in ms from the start of the utterance). */
     pushChunk(chunk) {
+        if (this.streamGen !== this.speechGen)
+            return; // stopped or superseded: its late chunks must not play
         if (this.head) {
             this.head.streamAudio({
                 audio: chunk.audio,
@@ -462,7 +473,9 @@ export class MaAvatarElement extends HTMLElement {
             return;
         }
         const ctx = this.audioContext();
-        window.setTimeout(() => this.speechEnded(), Math.max(0, (this.nextPlayTime - ctx.currentTime) * 1000) + 50);
+        const gen = this.speechGen;
+        window.setTimeout(() => { if (gen === this.speechGen)
+            this.speechEnded(); }, Math.max(0, (this.nextPlayTime - ctx.currentTime) * 1000) + 50);
     }
     // ---- stop (barge-in) ------------------------------------------------------------------------------------------
     /** Cuts speech off at once (the student started talking, or Stop was pressed). Safe to call when silent. */

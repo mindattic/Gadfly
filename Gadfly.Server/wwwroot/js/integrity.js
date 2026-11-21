@@ -44,10 +44,15 @@ async function flush() {
     if (!s || s.stopped || s.sending || s.queue.length === 0) return;
     s.sending = true;
     const batch = s.queue.splice(0, MAX_SEND);
+    // Still unconfirmed: save() keeps it with the queue, so a page that unloads mid-send doesn't lose it.
+    s.inFlight = batch;
     try {
         const keepGoing = await s.dotnet.invokeMethodAsync("RecordIntegrity", { sentAt: now(), events: batch });
+        s.inFlight = null;
         if (keepGoing === false && state === s) stop(false);
+        else if (state === s) save();   // a copy saved while it was in flight is no longer pending
     } catch {
+        s.inFlight = null;
         // Connection trouble: put them back and try again later. Never surfaces to the student.
         if (!s.stopped) s.queue.unshift(...batch);
     } finally {
@@ -58,7 +63,8 @@ async function flush() {
 function save() {
     if (!state || state.stopped) return;
     try {
-        if (state.queue.length > 0) sessionStorage.setItem(storageKey(state.sessionId), JSON.stringify(state.queue));
+        const pending = state.inFlight ? state.inFlight.concat(state.queue) : state.queue;
+        if (pending.length > 0) sessionStorage.setItem(storageKey(state.sessionId), JSON.stringify(pending));
         else sessionStorage.removeItem(storageKey(state.sessionId));
     } catch { /* storage blocked: those signals are lost, the exam goes on */ }
 }

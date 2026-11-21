@@ -75,6 +75,12 @@ public sealed class SocraticSession
     public bool StartClock(DateTimeOffset at)
     {
         if (!ClockHeld || IsEnded || at < StartedAt) return false;
+        // Answers were already given while held: the clock was running for them, so it never restarts with a fresh budget.
+        if (_turns.Any(t => t.Answer is not null))
+        {
+            ClockHeld = false;
+            return false;
+        }
         ClockHeld = false;
         StartedAt = at;
         if (OpenTurn is { } open && _turns.All(t => t.Answer is null)) Replace(open with { AskedAt = at });
@@ -137,6 +143,8 @@ public sealed class SocraticSession
         EnsureRunning();
         ArgumentNullException.ThrowIfNull(answer);
         var open = OpenTurn ?? throw new InvalidOperationException("There is no open turn to answer.");
+        // The first answer releases a held clock where it stands (counting from StartedAt); it can no longer be restarted.
+        ClockHeld = false;
         return Replace(open with { Answer = answer });
     }
 

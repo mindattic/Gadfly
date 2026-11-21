@@ -76,7 +76,8 @@ else
                         @if (r.LatestGrade is { } g)
                         {
                             <strong>@g.Grade</strong>
-                            @if (g.OverridesRecommendation) { <span class="hint"> (override)</span> }
+                            @* Blind grading leaves Recommendation null: whether the grade overrode it would reveal the AI's view. *@
+                            @if (g.OverridesRecommendation && r.Recommendation is not null) { <span class="hint"> (override)</span> }
                         }
                         else if (r.NeedsGrade)
                         {

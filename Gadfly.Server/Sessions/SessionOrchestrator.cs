@@ -168,7 +168,18 @@ public sealed class SessionOrchestrator(
 
     /// <summary>The current question (asking it again after a reconnect), planning a new one if needed.</summary>
     public Task<SessionStep> CurrentAsync(Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct = default) =>
-        StepAsync(organizationId, sessionId, studentUserId, async live => await live.Engine.NextQuestionAsync(ct), ct);
+        StepAsync(organizationId, sessionId, studentUserId, live => NextAsync(live, ct), ct);
+
+    /// <summary>
+    /// The next question, first finishing the judgment of an answer that was recorded but not judged (a step failed between
+    /// the two), as <see cref="AnswerAsync"/> recovers: otherwise the engine refuses to plan on and the session is stuck.
+    /// </summary>
+    private static async Task<Turn?> NextAsync(Live live, CancellationToken ct)
+    {
+        if (!live.Engine.Session.IsEnded && live.Engine.Session.AwaitingJudgment is not null)
+            await live.Engine.SubmitAnswerAsync(null, ct);
+        return await live.Engine.NextQuestionAsync(ct);
+    }
 
     /// <summary>
     /// The examiner has begun speaking the first question (GAD-T239): the held exam clock starts now, so the student's time begins
@@ -222,11 +233,19 @@ public sealed class SessionOrchestrator(
             if (await ledger.PendingAsync(s.Id, turnId, ct) is not null)
                 throw new SessionRefusedException("Please answer the request about your last answer first.");
 
-            var response = await ledger.CaptureAsync(live.OrganizationId, s.Id, turnId, studentUserId, answer, ct: ct);
+            // An answer given while the clock is still held (the examiner-speaks signal never arrived) releases it where it stands,
+            // counting from when the session started: a later start can't hand out a fresh time budget (GAD-T239).
+            if (s.ClockHeld) s.StartClock(s.StartedAt);
+
+            // A resend after a step failed past the capture reuses the original already recorded for this turn (one original per turn);
+            // one that already got past verification is judged as it stands.
+            var response = await ledger.OriginalForTurnAsync(s.Id, turnId, ct);
+            var alreadyVerified = response is not null && response.VerificationState != VerificationState.Captured;
+            response ??= await ledger.CaptureAsync(live.OrganizationId, s.Id, turnId, studentUserId, answer, ct: ct);
             // GAD-T58: a spoken answer's speech metrics become reviewable audio annotations (never a score), saved with the answer.
             await Gadfly.Server.Integrity.AudioIntegritySignals.RecordAsync(db, live.OrganizationId, s.Id, turnId, answer, ct);
             await db.SaveChangesAsync(ct);
-            if (await VerifyAsync(live, db, ledger, response, open, answer, ct))
+            if (!alreadyVerified && await VerifyAsync(live, db, ledger, response, open, answer, ct))
             {
                 await db.SaveChangesAsync(ct);
                 return open;   // the same question, now with a pending request
@@ -286,6 +305,8 @@ public sealed class SessionOrchestrator(
             if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
             var text = (corrected ?? "").Trim();
             if (text.Length == 0 || text.Length > 20_000) throw new SessionRefusedException("The corrected answer needs text.");
+            // A step failed between recording and judging: finish judging what was recorded first (it is the answer on record).
+            if (s.OpenTurn is null && s.AwaitingJudgment is not null) return await NextAsync(live, ct);
             using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             var ledger = new ResponseLedger(db, clock);
@@ -342,6 +363,8 @@ public sealed class SessionOrchestrator(
             if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
             var text = (revised ?? "").Trim();
             if (text.Length == 0 || text.Length > 20_000) throw new SessionRefusedException("Your changed answer needs text.");
+            // A step failed between recording and judging: finish judging that answer before anything can be changed.
+            if (s.OpenTurn is null && s.AwaitingJudgment is not null) return await NextAsync(live, ct);
             if (TooLate(live)) throw new SessionRefusedException("Time is up, so answers can no longer be changed.");
             using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
@@ -488,6 +511,8 @@ public sealed class SessionOrchestrator(
         {
             var s = live.Engine.Session;
             if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            // A step failed between recording and judging: the request was already resolved, so finish judging and move on.
+            if (s.OpenTurn is null && s.AwaitingJudgment is not null) return await NextAsync(live, ct);
             var open = s.OpenTurn ?? throw new SessionRefusedException("There is nothing waiting for you to confirm.");
             using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
@@ -559,7 +584,8 @@ public sealed class SessionOrchestrator(
             finally
             {
                 // Persist whatever happened, even if a panel call failed midway: the transcript is the resume point.
-                await PersistAsync(live, studentUserId, calls, ct);
+                // Not the caller's token: an aborted connection must not skip saving what the step already did.
+                await PersistAsync(live, studentUserId, calls, CancellationToken.None);
             }
             var view = await ViewAsync(live, question, ct);
             log.LogInformation("Session step: turn {Turn}, {Move}, state {State}, {Elapsed} ms.",
@@ -662,9 +688,13 @@ public sealed class SessionOrchestrator(
                 var session = SessionTranscriptSerializer.Deserialize(transcript);
                 if (session.PromptSetSha256 != subject.PromptSet.Sha256)
                 {
+                    // An attempt that already ended keeps its own end reason and end time: it can't resume, and it isn't rewritten.
+                    if (row.State == SessionState.Ended)
+                        throw new SessionRefusedException("This exam has ended; your answers were submitted.");
                     // Started under older wording: it can never resume. End it cleanly (not a used attempt) so the student can start afresh (GAD-T235).
                     var endedAt = clock.GetUtcNow();
-                    await db.ExamSessions.Where(x => x.Id == sessionId && x.OrganizationId == organizationId)
+                    await db.ExamSessions.Where(x => x.Id == sessionId && x.OrganizationId == organizationId
+                            && x.State != SessionState.Ended && x.State != SessionState.Failed)
                         .ExecuteUpdateAsync(u => u.SetProperty(x => x.State, SessionState.Ended)
                             .SetProperty(x => x.EndReason, nameof(EndReason.PromptSetChanged))
                             .SetProperty(x => x.EndedAt, endedAt), ct);

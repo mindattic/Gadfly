@@ -18,7 +18,10 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
     /// <summary>Redacts every ended session older than its organization's retention period. Returns sessions redacted.</summary>
-    public async Task<int> ApplyRetentionAsync(CancellationToken ct = default)
+    public async Task<int> ApplyRetentionAsync(CancellationToken ct = default) => await ApplyRetentionAsync(null, ct);
+
+    /// <summary>As above; <paramref name="progress"/> is told after each redacted session (the job renews its lease with it).</summary>
+    public async Task<int> ApplyRetentionAsync(IJobProgress? progress, CancellationToken ct = default)
     {
         var now = clock.GetUtcNow();
         var settings = await db.OrganizationSettings.AsNoTracking().ToDictionaryAsync(s => s.OrganizationId, s => s.RetentionDays, ct);
@@ -29,6 +32,7 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
             .Select(s => new { s.Id, s.OrganizationId, s.EndedAt, s.State, Started = s.StartedAt ?? s.CreatedAt })
             .ToListAsync(ct);
         var due = candidates.Where(s => (s.EndedAt ?? s.Started.AddDays(1)).AddDays(settings.GetValueOrDefault(s.OrganizationId, 90)) <= now).ToList();
+        var redacted = 0;
         foreach (var s in due)
         {
             await RedactSessionAsync(s.Id, ct);
@@ -36,6 +40,9 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
                 await db.ExamSessions.Where(x => x.Id == s.Id && (x.State == SessionState.Running || x.State == SessionState.Paused))
                     .ExecuteUpdateAsync(u => u.SetProperty(x => x.State, SessionState.Failed).SetProperty(x => x.EndReason, "Abandoned").SetProperty(x => x.EndedAt, now), ct);
             log.LogInformation("Retention: redacted session {SessionId} (organization {OrganizationId}).", s.Id, s.OrganizationId);
+            redacted++;
+            if (progress is not null)
+                await progress.ReportAsync((double)redacted / due.Count, $"Redacted {redacted} of {due.Count} session(s)", ct);
         }
         return due.Count;
     }
@@ -127,6 +134,10 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
     /// <summary>The AI objective grade's stored detail without the words: criterion levels and scores stay, quotes and rationales go.</summary>
     internal static string RedactAiDetail(string criteriaJson)
     {
+        // The legacy format is a bare criteria array (AiGradeView.From still reads it): keep its levels and scores too.
+        if (criteriaJson.TrimStart().StartsWith('['))
+            return Gadfly.Server.Grading.GradingJson.Write(Gadfly.Server.Grading.GradingJson.ReadList<Gadfly.Sources.Grading.CriterionGrade>(criteriaJson)
+                .Select(c => c with { Rationale = "", Quotes = [] }).ToList());
         var detail = Gadfly.Server.Grading.GradingJson.Read<Gadfly.Server.Grading.StoredAiDetail>(criteriaJson);
         if (detail is null) return "[]";
         return Gadfly.Server.Grading.GradingJson.Write(new Gadfly.Server.Grading.StoredAiDetail(
@@ -272,7 +283,7 @@ public sealed class RetentionJob(PrivacyService privacy) : IJobHandler
 
     public async Task RunAsync(Job job, IJobProgress progress, CancellationToken ct)
     {
-        var n = await privacy.ApplyRetentionAsync(ct);
+        var n = await privacy.ApplyRetentionAsync(progress, ct);
         await progress.ReportAsync(1, $"{n} session(s) redacted", ct);
     }
 }

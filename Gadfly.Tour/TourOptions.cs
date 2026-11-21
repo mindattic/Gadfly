@@ -51,7 +51,12 @@ public sealed class TourOptions
                 case "--url": o.Url = Next(); break;
                 case "--fresh": o.Fresh = true; break;
                 case "--live": o.Live = true; break;
-                case "--port": o.Port = int.Parse(Next()); break;
+                case "--port":
+                    var portText = Next();
+                    if (!int.TryParse(portText, out var port) || port is < 1 or > 65535)
+                        throw new ArgumentException($"--port needs a number from 1 to 65535, not '{portText}'.");
+                    o.Port = port;
+                    break;
                 case "--server": o.ServerExe = Next(); break;
                 case "--db": o.ConnectionString = Next(); break;
                 case "--password": o.Password = Next(); break;

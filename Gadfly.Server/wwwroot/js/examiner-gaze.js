@@ -133,15 +133,19 @@ function watch(g) {
 }
 
 async function resume(g, avatar) {
+    // Only the latest resume may commit: a pause and a new resume during this one's awaits make it stale (GAD-T240).
+    const gen = g.resumeGen = (g.resumeGen || 0) + 1;
+    const live = () => !g.stopped && g.starting && g.resumeGen === gen;
+    let core = null;
     g.starting = true;
     g.avatar = avatar;
     show(g, "loading");
     const base = new URL("../" + (g.options.basePath || "webcam/"), import.meta.url);
     try {
         const lib = await import(new URL("webcam.browser.js", base).href);
-        if (g.stopped || !g.starting) return;
+        if (!live()) return;
         const limits = examinerLimits(lib);
-        g.core = new lib.WebcamCore({
+        core = g.core = new lib.WebcamCore({
             numFaces: 2, width: 640, height: 480,
             wasmBaseUrl: new URL(".", base).href.replace(/\/$/, ""),
             modelUrl: new URL("face_landmarker.bin", base).href,
@@ -167,18 +171,20 @@ async function resume(g, avatar) {
         });
         g.offs.push(g.presence.connect(g.core), g.headpose.connect(g.core));
         const unshare = await shareSelfCamera(g);
-        try { await g.core.retain(); } finally { unshare(); }
-        if (g.stopped || !g.starting) { releaseCore(g); return; }
+        try { await core.retain(); } finally { unshare(); }
+        // Superseded meanwhile: pause() already released this core (g.core may now be a newer resume's), but retain may have
+        // opened the camera after that, so stop this one's own core.
+        if (!live()) { try { core.stop(); } catch { } return; }
         g.running = true;
         calibrate(g);
     } catch {
+        if (!live()) { try { core && core.stop(); } catch { } return; }
         releaseCore(g);
-        if (g.stopped) return;
         // Denied, missing or no face model: say so once and don't keep asking for the camera.
         g.failed = true;
         show(g, "unavailable");
     } finally {
-        g.starting = false;
+        if (g.resumeGen === gen) g.starting = false;
     }
 }
 
@@ -389,7 +395,10 @@ function remark(g, kind) {
             // The voice room stops capturing the microphone while the examiner speaks, so the remark isn't transcribed into the answer.
             held = true;
             holdMic(true);
-            await Promise.race([speech.speak(what, undefined, true), new Promise((r) => setTimeout(r, GAZE.remarkTimeoutMs))]);
+            let timedOut = false;
+            await Promise.race([speech.speak(what, undefined, true), new Promise((r) => setTimeout(() => { timedOut = true; r(); }, GAZE.remarkTimeoutMs))]);
+            // A stalled remark is cut off before the microphone reopens, so it can't start late and be recorded into the answer.
+            if (timedOut) { try { speech.stop().catch(() => { }); } catch { } }
         } catch { /* never the student's problem */ }
         finally {
             g.remarking = false;
@@ -413,8 +422,11 @@ async function avatarSpeech(g, avatar) {
     g.speech = null;
     if (!window.signalR) return null;
     if (!g.hub) {
-        g.hub = new window.signalR.HubConnectionBuilder().withUrl(AVATAR_HUB).withAutomaticReconnect().build();
-        await g.hub.start();
+        // Kept only once it has started: a failed first start would otherwise leave a dead connection for every later remark.
+        const hub = new window.signalR.HubConnectionBuilder().withUrl(AVATAR_HUB).withAutomaticReconnect().build();
+        await hub.start();
+        if (G !== g) { try { hub.stop(); } catch { } return null; }
+        g.hub = hub;
     }
     const pkg = await import(`${LIB}/avatar/index.js`);
     g.speech = pkg.attachSpeechHub(avatar, g.hub);

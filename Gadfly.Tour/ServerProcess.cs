@@ -12,6 +12,18 @@ public sealed class ServerProcess : IAsyncDisposable
     private Process? _process;
     public string LogPath { get; } = Path.Combine(Path.GetTempPath(), $"gadfly-tour-server-{DateTime.Now:yyyyMMdd-HHmmss}.log");
     private StreamWriter? _log;
+    private readonly object _logLock = new();
+    private bool _logDisposed;
+
+    // The async output handlers keep running after Detach(), so writes check the log is still open.
+    private void WriteLog(string line)
+    {
+        lock (_logLock)
+        {
+            if (_logDisposed || _log is null) return;
+            try { _log.WriteLine(line); } catch (ObjectDisposedException) { }
+        }
+    }
 
     public static string RepoRoot()
     {
@@ -54,8 +66,8 @@ public sealed class ServerProcess : IAsyncDisposable
 
         _log = new StreamWriter(LogPath) { AutoFlush = true };
         _process = Process.Start(psi) ?? throw new InvalidOperationException("The server did not start.");
-        _process.OutputDataReceived += (_, e) => { if (e.Data is not null) lock (_log) _log.WriteLine(e.Data); };
-        _process.ErrorDataReceived += (_, e) => { if (e.Data is not null) lock (_log) _log.WriteLine("ERR " + e.Data); };
+        _process.OutputDataReceived += (_, e) => { if (e.Data is not null) WriteLog(e.Data); };
+        _process.ErrorDataReceived += (_, e) => { if (e.Data is not null) WriteLog("ERR " + e.Data); };
         _process.BeginOutputReadLine();
         _process.BeginErrorReadLine();
     }
@@ -74,7 +86,13 @@ public sealed class ServerProcess : IAsyncDisposable
             catch (Exception) { /* already gone */ }
         }
         _process?.Dispose();
-        if (_log is not null) await _log.DisposeAsync();
+        StreamWriter? log;
+        lock (_logLock)
+        {
+            _logDisposed = true;
+            log = _log;
+        }
+        if (log is not null) await log.DisposeAsync();
     }
 
     /// <summary>Lets the server keep running after the tour exits (<c>--keep</c>).</summary>

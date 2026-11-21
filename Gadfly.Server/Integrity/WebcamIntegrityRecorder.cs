@@ -173,7 +173,8 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         events = events?.Where(e => e is not null && ExaminerTypes.Contains((e.Type ?? "").Trim()) == examinerRoom).ToList();
         if (events is null || events.Count == 0) return new(session.State != SessionState.Ended, 0);
 
-        var windowStart = session.StartedAt ?? session.ConsentRecordedAt ?? session.CreatedAt;
+        // From consent (or creation), not StartedAt: that moves to when a held exam clock starts (GAD-T239), after the room is already open.
+        var windowStart = session.ConsentRecordedAt ?? session.CreatedAt;
         var windowEnd = session.EndedAt is { } e2 && e2 < now ? e2 : now;
 
         var accepted = new List<Clean>();

@@ -96,6 +96,13 @@ public sealed class JobWorker(
             await FinishAsync(db, job.Id, JobState.Failed, $"No handler is registered for job kind '{job.Kind}'.", stop);
             return true;
         }
+        if (job.Attempts > job.MaxAttempts)
+        {
+            // Reclaimed after its lease expired once too often (its worker keeps dying or stalling): stop retrying.
+            log.LogWarning("Job {JobId} ({Kind}) was reclaimed past its {Max} attempts; marking it failed.", job.Id, job.Kind, job.MaxAttempts);
+            await FinishAsync(db, job.Id, JobState.Failed, job.Error ?? $"Gave up after {job.MaxAttempts} attempts (the job's lease expired without it finishing).", stop);
+            return true;
+        }
 
         using var jobCts = CancellationTokenSource.CreateLinkedTokenSource(stop);
         var progress = new RowProgress(scopes, clock, job.Id, _workerId, options.LeaseDuration, jobCts);
@@ -107,9 +114,11 @@ public sealed class JobWorker(
         }
         catch (OperationCanceledException) when (stop.IsCancellationRequested)
         {
-            // Shutting down: release the lease so another instance picks it up promptly.
-            await db.Jobs.Where(j => j.Id == job.Id && j.LockedBy == _workerId)
+            // Shutting down: release the lease so another instance picks it up promptly. A shutdown is not a failed
+            // attempt, so it does not count against MaxAttempts.
+            await db.Jobs.Where(j => j.Id == job.Id && j.LockedBy == _workerId && j.State == JobState.Running)
                 .ExecuteUpdateAsync(s => s.SetProperty(j => j.State, JobState.Queued)
+                                          .SetProperty(j => j.Attempts, j => j.Attempts - 1)
                                           .SetProperty(j => j.LockedBy, (string?)null)
                                           .SetProperty(j => j.LockedUntil, (DateTimeOffset?)null), CancellationToken.None);
         }
@@ -129,7 +138,7 @@ public sealed class JobWorker(
                 var backoff = TimeSpan.FromSeconds(Math.Min(3600, 15 * Math.Pow(2, job.Attempts - 1)));
                 var retryAt = clock.GetUtcNow() + backoff;
                 var error = ex.Message;
-                await db.Jobs.Where(j => j.Id == job.Id && j.LockedBy == _workerId)
+                await db.Jobs.Where(j => j.Id == job.Id && j.LockedBy == _workerId && j.State == JobState.Running)
                     .ExecuteUpdateAsync(s => s.SetProperty(j => j.State, JobState.Queued)
                                               .SetProperty(j => j.RunAfter, retryAt)
                                               .SetProperty(j => j.Error, error)

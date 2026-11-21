@@ -118,14 +118,23 @@ public sealed class GroundingRetriever
     }
 
     internal static IEnumerable<string> Tokenize(string text) =>
-        Word.Matches(text.ToLowerInvariant()).Select(m => Stem(m.Value)).Where(w => w.Length > 1 && !Stop.Contains(w));
+        Word.Matches(text.ToLowerInvariant()).Select(m => m.Value).Where(w => !Stop.Contains(w)).Select(Stem).Where(w => w.Length > 1);
 
     /// <summary>A light suffix stripper so "cells"/"cell" and "dividing"/"divide" match.</summary>
-    private static string Stem(string w)
+    private static string Stem(string w) => DropFinalE(StripSuffix(w));
+
+    // "enzyme"/"enzymes" and "divide"/"dividing" must reach the same stem, so a trailing 'e' is dropped after the suffix.
+    private static string DropFinalE(string w) => w.Length > 3 && w.EndsWith('e') ? w[..^1] : w;
+
+    private static string StripSuffix(string w)
     {
         if (w.Length > 5 && w.EndsWith("ing", StringComparison.Ordinal)) return w[..^3];
         if (w.Length > 4 && w.EndsWith("ies", StringComparison.Ordinal)) return w[..^3] + "y";
-        if (w.Length > 4 && w.EndsWith("es", StringComparison.Ordinal) && !w.EndsWith("ses", StringComparison.Ordinal)) return w[..^2];
+        // "es" is a plural ending only after s, x, z, ch, sh ("boxes", "watches"); elsewhere the word is just "e" + "s".
+        if (w.Length > 4 && w.EndsWith("es", StringComparison.Ordinal)
+            && (w.EndsWith("ses", StringComparison.Ordinal) || w.EndsWith("xes", StringComparison.Ordinal) || w.EndsWith("zes", StringComparison.Ordinal)
+                || w.EndsWith("ches", StringComparison.Ordinal) || w.EndsWith("shes", StringComparison.Ordinal)))
+            return w[..^2];
         if (w.Length > 3 && w.EndsWith('s') && !w.EndsWith("ss", StringComparison.Ordinal)) return w[..^1];
         if (w.Length > 4 && w.EndsWith("ed", StringComparison.Ordinal)) return w[..^2];
         return w;

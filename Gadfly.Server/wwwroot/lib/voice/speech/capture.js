@@ -37,10 +37,18 @@ export class MicCapture {
         if (this._state === "listening" || this._state === "starting")
             return;
         this._state = "starting";
+        // stop() may run during any await below: it sets the state to "stopped" and releases what this already holds, so each
+        // step releases only what it acquired after that and returns.
+        const stopped = () => this._state !== "starting";
         try {
             const vad = await createVad({ ...this.options, onFallback: (r) => this.options.onVadFallback?.(r) });
-            this.pipeline = new AudioPipeline(vad, this.options);
-            this.stream = await navigator.mediaDevices.getUserMedia({
+            const pipeline = new AudioPipeline(vad, this.options);
+            if (stopped()) {
+                pipeline.dispose();
+                return;
+            }
+            this.pipeline = pipeline;
+            const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     deviceId: this.options.deviceId ? { exact: this.options.deviceId } : undefined,
                     channelCount: 1,
@@ -49,9 +57,18 @@ export class MicCapture {
                     autoGainControl: this.options.autoGainControl ?? false,
                 },
             });
+            if (stopped()) {
+                stream.getTracks().forEach((t) => t.stop());
+                return;
+            }
+            this.stream = stream;
             this.context = new AudioContext({ latencyHint: "interactive" });
             await this.context.resume();
+            if (stopped())
+                return; // stop() saw this stream and context and released both
             await addCaptureWorklet(this.context);
+            if (stopped())
+                return;
             const source = this.context.createMediaStreamSource(this.stream);
             this.node = new AudioWorkletNode(this.context, WORKLET_NAME, { numberOfInputs: 1, numberOfOutputs: 1, channelCount: 1 });
             this.node.port.onmessage = (e) => this.pipeline?.push(e.data);
@@ -61,6 +78,8 @@ export class MicCapture {
             this._state = "listening";
         }
         catch (e) {
+            if (stopped())
+                return; // stopped meanwhile (a closed context fails the worklet): not an error, and already released
             await this.stop();
             this.options.onError?.(e);
             throw e;

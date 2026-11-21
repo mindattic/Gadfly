@@ -177,7 +177,7 @@ public static class ApiEndpoints
                 map.Concepts.Select(c => new ConceptView(c.Key, c.Title, c.Definition)).ToList(), map.Relations));
         }).Produces<ConceptMapView>().Produces(StatusCodes.Status404NotFound);
 
-        api.MapPost("/exams", async (CreateExam body, ITenantContext t, GadflyDbContext db, TimeProvider clock, CancellationToken ct) =>
+        api.MapPost("/exams", async (CreateExam body, ITenantContext t, GadflyDbContext db, TimeProvider clock, HttpContext http, CancellationToken ct) =>
         {
             var title = body.Title?.Trim() ?? "";
             if (title.Length == 0) return Error("title is required");
@@ -201,13 +201,16 @@ public static class ApiEndpoints
             };
             try { policy.Validate(); }
             catch (ArgumentException ex) { return Error(ex.Message); }
+            // The exam is owned by the person who created the API key, so assignments made from it name a real user.
+            var keyId = Guid.TryParse(http.User.FindFirst(GadflyClaims.ApiKeyId)?.Value, out var kid) ? kid : Guid.Empty;
+            var createdBy = await db.ApiKeys.AsNoTracking().Where(k => k.Id == keyId).Select(k => k.CreatedByUserId).FirstOrDefaultAsync(ct);
             var exam = new Exam
             {
                 OrganizationId = t.OrganizationId!.Value, CollectionId = body.CollectionId, Title = title,
                 Instructions = body.Instructions, PolicyJson = JsonSerializer.Serialize(policy, Camel),
                 Mode = string.Equals(mode, "Voice", StringComparison.OrdinalIgnoreCase) ? ExamMode.Voice : ExamMode.Text,
                 PromptSetId = ExamPrompts.SetId, PromptSetVersion = ExamPrompts.Version,
-                Status = ExamStatus.Published, CreatedAt = clock.GetUtcNow(), PublishedAt = clock.GetUtcNow(),
+                Status = ExamStatus.Published, CreatedByUserId = createdBy, CreatedAt = clock.GetUtcNow(), PublishedAt = clock.GetUtcNow(),
             };
             db.Exams.Add(exam);
             await db.SaveChangesAsync(ct);

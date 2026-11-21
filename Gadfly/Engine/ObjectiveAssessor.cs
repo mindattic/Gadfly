@@ -197,7 +197,8 @@ public static class ObjectiveAssessor
         Turn? previousJudged = null;
         foreach (var t in turns)
         {
-            if (t.Judgment is null || t.Answer is null || IsUnjudged(t.Judgment)) continue;
+            // A skipped turn still counts as the previous one, so a Clarify after it never merges into an earlier answer.
+            if (t.Judgment is null || t.Answer is null || IsUnjudged(t.Judgment)) { previousJudged = t; continue; }
             if (t.Move is MoveKind.Contradiction or MoveKind.Close) { previousJudged = t; continue; }
             // A recited answer (GAD-T242) is not the student's own understanding: left out like a leaked one.
             var contaminated = (leak is { } l && t.Index >= l && (!t.IsReplacement || t.Leak is not null)) || IsRecited(t);
@@ -227,20 +228,23 @@ public static class ObjectiveAssessor
 
         var independent = outcomes.Where(o => o.Independent).ToList();
         var minCorr = p.MinCorroboratingAnswers;
-        var ladder = Climb(independent, minCorr);
+        var ladder = Settled(independent, minCorr);
 
         // Consistency: contradictions between the student's claims on this objective's concepts.
         var concepts = new HashSet<string>(objective.ConceptKeys.Count > 0 ? objective.ConceptKeys : [key], StringComparer.Ordinal);
         var mine = (contradictions ?? []).Where(c => concepts.Contains(c.ConceptId)).ToList();
         var confronting = session.Turns.Where(t => t.Move == MoveKind.Contradiction).ToList();
-        int unconfronted = 0, failedConfrontations = 0;
+        int unconfronted = 0, failedConfrontations = 0, unjudgedConfrontations = 0;
         foreach (var c in mine)
         {
-            var turn = confronting.FirstOrDefault(t => t.TargetClaimIds.Contains(c.FirstClaimId) && t.TargetClaimIds.Contains(c.SecondClaimId));
-            if (turn is null) unconfronted++;
-            else if (turn.Judgment is { } j && j.OverallScore < 0.5) failedConfrontations++;
+            var asked = confronting.Where(t => t.TargetClaimIds.Contains(c.FirstClaimId) && t.TargetClaimIds.Contains(c.SecondClaimId)).ToList();
+            // Only a usable verdict settles a confrontation: asked but unanswered or unjudged stays pending, never consistent.
+            var judgedTurn = asked.FirstOrDefault(t => t.Answer is not null && t.Judgment is { } tj && !IsUnjudged(tj));
+            if (asked.Count == 0) unconfronted++;
+            else if (judgedTurn is null) unjudgedConfrontations++;
+            else if (judgedTurn.Judgment!.OverallScore < 0.5) failedConfrontations++;
         }
-        var consistent = unconfronted == 0 && failedConfrontations == 0;
+        var consistent = unconfronted == 0 && failedConfrontations == 0 && unjudgedConfrontations == 0;
 
         // Misconceptions: resolved by a later independent positive answer that probed understanding (level 3+).
         var misconceptions = session.Turns.Where(t => t.Analysis is not null && t.Judgment is not null)
@@ -270,7 +274,7 @@ public static class ObjectiveAssessor
         // The tentative top must be corroborated, or outweighed: a single success at a level the student then failed
         // repeatedly at or above (Scenario A: a correct definition, then no explanation or application).
         var topCorroborated = TopSettled(ladder, minCorr);
-        var pending = unconfronted > 0 || untested.Count > 0;
+        var pending = unconfronted > 0 || unjudgedConfrontations > 0 || untested.Count > 0;
         var sufficient = enough && topCorroborated && ceilingTested && !pending;
 
         // Learning Mode: the assisted view counts every uncontaminated answer, assisted or not, and decides when to stop.
@@ -279,7 +283,7 @@ public static class ObjectiveAssessor
         if (assist is not null)
         {
             var all = outcomes.Where(o => !o.Contaminated).ToList();
-            var assistedLadder = Climb(all, minCorr);
+            var assistedLadder = Settled(all, minCorr);
             assistedLevel = all.Count >= minCorr ? (MasteryLevel)assistedLadder.Level : MasteryLevel.InsufficientEvidence;
             if (p.Mode == AssessmentMode.Learning)
             {
@@ -290,7 +294,7 @@ public static class ObjectiveAssessor
                 var lastWeak = outcomes.Count > 0 && outcomes[^1].Result != AnswerResult.Positive;
                 var assistsLeft = turns.Count(t => MoveProfiles.IsAssistance(t.Move)) < p.MaxAssistsPerObjective;
                 sufficient = all.Count >= minCorr && TopSettled(assistedLadder, minCorr) && CeilingTested(assistedLadder, all.Count, minCorr)
-                             && unconfronted == 0 && reassessed && !(lastWeak && assistsLeft);
+                             && unconfronted == 0 && unjudgedConfrontations == 0 && reassessed && !(lastWeak && assistsLeft);
             }
         }
 
@@ -302,7 +306,7 @@ public static class ObjectiveAssessor
             : ObjectiveStatus.Open;
 
         var uncertainties = turns.LastOrDefault(t => t.Analysis is not null && t.Judgment is not null)?.Analysis?.Uncertainties ?? [];
-        var explanation = Explain(status, enough, independent.Count, minCorr, topCorroborated, ceilingTested, unconfronted, untested.Count,
+        var explanation = Explain(status, enough, independent.Count, minCorr, topCorroborated, ceilingTested, unconfronted, unjudgedConfrontations, untested.Count,
             ladder, capReasons, outcomes.Count(o => o.Contaminated), assistedCount, atLimit, session.IsEnded, left);
 
         return new ObjectiveAssessment
@@ -352,6 +356,20 @@ public static class ObjectiveAssessor
 
     private static bool TopSettled(Ladder l, int minCorr) => l.Level >= l.TentativeHigh || l.FailuresAtOrAboveHigh >= minCorr;
 
+    /// <summary>
+    /// The ladder, where a good answer never unsettles a settled result: a positive Synthesize answer (asked only once the
+    /// objective was sufficient) above the settled level can raise it once corroborated, but never reopen the objective.
+    /// </summary>
+    private static Ladder Settled(IReadOnlyList<AnswerOutcome> outcomes, int minCorr)
+    {
+        var ladder = Climb(outcomes, minCorr);
+        if (TopSettled(ladder, minCorr)) return ladder;
+        var before = outcomes.Where(o => !(o.Move == MoveKind.Synthesize && o.Result == AnswerResult.Positive)).ToList();
+        if (before.Count == outcomes.Count || before.Count < minCorr) return ladder;
+        var basis = Climb(before, minCorr);
+        return TopSettled(basis, minCorr) && CeilingTested(basis, before.Count, minCorr) ? basis : ladder;
+    }
+
     internal static Ladder Climb(IReadOnlyList<AnswerOutcome> outcomes, int minCorroboration)
     {
         var pos = new int[6];
@@ -385,7 +403,7 @@ public static class ObjectiveAssessor
     }
 
     private static string Explain(ObjectiveStatus status, bool enough, int independent, int minCorr, bool topCorroborated, bool ceilingTested,
-        int unconfronted, int untested, Ladder ladder, List<string> capReasons, int contaminated, int assisted, bool atLimit, bool ended, bool left)
+        int unconfronted, int unjudgedConfrontations, int untested, Ladder ladder, List<string> capReasons, int contaminated, int assisted, bool atLimit, bool ended, bool left)
     {
         var parts = new List<string>();
         if (status == ObjectiveStatus.Sufficient)
@@ -398,6 +416,7 @@ public static class ObjectiveAssessor
             else if (!topCorroborated) parts.Add($"Level {ladder.TentativeHigh} was shown once but neither corroborated nor outweighed.");
             else if (!ceilingTested) parts.Add($"Level {ladder.Level} is corroborated but the next level has not been tested enough.");
             if (unconfronted > 0) parts.Add($"{unconfronted} contradiction(s) in the student's claims not yet put to them.");
+            if (unjudgedConfrontations > 0) parts.Add($"{unjudgedConfrontations} contradiction(s) put to the student but not yet answered or judged.");
             if (untested > 0) parts.Add($"{untested} possible misconception(s) not yet tested.");
             if (status == ObjectiveStatus.Inconclusive)
                 parts.Add(atLimit ? "The question limit for this objective was reached: Insufficient Evidence for Reliable Assessment."

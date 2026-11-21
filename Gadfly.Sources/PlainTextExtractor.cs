@@ -37,14 +37,16 @@ public sealed class PlainTextExtractor : IDocumentTextExtractor
             para.Clear();
         }
 
+        var inFence = false;
         foreach (var raw in text.Replace("\r\n", "\n").Split('\n'))
         {
             var line = raw.TrimEnd();
-            if (isMarkdown && line.StartsWith('#'))
+            if (isMarkdown && line.TrimStart().StartsWith("```", StringComparison.Ordinal)) inFence = !inFence;
+            if (isMarkdown && !inFence && line.StartsWith('#'))
             {
                 var level = line.TakeWhile(c => c == '#').Count();
                 var title = line[level..].Trim();
-                if (level <= 6 && title.Length > 0)
+                if (level <= 6 && title.Length > 0 && line[level] is ' ' or '\t')
                 {
                     Flush();
                     headings.RemoveAll(h => h.Level >= level);

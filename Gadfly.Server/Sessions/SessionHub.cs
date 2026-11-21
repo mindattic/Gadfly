@@ -63,6 +63,10 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
     {
         var (org, user) = Caller();
         var step = await Guard(() => orchestrator.CurrentAsync(org, sessionId, user, Context.ConnectionAborted));
+        // A hub client has no "the examiner began speaking" signal: the question it is handed now is the question asked, so a held
+        // exam clock starts here rather than giving the question out while the student's time isn't counting (GAD-T239).
+        if (!step.ClockStarted && step.Question is not null)
+            step = await Guard(() => orchestrator.StartClockAsync(org, sessionId, user, Context.ConnectionAborted));
         await JoinAsync(sessionId);
         return step;
     }
@@ -77,18 +81,63 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
             throw new HubException("That answer carries too much timing data.");
         // Only a connection that already proved ownership (Start/Current) may signal the session's channel (GAD-T74).
         if (Joined().Contains(sessionId)) await Clients.Group(Group(sessionId)).SendAsync("Thinking", sessionId);
-        var step = await Guard(() => orchestrator.AnswerAsync(org, sessionId, user, new Answer
-        {
-            Text = answer.Text.Trim(),
-            Mode = answer.Mode is "voice" ? "voice" : "text",
-            StartedAt = answer.StartedAt,
-            CompletedAt = DateTimeOffset.UtcNow,
-            Words = answer.Words ?? [],
-            SpeechMetrics = answer.SpeechMetrics ?? new Dictionary<string, double>(),
-        }, Context.ConnectionAborted));
+        var sanitized = await ToAnswerAsync(org, sessionId, answer, DateTimeOffset.UtcNow);
+        var step = await Guard(() => orchestrator.AnswerAsync(org, sessionId, user, sanitized, Context.ConnectionAborted));
         await Clients.OthersInGroup(Group(sessionId)).SendAsync("Step", step);
         return step;
     }
+
+    /// <summary>
+    /// The client's answer as the server can stand behind it, the way <see cref="Voice.VoiceAnswerBuilder"/> treats the exam room's:
+    /// the start time and word confidences are bounded, keys only the server may set (strain.*, verification.*, time to first word)
+    /// are dropped, the word-derived speech metrics and transcript advice are recomputed from the words, and the voice strain
+    /// comparison is computed here against the student's own earlier answers.
+    /// </summary>
+    private async Task<Answer> ToAnswerAsync(Guid org, Guid sessionId, HubAnswer answer, DateTimeOffset now)
+    {
+        var voice = answer.Mode is "voice";
+        var text = answer.Text.Trim();
+        var startedAt = answer.StartedAt is { } s && s <= now && s >= now - TimeSpan.FromHours(6) ? s : (DateTimeOffset?)null;
+        var words = (answer.Words ?? []).Where(w => w is not null && !string.IsNullOrWhiteSpace(w.Text)
+                && w.Start >= TimeSpan.Zero && w.End >= w.Start && !double.IsNaN(w.Confidence))
+            .Select(w => w with { Text = w.Text.Trim(), Confidence = Math.Clamp(w.Confidence, 0, 1) }).ToList();
+        var metrics = new Dictionary<string, double>(StringComparer.Ordinal);
+        foreach (var (key, value) in answer.SpeechMetrics ?? new Dictionary<string, double>())
+            if (!string.IsNullOrEmpty(key) && double.IsFinite(value) && !ServerDerived(key)) metrics[key] = value;
+        if (voice && words.Count > 0)
+        {
+            List<MindAttic.SpeechRecognition.TranscriptSegment> segments =
+            [
+                new()
+                {
+                    Index = 0, IsFinal = true, Text = text,
+                    Words = words.Select(w => new MindAttic.SpeechRecognition.TranscriptWord(w.Text, w.Start, w.End, w.Confidence, null, false)).ToList(),
+                },
+            ];
+            var computed = Voice.SpeechMetricKeys.Flatten(
+                MindAttic.SpeechRecognition.Metrics.SpeechMetricsCalculator.Compute(segments, new MindAttic.SpeechRecognition.Metrics.SpeechMetricsContext()),
+                MindAttic.SpeechRecognition.TranscriptVerification.Assess(segments));
+            // The words carry no speaker labels, so the client's diarization (speakers.*) is the only source for those.
+            foreach (var (key, value) in computed)
+                if (!key.StartsWith("speakers.", StringComparison.Ordinal)) metrics[key] = value;
+        }
+        var result = new Answer
+        {
+            Text = text,
+            Mode = voice ? "voice" : "text",
+            StartedAt = startedAt,
+            CompletedAt = now,
+            Words = words,
+            SpeechMetrics = metrics,
+        };
+        if (!voice || metrics.Count == 0) return result;
+        using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(org));
+        return await Voice.VoiceStrain.ApplyAsync(scope.ServiceProvider.GetRequiredService<Data.GadflyDbContext>(), sessionId, result, Context.ConnectionAborted);
+    }
+
+    private static bool ServerDerived(string key) =>
+        key.StartsWith("strain.", StringComparison.Ordinal) || key.StartsWith("verification.", StringComparison.Ordinal)
+        || key == Voice.SpeechMetricKeys.TimeToFirstWordSeconds;
 
     /// <summary>
     /// Replies to a pending meaning clarification (step.Verification.Kind "meaning"). The reply is stored beside
@@ -179,7 +228,28 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
 public sealed class HubIntegrityRecorder(Data.GadflyDbContext db, TimeProvider clock)
 {
     public const int MaxEventsPerSession = 500;
-    private static readonly HashSet<string> Sources = ["browser", "audio"];
+
+    /// <summary>
+    /// The browser and audio rows a hub client may add to one session, well under the browser recorder's own cap
+    /// (<see cref="Integrity.IntegrityRecorder.MaxEventsPerSession"/>), so a client can never use up the room real signals need.
+    /// </summary>
+    public const int MaxHubEventsPerSession = 100;
+
+    /// <summary>At most this many browser and audio events a session may send through the hub per rate window.</summary>
+    public const int MaxPerWindow = 20;
+    public static readonly TimeSpan RateWindow = TimeSpan.FromMinutes(1);
+
+    /// <summary>
+    /// The types a client may report, per source. Audio signals the server derives from an answer's speech metrics
+    /// (<see cref="Integrity.AudioIntegritySignals"/>) are never taken from a client: a client-sent one would pre-empt the real one.
+    /// </summary>
+    private static readonly Dictionary<string, IReadOnlySet<string>> Sources = new(StringComparer.Ordinal)
+    {
+        ["browser"] = Integrity.IntegrityRecorder.BrowserTypes,
+        ["audio"] = new HashSet<string>(StringComparer.Ordinal) { "whispering" },
+    };
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, Queue<DateTimeOffset>> Recent = new();
 
     public async Task<int> RecordAsync(Guid org, Guid student, Guid sessionId, IReadOnlyList<HubIntegrityEvent> events, CancellationToken ct)
     {
@@ -191,12 +261,17 @@ public sealed class HubIntegrityRecorder(Data.GadflyDbContext db, TimeProvider c
         var session = db.ExamSessions.FirstOrDefault(s => s.Id == sessionId && s.OrganizationId == org && s.StudentUserId == student);
         if (session is null || session.State != Data.SessionState.Running) return webcamStored;
         var existing = db.IntegrityEvents.Count(e => e.SessionId == sessionId);
-        var room = Math.Max(0, MaxEventsPerSession - existing);
+        var existingHub = db.IntegrityEvents.Count(e => e.SessionId == sessionId && (e.Source == "browser" || e.Source == "audio"));
+        var room = Math.Max(0, Math.Min(MaxEventsPerSession - existing, MaxHubEventsPerSession - existingHub));
+        var allowed = events.Where(e => e is not null && e.Source is { } src && Sources.TryGetValue(src, out var types)
+            && types.Contains((e.Type ?? "").Trim()) && double.IsFinite(e.Confidence)).Take(room).ToList();
+        var now = clock.GetUtcNow();
+        allowed = allowed.Take(TakeRate(sessionId, now, allowed.Count)).ToList();
+        if (allowed.Count == 0) return webcamStored;
         var openTurn = db.SessionTurns.Where(t => t.SessionId == sessionId && t.AnswerText == null).OrderByDescending(t => t.Index)
             .Select(t => (Guid?)t.Id).FirstOrDefault();
-        var now = clock.GetUtcNow();
         var added = 0;
-        foreach (var e in events.Where(e => Sources.Contains(e.Source)).Take(room))
+        foreach (var e in allowed)
         {
             db.IntegrityEvents.Add(new Data.IntegrityEvent
             {
@@ -204,9 +279,9 @@ public sealed class HubIntegrityRecorder(Data.GadflyDbContext db, TimeProvider c
                 SessionId = sessionId,
                 TurnId = openTurn,
                 Source = e.Source,
-                Type = Clip(e.Type, 60),
+                Type = Clip(e.Type.Trim(), 60),
                 StartedAt = e.StartedAt > now ? now : e.StartedAt,
-                EndedAt = e.EndedAt,
+                EndedAt = e.EndedAt is { } end ? (end > now ? now : end < e.StartedAt ? (e.StartedAt > now ? now : e.StartedAt) : end) : null,
                 Confidence = Math.Clamp(e.Confidence, 0, 1),
                 // Client-reported signals are never more than Medium on their own.
                 Severity = e.Confidence >= 0.8 ? Data.IntegritySeverity.Medium : e.Confidence >= 0.4 ? Data.IntegritySeverity.Low : Data.IntegritySeverity.Info,
@@ -219,4 +294,21 @@ public sealed class HubIntegrityRecorder(Data.GadflyDbContext db, TimeProvider c
     }
 
     private static string Clip(string? s, int max) => string.IsNullOrEmpty(s) ? "" : s.Length <= max ? s : s[..max];
+
+    /// <summary>How many of <paramref name="want"/> events this session may still store in the current rate window.</summary>
+    private static int TakeRate(Guid sessionId, DateTimeOffset now, int want)
+    {
+        if (Recent.Count > 2000)
+            foreach (var (id, other) in Recent)
+                lock (other)
+                    if (other.Count == 0 || now - other.Peek() > RateWindow) Recent.TryRemove(id, out _);
+        var q = Recent.GetOrAdd(sessionId, _ => new Queue<DateTimeOffset>());
+        lock (q)
+        {
+            while (q.Count > 0 && now - q.Peek() > RateWindow) q.Dequeue();
+            var take = Math.Min(Math.Max(0, MaxPerWindow - q.Count), want);
+            for (var i = 0; i < take; i++) q.Enqueue(now);
+            return take;
+        }
+    }
 }

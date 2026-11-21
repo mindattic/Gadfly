@@ -26,11 +26,13 @@ public static class DeskAccess
     public const string Policy = "gadfly:admin-desk";
     public const string EnabledSetting = "Gadfly:AdminDesk:Enabled";
     public const string AdminsSetting = "Gadfly:AdminDesk:Admins";
+    /// <summary>The organization id where <see cref="AdminsSetting"/> accounts hold the desk Admin role.</summary>
+    public const string OrganizationSetting = "Gadfly:AdminDesk:Organization";
 
     public static bool IsEnabled(IConfiguration config) =>
         string.Equals(config[EnabledSetting], "true", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>User names granted the desk Admin role in every organization they belong to.</summary>
+    /// <summary>User names granted the desk Admin role (in one organization only: see <see cref="IsDeskAdmin"/>).</summary>
     public static IReadOnlyList<string> ListedAdmins(IConfiguration config) =>
         config.GetSection(AdminsSetting).GetChildren().Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v!.Trim()).ToList();
 
@@ -39,10 +41,25 @@ public static class DeskAccess
     {
         if (!IsEnabled(config) || user?.Identity?.IsAuthenticated != true) return false;
         if (tenant.IsSystem || tenant.OrganizationId is null || tenant.UserId is null || tenant.Role is null or OrgRoles.Api) return false;
+        // Org Owners and Admins need the same MFA as everywhere else. A listed account skips it for now, at the owner's request
+        // ("admin mode now, hide it under security later"); GAD-T247 adds MFA for listed accounts before real students use the desk.
         if (tenant.Role is OrgRoles.Owner or OrgRoles.Admin)
             return !OrgRoleHandler.MfaRequired || user.HasClaim(MaClaims.Amr, "mfa");
         var name = user.Identity?.Name;
-        return name is { Length: > 0 } && ListedAdmins(config).Contains(name, StringComparer.OrdinalIgnoreCase);
+        return name is { Length: > 0 } && ListedAdmins(config).Contains(name, StringComparer.OrdinalIgnoreCase)
+            && IsListedAdminOrganization(tenant, config);
+    }
+
+    /// <summary>
+    /// Where a listed account holds the desk Admin role: only the organization named in <see cref="OrganizationSetting"/>, or,
+    /// when none is configured, only while the account belongs to exactly one organization (the active one), so the grant never
+    /// follows the account into another organization it joins.
+    /// </summary>
+    private static bool IsListedAdminOrganization(ITenantContext tenant, IConfiguration config)
+    {
+        if (Guid.TryParse(config[OrganizationSetting], out var configured)) return tenant.OrganizationId == configured;
+        var orgs = tenant.Memberships.Select(m => m.OrganizationId).Distinct().ToList();
+        return orgs.Count == 1 && orgs[0] == tenant.OrganizationId;
     }
 
     /// <summary>The tenant the desk acts as: the caller, in the same organization, with the Admin role.</summary>
@@ -184,6 +201,17 @@ public sealed class DeskService(IServiceProvider sp)
         if (title.Length > 200) return new(false, "Keep the title under 200 characters.");
         if (form.DurationMinutes is < AssessmentService.MinDurationMinutes or > AssessmentService.MaxDurationMinutes)
             return new(false, $"The duration must be {AssessmentService.MinDurationMinutes} to {AssessmentService.MaxDurationMinutes} minutes.");
+        // The uploads are checked before anything is saved, so a bad file leaves no course or notes collection behind.
+        if (Encoding.UTF8.GetByteCount(notes) > SourceLibraryService.MaxFileBytes)
+            return new(false, $"The pasted notes are larger than the {SourceLibraryService.MaxFileBytes / (1024 * 1024)} MB limit.");
+        foreach (var u in uploads)
+        {
+            if (SourceLibraryService.SanitizeFileName(u.Name) is null)
+                return new(false, $"\"{u.Name}\": only {string.Join(", ", SourceLibraryService.AcceptedExtensions)} files can be read.");
+            if (u.Size > SourceLibraryService.MaxFileBytes)
+                return new(false, $"\"{u.Name}\" is larger than the {SourceLibraryService.MaxFileBytes / (1024 * 1024)} MB limit.");
+            if (u.Size <= 0) return new(false, $"\"{u.Name}\" is empty.");
+        }
 
         var db = Db;
         var org = Org;
@@ -385,9 +413,12 @@ public sealed class DeskService(IServiceProvider sp)
         if (string.IsNullOrEmpty(password)) return new(false, "Give the new password.");
         var db = Db;
         var org = Org;
-        if (!await db.OrganizationMembers.AnyAsync(m => m.OrganizationId == org && m.UserId == userId && m.Role == OrgRoles.Student, ct))
-            return new(false, "That person is not a student of this organization.");
-        if (await db.OrganizationMembers.AnyAsync(m => m.UserId == userId && m.IsActive && m.Role != OrgRoles.Student, ct)
+        if (!await db.OrganizationMembers.AnyAsync(m => m.OrganizationId == org && m.UserId == userId && m.Role == OrgRoles.Student && m.IsActive, ct))
+            return new(false, "That person is not an active student of this organization.");
+        // Only an account that is nothing but an active student here: a membership anywhere else (any role, active or not), a
+        // removed membership here, or platform staff means another organization or administrator owns the account too.
+        if (await db.OrganizationMembers.IgnoreQueryFilters()
+                .AnyAsync(m => m.UserId == userId && !(m.OrganizationId == org && m.Role == OrgRoles.Student && m.IsActive), ct)
             || await db.AuthUsers.AnyAsync(u => u.Id == userId && u.Role == MaRoles.Admin, ct))
             return new(false, "That account is also staff somewhere; reset it from its own organization's members page.");
         var r = await sp.GetRequiredService<IUserAdminService>().ResetPasswordAsync(userId, password, mustChange, ct);
@@ -477,8 +508,11 @@ public sealed class DeskService(IServiceProvider sp)
         var a = await db.ExamAssignments.AsNoTracking().FirstOrDefaultAsync(x => x.Id == assignmentId && x.OrganizationId == org, ct);
         if (a is null) return new(false, "That assignment no longer exists.");
         var ids = await db.ExamSessions.Where(s => s.OrganizationId == org && s.AssignmentId == assignmentId).Select(s => s.Id).ToListAsync(ct);
+        if (await HasLiveAttemptAsync(db, org, assignmentId, ct))
+            return new(false, "An attempt is in progress (running or paused). Let it end, then reset.");
         await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
+            db.ChangeTracker.Clear();   // a retried attempt starts clean, so it adds one audit row, not two
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             await DeleteGradesAsync(db, org, ids, ct);
             // The session records (the response ledger, evidence, turns, judgments, integrity) go too: children first, nothing cascades.
@@ -521,12 +555,23 @@ public sealed class DeskService(IServiceProvider sp)
         var a = await db.ExamAssignments.AsNoTracking().FirstOrDefaultAsync(x => x.Id == assignmentId && x.OrganizationId == org, ct);
         if (a is null) return new(false, "That assignment no longer exists.");
         var ids = await db.ExamSessions.Where(s => s.OrganizationId == org && s.AssignmentId == assignmentId).Select(s => s.Id).ToListAsync(ct);
+        if (await HasLiveAttemptAsync(db, org, assignmentId, ct))
+            return new(false, "An attempt is in progress (running or paused). Let it end, then clear the scores.");
+        // Ended attempts get a grade record held at Examination In Progress, a status nothing moves out of on its own: the
+        // grading sweeper only starts sessions with no grade record and only re-queues later statuses, so the cleared scores
+        // stay cleared instead of being re-graded by the AI within seconds.
+        var ended = await db.ExamSessions.Where(s => s.OrganizationId == org && s.AssignmentId == assignmentId && s.State == SessionState.Ended)
+            .Select(s => s.Id).ToListAsync(ct);
         await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
+            db.ChangeTracker.Clear();   // a retried attempt starts clean, so it adds one audit row, not two
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             await DeleteGradesAsync(db, org, ids, ct);
             await db.ExamAssignments.Where(x => x.Id == assignmentId && x.OrganizationId == org)
                 .ExecuteUpdateAsync(u => u.SetProperty(x => x.ResultsReleasedAt, (DateTimeOffset?)null), ct);
+            var now = Clock.GetUtcNow();
+            foreach (var id in ended)
+                db.FinalGrades.Add(new FinalGrade { SessionId = id, OrganizationId = org, Status = GradeStatus.ExaminationInProgress, UpdatedAt = now });
             Audit("desk.scores-cleared", "ExamAssignment", assignmentId.ToString(), new { Sessions = ids },
                 reason: "Scores cleared from the admin desk: grades, reports and grading records removed; attempts and transcripts kept.");
             await db.SaveChangesAsync(ct);
@@ -561,6 +606,14 @@ public sealed class DeskService(IServiceProvider sp)
         await db.GradeDecisions.Where(g => g.OrganizationId == org && ids.Contains(g.SessionId)).ExecuteDeleteAsync(ct);
         await db.SessionReports.Where(r => r.OrganizationId == org && ids.Contains(r.SessionId)).ExecuteDeleteAsync(ct);
     }
+
+    /// <summary>
+    /// True while an attempt at the assignment is running or paused: the session orchestrator holds it live and keeps saving
+    /// to it, so its rows can't be removed under it. Reset and Clear scores refuse rather than end it for the student.
+    /// </summary>
+    private static Task<bool> HasLiveAttemptAsync(GadflyDbContext db, Guid org, Guid assignmentId, CancellationToken ct) =>
+        db.ExamSessions.AnyAsync(s => s.OrganizationId == org && s.AssignmentId == assignmentId
+                                      && (s.State == SessionState.Running || s.State == SessionState.Paused), ct);
 
     private async Task<Dictionary<Guid, string>> NamesAsync(CancellationToken ct) =>
         (await Directory.MembersAsync(Org, ct)).GroupBy(m => m.Member.UserId).ToDictionary(g => g.Key, g => g.First().UserName);

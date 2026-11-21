@@ -124,11 +124,21 @@ public static class ExamCommand
         var retriever = new GroundingRetriever(passages);
 
         var map = await files.LoadMapAsync(collectionId);
-        if (map is null || rebuild || ingest.DocumentsIngested > 0)
+        // An empty saved map (an earlier build where every provider failed) is rebuilt rather than reused.
+        if (map is null || rebuild || ingest.DocumentsIngested > 0 || map.Concepts.Count == 0)
         {
             Console.WriteLine("Building the concept map with the panel...");
-            map = await new ConceptMapBuilder(client).BuildAsync(collectionId, passages, map, progress);
-            await files.SaveMapAsync(map);
+            try
+            {
+                map = await new ConceptMapBuilder(client).BuildAsync(collectionId, passages, map, progress);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.Error.WriteLine($"exam: {ex.Message}");
+                return 1;
+            }
+            // Never save an empty map from a failed build: it would be reused on every later run.
+            if (map.Concepts.Count > 0) await files.SaveMapAsync(map);
         }
         if (map.Concepts.Count == 0)
         {
@@ -182,7 +192,10 @@ public static class ExamCommand
         await File.WriteAllTextAsync(sessionPath, SessionTranscriptSerializer.Serialize(session));
         reportPath ??= Path.Combine(DefaultExamsDir, $"{stamp}.report.md");
         await File.WriteAllTextAsync(reportPath, report.ToMarkdown());
-        await File.WriteAllTextAsync(Path.ChangeExtension(reportPath, ".json"), report.ToJson());
+        var jsonReportPath = Path.ChangeExtension(reportPath, ".json");
+        if (string.Equals(Path.GetFullPath(jsonReportPath), Path.GetFullPath(reportPath), StringComparison.OrdinalIgnoreCase))
+            jsonReportPath = reportPath + ".json";
+        await File.WriteAllTextAsync(jsonReportPath, report.ToJson());
 
         Console.WriteLine();
         Console.WriteLine($"Session ended ({session.EndReason}). Recommendation: {report.Recommendation}, overall mastery {report.OverallScore:P0}.");

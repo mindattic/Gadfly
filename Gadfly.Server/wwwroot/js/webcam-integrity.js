@@ -112,7 +112,15 @@ export async function start(dotnet, video, options) {
             dotnet.invokeMethodAsync("OnStatus", "on", hint).catch(() => { });
         });
         await s.monitor.start(s.core);
-        if (s.stopped) return false;
+        if (s.stopped) {
+            // stop() ran while the camera was starting: its monitor.stop() came before the camera was held, so release it now,
+            // and the timers started after stop() cleared them.
+            if (s.heartbeat) clearInterval(s.heartbeat);
+            if (s.partials) clearInterval(s.partials);
+            try { s.monitor.stop(); } catch { }
+            try { s.core.stop(); } catch { }
+            return false;
+        }
         const stream = video && video.srcObject;
         if (stream && stream.getVideoTracks) {
             for (const t of stream.getVideoTracks()) {

@@ -140,7 +140,8 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var moved = await TryMoveAsync(grade, GradeStatus.AiGradingPending, "Proceed with unresolved responses flagged: " + reason.Trim(), ct);
         if (moved is not null) return moved;
         await db.SaveChangesAsync(ct);
-        await queue.EnqueueAsync(AiGradingJob.JobKind, new AiGradingPayload(sessionId), Org, maxAttempts: 4, ct: ct);
+        if (!await GradingStarter.HasJobAsync(db, sessionId, activeOnly: true, ct))
+            await queue.EnqueueAsync(AiGradingJob.JobKind, new AiGradingPayload(sessionId), Org, maxAttempts: 4, ct: ct);
         return GradingResult.Done("AI grading queued; the unresolved responses will be flagged, not used.");
     }
 
@@ -185,11 +186,17 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             .GroupBy(a => a.ObjectiveId).ToDictionary(g => g.Key, g => g.OrderByDescending(a => a.CreatedAt).First());
         var humans = await db.HumanObjectiveGrades.AsNoTracking().Where(h => h.SessionId == sessionId && h.OrganizationId == org).OrderBy(h => h.SubmittedAt).ToListAsync(ct);
         var evidence = (await db.AssessmentEvidence.AsNoTracking().Where(e => e.SessionId == sessionId && e.OrganizationId == org).ToListAsync(ct)).ToLookup(e => e.ObjectiveId);
-        var disagreements = (await db.GradeDisagreements.AsNoTracking().Where(d => d.SessionId == sessionId && d.OrganizationId == org).ToListAsync(ct))
+        var allDisagreements = await db.GradeDisagreements.AsNoTracking().Where(d => d.SessionId == sessionId && d.OrganizationId == org).ToListAsync(ct);
+        var disagreements = allDisagreements
             .GroupBy(d => d.ObjectiveId).ToDictionary(g => g.Key, g => g.OrderByDescending(d => d.DetectedAt).First());
         var dIds = disagreements.Values.Select(d => d.Id).ToList();
         var reconciliations = (await db.GradeReconciliations.AsNoTracking().Where(r => r.OrganizationId == org && dIds.Contains(r.DisagreementId)).OrderBy(r => r.At).ToListAsync(ct))
             .ToLookup(r => r.DisagreementId);
+        // The score uses the objective's most recent reconciliation of any of its disagreements, as approval does (ComputeAsync).
+        var objectiveOf = allDisagreements.ToDictionary(d => d.Id, d => d.ObjectiveId);
+        var allIds = objectiveOf.Keys.ToList();
+        var latestRec = (await db.GradeReconciliations.AsNoTracking().Where(r => r.OrganizationId == org && allIds.Contains(r.DisagreementId)).ToListAsync(ct))
+            .GroupBy(r => objectiveOf[r.DisagreementId]).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.At).First());
 
         var states = objectives.Select(o =>
         {
@@ -197,7 +204,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             var recs = d is null ? [] : reconciliations[d.Id].ToList();
             return (Objective: o, Ai: ai.GetValueOrDefault(o.Id), Human: CurrentHuman(humans, o.Id), Disagreement: d, Recs: recs);
         }).ToList();
-        var (combined, excluded) = TryCompute(policy, states.Select(s => (s.Objective, s.Ai, s.Human, s.Recs.LastOrDefault())).ToList());
+        var (combined, excluded) = TryCompute(policy, states.Select(s => (s.Objective, s.Ai, s.Human, latestRec.GetValueOrDefault(s.Objective.Id))).ToList());
         var objectiveViews = states.Select(s => new ObjectiveView(s.Objective, s.Ai is null ? null : AiGradeView.From(s.Ai), s.Human,
             humans.Where(h => h.ObjectiveId == s.Objective.Id).ToList(),
             aiVisible ? evidence[s.Objective.Id].ToList() : [],   // D25 (GAD-T218): the exam-time judge's stance and notes stay hidden while blind
@@ -292,16 +299,21 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var humans = (await db.HumanObjectiveGrades.Where(h => h.SessionId == session.Id && h.OrganizationId == Org).ToListAsync(ct))
             .Concat(db.ChangeTracker.Entries<HumanObjectiveGrade>().Where(e => e.State == EntityState.Added).Select(e => e.Entity))
             .DistinctBy(h => h.Id).ToList();
-        var disagreements = (await db.GradeDisagreements.Where(d => d.SessionId == session.Id && d.OrganizationId == Org).ToListAsync(ct))
+        var allDisagreements = await db.GradeDisagreements.Where(d => d.SessionId == session.Id && d.OrganizationId == Org).ToListAsync(ct);
+        var disagreements = allDisagreements
             .GroupBy(d => d.ObjectiveId).ToDictionary(g => g.Key, g => g.OrderByDescending(d => d.DetectedAt).First());
-        var dIds = disagreements.Values.Select(d => d.Id).ToList();
+        // The objective's most recent reconciliation, of any of its disagreements: a resubmission after a reconciliation
+        // records a new disagreement, and the resolved scores must not be lost with it (the resubmission was compared against them).
+        var objectiveOf = allDisagreements.ToDictionary(d => d.Id, d => d.ObjectiveId);
+        var dIds = objectiveOf.Keys.ToList();
         var recs = (await db.GradeReconciliations.AsNoTracking().Where(r => dIds.Contains(r.DisagreementId) && r.OrganizationId == Org).ToListAsync(ct))
             .Concat(db.ChangeTracker.Entries<GradeReconciliation>().Where(e => e.State == EntityState.Added).Select(e => e.Entity))
-            .GroupBy(r => r.DisagreementId).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.At).First());
+            .Where(r => objectiveOf.ContainsKey(r.DisagreementId))
+            .GroupBy(r => objectiveOf[r.DisagreementId]).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.At).First());
         var states = objectives.Select(o =>
         {
             var d = disagreements.GetValueOrDefault(o.Id);
-            return (o, ai.GetValueOrDefault(o.Id), CurrentHuman(humans, o.Id), d, d is null ? null : recs.GetValueOrDefault(d.Id));
+            return (o, ai.GetValueOrDefault(o.Id), CurrentHuman(humans, o.Id), d, recs.GetValueOrDefault(o.Id));
         }).ToList();
         var (result, excluded) = TryCompute(policy, states.Select(s => (s.o, s.Item2, s.Item3, s.Item5)).ToList());
         if (result is null) throw new InvalidOperationException("The combined score could not be computed (check the objectives' maximum scores and weights).");

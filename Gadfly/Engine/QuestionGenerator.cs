@@ -86,9 +86,17 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
 
         var reasons = new List<string>();
         var undecided = false;
+        var guarded = false;
+        bool? previous = false; // the guard's verdict on the previous draft: true leaked, null undecided, false none (or empty)
         for (var attempt = 0; attempt < 2; attempt++)
         {
-            var ask = attempt == 0 ? prompt : prompt + "\n\nYour previous draft revealed expected answer points. Ask without stating or hinting at any of them.";
+            var ask = previous switch
+            {
+                true => prompt + "\n\nYour previous draft revealed expected answer points. Ask without stating or hinting at any of them.",
+                null => prompt + "\n\nYour previous draft could not be confirmed free of expected answer points. Ask without stating or hinting at any of them.",
+                _ => prompt,
+            };
+            previous = false;
             var result = await panel.AskAsync(ask, "", Quorum.Plurality, ct);
             var question = Usable(Clean(PanelText(result)));
             if (question.Length == 0)
@@ -114,9 +122,12 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
             }
             reasons.Add(verdict == true ? $"leaked: \"{question}\"" : "leak guard undecided");
             undecided = verdict is null;
+            guarded = true;
+            previous = verdict;
         }
         LastOutcome = "fallback: " + string.Join(" | ", reasons);
-        LastGuard = undecided ? LeakGuardResult.UndecidedReplaced : LeakGuardResult.LeakedReplaced;
+        // Only a guard verdict is reported as one: with no draft to check (or no rubric), no guard ran.
+        LastGuard = !guarded ? LeakGuardResult.Skipped : undecided ? LeakGuardResult.UndecidedReplaced : LeakGuardResult.LeakedReplaced;
         return Fallback(r.Decision.Move, r.ConceptTitle, r.RelatedConceptTitle);
     }
 
