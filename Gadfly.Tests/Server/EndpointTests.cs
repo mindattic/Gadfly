@@ -29,9 +29,25 @@ public class RouteAuthorizationTests : ServerTest
 
     private static bool IsAnonymous(Endpoint e) => e.Metadata.GetMetadata<IAllowAnonymous>() is not null;
 
+    /// <summary>
+    /// Pages that render signed-out because they share AccountPages.razor with /mfa (static SSR for antiforgery);
+    /// their actions are the library's change-password and MFA-setup posts, which require sign-in (checked below).
+    /// </summary>
+    private static readonly string[] SharedAccountPages = ["account/change-password", "account/mfa/setup"];
+
     private static bool Allowed(string raw) =>
         GadflyEndpoints.AnonymousRoutes.Any(a => string.Equals(a, raw, StringComparison.OrdinalIgnoreCase))
+        || SharedAccountPages.Contains(raw, StringComparer.OrdinalIgnoreCase)
         || raw.StartsWith("_framework/", StringComparison.OrdinalIgnoreCase);
+
+    [Test]
+    public void TheAccountPagesActions_RequireSignIn()
+    {
+        var actions = Routes().Where(r => Raw(r).StartsWith("_ma-auth/", StringComparison.OrdinalIgnoreCase)
+            && (Raw(r).Contains("change-password", StringComparison.OrdinalIgnoreCase) || Raw(r).Contains("mfa/setup", StringComparison.OrdinalIgnoreCase)
+                || Raw(r).Contains("mfa/enroll", StringComparison.OrdinalIgnoreCase))).ToList();
+        Assert.That(actions.Where(IsAnonymous).Select(Raw), Is.Empty);
+    }
 
     [Test]
     public void TheAppMapsRoutes() => Assert.That(Routes(), Has.Count.GreaterThan(10));
