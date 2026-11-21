@@ -279,8 +279,12 @@ else
             }
             else
             {
-                <p class="hint">Students see their result only after you release it.</p>
-                <button type="button" disabled="@(busy || view.LatestGrade is null)" @onclick="() => ReleaseAsync(true)">Release result</button>
+                <p class="hint">Students see their result only after you release it. Releasing needs a grade on the student's latest finished attempt.</p>
+                <button type="button" disabled="@(busy || releaseBlocker is not null)" title="@releaseBlocker" @onclick="() => ReleaseAsync(true)">Release result</button>
+                @if (releaseBlocker is not null)
+                {
+                    <p class="hint">@releaseBlocker</p>
+                }
             }
         </div>
     }
@@ -321,7 +325,7 @@ else
     private SessionReviewView? view;
     private GradeForm form = new();
     private bool loading = true, busy, ok;
-    private string? message;
+    private string? message, releaseBlocker;
 
     private ReviewService Service => new(Db, Tenant.OrganizationId!.Value);
 
@@ -334,7 +338,11 @@ else
         loading = false;
     }
 
-    private async Task LoadAsync() => view = await Service.GetAsync(SessionId);
+    private async Task LoadAsync()
+    {
+        view = await Service.GetAsync(SessionId);
+        releaseBlocker = view?.Assignment is { } a ? await Service.ReleaseBlockerAsync(a.Id) : null;
+    }
 
     private void UseRecommendation()
     {

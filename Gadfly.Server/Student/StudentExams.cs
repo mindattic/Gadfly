@@ -6,7 +6,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Gadfly.Server.Student;
 
 /// <summary>Where one assignment stands for the student, in the words the dashboard shows.</summary>
-public enum AssignmentStanding { NotOpenYet, Open, InProgress, Completed, Closed, Unavailable }
+/// <remarks>
+/// <see cref="Archived"/>: the instructor archived the exam, so no new attempt can start; an attempt
+/// already in progress stays <see cref="InProgress"/> and can be resumed (GAD-T70).
+/// </remarks>
+public enum AssignmentStanding { NotOpenYet, Open, InProgress, Completed, Closed, Unavailable, Archived }
 
 /// <summary>Results the instructor released for one assignment (never shown before release).</summary>
 public sealed record ReleasedResult(string? Grade, string? Comment, string? Recommendation, DateTimeOffset ReleasedAt);
@@ -28,6 +32,8 @@ public sealed record StudentAssignmentView
     public Guid? ActiveSessionId { get; init; }
     public SessionState? ActiveSessionState { get; init; }
     public ReleasedResult? Result { get; init; }
+    /// <summary>The instructor archived the exam: no new attempts, but one in progress can still be finished.</summary>
+    public bool ExamArchived { get; init; }
 
     /// <summary>True when the attempt in progress already has consent, so "Resume" can go straight to the exam room.</summary>
     public bool CanResumeDirectly => ActiveSessionId is not null && ActiveSessionState is SessionState.ConsentGiven or SessionState.Running or SessionState.Paused;
@@ -111,6 +117,7 @@ public static class StudentExams
                 ActiveSessionId = active?.Id,
                 ActiveSessionState = active?.State,
                 Result = result,
+                ExamArchived = a.Exam?.Status == ExamStatus.Archived,
                 Standing = StandingOf(a, active is not null, used, now),
             });
         }
@@ -133,9 +140,12 @@ public static class StudentExams
 
     private static AssignmentStanding StandingOf(ExamAssignment a, bool hasActive, int used, DateTimeOffset now)
     {
-        if (a.Exam?.Status != ExamStatus.Published) return AssignmentStanding.Unavailable;
+        var archived = a.Exam?.Status == ExamStatus.Archived;
+        if (a.Exam?.Status != ExamStatus.Published && !archived) return AssignmentStanding.Unavailable;
         if (a.ClosesAt is { } closes && now > closes) return used > 0 ? AssignmentStanding.Completed : AssignmentStanding.Closed;
+        // Archiving blocks new attempts only: an attempt already in progress can still be resumed.
         if (hasActive) return AssignmentStanding.InProgress;
+        if (archived) return used > 0 ? AssignmentStanding.Completed : AssignmentStanding.Archived;
         if (a.OpensAt is { } opens && now < opens) return AssignmentStanding.NotOpenYet;
         if (used >= a.AttemptsAllowed) return AssignmentStanding.Completed;
         return AssignmentStanding.Open;
@@ -148,6 +158,7 @@ public static class StudentExams
         AssignmentStanding.InProgress => "In progress",
         AssignmentStanding.Completed => "Submitted",
         AssignmentStanding.Closed => "Closed",
+        AssignmentStanding.Archived => "No longer available",
         _ => "Not available yet",
     };
 

@@ -59,5 +59,4 @@ video and no account details are sent.
 
 - Customer-facing privacy policy and terms of service (from this draft).
 - Data Processing Agreement template.
-- Per-organization retention setting in the org admin console (GAD-T55).
 - Audio storage and deletion once voice mode stores audio (GAD-T53).

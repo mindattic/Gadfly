@@ -273,7 +273,10 @@ else
         error = null;
         try
         {
-            var sessionId = await Sessions.CreateOrResumeAsync(org, assignment.AssignmentId, user, clientInfo);
+            // An attempt already in progress is resumed as it is (even if the exam was archived since:
+            // archiving blocks only new attempts); otherwise the orchestrator starts the next attempt.
+            var sessionId = assignment.ActiveSessionId
+                            ?? await Sessions.CreateOrResumeAsync(org, assignment.AssignmentId, user, clientInfo);
             await Sessions.RecordConsentAsync(org, sessionId, user, notice.Sha256);
             Nav.NavigateTo($"exam/{sessionId}");
         }

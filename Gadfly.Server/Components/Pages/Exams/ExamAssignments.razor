@@ -74,16 +74,21 @@ else
                         {
                             <span class="ok">released @Local(rel)</span>
                         }
-                        else
+                        else if (r.CanRelease)
                         {
                             <button type="button" class="link" disabled="@busy" @onclick="() => ReleaseAsync(r)">Release results</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="link" disabled title="@r.ReleaseBlocker">Release results</button>
+                            <div class="hint">@(r.ReleaseBlocker == Gadfly.Server.Review.ResultRelease.NoEndedSession ? "No finished attempt yet" : "Grade it on the Review page first")</div>
                         }
                     </td>
                 </tr>
             }
         </tbody>
     </table>
-    <p class="hint">Releasing results lets that student see their report. You decide when; review the session first.</p>
+    <p class="hint">Releasing results lets that student see their grade and report. You decide when; grade the student's latest finished attempt on the Review page first (release stays off until it has a grade).</p>
     @if (!CanAssign && message is not null)
     {
         <p role="status" class="@(ok ? "ok" : "error")">@message</p>

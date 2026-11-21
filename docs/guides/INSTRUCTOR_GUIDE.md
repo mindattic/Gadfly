@@ -9,15 +9,17 @@ This guide covers everything an instructor does: uploading material, checking th
 built from it, building and assigning exams, reviewing sessions, grading and releasing results.
 Owners and admins of an organization can do all of it too.
 
-> **Today vs later.** Students type their answers. Voice answers, the talking examiner (avatar), webcam
-> and audio integrity signals, browser focus signals and PDF/DOCX/EPUB/HTML uploads are planned but not
-> built yet. Where a setting exists for one of them, this guide says so.
+> **Today vs later.** Students type their answers. Browser integrity signals (tab switches, pastes and
+> the like) are recorded. Voice answers, the talking examiner (avatar), webcam and audio integrity
+> signals and PDF/DOCX/EPUB/HTML uploads are planned but not built yet. Where a setting exists for one of
+> them, this guide says so.
 
 ## Signing in
 
 | Step | What happens |
 |---|---|
 | First sign-in | Your organization's admin gives you a user name and a temporary password. Sign in at `/login`; you are asked to choose a new password straight away. |
+| Forgot your password | Press **Forgot password?** on the sign-in page and enter your user name or email. If an account matches, you are emailed a link to choose a new password; then sign in again with it (your authenticator code is still asked for). |
 | Two-step verification (MFA) | Owners, admins and instructors must use an authenticator app (any TOTP app). At first sign-in you scan a QR code; after that every sign-in asks for the 6-digit code. Students don't need it. |
 | More than one organization | If you belong to several, a drop-down in the top bar switches between them. Everything you see is scoped to the organization selected there. |
 
@@ -103,8 +105,8 @@ Open **Exams**, then **New exam**.
 | Duration (minutes) | 1 to 240. The clock is kept on the server and runs from the first question; it doesn't pause if the student leaves the page. |
 | Difficulty | 1 gentle, 2 easy, 3 standard, 4 demanding, 5 rigorous: how hard the follow-ups push. |
 | Most follow-up questions per concept | 0 to 20, after the opening question. The examiner moves on sooner when a concept is clearly mastered or clearly not understood. The whole exam is capped at (concepts × (follow-ups + 1)) questions. |
-| Mode | **Voice** or **Text**. Voice isn't built yet: students answer by typing in either mode, and are told so. |
-| Integrity monitoring | **Off**, **Standard** or **Strict**. Saved with the exam for when browser (Standard) and webcam/audio (Strict) signals arrive. Today the only signal recorded is "answer reads like written text", and it is recorded at every level. |
+| Mode | **Text** (the default) or **Voice**. Voice is marked "coming soon": it needs the speech and avatar libraries, which aren't built yet. You can still choose it; students of a voice exam answer by typing, and are told so. |
+| Integrity monitoring | **Off**, **Standard** or **Strict**. **Standard** records browser signals: the exam tab hidden or the window losing focus (with how long), pastes into the answer box, copying the question, a second screen connected, and a guess that developer tools are open (information only). **Strict** also asks the browser for permission to detect extra screens (the student may decline) and offers an optional **Go full screen** button, noting when the student leaves full screen. Webcam and audio signals for Strict arrive with voice mode. **Off** records no browser signals. Students are told in the notice they accept what is noted. |
 | Examiner voice id / avatar id | Free text, saved for the voice and avatar features; unused today. Blank means the default. |
 | Instructions shown to students | Shown on the student's exam list. |
 
@@ -112,7 +114,8 @@ Open **Exams**, then **New exam**.
 collection is still ready, every chosen concept still exists) and then **freezes its settings**. Editing a
 published or archived exam saves your changes as a new draft copy; the original stays as it is.
 
-**Archive** stops new attempts. Existing sessions and results are kept.
+**Archive** stops new attempts. A student who is part-way through an attempt can still resume and finish
+it. Existing sessions and results are kept.
 
 ## 5. Assign it
 
@@ -129,7 +132,8 @@ Students who already have this exam are skipped. Students must already be member
 **My exams** when they sign in.
 
 The **Assignments** table shows each student's window, attempts used, their latest session's state and
-whether results were released.
+whether results were released. **Release results** there follows the same rule as the review page (see
+Grade and release): it stays off, with a hint, until the student's latest finished attempt is graded.
 
 ## 6. What the student sees
 
@@ -200,8 +204,21 @@ found to have no effect. Gaze events like this are listed as normal behavior and
 The signals that can matter are a second face, a second voice, a sustained reading pattern at one
 off-screen spot, or the exam tab being hidden, and even those have innocent explanations.
 
-Today the only signal recorded is **"Answer reads like written text"**, raised when an answer reads
-noticeably more like written text than the student's other answers. It is weak evidence on its own.
+What is recorded today:
+
+| Signal | From | Notes |
+|---|---|---|
+| Exam tab hidden / window lost focus | the browser | With how long it lasted. Brief focus changes (a notification, an alert) are common. |
+| Pasted into the answer box | the browser | Text exams only, with how many characters. |
+| Copied the question | the browser | Some students copy the question to re-read it. |
+| Extra screen connected | the browser | On Strict, only if the student allowed screen detection. |
+| Left full screen | the browser | Strict, only after the student chose **Go full screen**. |
+| Developer tools may be open | the browser | A guess; information only, never counted as a flag. |
+| Answer reads like written text | the server | Raised when an answer reads noticeably more like written text than the student's other answers. Weak evidence on its own. |
+
+Browser signals are sent every few seconds and survive a page reload; nothing is blocked, and no signal
+is ever rated High. The browser's clock is corrected against the server's, and repeated identical signals
+are merged.
 
 ### Mastery and the AI report
 
@@ -225,9 +242,10 @@ recommendation. A grade overrides when it names a different outcome (for example
 "fail" with not-demonstrated; anything else counts as an override) or when your score is more than 10
 points from the AI's. Every saved grade is kept in the **Grade history**; the newest one is the grade.
 
-**Release** decides when the student sees the result. On the session page, **Release result** needs a
-saved grade; **Withdraw the result** hides it again. The exam's **Assignments** table also has **Release
-results** per student. Release is per assignment: the student sees the latest grade and comment, plus the
+**Release** decides when the student sees the result. One rule applies everywhere: a result can be
+released only when the assignment's **latest finished attempt has a grade**. On the session page,
+**Release result** stays off until then (the page says why); **Withdraw the result** hides it again. The
+exam's **Assignments** table also has **Release results** per student, with the same rule. Release is per assignment: the student sees the latest grade and comment, plus the
 AI's recommendation in plain words ("Understanding shown", "Partly shown", "Not yet shown"), on
 **My exams**.
 

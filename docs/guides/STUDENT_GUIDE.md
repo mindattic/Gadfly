@@ -31,7 +31,9 @@ the questions, and a memorized definition only gets you through the first one. W
 
 ## Before you start: the system check and the notice
 
-Sign in, open **My exams** and press **Start**. The get-ready page has three steps.
+Sign in, open **My exams** and press **Start**. (Forgot your password? Press **Forgot password?** on the
+sign-in page and enter your user name or email; if an account matches, you'll get an email with a link to
+choose a new one.) The get-ready page has three steps.
 
 1. **System check.** Your browser, cookies, internet connection and screen are checked. If something is
    marked ✗, the page tells you how to fix it; press **Check again** afterwards. A slow connection gets a
@@ -64,7 +66,9 @@ Sign in, open **My exams** and press **Start**. The get-ready page has three ste
   used up; you can't come back to it.
 
 Your instructor sets how many attempts you have and the window when the exam is open; both show on
-**My exams**.
+**My exams**. If you leave mid-exam, **My exams** shows **Resume**. You can resume an attempt you
+started even if your instructor closes the exam to new attempts in the meantime (but not after its
+window closes).
 
 ## What is recorded, and for how long
 
@@ -74,9 +78,12 @@ Your instructor sets how many attempts you have and the window when the exam is 
 | When each question was asked and when you started and finished answering | Your screen |
 | The AI panel's judgment of each answer | Any guess about your emotions or honesty: the platform never tries |
 | Integrity notes for your instructor, such as an answer that reads very differently from your others | |
+| Browser notes, unless your instructor turned them off: switching to another tab or window (and for how long), pasting into the answer box, copying the question, and on some exams leaving full screen or having a second screen connected | |
 | Your consent (the time and a fingerprint of the notice you accepted) | |
 
-Integrity notes are for a person to read in context. They never fail you automatically. Looking away from
+Integrity notes are for a person to read in context. They never fail you automatically, and nothing is
+blocked: the notice before each exam lists exactly what that exam notes. On a Strict exam your browser
+may ask to allow screen detection; you can decline. Looking away from
 the screen while you think is normal and isn't counted against you.
 
 Your answers are kept for your organization's retention period, shown in the notice (90 days unless your
@@ -99,7 +106,10 @@ Until then the exam shows "Your answers were submitted. Your instructor will rel
 
 ## Your data
 
-You can ask for a copy of everything Gadfly holds about you in your organization (your assignments,
-attempts, questions and answers, judgments, integrity notes, reports and grades), or ask for it to be
-deleted. Ask your organization's administrator; the copy is a single file, and deletion removes your exam
-records in that organization. A download button for students isn't built yet.
+You can download a copy of everything Gadfly holds about you in your organization (your assignments,
+attempts, questions and answers, judgments, integrity notes, reports and grades): press **Download my
+data** at the top of **My exams**. It is a single JSON file. If you belong to several organizations, each
+one's copy is separate; switch organization first.
+
+To have your exam records deleted, ask your organization's administrator. Deletion removes your exam
+records in that organization and can't be undone.

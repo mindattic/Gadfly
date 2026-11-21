@@ -4,8 +4,9 @@ For organization owners and admins, and for MindAttic staff who run the platform
 organizations, members and roles, two-step verification, data retention, API keys, webhooks, usage, and
 data export and erasure. Instructors' work is in the [Instructor guide](INSTRUCTOR_GUIDE.md).
 
-Several admin tasks below have no screen yet; the organization admin console (GAD-T55) will add them.
-Each section says what works today.
+Owners and admins manage all of this in the **organization admin console**: the links at the top of
+every admin page are **Members** (`/org/members`), **Settings** (`/org/settings`), **API keys**
+(`/org/api-keys`), **Webhooks** (`/org/webhooks`) and **Usage** (`/org/usage`).
 
 ## Organizations
 
@@ -46,7 +47,14 @@ Owners and admins manage people at **Members** (`/org/members`).
 them back. Their records are kept either way (see erasure below to delete them).
 
 There are no email invitations yet (M.AUTH-T35): give people their user name and temporary password
-yourself. There is also no password-reset screen in Gadfly yet.
+yourself.
+
+**Forgotten passwords.** The sign-in page has a **Forgot password?** link (`/forgot-password`). The person
+enters their user name or email; if an account matches, they are emailed a link to `/account/reset`,
+where they choose a new password and then sign in again (two-step verification still applies). The page
+always gives the same answer, so it never reveals whether an account exists. The reset email needs the
+server's outgoing mail (SMTP) and `MindAttic:Auth:Reset:PublicBaseUrl` to be configured; without them no
+email is sent and the server logs a warning at startup.
 
 ## Two-step verification (MFA)
 
@@ -73,9 +81,12 @@ session that ended longer ago than that, removes what the student said and keeps
 Video is never stored. Students are told the retention period, in days, in the notice they accept before
 every attempt.
 
-There is no screen to change the period yet. Until the admin console arrives, MindAttic staff can set it
-per organization in the database (`gadfly.OrganizationSettings.RetentionDays`). See
-[Privacy](../PRIVACY.md) for the reasoning and the regulatory notes.
+Change the period at **Settings** (`/org/settings`): 7 to 3650 days. The page lists what is removed
+and what is kept. Shortening it applies to sessions that already ended, at the next daily run, and
+redaction can't be undone. See [Privacy](../PRIVACY.md) for the reasoning and the regulatory notes.
+
+Settings also holds the **monthly cost quota** (see Usage) and the **default voice and avatar** ids for
+voice-mode exams (voice exams aren't built yet; students of a voice exam answer by typing).
 
 ## API keys
 
@@ -89,14 +100,19 @@ Apps that integrate Gadfly call the [platform API](../API.md) with an organizati
 - A revoked key, or any key of a deactivated organization, is refused. The last time each key was used
   is recorded.
 
-There is no screen or endpoint to create, list or revoke keys yet; the admin console will add them. Until
-then MindAttic staff create keys on the server.
+Manage keys at **API keys** (`/org/api-keys`):
+
+- **Create a key** with a name (for example "LMS integration"). The full key is shown once, with a copy
+  button; store it in a secret manager.
+- The list shows each key's name, prefix, when it was created and when it was last used.
+- **Revoke** (after a confirmation) stops the key working at once. It can't be undone; create a new key
+  instead.
 
 ## Webhooks
 
-A webhook tells your app when something happens, by POSTing JSON to an `https` URL you register through
-the API (`POST /api/v1/webhooks`). Today there is one event, `session.completed`, sent when an exam
-attempt ends.
+A webhook tells your app when something happens, by POSTing JSON to an `https` URL you register at
+**Webhooks** (`/org/webhooks`) or through the API (`POST /api/v1/webhooks`). Today there is one event,
+`session.completed`, sent when an exam attempt ends.
 
 - Each webhook gets its own signing secret (`whsec_...`), shown once when it is registered and stored
   encrypted.
@@ -104,20 +120,34 @@ attempt ends.
   [API reference](../API.md#webhooks) shows how.
 - A delivery that doesn't get a 2xx answer within 15 seconds is retried with growing waits (15 seconds,
   then doubling, at most an hour apart), up to 8 attempts.
-- `DELETE /api/v1/webhooks/{id}` deactivates a webhook; deliveries still waiting for it are dropped.
+- **Deactivate** on the Webhooks page (after a confirmation), or `DELETE /api/v1/webhooks/{id}`,
+  stops a webhook; deliveries still waiting for it are dropped.
 
-Webhooks are managed through the API only; there is no screen for them yet.
+The Webhooks page also lists recent deliveries with their event, endpoint, status, attempt number and the
+response code your endpoint returned, which is the first place to look when an integration says it heard nothing.
+
+### Live exam sessions for integrators
+
+Apps that run their own exam screen (for example a voice client) can drive a session over the
+SignalR **session hub** at `/hubs/session` instead of the Gadfly exam room. It is for developers; see the
+[API reference](../API.md). Nothing needs turning on for it.
 
 ## Usage
 
-The platform has a usage ledger for LLM, speech-to-text, text-to-speech and embedding calls (units and
-cost per organization and session), and a monthly cost quota setting. Neither is filled in or enforced
-yet (usage metering, GAD-T47), and there is no usage screen. The **Exams** list shows how many students
-each exam is assigned to and how many sessions started and ended.
+**Usage** (`/org/usage`) shows, for recent months, the provider cost and metered calls (LLM,
+speech-to-text, text-to-speech, embeddings) by kind and provider, the number of sessions started and
+ended, the month's cost against the **monthly cost quota** set under Settings, and the health of each LLM
+provider on the judging panel.
+
+Cost figures appear once usage metering is on (GAD-T47); until then the page says so, and session counts
+are already live. The quota is shown for comparison but not yet enforced. The **Exams** list shows how
+many students each exam is assigned to and how many sessions started and ended.
 
 ## Data export and erasure
 
-Students can ask for a copy of their data or for it to be deleted (see the [Student guide](STUDENT_GUIDE.md#your-data)).
+Students can download a copy of their own data from **My exams**, and can ask for it to be deleted (see
+the [Student guide](STUDENT_GUIDE.md#your-data)). On **Members**, each member has an **Export data**
+link and an **Erase data** form, which asks you to type DELETE before it runs.
 
 | Request | How | Who |
 |---|---|---|
@@ -127,8 +157,7 @@ Students can ask for a copy of their data or for it to be deleted (see the [Stud
 The student's sign-in account itself is not deleted, because the person may belong to other
 organizations.
 
-Neither has a button yet, and the Members page doesn't show user ids. Until the admin console adds them,
-MindAttic staff run exports and erasures on request.
+Export before erasing if the data may be needed: erasure can't be undone.
 
 ## Health
 

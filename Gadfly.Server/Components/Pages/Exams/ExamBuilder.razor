@@ -102,10 +102,14 @@ else
         <p class="hint">The examiner moves on sooner when a concept is clearly mastered or clearly not understood.</p>
         <label>Mode
             <select @bind="draft.Mode">
-                <option value="@ExamMode.Voice">Voice: the examiner speaks, the student answers aloud</option>
                 <option value="@ExamMode.Text">Text: questions and answers are typed</option>
+                <option value="@ExamMode.Voice">Voice (coming soon — needs the speech and avatar libraries)</option>
             </select>
         </label>
+        @if (draft.Mode == ExamMode.Voice)
+        {
+            <p class="hint">Voice isn't built yet: until the speech and avatar libraries arrive, students taking a voice exam answer by typing.</p>
+        }
         <fieldset class="eb-list">
             <legend>Integrity monitoring</legend>
             @foreach (var level in Enum.GetValues<IntegrityLevel>())
