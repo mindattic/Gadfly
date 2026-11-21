@@ -77,6 +77,14 @@ public sealed class SourceIngestor(ISourceStore store, IReadOnlyList<IDocumentTe
             {
                 progress?.Report($"Embedding {texts.Count} passages from {relative}");
                 vectors = [.. await embeddings.EmbedAsync(texts.Select(t => t.Text).ToList(), ct)];
+                if (vectors.Length != texts.Count)
+                {
+                    // Indexing by position would misattribute or overrun: record it and leave the document unsaved so a rerun retries it (GAD-T196).
+                    var msg = $"\"{relative}\": the embedding provider returned {vectors.Length} vectors for {texts.Count} passages, so the document was not ingested.";
+                    failures.Add(msg);
+                    progress?.Report(msg);
+                    continue;
+                }
             }
             var passages = texts.Select((t, i) => new SourcePassage
             {

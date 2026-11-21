@@ -560,6 +560,30 @@ public class SourceIngestorTests
         Assert.That(SourceIngestor.DocumentId("a.md"), Does.Match("^d[0-9a-f]{12}$"));
     }
 
+    private sealed class ShortEmbeddings : IEmbeddingProvider
+    {
+        public string Model => "short";
+        // Always one vector fewer than the passages asked for.
+        public Task<IReadOnlyList<float[]>> EmbedAsync(IReadOnlyList<string> texts, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<float[]>>(texts.Skip(1).Select(_ => new[] { 1f, 0f }).ToList());
+    }
+
+    [Test]
+    public async Task Ingest_WhenTheEmbeddingCountDiffers_RecordsAFailure_AndDoesNotSaveTheDocument()
+    {
+        var src = Path.Combine(_dir, "src");
+        Directory.CreateDirectory(src);
+        await File.WriteAllTextAsync(Path.Combine(src, "a.md"), "# A\n\nAlpha text.");
+        var store = new FileSourceStore(Path.Combine(_dir, "store"));
+        var ingestor = new SourceIngestor(store, [new PlainTextExtractor()], new ShortEmbeddings());
+
+        var result = await ingestor.IngestAsync(src, "col");
+
+        Assert.That(result.DocumentsIngested, Is.EqualTo(0));
+        Assert.That(result.Failures, Has.Count.EqualTo(1));
+        Assert.That((await store.GetCollectionAsync("col"))!.Documents, Is.Empty, "left unsaved so the next run retries it");
+    }
+
     [Test]
     public async Task Ingest_SkipsUnchangedFiles_ReingestsChangedOnes_SkipsUnreadable()
     {
