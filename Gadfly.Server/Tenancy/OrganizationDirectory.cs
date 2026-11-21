@@ -98,7 +98,8 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
                 temporaryPassword, mustChangePassword: true, ct: ct);
             if (!created.Ok || created.UserId is null) return new(false, created.Error ?? "The account could not be created.");
             userId = created.UserId.Value;
-            if (OrgRoles.RequiresMfa(role))
+            // Staff enroll an authenticator at first sign-in (not in local development, where MFA is off).
+            if (OrgRoles.RequiresMfa(role) && OrgRoleHandler.MfaRequired)
                 await db.AuthUsers.Where(u => u.Id == userId).ExecuteUpdateAsync(s => s.SetProperty(u => u.MustEnrollMfa, true), ct);
         }
         else

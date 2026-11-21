@@ -1,6 +1,6 @@
 @inherits LayoutComponentBase
 @inject ITenantContext Tenant
-@inject IOrganizationDirectory Directory
+@inject IServiceScopeFactory Scopes
 
 <div class="shell">
     <header class="topbar">
@@ -63,7 +63,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Its own scope: the page below shares the circuit's DbContext and may be querying it right now.
         if (Tenant.UserId is { } uid)
-            orgNames = (await Directory.MembershipsOfAsync(uid)).Select(m => (m.Org.Id, m.Org.Name, m.Role)).ToList();
+        {
+            using var scope = Scopes.CreateScope();
+            var directory = scope.ServiceProvider.GetRequiredService<IOrganizationDirectory>();
+            orgNames = (await directory.MembershipsOfAsync(uid)).Select(m => (m.Org.Id, m.Org.Name, m.Role)).ToList();
+        }
     }
 }
