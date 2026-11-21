@@ -1,6 +1,6 @@
 # Citation verification status
 
-**Last updated:** 2026-11-21 (GAD-T256, first drafting pass).
+**Last updated:** 2026-11-21 (GAD-T274, second drafting pass: Chapters 3 and 4).
 
 Every work cited in the manuscript was located in the research pass of 21 November 2026 (GAD-T254), and its verification level is recorded in the verification ledger appendix, Appendix A (`chapters/90-appendix-verification-ledger.md`):
 
@@ -21,7 +21,7 @@ Appendix A, Section A.4, lists them. Items 1 to 28 come from the research pass a
 - Liang et al. (2023) concerns detectors of machine text, not graders;
 - no source supports the claim that a person relaying answers will contradict themselves under questioning.
 
-Item 29, found while drafting, removed a cost argument the first draft had attributed to Memon et al. (2010).
+Item 29, found while drafting, removed a cost argument the first draft had attributed to Memon et al. (2010). Items 30 to 36, found while drafting Chapter 4 against Gadfly's code, correct statements about the system in Section 1.2, in the outline of Chapter 4 and in the project's documentation; the most consequential are that large grading disagreements need not be reconciled by a second reviewer (30), that integrity signals do act on the examination even though none enters the score (33), and that the Contradiction move scores a resolution's accuracy as well as its coherence (36). Chapters 3 and 4 add no new source.
 
 ## Items still to confirm before submission
 
