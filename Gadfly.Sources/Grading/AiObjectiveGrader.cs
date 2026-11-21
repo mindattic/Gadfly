@@ -25,10 +25,15 @@ namespace Gadfly.Sources.Grading;
 /// <item>Confidence is a category from <see cref="GradingConfidence"/>, never a percentage.</item>
 /// </list>
 /// The result is preliminary: it is stored for human review and never published on its own.
+/// Bias controls (GAD-T269, docs/research/05): the prompt says length, repetition and restatement earn
+/// nothing and fluency is never penalized, asks for the quote and evidence before each level, and the order
+/// of the rubric criteria and of their levels is shuffled on every call (position bias). <see cref="PanelBiasCheck"/>
+/// probes a panel with padded and less fluent versions of the same answers.
 /// </summary>
-public sealed class AiObjectiveGrader(ISocraticVotingClient panel)
+public sealed class AiObjectiveGrader(ISocraticVotingClient panel, Random? shuffle = null)
 {
     private static readonly Regex Space = new(@"\s+", RegexOptions.Compiled);
+    private readonly Random order = shuffle ?? Random.Shared;
 
     public const string SystemPrompt = PanelJson.JsonOnlySystem;
 
@@ -65,7 +70,7 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel)
             };
         }
 
-        var prompt = BuildPrompt(objective, criteria, usable, input.Evidence.Except(usable).ToList());
+        var prompt = BuildPrompt(objective, criteria, usable, input.Evidence.Except(usable).ToList(), order);
         var replies = await panel.FanOutAsync(SystemPrompt, prompt, maxTokens: 2500, temperature: 0.1, ct: ct);
         mock = IsMockPanel(panel, replies);
         var votes = replies.Where(r => !r.IsError).Select(r => ParseVote(r, criteria, usable)).OfType<Vote>().ToList();
@@ -105,7 +110,13 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel)
 
     // ------------------------------------------------------------------ prompt
 
-    internal static string BuildPrompt(GradingObjective o, IReadOnlyList<GradingCriterion> criteria, IReadOnlyList<EvidenceItem> usable, IReadOnlyList<EvidenceItem> excluded)
+    /// <summary>
+    /// The grading prompt. With <paramref name="shuffle"/>, the criteria and each criterion's levels are listed in
+    /// a random order (levels keep their numbers), so no criterion or level gains from its position; without it the
+    /// order is the rubric's own. Evidence stays in exam order and numbering, which citations depend on.
+    /// </summary>
+    internal static string BuildPrompt(GradingObjective o, IReadOnlyList<GradingCriterion> criteria, IReadOnlyList<EvidenceItem> usable, IReadOnlyList<EvidenceItem> excluded,
+        Random? shuffle = null)
     {
         var ci = CultureInfo.InvariantCulture;
         var sb = new StringBuilder();
@@ -119,11 +130,13 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel)
         if (o.KnownMisconceptions is { Count: > 0 } known) sb.AppendLine("Common misconceptions to watch for: " + string.Join("; ", known.Take(8)));
         sb.AppendLine($"Maximum score: {o.MaxScore.ToString("0.##", ci)} (computed by the platform from your levels; do not give a score).");
         sb.AppendLine();
-        sb.AppendLine("Rubric criteria (judge each one on levels 0-5):");
-        foreach (var c in criteria)
+        sb.AppendLine(shuffle is null
+            ? "Rubric criteria (judge each one on levels 0-5):"
+            : "Rubric criteria (judge each one on levels 0-5; criteria and levels are listed in random order, which means nothing: go by the level numbers and descriptions):");
+        foreach (var c in Ordered(criteria, shuffle))
         {
             sb.AppendLine($"- \"{c.Name}\" ({c.Dimension}){(string.IsNullOrWhiteSpace(c.Description) ? "" : ": " + c.Description)}");
-            foreach (var level in Enum.GetValues<MasteryLevel>())
+            foreach (var level in Ordered(Enum.GetValues<MasteryLevel>(), shuffle))
                 sb.AppendLine($"    {(int)level} {MasteryLevels.Label(level)}: {(c.Levels.TryGetValue(level, out var d) && !string.IsNullOrWhiteSpace(d) ? d : MasteryLevels.DefaultDescriptor(level))}");
         }
         sb.AppendLine();
@@ -142,10 +155,13 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel)
             Rules:
             - Use only the numbered evidence. Never invent or assume evidence. Every level above 0 must cite at least one evidence number.
             - Level 0 means the evidence is insufficient to judge the criterion (not zero understanding). Use it when the student was not asked or did not address it.
+            - Length, repetition and restatement earn nothing. Saying the same thing twice, at greater length, or in other words shows no more understanding than saying it once; judge only what the answers show against the rubric.
+            - The answers are transcribed speech. Never penalize grammar, accent, fluency, filler words, false starts or non-native phrasing, and never reward polish: judge the ideas.
+            - For each criterion, first find the evidence: give the evidence numbers and quote the words that support it, then the rationale, and only then the level. Every level above 0 needs that quote.
             - A quote must be copied exactly from one cited answer, or left empty.
             - Note misconceptions only when an answer actually shows them. Note ambiguities where an answer could be read in ways that would be graded differently.
-            Return JSON only:
-            {"criteria":[{"criterion":"<criterion name exactly as given>","level":<0-5>,"rationale":"<one or two sentences>","evidence":[<numbers>],"quote":"<exact words or empty>"}],
+            Return JSON only, keeping the field order (evidence and quote before the level):
+            {"criteria":[{"criterion":"<criterion name exactly as given>","evidence":[<numbers>],"quote":"<exact words or empty>","rationale":"<one or two sentences>","level":<0-5>}],
              "explanation":"<two to four sentences on the objective overall, referring to evidence numbers>",
              "misconceptions":["<misconception shown by the student>"],
              "ambiguities":["<unresolved ambiguity>"]}
@@ -334,6 +350,19 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel)
         var sorted = values.OrderBy(v => v).ToList();
         var mid = sorted.Count / 2;
         return sorted.Count % 2 == 1 ? sorted[mid] : Math.Round((sorted[mid - 1] + sorted[mid]) / 2m, 2, MidpointRounding.AwayFromZero);
+    }
+
+    /// <summary>The items in their own order, or shuffled (Fisher-Yates) when <paramref name="shuffle"/> is given.</summary>
+    private static List<T> Ordered<T>(IEnumerable<T> items, Random? shuffle)
+    {
+        var list = items.ToList();
+        if (shuffle is null) return list;
+        for (var i = list.Count - 1; i > 0; i--)
+        {
+            var j = shuffle.Next(i + 1);
+            (list[i], list[j]) = (list[j], list[i]);
+        }
+        return list;
     }
 
     private static string Normalize(string s) => Space.Replace(s.Trim().ToLowerInvariant(), " ");
