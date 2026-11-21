@@ -218,8 +218,13 @@ public sealed class SourceExamEngine
             ObjectiveTitle = objective?.Title,
             Misconception = misconception,
         }, ct);
-        Diagnostics?.Report($"[{decision.Move} on {decision.ObjectiveKey ?? concept.Key}{(decision.IsReplacement ? " (replacement)" : "")}: {decision.Reason} Question {_generator.LastOutcome}.]");
-        return Session.Ask(concept.Key, decision.Move, question, _clock.GetUtcNow(), decision.TargetClaimIds, decision.Reason,
+        // An Apply question's reason carries its transfer label, so reviewers see how its situation differs from the source,
+        // and that the transfer measured is sequestered (GAD-T268).
+        var reason = decision.Move == MoveKind.Apply
+            ? $"{decision.Reason} Transfer item ({TransferLabels.Label(TransferLabels.Next(Session, decision.ObjectiveKey ?? concept.Key))}). {TransferLabels.Caveat}"
+            : decision.Reason;
+        Diagnostics?.Report($"[{decision.Move} on {decision.ObjectiveKey ?? concept.Key}{(decision.IsReplacement ? " (replacement)" : "")}: {reason} Question {_generator.LastOutcome}.]");
+        return Session.Ask(concept.Key, decision.Move, question, _clock.GetUtcNow(), decision.TargetClaimIds, reason,
             decision.ObjectiveKey, decision.IsReplacement);
     }
 

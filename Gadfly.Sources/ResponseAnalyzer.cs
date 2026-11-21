@@ -67,7 +67,14 @@ public sealed class ResponseAnalyzer(ISocraticVotingClient panel, PromptSet? pro
             }
             else votes.Add(parsed);
         }
-        return Merge(votes, rejected) with { Rejections = rejections };
+        var merged = Merge(votes, rejected);
+        // Knowledge transfer is credited only from Apply, a situation new to the student (GAD-T268): a voter that calls a
+        // ScenarioVariation what-if "transfer" is recorded as application (extrapolation).
+        return merged with
+        {
+            Rejections = rejections,
+            Evidence = merged.Evidence.Select(e => e with { Dimension = MoveProfiles.CreditedDimension(turn.Move, e.Dimension) }).ToList(),
+        };
     }
 
     /// <summary>

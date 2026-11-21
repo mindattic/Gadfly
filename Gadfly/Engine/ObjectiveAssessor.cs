@@ -179,9 +179,11 @@ public static class ObjectiveAssessor
         {
             foreach (var e in t.Analysis!.Evidence)
             {
-                list.Add(new CollectedEvidence(t.Index, e.ObjectiveKey, e.Polarity, e.Dimension, e.Quote, e.Note, e.Support,
+                // Transfer is credited only from Apply (GAD-T268): older analyses may still carry it from another move.
+                var dimension = MoveProfiles.CreditedDimension(t.Move, e.Dimension);
+                list.Add(new CollectedEvidence(t.Index, e.ObjectiveKey, e.Polarity, dimension, e.Quote, e.Note, e.Support,
                     Assisted: IsAssisted(session, t, e.ObjectiveKey) || MoveProfiles.IsAssistance(t.Move),
-                    Contaminated: IsContaminated(session, t, e.ObjectiveKey, e.Dimension) || IsRecited(t), t.Move));
+                    Contaminated: IsContaminated(session, t, e.ObjectiveKey, dimension) || IsRecited(t), t.Move));
             }
         }
         return list;
@@ -343,7 +345,8 @@ public static class ObjectiveAssessor
             Corroborated = enough && topCorroborated,
             Consistent = consistent,
             ReasoningShown = independent.Any(o => o.Result == AnswerResult.Positive && o.ProbedLevel >= 3),
-            TransferShown = independent.Any(o => o.Result == AnswerResult.Positive && o.ProbedLevel >= 4),
+            // Only Apply, a situation new to the student, shows transfer; a ScenarioVariation what-if is extrapolation (GAD-T268).
+            TransferShown = independent.Any(o => o.Result == AnswerResult.Positive && MoveProfiles.CreditsTransfer(o.Move)),
             CriticalReasoningShown = independent.Any(o => o.Result == AnswerResult.Positive && o.ProbedLevel >= 5),
             UnresolvedMisconceptions = unresolved,
             UntestedMisconceptions = untested,
@@ -404,8 +407,9 @@ public static class ObjectiveAssessor
         var level = 1;
         for (var lv = 5; lv >= 2; lv--)
             if (pos.Skip(lv).Sum() >= minCorroboration) { level = lv; break; }
-        // Level 5 also needs application shown (Part 5.3: transfer *and* critical reasoning).
-        if (level == 5 && pos[4] == 0) level = 4;
+        // Level 5 also needs transfer shown (Part 5.3: transfer *and* critical reasoning), and only Apply, a situation new to
+        // the student, shows transfer: a ScenarioVariation what-if is extrapolation (GAD-T268).
+        if (level == 5 && !outcomes.Any(o => o.Result == AnswerResult.Positive && MoveProfiles.CreditsTransfer(o.Move))) level = 4;
         var high = 1;
         for (var lv = 5; lv >= 2; lv--)
             if (pos[lv] > 0) { high = lv; break; }

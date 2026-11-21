@@ -336,7 +336,7 @@ public sealed class QuestionPlanner
                     return new PlanDecision
                     {
                         ObjectiveKey = o.Key, ConceptId = conceptKey, RelatedConceptId = related, Move = MoveKind.Synthesize,
-                        Reason = $"'{o.Title}' and '{partner.Title}' both show conceptual understanding; testing how the student connects them (transfer).",
+                        Reason = $"'{o.Title}' and '{partner.Title}' both show conceptual understanding; testing how the student connects them (synthesis, not transfer: only Apply probes transfer).",
                     };
                 }
             }

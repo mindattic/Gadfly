@@ -70,12 +70,17 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
         LastDelivery = recent.LastOrDefault(t => t.Answer is not null) is { } answered ? AnswerDelivery.Read(r.Session, answered) : null;
         var targets = string.Join("\n", r.Decision.TargetClaimIds.Select(id => r.Ledger.Find(id))
             .Where(c => c is not null).Select(c => $"- (turn {c!.TurnIndex + 1}) {ExamPrompts.Student(c.Quote)}"));
+        // An Apply question is labelled by how its situation differs from the source (GAD-T268, Barnett and Ceci 2002).
+        var transfer = r.Decision.Move == MoveKind.Apply
+            ? TransferLabels.Instruction(TransferLabels.Next(r.Session, r.Decision.ObjectiveKey ?? r.Decision.ConceptId ?? ""))
+            : "(none)";
         var prompt = ExamPrompts.Fill(_prompts[ExamPrompts.QuestionKey], new Dictionary<string, string?>
         {
             ["move"] = r.Decision.Move.ToString(),
             ["objective"] = r.ObjectiveTitle ?? r.ConceptTitle,
             ["concept"] = r.ConceptTitle,
             ["related_concept"] = r.RelatedConceptTitle ?? "(none)",
+            ["transfer"] = transfer,
             ["difficulty"] = r.Session.Policy.Difficulty.ToString(),
             ["target_claims"] = targets.Length == 0 ? "(none)" : targets,
             ["delivery"] = AnswerDelivery.Describe(r.Session, recent),

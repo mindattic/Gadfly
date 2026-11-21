@@ -115,10 +115,28 @@ public static class MoveProfiles
         MoveKind.ScenarioVariation => [AssessmentDimension.Application, AssessmentDimension.LogicalReasoning],
         MoveKind.Counterexample => [AssessmentDimension.MisconceptionRecognition, AssessmentDimension.LogicalReasoning],
         MoveKind.AssumptionTesting => [AssessmentDimension.MisconceptionRecognition, AssessmentDimension.Metacognition],
-        MoveKind.Synthesize => [AssessmentDimension.KnowledgeTransfer],
+        // Connecting two objectives shows relational understanding, not transfer: only Apply credits transfer (GAD-T268).
+        MoveKind.Synthesize => [AssessmentDimension.ConceptualUnderstanding, AssessmentDimension.LogicalReasoning],
         MoveKind.Contradiction => [AssessmentDimension.Consistency],
         _ => [],
     };
+
+    /// <summary>
+    /// True only for Apply: a situation new to the student is the one move that probes transfer (GAD-T268). A what-if inside
+    /// a situation already discussed (ScenarioVariation) is extrapolation, which Bloom puts under Comprehension, and
+    /// connecting two objectives (Synthesize) is relational understanding (research note 03: Bloom1956, BarnettCeci2002).
+    /// </summary>
+    public static bool CreditsTransfer(MoveKind move) => move == MoveKind.Apply;
+
+    /// <summary>
+    /// The dimension an evidence item may be credited on, given the move that drew it (GAD-T268): knowledge transfer is
+    /// credited only from Apply. From ScenarioVariation it is extrapolation, credited as application; from any other move,
+    /// as conceptual understanding. Every other dimension stands as the panel gave it.
+    /// </summary>
+    public static AssessmentDimension CreditedDimension(MoveKind move, AssessmentDimension dimension) =>
+        dimension != AssessmentDimension.KnowledgeTransfer || CreditsTransfer(move) ? dimension
+        : move == MoveKind.ScenarioVariation ? AssessmentDimension.Application
+        : AssessmentDimension.ConceptualUnderstanding;
 
     /// <summary>
     /// True for a follow-up question: any examining move after the objective's opening Elicit (not Close, and not Learning
@@ -150,8 +168,8 @@ public static class MoveProfiles
         MoveKind.CausalReasoning => "cause and effect",
         MoveKind.Counterexample => "whether the explanation survives a challenging case",
         MoveKind.Contradiction => "two of the student's own claims that conflict",
-        MoveKind.Apply => "transfer to an unfamiliar situation",
-        MoveKind.ScenarioVariation => "consistent reasoning when one condition changes",
+        MoveKind.Apply => "transfer to a situation new to the student",
+        MoveKind.ScenarioVariation => "consistent reasoning when one condition changes (extrapolation within a situation already discussed, not transfer)",
         MoveKind.AssumptionTesting => "the assumptions behind the conclusion",
         MoveKind.IndependentExplanation => "an explanation rebuilt from the student's own reasoning",
         MoveKind.Synthesize => "how two objectives connect",

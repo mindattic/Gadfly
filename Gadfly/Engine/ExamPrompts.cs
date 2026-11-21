@@ -18,8 +18,11 @@ public static partial class ExamPrompts
     /// strain against the student's baseline, hedging) and presses harder where understanding looks shaky (GAD-T233).
     /// 6: a Contradiction answer is judged on how well the student resolves the conflict, never on which claim they keep;
     /// which claim is wrong is decided from the rubric and source alone; and the no-hint rule, the leak guard and the
-    /// analysis's revealed-answer flag also catch a question whose form presupposes an answer point (GAD-T266).</summary>
-    public const int Version = 6;
+    /// analysis's revealed-answer flag also catch a question whose form presupposes an answer point (GAD-T266).
+    /// 7: only Apply, a situation new to the student, probes transfer: ScenarioVariation is named extrapolation, each Apply
+    /// question is told how its situation must differ from the source (its transfer label), and the analysis gives
+    /// knowledge-transfer only for an Apply question (GAD-T268).</summary>
+    public const int Version = 7;
 
     /// <summary>Delimits text the student wrote or said; <see cref="Student"/> strips forged copies of these tags from the text it wraps.</summary>
     public const string StudentOpen = "<student_text>", StudentClose = "</student_text>";
@@ -63,9 +66,10 @@ public static partial class ExamPrompts
         - Counterexample: present a concrete case, consistent with the source, that their stated definition
           or rule handles wrongly or does not cover, and ask them to account for it.
         - ScenarioVariation: change one relevant condition of a situation already discussed, keep the others
-          fixed, and ask what changes and why.
-        - Apply (knowledge transfer): describe a short new situation the source material does not discuss
-          directly, where the concept is needed, and ask what happens or what they would do.
+          fixed, and ask what changes and why. This is extrapolation inside a familiar situation, not transfer.
+        - Apply (knowledge transfer): describe a short situation new to the student, which neither the source
+          material nor the conversation so far discusses, where the concept is needed, and ask what happens
+          or what they would do. Make it differ from the source in the way given under "Transfer".
         - Contradiction: quote the two claims of theirs listed under "Claims to confront" and ask how they
           fit together. Never say or imply which of the two is wrong, or which one the source supports.
         - AssumptionTesting: ask what must be true for their explanation or conclusion to hold.
@@ -95,6 +99,7 @@ public static partial class ExamPrompts
         Learning objective: {objective}
         Concept: {concept}
         Second concept (Synthesize only): {related_concept}
+        Transfer (Apply only): {transfer}
         Difficulty (1 gentle - 5 rigorous): {difficulty}
         Claims to confront (Contradiction only): {target_claims}
 
@@ -182,7 +187,10 @@ public static partial class ExamPrompts
          "questionRevealedAnswer": <true if the question itself stated, strongly hinted at, or by its form presupposed expected answer points the student had not already said, else false>}
         Use [] for an empty list. "supports" means the words show the objective is understood on that
         dimension; "contradicts" that they show it is not; "misconception" that they state a wrong belief;
-        "uncertain" that their meaning cannot be determined.
+        "uncertain" that their meaning cannot be determined. Use "knowledge-transfer" only when the question
+        move is Apply (a situation new to the student). Reasoning about a changed condition in a situation
+        already discussed (ScenarioVariation) is extrapolation: use "application"; relating two concepts
+        (Synthesize) is "conceptual-understanding" or "logical-reasoning".
         """;
 
     public const string QuestionGuard = $$"""
