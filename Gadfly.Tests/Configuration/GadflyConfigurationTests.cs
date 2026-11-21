@@ -135,6 +135,27 @@ public class GadflyConfigurationTests
     }
 
     [Test]
+    public void LegionJsonVoterList_CannotAddAnUntrustedProvider()
+    {
+        WriteLegionJson("""{ "voters": ["openai", "mistral"] }""");
+
+        var config = GadflyConfiguration.Build(projectDir: dir);
+
+        Assert.That(config.AllowedProviderIds, Is.EquivalentTo(new[] { "openai" }), "GAD-T220");
+    }
+
+    [Test]
+    public void LegionJsonWithOnlyUntrustedVoters_FallsBackToTheTrustedPanel_NeverAnEmptyList()
+    {
+        WriteLegionJson("""{ "voters": ["mistral"], "judge": "mistral" }""");
+
+        var config = GadflyConfiguration.Build(projectDir: dir);
+
+        Assert.That(config.AllowedProviderIds, Is.EquivalentTo(LegionTierResolver.TrustedProviderIds));
+        Assert.That(config.JudgeProviderId, Is.EqualTo("claude"));
+    }
+
+    [Test]
     public void LegionJsonJudgeAndConcurrency_AreApplied()
     {
         WriteLegionJson("""{ "judge": "openai", "maxConcurrency": 2 }""");

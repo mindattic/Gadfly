@@ -45,6 +45,12 @@ public static class GadflyConfiguration
             : DefaultClaudeModel;
         if (providerOverride is not null)
             config.AllowedProviderIds = LegionTierResolver.IntersectWithTrustedSet(providerOverride);
+        // legion.json can't widen the panel past the trusted providers either (GAD-T220): its voter list is narrowed
+        // to them, and a list with none of them falls back to all of them, never to an empty (unrestricted) list.
+        var trusted = LegionTierResolver.IntersectWithTrustedSet(config.AllowedProviderIds);
+        config.AllowedProviderIds = trusted.Count > 0 ? trusted : LegionTierResolver.IntersectWithTrustedSet(null);
+        if (!LegionTierResolver.TrustedProviderIds.Contains(config.JudgeProviderId ?? "", StringComparer.OrdinalIgnoreCase))
+            config.JudgeProviderId = "claude";
 
         return config;
     }
