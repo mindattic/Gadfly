@@ -24,6 +24,7 @@ public class ReflectionRunner
         }
 
         var result = await client.AskAsync(CanonicalPrompts.FinalReflection, context, Quorum.Plurality, ct);
-        return !string.IsNullOrWhiteSpace(result.Consensus) ? result.Consensus : result.NarrativeSummary;
+        // A failed panel's status wording ("All voters failed.") is not a reflection (GAD-T181).
+        return PanelText.Of(result) ?? "The panel returned no usable reflection this time. Try again in a moment.";
     }
 }

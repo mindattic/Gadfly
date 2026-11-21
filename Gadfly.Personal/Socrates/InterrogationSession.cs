@@ -75,7 +75,8 @@ public class InterrogationSession
 
             var result = await client.AskAsync(CanonicalPrompts.Interrogation, context, quorum, ct);
 
-            var question = !string.IsNullOrWhiteSpace(result.Consensus) ? result.Consensus : result.NarrativeSummary;
+            // A failed panel's status wording ("All voters failed.") is never a question (GAD-T181).
+            var question = PanelText.Of(result);
             if (string.IsNullOrWhiteSpace(question))
                 question = "I have nothing further to ask — the panel returned no usable question this turn.";
 
