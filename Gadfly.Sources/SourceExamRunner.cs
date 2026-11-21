@@ -283,9 +283,12 @@ public sealed class SourceExamEngine
         }
 
         var prior = Session.Mastery.TryGetValue(concept.Key, out var m) ? m.Estimate : MasteryModel.Prior;
-        var judgedBefore = Session.Turns.Count(t => t.ConceptId == concept.Key && t.Judgment is not null);
-        var estimate = MasteryModel.Update(prior, judgment.OverallScore,
-            MasteryModel.QuestionDifficulty(turn.Move, Session.Policy.Difficulty), judgedBefore);
+        var judgedBefore = Session.Turns.Count(t => t.ConceptId == concept.Key && t.Judgment is not null && !ObjectiveAssessor.IsUnjudged(t.Judgment));
+        // A failed panel (no usable verdict) is not evidence of anything: it leaves the estimate where it was,
+        // as ObjectiveAssessor already treats such an answer as neither for nor against (GAD-T176).
+        var estimate = ObjectiveAssessor.IsUnjudged(judgment) ? prior
+            : MasteryModel.Update(prior, judgment.OverallScore,
+                MasteryModel.QuestionDifficulty(turn.Move, Session.Policy.Difficulty), judgedBefore);
         turn = Session.RecordJudgment(judgment, estimate, analysis);
 
         // Scenario I: the panel found the question itself gave expected points away (hints teach on purpose).
