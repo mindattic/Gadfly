@@ -327,7 +327,7 @@ public static class ApiEndpoints
             .Produces(StatusCodes.Status204NoContent).Produces(StatusCodes.Status404NotFound);
 
         // The student-facing end of a launch link: verify, then go to the assignment (signing in first if needed).
-        app.MapGet("/launch", (string token, HttpContext http, IDataProtectionProvider dp, ITenantContext tenant) =>
+        app.MapGet("/launch", async (string token, HttpContext http, IDataProtectionProvider dp, ITenantContext tenant, GadflyDbContext db) =>
         {
             string payload;
             try { payload = LaunchTokens.Protector(dp).Unprotect(token); }
@@ -338,6 +338,14 @@ public static class ApiEndpoints
             var target = $"/my-exams/{assignmentId}/start";
             if (tenant.UserId is null) return Results.LocalRedirect($"/login?returnUrl={Uri.EscapeDataString(target)}");
             if (tenant.UserId != studentId) return Results.Content("This exam link belongs to a different student. Sign out and sign in as the right person.", "text/plain");
+            // A student in several organizations lands in the one this assignment belongs to.
+            var org = await db.ExamAssignments.IgnoreQueryFilters().AsNoTracking()
+                .Where(a => a.Id == assignmentId && a.StudentUserId == studentId).Select(a => (Guid?)a.OrganizationId).FirstOrDefaultAsync(http.RequestAborted);
+            if (org is { } o && tenant.Memberships.Any(m => m.OrganizationId == o) && tenant.OrganizationId != o)
+                http.Response.Cookies.Append(ITenantContext.ActiveOrgCookie, o.ToString("N"), new CookieOptions
+                {
+                    HttpOnly = true, Secure = true, SameSite = SameSiteMode.Lax, IsEssential = true, MaxAge = TimeSpan.FromDays(30),
+                });
             return Results.LocalRedirect(target);
         }).AllowAnonymous().ExcludeFromDescription();
     }
