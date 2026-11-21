@@ -10,7 +10,15 @@ namespace Gadfly.Server.Grading;
 /// <summary>One objective's line in the assessment report.</summary>
 public sealed record ReportObjective(string Key, string Title, decimal MaxScore, decimal Weight, decimal? AiScore, string? AiLevel, string? AiConfidence,
     bool AiExcluded, bool AiIsMock, decimal? HumanScore, string? HumanLevel, string? HumanComment, decimal? Combined, string? Band, string? Reconciliation,
-    IReadOnlyList<ReportEvidence> Evidence, string? AiExplanation);
+    IReadOnlyList<ReportEvidence> Evidence, string? AiExplanation, IReadOnlyList<string>? Missing = null, int? PreviousAttempt = null,
+    decimal? PreviousCombined = null, bool? FeedbackBeforeAttempt = null)
+{
+    /// <summary>What this objective lacked, criterion by criterion, and what the next level asks for (GAD-T273).</summary>
+    public IReadOnlyList<string> WhatWasMissing => Missing ?? [];
+
+    /// <summary>The combined score's change since <see cref="PreviousAttempt"/>, when both are known.</summary>
+    public decimal? Change => Combined is { } now && PreviousCombined is { } before ? now - before : null;
+}
 
 /// <summary>A verified response quoted as evidence.</summary>
 public sealed record ReportEvidence(int Sequence, string Question, string VerifiedText, bool Corrected);
@@ -67,13 +75,16 @@ public sealed record AssessmentReport
                 .OrderBy(r => r.Response.Sequence).Take(6)
                 .Select(r => new ReportEvidence(r.Response.Sequence, r.Question, r.Response.VerifiedText, r.TextChanged)).ToList();
             var rec = o.LatestReconciliation;
+            // The comparison attempt: the latest earlier graded one; a student only ever sees one published to them.
+            var prior = w.AiVisible ? w.PriorAttempts.FirstOrDefault(p => (!forStudent || p.VisibleToStudent) && p.Combined.GetValueOrDefault(o.Objective.Key) is not null) : null;
             return new ReportObjective(o.Objective.Key, o.Objective.Title, o.Objective.MaxScore, o.Objective.Weight,
                 showAi ? o.Combined?.AiScore is { } a && !o.AiExcluded ? a : o.Ai!.Row.Score : null,
                 showAi ? MasteryLevels.Label(o.Ai!.Row.Level) : null, showAi ? o.Ai!.Row.Confidence : null, showAi && o.AiExcluded, showAi && o.Ai!.Row.IsMock,
                 o.Combined?.HumanScore ?? o.Human?.Score, o.Human is { } h ? MasteryLevels.Label(h.Level) : null, o.Human?.Comment,
                 w.AiVisible ? o.Combined?.Combined : null, w.AiVisible ? o.Combined?.Band?.ToString() : null,
                 !w.AiVisible || rec is null ? null : $"{ReconciliationCauses.Label(rec.Cause)}: {rec.Resolution}",
-                evidenceIds, showAi ? o.Ai!.Row.Explanation : null);
+                evidenceIds, showAi ? o.Ai!.Row.Explanation : null, WhatWasMissing(o, showAi),
+                prior?.Attempt, prior?.Combined.GetValueOrDefault(o.Objective.Key), prior?.FeedbackBeforeThisAttempt);
         }).ToList();
 
         var gaps = new List<string>();
@@ -111,6 +122,62 @@ public sealed record AssessmentReport
         };
     }
 
+    /// <summary>
+    /// What one objective lacked (GAD-T273): each rubric criterion scored below its maximum, with the panel's reason
+    /// and what the next level asks for, the misconceptions noted, or the examiner's level and the next one. Retakes
+    /// help only with feedback that says what was missing (research note 03: Rowland2014, PanRickard2018). Anything
+    /// from the AI appears only once the AI evaluation is visible (blind grading, Part 8.3).
+    /// </summary>
+    private static IReadOnlyList<string> WhatWasMissing(ObjectiveView o, bool showAi)
+    {
+        var lines = new List<string>();
+        var aiCriteria = 0;
+        if (showAi && o.Ai is { } ai)
+        {
+            if (ai.Insufficient)
+                lines.Add("Not enough evidence was gathered to judge this objective: next time, answer its questions in full, in your own words, with an example.");
+            foreach (var c in ai.Criteria.Where(c => c.Score < c.MaxScore))
+            {
+                aiCriteria++;
+                var line = $"{c.Criterion}: shown at {MasteryLevels.Label(c.Level)} ({N(c.Score)} of {N(c.MaxScore)}).";
+                if (!string.IsNullOrWhiteSpace(c.Rationale)) line += $" {c.Rationale.Trim()}";
+                if (NextLevel(o.Objective, c.Criterion, c.Level) is { } next) line += $" To reach {next.Label}: {next.Descriptor}";
+                lines.Add(line);
+            }
+            foreach (var m in ai.Misconceptions.Take(3)) lines.Add($"Misconception to correct: {m.Text}");
+        }
+        // Without per-criterion detail, the examiner's level says what the next step is.
+        if (aiCriteria == 0 && o.Human is { } h && h.Level < MasteryLevel.TransferAndCriticalReasoning)
+        {
+            if (h.Level == MasteryLevel.InsufficientEvidence)
+                lines.Add("The examiner could not judge this objective from your answers: next time, explain it fully in your own words.");
+            else if (NextLevel(o.Objective, null, h.Level) is { } next)
+                lines.Add($"Examiner judged {MasteryLevels.Label(h.Level)}. To reach {next.Label}: {next.Descriptor}");
+        }
+        return lines;
+    }
+
+    /// <summary>The level above <paramref name="level"/> and its descriptor: the rubric's own wording when the criterion defines it.</summary>
+    private static (string Label, string Descriptor)? NextLevel(LearningObjective objective, string? criterion, MasteryLevel level)
+    {
+        if (level >= MasteryLevel.TransferAndCriticalReasoning) return null;
+        var next = level + 1;
+        var own = criterion is null ? null
+            : objective.Criteria.FirstOrDefault(c => string.Equals(c.Name, criterion, StringComparison.OrdinalIgnoreCase))?
+                .Levels.FirstOrDefault(l => l.Level == next)?.Descriptor;
+        return (MasteryLevels.Label(next), string.IsNullOrWhiteSpace(own) ? MasteryLevels.DefaultDescriptor(next) : own.Trim());
+    }
+
+    /// <summary>One line on the objective's change since the earlier attempt (reviewers also see whether its feedback came first).</summary>
+    public string? ChangeLine(ReportObjective o)
+    {
+        if (o.Change is not { } d || o.PreviousAttempt is not { } attempt) return null;
+        var line = $"Since attempt {attempt}: {N(o.PreviousCombined)} → {N(o.Combined)} ({(d > 0 ? "+" : "")}{N(d)} of {N(o.MaxScore)})";
+        if (!ForStudent && o.FeedbackBeforeAttempt is { } fb)
+            line += fb ? "; attempt " + attempt + "'s feedback was published before this attempt" : "; attempt " + attempt + "'s feedback was not published before this attempt";
+        return line + ".";
+    }
+
     public string ToMarkdown()
     {
         var ci = CultureInfo.InvariantCulture;
@@ -140,6 +207,12 @@ public sealed record AssessmentReport
             if (o.HumanLevel is not null) sb.AppendLine($"- Examiner: {o.HumanLevel}{(o.HumanComment is { } c ? $": {c}" : "")}");
             if (o.AiLevel is not null) sb.AppendLine($"- AI (preliminary{(o.AiIsMock ? ", MOCK" : "")}): {o.AiLevel}, confidence {o.AiConfidence}{(o.AiExplanation is { Length: > 0 } x ? $". {x}" : "")}");
             if (o.Reconciliation is not null) sb.AppendLine($"- Reconciliation: {o.Reconciliation}");
+            if (ChangeLine(o) is { } change) sb.AppendLine($"- {change}");
+            if (o.WhatWasMissing.Count > 0)
+            {
+                sb.AppendLine("- What was missing:");
+                foreach (var m in o.WhatWasMissing) sb.AppendLine($"  - {Quote(m)}");
+            }
             foreach (var e in o.Evidence)
                 sb.AppendLine($"- Evidence (response {e.Sequence}{(e.Corrected ? ", verified correction" : "")}): \"{Quote(e.VerifiedText)}\"");
         }
@@ -162,11 +235,14 @@ public sealed record AssessmentReport
         var sb = new StringBuilder();
         void Row(params string?[] cells) => sb.AppendJoin(',', cells.Select(Csv)).Append("\r\n");
         Row("session_id", "student", "exam", "attempt", "status", "final_percent", "label", "objective_key", "objective", "max_score", "weight",
-            "ai_score", "ai_level", "ai_confidence", "ai_excluded", "ai_mock", "human_score", "human_level", "combined", "band", "reconciliation", "evidence_responses");
+            "ai_score", "ai_level", "ai_confidence", "ai_excluded", "ai_mock", "human_score", "human_level", "combined", "band", "reconciliation", "evidence_responses",
+            "what_was_missing", "previous_attempt", "previous_combined", "change", "feedback_before_attempt");
         foreach (var o in Objectives)
             Row(SessionId.ToString(), StudentName, ExamTitle, Attempt.ToString(CultureInfo.InvariantCulture), Status, N(FinalPercent), Label, o.Key, o.Title, N(o.MaxScore), N(o.Weight),
                 N(o.AiScore), o.AiLevel, o.AiConfidence, o.AiExcluded ? "yes" : "no", o.AiIsMock ? "yes" : "no", N(o.HumanScore), o.HumanLevel, N(o.Combined), o.Band,
-                o.Reconciliation, string.Join(" ", o.Evidence.Select(e => e.Sequence)));
+                o.Reconciliation, string.Join(" ", o.Evidence.Select(e => e.Sequence)),
+                string.Join(" | ", o.WhatWasMissing), o.PreviousAttempt?.ToString(CultureInfo.InvariantCulture), N(o.PreviousCombined), N(o.Change),
+                o.FeedbackBeforeAttempt is { } fb ? fb ? "yes" : "no" : null);
         return sb.ToString();
     }
 
