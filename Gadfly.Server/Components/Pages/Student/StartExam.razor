@@ -220,9 +220,9 @@ else
             list.Add(r.ScreenWidth is > 0 and < 360
                 ? new Check("Screen", CheckStatus.Warn, "very narrow", "A larger window or a tablet or computer is easier to type on.")
                 : new Check("Screen", CheckStatus.Pass, "fine"));
-            list.Add(new Check("Microphone level", CheckStatus.Later, "coming with voice mode",
-                r.MediaDevices ? null : "When voice mode arrives you'll need a browser that allows microphone access."));
-            list.Add(new Check("Camera and face visible", CheckStatus.Later, "coming with voice mode"));
+            list.Add(new Check("Microphone level", CheckStatus.Later, "checked when you turn on voice mode in the exam",
+                r.MediaDevices ? null : "Voice mode needs a browser that allows microphone access; without one you can still answer by typing."));
+            list.Add(new Check("Camera and face visible", CheckStatus.Later, "only for exams that use the camera; your browser asks when the exam starts"));
         }
         catch (JSException ex)
         {

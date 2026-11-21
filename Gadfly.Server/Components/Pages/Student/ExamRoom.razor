@@ -46,6 +46,14 @@
         </div>
     }
 
+    @if (voiceAvailable && phase is Phase.Answering or Phase.Thinking)
+    {
+        @* Voice mode (GAD-T53): kept outside the phase switch so the microphone and the examiner persist from question to question. *@
+        <VoiceRoom SessionId="SessionId" TurnIndex="step?.TurnIndex" Question="@step?.Question" Prompt="@VoicePrompt"
+                   PromptId="step?.Verification?.ResponseId" CanAnswer="VoiceCanAnswer" Active="voiceOn" ActiveChanged="OnVoiceActive"
+                   OnAnswer="OnVoiceAnswerAsync" />
+    }
+
     @switch (phase)
     {
         case Phase.Loading:
@@ -147,6 +155,10 @@
                             }
                         }
                     </div>
+                }
+                else if (voiceOn)
+                {
+                    <p class="hint" role="status">Voice mode is on: answer out loud. You can switch to typing at any time with "Type my answers instead".</p>
                 }
                 else
                 {
@@ -323,6 +335,7 @@
             return;
         }
         examTitle = s.ExamTitle;
+        await LoadVoiceAsync(org, user);   // voice exams only (GAD-T53)
         switch (s.State)
         {
             case SessionState.Created:
@@ -565,13 +578,17 @@
     {
         if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user || string.IsNullOrWhiteSpace(text)) return;
         pendingAnswer = text;
-        var submitted = new Answer
-        {
-            Text = text,
-            Mode = "text",
-            StartedAt = answerStartedAt,
-            CompletedAt = Clock.GetUtcNow(),
-        };
+        // A resend after a failed step keeps a spoken answer's voice modality, word timings and metrics (GAD-T53).
+        var submitted = pendingVoiceAnswer is { } spoken && spoken.Text == text
+            ? spoken with { CompletedAt = Clock.GetUtcNow() }
+            : new Answer
+            {
+                Text = text,
+                Mode = "text",
+                StartedAt = answerStartedAt,
+                CompletedAt = Clock.GetUtcNow(),
+            };
+        if (pendingVoiceAnswer is not null && submitted.Mode == "voice") pendingVoiceAnswer = submitted;
         await RunStepAsync(ThinkingAbout.Answer, () => Sessions.AnswerAsync(org, SessionId, user, submitted));
     }
 
