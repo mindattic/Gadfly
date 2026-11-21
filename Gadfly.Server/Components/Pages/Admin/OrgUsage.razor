@@ -1,0 +1,200 @@
+@page "/org/usage"
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Data
+@using Gadfly.Socrates
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+@inject LegionVotingClient Panel
+
+@* Usage and cost (GAD-T55): metered LLM/speech usage (GAD-T47), sessions per month, panel provider health. *@
+
+<PageTitle>Usage · Gadfly Exams</PageTitle>
+<h1>Usage <span>the last @Months months</span></h1>
+<AdminNav />
+
+@if (months is null)
+{
+    <p class="hint">Loading…</p>
+}
+else
+{
+    var current = months[0];
+    <div class="stat-tiles">
+        <div class="stat @(OverQuota(current) ? "over" : "")">
+            <span class="label">Cost this month</span>
+            <span class="value">@Usd(current.Cost)</span>
+            <span class="hint">@(quota is { } q ? $"of a {Usd(q)} quota" : "no monthly quota set")</span>
+        </div>
+        <div class="stat">
+            <span class="label">Sessions this month</span>
+            <span class="value">@current.Sessions</span>
+            <span class="hint">@current.Completed ended</span>
+        </div>
+        <div class="stat">
+            <span class="label">Cost last month</span>
+            <span class="value">@Usd(months[1].Cost)</span>
+            <span class="hint">@months[1].Sessions sessions</span>
+        </div>
+    </div>
+    @if (!anyUsage)
+    {
+        <p class="notice">No metered usage recorded yet. Provider costs appear here once usage metering is on (GAD-T47); session counts below are already live.</p>
+    }
+
+    <h2 class="section">By month</h2>
+    <table class="grid">
+        <thead><tr><th>Month</th><th class="num">Sessions</th><th class="num">Ended</th><th class="num">Metered calls</th><th class="num">Cost (USD)</th></tr></thead>
+        <tbody>
+            @foreach (var m in months)
+            {
+                <tr>
+                    <td>@m.Label</td>
+                    <td class="num">@m.Sessions</td>
+                    <td class="num">@m.Completed</td>
+                    <td class="num">@m.Lines.Sum(l => l.Count)</td>
+                    <td class="num">@Usd(m.Cost)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @foreach (var m in months.Where(m => m.Lines.Count > 0))
+    {
+        <section class="month">
+            <h2 class="section">@m.Label: by kind and provider</h2>
+            <table class="grid">
+                <thead><tr><th>Kind</th><th>Provider</th><th class="num">Calls</th><th class="num">Input</th><th class="num">Output</th><th class="num">Cost (USD)</th></tr></thead>
+                <tbody>
+                    @foreach (var l in m.Lines)
+                    {
+                        <tr>
+                            <td>@KindName(l.Kind)</td>
+                            <td>@l.Provider</td>
+                            <td class="num">@l.Count.ToString("N0")</td>
+                            <td class="num">@Units(l.Kind, l.Input)</td>
+                            <td class="num">@Units(l.Kind, l.Output)</td>
+                            <td class="num">@Usd(l.Cost)</td>
+                        </tr>
+                    }
+                    <tr class="total"><td colspan="5">Total</td><td class="num">@Usd(m.Cost)</td></tr>
+                </tbody>
+            </table>
+        </section>
+    }
+}
+
+<h2 class="section">LLM provider health</h2>
+@if (health.Count == 0)
+{
+    <p class="notice">No panel calls since the server started.</p>
+}
+else
+{
+    <table class="grid">
+        <thead><tr><th>Provider</th><th>Status</th><th class="num">Calls</th><th class="num">Failures</th><th>Last success</th><th>Last failure</th></tr></thead>
+        <tbody>
+            @foreach (var p in health)
+            {
+                <tr>
+                    <td>@p.ProviderId</td>
+                    <td class="@(p.Failing ? "status-failing" : "status-ok")">
+                        @(p.Failing ? $"failing ({p.ConsecutiveFailures} in a row)" : "working")
+                        @if (p.Failing && !string.IsNullOrWhiteSpace(p.LastError))
+                        {
+                            <br /><span class="hint">@p.LastError</span>
+                        }
+                    </td>
+                    <td class="num">@p.TotalCalls</td>
+                    <td class="num">@p.TotalFailures</td>
+                    <td>@AdminDb.When(p.LastSuccessAt)</td>
+                    <td>@AdminDb.When(p.LastFailureAt)</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+<p class="hint">Provider health is for the whole platform since the server last started, not only this organization. A failing provider is left out of the judging panel until it recovers; the remaining judges still decide.</p>
+
+@code {
+    private const int Months = 12;
+
+    private sealed record Line(UsageKind Kind, string Provider, int Count, double Input, double Output, decimal Cost);
+
+    private sealed record Month(string Label, IReadOnlyList<Line> Lines, int Sessions, int Completed)
+    {
+        public decimal Cost => Lines.Sum(l => l.Cost);
+    }
+
+    private List<Month>? months;
+    private decimal? quota;
+    private bool anyUsage;
+    private IReadOnlyList<ProviderStatus> health = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        health = Panel.Health.Snapshot();
+        if (Tenant.OrganizationId is not { } org) return;
+        var now = Clock.GetUtcNow();
+        var thisMonth = new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        var start = thisMonth.AddMonths(-(Months - 1));
+
+        var (usage, sessions, q) = await AdminDb.RunAsync(Scopes, async (_, db) =>
+        {
+            var u = await db.UsageEntries.AsNoTracking()
+                .Where(x => x.OrganizationId == org && x.CreatedAt >= start)
+                .GroupBy(x => new { x.CreatedAt.Year, x.CreatedAt.Month, x.Kind, x.Provider })
+                .Select(g => new
+                {
+                    g.Key.Year, g.Key.Month, g.Key.Kind, g.Key.Provider,
+                    Count = g.Count(),
+                    Input = g.Sum(x => x.InputUnits),
+                    Output = g.Sum(x => x.OutputUnits),
+                    Cost = g.Sum(x => x.CostUsd),
+                })
+                .ToListAsync();
+            var s = await db.ExamSessions.AsNoTracking()
+                .Where(x => x.OrganizationId == org && x.CreatedAt >= start)
+                .GroupBy(x => new { x.CreatedAt.Year, x.CreatedAt.Month, x.State })
+                .Select(g => new { g.Key.Year, g.Key.Month, g.Key.State, Count = g.Count() })
+                .ToListAsync();
+            var quotaUsd = await db.OrganizationSettings.AsNoTracking()
+                .Where(x => x.OrganizationId == org).Select(x => x.MonthlyCostQuotaUsd).FirstOrDefaultAsync();
+            return (u, s, quotaUsd);
+        });
+
+        quota = q;
+        anyUsage = usage.Count > 0;
+        months = Enumerable.Range(0, Months).Select(i =>
+        {
+            var m = thisMonth.AddMonths(-i);
+            var lines = usage.Where(x => x.Year == m.Year && x.Month == m.Month)
+                .Select(x => new Line(x.Kind, x.Provider, x.Count, x.Input, x.Output, x.Cost))
+                .OrderBy(l => l.Kind).ThenByDescending(l => l.Cost).ToList();
+            var inMonth = sessions.Where(x => x.Year == m.Year && x.Month == m.Month).ToList();
+            return new Month(m.ToString("MMMM yyyy"), lines, inMonth.Sum(x => x.Count),
+                inMonth.Where(x => x.State == SessionState.Ended).Sum(x => x.Count));
+        }).ToList();
+    }
+
+    private bool OverQuota(Month m) => quota is { } q && m.Cost > q;
+
+    private static string Usd(decimal v) => "$" + v.ToString("N2");
+
+    private static string KindName(UsageKind k) => k switch
+    {
+        UsageKind.Llm => "LLM",
+        UsageKind.SpeechToText => "Speech to text",
+        UsageKind.TextToSpeech => "Text to speech",
+        UsageKind.Embedding => "Embeddings",
+        _ => k.ToString(),
+    };
+
+    private static string Units(UsageKind k, double v) => k switch
+    {
+        UsageKind.SpeechToText => $"{v:N0} s",
+        UsageKind.TextToSpeech => $"{v:N0} chars",
+        _ => $"{v:N0} tokens",
+    };
+}

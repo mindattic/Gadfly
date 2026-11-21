@@ -1,0 +1,177 @@
+@page "/org/api-keys"
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Platform
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+@inject IJSRuntime JS
+
+@* Organization API keys for the platform API (GAD-T46, console GAD-T55). Keys are hashed; shown once. *@
+
+<PageTitle>API keys · Gadfly Exams</PageTitle>
+<h1>API keys</h1>
+<AdminNav />
+
+@if (created is { } c)
+{
+    <section class="panel secret-once" role="alert">
+        <h2>Your new key: @c.Name</h2>
+        <p class="warn">Copy it now. This is the only time it is shown; Gadfly keeps only a hash and cannot show it again.</p>
+        <div class="secret-row">
+            <code>@c.Key</code>
+            <button type="button" @onclick="CopyAsync">@(copied ? "Copied" : "Copy")</button>
+        </div>
+        <p class="hint">Send it as <code>Authorization: Bearer &lt;key&gt;</code>. Store it in a secret manager, never in source code. Anyone with it can act for this organization through the API.</p>
+        <button type="button" class="link" @onclick="() => created = null">I have stored it, hide the key</button>
+    </section>
+}
+
+<EditForm Model="form" OnValidSubmit="CreateAsync" FormName="create-api-key" class="panel">
+    <h2>Create a key</h2>
+    <label>Name <InputText @bind-Value="form.Name" autocomplete="off" placeholder="e.g. LMS integration" maxlength="120" /></label>
+    <p class="hint">A name tells keys apart later. A key can create exams from uploaded sources, assign students, open launch links and read results for this organization.</p>
+    <button type="submit" disabled="@busy">Create key</button>
+    @if (message is not null)
+    {
+        <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+    }
+</EditForm>
+
+<h2 class="section">Keys</h2>
+@if (keys is null)
+{
+    <p class="hint">Loading…</p>
+}
+else if (keys.Count == 0)
+{
+    <p class="notice">No API keys yet.</p>
+}
+else
+{
+    <table class="grid">
+        <thead><tr><th>Name</th><th>Key</th><th>Created</th><th>Last used</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+            @foreach (var k in keys)
+            {
+                <tr>
+                    <td>@k.Name</td>
+                    <td><code>@(ApiKeyService.KeyPrefix)@(k.Prefix)_…</code></td>
+                    <td>@AdminDb.When(k.CreatedAt)</td>
+                    <td>@AdminDb.When(k.LastUsedAt)</td>
+                    <td>
+                        @if (k.RevokedAt is { } r)
+                        {
+                            <span class="muted">revoked @AdminDb.When(r)</span>
+                        }
+                        else
+                        {
+                            <span class="ok">active</span>
+                        }
+                    </td>
+                    <td>
+                        @if (k.RevokedAt is null)
+                        {
+                            @if (confirming == k.Id)
+                            {
+                                <div class="row-actions">
+                                    <span>Revoke? Apps using it stop working at once.</span>
+                                    <button type="button" class="danger" @onclick="() => RevokeAsync(k.Id)">Revoke</button>
+                                    <button type="button" class="link" @onclick="() => confirming = null">Cancel</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button type="button" class="link" @onclick="() => confirming = k.Id">Revoke…</button>
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private sealed class Form
+    {
+        public string Name { get; set; } = "";
+    }
+
+    private sealed record Created(string Name, string Key);
+
+    private Form form = new();
+    private Created? created;
+    private bool copied;
+    private List<ApiKey>? keys;
+    private Guid? confirming;
+    private string? message;
+    private bool ok, busy;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (Tenant.OrganizationId is not { } org) return;
+        keys = await AdminDb.RunAsync(Scopes, (_, db) => db.ApiKeys.AsNoTracking()
+            .Where(k => k.OrganizationId == org)
+            .OrderBy(k => k.RevokedAt != null).ThenByDescending(k => k.CreatedAt)
+            .ToListAsync());
+    }
+
+    private async Task CreateAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        busy = true;
+        message = null;
+        try
+        {
+            var (row, key) = await AdminDb.RunAsync(Scopes, (sp, _) =>
+                sp.GetRequiredService<ApiKeyService>().CreateAsync(org, user, form.Name));
+            created = new Created(row.Name, key);
+            copied = false;
+            form = new();
+            ok = true;
+            message = $"Created \"{row.Name}\".";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            message = "The key could not be created: " + ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task CopyAsync()
+    {
+        if (created is null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", created.Key);
+            copied = true;
+        }
+        catch (JSException)
+        {
+            ok = false;
+            message = "The browser would not copy; select the key and copy it by hand.";
+        }
+    }
+
+    private async Task RevokeAsync(Guid id)
+    {
+        if (Tenant.OrganizationId is not { } org) return;
+        var now = Clock.GetUtcNow();
+        var n = await AdminDb.RunAsync(Scopes, (_, db) => db.ApiKeys
+            .Where(k => k.Id == id && k.OrganizationId == org && k.RevokedAt == null)
+            .ExecuteUpdateAsync(u => u.SetProperty(k => k.RevokedAt, now)));
+        confirming = null;
+        ok = n > 0;
+        message = n > 0 ? "Key revoked." : "That key was already revoked.";
+        await LoadAsync();
+    }
+}

@@ -1,0 +1,138 @@
+@page "/org/settings"
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using System.ComponentModel.DataAnnotations
+@using Gadfly.Server.Data
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+
+@* Organization settings (GAD-T55): retention (GAD-T61, decision D7), cost quota, voice/avatar defaults. *@
+
+<PageTitle>Settings · Gadfly Exams</PageTitle>
+<h1>Organization settings</h1>
+<AdminNav />
+
+@if (form is null)
+{
+    <p class="hint">Loading…</p>
+}
+else
+{
+    <EditForm Model="form" OnValidSubmit="SaveAsync" FormName="org-settings" class="panel">
+        <DataAnnotationsValidator />
+        <h2>Data retention</h2>
+        <label>Keep what students said for (days)
+            <InputNumber @bind-Value="form.RetentionDays" min="7" max="3650" />
+        </label>
+        <ValidationMessage For="() => form.RetentionDays" class="error" />
+        <p class="hint">
+            When an ended exam session is older than this, a daily job redacts what the student said: typed and
+            spoken answers, word timings, speech metrics, answer audio, quoted claims, the raw detail of integrity
+            events and the saved session transcript. The outcome stays: judgments, concept mastery, the AI report
+            and the instructor's grade. Video is never stored. Shortening the period applies to existing sessions
+            at the next daily run, and redaction cannot be undone. Allowed: 7 to 3650 days (default 90).
+        </p>
+
+        <h2>Monthly cost quota</h2>
+        <label>Provider cost ceiling per month (USD)
+            <InputNumber @bind-Value="form.MonthlyCostQuotaUsd" min="0" step="0.01" placeholder="No limit" />
+        </label>
+        <ValidationMessage For="() => form.MonthlyCostQuotaUsd" class="error" />
+        <p class="hint">Leave empty for no limit. LLM, speech-to-text and text-to-speech costs are counted against it (see Usage).</p>
+
+        <h2>Voice exam defaults</h2>
+        <label>Default voice id
+            <InputText @bind-Value="form.DefaultVoiceId" autocomplete="off" placeholder="Platform default" />
+        </label>
+        <ValidationMessage For="() => form.DefaultVoiceId" class="error" />
+        <label>Default avatar id
+            <InputText @bind-Value="form.DefaultAvatarId" autocomplete="off" placeholder="Platform default" />
+        </label>
+        <ValidationMessage For="() => form.DefaultAvatarId" class="error" />
+        <p class="hint">Used for new voice-mode exams unless the exam picks its own. Leave empty for the platform default.</p>
+
+        <button type="submit" disabled="@busy">Save settings</button>
+        @if (message is not null)
+        {
+            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+        }
+        @if (updatedAt is { } u)
+        {
+            <p class="hint">Last changed @AdminDb.When(u).</p>
+        }
+    </EditForm>
+}
+
+@code {
+    private sealed class Form
+    {
+        [Range(7, 3650, ErrorMessage = "Retention must be between 7 and 3650 days.")]
+        public int RetentionDays { get; set; } = 90;
+
+        [Range(typeof(decimal), "0", "1000000000", ErrorMessage = "The quota must be zero or more.")]
+        public decimal? MonthlyCostQuotaUsd { get; set; }
+
+        [StringLength(100, ErrorMessage = "At most 100 characters.")]
+        public string? DefaultVoiceId { get; set; }
+
+        [StringLength(100, ErrorMessage = "At most 100 characters.")]
+        public string? DefaultAvatarId { get; set; }
+    }
+
+    private Form? form;
+    private DateTimeOffset? updatedAt;
+    private string? message;
+    private bool ok, busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.OrganizationId is not { } org) return;
+        var row = await AdminDb.RunAsync(Scopes, (_, db) =>
+            db.OrganizationSettings.AsNoTracking().FirstOrDefaultAsync(s => s.OrganizationId == org));
+        form = new Form
+        {
+            RetentionDays = row?.RetentionDays ?? 90,
+            MonthlyCostQuotaUsd = row?.MonthlyCostQuotaUsd,
+            DefaultVoiceId = row?.DefaultVoiceId,
+            DefaultAvatarId = row?.DefaultAvatarId,
+        };
+        updatedAt = row is null || row.UpdatedAt == default ? null : row.UpdatedAt;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (form is null || Tenant.OrganizationId is not { } org) return;
+        busy = true;
+        message = null;
+        try
+        {
+            var now = Clock.GetUtcNow();
+            await AdminDb.RunAsync(Scopes, async (_, db) =>
+            {
+                var row = await db.OrganizationSettings.FirstOrDefaultAsync(s => s.OrganizationId == org);
+                if (row is null) db.OrganizationSettings.Add(row = new OrganizationSettings { OrganizationId = org });
+                row.RetentionDays = Math.Clamp(form.RetentionDays, 7, 3650);
+                row.MonthlyCostQuotaUsd = form.MonthlyCostQuotaUsd is { } q ? Math.Round(q, 2) : null;
+                row.DefaultVoiceId = Clean(form.DefaultVoiceId);
+                row.DefaultAvatarId = Clean(form.DefaultAvatarId);
+                row.UpdatedAt = now;
+                return await db.SaveChangesAsync();
+            });
+            updatedAt = now;
+            ok = true;
+            message = "Settings saved.";
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            message = "The settings could not be saved: " + ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+}

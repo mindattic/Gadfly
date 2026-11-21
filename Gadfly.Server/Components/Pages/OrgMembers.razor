@@ -5,6 +5,12 @@
 
 <PageTitle>Members · Gadfly Exams</PageTitle>
 <h1>Members</h1>
+<Gadfly.Server.Components.Pages.Admin.AdminNav />
+
+@if (Erased is { } erased)
+{
+    <p role="status" class="notice">Erased: @erased session record(s) deleted and the membership deactivated.</p>
+}
 
 <EditForm Model="form" OnValidSubmit="AddAsync" FormName="add-member" class="panel">
     <h2>Add a member</h2>
@@ -37,7 +43,26 @@
                 <td>@m.Email</td>
                 <td>@m.Member.Role</td>
                 <td>@(m.Member.IsActive ? "active" : "removed")</td>
-                <td><button class="link" @onclick="() => ToggleAsync(m.Member.Id, !m.Member.IsActive)">@(m.Member.IsActive ? "Remove" : "Restore")</button></td>
+                <td>
+                    <div class="row-actions">
+                        <button class="link" @onclick="() => ToggleAsync(m.Member.Id, !m.Member.IsActive)">@(m.Member.IsActive ? "Remove" : "Restore")</button>
+                        <a href="privacy/export/@m.Member.UserId" download="gadfly-data-@(m.Member.UserId.ToString("N")).json">Export data</a>
+                    </div>
+                    @if (m.Member.UserId != Tenant.UserId)
+                    {
+                        <details class="erase">
+                            <summary>Erase data…</summary>
+                            <form method="post" action="privacy/erase/@m.Member.UserId" data-enhance="false">
+                                <AntiforgeryToken />
+                                <p class="hint">Deletes every exam session and assignment of @m.UserName in this organization (answers, judgments, reports, grades) and deactivates the membership. This cannot be undone; export first if the data is needed.</p>
+                                <div class="row-actions">
+                                    <input name="confirm" required pattern="DELETE" autocomplete="off" placeholder="Type DELETE" aria-label="Type DELETE to confirm" />
+                                    <button type="submit" class="danger">Erase</button>
+                                </div>
+                            </form>
+                        </details>
+                    }
+                </td>
             </tr>
         }
     </tbody>
@@ -51,6 +76,9 @@
         public string Role { get; set; } = OrgRoles.Student;
         public string Password { get; set; } = "";
     }
+
+    /// <summary>Set by the erase endpoint's redirect: how many session records it deleted.</summary>
+    [SupplyParameterFromQuery(Name = "erased")] public int? Erased { get; set; }
 
     private Form form = new();
     private IReadOnlyList<(Gadfly.Server.Data.OrganizationMember Member, string UserName, string? Email)> members = [];

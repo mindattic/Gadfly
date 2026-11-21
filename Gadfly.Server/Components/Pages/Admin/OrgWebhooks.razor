@@ -1,0 +1,233 @@
+@page "/org/webhooks"
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Platform
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject IJSRuntime JS
+
+@* Outgoing webhooks (GAD-T46, console GAD-T55): HMAC-signed, the signing secret is shown once. *@
+
+<PageTitle>Webhooks · Gadfly Exams</PageTitle>
+<h1>Webhooks</h1>
+<AdminNav />
+
+@if (created is { } c)
+{
+    <section class="panel secret-once" role="alert">
+        <h2>Signing secret for @c.Url</h2>
+        <p class="warn">Copy it now. This is the only time it is shown.</p>
+        <div class="secret-row">
+            <code>@c.Secret</code>
+            <button type="button" @onclick="CopyAsync">@(copied ? "Copied" : "Copy")</button>
+        </div>
+        <p class="hint">
+            Every delivery carries <code>X-Gadfly-Signature: t=&lt;unix seconds&gt;,v1=&lt;hex&gt;</code>, the HMAC-SHA256
+            of <code>t + "." + body</code> with this secret. Check it, and reject signatures older than five minutes.
+            Deliveries that do not get a 2xx answer are retried with backoff, up to 8 attempts.
+        </p>
+        <button type="button" class="link" @onclick="() => created = null">I have stored it, hide the secret</button>
+    </section>
+}
+
+<EditForm Model="form" OnValidSubmit="CreateAsync" FormName="create-webhook" class="panel">
+    <h2>Add a webhook</h2>
+    <label>Endpoint URL (https) <InputText @bind-Value="form.Url" type="url" autocomplete="off" placeholder="https://example.org/gadfly/events" maxlength="1000" /></label>
+    <fieldset class="checks">
+        <legend class="hint">Events</legend>
+        @foreach (var e in WebhookService.Events)
+        {
+            <label><input type="checkbox" checked="@form.Events.Contains(e)" @onchange="ev => Toggle(e, ev.Value is true)" /> @e</label>
+        }
+    </fieldset>
+    <button type="submit" disabled="@busy">Add webhook</button>
+    @if (message is not null)
+    {
+        <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+    }
+</EditForm>
+
+<h2 class="section">Endpoints</h2>
+@if (hooks is null)
+{
+    <p class="hint">Loading…</p>
+}
+else if (hooks.Count == 0)
+{
+    <p class="notice">No webhooks yet.</p>
+}
+else
+{
+    <table class="grid">
+        <thead><tr><th>URL</th><th>Events</th><th>Created</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+            @foreach (var h in hooks)
+            {
+                <tr>
+                    <td><code>@h.Url</code></td>
+                    <td>@h.Events.Replace(",", ", ")</td>
+                    <td>@AdminDb.When(h.CreatedAt)</td>
+                    <td>@if (h.IsActive) { <span class="ok">active</span> } else { <span class="muted">deactivated</span> }</td>
+                    <td>
+                        @if (h.IsActive)
+                        {
+                            @if (confirming == h.Id)
+                            {
+                                <div class="row-actions">
+                                    <span>Deactivate? Pending deliveries are dropped.</span>
+                                    <button type="button" class="danger" @onclick="() => DeactivateAsync(h.Id)">Deactivate</button>
+                                    <button type="button" class="link" @onclick="() => confirming = null">Cancel</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <button type="button" class="link" @onclick="() => confirming = h.Id">Deactivate…</button>
+                            }
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<h2 class="section">Recent deliveries</h2>
+@if (deliveries is null)
+{
+    <p class="hint">Loading…</p>
+}
+else if (deliveries.Count == 0)
+{
+    <p class="notice">No deliveries yet. One is sent for each subscribed event, for example when a student's exam session completes.</p>
+}
+else
+{
+    <table class="grid">
+        <thead><tr><th>Created</th><th>Event</th><th>Endpoint</th><th>Status</th><th class="num">Attempt</th><th class="num">Response</th></tr></thead>
+        <tbody>
+            @foreach (var d in deliveries)
+            {
+                <tr>
+                    <td>@AdminDb.When(d.CreatedAt)</td>
+                    <td>@d.EventType</td>
+                    <td><code>@(urls.GetValueOrDefault(d.WebhookId) ?? "(removed)")</code></td>
+                    <td class="status-@d.Status.ToString().ToLowerInvariant()">@Describe(d.Status)</td>
+                    <td class="num">@d.Attempt</td>
+                    <td class="num">@(d.ResponseCode?.ToString() ?? "—")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <p class="hint">The latest @DeliveryLimit deliveries.</p>
+}
+
+@code {
+    private const int DeliveryLimit = 50;
+
+    private sealed class Form
+    {
+        public string Url { get; set; } = "";
+        public HashSet<string> Events { get; set; } = [.. WebhookService.Events];
+    }
+
+    private sealed record Created(string Url, string Secret);
+
+    private Form form = new();
+    private Created? created;
+    private bool copied;
+    private List<Webhook>? hooks;
+    private List<WebhookDelivery>? deliveries;
+    private Dictionary<Guid, string> urls = [];
+    private Guid? confirming;
+    private string? message;
+    private bool ok, busy;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (Tenant.OrganizationId is not { } org) return;
+        (hooks, deliveries) = await AdminDb.RunAsync(Scopes, async (_, db) =>
+        {
+            var h = await db.Webhooks.AsNoTracking().Where(w => w.OrganizationId == org)
+                .OrderByDescending(w => w.IsActive).ThenByDescending(w => w.CreatedAt).ToListAsync();
+            var d = await db.WebhookDeliveries.AsNoTracking().Where(x => x.OrganizationId == org)
+                .OrderByDescending(x => x.CreatedAt).Take(DeliveryLimit).ToListAsync();
+            return (h, d);
+        });
+        urls = hooks.ToDictionary(h => h.Id, h => h.Url);
+    }
+
+    private void Toggle(string e, bool on)
+    {
+        if (on) form.Events.Add(e); else form.Events.Remove(e);
+    }
+
+    private async Task CreateAsync()
+    {
+        if (Tenant.OrganizationId is not { } org) return;
+        busy = true;
+        message = null;
+        try
+        {
+            var (row, secret) = await AdminDb.RunAsync(Scopes, (sp, _) =>
+                sp.GetRequiredService<WebhookService>().CreateAsync(org, form.Url.Trim(), form.Events));
+            created = new Created(row.Url, secret);
+            copied = false;
+            form = new();
+            ok = true;
+            message = "Webhook added.";
+            await LoadAsync();
+        }
+        catch (ArgumentException ex)
+        {
+            ok = false;
+            message = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            message = "The webhook could not be added: " + ex.Message;
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task CopyAsync()
+    {
+        if (created is null) return;
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", created.Secret);
+            copied = true;
+        }
+        catch (JSException)
+        {
+            ok = false;
+            message = "The browser would not copy; select the secret and copy it by hand.";
+        }
+    }
+
+    private async Task DeactivateAsync(Guid id)
+    {
+        if (Tenant.OrganizationId is not { } org) return;
+        var n = await AdminDb.RunAsync(Scopes, (_, db) => db.Webhooks
+            .Where(w => w.Id == id && w.OrganizationId == org && w.IsActive)
+            .ExecuteUpdateAsync(u => u.SetProperty(w => w.IsActive, false)));
+        confirming = null;
+        ok = n > 0;
+        message = n > 0 ? "Webhook deactivated." : "That webhook was already inactive.";
+        await LoadAsync();
+    }
+
+    private static string Describe(DeliveryStatus s) => s switch
+    {
+        DeliveryStatus.Delivered => "delivered",
+        DeliveryStatus.Failed => "failed, retrying",
+        DeliveryStatus.GaveUp => "gave up",
+        _ => "pending",
+    };
+}
