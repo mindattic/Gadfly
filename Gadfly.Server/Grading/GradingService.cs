@@ -370,8 +370,9 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             if (i.Comment is { Length: > 4000 } || i.EvidenceNote is { Length: > 4000 }) return GradingResult.Fail("Keep comments and evidence notes under 4,000 characters.");
         }
 
-        var wasBlind = !AiVisible(policy, grade.Status);
         var existing = await db.HumanObjectiveGrades.AsNoTracking().Where(h => h.SessionId == sessionId && h.OrganizationId == Org).ToListAsync(ct);
+        // Only a first submission can be blind: after a reopen the examiner has already seen the AI's scores (GAD-T183).
+        var wasBlind = !AiVisible(policy, grade.Status) && existing.Count == 0;
         foreach (var o in objectives)
         {
             var i = byObjective[o.Id];

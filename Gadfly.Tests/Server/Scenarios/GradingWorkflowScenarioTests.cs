@@ -90,6 +90,23 @@ public class GradingWorkflowScenarioTests : ServerTest
     }
 
     [Test]
+    public async Task HumanGradesResubmittedAfterReopen_AreNotRecordedAsBlind()
+    {
+        var w = await GradedByAi(85);
+        var examiner = As(w.Org, OrgRoles.Examiner, null, out var edb);
+        await using (edb)
+        {
+            Assert.That((await examiner.SubmitHumanGradesAsync(w.SessionId, [new HumanGradeInput(w.ObjectiveId, MasteryLevel.Application, 88, null, null)])).Ok, Is.True);
+            Assert.That((await examiner.ReopenHumanReviewAsync(w.SessionId, "Adjusting after seeing the AI's evaluation.")).Ok, Is.True);
+            Assert.That((await examiner.SubmitHumanGradesAsync(w.SessionId, [new HumanGradeInput(w.ObjectiveId, MasteryLevel.Application, 80, null, null)])).Ok, Is.True);
+        }
+        await using var check = SystemDb();
+        var rows = await check.HumanObjectiveGrades.AsNoTracking().Where(h => h.SessionId == w.SessionId).Select(h => h.WasBlind).ToListAsync();
+        Assert.That(rows.Count(b => b), Is.EqualTo(1), "only the first submission was blind");
+        Assert.That(rows.Count(b => !b), Is.EqualTo(1), "the resubmission came after the AI scores were visible");
+    }
+
+    [Test]
     public async Task Scenario_G_AiHumanScoringDisagreement_FullWorkflow()
     {
         var w = await GradedByAi(95);
