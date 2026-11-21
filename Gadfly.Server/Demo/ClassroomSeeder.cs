@@ -240,6 +240,8 @@ public static class ClassroomSeeder
         await db.AuthUsers.Where(u => u.Id == id).ExecuteUpdateAsync(s => s
             .SetProperty(u => u.MustChangePassword, false)
             .SetProperty(u => u.MustEnrollMfa, false), ct);
+        // The update above bypassed the change tracker; drop the stale tracked copy so a later save can't trip its concurrency token.
+        db.ChangeTracker.Clear();
         return id;
     }
 

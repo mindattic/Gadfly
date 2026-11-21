@@ -141,7 +141,9 @@ if (args.Contains(Gadfly.Server.Demo.DemoSeeder.SeedArgument)) await Gadfly.Serv
 // Classroom test accounts: Teacher_A..C, Student_A..Z across their assessments (GAD-T151). --then-exit makes it a one-shot.
 if (args.Contains(Gadfly.Server.Demo.ClassroomSeeder.SeedArgument) || app.Configuration["Gadfly:Demo:SeedClassroomOnStartup"] == "true")
 {
-    await Gadfly.Server.Demo.ClassroomSeeder.RunAsync(app);
+    // Test data must never stop the site from starting: a failure is logged and the server carries on.
+    try { await Gadfly.Server.Demo.ClassroomSeeder.RunAsync(app); }
+    catch (Exception ex) { app.Logger.LogError(ex, "Classroom seeding failed; the server starts without it."); }
     if (args.Contains("--then-exit")) return;
 }
 
