@@ -35,6 +35,7 @@ public sealed class WebhookService(GadflyDbContext db, JobQueue jobs, IDataProte
             throw new ArgumentException("Webhook URLs must be absolute https URLs.");
         if (uri.ToString().Length > MaxUrlLength)
             throw new ArgumentException($"Webhook URLs must be at most {MaxUrlLength} characters.");
+        if (WebhookTargets.Problem(uri) is { } problem) throw new ArgumentException(problem);
         var wanted = (events ?? []).OfType<string>().Select(e => e.Trim()).Where(e => Events.Contains(e)).Distinct().ToList();
         if (wanted.Count == 0) throw new ArgumentException($"Subscribe to at least one of: {string.Join(", ", Events)}.");
         var secret = "whsec_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(24));
@@ -91,7 +92,9 @@ public sealed class WebhookDeliveryJob(GadflyDbContext db, WebhookService webhoo
         var delivery = await db.WebhookDeliveries.FirstOrDefaultAsync(d => d.Id == request.DeliveryId, ct);
         if (delivery is null || delivery.Status == DeliveryStatus.Delivered) return;
         var hook = await db.Webhooks.FirstOrDefaultAsync(w => w.Id == delivery.WebhookId, ct);
-        if (hook is null || !hook.IsActive)
+        // A hook registered before the target rules (or whose URL no longer passes them) is never called (GAD-T75).
+        if (hook is null || !hook.IsActive || !Uri.TryCreate(hook.Url, UriKind.Absolute, out var target)
+            || target.Scheme != Uri.UriSchemeHttps || WebhookTargets.Problem(target) is not null)
         {
             delivery.Status = DeliveryStatus.GaveUp;
             await db.SaveChangesAsync(ct);

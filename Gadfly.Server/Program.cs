@@ -104,7 +104,10 @@ builder.Services.AddScoped<ApiKeyService>();
 builder.Services.AddSingleton<UsageMeter>();
 builder.Services.AddScoped<WebhookService>();
 builder.Services.AddJobHandler<WebhookDeliveryJob>();
-builder.Services.AddHttpClient("webhooks", c => c.Timeout = TimeSpan.FromSeconds(15));
+// Deliveries only reach public https hosts, checked after DNS resolution, with no redirects (GAD-T75).
+WebhookTargets.AllowPrivate = builder.Environment.IsDevelopment() && builder.Configuration[WebhookTargets.AllowPrivateSetting] == "true";
+builder.Services.AddHttpClient("webhooks", c => c.Timeout = TimeSpan.FromSeconds(15))
+    .ConfigurePrimaryHttpMessageHandler(WebhookTargets.CreateHandler);
 builder.Services.AddOpenApi();
 
 // Privacy (GAD-T61): daily retention redaction, per-student export and erasure.

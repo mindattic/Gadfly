@@ -455,7 +455,9 @@ students only what your own release rules allow.
 ```
 
 Store `secret`: it is shown only here. `400` `{ "error": "Webhook URLs must be absolute https URLs." }`,
-`{ "error": "Webhook URLs must be at most 1000 characters." }` or
+`{ "error": "Webhook URLs must be at most 1000 characters." }`,
+`{ "error": "Webhook URLs must name a public host." }` (localhost, `.local`, `.internal` and single-label
+names), `{ "error": "Webhook URLs must not point at private, loopback or link-local addresses." }` or
 `{ "error": "Subscribe to at least one of: session.completed." }` (also when `events` is missing). Unknown
 event names are ignored.
 
@@ -501,6 +503,10 @@ The student still signs in with their Gadfly user name and password; one-click s
 needs trusted-launch support in MindAttic.Authentication and is not built yet.
 
 ## Webhooks
+
+Deliveries go only to public addresses: the host is resolved at each delivery and a name that
+resolves to a private, loopback, link-local or reserved address is refused (no request is sent), and
+redirects are not followed (a `3xx` answer counts as a failed attempt and is retried).
 
 ### Payload
 
