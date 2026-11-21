@@ -135,6 +135,57 @@ public static class StudentExams
             .ToList();
     }
 
+    /// <summary>Configuration switch for open exams (GAD-T253).</summary>
+    public const string OpenExamsSetting = "Gadfly:OpenExams";
+
+    /// <summary>Attempts allowed on an assignment created for an open exam.</summary>
+    public const int OpenExamAttempts = 50;
+
+    /// <summary>
+    /// Open exams (GAD-T253): every student can take every published exam in their organization without being
+    /// assigned. Creates any missing assignment for the student on each published exam (50 attempts, assigned by
+    /// the exam's owner), so the existing session and attempt code keeps working unchanged; assignment stays the
+    /// mechanism for later. Returns how many assignments were created.
+    /// </summary>
+    public static Task<int> EnsureOpenAssignmentsAsync(
+        IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, DateTimeOffset now, CancellationToken ct = default) =>
+        WithDbAsync(scopes, organizationId, async db =>
+    {
+        var assigned = await db.ExamAssignments.AsNoTracking()
+            .Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId)
+            .Select(a => a.ExamId)
+            .ToListAsync(ct);
+        var missing = await db.Exams.AsNoTracking()
+            .Where(e => e.OrganizationId == organizationId && e.Status == ExamStatus.Published && !assigned.Contains(e.Id))
+            .Select(e => new { e.Id, e.CreatedByUserId })
+            .ToListAsync(ct);
+        if (missing.Count == 0) return 0;
+
+        foreach (var exam in missing)
+        {
+            db.ExamAssignments.Add(new ExamAssignment
+            {
+                OrganizationId = organizationId,
+                ExamId = exam.Id,
+                StudentUserId = studentUserId,
+                AttemptsAllowed = OpenExamAttempts,
+                AssignedByUserId = exam.CreatedByUserId,
+                AssignedAt = now,
+            });
+        }
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return missing.Count;
+        }
+        catch (DbUpdateException)
+        {
+            // Another load of the page (or an instructor) assigned one of these at the same moment: the unique
+            // (exam, student) index refused the duplicate. Whatever exists now is what the student sees.
+            return 0;
+        }
+    });
+
     /// <summary>One of the student's own assignments, or null when it isn't theirs.</summary>
     public static async Task<StudentAssignmentView?> FindAsync(
         IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, Guid assignmentId, DateTimeOffset now, CancellationToken ct = default) =>

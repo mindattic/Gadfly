@@ -5,6 +5,7 @@
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
 @inject TimeProvider Clock
+@inject IConfiguration Config
 
 <HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
 <PageTitle>My exams · Gadfly Exams</PageTitle>
@@ -95,6 +96,9 @@ else
             rows = [];
             return;
         }
+        // Open exams (GAD-T253): every published exam in the organization, assigned on first sight.
+        if (Config.GetValue<bool>(StudentExams.OpenExamsSetting))
+            await StudentExams.EnsureOpenAssignmentsAsync(Scopes, org, user, Clock.GetUtcNow());
         rows = await StudentExams.ListAsync(Scopes, org, user, Clock.GetUtcNow());
         published = await Gadfly.Server.Grading.GradingDb.RunAsync(Scopes, Tenant, g => g.MyResultsAsync());
     }
