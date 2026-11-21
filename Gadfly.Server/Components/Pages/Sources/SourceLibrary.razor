@@ -124,6 +124,7 @@ else
 
     private async Task CreateAsync()
     {
+        if (busy) return;   // a double click would create the collection twice (GAD-T209)
         if (string.IsNullOrWhiteSpace(form.Title))
         {
             ok = false;
