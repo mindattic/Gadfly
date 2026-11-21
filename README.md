@@ -1,20 +1,32 @@
 # Gadfly
 
-A Socratic engine. Gadfly questions a person one turn at a time and writes each follow-up from their
-own previous answer: it asks them to clarify, probes the reasoning, offers counterexamples, keeps a
-ledger of their claims and puts contradictions back to them, until they show understanding or reach
-*aporia*, honest puzzlement. Every question and every judgment goes through
-[MindAttic.Legion](https://github.com/mindattic/MindAttic.Legion)'s multi-LLM voting, so no single model's
-opinion is the verdict.
+**Exams that find out whether a student understands, not whether they can produce an answer.**
 
-Two things run on the engine:
+When anyone can paste a question into an AI, a correct answer proves very little. Gadfly Exams asks
+questions the way a good examiner does in person: it starts with "what is it?", then follows up on the
+student's own words, asking why, what if, what would change, and whether two things they said can both
+be true. Each follow-up is written from the previous answer, so it can't be looked up or prepared in
+advance, and understanding shows in the reasoning, not in the wording.
 
-- **Gadfly Exams**, a web platform for Socratic oral-style exams. Instructors upload source material;
-  the panel turns it into concepts and rubrics they can edit; students are questioned on it; each answer
-  is judged against the material with citations; the AI recommends and the instructor grades. Other apps
-  can use it through a platform API with signed webhooks.
-- **The personal introspection CLI** (`gadfly`), which mines your own Claude Code transcripts and
-  claude.ai export and cross-examines you about them. It is documented further down.
+Instructors upload their own course material. Gadfly turns it into learning objectives and rubrics they
+can edit, and every question and judgment is grounded in that material with citations. Every answer is
+kept exactly as the student gave it; unclear answers get a neutral clarifying question that never hints
+at the answer. A panel of AI models scores each objective, a human examiner grades independently
+(blind, by default), large disagreements go to reconciliation, and nothing reaches a student until an
+authorized person approves it. Integrity signals (focus loss, a second voice, reading from elsewhere) are
+shown to the reviewer as evidence, never as an automatic verdict.
+
+It's a multi-tenant web platform for schools, universities, certification bodies and corporate training:
+organizations, teachers, examiners, reviewers and students, a full audit trail, privacy controls, and an
+API for other applications. Built on Blazor Server, SQL Server and Azure, with
+[MindAttic.Legion](https://github.com/mindattic/MindAttic.Legion)'s multi-LLM panel underneath.
+
+The product plan is [docs/MASTER-PLAN.md](docs/MASTER-PLAN.md); what's built against it is in
+[docs/MASTER-PLAN-STATUS.md](docs/MASTER-PLAN-STATUS.md).
+
+Underneath is a general **Socratic engine** that other apps can use, and the original **personal
+introspection CLI** (`gadfly`), which cross-examines you about your own Claude Code transcripts and
+claude.ai export. It is documented further down.
 
 ## Gadfly Exams
 
