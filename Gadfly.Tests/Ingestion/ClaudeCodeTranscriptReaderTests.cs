@@ -37,6 +37,21 @@ public class ClaudeCodeTranscriptReaderTests
     }
 
     [Test]
+    public void ReadFile_LinesWithoutUuid_GetDistinctStableIds()
+    {
+        var path = WriteLines(
+            """{"type":"user","message":{"role":"user","content":"first"},"timestamp":"2026-01-01T00:00:00.000Z","sessionId":"s1","origin":{"kind":"human"}}""",
+            """{"type":"user","message":{"role":"user","content":"second"},"timestamp":"2026-01-01T00:00:01.000Z","sessionId":"s1","origin":{"kind":"human"}}""");
+
+        var first = ClaudeCodeTranscriptReader.ReadFile(path).ToList();
+        var again = ClaudeCodeTranscriptReader.ReadFile(path).ToList();
+
+        Assert.That(first.Select(m => m.Id), Has.All.Not.Empty);
+        Assert.That(first[0].Id, Is.Not.EqualTo(first[1].Id));
+        Assert.That(again.Select(m => m.Id), Is.EqualTo(first.Select(m => m.Id)), "ids must be stable so re-ingesting is idempotent");
+    }
+
+    [Test]
     public void ReadFile_SkipsToolResultArrayContent()
     {
         var path = WriteLines(

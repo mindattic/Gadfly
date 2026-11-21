@@ -43,7 +43,10 @@ public static class ClaudeCodeTranscriptReader
         TryGetString(root, "sessionId", out var sessionId);
         TryGetString(root, "cwd", out var cwd);
         TryGetString(root, "uuid", out var lineUuid);
-        var messageId = lineUuid ?? Guid.NewGuid().ToString("N");
+        // No uuid on the line: derive a stable id from the line itself, so re-ingesting stays idempotent and
+        // distinct messages never share the empty id (TryGetString yields "", never null, for a missing field).
+        var messageId = !string.IsNullOrEmpty(lineUuid) ? lineUuid
+            : "line-" + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(root.GetRawText())))[..24];
 
         var timestamp = TryGetString(root, "timestamp", out var ts) && DateTimeOffset.TryParse(ts, out var parsed)
             ? parsed
