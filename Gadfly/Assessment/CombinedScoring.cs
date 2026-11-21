@@ -13,6 +13,19 @@ public sealed record GradingPolicyRules
     /// <summary>Differences at or above this require reconciliation and block finalization.</summary>
     public decimal MandatoryReconciliationAt { get; init; } = 20m;
     public bool BlindHumanGrading { get; init; } = true;
+    /// <summary>
+    /// Single-answer trigger (GAD-T270): panel members whose rubric levels for one objective differ by more than
+    /// this many levels send it to reconciliation, whatever the AI-human difference.
+    /// </summary>
+    public int MaxPanelSpreadLevels { get; init; } = 1;
+    /// <summary>
+    /// Single-answer trigger (GAD-T270): pass/fail or grade boundaries, in percent of an objective's maximum. An
+    /// objective goes to reconciliation when the AI and human scores fall on opposite sides of one, or the combined
+    /// score is within <see cref="BoundaryMarginPoints"/> of one. Empty turns the trigger off.
+    /// </summary>
+    public IReadOnlyList<decimal> ScoreBoundaries { get; init; } = [50m];
+    /// <summary>How close (percentage points) a combined score must be to a boundary to count as on it.</summary>
+    public decimal BoundaryMarginPoints { get; init; } = 2.5m;
 
     /// <summary>Throws when the policy is unusable (weights not in [0,1] or not summing to 1, thresholds out of order).</summary>
     public void Validate()
@@ -22,6 +35,9 @@ public sealed record GradingPolicyRules
         if (HumanWeight == 0) throw new ArgumentException("The human weight cannot be 0: a human examiner must take part in grading (Part 8.1).");
         if (AdditionalReviewAt < 0 || MandatoryReconciliationAt <= 0) throw new ArgumentException("Thresholds must be positive.");
         if (AdditionalReviewAt > MandatoryReconciliationAt) throw new ArgumentException("The additional-review threshold must not exceed the reconciliation threshold.");
+        if (MaxPanelSpreadLevels < 0) throw new ArgumentException("The panel spread limit cannot be negative.");
+        if ((ScoreBoundaries ?? []).Any(b => b <= 0 || b >= 100)) throw new ArgumentException("Score boundaries must be between 0 and 100 percent.");
+        if (BoundaryMarginPoints < 0) throw new ArgumentException("The boundary margin cannot be negative.");
     }
 }
 

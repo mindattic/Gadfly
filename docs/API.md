@@ -752,3 +752,35 @@ reviewer names, voters or audit detail:
 Other members without a reviewer permission get `403` (audited). The per-objective assessment report downloads at
 `/grading/{sessionId}/report.md` and `/grading/{sessionId}/report.csv` (reviewers) and
 `/my-results/{sessionId}/report.md` (the student, once published).
+
+### Reconciliation triggers
+
+Besides the AI-human difference bands, an objective goes to reconciliation (band `MandatoryReconciliation`, status
+`ReconciliationRequired`) when its panel is split (members' rubric levels differ by more than
+`maxPanelSpreadLevels`, default 1) or its score sits on a boundary (the AI and human scores fall on opposite sides of
+one of `scoreBoundaries`, default 50% of the objective's maximum, or the combined score is within
+`boundaryMarginPoints`, default 2.5, of one). An objective already reconciled once is not sent again by these
+triggers. The `grade.disagreement.detected` audit event lists the triggers that fired (GAD-T270; research note 05).
+
+### Panel calibration
+
+A grading panel is accepted for an exam only after a blind, double-marked calibration set meets the thresholds
+(Williamson et al. 2012, as reported in research note 05): panel-human QWK at least .70, no more than .10 below the
+human-human QWK, and |SMD| under .15, on at least 30 answers. The panel is compared with each marker and the weaker
+comparison counts. Levels are the rubric's mastery levels 0..5.
+
+`POST /grading/calibration/{examId}` (ApproveGradingPolicyChange; antiforgery token as above):
+
+```json
+{ "panel": "claude-sonnet-5, gpt-5, gemini-3 (majority of levels)",
+  "items": [ { "itemId": "s01-equal-groups", "panelLevel": 3, "humanALevel": 3, "humanBLevel": 2 } ] }
+
+→ 200 { "ok": false, "accepted": false, "message": "Panel not accepted for this exam. ...",
+        "report": { "items": 12, "humanHumanQwk": 0.81, "panelHumanQwk": 0.66, "degradation": 0.15, "smd": 0.21,
+                    "accepted": false, "failures": [ "..." ], "thresholds": { "minQwk": 0.7, "maxDegradation": 0.1, "maxAbsSmd": 0.15, "minItems": 30 } } }
+```
+
+Every evaluation, passing or failing, is recorded as an audit event (`panel.calibration.evaluated`), and the latest
+one is the exam's status: `GET /grading/calibration/{examId}` (ViewTranscripts) returns it, or `404` when none is
+recorded. When AI grading of a session starts, the status is frozen into its policy snapshot (`panel`), and the
+grading page shows whether the panel's grades are calibrated or provisional. The AI grade is never final either way.

@@ -36,6 +36,7 @@ else
         <div><span class="hint">Status</span>@if (status is { } st) { <span class="gr-status s-@st">@GradeStatusMachine.Label(st)</span> } else { <span>Not started</span> }</div>
         <div><span class="hint">Combined grade</span>@(w.AiVisible && w.Grade?.FinalPercent is { } fp ? AssessmentReport.Pct(fp) : "—")@(w.AiVisible && w.Grade?.LetterOrLabel is { } lbl ? $" ({lbl})" : "")</div>
         <div><span class="hint">Policy</span>AI @Pct(w.Policy.Rules.AiWeight) · human @Pct(w.Policy.Rules.HumanWeight) · reconcile at @w.Policy.Rules.MandatoryReconciliationAt.ToString("0.##") pts@(w.Policy.Rules.BlindHumanGrading ? " · blind" : "")</div>
+        <div><span class="hint">Panel</span>@(w.Policy.Panel is { Accepted: true } pc ? $"calibrated for this exam (QWK {pc.PanelHumanQwk:0.00}, {pc.Items} answers)" : w.Policy.Panel is not null ? "not accepted on its last calibration: grades are provisional" : "not calibrated for this exam: grades are provisional")</div>
         <div><span class="hint">Ended</span>@(w.Session.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm") ?? "—") UTC</div>
         <div><span class="hint">Report</span><a href="grading/@w.Session.Id/report">view</a> · <a href="@GradingSetup.ReportMarkdownPath(w.Session.Id)" download data-enhance-nav="false">Markdown</a> · <a href="@GradingSetup.ReportCsvPath(w.Session.Id)" download data-enhance-nav="false">CSV</a></div>
     </div>

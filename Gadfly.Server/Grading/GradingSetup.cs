@@ -13,6 +13,7 @@ public static class GradingSetup
     public static IServiceCollection AddGrading(this IServiceCollection services)
     {
         services.AddScoped<GradingService>();
+        services.AddScoped<PanelCalibrationService>();   // per-exam panel acceptance (GAD-T270)
         services.AddJobHandler<AiGradingJob>();
         services.AddHostedService<GradingSweeper>();
         return services;
@@ -36,6 +37,7 @@ public static class GradingSetup
             var report = AssessmentReport.Build(w, forStudent: true);
             return Results.File(Encoding.UTF8.GetBytes(report.ToMarkdown()), "text/markdown; charset=utf-8", report.FileStem() + ".md");
         }).RequireAuthorization(GadflyPolicies.Student);
+        app.MapPanelCalibration();   // GAD-T270
         return app;
     }
 

@@ -66,3 +66,10 @@ Would she use it for a real grade? <yes / not yet, because ...>
 The owner pastes the forms into the chat. Each problem and wish is filed as a ticket in Gadfly (linked to GAD-T66),
 prioritised with the owner, and worked like any other ticket. GAD-T66 closes when at least five sessions are done
 and their feedback is filed.
+
+Before any exam's AI grades are relied on, its panel is calibrated (GAD-T270): a second examiner grades the pilot
+answers blind and independently of Erin, and the panel's levels, Erin's and the second examiner's are posted to
+`POST /grading/calibration/{examId}` (docs/API.md, "Panel calibration"). The panel is accepted for that exam only when
+panel-human QWK is at least .70, no more than .10 below the two examiners' own agreement, and |SMD| is under .15, on at
+least 30 answers. No published source tests LLM grading of spoken Socratic answers, so these figures can only come
+from Gadfly's own double-marked answers (research note 05).

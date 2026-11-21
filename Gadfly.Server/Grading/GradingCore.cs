@@ -35,6 +35,11 @@ public sealed record PolicySnapshot
     public string Source { get; init; } = "platform-default";
     public DateTimeOffset? LockedAt { get; init; }
     public DateTimeOffset TakenAt { get; init; }
+    /// <summary>
+    /// The exam's grading-panel calibration when AI grading started (GAD-T270): null when none was recorded, so the
+    /// panel's grades for this exam are provisional (not accepted on calibration evidence).
+    /// </summary>
+    public PanelCalibrationNote? Panel { get; init; }
 
     public static PolicySnapshot From(GradingPolicy? p, DateTimeOffset now) => p is null
         ? new PolicySnapshot { TakenAt = now }

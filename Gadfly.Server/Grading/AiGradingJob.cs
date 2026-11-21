@@ -60,7 +60,10 @@ public sealed class AiGradingJob(GadflyDbContext db, ISocraticVotingClient panel
         var policy = GradingJson.Read<PolicySnapshot>(grade.PolicyJson);
         if (policy is null)
         {
-            policy = PolicySnapshot.From(policyRow, now);
+            policy = PolicySnapshot.From(policyRow, now) with
+            {
+                Panel = (await PanelCalibrationService.LatestAsync(db, exam.OrganizationId, exam.Id, ct))?.ToNote(),   // GAD-T270
+            };
             grade.PolicyJson = GradingJson.Write(policy);
             GradingAudit.Add(db, grade.OrganizationId, GradingActor.System, "grade.policy.applied", "FinalGrade", grade.SessionId.ToString(), grade.SessionId, now,
                 after: policy, reason: policy.Source == "exam-policy" ? "The exam's grading policy." : "The exam has no grading policy; the platform defaults apply.");

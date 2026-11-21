@@ -367,10 +367,16 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
     /// <summary>
     /// Records a disagreement row per objective for the newly computed comparison (Part 10.1) and closes the
     /// previous comparison's open rows. Standard-band rows are resolved at once; others stay open for review.
+    /// GAD-T270: an objective whose panel is split or whose score sits on a boundary
+    /// (<see cref="ReconciliationTriggers"/>) is recorded as needing reconciliation whatever its difference band,
+    /// unless it was already reconciled once (the triggers would fire again on the same panel grade). Returns
+    /// whether any trigger fired.
     /// </summary>
-    private void RecordDisagreements(Guid sessionId, CombinedResult result, HashSet<string> excluded,
-        IReadOnlyList<(LearningObjective Objective, AiObjectiveGrade? Ai, HumanObjectiveGrade? Human, GradeDisagreement? Disagreement)> states, string reason)
+    private bool RecordDisagreements(Guid sessionId, CombinedResult result, HashSet<string> excluded,
+        IReadOnlyList<(LearningObjective Objective, AiObjectiveGrade? Ai, HumanObjectiveGrade? Human, GradeDisagreement? Disagreement)> states, string reason,
+        PolicySnapshot policy, IReadOnlySet<Guid> reconciledObjectives)
     {
+        var triggeredAny = false;
         foreach (var s in states)
         {
             if (s.Disagreement is { ResolvedAt: null } old)
@@ -380,6 +386,13 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             }
             var r = result.Objectives.FirstOrDefault(x => x.ObjectiveKey == s.Objective.Key);
             if (r?.DifferencePoints is not { } diff || r.Band is not { } band || excluded.Contains(s.Objective.Key)) continue;
+            var panelLevels = s.Ai is null ? [] : AiGradeView.From(s.Ai).Voters.Select(v => (int)v.Level).ToList();
+            var triggers = reconciledObjectives.Contains(s.Objective.Id) ? [] : ReconciliationTriggers.Evaluate(r, panelLevels, policy.Rules);
+            if (triggers.Count > 0 && band != DisagreementBand.MandatoryReconciliation)
+            {
+                band = DisagreementBand.MandatoryReconciliation;
+                triggeredAny = true;
+            }
             var d = new GradeDisagreement
             {
                 OrganizationId = Org, SessionId = sessionId, ObjectiveId = s.Objective.Id, AiScore = r.AiScore!.Value, HumanScore = r.HumanScore!.Value,
@@ -387,8 +400,10 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             };
             db.GradeDisagreements.Add(d);
             GradingAudit.Add(db, Org, Actor, "grade.disagreement.detected", "GradeDisagreement", d.Id.ToString(), sessionId, Now,
-                after: new { objective = s.Objective.Key, ai = d.AiScore, human = d.HumanScore, differencePoints = diff, band = band.ToString() });
+                after: new { objective = s.Objective.Key, ai = d.AiScore, human = d.HumanScore, differencePoints = diff, band = band.ToString(), triggers, panelLevels },
+                reason: triggers.Count == 0 ? null : string.Join(" ", triggers.Select(ReconciliationTriggers.Describe)));
         }
+        return triggeredAny;
     }
 
     // ================================================================== human grading (Part 8)
@@ -440,17 +455,24 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         }
 
         var (result, excluded, states) = await ComputeAsync(session, policy, ct);
-        RecordDisagreements(sessionId, result, excluded, states, "A new human evaluation was submitted.");
+        var reconciled = (await (from rec in db.GradeReconciliations.AsNoTracking()
+                                 join dis in db.GradeDisagreements.AsNoTracking() on rec.DisagreementId equals dis.Id
+                                 where dis.SessionId == sessionId && dis.OrganizationId == Org && rec.OrganizationId == Org
+                                 select dis.ObjectiveId).Distinct().ToListAsync(ct)).ToHashSet();
+        var triggered = RecordDisagreements(sessionId, result, excluded, states, "A new human evaluation was submitted.", policy, reconciled);
         StoreResult(grade, result, excluded);
-        var next = result.RequiresReconciliation ? GradeStatus.ReconciliationRequired : GradeStatus.AwaitingFinalApproval;
+        var requires = result.RequiresReconciliation || triggered;
+        var next = requires ? GradeStatus.ReconciliationRequired : GradeStatus.AwaitingFinalApproval;
         var refused = await TryMoveAsync(grade, next, result.RequiresReconciliation
             ? "AI and human scores differ by at least the reconciliation threshold; finalization is blocked until reconciled."
+            : triggered ? "A split panel or a score on a grade boundary sends an objective to reconciliation (GAD-T270); finalization is blocked until reconciled."
             : "The human evaluation is in; the weighted combined score awaits final approval.", ct);
         if (refused is not null) return refused;
         var saved = await SaveAsync(ct);
         if (saved is not null) return saved;
         return GradingResult.Done(result.RequiresReconciliation
             ? "Human grades saved. The AI and human scores disagree substantially: reconciliation is required before this grade can be finalized."
+            : triggered ? "Human grades saved. An objective's panel was split or its score sits on a grade boundary: reconciliation is required before this grade can be finalized."
             : $"Human grades saved. Combined score {result.FinalPercent:0.##}%: awaiting final approval.");
     }
 
