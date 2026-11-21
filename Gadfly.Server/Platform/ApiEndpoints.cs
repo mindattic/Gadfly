@@ -66,7 +66,7 @@ public static class ApiEndpoints
 
     public static void Map(WebApplication app)
     {
-        var api = app.MapGroup("/api/v1").RequireAuthorization(GadflyPolicies.Api).DisableAntiforgery()
+        var api = app.MapGroup("/api/v1").RequireAuthorization(GadflyPolicies.Api).DisableAntiforgery().RequireRateLimiting(RateLimits.Api)
             .WithTags("Platform API v1")
             .AddOpenApiOperationTransformer(DeclareApiKeySecurity);
 
@@ -347,7 +347,7 @@ public static class ApiEndpoints
                     HttpOnly = true, Secure = true, SameSite = SameSiteMode.Lax, IsEssential = true, MaxAge = TimeSpan.FromDays(30),
                 });
             return Results.LocalRedirect(target);
-        }).AllowAnonymous().ExcludeFromDescription();
+        }).AllowAnonymous().RequireRateLimiting(RateLimits.Anonymous).ExcludeFromDescription();
     }
 
     /// <summary>

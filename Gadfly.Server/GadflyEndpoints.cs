@@ -38,7 +38,10 @@ public static class GadflyEndpoints
             ((IEndpointConventionBuilder)group).Finally(endpoint =>
             {
                 if (endpoint is RouteEndpointBuilder route && IsAnonymousAuthPost(route.RoutePattern))
+                {
                     endpoint.Metadata.Add(new AllowAnonymousAttribute());
+                    endpoint.Metadata.Add(new Microsoft.AspNetCore.RateLimiting.EnableRateLimitingAttribute(Platform.RateLimits.Anonymous));
+                }
             }));
 
         // Health: anonymous and data-free. Provider health is staff-only (it names providers and errors).
@@ -47,7 +50,7 @@ public static class GadflyEndpoints
             .RequireAuthorization(GadflyPolicies.SuperAdmin);
 
         MapPrivacy(app);
-        app.MapHub<Sessions.SessionHub>(Sessions.SessionHub.Path);
+        app.MapHub<Sessions.SessionHub>(Sessions.SessionHub.Path).RequireRateLimiting(Platform.RateLimits.Hub);
         Platform.ApiEndpoints.Map(app);
         Review.ReviewExportEndpoints.Map(app);
         app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();

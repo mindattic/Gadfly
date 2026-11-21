@@ -109,6 +109,7 @@ WebhookTargets.AllowPrivate = builder.Environment.IsDevelopment() && builder.Con
 builder.Services.AddHttpClient("webhooks", c => c.Timeout = TimeSpan.FromSeconds(15))
     .ConfigurePrimaryHttpMessageHandler(WebhookTargets.CreateHandler);
 builder.Services.AddOpenApi();
+builder.Services.AddRateLimiter(RateLimits.Configure);   // GAD-T78: API by key, hub by user, anonymous posts by IP
 
 // Privacy (GAD-T61): daily retention redaction, per-student export and erasure.
 builder.Services.AddScoped<PrivacyService>();
@@ -146,6 +147,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseMindAtticAuthentication();   // authn + authz + forced steps (change password, enroll MFA) + CSP
+app.UseRateLimiter();
 app.UseAntiforgery();
 
 GadflyEndpoints.Map(app);

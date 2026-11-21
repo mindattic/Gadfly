@@ -611,10 +611,12 @@ export function verifyGadflySignature(secret, header, rawBody, toleranceSeconds 
 | `401 Unauthorized` | Missing, unknown or revoked key; deactivated organization | Empty |
 | `404 Not Found` | The id doesn't exist in your organization | Empty |
 | `409 Conflict` | The request clashes with current state: processing already queued or running; assigning a non-student, a deactivated member, or an account outside your organization | `{ "error": "<what to do>" }` |
+| `429 Too Many Requests` | More than the rate limit (below) | Empty; `Retry-After` gives the seconds to wait |
 | `500 Internal Server Error` | An unexpected server error | No stable shape |
 
 Every id is checked against your organization, so another organization's ids answer `404`, never their
-data. There is no pagination and no rate limit yet.
+data. There is no pagination. Each API key may make 120 calls a minute, in bursts of up to 60; past that
+the API answers `429` with `Retry-After`. Launch links are limited to 30 a minute per IP address.
 
 ## OpenAPI
 
