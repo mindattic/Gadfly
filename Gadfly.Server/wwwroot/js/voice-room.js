@@ -229,7 +229,10 @@ export function stop() {
     clearCue();
     clearCaptions();
     try { s.mic && s.mic.stop(); } catch { }
-    try { s.speechConn && s.speechConn.invoke("StopSession").catch(() => { }).finally(() => s.speechConn.stop()); } catch { }
+    // Hold the connection in a local: the fields are nulled below, before this promise settles, so reading s.speechConn in the
+    // callback threw and the speech hub connection was never closed (GAD-T200).
+    const speechConn = s.speechConn;
+    try { speechConn && speechConn.invoke("StopSession").catch(() => { }).finally(() => speechConn.stop().catch(() => { })); } catch { }
     try { s.speech && s.speech.stop().catch(() => { }); } catch { }
     try { s.avatarConn && s.avatarConn.stop(); } catch { }
     try { s.speech && s.speech.dispose(); } catch { }
