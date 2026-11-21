@@ -125,6 +125,8 @@ public sealed class GadflyFactory(string connectionString) : WebApplicationFacto
         builder.UseEnvironment("Development");
         builder.UseSetting("ConnectionStrings:" + GadflyDatabase.ConnectionStringName, connectionString);
         builder.UseSetting(Gadfly.Server.Platform.WebhookTargets.AllowPrivateSetting, "false");
+        // Never probe or call the live LLM providers from tests (GAD-T100's "auto" probes them at startup).
+        builder.UseSetting("Gadfly:AiMode", "mock");
         builder.ConfigureTestServices(services =>
         {
             // Gadfly's own background services stay off: tests drive jobs explicitly.

@@ -12,12 +12,15 @@ namespace Gadfly.Tests.Fakes;
 /// </summary>
 public sealed class ScriptedPanel : ISocraticVotingClient
 {
-    public enum Kind { Question, Guard, Judge, Claims, Contradiction, Aporia, TextStyle, ConceptMap, Rubric, Verification, Clarification, Other }
+    public enum Kind { Question, Guard, Judge, Claims, Contradiction, Aporia, TextStyle, ConceptMap, Rubric, Verification, Clarification, Analysis, Other }
 
     public static Kind Classify(string prompt) =>
-        prompt.Contains("You are the examiner in a spoken Socratic oral exam", StringComparison.Ordinal) ? Kind.Question
+        prompt.Contains("Write the next question for this move:", StringComparison.Ordinal)
+            || prompt.Contains("You are the examiner in a", StringComparison.Ordinal)
+            || prompt.Contains("You are a Socratic tutor in learning mode", StringComparison.Ordinal) ? Kind.Question
         : prompt.Contains("You check exam questions before a student hears them", StringComparison.Ordinal) ? Kind.Guard
         : prompt.Contains("You are one judge on a panel", StringComparison.Ordinal) ? Kind.Judge
+        : prompt.Contains("You are one analyst on a panel", StringComparison.Ordinal) ? Kind.Analysis
         : prompt.Contains("Extract the factual or conceptual claims", StringComparison.Ordinal) ? Kind.Claims
         : prompt.Contains("A student made both of these claims", StringComparison.Ordinal) ? Kind.Contradiction
         : prompt.Contains("APORIA if the student's answer", StringComparison.Ordinal) ? Kind.Aporia
