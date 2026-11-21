@@ -40,6 +40,10 @@ public static class VoiceServices
             // Live never falls back to the Simulated recognizer: its words are placeholders.
             if (!mock && (string.IsNullOrWhiteSpace(o.Provider) || o.Provider.Equals("Simulated", StringComparison.OrdinalIgnoreCase)))
                 o.Provider = "ElevenLabs";
+            // Gadfly asks Scribe to label speakers (the second-speaker signal), which only scribe_v3_live supports; the library's
+            // default model refuses the session with "diarize is only supported by scribe_v3_live" (GAD-T228).
+            var scribeModel = builder.Configuration["Gadfly:Voice:ScribeModel"] is { Length: > 0 } m ? m : "scribe_v3_live";
+            o.ConfigureElevenLabs = e => e.ModelId = scribeModel;
         });
         services.AddMindAtticAvatar(builder.Configuration, o =>
         {

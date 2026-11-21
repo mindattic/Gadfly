@@ -43,6 +43,7 @@ public static class DemoSeeder
         ("demo.examiner", OrgRoles.Examiner),
         ("demo.reviewer", OrgRoles.SecondReviewer),
         ("demo.student", OrgRoles.Student),
+        ("ryan", OrgRoles.Student),
     ];
 
     public static readonly IReadOnlyList<DemoAssessment> Assessments =
@@ -78,6 +79,24 @@ public static class DemoSeeder
                     "Explains that the relationship between an independent variable and the outcome can depend on another variable, and interprets interaction coefficients.",
                     "Interaction effects", 20m),
             ]),
+        new DemoAssessment(
+            Title: "Demo: The American Civil War",
+            Course: "Demo U.S. History",
+            Subject: "History",
+            Topic: "The American Civil War",
+            Collection: "Demo notes: The American Civil War",
+            MaterialFile: "civil-war.md",
+            Instructions: "The examiner will talk with you about the Civil War. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+            Objectives:
+            [
+                new DemoObjective("causes", "Explain why the Southern states seceded",
+                    "Connects the dispute over slavery's expansion, the crises of the 1850s and Lincoln's election to secession.", "Why the Union broke apart", 10m),
+                new DemoObjective("turning-points", "Explain how and why the war turned in the Union's favor",
+                    "Relates the two sides' strengths and strategies to Antietam, Gettysburg, Vicksburg and the campaigns of 1864.", "The course of the war", 10m),
+                new DemoObjective("emancipation", "Explain how ending slavery became a war aim and what the Emancipation Proclamation did and did not do",
+                    "Distinguishes the Proclamation's limits from its significance, and explains the Thirteenth Amendment's role.", "Emancipation", 10m),
+            ],
+            Mode: ExamMode.Voice),
     ];
 
     /// <summary>The <c>Program.cs</c> hook: seeds when the process was started with <see cref="SeedArgument"/>.</summary>
@@ -102,7 +121,8 @@ public static class DemoSeeder
 
     /// <summary>What phase one created, for phase two.</summary>
     public sealed record SeedPlan(Guid OrganizationId, Guid TeacherId, Guid StudentId,
-        IReadOnlyList<(DemoAssessment Assessment, Guid CourseId, Guid CollectionId, Guid? JobId)> Collections);
+        IReadOnlyList<(DemoAssessment Assessment, Guid CourseId, Guid CollectionId, Guid? JobId)> Collections,
+        IReadOnlyList<Guid>? OtherStudentIds = null);
 
     // ------------------------------------------------------------------ phase 1: institution, people, courses, sources
 
@@ -189,7 +209,8 @@ public static class DemoSeeder
         }
 
         Print(log, password, configuredPassword is { Length: > 0 }, apiKey);
-        return new SeedPlan(org.Id, ids["demo.teacher"], ids["demo.student"], collections);
+        var otherStudents = Accounts.Where(a => a.Role == OrgRoles.Student && a.UserName != "demo.student").Select(a => ids[a.UserName]).ToList();
+        return new SeedPlan(org.Id, ids["demo.teacher"], ids["demo.student"], collections, otherStudents);
     }
 
     // ------------------------------------------------------------------ phase 2: assessments (after source processing)
@@ -211,7 +232,8 @@ public static class DemoSeeder
                 log.LogError("Demo assessment {Title} not created: the collection has no concept map.", assessment.Title);
                 continue;
             }
-            await CreateAssessmentAsync(db, clock, plan.OrganizationId, plan.TeacherId, [plan.StudentId], assessment, courseId, collectionId, map,
+            // Every demo student gets every demo assessment (demo.student is the one the tour drives).
+            await CreateAssessmentAsync(db, clock, plan.OrganizationId, plan.TeacherId, [plan.StudentId, .. plan.OtherStudentIds ?? []], assessment, courseId, collectionId, map,
                 "Demonstration assessment seeded by --seed-demo (GAD-T103).", ct);
             log.LogWarning("Demo assessment ready: {Title}.", assessment.Title);
         }
@@ -263,7 +285,7 @@ public static class DemoSeeder
         {
             OrganizationId = org, CollectionId = collectionId, CourseId = courseId, Subject = a.Subject, Topic = a.Topic,
             AssessmentMode = AssessmentMode.Examination, Title = a.Title, Instructions = a.Instructions,
-            PolicyJson = JsonSerializer.Serialize(policy, Camel), Mode = ExamMode.Text,
+            PolicyJson = JsonSerializer.Serialize(policy, Camel), Mode = a.Mode,
             PromptSetId = ExamPrompts.SetId, PromptSetVersion = ExamPrompts.Version,
             Status = ExamStatus.Published, CreatedByUserId = teacherId, CreatedAt = now, PublishedAt = now,
         };
@@ -390,4 +412,4 @@ public static class DemoSeeder
 public sealed record DemoObjective(string Key, string Title, string Description, string ConceptTitle, decimal MaxScore);
 
 public sealed record DemoAssessment(string Title, string Course, string Subject, string Topic, string Collection, string MaterialFile,
-    string Instructions, IReadOnlyList<DemoObjective> Objectives);
+    string Instructions, IReadOnlyList<DemoObjective> Objectives, ExamMode Mode = ExamMode.Text);
