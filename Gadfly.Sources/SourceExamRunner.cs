@@ -197,7 +197,7 @@ public sealed class SourceExamEngine
         var prompt = ExamPrompts.Fill(ExamPrompts.Set[ExamPrompts.AporiaKey], new Dictionary<string, string?>
         {
             ["question"] = turn.Question,
-            ["answer"] = text,
+            ["answer"] = ExamPrompts.Student(text),
         });
         var d = await _panel.DecideAsync(prompt, ["APORIA", "ANSWER"], "", ct);
         return string.Equals(d.Choice, "APORIA", StringComparison.OrdinalIgnoreCase);

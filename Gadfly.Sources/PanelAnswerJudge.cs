@@ -46,10 +46,10 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
             ["move"] = turn.Move.ToString(),
             ["concept"] = $"{input.Concept.Title}: {input.Concept.Definition}",
             ["rubric"] = input.Rubric.Describe(),
-            ["claims"] = string.IsNullOrWhiteSpace(input.EarlierClaims) ? "(none yet)" : input.EarlierClaims,
+            ["claims"] = string.IsNullOrWhiteSpace(input.EarlierClaims) ? "(none yet)" : ExamPrompts.Student(input.EarlierClaims),
             ["passages"] = PanelJson.Number(input.Passages),
             ["question"] = turn.Question,
-            ["answer"] = turn.Answer.Text,
+            ["answer"] = ExamPrompts.Student(turn.Answer.Text),
         });
         var replies = await panel.FanOutAsync(PanelJson.JsonOnlySystem, prompt, maxTokens: 1500, temperature: 0.1, ct: ct);
 
@@ -114,15 +114,20 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
         }).Where(c => c is not null).Select(c => c!).ToList();
 
         var representative = votes.Zip(overalls).OrderBy(x => Math.Abs(x.Second - mean)).First().First;
+        // An answer written at the grader (asking for marks, "ignore the rubric") never stands on the panel's
+        // word alone, however the judges scored it (GAD-T77).
+        var addressesGrader = ExamPrompts.AddressesGrader(turn.Answer.Text);
         return new AnswerJudgment
         {
             Criteria = criteria,
             OverallScore = Math.Round(mean, 3),
             Votes = votes.Zip(overalls).Select(x => new JudgeVote(x.First.Provider, x.First.Model, Math.Round(x.Second, 3), x.First.Verdict)).ToList(),
             Agreement = Math.Round(agreement, 3),
-            NeedsHumanReview = agreement < ReviewBelowAgreement,
+            NeedsHumanReview = agreement < ReviewBelowAgreement || addressesGrader,
             RubricVersion = rubricVersion,
-            Summary = representative.Verdict,
+            Summary = addressesGrader
+                ? "This answer contains text addressed to the examiner or judges; check it by hand. " + representative.Verdict
+                : representative.Verdict,
         };
     }
 

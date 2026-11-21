@@ -107,9 +107,9 @@ public sealed class ClaimAnalyzer(ISocraticVotingClient panel, PromptSet prompts
                 var question = ExamPrompts.Fill(prompts[ExamPrompts.ContradictionKey], new Dictionary<string, string?>
                 {
                     ["first_turn"] = (prior.TurnIndex + 1).ToString(),
-                    ["first_claim"] = prior.Text,
+                    ["first_claim"] = ExamPrompts.Student(prior.Text),
                     ["second_turn"] = (claim.TurnIndex + 1).ToString(),
-                    ["second_claim"] = claim.Text,
+                    ["second_claim"] = ExamPrompts.Student(claim.Text),
                 });
                 var d = await panel.DecideAsync(question, [Contradict, Consistent], "", ct);
                 if (string.Equals(d.Choice, Contradict, StringComparison.OrdinalIgnoreCase))
@@ -129,7 +129,7 @@ public sealed class ClaimAnalyzer(ISocraticVotingClient panel, PromptSet prompts
         {
             ["concept"] = conceptTitle,
             ["question"] = turn.Question,
-            ["answer"] = turn.Answer!.Text,
+            ["answer"] = ExamPrompts.Student(turn.Answer!.Text),
         });
         var result = await panel.AskAsync(question, "", MindAttic.Legion.Quorum.Plurality, ct);
 

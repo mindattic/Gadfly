@@ -39,7 +39,7 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
     {
         var dialogue = Dialogue(r.Session);
         var targets = string.Join("\n", r.Decision.TargetClaimIds.Select(id => r.Ledger.Find(id))
-            .Where(c => c is not null).Select(c => $"- (turn {c!.TurnIndex + 1}) \"{c.Quote}\""));
+            .Where(c => c is not null).Select(c => $"- (turn {c!.TurnIndex + 1}) {ExamPrompts.Student(c.Quote)}"));
         var prompt = ExamPrompts.Fill(_prompts[ExamPrompts.QuestionKey], new Dictionary<string, string?>
         {
             ["move"] = r.Decision.Move.ToString(),
@@ -113,7 +113,7 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
     private string Dialogue(SocraticSession s) =>
         string.Join("\n", s.Turns.TakeLast(DialogueTurns).SelectMany(t => t.Answer is null
             ? new[] { $"Examiner: {t.Question}" }
-            : new[] { $"Examiner: {t.Question}", $"Student: {t.Answer.Text}" }));
+            : new[] { $"Examiner: {t.Question}", $"Student: {ExamPrompts.Student(t.Answer.Text)}" }));
 
     /// <summary>Strips quotes, labels and extra lines a model may wrap the question in.</summary>
     internal static string Clean(string? raw)

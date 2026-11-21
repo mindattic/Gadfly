@@ -29,8 +29,8 @@ public sealed class TextStyleAssessor(ISocraticVotingClient panel, PromptSet? pr
 
         var prompt = ExamPrompts.Fill(_prompts[ExamPrompts.TextStyleKey], new Dictionary<string, string?>
         {
-            ["other_answers"] = string.Join("\n", others.Select(o => "- " + o)),
-            ["answer"] = text,
+            ["other_answers"] = string.Join("\n", others.Select(o => "- " + ExamPrompts.Student(o))),
+            ["answer"] = ExamPrompts.Student(text),
         });
         var replies = await panel.FanOutAsync(PanelJson.JsonOnlySystem, prompt, maxTokens: 300, temperature: 0.1, ct: ct);
         var estimates = new List<(double Score, string Reason)>();
