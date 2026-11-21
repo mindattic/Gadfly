@@ -188,3 +188,57 @@ public class GradingWorkflowScenarioTests : ServerTest
         Assert.That((await Denials(w.SessionId)).Count, Is.GreaterThanOrEqualTo(3));
     }
 }
+
+/// <summary>Blind human grading (Part 8.3): the AI's scores stay hidden from the examiner until their own scores are in.</summary>
+[TestFixture]
+public class BlindGradingRuleTests
+{
+    private static PolicySnapshot Policy(bool blind) => new() { Rules = new GradingPolicyRules { BlindHumanGrading = blind } };
+
+    [TestCase(null)]
+    [TestCase(GradeStatus.ExaminationInProgress)]
+    [TestCase(GradeStatus.ExaminationCompleted)]
+    [TestCase(GradeStatus.TranscriptVerificationPending)]
+    [TestCase(GradeStatus.AiGradingPending)]
+    [TestCase(GradeStatus.HumanReviewPending)]
+    public void BlindPolicy_HidesTheAiUntilTheHumanHasScored(GradeStatus? status) =>
+        Assert.That(GradingService.AiVisible(Policy(blind: true), status), Is.False);
+
+    [TestCase(GradeStatus.ReconciliationRequired)]
+    [TestCase(GradeStatus.AwaitingFinalApproval)]
+    [TestCase(GradeStatus.Finalized)]
+    [TestCase(GradeStatus.Published)]
+    [TestCase(GradeStatus.UnderAppeal)]
+    [TestCase(GradeStatus.Amended)]
+    public void BlindPolicy_ShowsTheAiForComparisonAfterwards(GradeStatus status) =>
+        Assert.That(GradingService.AiVisible(Policy(blind: true), status), Is.True);
+
+    [Test]
+    public void NonBlindPolicy_AlwaysShowsTheAi()
+    {
+        foreach (var s in Enum.GetValues<GradeStatus>())
+            Assert.That(GradingService.AiVisible(Policy(blind: false), s), Is.True, s.ToString());
+    }
+
+    [Test]
+    public void TheCurrentHumanGrade_IsTheNewestNotSuperseded()
+    {
+        var objective = Guid.NewGuid();
+        var first = new HumanObjectiveGrade { ObjectiveId = objective, Score = 60, SubmittedAt = DateTimeOffset.UtcNow.AddMinutes(-5) };
+        var second = new HumanObjectiveGrade { ObjectiveId = objective, Score = 70, SupersedesId = first.Id, SubmittedAt = DateTimeOffset.UtcNow };
+        var other = new HumanObjectiveGrade { ObjectiveId = Guid.NewGuid(), Score = 10, SubmittedAt = DateTimeOffset.UtcNow };
+        Assert.That(GradingService.CurrentHuman([first, second, other], objective), Is.SameAs(second));
+        Assert.That(GradingService.CurrentHuman([other], objective), Is.Null);
+    }
+
+    [Test]
+    public void InsufficientAiEvidence_IsLeftOut_NotScoredZero()
+    {
+        var o = new LearningObjective { Key = "k", MaxScore = 100, Weight = 1 };
+        var ai = new AiObjectiveGrade { Level = MasteryLevel.InsufficientEvidence, Score = 0, MaxScore = 100 };
+        var human = new HumanObjectiveGrade { Score = 70, MaxScore = 100 };
+        var (result, excluded) = GradingService.TryCompute(new PolicySnapshot(), [(o, ai, human, null)]);
+        Assert.That(excluded, Does.Contain("k"));
+        Assert.That(result!.FinalPercent, Is.EqualTo(70m), "the human's score stands alone");
+    }
+}
