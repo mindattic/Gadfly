@@ -199,7 +199,8 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         }).ToList();
         var (combined, excluded) = TryCompute(policy, states.Select(s => (s.Objective, s.Ai, s.Human, s.Recs.LastOrDefault())).ToList());
         var objectiveViews = states.Select(s => new ObjectiveView(s.Objective, s.Ai is null ? null : AiGradeView.From(s.Ai), s.Human,
-            humans.Where(h => h.ObjectiveId == s.Objective.Id).ToList(), evidence[s.Objective.Id].ToList(),
+            humans.Where(h => h.ObjectiveId == s.Objective.Id).ToList(),
+            aiVisible ? evidence[s.Objective.Id].ToList() : [],   // D25 (GAD-T218): the exam-time judge's stance and notes stay hidden while blind
             combined?.Objectives.FirstOrDefault(r => r.ObjectiveKey == s.Objective.Key), excluded.Contains(s.Objective.Key), s.Disagreement, s.Recs)).ToList();
 
         var approvals = await db.ApprovalRecords.AsNoTracking().Where(a => a.SessionId == sessionId && a.OrganizationId == org).OrderBy(a => a.At).ToListAsync(ct);

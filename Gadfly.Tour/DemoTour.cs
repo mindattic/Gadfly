@@ -562,6 +562,31 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
         }
         if (Mock) Expect.True(!view.GetRawText().Contains("[MOCK]", StringComparison.Ordinal), "an AI explanation ([MOCK]) leaked into the blind status");
 
+        // D25 (GAD-T218): the exam-time judge's per-answer stance, dimension and notes, and the per-turn judgments, stay hidden too.
+        var judgeNotes = (await _db.RowsAsync("SELECT e.Note FROM gadfly.AssessmentEvidence e WHERE e.SessionId = @s AND LEN(e.Note) > 3", ("@s", _sessionId)))
+            .Select(r => (string)r["Note"]!).ToList();
+        Expect.True(judgeNotes.Count > 0, "no exam-time evidence notes were recorded, so the blind check below would prove nothing");
+        var judgeSummaries = (await _db.RowsAsync("""
+            SELECT j.Summary FROM gadfly.Judgments j JOIN gadfly.SessionTurns t ON t.Id = j.TurnId WHERE t.SessionId = @s AND LEN(j.Summary) > 3
+            """, ("@s", _sessionId))).Select(r => (string)r["Summary"]!).ToList();
+        Expect.True(judgeSummaries.Count > 0, "no per-turn judgment summaries were recorded, so the blind check below would prove nothing");
+        var (gs, gradingPage, _) = await _users["demo.examiner"].GetAsync($"/grading/{_sessionId:D}");
+        Expect.True(gs == HttpStatusCode.OK, $"the examiner's grading page answered {(int)gs}");
+        Expect.True(!gradingPage.Contains("Recorded evidence", StringComparison.Ordinal), "the blind examiner's grading page shows the judge's \"Recorded evidence\" stance line");
+        foreach (var note in judgeNotes) Expect.True(!gradingPage.Contains(System.Net.WebUtility.HtmlEncode(note), StringComparison.Ordinal), "a judge note leaked into the blind examiner's grading page");
+        foreach (var who in new[] { "demo.examiner", "demo.teacher" })
+        {
+            var (_, reviewPage, _) = await _users[who].GetAsync($"/review/{_sessionId:D}");
+            var (_, csv, _) = await _users[who].GetAsync($"/review/{_sessionId:D}/turns.csv");
+            var (_, md, _) = await _users[who].GetAsync($"/review/{_sessionId:D}/report.md");
+            foreach (var summary in judgeSummaries)
+            {
+                Expect.True(!csv.Contains(summary, StringComparison.Ordinal) && !md.Contains(summary, StringComparison.Ordinal)
+                            && !reviewPage.Contains(System.Net.WebUtility.HtmlEncode(summary), StringComparison.Ordinal),
+                    $"a per-turn judge summary leaked to {who} while grading is blind");
+            }
+        }
+
         // The tour (not the examiner) reads the AI grades from the database to plan the grades.
         var ai = (await _db.RowsAsync("""
             SELECT g.ObjectiveId, g.Level, g.Score FROM gadfly.AiObjectiveGrades g
@@ -859,6 +884,9 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
         Expect.True(s1 == HttpStatusCode.OK && list.Contains("demo.student", StringComparison.Ordinal), "the review list doesn't show demo.student's session");
         var (s2, page, _) = await teacher.GetAsync($"/review/{_sessionId:D}");
         Expect.True(s2 == HttpStatusCode.OK && page.Contains(MathExam, StringComparison.Ordinal), $"the session review page answered {(int)s2}");
+        // Control for the blind check (D25): once the human grades are submitted the judge's evidence shows again.
+        var (_, afterBlind, _) = await teacher.GetAsync($"/grading/{_sessionId:D}");
+        Expect.True(afterBlind.Contains("Recorded evidence", StringComparison.Ordinal), "after blind grading the grading page no longer shows the recorded evidence");
         return "review list and session page render for the teacher";
     }
 

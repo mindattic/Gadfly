@@ -30,6 +30,7 @@ else
         <div><span class="hint">Ended</span> @(s.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "—")</div>
         <div><span class="hint">AI recommendation</span>
             @if (view.Report is { } rep) { <span class="tag rec-@rep.Recommendation">@rep.Recommendation</span> @Pct(rep.OverallScore) }
+            else if (view.Blinded) { <span>hidden until the human evaluation is submitted (blind grading)</span> }
             else { <span>none yet</span> }
         </div>
         <div><span class="hint">Grading</span> <a href="grading/@s.Id">open the grading workspace</a></div>
@@ -270,7 +271,7 @@ else
     private SessionReviewView? view;
     private bool loading = true;
 
-    private ReviewService Service => new(Db, Tenant.OrganizationId!.Value);
+    private ReviewService Service => new(Db, Tenant.OrganizationId!.Value, viewerRole: Tenant.Role);
 
     protected override async Task OnParametersSetAsync()
     {

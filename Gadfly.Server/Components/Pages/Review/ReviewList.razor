@@ -105,7 +105,7 @@ else
     /// newest filter's answer is shown: two quick filter changes used to overlap on that context and end the circuit (GAD-T208).
     /// </summary>
     private Task<T> InScopeAsync<T>(Func<ReviewService, Task<T>> work) =>
-        Gadfly.Server.Components.Pages.Admin.AdminDb.RunAsync(Scopes, Tenant, (_, db) => work(new ReviewService(db, Tenant.OrganizationId!.Value)));
+        Gadfly.Server.Components.Pages.Admin.AdminDb.RunAsync(Scopes, Tenant, (_, db) => work(new ReviewService(db, Tenant.OrganizationId!.Value, viewerRole: Tenant.Role)));
 
     private int loadSequence;
 

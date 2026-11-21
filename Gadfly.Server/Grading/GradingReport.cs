@@ -49,7 +49,7 @@ public sealed record AssessmentReport
         var objectives = w.Objectives.Select(o =>
         {
             var showAi = w.AiVisible && o.Ai is not null;
-            var evidenceIds = (showAi ? o.Ai!.EvidenceRefs : []).Concat(o.Evidence.Select(e => e.ResponseId)).Distinct()
+            var evidenceIds = (showAi ? o.Ai!.EvidenceRefs : []).Concat((w.AiVisible ? o.Evidence : []).Select(e => e.ResponseId)).Distinct()
                 .Where(byId.ContainsKey).Select(id => byId[id]).Where(r => !r.NeedsHuman)
                 .OrderBy(r => r.Response.Sequence).Take(6)
                 .Select(r => new ReportEvidence(r.Response.Sequence, r.Question, r.Response.VerifiedText, r.TextChanged)).ToList();

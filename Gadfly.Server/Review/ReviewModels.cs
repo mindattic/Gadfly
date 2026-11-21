@@ -114,6 +114,8 @@ public sealed record SessionReviewView(
     Data.SessionReport? Report,
     IReadOnlyList<(GradeDecision Decision, string DecidedBy)> Grades)
 {
+    /// <summary>True when blind grading hid the AI report and the exam-time judge's per-answer data from this viewer (D25).</summary>
+    public bool Blinded { get; init; }
     public GradeDecision? LatestGrade => Grades.Count == 0 ? null : Grades[0].Decision;
     public int JudgesDisagreed => Turns.Count(t => t.Judgment?.NeedsHumanReview == true);
 }

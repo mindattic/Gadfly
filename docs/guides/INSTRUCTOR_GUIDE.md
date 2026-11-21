@@ -257,6 +257,17 @@ exam's **Assignments** table also has **Release results** per student, with the 
 AI's recommendation in plain words ("Understanding shown", "Partly shown", "Not yet shown"), on
 **My exams**.
 
+### Grading as the blind examiner
+
+When the exam's grading policy is blind (the default), the examiner grades before seeing anything the AI
+concluded. Until you submit your own grades for a session, Gadfly hides the AI evaluation **and** the
+exam-time judge's per-answer evidence: the stance (supports, contradicts, misconception, uncertain), its
+dimension and its notes (the "Recorded evidence" line on the grading page), plus, on the session review page,
+the per-answer judging scores, summaries, votes, contradictions, mastery estimates and the AI report, in the
+page, the CSV and Markdown exports and the status endpoint. You still see the student's original and verified
+answers, clarifications, corrections and the full transcript, which is the evidence you grade. Once you submit,
+everything shows as before. Owners and Admins, who do not enter scores, keep the full review view.
+
 ## 9. Export
 
 From a session's summary:

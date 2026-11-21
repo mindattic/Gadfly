@@ -343,7 +343,7 @@ else
                     </ul>
                 }
             </details>
-            @if (o.Evidence.Count > 0)
+            @if (w.AiVisible && o.Evidence.Count > 0)
             {
                 <p class="hint">Recorded evidence: @string.Join("; ", o.Evidence.Select(e => $"#{Seq(e.ResponseId)} {e.Stance}{(e.Contaminated ? " (contaminated)" : "")}{(e.Assisted ? " (assisted)" : "")}{(string.IsNullOrWhiteSpace(e.Note) ? "" : ": " + e.Note)}"))</p>
             }

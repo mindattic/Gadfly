@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Gadfly.Engine;
 using Gadfly.Server.Data;
+using Gadfly.Server.Grading;
 using Gadfly.Server.Integrity;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,8 +14,10 @@ namespace Gadfly.Server.Review;
 /// Instructor review and grading (GAD-T54, decision D13: the AI recommends, the instructor finalizes).
 /// Reads what <see cref="Sessions.SessionOrchestrator"/> persisted for each session and records grade
 /// decisions. Every query names the organization explicitly on top of GadflyDbContext's tenant filter.
+/// <paramref name="viewerRole"/> is the caller's role: while a session's grading is blind, a viewer who can enter human
+/// scores gets no AI or exam-time judge data (<see cref="BlindGrading"/>, decision D25); null means no redaction.
 /// </summary>
-public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeProvider? clock = null)
+public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeProvider? clock = null, string? viewerRole = null)
 {
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
@@ -58,13 +61,14 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         var grades = (await db.GradeDecisions.AsNoTracking().Where(g => g.OrganizationId == organizationId && ids.Contains(g.SessionId)).ToListAsync(ct))
             .GroupBy(g => g.SessionId).ToDictionary(g => g.Key, g => g.OrderByDescending(d => d.DecidedAt).First());
 
+        var blind = await BlindAsync(ids, ct);
         var rows = sessions.Select(s => new ReviewListRow(
                 s.Id, s.ExamId, exams.GetValueOrDefault(s.ExamId) ?? "(deleted exam)",
                 s.StudentUserId, names.GetValueOrDefault(s.StudentUserId) ?? "(unknown student)",
                 s.Attempt, s.State, s.EndedAt,
-                reports.TryGetValue(s.Id, out var r) ? r.Recommendation : null,
-                reports.TryGetValue(s.Id, out var r2) ? r2.OverallScore : null,
-                disagreed.GetValueOrDefault(s.Id), flagCounts.GetValueOrDefault(s.Id),
+                !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r) ? r.Recommendation : null,
+                !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r2) ? r2.OverallScore : null,
+                blind.Contains(s.Id) ? 0 : disagreed.GetValueOrDefault(s.Id), flagCounts.GetValueOrDefault(s.Id),
                 grades.GetValueOrDefault(s.Id)))
             .Where(r => !filter.NeedsGradeOnly || r.NeedsGrade)
             .Where(r => !filter.NeedsHumanReviewOnly || r.JudgesDisagreed > 0)
@@ -86,13 +90,14 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                 .ToDictionaryAsync(c => c.Key, c => c.Title, ct);
         string Title(string key) => titles.TryGetValue(key, out var t) && !string.IsNullOrWhiteSpace(t) ? t : key;
 
+        var blinded = (await BlindAsync([sessionId], ct)).Contains(sessionId);
         var turns = await db.SessionTurns.AsNoTracking().Where(t => t.SessionId == sessionId && t.OrganizationId == organizationId)
             .OrderBy(t => t.Index).ToListAsync(ct);
         var turnIds = turns.Select(t => t.Id).ToList();
-        var judgments = (await db.Judgments.AsNoTracking().Include(j => j.Votes)
+        var judgments = (blinded ? [] : await db.Judgments.AsNoTracking().Include(j => j.Votes)
                 .Where(j => j.OrganizationId == organizationId && turnIds.Contains(j.TurnId)).ToListAsync(ct))
             .GroupBy(j => j.TurnId).ToDictionary(g => g.Key, g => g.OrderByDescending(j => j.CreatedAt).First());
-        var claims = await db.SessionClaims.AsNoTracking().Where(c => c.SessionId == sessionId && c.OrganizationId == organizationId).ToListAsync(ct);
+        var claims = blinded ? [] : await db.SessionClaims.AsNoTracking().Where(c => c.SessionId == sessionId && c.OrganizationId == organizationId).ToListAsync(ct);
         var claimsById = claims.ToDictionary(c => c.Id);
 
         // Every criterion's citations, resolved to the passage text in one query.
@@ -118,8 +123,8 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
             }
             var contradictions = claims.Where(c => c.TurnId == t.Id && c.ContradictsClaimId is { } other && claimsById.ContainsKey(other))
                 .Select(c => new ContradictionView(c.Quote, claimsById[c.ContradictsClaimId!.Value].Quote)).ToList();
-            return new TurnView(t.Id, t.Index, t.ConceptKey, Title(t.ConceptKey), t.Move, t.Question, t.PlannerReason, t.AskedAt,
-                t.AnswerText, t.AnswerMode, t.AnswerStartedAt, t.AnswerCompletedAt, !string.IsNullOrEmpty(t.AudioRef), t.MasteryAfter,
+            return new TurnView(t.Id, t.Index, t.ConceptKey, Title(t.ConceptKey), t.Move, t.Question, blinded ? null : t.PlannerReason, t.AskedAt,
+                t.AnswerText, t.AnswerMode, t.AnswerStartedAt, t.AnswerCompletedAt, !string.IsNullOrEmpty(t.AudioRef), blinded ? null : t.MasteryAfter,
                 ParseMetrics(t.SpeechMetricsJson), jv, contradictions);
         }).ToList();
 
@@ -133,12 +138,12 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                     SessionOver: session.State is SessionState.Ended or SessionState.Failed);
             }).ToList();
 
-        var mastery = (await db.ConceptMastery.AsNoTracking().Where(m => m.SessionId == sessionId && m.OrganizationId == organizationId).ToListAsync(ct))
+        var mastery = (blinded ? [] : await db.ConceptMastery.AsNoTracking().Where(m => m.SessionId == sessionId && m.OrganizationId == organizationId).ToListAsync(ct))
             .Select(m => new MasteryView(m.ConceptKey, Title(m.ConceptKey), m.Estimate, m.TurnsOnConcept, m.Status))
             .OrderBy(m => turnViews.FindIndex(t => t.ConceptKey == m.ConceptKey) is var i && i >= 0 ? i : int.MaxValue)
             .ThenBy(m => m.ConceptTitle).ToList();
 
-        var report = await db.SessionReports.AsNoTracking().Where(r => r.SessionId == sessionId && r.OrganizationId == organizationId)
+        var report = blinded ? null : await db.SessionReports.AsNoTracking().Where(r => r.SessionId == sessionId && r.OrganizationId == organizationId)
             .OrderByDescending(r => r.CreatedAt).FirstOrDefaultAsync(ct);
 
         var grades = await db.GradeDecisions.AsNoTracking().Where(g => g.SessionId == sessionId && g.OrganizationId == organizationId)
@@ -148,8 +153,12 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         return new SessionReviewView(session, exam?.Title ?? "(deleted exam)", exam?.CollectionId ?? Guid.Empty,
             names.GetValueOrDefault(session.StudentUserId) ?? "(unknown student)", assignment,
             turnViews, integrity, BuildTimeline(turnViews, integrity), mastery, report,
-            grades.Select(g => (g, names.GetValueOrDefault(g.DecidedByUserId) ?? "(unknown)")).ToList());
+            grades.Select(g => (g, names.GetValueOrDefault(g.DecidedByUserId) ?? "(unknown)")).ToList()) { Blinded = blinded };
     }
+
+    /// <summary>The sessions among <paramref name="ids"/> whose AI and exam-time judgments are hidden from this viewer (D25).</summary>
+    private async Task<HashSet<Guid>> BlindAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+        BlindGrading.AppliesToRole(viewerRole) ? await BlindGrading.BlindSessionsAsync(db, organizationId, ids, _clock.GetUtcNow(), ct) : [];
 
     /// <summary>
     /// Records a grade decision. Earlier decisions are kept (history); the latest one is the grade.
@@ -241,6 +250,7 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         var sb = new StringBuilder();
         sb.AppendLine($"<!-- Gadfly session {v.Session.Id}: {v.StudentName}, {v.ExamTitle}, attempt {v.Session.Attempt} -->");
         if (v.Report is { Markdown.Length: > 0 } r) sb.AppendLine(r.Markdown.TrimEnd());
+        else if (v.Blinded) sb.AppendLine("# Socratic session report").AppendLine().AppendLine("The AI report is hidden until the human evaluation is submitted (blind grading).");
         else sb.AppendLine("# Socratic session report").AppendLine().AppendLine("No AI report yet: the session hasn't ended.");
         if (v.LatestGrade is { } g)
         {
@@ -248,7 +258,7 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
             sb.AppendLine().AppendLine("## Instructor decision").AppendLine();
             sb.AppendLine($"- Grade: **{g.Grade}**" + (g.Score is { } s ? $" ({s.ToString("0.##", ci)}%)" : ""));
             sb.AppendLine($"- Decided by {v.Grades[0].DecidedBy} on {g.DecidedAt.UtcDateTime.ToString("u", ci)}");
-            sb.AppendLine(g.OverridesRecommendation ? "- Overrides the AI recommendation" : "- Agrees with the AI recommendation");
+            if (!v.Blinded) sb.AppendLine(g.OverridesRecommendation ? "- Overrides the AI recommendation" : "- Agrees with the AI recommendation");
             if (!string.IsNullOrWhiteSpace(g.Comment)) sb.AppendLine().AppendLine(g.Comment);
         }
         return sb.ToString();
