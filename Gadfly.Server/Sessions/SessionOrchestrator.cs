@@ -45,10 +45,13 @@ public sealed class SessionOrchestrator(
     ILogger<SessionOrchestrator> log,
     Platform.UsageMeter meter)
 {
-    private sealed class Live(SourceExamEngine engine, Guid organizationId)
+    private sealed class Live(SourceExamEngine engine, Guid organizationId, Guid studentUserId)
     {
         public SourceExamEngine Engine { get; set; } = engine;
         public Guid OrganizationId { get; } = organizationId;
+        /// <summary>The session's owner: a cached engine is only handed to them (GAD-T74).</summary>
+        public Guid StudentUserId { get; } = studentUserId;
+        public bool IsFor(Guid org, Guid student) => OrganizationId == org && StudentUserId == student;
         public SemaphoreSlim Gate { get; } = new(1, 1);
     }
 
@@ -217,12 +220,12 @@ public sealed class SessionOrchestrator(
 
     private async Task<Live> GetLiveAsync(Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct)
     {
-        if (_live.TryGetValue(sessionId, out var cached) && cached.OrganizationId == organizationId) return cached;
+        if (_live.TryGetValue(sessionId, out var cached) && cached.IsFor(organizationId, studentUserId)) return cached;
         var gate = _loadGates.GetOrAdd(sessionId, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try
         {
-            if (_live.TryGetValue(sessionId, out cached) && cached.OrganizationId == organizationId) return cached;
+            if (_live.TryGetValue(sessionId, out cached) && cached.IsFor(organizationId, studentUserId)) return cached;
             using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(organizationId));
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             var row = await Owned(db, organizationId, sessionId, studentUserId, ct);
@@ -261,7 +264,7 @@ public sealed class SessionOrchestrator(
             }
             // The answer-text signal is an integrity signal: off when the exam's integrity level is Off.
             engine.AssessTextStyle = exam.IntegrityLevel != IntegrityLevel.Off;
-            var live = new Live(engine, organizationId);
+            var live = new Live(engine, organizationId, row.StudentUserId);
             _live[sessionId] = live;
             return live;
         }

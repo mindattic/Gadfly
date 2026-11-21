@@ -47,7 +47,7 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
             if (string.IsNullOrWhiteSpace(consentTextSha256) || consentTextSha256.Length != 64)
                 throw new SessionRefusedException("Consent is required before the exam starts.");
             await orchestrator.RecordConsentAsync(org, id, user, consentTextSha256, Context.ConnectionAborted);
-            await Groups.AddToGroupAsync(Context.ConnectionId, Group(id));
+            await JoinAsync(id);
             return id;
         }
         catch (SessionRefusedException ex)
@@ -61,7 +61,7 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
     {
         var (org, user) = Caller();
         var step = await Guard(() => orchestrator.CurrentAsync(org, sessionId, user, Context.ConnectionAborted));
-        await Groups.AddToGroupAsync(Context.ConnectionId, Group(sessionId));
+        await JoinAsync(sessionId);
         return step;
     }
 
@@ -71,7 +71,10 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
         var (org, user) = Caller();
         if (answer is null || answer.Text is null) throw new HubException("An answer needs text (\"aporia\" if you don't know).");
         if (answer.Text.Length > 20_000) throw new HubException("That answer is too long.");
-        await Clients.Group(Group(sessionId)).SendAsync("Thinking", sessionId);
+        if (answer.Words is { Count: > MaxWords } || answer.SpeechMetrics is { Count: > MaxSpeechMetrics })
+            throw new HubException("That answer carries too much timing data.");
+        // Only a connection that already proved ownership (Start/Current) may signal the session's channel (GAD-T74).
+        if (Joined().Contains(sessionId)) await Clients.Group(Group(sessionId)).SendAsync("Thinking", sessionId);
         var step = await Guard(() => orchestrator.AnswerAsync(org, sessionId, user, new Answer
         {
             Text = answer.Text.Trim(),
@@ -102,7 +105,20 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
         return await recorder.RecordAsync(org, user, sessionId, events.Take(50).ToList(), Context.ConnectionAborted);
     }
 
+    private const int MaxWords = 10_000;
+    private const int MaxSpeechMetrics = 64;
+
     private static string Group(Guid sessionId) => "session:" + sessionId.ToString("N");
+
+    /// <summary>Sessions this connection joined after the orchestrator confirmed the caller owns them.</summary>
+    private HashSet<Guid> Joined() =>
+        (HashSet<Guid>)(Context.Items.TryGetValue("gadfly:sessions", out var v) && v is HashSet<Guid> s ? s : Context.Items["gadfly:sessions"] = new HashSet<Guid>());
+
+    private async Task JoinAsync(Guid sessionId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, Group(sessionId));
+        lock (Joined()) Joined().Add(sessionId);
+    }
 
     private static async Task<SessionStep> Guard(Func<Task<SessionStep>> step)
     {
