@@ -156,6 +156,7 @@ app.UseAntiforgery();
 
 GadflyEndpoints.Map(app);
 app.MapGrading();
+app.MapGradingActions();   // HTTP grading workflow for integrators and the demo tour (GAD-T105)
 
 app.Run();
 
