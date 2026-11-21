@@ -44,7 +44,7 @@ public sealed record StudentOption(Guid UserId, string UserName, string? Email);
 
 public sealed record AssignmentRow(Guid Id, Guid StudentUserId, string StudentName, DateTimeOffset? OpensAt, DateTimeOffset? ClosesAt,
     int AttemptsAllowed, int AttemptsUsed, SessionState? LatestState, DateTimeOffset? LatestEndedAt, DateTimeOffset AssignedAt,
-    DateTimeOffset? ResultsReleasedAt, string? ReleaseBlocker = null)
+    DateTimeOffset? ResultsReleasedAt, string? ReleaseBlocker = null, decimal TimeMultiplier = 1m)
 {
     /// <summary>True when results can be released now (<see cref="Review.ResultRelease"/>).</summary>
     public bool CanRelease => ReleaseBlocker is null;
@@ -249,10 +249,11 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
 
     /// <summary>
     /// Assigns a published exam to the given students (or every student when <paramref name="studentUserIds"/>
-    /// is null). Students who already have an assignment for this exam are skipped.
+    /// is null). Students who already have an assignment for this exam are skipped. <paramref name="timeMultiplier"/>
+    /// is the extra-time accommodation (1 = none; <see cref="TimeMultipliers"/>), applied when an attempt starts.
     /// </summary>
     public async Task<ExamResult> AssignAsync(Guid examId, IReadOnlyCollection<Guid>? studentUserIds, DateTimeOffset? opensAt,
-        DateTimeOffset? closesAt, int attemptsAllowed, CancellationToken ct = default)
+        DateTimeOffset? closesAt, int attemptsAllowed, decimal timeMultiplier = 1m, CancellationToken ct = default)
     {
         if (await DeniedAsync(Permission.AssignExaminations, "Assigning an exam", "Exam", examId, ct) is { } denied) return denied;
         var org = Org;
@@ -260,6 +261,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
         if (exam is null) return new(false, "That exam no longer exists.");
         if (exam.Status != ExamStatus.Published) return new(false, "Publish the exam before assigning it.");
         if (attemptsAllowed is < 1 or > 20) return new(false, "Attempts allowed must be 1 to 20.");
+        if (timeMultiplier is < 1m or > 4m) return new(false, "Extra time must be between none (1x) and 4x.");
         if (opensAt is { } o && closesAt is { } c && c <= o) return new(false, "The window must close after it opens.");
 
         var students = (await StudentsAsync(ct)).Select(s => s.UserId).ToHashSet();
@@ -281,6 +283,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
                 OpensAt = opensAt,
                 ClosesAt = closesAt,
                 AttemptsAllowed = attemptsAllowed,
+                TimeMultiplier = timeMultiplier,
                 AssignedByUserId = User,
                 AssignedAt = now,
             });
@@ -289,7 +292,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
         if (added > 0)
         {
             Guard.Audit("assessment.assigned", "Exam", examId.ToString(),
-                after: new { Students = wanted.Where(s => !already.Contains(s)).ToList(), opensAt, closesAt, attemptsAllowed });
+                after: new { Students = wanted.Where(s => !already.Contains(s)).ToList(), opensAt, closesAt, attemptsAllowed, timeMultiplier });
             await db.SaveChangesAsync(ct);
         }
         db.ChangeTracker.Clear();
@@ -298,6 +301,9 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
         if (skipped > 0) msg += $" Skipped {skipped} already assigned.";
         return new(true, msg, examId);
     }
+
+    /// <summary>The extra-time accommodations offered when assigning (Part 13 accessibility): none, 1.25x, 1.5x, 2x.</summary>
+    public static readonly IReadOnlyList<decimal> TimeMultipliers = [1m, 1.25m, 1.5m, 2m];
 
     /// <summary>Every assignment of an exam with the student's latest attempt.</summary>
     public async Task<IReadOnlyList<AssignmentRow>> AssignmentsAsync(Guid examId, CancellationToken ct = default)
@@ -321,7 +327,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
                 var latest = list.FirstOrDefault();
                 return new AssignmentRow(a.Id, a.StudentUserId, names.GetValueOrDefault(a.StudentUserId, "(unknown user)"), a.OpensAt, a.ClosesAt,
                     a.AttemptsAllowed, list.Count, latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt,
-                    Review.ResultRelease.Blocker(latestEnded.GetValueOrDefault(a.Id), latestEnded.GetValueOrDefault(a.Id) is { } e && graded.Contains(e)));
+                    Review.ResultRelease.Blocker(latestEnded.GetValueOrDefault(a.Id), latestEnded.GetValueOrDefault(a.Id) is { } e && graded.Contains(e)), a.TimeMultiplier);
             })
             .OrderBy(r => r.StudentName, StringComparer.OrdinalIgnoreCase).ToList();
     }

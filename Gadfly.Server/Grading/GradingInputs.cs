@@ -23,6 +23,27 @@ internal static class GradingInputs
     /// </summary>
     public static async Task<List<StudentResponse>> EnsureResponsesAsync(GadflyDbContext db, ExamSession session, DateTimeOffset now, CancellationToken ct)
     {
+        // Answer-time capture (ResponseLedger) may write a response for this session at the same moment: the
+        // (SessionId, Sequence) unique index then rejects one of the two inserts. Ours is the one to yield:
+        // drop what we staged, re-read (the turn may now be covered) and try again with fresh sequence numbers.
+        for (var attempt = 1; ; attempt++)
+        {
+            var staged = new List<object>();
+            try
+            {
+                return await EnsureResponsesOnceAsync(db, session, now, staged, ct);
+            }
+            catch (DbUpdateException) when (attempt < 3)
+            {
+                foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added && staged.Contains(e.Entity)).ToList())
+                    entry.State = EntityState.Detached;
+            }
+        }
+    }
+
+    private static async Task<List<StudentResponse>> EnsureResponsesOnceAsync(GadflyDbContext db, ExamSession session, DateTimeOffset now, List<object> staged,
+        CancellationToken ct)
+    {
         var responses = await db.StudentResponses.Where(r => r.SessionId == session.Id && r.OrganizationId == session.OrganizationId)
             .OrderBy(r => r.Sequence).ToListAsync(ct);
         var turns = await db.SessionTurns.AsNoTracking().Where(t => t.SessionId == session.Id && t.OrganizationId == session.OrganizationId && t.AnswerText != null)
@@ -38,15 +59,20 @@ internal static class GradingInputs
                 Modality = t.AnswerMode is "voice" or "speech" ? "voice" : "text", OriginalText = t.AnswerText!, VerifiedText = t.AnswerText!,
                 VerificationState = VerificationState.Captured, SubmittedAt = t.AnswerCompletedAt ?? t.AskedAt,
             };
-            r.Versions.Add(new TranscriptVersion { OrganizationId = session.OrganizationId, Version = 1, Text = t.AnswerText!, Source = "student", CreatedAt = now });
+            var v1 = new TranscriptVersion { OrganizationId = session.OrganizationId, Version = 1, Text = t.AnswerText!, Source = "student", CreatedAt = now };
+            r.Versions.Add(v1);
             db.StudentResponses.Add(r);
+            staged.Add(r);
+            staged.Add(v1);
             responses.Add(r);
             added++;
         }
         if (added > 0)
         {
+            var before = db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).Select(e => e.Entity).ToHashSet();
             GradingAudit.Add(db, session.OrganizationId, GradingActor.System, "response.captured", "ExamSession", session.Id.ToString(), session.Id, now,
                 after: new { responses = added }, reason: "Response records built from the session's stored answers for grading (state Captured, original text preserved).");
+            staged.AddRange(db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added && !before.Contains(e.Entity)).Select(e => e.Entity));
             await db.SaveChangesAsync(ct);
         }
         return responses;

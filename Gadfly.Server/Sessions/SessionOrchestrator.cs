@@ -117,6 +117,8 @@ public sealed class SessionOrchestrator(
 
         var collection = await db.SourceCollections.AsNoTracking()
             .FirstAsync(c => c.Id == exam.CollectionId && c.OrganizationId == organizationId, ct);
+        // The session records the policy it runs under: objectives, mode and this student's extra time (GAD-T120).
+        var policy = await SessionObjectives.ForSessionAsync(db, ReadPolicy(exam.PolicyJson), exam, assignment.TimeMultiplier, ct);
         var session = new ExamSession
         {
             OrganizationId = organizationId,
@@ -126,7 +128,7 @@ public sealed class SessionOrchestrator(
             Attempt = sessions.Count + 1,
             State = SessionState.Created,
             CreatedAt = now,
-            PolicyJson = exam.PolicyJson,
+            PolicyJson = JsonSerializer.Serialize(policy, Json),
             PromptSetSha256 = ExamPrompts.Set.Sha256,
             ConceptMapVersion = collection.ConceptMapVersion,
             ClientInfo = clientInfo is { Length: > 500 } ci ? ci[..500] : clientInfo,
@@ -354,7 +356,7 @@ public sealed class SessionOrchestrator(
     private bool TooLate(Live live)
     {
         var s = live.Engine.Session;
-        return s.Remaining(clock.GetUtcNow()) <= TimeSpan.Zero && clock.GetUtcNow() - (s.StartedAt + s.Policy.TimeBudget) > AnswerGrace;
+        return s.Remaining(clock.GetUtcNow()) <= TimeSpan.Zero && clock.GetUtcNow() - (s.StartedAt + s.Policy.EffectiveTimeBudget) > AnswerGrace;
     }
 
     private static Task<Guid?> TurnIdAsync(GadflyDbContext db, Guid sessionId, int index, CancellationToken ct) =>
@@ -419,7 +421,33 @@ public sealed class SessionOrchestrator(
             VerificationState.VerificationRequired, VerificationState.AwaitingStudentConfirmation);
         var question = await _verifier.WordAsync(input, decision, live.Engine.Subject.Rubric(concept.Key).Describe(), Dialogue(s, open, text), ct);
         ledger.Ask(response, ClarificationType.Meaning, question.Text, question.NonLeadingChecked, $"{question.Outcome}; {decision.Reason}");
+        await CheckClarificationLeakAsync(live, open, question, ct);
         return true;
+    }
+
+    /// <summary>
+    /// A clarification shown to the student may itself give the answer away (Part 4.4, GAD-T92): a drafted one goes
+    /// through the engine's leak guard, which flags the turn when it leaks or cannot decide, so answers on that
+    /// objective from then on count as contaminated, never as independent evidence. One the verification guard
+    /// did not clear is flagged outright. The fixed template only quotes the student's own words, so it is not checked.
+    /// </summary>
+    private async Task CheckClarificationLeakAsync(Live live, Turn open, ClarificationQuestion question, CancellationToken ct)
+    {
+        if (!question.NonLeadingChecked)
+        {
+            live.Engine.FlagLeak(open.Index, LeakSource.GuardFailedOpen, $"The clarification was shown without passing the leak checks ({question.Outcome}).");
+            return;
+        }
+        if (question.Outcome != "drafted") return;
+        try
+        {
+            await live.Engine.CheckClarificationAsync(open.Index, question.Text, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            log.LogWarning(ex, "The clarification leak check failed; the turn is flagged as possibly leaked.");
+            live.Engine.FlagLeak(open.Index, LeakSource.GuardFailedOpen, "The leak guard could not run on a clarification already shown to the student.");
+        }
     }
 
     /// <summary>Loads and checks the pending request, applies <paramref name="resolve"/> (which returns the text to judge), then judges and moves on.</summary>
@@ -521,7 +549,7 @@ public sealed class SessionOrchestrator(
     private async Task<SessionStep> ViewAsync(Live live, Turn? question, CancellationToken ct)
     {
         var s = live.Engine.Session;
-        var concepts = s.Policy.ConceptIds;
+        var objectives = live.Engine.Assessments();
         PendingVerification? pending = null;
         LastAnswer? last = null;
         using (var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId)))
@@ -557,8 +585,9 @@ public sealed class SessionOrchestrator(
             Move = question?.Move.ToString(),
             Remaining = s.Remaining(clock.GetUtcNow()),
             EndReason = s.IsEnded ? s.EndReason.ToString() : null,
-            ConceptsTotal = concepts.Count,
-            ConceptsClosed = concepts.Count(c => QuestionPlanner.StatusOf(s, c) is ConceptStatus.Mastered or ConceptStatus.Aporia or ConceptStatus.Exhausted),
+            // Progress is per learning objective (one per concept when the exam defines none).
+            ConceptsTotal = objectives.Count,
+            ConceptsClosed = objectives.Count(o => o.IsClosed),
             Verification = pending,
             LastAnswer = last,
             Notice = live.Notice,
@@ -604,10 +633,16 @@ public sealed class SessionOrchestrator(
             }
             else
             {
-                var policy = JsonSerializer.Deserialize<SessionPolicy>(row.PolicyJson, Json) ?? new SessionPolicy();
+                // Objectives, mode and extra time (GAD-T120); a session created before they were recorded gets them now.
+                var multiplier = await db.ExamAssignments.Where(a => a.Id == row.AssignmentId && a.OrganizationId == organizationId)
+                    .Select(a => (decimal?)a.TimeMultiplier).FirstOrDefaultAsync(ct);
+                var policy = await SessionObjectives.ForSessionAsync(db, ReadPolicy(row.PolicyJson), exam, multiplier, ct);
                 if (policy.ConceptIds.Count == 0)
                     policy = policy with { ConceptIds = subject.Map.Concepts.Select(c => c.Key).ToList() };
                 engine = await SourceExamEngine.StartAsync(panel, subject, policy, clock, sessionId, ct);
+                var recorded = JsonSerializer.Serialize(policy, Json);
+                if (recorded != row.PolicyJson)
+                    await db.ExamSessions.Where(x => x.Id == sessionId).ExecuteUpdateAsync(u => u.SetProperty(x => x.PolicyJson, recorded), ct);
             }
             // The answer-text signal is an integrity signal: off when the exam's integrity level is Off.
             engine.AssessTextStyle = exam.IntegrityLevel != IntegrityLevel.Off;
@@ -635,6 +670,8 @@ public sealed class SessionOrchestrator(
         _subjects[(collectionId, version)] = subject;
         return subject;
     }
+
+    private static SessionPolicy ReadPolicy(string? json) => Exams.ExamService.ReadPolicy(json);
 
     private static async Task<ExamSession> Owned(GadflyDbContext db, Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct) =>
         await db.ExamSessions.FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == organizationId && s.StudentUserId == studentUserId, ct)
@@ -770,5 +807,26 @@ public sealed class SessionOrchestrator(
             }, now, ct);
         }
         await db.SaveChangesAsync(ct);
+        await PersistEvidenceAsync(live, row.ExamId, now, ct);
+    }
+
+    /// <summary>
+    /// Per-objective evidence (GAD-T91, GAD-T120): AssessmentEvidence rows linked to the exam's objectives and the
+    /// verified responses, in their own save after the transcript is stored, so a problem here never costs the
+    /// resume point. Idempotent: items not written now (a turn or response not stored yet) are written by a later step.
+    /// </summary>
+    private async Task PersistEvidenceAsync(Live live, Guid examId, DateTimeOffset now, CancellationToken ct)
+    {
+        try
+        {
+            using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            await Evidence.EvidenceWriter.SyncAsync(db, live.OrganizationId, live.Engine.Session.Id, examId, live.Engine.CollectEvidence(), now, ct);
+            await db.SaveChangesAsync(ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            log.LogWarning(ex, "Evidence for session {SessionId} was not stored this step; the next step retries.", live.Engine.Session.Id);
+        }
     }
 }

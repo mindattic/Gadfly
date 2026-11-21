@@ -38,6 +38,14 @@
             <label>Opens (optional, your time @OffsetLabel) <input type="datetime-local" @bind="opensLocal" /></label>
             <label>Closes (optional, your time @OffsetLabel) <input type="datetime-local" @bind="closesLocal" /></label>
             <label>Attempts allowed <input type="number" min="1" max="20" @bind="attempts" /></label>
+            <label>Extra time (accommodation)
+                <select @bind="timeMultiplier" @bind:culture="System.Globalization.CultureInfo.InvariantCulture">
+                    @foreach (var m in ExamService.TimeMultipliers)
+                    {
+                        <option value="@m.ToString(System.Globalization.CultureInfo.InvariantCulture)">@MultiplierLabel(m)</option>
+                    }
+                </select>
+            </label>
             <p class="hint">Students already assigned to this exam are skipped. Email invitations arrive with M.AUTH-T35; for now students see the exam under My exams.</p>
             <button type="button" disabled="@busy" @onclick="AssignAsync">Assign</button>
         }
@@ -60,7 +68,7 @@ else if (rows.Count == 0)
 else
 {
     <table class="grid">
-        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Latest session</th><th>Results</th></tr></thead>
+        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Latest session</th><th>Results</th></tr></thead>
         <tbody>
             @foreach (var r in rows)
             {
@@ -68,6 +76,7 @@ else
                     <td>@r.StudentName</td>
                     <td>@Window(r)</td>
                     <td>@r.AttemptsUsed / @r.AttemptsAllowed</td>
+                    <td>@MultiplierLabel(r.TimeMultiplier)</td>
                     <td>@(r.LatestState is { } st ? StateLabel(st) + (r.LatestEndedAt is { } end ? $" {Local(end)}" : "") : "not started")</td>
                     <td>
                         @if (r.ResultsReleasedAt is { } rel)
@@ -106,6 +115,7 @@ else
     private bool allStudents = true;
     private DateTime? opensLocal, closesLocal;
     private int attempts = 1;
+    private decimal timeMultiplier = 1m;
     private TimeSpan offset = TimeSpan.Zero;
     private string? message;
     private bool ok, busy;
@@ -150,7 +160,7 @@ else
     private async Task AssignAsync()
     {
         busy = true;
-        var r = await Service.AssignAsync(ExamId, allStudents ? null : picked.ToList(), ToUtc(opensLocal), ToUtc(closesLocal), attempts);
+        var r = await Service.AssignAsync(ExamId, allStudents ? null : picked.ToList(), ToUtc(opensLocal), ToUtc(closesLocal), attempts, timeMultiplier);
         ok = r.Ok;
         message = r.Message;
         if (r.Ok) picked.Clear();
@@ -170,6 +180,9 @@ else
         (null, { } c) => $"until {Local(c)}",
         ({ } o, { } c) => $"{Local(o)} – {Local(c)}",
     };
+
+    private static string MultiplierLabel(decimal m) =>
+        m == 1m ? "none" : m.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "x";
 
     private static string StateLabel(SessionState s) => s switch
     {

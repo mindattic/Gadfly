@@ -17,6 +17,7 @@ public static class ResponseBackfill
     {
         var now = clock.GetUtcNow();
         var total = 0;
+        var conflicts = 0;
         while (true)
         {
             var turns = await db.SessionTurns.IgnoreQueryFilters()
@@ -53,7 +54,18 @@ public static class ResponseBackfill
                 });
                 total += session.Count();
             }
-            await db.SaveChangesAsync(ct);
+            try
+            {
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException) when (++conflicts <= 3)
+            {
+                // A live answer took one of these sequence numbers (unique SessionId+Sequence): drop this batch and
+                // re-read; turns that now have a response are skipped, the rest get fresh numbers.
+                foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).ToList())
+                    entry.State = EntityState.Detached;
+                total = Math.Max(0, total - turns.Count);
+            }
         }
     }
 }

@@ -718,7 +718,10 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
     /// <summary>The older exam service over the same context and tenant (concept maps, collections, assignments).</summary>
     public ExamService Exams() => new(db, tenant, directory, clock);
 
-    /// <summary>The session policy publishing writes: the objectives' concepts in objective order; the question limit caps turns.</summary>
+    /// <summary>
+    /// The session policy publishing writes: the objectives' concepts in objective order; the question limit caps turns;
+    /// the learning objectives (with their rubric criteria) the engine examines, and the assessment's mode (GAD-T120).
+    /// </summary>
     public static SessionPolicy BuildSessionPolicy(Exam exam, IReadOnlyList<LearningObjective> objectives)
     {
         var basis = ExamService.ReadPolicy(exam.PolicyJson);
@@ -730,6 +733,8 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
             ConceptIds = concepts,
             MaxTurns = limit,
             MaxTurnsPerConcept = Math.Max(1, limit / Math.Max(1, concepts.Count)),
+            Objectives = Sessions.SessionObjectives.From(objectives),
+            Mode = exam.AssessmentMode,
         };
     }
 

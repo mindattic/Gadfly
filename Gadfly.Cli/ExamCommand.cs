@@ -31,6 +31,8 @@ public static class ExamCommand
         var rebuild = false;
         var verbose = false;
         var listOnly = false;
+        var learning = false;
+        var timeMultiplier = 1.0;
 
         for (var i = 0; i < args.Length; i++)
         {
@@ -50,6 +52,16 @@ public static class ExamCommand
                 case "--rebuild": rebuild = true; break;
                 case "--verbose": verbose = true; break;
                 case "--list-concepts": listOnly = true; break;
+                case "--learning": learning = true; break;
+                case "--time-multiplier":
+                    if (double.TryParse(Next(), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var tm)
+                        && tm is >= 1 and <= 4) timeMultiplier = tm;
+                    else
+                    {
+                        Console.Error.WriteLine("exam: --time-multiplier takes a number from 1 to 4 (e.g. 1.5).");
+                        return 2;
+                    }
+                    break;
                 case "--tier":
                     if (Enum.TryParse<ModelTier>(Next(), ignoreCase: true, out var parsedTier)) tier = parsedTier;
                     break;
@@ -147,11 +159,13 @@ public static class ExamCommand
             TimeBudget = TimeSpan.FromMinutes(minutes),
             MaxTurns = maxTurns,
             Difficulty = difficulty,
+            Mode = learning ? Gadfly.Assessment.AssessmentMode.Learning : Gadfly.Assessment.AssessmentMode.Examination,
+            TimeMultiplier = timeMultiplier,
         };
 
         var subject = new SourceMaterialSubject(map.CollectionId, map, rubrics, retriever);
         Console.WriteLine();
-        Console.WriteLine($"Exam: {policy.ConceptIds.Count} concept(s), up to {minutes} minutes. Answer in your own words;");
+        Console.WriteLine($"{(learning ? "Learning session" : "Exam")}: {policy.ConceptIds.Count} concept(s), up to {policy.EffectiveTimeBudget.TotalMinutes:0.#} minutes. Answer in your own words;");
         Console.WriteLine("type \"Aporia\" if you honestly don't know. An empty line ends your answer early; Ctrl+Z / Ctrl+D quits.");
         Console.WriteLine();
 
@@ -253,6 +267,8 @@ public static class ExamCommand
         Console.WriteLine("  --minutes N           Time budget (default 20).");
         Console.WriteLine("  --max-turns N         Question limit (default 30).");
         Console.WriteLine("  --difficulty 1-5      How hard follow-ups push (default 3).");
+        Console.WriteLine("  --learning            Learning Mode: hints and guided explanations when you struggle (assisted, not exam evidence).");
+        Console.WriteLine("  --time-multiplier N   Extra-time accommodation: the time budget times N (1 to 4, e.g. 1.5).");
         Console.WriteLine("  --rebuild             Rebuild the concept map and rubrics even if the source is unchanged.");
         Console.WriteLine("  --verbose             Show why each move was chosen and how each question was produced.");
         Console.WriteLine("  --report <path>       Where to write the Markdown report (a .json copy is written beside it).");

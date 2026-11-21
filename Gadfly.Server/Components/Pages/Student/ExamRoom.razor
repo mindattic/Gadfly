@@ -476,7 +476,7 @@
             {
                 nameof(EndReason.TimeUp) => "Time ran out.",
                 nameof(EndReason.Abandoned) => "You finished the exam early.",
-                nameof(EndReason.Mastery) or nameof(EndReason.Aporia) or nameof(EndReason.TurnLimit) => "The examiner has finished asking questions.",
+                nameof(EndReason.Mastery) or nameof(EndReason.Aporia) or nameof(EndReason.TurnLimit) or nameof(EndReason.EvidenceComplete) =>"The examiner has finished asking questions.",
                 _ => null,
             };
             return;
