@@ -128,6 +128,16 @@ public class QuestionGeneratorTests
     [TestCase("   ", "")]
     public void Clean(string? raw, string expected) => Assert.That(QuestionGenerator.Clean(raw), Is.EqualTo(expected));
 
+    [TestCase("What happens to the program when an exception is thrown inside the loop?")]
+    [TestCase("How would you handle an error in the rate limit check for an API key?")]
+    public void Usable_KeepsAQuestionThatMentionsFailureWords(string question) =>
+        Assert.That(QuestionGenerator.Usable(question), Is.EqualTo(question));
+
+    [TestCase("All voters failed.")]
+    [TestCase("Error: rate limit exceeded, check the API key")]
+    public void Usable_StillDropsProviderFailureWording(string text) =>
+        Assert.That(QuestionGenerator.Usable(text), Is.Empty);
+
     [Test]
     public void Fallback_CoversEveryMove_AndNeverStatesTheAnswer()
     {

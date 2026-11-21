@@ -214,6 +214,9 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
     {
         if (string.IsNullOrWhiteSpace(text)) return false;
         var t = text.Trim();
+        // A real question mentions "exception" or "error" when the subject is exception handling or errors; Legion's
+        // status and error strings are never phrased as a question (GAD-T188).
+        if (t.EndsWith('?')) return false;
         return t.Contains("voters failed", StringComparison.OrdinalIgnoreCase)
             || t.Contains("no quorum", StringComparison.OrdinalIgnoreCase)
             || t.Contains("quorum not reached", StringComparison.OrdinalIgnoreCase)
