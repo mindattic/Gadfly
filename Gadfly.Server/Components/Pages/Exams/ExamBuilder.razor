@@ -218,41 +218,51 @@ else
 
     private async Task SaveAsync()
     {
-        if (draft is null) return;
+        // One operation at a time: the builder shares the circuit's DbContext, so a second click while one is in flight must wait (GAD-T189).
+        if (draft is null || busy) return;
         busy = true;
-        var r = await svc.SaveDraftAsync(draft);
-        Show(r);
-        busy = false;
-        if (r.Ok && r.Id is { } id && id != draft.Id)
+        try
         {
-            // New exam or a copy of a frozen one: go to it (keeps the message).
-            var keep = message;
-            Nav.NavigateTo($"exams/{id}");
-            message = keep;
-            ok = true;
+            var r = await svc.SaveDraftAsync(draft);
+            Show(r);
+            if (r.Ok && r.Id is { } id && id != draft.Id)
+            {
+                // New exam or a copy of a frozen one: go to it (keeps the message).
+                var keep = message;
+                Nav.NavigateTo($"exams/{id}");
+                message = keep;
+                ok = true;
+            }
+            else if (r.Ok && r.Id is { } same)
+            {
+                draft = await svc.GetAsync(same) ?? draft;
+            }
         }
-        else if (r.Ok && r.Id is { } same)
-        {
-            draft = await svc.GetAsync(same) ?? draft;
-        }
+        finally { busy = false; }
     }
 
     private async Task PublishAsync()
     {
-        if (draft?.Id is not { } id) return;
+        if (draft?.Id is not { } id || busy) return;
         busy = true;
-        Show(await svc.PublishAsync(id));
-        draft = await svc.GetAsync(id) ?? draft;
-        busy = false;
+        try
+        {
+            Show(await svc.PublishAsync(id));
+            draft = await svc.GetAsync(id) ?? draft;
+        }
+        finally { busy = false; }
     }
 
     private async Task ArchiveAsync()
     {
-        if (draft?.Id is not { } id) return;
+        if (draft?.Id is not { } id || busy) return;
         busy = true;
-        Show(await svc.ArchiveAsync(id));
-        draft = await svc.GetAsync(id) ?? draft;
-        busy = false;
+        try
+        {
+            Show(await svc.ArchiveAsync(id));
+            draft = await svc.GetAsync(id) ?? draft;
+        }
+        finally { busy = false; }
     }
 
     private void Show(ExamResult r)

@@ -159,13 +159,17 @@ else
 
     private async Task AssignAsync()
     {
+        if (busy) return;   // the service shares the circuit's DbContext: one operation at a time (GAD-T189)
         busy = true;
-        var r = await Service.AssignAsync(ExamId, allStudents ? null : picked.ToList(), ToUtc(opensLocal), ToUtc(closesLocal), attempts, timeMultiplier);
-        ok = r.Ok;
-        message = r.Message;
-        if (r.Ok) picked.Clear();
-        await LoadAsync();
-        busy = false;
+        try
+        {
+            var r = await Service.AssignAsync(ExamId, allStudents ? null : picked.ToList(), ToUtc(opensLocal), ToUtc(closesLocal), attempts, timeMultiplier);
+            ok = r.Ok;
+            message = r.Message;
+            if (r.Ok) picked.Clear();
+            await LoadAsync();
+        }
+        finally { busy = false; }
     }
 
     private DateTimeOffset? ToUtc(DateTime? local) =>
