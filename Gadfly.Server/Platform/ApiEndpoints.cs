@@ -61,6 +61,8 @@ public static class ApiEndpoints
     private const int MaxTitleLength = 300;
     /// <summary>The same cap the assessment editor puts on the instructions students see (GAD-T210).</summary>
     private const int MaxInstructionsLength = 4000;
+    /// <summary>The account table's column limit for user names and emails (GAD-T211).</summary>
+    private const int MaxAccountTextLength = 256;
     private const string SecuritySchemeId = "ApiKey";
 
     private static IResult Error(string message, int status = StatusCodes.Status400BadRequest) =>
@@ -223,6 +225,10 @@ public static class ApiEndpoints
             var org = t.OrganizationId!.Value;
             var userName = body.UserName?.Trim() ?? "";
             if (userName.Length == 0) return Error("userName is required");
+            if (userName.Length > MaxAccountTextLength) return Error($"userName must be at most {MaxAccountTextLength} characters");
+            var email = body.Email?.Trim();
+            if (!string.IsNullOrEmpty(email) && (email.Length > MaxAccountTextLength || !System.Net.Mail.MailAddress.TryCreate(email, out var parsed) || parsed.Address != email))
+                return Error($"email must be an email address of at most {MaxAccountTextLength} characters");
             if (body.AttemptsAllowed is < 1) return Error("attemptsAllowed must be at least 1");
             if (body.OpensAt is { } opens && body.ClosesAt is { } closes && closes <= opens) return Error("closesAt must be after opensAt");
 

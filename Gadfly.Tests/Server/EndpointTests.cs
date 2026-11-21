@@ -412,6 +412,9 @@ public class ApiEndpointTests : ServerTest
             Assert.That((await client.PostAsJsonAsync($"/api/v1/exams/{Guid.NewGuid()}/assignments", new { userName = "x" })).StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
             using (var r = await Assign(new { userName = " " })) Assert.That(await Error(r), Is.EqualTo("userName is required"));
             using (var r = await Assign(new { userName = Seed.UserName(), attemptsAllowed = 0 })) Assert.That(await Error(r), Is.EqualTo("attemptsAllowed must be at least 1"));
+            using (var r = await Assign(new { userName = new string('u', 257) })) Assert.That(await Error(r), Does.Contain("userName must be at most 256"));
+            using (var r = await Assign(new { userName = Seed.UserName(), email = new string('a', 300) + "@x.test" })) Assert.That(await Error(r), Does.Contain("email must be an email address"));
+            using (var r = await Assign(new { userName = Seed.UserName(), email = "not-an-address" })) Assert.That(await Error(r), Does.Contain("email must be an email address"));
             var now = DateTimeOffset.UtcNow;
             using (var r = await Assign(new { userName = Seed.UserName(), opensAt = now, closesAt = now }))
                 Assert.That(await Error(r), Is.EqualTo("closesAt must be after opensAt"));
