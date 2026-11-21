@@ -13,8 +13,10 @@ public static partial class ExamPrompts
     /// <summary>2: student text fenced and declared data, never instructions (GAD-T77).
     /// 3: response verification and neutral meaning clarification prompts (GAD-T87).
     /// 4: objective-driven examination: the question prompt names the objective and all eight strategies,
-    /// plus the Learning Mode and response-analysis prompts (GAD-T89..T93, merged from ExamPromptsV3 in GAD-T120).</summary>
-    public const int Version = 4;
+    /// plus the Learning Mode and response-analysis prompts (GAD-T89..T93, merged from ExamPromptsV3 in GAD-T120).
+    /// 5: adaptive Socratic probing: the question prompt carries how each recent answer was delivered (delay, hesitations,
+    /// strain against the student's baseline, hedging) and presses harder where understanding looks shaky (GAD-T233).</summary>
+    public const int Version = 5;
 
     /// <summary>Delimits text the student wrote or said; <see cref="Student"/> strips forged copies of these tags from the text it wraps.</summary>
     public const string StudentOpen = "<student_text>", StudentClose = "</student_text>";
@@ -76,6 +78,10 @@ public static partial class ExamPrompts
         - Do not repeat a question already asked. Do not ask yes/no questions.
         - Never include rubric points, definitions, causes, examples or facts the student has not already
           said themselves, and never say whether an earlier answer was right.
+        - Adapt to how the answers were delivered (listed below): where understanding looks shaky, probe
+          harder within the move (ask for a concrete example, challenge an assumption, ask why again, or pose
+          a counterfactual) until it is clear whether the concept is understood. Delivery is only a reason to
+          press, never evidence of understanding, and never mention it: no remark on pauses, nerves or tone.
         - Output only the question text.
 
         {{ExamPrompts.StudentTextRule}}
@@ -85,6 +91,10 @@ public static partial class ExamPrompts
         Second concept (Synthesize only): {related_concept}
         Difficulty (1 gentle - 5 rigorous): {difficulty}
         Claims to confront (Contradiction only): {target_claims}
+
+        How the recent answers were delivered (against the student's own earlier answers):
+        {delivery}
+        Probing: {probing}
 
         Source material:
         {grounding}
