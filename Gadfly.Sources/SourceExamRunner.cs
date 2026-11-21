@@ -268,6 +268,19 @@ public sealed class SourceExamEngine
             }, rubric.Version, ct);
             if (AssessTextStyle && await _style.AssessAsync(Session, turn, ct) is { } style)
                 judgment = judgment with { TextStyle = style };
+            // Recitation check (GAD-T242): an answer that closely follows the source's wording, or a long fluent one after a long
+            // silent wait, is not accepted as the student's own understanding. It is recorded for review (never a cheating verdict),
+            // left out of mastery and evidence, and the next question asks for it differently, applied, or why.
+            if (RecitationCheck.Check(Session, turn, string.Join('\n', passages.Select(p => p.Text))) is { } recited)
+            {
+                judgment = judgment with
+                {
+                    Recitation = recited,
+                    Summary = string.IsNullOrWhiteSpace(judgment.Summary) ? RecitationCheck.ReviewNote(recited)
+                        : $"{judgment.Summary} {RecitationCheck.ReviewNote(recited)}",
+                };
+                Diagnostics?.Report($"[Recitation on turn {turn.Index + 1}: {recited.Reason}. Not accepted; asking for it differently.]");
+            }
             if (AnalyzeResponses)
             {
                 analysis = await _analyzer.AnalyzeAsync(new AnalysisInput
@@ -286,7 +299,8 @@ public sealed class SourceExamEngine
         var judgedBefore = Session.Turns.Count(t => t.ConceptId == concept.Key && t.Judgment is not null && !ObjectiveAssessor.IsUnjudged(t.Judgment));
         // A failed panel (no usable verdict) is not evidence of anything: it leaves the estimate where it was,
         // as ObjectiveAssessor already treats such an answer as neither for nor against (GAD-T176).
-        var estimate = ObjectiveAssessor.IsUnjudged(judgment) ? prior
+        // A recited answer (GAD-T242) is not evidence of the student's own understanding either: it leaves the estimate too.
+        var estimate = ObjectiveAssessor.IsUnjudged(judgment) || judgment.Recitation is not null ? prior
             : MasteryModel.Update(prior, judgment.OverallScore,
                 MasteryModel.QuestionDifficulty(turn.Move, Session.Policy.Difficulty), judgedBefore);
         turn = Session.RecordJudgment(judgment, estimate, analysis);
