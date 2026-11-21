@@ -124,6 +124,8 @@ public sealed class SessionOrchestrator(
     public Task<SessionStep> AnswerAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Answer answer, CancellationToken ct = default) =>
         StepAsync(organizationId, sessionId, studentUserId, async live =>
         {
+            if (live.Engine.Session.IsEnded)
+                throw new SessionRefusedException("This exam has ended; your answers were submitted.");
             if (live.Engine.Session.OpenTurn is null && live.Engine.Session.AwaitingJudgment is null)
                 throw new SessionRefusedException("There is no question waiting for an answer.");
             // The server's clock is the authority: an answer arriving well after time ran out is not judged.

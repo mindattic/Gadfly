@@ -91,6 +91,9 @@ builder.Services.AddJobHandler<SourceProcessingJob>();
 
 // Live exam sessions: one engine per active session, persisted after every step (GAD-T44).
 builder.Services.AddSingleton<SessionOrchestrator>();
+builder.Services.AddScoped<HubIntegrityRecorder>();
+builder.Services.AddScoped<Gadfly.Server.Integrity.IntegrityRecorder>();
+builder.Services.AddSignalR(o => o.MaximumReceiveMessageSize = 256 * 1024);
 
 // Platform API (GAD-T46): organization API keys, webhooks with signed deliveries.
 builder.Services.AddScoped<ApiKeyService>();

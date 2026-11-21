@@ -46,6 +46,7 @@ public static class GadflyEndpoints
             .RequireAuthorization(GadflyPolicies.SuperAdmin);
 
         MapPrivacy(app);
+        app.MapHub<Sessions.SessionHub>(Sessions.SessionHub.Path);
         Platform.ApiEndpoints.Map(app);
         Review.ReviewExportEndpoints.Map(app);
         app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
