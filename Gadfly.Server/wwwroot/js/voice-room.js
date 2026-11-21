@@ -120,6 +120,7 @@ async function start() {
                 s.speechConn.send("SendAudio", s.pcm16ToBase64(c.pcm), c.captureStartMs).catch(() => { });
             },
             onSpeechStart: () => {
+                s.inSpeech = true;
                 if (s.gate) return;
                 s.startedAtUnixMs ??= Date.now();
                 freezeDelay(s);
@@ -128,6 +129,7 @@ async function start() {
                 status("Hearing you…");
             },
             onSpeechEnd: () => {
+                s.inSpeech = false;
                 try { s.acoustics.endSegment(); } catch { }
                 talking(s, false);
                 if (s.gate || !s.speechConn) return;
@@ -329,7 +331,7 @@ function remarkHold(s, active) {
         s.gate = false;
         if (s.avatar) s.avatar.state = "listening";
         status(s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.");
-        if (s.segments.length) {
+        if (s.segments.length && !s.inSpeech) {   // still talking: the next pause arms the cue as usual
             const ms = s.cfg.endCueMs || 4000;
             const cue = q("cue");
             if (cue) { cue.style.setProperty("--cue-ms", ms + "ms"); cue.dataset.active = "true"; }
