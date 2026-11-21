@@ -26,7 +26,9 @@ public interface IOrganizationDirectory
         Guid createdByUserId, CancellationToken ct = default);
 
     /// <summary>
-    /// Adds a member, creating their account when the user name is new (temporary password, must change it).
+    /// Adds a member, creating their account when the user name is new (temporary password, must change it),
+    /// or changes an existing member's role. An organization caller (<paramref name="actingRole"/> set) can't
+    /// add an existing account that isn't already a member of this organization (GAD-T106).
     /// <paramref name="actingRole"/> is the caller's role in the organization (null for platform staff and
     /// system callers): only an Owner may grant Owner or change an Owner's role (GAD-T76).
     /// </summary>
@@ -114,6 +116,14 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
         }
 
         var existing = await db.OrganizationMembers.FirstOrDefaultAsync(m => m.OrganizationId == organizationId && m.UserId == userId, ct);
+        // An organization's own admins never pull an outside account in: accounts are shared across
+        // organizations, and adding one would put this organization in someone's switcher without their
+        // consent (and confirm the name exists). Same rule as the API (decision D17 default) until email
+        // invitations land (M.AUTH-T35). Platform staff and system callers (actingRole null) are exempt.
+        if (account is not null && existing is null && actingRole is not null)
+            return new(false, $"The user name '{userName}' belongs to an existing Gadfly account that is not a member of this organization. " +
+                "Choose a different user name for a new account; bringing in an existing account needs an invitation the person accepts, " +
+                "which arrives with email invitations (M.AUTH-T35).");
         var roleChanged = false;
         if (existing is not null)
         {

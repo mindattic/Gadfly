@@ -13,7 +13,7 @@
 }
 
 <EditForm Model="form" OnValidSubmit="AddAsync" FormName="add-member" class="panel">
-    <h2>Add a member</h2>
+    <h2>Add a member or change a role</h2>
     <label>User name <InputText @bind-Value="form.UserName" autocomplete="off" /></label>
     <label>Email <InputText @bind-Value="form.Email" type="email" autocomplete="off" /></label>
     <label>Role
@@ -25,7 +25,7 @@
         </InputSelect>
     </label>
     <label>Temporary password <InputText @bind-Value="form.Password" type="password" autocomplete="new-password" /></label>
-    <p class="hint">New accounts change this at first sign-in; staff also set up two-step verification. Email invitations arrive with M.AUTH-T35.</p>
+    <p class="hint">Creates a new account (it changes this password at first sign-in; staff also set up two-step verification), or changes the role of someone already in this organization. Accounts from outside the organization can't be added here; that needs an email invitation, which arrives with M.AUTH-T35.</p>
     <button type="submit" disabled="@busy">Add</button>
     @if (message is not null)
     {
