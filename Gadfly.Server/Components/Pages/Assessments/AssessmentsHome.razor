@@ -1,0 +1,196 @@
+@page "/assessments"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject NavigationManager Nav
+
+@* Teacher assessment setup (GAD-T85): courses and the assessments in them. Permissions: GAD-T83. *@
+
+<PageTitle>Assessments · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="assessments.css" /></HeadContent>
+<h1>Assessments</h1>
+
+@if (caps is null)
+{
+    <p class="hint">Loading…</p>
+}
+else if (!caps.Any)
+{
+    <p class="notice" role="alert">Your role in this organization (@(caps.Role ?? "none")) can't set up assessments. Ask an instructor or administrator.</p>
+}
+else
+{
+    @if (message is not null)
+    {
+        <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+    }
+
+    <section aria-labelledby="courses-h" class="as-section">
+        <h2 id="courses-h">Courses</h2>
+        @if (courses.Count == 0)
+        {
+            <p class="hint">No courses yet. Every assessment belongs to a course; create one first.</p>
+        }
+        else
+        {
+            <div class="as-scroll">
+                <table class="grid">
+                    <thead><tr><th scope="col">Course</th><th scope="col">Subject</th><th scope="col">Assessments</th><th scope="col">Status</th><th scope="col"><span class="as-sr">Actions</span></th></tr></thead>
+                    <tbody>
+                        @foreach (var c in courses)
+                        {
+                            <tr class="@(c.IsArchived ? "as-muted" : "")">
+                                <td>
+                                    <button type="button" class="link" @onclick="() => FilterTo(c.Id)" aria-label="Show the assessments of @c.Title">@c.Title</button>
+                                    @if (!string.IsNullOrEmpty(c.Description)) { <div class="hint">@c.Description</div> }
+                                </td>
+                                <td>@c.Subject</td>
+                                <td>@c.Assessments</td>
+                                <td>@(c.IsArchived ? "Archived" : "Active")</td>
+                                <td class="as-row-actions">
+                                    @if (caps.ManageCourses)
+                                    {
+                                        <button type="button" class="link" @onclick="() => EditCourse(c)" aria-label="Edit course @c.Title">Edit</button>
+                                        <button type="button" class="link" disabled="@busy" @onclick="() => ArchiveCourseAsync(c, !c.IsArchived)"
+                                                aria-label="@(c.IsArchived ? "Restore" : "Archive") course @c.Title">@(c.IsArchived ? "Restore" : "Archive")</button>
+                                    }
+                                    @if (caps.ManageAssessments && !c.IsArchived)
+                                    {
+                                        <a href="assessments/new?course=@c.Id" aria-label="New assessment in @c.Title">New assessment</a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (caps.ManageCourses)
+        {
+            <form class="panel" @onsubmit="SaveCourseAsync" @onsubmit:preventDefault aria-labelledby="course-form-h">
+                <h3 id="course-form-h">@(course.Id is null ? "New course" : $"Edit course")</h3>
+                <label>Title <input @bind="course.Title" maxlength="300" required autocomplete="off" /></label>
+                <label>Subject <input @bind="course.Subject" maxlength="200" required placeholder="e.g. Biology" autocomplete="off" /></label>
+                <label>Description (optional) <textarea rows="2" @bind="course.Description" maxlength="4000"></textarea></label>
+                <div class="eb-actions">
+                    <button type="submit" disabled="@busy">@(course.Id is null ? "Create course" : "Save course")</button>
+                    @if (course.Id is not null)
+                    {
+                        <button type="button" class="link" @onclick="() => course = new()">Cancel</button>
+                    }
+                </div>
+            </form>
+        }
+    </section>
+
+    <section aria-labelledby="assessments-h" class="as-section">
+        <h2 id="assessments-h">Assessments</h2>
+        <div class="as-toolbar">
+            <label>Course
+                <select value="@(filter?.ToString() ?? "")" @onchange="FilterChangedAsync">
+                    <option value="">All courses</option>
+                    @foreach (var c in courses)
+                    {
+                        <option value="@c.Id">@c.Title@(c.IsArchived ? " (archived)" : "")</option>
+                    }
+                </select>
+            </label>
+            @if (caps.ManageAssessments && courses.Any(c => !c.IsArchived))
+            {
+                <a class="as-button" href="@(filter is { } f ? $"assessments/new?course={f}" : "assessments/new")">New assessment</a>
+            }
+        </div>
+        @if (assessments.Count == 0)
+        {
+            <p class="hint">No assessments@(filter is null ? "" : " in this course") yet.</p>
+        }
+        else
+        {
+            <div class="as-scroll">
+                <table class="grid">
+                    <thead><tr><th scope="col">Title</th><th scope="col">Course</th><th scope="col">Mode</th><th scope="col">Status</th><th scope="col">Objectives</th><th scope="col">Assigned</th><th scope="col">Grading policy</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in assessments)
+                        {
+                            <tr>
+                                <td><a href="assessments/@a.Id">@a.Title</a>@if (!string.IsNullOrEmpty(a.Topic)) { <div class="hint">@a.Topic</div> }</td>
+                                <td>@(a.CourseTitle ?? "—")</td>
+                                <td>@AssessmentOps.ModeLabel(a.Mode)</td>
+                                <td>@a.Status</td>
+                                <td>@a.Objectives</td>
+                                <td>@a.Assigned</td>
+                                <td>
+                                    @(a.PolicyLocked ? "Locked" : "Editable")
+                                    @if (a.PendingPolicyChanges > 0) { <div><a class="as-flag" href="assessments/@a.Id/policy">@a.PendingPolicyChanges change awaiting approval</a></div> }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private AssessmentCapabilities? caps;
+    private IReadOnlyList<CourseSummary> courses = [];
+    private IReadOnlyList<AssessmentSummary> assessments = [];
+    private CourseDraft course = new();
+    private Guid? filter;
+    private string? message;
+    private bool ok, busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        caps = await Ops(s => s.EnterAsync("the assessments page", audit: RendererInfo.IsInteractive));
+        if (caps.Any) await LoadAsync();
+    }
+
+    private Task<T> Ops<T>(Func<AssessmentService, Task<T>> work) => AssessmentOps.RunAsync(Scopes, Tenant, work);
+
+    private async Task LoadAsync()
+    {
+        courses = await Ops(s => s.CoursesAsync());
+        assessments = await Ops(s => s.ListAsync(filter));
+    }
+
+    private async Task FilterChangedAsync(ChangeEventArgs e)
+    {
+        filter = Guid.TryParse(e.Value?.ToString(), out var g) ? g : null;
+        assessments = await Ops(s => s.ListAsync(filter));
+    }
+
+    private async Task FilterTo(Guid id)
+    {
+        filter = id;
+        assessments = await Ops(s => s.ListAsync(filter));
+    }
+
+    private void EditCourse(CourseSummary c) => course = new CourseDraft { Id = c.Id, Title = c.Title, Subject = c.Subject, Description = c.Description };
+
+    private async Task SaveCourseAsync()
+    {
+        busy = true;
+        var r = await Ops(s => s.SaveCourseAsync(course));
+        Show(r);
+        if (r.Ok) course = new();
+        await LoadAsync();
+        busy = false;
+    }
+
+    private async Task ArchiveCourseAsync(CourseSummary c, bool archive)
+    {
+        busy = true;
+        Show(await Ops(s => s.SetCourseArchivedAsync(c.Id, archive)));
+        await LoadAsync();
+        busy = false;
+    }
+
+    private void Show(AssessmentResult r)
+    {
+        ok = r.Ok;
+        message = r.Message;
+    }
+}

@@ -10,7 +10,9 @@
 <HeadContent><link rel="stylesheet" href="exams.css" /></HeadContent>
 <h1>Exams</h1>
 
-<p class="eb-toolbar"><button type="button" @onclick='() => Nav.NavigateTo("exams/new")'>New exam</button></p>
+<p class="notice">Exams are now set up as <a href="assessments">Assessments</a>: courses, learning objectives, rubrics and a grading policy
+    that locks when published (GAD-T85). This list keeps the exams built with the older concept-only builder.</p>
+<p class="eb-toolbar"><a href="assessments/new">New assessment</a></p>
 
 @if (exams is null)
 {

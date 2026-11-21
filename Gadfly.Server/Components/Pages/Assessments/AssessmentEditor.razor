@@ -1,0 +1,798 @@
+@page "/assessments/new"
+@page "/assessments/{Id:guid}"
+@page "/assessments/{Id:guid}/{Step}"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@implements IAsyncDisposable
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject NavigationManager Nav
+
+@* Teacher assessment setup (GAD-T85): details → objectives → rubric → policy → review & publish → assign.
+   Grading policy lock and approved changes: GAD-T82. Permission checks and audited refusals: GAD-T83. *@
+
+<PageTitle>@(view?.Details.Title is { Length: > 0 } t ? t : "New assessment") · Assessments · Gadfly Exams</PageTitle>
+<HeadContent>
+    <link rel="stylesheet" href="exams.css" />
+    <link rel="stylesheet" href="assessments.css" />
+</HeadContent>
+
+<p class="eb-toolbar"><a href="assessments">← All assessments</a></p>
+<h1>
+    @(view?.Details.Title is { Length: > 0 } title ? title : "New assessment")
+    @if (view is not null) { <span>· @view.Status</span> }
+</h1>
+
+@if (caps is null)
+{
+    <p class="hint">Loading…</p>
+}
+else if (!caps.Any)
+{
+    <p class="notice" role="alert">Your role in this organization (@(caps.Role ?? "none")) can't set up assessments.</p>
+}
+else if (notFound)
+{
+    <p class="notice" role="alert">That assessment does not exist in this organization.</p>
+}
+else
+{
+    <nav aria-label="Assessment setup steps">
+        <ol class="as-steps">
+            @foreach (var (key, label) in Steps)
+            {
+                var current = key == CurrentStep;
+                <li class="@(current ? "current" : "")">
+                    @if (Id is null && key != "details")
+                    {
+                        <span aria-disabled="true">@label</span>
+                    }
+                    else
+                    {
+                        <a href="@StepHref(key)" aria-current="@(current ? "step" : null)">@label</a>
+                    }
+                </li>
+            }
+        </ol>
+    </nav>
+
+    @if (view is { IsDraft: false })
+    {
+        <p class="notice">
+            Published @AssessmentOps.When(view.PublishedAt). The details, objectives and rubric are locked, and so is the grading policy:
+            a policy change must be requested and approved by an institution administrator.
+        </p>
+    }
+
+    @if (message is not null)
+    {
+        <p role="status" class="as-message @(ok ? "ok" : "error")">@message</p>
+    }
+
+    @switch (CurrentStep)
+    {
+        case "details":
+            @DetailsStep
+            break;
+        case "objectives":
+            @ObjectivesStep
+            break;
+        case "rubric":
+            @RubricStep
+            break;
+        case "policy":
+            @PolicyStep
+            break;
+        case "review":
+            @ReviewStep
+            break;
+        case "assign":
+            @AssignStep
+            break;
+        default:
+            <p class="notice">Unknown step.</p>
+            break;
+    }
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+    [Parameter] public string? Step { get; set; }
+    [SupplyParameterFromQuery(Name = "course")] public Guid? CourseQuery { get; set; }
+
+    private static readonly (string Key, string Label)[] Steps =
+    [
+        ("details", "1. Details"), ("objectives", "2. Objectives"), ("rubric", "3. Rubric"),
+        ("policy", "4. Grading policy"), ("review", "5. Review & publish"), ("assign", "6. Assign"),
+    ];
+
+    private AssessmentCapabilities? caps;
+    private AssessmentView? view;
+    private AssessmentDetails details = new();
+    private IReadOnlyList<CourseSummary> courses = [];
+    private IReadOnlyList<CollectionOption> collections = [];
+    private IReadOnlyList<ConceptSuggestion> concepts = [];
+    private IReadOnlyList<ConceptSuggestion> suggestions = [];
+    private IReadOnlyList<string> problems = [];
+    private readonly HashSet<string> pickedSuggestions = new(StringComparer.Ordinal);
+    private readonly Dictionary<Guid, ObjectiveDraft> objectiveEdits = [];
+    private ObjectiveDraft newObjective = new();
+    private readonly Dictionary<Guid, CriterionDraft> criterionEdits = [];
+    private readonly Dictionary<Guid, CriterionDraft> newCriteria = [];
+    private PolicyDraft policy = new();
+    private PolicyDraft changeDraft = new();
+    private string changeReason = "";
+    private readonly Dictionary<Guid, string> decisionNotes = [];
+    private AsyncServiceScope? assignScope;
+    private ExamService? assignService;
+    private string? message;
+    private bool ok, busy, notFound;
+    private Guid? loadedId;
+    private bool loaded, keepMessage;
+    private string? shownStep;
+
+    private string CurrentStep => Id is null ? "details" : (Step?.ToLowerInvariant() ?? "details");
+    private string StepHref(string key) => key == "details" ? $"assessments/{Id}" : $"assessments/{Id}/{key}";
+    private bool Editable => view is null || view.IsDraft;
+
+    private Task<T> Ops<T>(Func<AssessmentService, Task<T>> work) => AssessmentOps.RunAsync(Scopes, Tenant, work);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        caps ??= await Ops(s => s.EnterAsync("the assessment editor", audit: RendererInfo.IsInteractive));
+        if (!caps.Any) return;
+        if (CurrentStep != shownStep)
+        {
+            if (!keepMessage) message = null;
+            keepMessage = false;
+            shownStep = CurrentStep;
+        }
+        if (!loaded || Id != loadedId)
+        {
+            loaded = true;
+            loadedId = Id;
+            message = null;
+            objectiveEdits.Clear();
+            criterionEdits.Clear();
+            newCriteria.Clear();
+            courses = await Ops(s => s.CoursesAsync(includeArchived: true));
+            collections = await Ops(s => s.CollectionsAsync());
+        }
+        await ReloadAsync();
+        if (CurrentStep == "assign" && view is { Status: ExamStatus.Published or ExamStatus.Archived } && assignService is null)
+        {
+            assignScope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+            assignService = ActivatorUtilities.GetServiceOrCreateInstance<ExamService>(assignScope.Value.ServiceProvider);
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        notFound = false;
+        if (Id is not { } id)
+        {
+            view = null;
+            details = new AssessmentDetails
+            {
+                CourseId = CourseQuery is { } q && courses.Any(c => c.Id == q && !c.IsArchived) ? q : courses.FirstOrDefault(c => !c.IsArchived)?.Id,
+                CollectionId = collections.Count == 1 ? collections[0].Id : Guid.Empty,
+            };
+            details.Subject = courses.FirstOrDefault(c => c.Id == details.CourseId)?.Subject ?? "";
+            return;
+        }
+        view = await Ops(s => s.GetAsync(id));
+        if (view is null)
+        {
+            notFound = true;
+            return;
+        }
+        details = Copy(view.Details);
+        policy = PolicyDraft.From(view.Policy);
+        changeDraft = PolicyDraft.From(view.Policy);
+        concepts = await Ops(s => s.ConceptsAsync(id));
+        suggestions = await Ops(s => s.SuggestionsAsync(id));
+        pickedSuggestions.IntersectWith(suggestions.Select(x => x.Key));
+        problems = view.IsDraft ? await Ops(s => s.PublishProblemsAsync(id)) : [];
+    }
+
+    private void Show(AssessmentResult r)
+    {
+        ok = r.Ok;
+        message = r.Message;
+    }
+
+    private async Task RunAsync(Func<AssessmentService, Task<AssessmentResult>> work, Action<AssessmentResult>? onOk = null)
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await Ops(work);
+            Show(r);
+            if (r.Ok) onOk?.Invoke(r);
+            await ReloadAsync();
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private static AssessmentDetails Copy(AssessmentDetails d) => new()
+    {
+        Id = d.Id, CourseId = d.CourseId, CollectionId = d.CollectionId, Title = d.Title, Subject = d.Subject, Topic = d.Topic, Mode = d.Mode,
+        DurationMinutes = d.DurationMinutes, QuestionLimit = d.QuestionLimit, Difficulty = d.Difficulty, Instructions = d.Instructions,
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (assignScope is { } s) await s.DisposeAsync();
+    }
+
+    // ------------------------------------------------------------------ step 1: details
+
+    private RenderFragment DetailsStep => __builder =>
+    {
+        <form class="panel as-wide" @onsubmit="SaveDetailsAsync" @onsubmit:preventDefault aria-labelledby="details-h">
+            <h2 id="details-h">Details</h2>
+            <fieldset class="as-fieldset" disabled="@(!Editable)">
+                <legend class="as-sr">Assessment details</legend>
+                <label>Course
+                    <select value="@(details.CourseId?.ToString() ?? "")" @onchange="CourseChanged" required>
+                        <option value="">Choose a course…</option>
+                        @foreach (var c in courses.Where(c => !c.IsArchived || c.Id == details.CourseId))
+                        {
+                            <option value="@c.Id">@c.Title (@c.Subject)@(c.IsArchived ? " — archived" : "")</option>
+                        }
+                    </select>
+                </label>
+                @if (courses.All(c => c.IsArchived))
+                {
+                    <p class="hint">No active course. <a href="assessments">Create a course</a> first.</p>
+                }
+                <label>Title <input @bind="details.Title" maxlength="200" required autocomplete="off" /></label>
+                <div class="as-two">
+                    <label>Subject <input @bind="details.Subject" maxlength="200" placeholder="defaults to the course subject" autocomplete="off" /></label>
+                    <label>Topic <input @bind="details.Topic" maxlength="200" placeholder="e.g. Photosynthesis" autocomplete="off" /></label>
+                </div>
+                <label>Source collection
+                    <select value="@(details.CollectionId == Guid.Empty ? "" : details.CollectionId.ToString())"
+                            @onchange="e => details.CollectionId = Guid.TryParse(e.Value?.ToString(), out var g) ? g : Guid.Empty" required>
+                        <option value="">Choose the source material…</option>
+                        @foreach (var c in collections)
+                        {
+                            <option value="@c.Id">@c.Title (concept map v@(c.ConceptMapVersion))</option>
+                        }
+                        @if (details.CollectionId != Guid.Empty && collections.All(c => c.Id != details.CollectionId))
+                        {
+                            <option value="@details.CollectionId">@(view?.CollectionTitle ?? "(collection)") — not ready</option>
+                        }
+                    </select>
+                </label>
+                @if (collections.Count == 0)
+                {
+                    <p class="hint">No source collection has a ready concept map. Upload material under Source material first.</p>
+                }
+                <fieldset class="eb-list">
+                    <legend>Mode</legend>
+                    <label class="eb-check">
+                        <input type="radio" name="mode" checked="@(details.Mode == AssessmentMode.Examination)" @onchange="() => details.Mode = AssessmentMode.Examination" />
+                        <span><strong>Examination</strong>: evaluates understanding. The examiner does not teach or hint.</span>
+                    </label>
+                    <label class="eb-check">
+                        <input type="radio" name="mode" checked="@(details.Mode == AssessmentMode.Learning)" @onchange="() => details.Mode = AssessmentMode.Learning" />
+                        <span><strong>Learning</strong>: develops understanding with explanations. Its answers are assisted evidence, kept apart from examination evidence.</span>
+                    </label>
+                </fieldset>
+                <div class="as-three">
+                    <label>Duration (minutes) <input type="number" min="@AssessmentService.MinDurationMinutes" max="@AssessmentService.MaxDurationMinutes" @bind="details.DurationMinutes" /></label>
+                    <label>Question limit <input type="number" min="1" max="@AssessmentService.MaxQuestionLimit" @bind="details.QuestionLimit" /></label>
+                    <label>Difficulty
+                        <select @bind="details.Difficulty">
+                            @for (var d = 1; d <= 5; d++)
+                            {
+                                <option value="@d">@d · @DifficultyName(d)</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+                <label>Instructions shown to students <textarea rows="4" @bind="details.Instructions" maxlength="4000"></textarea></label>
+            </fieldset>
+            @if (Editable)
+            {
+                <div class="eb-actions">
+                    <button type="submit" disabled="@busy">@(Id is null ? "Create and continue" : "Save details")</button>
+                    @if (Id is not null) { <a href="@StepHref("objectives")">Next: objectives →</a> }
+                </div>
+            }
+        </form>
+    };
+
+    private void CourseChanged(ChangeEventArgs e)
+    {
+        var previous = courses.FirstOrDefault(c => c.Id == details.CourseId)?.Subject;
+        details.CourseId = Guid.TryParse(e.Value?.ToString(), out var g) ? g : null;
+        if (string.IsNullOrWhiteSpace(details.Subject) || details.Subject == previous)
+            details.Subject = courses.FirstOrDefault(c => c.Id == details.CourseId)?.Subject ?? "";
+    }
+
+    private async Task SaveDetailsAsync()
+    {
+        var creating = Id is null;
+        Guid? created = null;
+        await RunAsync(s => s.SaveDetailsAsync(details), r => created = r.Id);
+        if (creating && created is { } id)
+        {
+            keepMessage = true;
+            Nav.NavigateTo($"assessments/{id}/objectives");
+        }
+    }
+
+    private static string DifficultyName(int d) => d switch { 1 => "gentle", 2 => "easy", 3 => "standard", 4 => "demanding", _ => "rigorous" };
+
+    // ------------------------------------------------------------------ step 2: objectives
+
+    private RenderFragment ObjectivesStep => __builder =>
+    {
+        <section class="as-section" aria-labelledby="obj-h">
+            <h2 id="obj-h">Learning objectives</h2>
+            <p class="hint">What the student should understand. Each objective is graded on its own scale (0 to its maximum score) and counts by its weight.
+                Link each one to a concept of the source material: the examiner only questions what the material covers.</p>
+
+            @if (view is not null && view.Objectives.Count == 0)
+            {
+                <p class="notice">No objectives yet. Start from the source material's concepts below, or add your own.</p>
+            }
+            <ol class="as-objectives">
+                @foreach (var o in view?.Objectives ?? [])
+                {
+                    var editing = objectiveEdits.TryGetValue(o.Id, out var edit);
+                    <li class="panel as-wide">
+                        @if (editing && edit is not null)
+                        {
+                            <form @onsubmit="() => SaveObjectiveAsync(edit)" @onsubmit:preventDefault aria-label="Edit objective @o.Title">
+                                @ObjectiveFields(edit)
+                                <div class="eb-actions">
+                                    <button type="submit" disabled="@busy">Save objective</button>
+                                    <button type="button" class="link" @onclick="() => objectiveEdits.Remove(o.Id)">Cancel</button>
+                                </div>
+                            </form>
+                        }
+                        else
+                        {
+                            <h3>@o.Title <span class="hint">(@o.Key)</span></h3>
+                            @if (!string.IsNullOrEmpty(o.Description)) { <p class="as-desc">@o.Description</p> }
+                            <p class="hint">
+                                Weight @o.Weight.ToString("0.##") · max score @o.MaxScore.ToString("0.##") ·
+                                @if (o.ConceptKey is null) { <span class="error">no source concept</span> }
+                                else if (o.ConceptMissing) { <span class="error">concept @o.ConceptKey is no longer in the concept map</span> }
+                                else { <span>concept: @o.ConceptTitle</span> }
+                                · @o.Criteria.Count criteri@(o.Criteria.Count == 1 ? "on" : "a")
+                            </p>
+                            @if (Editable)
+                            {
+                                <div class="eb-actions">
+                                    <button type="button" class="link" @onclick="() => objectiveEdits[o.Id] = ToDraft(o)" aria-label="Edit objective @o.Title">Edit</button>
+                                    <button type="button" class="link" disabled="@(busy || o.Ordinal == view!.Objectives.Min(x => x.Ordinal))" @onclick="() => RunAsync(s => s.MoveObjectiveAsync(o.Id, -1))" aria-label="Move @o.Title up">Move up</button>
+                                    <button type="button" class="link" disabled="@(busy || o.Ordinal == view!.Objectives.Max(x => x.Ordinal))" @onclick="() => RunAsync(s => s.MoveObjectiveAsync(o.Id, 1))" aria-label="Move @o.Title down">Move down</button>
+                                    <button type="button" class="link error" disabled="@busy" @onclick="() => RunAsync(s => s.DeleteObjectiveAsync(o.Id))" aria-label="Remove objective @o.Title">Remove</button>
+                                </div>
+                            }
+                        }
+                    </li>
+                }
+            </ol>
+
+            @if (Editable && Id is { } examId)
+            {
+                @if (suggestions.Count > 0)
+                {
+                    <div class="panel as-wide">
+                        <h3>Suggested from the source material</h3>
+                        <fieldset class="eb-list scroll">
+                            <legend>Concepts not yet used by an objective</legend>
+                            @foreach (var c in suggestions)
+                            {
+                                <label class="eb-check">
+                                    <input type="checkbox" checked="@pickedSuggestions.Contains(c.Key)" @onchange="e => { if (e.Value is true) pickedSuggestions.Add(c.Key); else pickedSuggestions.Remove(c.Key); }" />
+                                    <span><strong>@c.Title</strong> @if (!string.IsNullOrEmpty(c.Definition)) { <span class="hint">— @c.Definition</span> }</span>
+                                </label>
+                            }
+                        </fieldset>
+                        <p class="hint">Each becomes an objective (weight 1, max score 100) with a starting Conceptual-understanding criterion you can refine on the Rubric step.</p>
+                        <button type="button" disabled="@(busy || pickedSuggestions.Count == 0)"
+                                @onclick="() => RunAsync(s => s.AddSuggestedAsync(examId, pickedSuggestions.ToList()), _ => pickedSuggestions.Clear())">
+                            Add @pickedSuggestions.Count as objectives
+                        </button>
+                    </div>
+                }
+
+                <form class="panel as-wide" @onsubmit="AddObjectiveAsync" @onsubmit:preventDefault aria-labelledby="newobj-h">
+                    <h3 id="newobj-h">Add an objective</h3>
+                    @ObjectiveFields(newObjective)
+                    <button type="submit" disabled="@busy">Add objective</button>
+                </form>
+            }
+            <p class="eb-actions"><a href="@StepHref("details")">← Details</a> <a href="@StepHref("rubric")">Next: rubric →</a></p>
+        </section>
+    };
+
+    private RenderFragment ObjectiveFields(ObjectiveDraft d) => __builder =>
+    {
+        <label>Title <input @bind="d.Title" maxlength="300" required autocomplete="off" /></label>
+        <label>Description (what understanding looks like) <textarea rows="2" @bind="d.Description" maxlength="4000"></textarea></label>
+        <label>Source concept
+            <select @bind="d.ConceptKey">
+                <option value="">(none — not examinable yet)</option>
+                @foreach (var c in concepts)
+                {
+                    <option value="@c.Key">@c.Title</option>
+                }
+            </select>
+        </label>
+        <div class="as-two">
+            <label>Weight <input type="number" min="0" max="1000" step="0.01" @bind="d.Weight" /></label>
+            <label>Maximum score <input type="number" min="0.01" max="@AssessmentService.MaxObjectiveScore" step="0.01" @bind="d.MaxScore" /></label>
+        </div>
+    };
+
+    private static ObjectiveDraft ToDraft(ObjectiveView o) => new()
+    {
+        Id = o.Id, Title = o.Title, Description = o.Description, ConceptKey = o.ConceptKey, Weight = o.Weight, MaxScore = o.MaxScore,
+    };
+
+    private async Task SaveObjectiveAsync(ObjectiveDraft d)
+    {
+        d.ExamId = Id!.Value;
+        await RunAsync(s => s.SaveObjectiveAsync(d), _ => { if (d.Id is { } id) objectiveEdits.Remove(id); });
+    }
+
+    private async Task AddObjectiveAsync()
+    {
+        newObjective.ExamId = Id!.Value;
+        await RunAsync(s => s.SaveObjectiveAsync(newObjective), _ => newObjective = new());
+    }
+
+    // ------------------------------------------------------------------ step 3: rubric
+
+    private RenderFragment RubricStep => __builder =>
+    {
+        <section class="as-section" aria-labelledby="rubric-h">
+            <h2 id="rubric-h">Rubric</h2>
+            <p class="hint">Each objective needs at least one criterion. A criterion assesses one dimension of understanding and describes what each level
+                (0 Insufficient Evidence to 5 Transfer and Critical Reasoning) looks like; the defaults are the platform's level descriptions. Level 0 means
+                the examination did not produce enough reliable evidence, never "no understanding".</p>
+            @if (view is not null && view.Objectives.Count == 0)
+            {
+                <p class="notice">Add learning objectives first.</p>
+            }
+            @foreach (var o in view?.Objectives ?? [])
+            {
+                <div class="panel as-wide">
+                    <h3>@o.Title</h3>
+                    @if (o.Criteria.Count == 0) { <p class="error">No criteria yet.</p> }
+                    @foreach (var c in o.Criteria)
+                    {
+                        if (criterionEdits.TryGetValue(c.Id, out var edit))
+                        {
+                            <form class="as-criterion" @onsubmit="() => SaveCriterionAsync(edit)" @onsubmit:preventDefault aria-label="Edit criterion @c.Name">
+                                @CriterionFields(edit, c.Id.ToString("N"))
+                                <div class="eb-actions">
+                                    <button type="submit" disabled="@busy">Save criterion</button>
+                                    <button type="button" class="link" @onclick="() => criterionEdits.Remove(c.Id)">Cancel</button>
+                                </div>
+                            </form>
+                        }
+                        else
+                        {
+                            <details class="as-criterion">
+                                <summary><strong>@c.Name</strong> · @AssessmentOps.DimensionLabel(c.Dimension) · weight @c.Weight.ToString("0.##")</summary>
+                                @if (!string.IsNullOrEmpty(c.Description)) { <p class="as-desc">@c.Description</p> }
+                                <dl class="as-levels">
+                                    @for (var i = 0; i < c.Levels.Count; i++)
+                                    {
+                                        <dt>@i · @MasteryLevels.Label((MasteryLevel)i)</dt>
+                                        <dd>@c.Levels[i]</dd>
+                                    }
+                                </dl>
+                                @if (Editable)
+                                {
+                                    <div class="eb-actions">
+                                        <button type="button" class="link" @onclick="() => criterionEdits[c.Id] = ToDraft(o.Id, c)" aria-label="Edit criterion @c.Name">Edit</button>
+                                        <button type="button" class="link error" disabled="@busy" @onclick="() => RunAsync(s => s.DeleteCriterionAsync(c.Id))" aria-label="Remove criterion @c.Name">Remove</button>
+                                    </div>
+                                }
+                            </details>
+                        }
+                    }
+                    @if (Editable)
+                    {
+                        var draft = NewCriterion(o.Id);
+                        <details class="as-criterion">
+                            <summary>Add a criterion to @o.Title</summary>
+                            <form @onsubmit="() => AddCriterionAsync(o.Id)" @onsubmit:preventDefault>
+                                @CriterionFields(draft, "new-" + o.Id.ToString("N"))
+                                <button type="submit" disabled="@busy">Add criterion</button>
+                            </form>
+                        </details>
+                    }
+                </div>
+            }
+            <p class="eb-actions"><a href="@StepHref("objectives")">← Objectives</a> <a href="@StepHref("policy")">Next: grading policy →</a></p>
+        </section>
+    };
+
+    private RenderFragment CriterionFields(CriterionDraft d, string idPrefix) => __builder =>
+    {
+        <label>Name <input @bind="d.Name" maxlength="200" required autocomplete="off" /></label>
+        <div class="as-two">
+            <label>Dimension
+                <select @bind="d.Dimension">
+                    @foreach (var dim in Enum.GetValues<AssessmentDimension>())
+                    {
+                        <option value="@dim">@AssessmentOps.DimensionLabel(dim)</option>
+                    }
+                </select>
+            </label>
+            <label>Weight <input type="number" min="0.01" max="1000" step="0.01" @bind="d.Weight" /></label>
+        </div>
+        <label>Description (optional) <textarea rows="2" @bind="d.Description" maxlength="4000"></textarea></label>
+        <fieldset class="eb-list">
+            <legend>Level descriptors</legend>
+            @for (var i = 0; i < 6; i++)
+            {
+                var level = i;
+                <label for="@($"{idPrefix}-l{level}")">@level · @MasteryLevels.Label((MasteryLevel)level)</label>
+                <textarea id="@($"{idPrefix}-l{level}")" rows="2" maxlength="2000" value="@d.Levels[level]" @onchange="e => d.Levels[level] = e.Value?.ToString() ?? string.Empty"></textarea>
+            }
+        </fieldset>
+    };
+
+    private CriterionDraft NewCriterion(Guid objectiveId)
+    {
+        if (!newCriteria.TryGetValue(objectiveId, out var d)) newCriteria[objectiveId] = d = new CriterionDraft { ObjectiveId = objectiveId };
+        return d;
+    }
+
+    private static CriterionDraft ToDraft(Guid objectiveId, CriterionView c) => new()
+    {
+        Id = c.Id, ObjectiveId = objectiveId, Dimension = c.Dimension, Name = c.Name, Description = c.Description, Weight = c.Weight, Levels = [.. c.Levels],
+    };
+
+    private Task SaveCriterionAsync(CriterionDraft d) => RunAsync(s => s.SaveCriterionAsync(d), _ => { if (d.Id is { } id) criterionEdits.Remove(id); });
+
+    private Task AddCriterionAsync(Guid objectiveId) => RunAsync(s => s.SaveCriterionAsync(newCriteria[objectiveId]), _ => newCriteria.Remove(objectiveId));
+
+    // ------------------------------------------------------------------ step 4: grading policy
+
+    private RenderFragment PolicyStep => __builder =>
+    {
+        <section class="as-section" aria-labelledby="policy-h">
+            <h2 id="policy-h">Grading policy</h2>
+            <p class="hint">Every objective gets an AI score and a human score; the combined score is AI × AI weight + human × human weight. The weights sum to 100%
+                and the human weight can't be 0. When the two scores differ by the review threshold (percentage points of the objective's maximum) the objective
+                is flagged for additional review; at the reconciliation threshold it must be reconciled before the grade can be finalized. The defaults (10 and
+                20 points) are illustrative: set what your institution has approved.</p>
+            @if (view is null)
+            {
+                <p class="hint">Loading…</p>
+            }
+            else if (!view.PolicyLocked)
+            {
+                <form class="panel as-wide" @onsubmit="SavePolicyAsync" @onsubmit:preventDefault aria-label="Grading policy">
+                    @PolicyFields(policy, "p")
+                    <div class="eb-actions">
+                        <button type="submit" disabled="@busy">Save policy</button>
+                        <a href="@StepHref("review")">Next: review →</a>
+                    </div>
+                    <p class="hint">The policy locks when you publish. After that, changes need an approved request.</p>
+                </form>
+            }
+            else
+            {
+                <div class="panel as-wide">
+                    <h3>Current policy <span class="hint">(locked @AssessmentOps.When(view.PolicyLockedAt)@(view.PolicyLockedBy is { } by ? $" by {by}" : ""))</span></h3>
+                    <p>@view.Policy.Describe()</p>
+                    @if (view.AnySessionCompleted)
+                    {
+                        <p class="notice">Students have completed this assessment. A change needs a reason and must be approved by someone other than the person who requested it.</p>
+                    }
+                </div>
+
+                @if (view.PolicyChanges.Any(c => c.Pending))
+                {
+                    var pending = view.PolicyChanges.First(c => c.Pending);
+                    <div class="panel as-wide as-pending" role="region" aria-labelledby="pending-h">
+                        <h3 id="pending-h">Change awaiting approval</h3>
+                        <p>Requested by <strong>@pending.RequestedBy</strong> on @AssessmentOps.When(pending.RequestedAt).</p>
+                        <p><strong>Reason:</strong> @pending.Reason</p>
+                        <p><strong>From:</strong> @pending.Before.Describe()</p>
+                        <p><strong>To:</strong> @pending.After.Describe()</p>
+                        @if (caps!.ApprovePolicyChanges)
+                        {
+                            <label>Note (required to reject; optional to approve)
+                                <textarea rows="2" maxlength="1000" value="@decisionNotes.GetValueOrDefault(pending.Id)" @onchange="e => decisionNotes[pending.Id] = e.Value?.ToString() ?? string.Empty"></textarea>
+                            </label>
+                            <div class="eb-actions">
+                                <button type="button" disabled="@busy" @onclick="() => RunAsync(s => s.ApprovePolicyChangeAsync(pending.Id, decisionNotes.GetValueOrDefault(pending.Id)))">Approve and apply</button>
+                                <button type="button" class="link error" disabled="@busy" @onclick="() => RunAsync(s => s.RejectPolicyChangeAsync(pending.Id, decisionNotes.GetValueOrDefault(pending.Id)))">@(pending.RequestedByUserId == Tenant.UserId ? "Reject (or withdraw, with no note)" : "Reject")</button>
+                            </div>
+                        }
+                        else if (pending.RequestedByUserId == Tenant.UserId)
+                        {
+                            <p class="hint">An institution administrator must approve it.</p>
+                            <button type="button" class="link" disabled="@busy" @onclick="() => RunAsync(s => s.RejectPolicyChangeAsync(pending.Id, null))">Withdraw request</button>
+                        }
+                        else
+                        {
+                            <p class="hint">An institution administrator must approve it.</p>
+                        }
+                    </div>
+                }
+                else if (caps!.ManageAssessments)
+                {
+                    <form class="panel as-wide" @onsubmit="RequestChangeAsync" @onsubmit:preventDefault aria-labelledby="change-h">
+                        <h3 id="change-h">Request a policy change</h3>
+                        @PolicyFields(changeDraft, "c")
+                        <label>Why it must change <textarea rows="3" maxlength="1000" @bind="changeReason" required></textarea></label>
+                        <button type="submit" disabled="@busy">Request change</button>
+                        <p class="hint">Nothing changes until an institution administrator approves the request. The request, the decision and the before/after values are kept in the audit log.</p>
+                    </form>
+                }
+
+                @if (view.PolicyChanges.Any(c => !c.Pending))
+                {
+                    <h3>Approved changes</h3>
+                    <ul class="as-history">
+                        @foreach (var c in view.PolicyChanges.Where(c => !c.Pending))
+                        {
+                            <li>
+                                @AssessmentOps.When(c.ApprovedAt): approved by <strong>@c.ApprovedBy</strong>, requested by @c.RequestedBy — @c.Reason
+                                <div class="hint">From @c.Before.Describe(). To @c.After.Describe().</div>
+                            </li>
+                        }
+                    </ul>
+                }
+            }
+            <p class="eb-actions"><a href="@StepHref("rubric")">← Rubric</a> <a href="@StepHref("review")">Next: review →</a></p>
+        </section>
+    };
+
+    private RenderFragment PolicyFields(PolicyDraft p, string prefix) => __builder =>
+    {
+        <fieldset class="eb-list">
+            <legend>Weights (must total 100%)</legend>
+            <div class="as-two">
+                <label>AI weight (%) <input type="number" min="0" max="100" step="0.01" value="@p.AiWeightPercent" @onchange="e => SetAi(p, e)" /></label>
+                <label>Human weight (%) <input type="number" min="0.01" max="100" step="0.01" value="@p.HumanWeightPercent" @onchange="e => SetHuman(p, e)" /></label>
+            </div>
+            <p class="hint @(p.AiWeightPercent + p.HumanWeightPercent == 100 ? "" : "error")" aria-live="polite">Total: @((p.AiWeightPercent + p.HumanWeightPercent).ToString("0.##"))%</p>
+        </fieldset>
+        <fieldset class="eb-list">
+            <legend>Disagreement thresholds (percentage points of an objective's maximum)</legend>
+            <div class="as-two">
+                <label>Additional review at <input type="number" min="0" max="100" step="0.01" @bind="p.AdditionalReviewAt" /></label>
+                <label>Mandatory reconciliation at <input type="number" min="0.01" max="100" step="0.01" @bind="p.MandatoryReconciliationAt" /></label>
+            </div>
+        </fieldset>
+        <label class="eb-check">
+            <input type="checkbox" @bind="p.BlindHumanGrading" />
+            <span><strong>Blind human grading</strong>: examiners score before they can see the AI's score (recommended).</span>
+        </label>
+        <label>When the evidence is inconclusive
+            <select @bind="p.InconclusiveProcedure">
+                <option value="@InconclusiveProcedure.HumanReview">A human reviews the transcript and decides</option>
+                <option value="@InconclusiveProcedure.AdditionalExamination">The student is offered an additional examination</option>
+            </select>
+        </label>
+        <label class="eb-check">
+            <input type="checkbox" @bind="p.AllowAssistedEvidence" />
+            <span><strong>Allow assisted evidence</strong>: answers given after instructional help (Learning mode) may count as examination evidence. Off unless your institution has a rule allowing it.</span>
+        </label>
+    };
+
+    private static void SetAi(PolicyDraft p, ChangeEventArgs e)
+    {
+        if (!decimal.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var v)) return;
+        p.AiWeightPercent = v;
+        if (v is >= 0 and <= 100) p.HumanWeightPercent = 100 - v;
+    }
+
+    private static void SetHuman(PolicyDraft p, ChangeEventArgs e)
+    {
+        if (!decimal.TryParse(e.Value?.ToString(), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var v)) return;
+        p.HumanWeightPercent = v;
+        if (v is >= 0 and <= 100) p.AiWeightPercent = 100 - v;
+    }
+
+    private Task SavePolicyAsync() => RunAsync(s => s.SavePolicyAsync(Id!.Value, policy));
+
+    private Task RequestChangeAsync() => RunAsync(s => s.RequestPolicyChangeAsync(Id!.Value, changeDraft, changeReason), _ => changeReason = "");
+
+    // ------------------------------------------------------------------ step 5: review & publish
+
+    private RenderFragment ReviewStep => __builder =>
+    {
+        <section class="as-section" aria-labelledby="review-h">
+            <h2 id="review-h">Review and publish</h2>
+            @if (view is not null)
+            {
+                <div class="panel as-wide">
+                    <h3>Details</h3>
+                    <dl class="as-summary">
+                        <dt>Course</dt><dd>@(view.CourseTitle ?? "—")</dd>
+                        <dt>Subject / topic</dt><dd>@view.Details.Subject@(string.IsNullOrEmpty(view.Details.Topic) ? "" : " / " + view.Details.Topic)</dd>
+                        <dt>Mode</dt><dd>@AssessmentOps.ModeLabel(view.Details.Mode)</dd>
+                        <dt>Source</dt><dd>@(view.CollectionTitle ?? "—")</dd>
+                        <dt>Duration</dt><dd>@view.Details.DurationMinutes minutes</dd>
+                        <dt>Question limit</dt><dd>@view.Details.QuestionLimit</dd>
+                        <dt>Difficulty</dt><dd>@view.Details.Difficulty · @DifficultyName(view.Details.Difficulty)</dd>
+                    </dl>
+                    <h3>Objectives</h3>
+                    @if (view.Objectives.Count == 0) { <p class="error">None.</p> }
+                    <ol>
+                        @foreach (var o in view.Objectives)
+                        {
+                            <li>@o.Title <span class="hint">— weight @o.Weight.ToString("0.##"), max @o.MaxScore.ToString("0.##"), @o.Criteria.Count criteri@(o.Criteria.Count == 1 ? "on" : "a")@(o.ConceptTitle is { } ct ? $", concept {ct}" : "")</span></li>
+                        }
+                    </ol>
+                    <h3>Grading policy</h3>
+                    <p>@view.Policy.Describe()</p>
+                </div>
+
+                @if (view.IsDraft)
+                {
+                    @if (problems.Count > 0)
+                    {
+                        <div class="panel as-wide" role="region" aria-labelledby="problems-h">
+                            <h3 id="problems-h" class="error">Fix these before publishing</h3>
+                            <ul>@foreach (var p in problems) { <li>@p</li> }</ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="ok">Ready to publish. Publishing locks the assessment and its grading policy.</p>
+                    }
+                    <div class="eb-actions">
+                        <button type="button" disabled="@(busy || problems.Count > 0)" @onclick="PublishAsync">Publish</button>
+                        <button type="button" class="link" disabled="@busy" @onclick="() => RunAsync(s => s.ArchiveAsync(Id!.Value))">Archive draft</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="eb-actions">
+                        <a href="@StepHref("assign")">Assign to students →</a>
+                        @if (view.Status != ExamStatus.Archived)
+                        {
+                            <button type="button" class="link" disabled="@busy" @onclick="() => RunAsync(s => s.ArchiveAsync(Id!.Value))">Archive</button>
+                        }
+                    </div>
+                }
+            }
+        </section>
+    };
+
+    private async Task PublishAsync()
+    {
+        await RunAsync(s => s.PublishAsync(Id!.Value));
+        if (!ok) return;
+        keepMessage = true;
+        Nav.NavigateTo(StepHref("assign"));
+    }
+
+    // ------------------------------------------------------------------ step 6: assign
+
+    private RenderFragment AssignStep => __builder =>
+    {
+        <section class="as-section" aria-labelledby="assign-h">
+            <h2 id="assign-h" class="as-sr">Assign</h2>
+            @if (view is { IsDraft: true })
+            {
+                <p class="notice">Publish the assessment before assigning it. <a href="@StepHref("review")">Review and publish</a></p>
+            }
+            else if (assignService is not null && Id is { } examId)
+            {
+                <ExamAssignments Service="assignService" ExamId="examId" CanAssign="@(caps!.AssignExaminations && view?.Status == ExamStatus.Published)" />
+            }
+        </section>
+    };
+}

@@ -9,7 +9,7 @@
 
 <PageTitle>@(Id is null ? "New exam" : draft?.Title ?? "Exam") · Gadfly Exams</PageTitle>
 <h1>@(Id is null ? "New exam" : draft?.Title ?? "Exam") @if (draft?.Id is not null) { <span>· @draft.Status</span> }</h1>
-<p class="eb-toolbar"><a href="exams">← All exams</a></p>
+<p class="eb-toolbar"><a href="exams">← All exams</a>@if (Id is { } aid) { <text> · </text><a href="assessments/@aid">Open in assessment setup</a> }</p>
 <HeadContent><link rel="stylesheet" href="exams.css" /></HeadContent>
 
 @if (notFound)
@@ -170,6 +170,12 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+        // New exams are built in the assessment setup (GAD-T85); this builder only opens existing ones.
+        if (Id is null)
+        {
+            Nav.NavigateTo("assessments/new", replace: true);
+            return;
+        }
         notFound = false;
         collections = await svc.ReadyCollectionsAsync();
         if (Id is { } id)

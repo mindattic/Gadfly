@@ -1,0 +1,51 @@
+/* Teacher assessment setup (GAD-T85). Loaded by the pages under Components/Pages/Assessments. Phone-width first. */
+.as-section { margin-bottom: 2rem; position: relative; }
+.as-section > h2 { font-size: 1.2rem; margin: 0 0 .5rem; }
+.as-section h3 { font-size: 1rem; margin: 0; }
+.panel.as-wide { max-width: none; }
+.as-scroll { position: relative; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 1rem; }
+.as-scroll .grid { min-width: 560px; }
+.as-muted td { color: var(--muted); }
+.as-row-actions { display: flex; flex-wrap: wrap; gap: .25rem .75rem; align-items: center; }
+.as-toolbar { display: flex; flex-wrap: wrap; gap: .75rem; align-items: end; margin-bottom: .75rem; }
+.as-button { display: inline-block; padding: .5rem .9rem; border-radius: 6px; background: var(--accent); color: var(--accent-ink); text-decoration: none; }
+.as-flag { color: var(--error); font-size: .85rem; }
+.as-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.as-message { font-weight: 600; }
+.as-fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: .6rem; min-width: 0; }
+
+/* Steps */
+.as-steps { list-style: none; padding: 0; margin: 0 0 1rem; display: flex; flex-wrap: wrap; gap: .35rem; counter-reset: none; }
+.as-steps li a, .as-steps li span { display: block; padding: .4rem .7rem; border: 1px solid var(--line); border-radius: 999px; font-size: .9rem; text-decoration: none; color: var(--ink); background: var(--panel); }
+.as-steps li span { color: var(--muted); }
+.as-steps li.current a { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+/* Form layout */
+.as-two, .as-three { display: grid; gap: .6rem; grid-template-columns: 1fr; }
+@media (min-width: 560px) {
+    .as-two { grid-template-columns: 1fr 1fr; }
+    .as-three { grid-template-columns: 1fr 1fr 1fr; }
+}
+input, select, textarea { max-width: 100%; box-sizing: border-box; }
+
+/* Objectives and rubric */
+.as-objectives { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: .75rem; }
+.as-objectives > li { margin: 0; }
+.as-desc { margin: 0; }
+.as-criterion { border: 1px solid var(--line); border-radius: 6px; padding: .5rem .75rem; display: grid; gap: .5rem; }
+.as-criterion summary { cursor: pointer; }
+.as-levels { display: grid; grid-template-columns: 1fr; gap: .15rem .75rem; margin: .25rem 0; font-size: .9rem; }
+.as-levels dt { font-weight: 600; }
+.as-levels dd { margin: 0 0 .35rem; color: var(--muted); }
+@media (min-width: 720px) {
+    .as-levels { grid-template-columns: minmax(12rem, max-content) 1fr; }
+    .as-levels dd { margin: 0; }
+}
+
+/* Review and policy */
+.as-summary { display: grid; grid-template-columns: max-content 1fr; gap: .2rem 1rem; margin: 0; }
+.as-summary dt { color: var(--muted); }
+.as-summary dd { margin: 0; overflow-wrap: anywhere; }
+.as-pending { border-left: 4px solid var(--accent); }
+.as-history { padding-left: 1.2rem; display: grid; gap: .5rem; }
+.link.error { color: var(--error); }
