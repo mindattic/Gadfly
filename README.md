@@ -412,6 +412,7 @@ and `Gadfly.Server` are two hosts. The full plan is in [docs/SOCRATIC_PLATFORM.m
 | Voice exam room, avatar and audio signals | [Voice](docs/VOICE.md) |
 | The demo tour and mock mode | [Tour](docs/TOUR.md) |
 | Deploying to Azure | [Deploy](docs/DEPLOY.md) |
+| The pilot with Erin: steps, what to watch for, feedback form | [Pilot](docs/PILOT.md) |
 | Security review findings | [Security review](docs/SECURITY_REVIEW.md) |
 | User stories (generated) | [User stories](docs/USER_STORIES.md) |
 | Using the engine or the API from your own app | [Samples](samples/README.md), [Gadfly.Core](Gadfly/README.md), [Gadfly.Sources](Gadfly.Sources/README.md) |
