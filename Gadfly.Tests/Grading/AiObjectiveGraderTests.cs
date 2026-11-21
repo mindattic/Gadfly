@@ -51,6 +51,23 @@ public class AiObjectiveGraderTests
         """;
 
     [Test]
+    public async Task CriteriaWithTheSameNormalizedName_DoNotCrashGrading()
+    {
+        var criteria = new List<GradingCriterion>
+        {
+            new("Accuracy", AssessmentDimension.FactualKnowledge, null, 1m, new Dictionary<MasteryLevel, string>()),
+            new("accuracy ", AssessmentDimension.ConceptualUnderstanding, null, 1m, new Dictionary<MasteryLevel, string>()),
+        };
+        var objective = new GradingObjective("calvin", "The Calvin cycle", null, 100m, criteria);
+        var panel = new GradingPanel(("a", """{"criteria":[{"criterion":"Accuracy","level":4,"rationale":"r","evidence":[1]}],"explanation":"e","misconceptions":[],"ambiguities":[]}"""));
+
+        var r = await new AiObjectiveGrader(panel).GradeAsync(new ObjectiveGradingInput(objective, Evidence()));
+
+        Assert.That(r.Criteria, Has.Count.EqualTo(2));
+        Assert.That(r.Criteria[0].Level, Is.EqualTo(MasteryLevel.Application));
+    }
+
+    [Test]
     public async Task NoUsableEvidence_IsLevelZero_WithoutAskingThePanel()
     {
         var panel = new GradingPanel(("a", Vote(5, 5, 5, 5)));

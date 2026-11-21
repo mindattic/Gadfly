@@ -166,7 +166,9 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel)
         using var doc = PanelJson.ParseObject(reply.Text);
         if (doc is null || doc.RootElement.ValueKind != JsonValueKind.Object) return null;
         var root = doc.RootElement;
-        var byName = criteria.ToDictionary(c => Normalize(c.Name), c => c, StringComparer.Ordinal);
+        // Names that match after normalizing (two criteria both called "Accuracy") must not throw: the first one gets the votes.
+        var byName = new Dictionary<string, GradingCriterion>(StringComparer.Ordinal);
+        foreach (var c in criteria) byName.TryAdd(Normalize(c.Name), c);
         var parsed = new Dictionary<string, CriterionVote>(StringComparer.Ordinal);
         foreach (var c in PanelJson.Arr(root, "criteria"))
         {
