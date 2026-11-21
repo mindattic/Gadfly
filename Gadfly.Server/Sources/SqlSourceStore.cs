@@ -250,11 +250,15 @@ public sealed class SqlConceptMapStore(GadflyDbContext db, Guid organizationId) 
             row.MisconceptionsJson = JsonSerializer.Serialize(entry.Misconceptions);
             row.EditedByInstructor = entry.EditedByInstructor;
             db.ConceptCitations.RemoveRange(row.Citations);
-            row.Citations = entry.PassageIds
+            var fresh = entry.PassageIds
                 .Select(p => Guid.TryParse(p, out var g) ? g : Guid.Empty)
                 .Where(validChunks.Contains).Distinct()
                 .Select(g => new ConceptCitation { OrganizationId = organizationId, ConceptId = row.Id, ChunkId = g })
                 .ToList();
+            // Add them explicitly: reached only through the navigation of a tracked concept, a new citation with a preset Guid key is
+            // tracked as an existing row, and saving it issued an UPDATE of a row that does not exist (GAD-T197).
+            db.ConceptCitations.AddRange(fresh);
+            row.Citations = fresh;
         }
         foreach (var gone in existing.Where(c => map.Concepts.All(e => e.Key != c.Key) && !c.EditedByInstructor))
             gone.IsArchived = true;

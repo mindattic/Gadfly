@@ -42,4 +42,28 @@ public class SqlSourceStoreTests : ServerTest
         Assert.That(kept[0].Quote, Is.EqualTo("light energy"));
         Assert.That(await check.SourceChunks.CountAsync(c => c.CollectionId == w.CollectionId), Is.EqualTo(2));
     }
+
+    /// <summary>GAD-T197: saving the map again (an instructor's edit) rewrites each concept's citations; the new rows must be inserts.</summary>
+    [Test]
+    public async Task SavingAConceptMap_ThatCitesPassages_ReplacesTheCitationsAsNewRows_EvenTwice()
+    {
+        var w = await Seed.ExamAsync();
+        string chunk;
+        await using (var db = OrgDb(w.Org))
+            chunk = (await db.SourceChunks.AsNoTracking().Where(c => c.CollectionId == w.CollectionId).OrderBy(c => c.Ordinal).Select(c => c.Id).FirstAsync()).ToString("N");
+
+        for (var round = 1; round <= 2; round++)
+        {
+            await using var db = OrgDb(w.Org);
+            var store = new SqlConceptMapStore(db, w.Org);
+            var map = (await store.LoadMapAsync(w.CollectionId.ToString()))!;
+            var edited = map with { Concepts = map.Concepts.Select(c => c with { PassageIds = [chunk], EditedByInstructor = true, Definition = $"{c.Definition} (edit {round})" }).ToList() };
+            Assert.DoesNotThrowAsync(() => store.SaveMapAsync(edited), $"round {round}: the citations are replaced, not updated");
+        }
+
+        await using var check = SystemDb();
+        var concepts = await check.Concepts.AsNoTracking().CountAsync(c => c.CollectionId == w.CollectionId && !c.IsArchived);
+        var citations = await check.ConceptCitations.AsNoTracking().Where(c => check.Concepts.Any(k => k.Id == c.ConceptId && k.CollectionId == w.CollectionId)).ToListAsync();
+        Assert.That(citations, Has.Count.EqualTo(concepts), "one citation per concept, none left over from the first save");
+    }
 }
