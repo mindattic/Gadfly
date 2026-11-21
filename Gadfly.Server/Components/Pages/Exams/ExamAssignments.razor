@@ -72,23 +72,22 @@ else
                     <td>
                         @if (r.ResultsReleasedAt is { } rel)
                         {
-                            <span class="ok">released @Local(rel)</span>
+                            <span class="hint">released @Local(rel) (before grading moved to Grading)</span>
                         }
-                        else if (r.CanRelease)
+                        else if (r.LatestEndedAt is not null)
                         {
-                            <button type="button" class="link" disabled="@busy" @onclick="() => ReleaseAsync(r)">Release results</button>
+                            <a href="grading">Grade and publish in Grading</a>
                         }
                         else
                         {
-                            <button type="button" class="link" disabled title="@r.ReleaseBlocker">Release results</button>
-                            <div class="hint">@(r.ReleaseBlocker == Gadfly.Server.Review.ResultRelease.NoEndedSession ? "No finished attempt yet" : "Grade it on the Review page first")</div>
+                            <span class="hint">No finished attempt yet</span>
                         }
                     </td>
                 </tr>
             }
         </tbody>
     </table>
-    <p class="hint">Releasing results lets that student see their grade and report. You decide when; grade the student's latest finished attempt on the Review page first (release stays off until it has a grade).</p>
+    <p class="hint">Results reach a student only through Grading: AI and human grades, reconciliation when they disagree, then an authorized approval and publication.</p>
     @if (!CanAssign && message is not null)
     {
         <p role="status" class="@(ok ? "ok" : "error")">@message</p>
@@ -155,16 +154,6 @@ else
         ok = r.Ok;
         message = r.Message;
         if (r.Ok) picked.Clear();
-        await LoadAsync();
-        busy = false;
-    }
-
-    private async Task ReleaseAsync(AssignmentRow row)
-    {
-        busy = true;
-        var r = await Service.ReleaseResultsAsync(row.Id);
-        ok = r.Ok;
-        message = r.Ok ? $"{row.StudentName}: {r.Message}" : r.Message;
         await LoadAsync();
         busy = false;
     }
