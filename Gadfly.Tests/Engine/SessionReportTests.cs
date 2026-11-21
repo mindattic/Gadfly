@@ -56,6 +56,19 @@ public class SessionReportTests
     }
 
     [Test]
+    public void AverageScore_ExcludesTurnsNoJudgeCouldGrade()
+    {
+        var s = Session();
+        s.Judged("a", MoveKind.Elicit, 0.8, 0.8);
+        s.AskAnswer("a", MoveKind.Probe);
+        // What the engine records when the panel failed: no criteria, zero score, flagged for a human.
+        s.RecordJudgment(new AnswerJudgment { Criteria = [], OverallScore = 0, NeedsHumanReview = true }, 0.8);
+        var a = SessionReport.From(s).Concepts.Single(c => c.ConceptId == "a");
+        Assert.That(a.AverageScore, Is.EqualTo(0.8));
+        Assert.That(a.DisputedTurns, Is.EqualTo(new[] { 1 }), "the unjudged turn still needs a human look");
+    }
+
+    [Test]
     public void ConceptRows_CarryStatusTurnsAverageAndTitles()
     {
         var s = Session();

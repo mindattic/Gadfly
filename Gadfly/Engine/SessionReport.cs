@@ -148,6 +148,7 @@ public sealed record SessionReport
         {
             var turns = session.Turns.Where(t => t.ConceptId == id).ToList();
             var judged = turns.Where(t => t.Judgment is not null && t.Answer is not null).ToList();
+            var graded = judged.Where(t => !ObjectiveAssessor.IsUnjudged(t.Judgment!)).ToList();
             var mastery = session.Mastery.TryGetValue(id, out var m) ? m.Estimate : (judged.Count == 0 ? 0 : MasteryModel.Prior);
             var status = turns.Count == 0 ? "not-examined" : QuestionPlanner.StatusOf(session, id).ToString().ToLowerInvariant();
             // Strongest and weakest answers both make good evidence: show the extremes first.
@@ -166,7 +167,8 @@ public sealed record SessionReport
                 Mastery = Math.Round(mastery, 3),
                 Status = status,
                 Turns = turns.Count,
-                AverageScore = judged.Count == 0 ? null : Math.Round(judged.Average(t => t.Judgment!.OverallScore), 3),
+                // A turn no judge could grade is no evidence, not a zero answer (GAD-T194); an honest "I don't know" is still 0.
+                AverageScore = graded.Count == 0 ? null : Math.Round(graded.Average(t => t.Judgment!.OverallScore), 3),
                 Evidence = evidence,
                 DisputedTurns = judged.Where(t => t.Judgment!.NeedsHumanReview).Select(t => t.Index).ToList(),
             };
