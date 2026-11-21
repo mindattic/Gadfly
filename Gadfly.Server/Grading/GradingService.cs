@@ -604,12 +604,14 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         {
             if (!objectives.TryGetValue(c.ObjectiveId, out var o) || c.Score is not { } sc) continue;
             if (sc < 0 || sc > o.MaxScore) return GradingResult.Fail($"The score for {o.Title} must be between 0 and {o.MaxScore:0.##}.");
+            if (!Enum.IsDefined(c.Level)) return GradingResult.Fail($"Choose a level for {o.Title}.");
+            var rounded = Math.Round(sc, 2, MidpointRounding.AwayFromZero);   // the rounding the stored score gets
             var previous = CurrentHuman(existing, o.Id);
-            if (previous is not null && previous.Score == Math.Round(sc, 2) && previous.Level == c.Level) continue;
+            if (previous is not null && previous.Score == rounded && previous.Level == c.Level) continue;
             var row = new HumanObjectiveGrade
             {
                 OrganizationId = Org, SessionId = sessionId, ObjectiveId = o.Id, ReviewerUserId = Actor.UserId!.Value, ReviewerRole = Actor.Role ?? "",
-                Level = c.Level, Score = Math.Round(sc, 2, MidpointRounding.AwayFromZero), MaxScore = o.MaxScore, Comment = Blank(c.Comment) ?? previous?.Comment,
+                Level = c.Level, Score = rounded, MaxScore = o.MaxScore, Comment = Blank(c.Comment) ?? previous?.Comment,
                 EvidenceNote = Blank(c.EvidenceNote) ?? previous?.EvidenceNote, WasBlind = false, SupersedesId = previous?.Id, SubmittedAt = Now,
             };
             db.HumanObjectiveGrades.Add(row);

@@ -107,6 +107,27 @@ public class GradingWorkflowScenarioTests : ServerTest
     }
 
     [Test]
+    public async Task Amend_RefusesAnUndefinedLevel_AndTreatsASameScoreAmendmentAsNoChange()
+    {
+        var w = await GradedByAi(85);
+        var examiner = As(w.Org, OrgRoles.Examiner, null, out var edb);
+        await using (edb)
+            Assert.That((await examiner.SubmitHumanGradesAsync(w.SessionId, [new HumanGradeInput(w.ObjectiveId, MasteryLevel.Application, 88.125m, null, null)])).Ok, Is.True);
+        var teacher = As(w.Org, OrgRoles.Instructor, null, out var tdb);
+        await using (tdb)
+        {
+            Assert.That((await teacher.ApproveAsync(w.SessionId, null, null)).Ok, Is.True);
+            Assert.That((await teacher.PublishAsync(w.SessionId, null)).Ok, Is.True);
+            var bad = await teacher.AmendAsync(w.SessionId, [new HumanGradeInput(w.ObjectiveId, (MasteryLevel)99, 70, null, null)], "Correcting the level.", null);
+            Assert.That(bad.Ok, Is.False);
+            Assert.That(bad.Message, Does.Contain("level"));
+            var same = await teacher.AmendAsync(w.SessionId, [new HumanGradeInput(w.ObjectiveId, MasteryLevel.Application, 88.125m, null, null)], "Nothing actually changes.", null);
+            Assert.That(same.Ok, Is.False, "88.125 is stored as 88.13, so resubmitting it is no change");
+            Assert.That(same.Message, Does.Contain("Change at least one"));
+        }
+    }
+
+    [Test]
     public async Task Scenario_G_AiHumanScoringDisagreement_FullWorkflow()
     {
         var w = await GradedByAi(95);
