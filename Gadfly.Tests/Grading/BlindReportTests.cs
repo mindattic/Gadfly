@@ -43,7 +43,8 @@ public class BlindReportTests
     {
         var report = AssessmentReport.Build(Workspace(aiVisible: false), forStudent: false);
         var md = report.ToMarkdown();
-        var csv = report.ToCsv();
+        // The header names the ai_mock/ai_excluded columns; only the data rows must not reveal anything.
+        var csv = string.Join("\n", report.ToCsv().Split('\n').Skip(1));
         Assert.That(report.Objectives.Single().AiExcluded, Is.False);
         Assert.That(report.Objectives.Single().AiIsMock, Is.False);
         Assert.That(report.Label, Is.Null);
