@@ -168,4 +168,21 @@ public class InstructorOwnershipTests : ServerTest
         Assert.That(await check.FinalGrades.Where(g => g.SessionId == w.SessionB).Select(g => g.Status).SingleAsync(), Is.EqualTo(Gadfly.Assessment.GradeStatus.Finalized));
         Assert.That(await check.AuditEvents.AnyAsync(a => a.OrganizationId == w.Org && a.Action == "access.denied" && a.ActorUserId == w.TeacherA && a.EntityId == w.SessionB.ToString()), Is.True);
     }
+
+    [Test]
+    public async Task SourceLibraryEdits_OnAnotherInstructorsCollection_AreRefusedAndAudited()
+    {
+        var w = await NewWorldAsync();
+        await using (var scope = Scope(Member(w.Org, w.TeacherA, OrgRoles.Instructor)))
+        {
+            var library = scope.ServiceProvider.GetRequiredService<SourceLibraryService>();
+            Assert.That((await library.UpdateConceptAsync(w.Org, w.CollB, "k", "Title", "Def", [], [])).Ok, Is.False);
+            Assert.That((await library.SaveRubricAsync(w.Org, w.CollB, "k", [new Gadfly.Sources.RubricItem("point", 1, [])], [], [])).Ok, Is.False);
+            Assert.That((await library.ArchiveConceptAsync(w.Org, w.CollB, "k")).Ok, Is.False);
+            Assert.That((await library.RestoreConceptAsync(w.Org, w.CollB, "k")).Ok, Is.False);
+        }
+        await using var sys = SystemDb();
+        Assert.That(await sys.AuditEvents.CountAsync(a => a.OrganizationId == w.Org && a.Action == "access.denied" && a.ActorUserId == w.TeacherA && a.EntityId == w.CollB.ToString()),
+            Is.EqualTo(4));
+    }
 }

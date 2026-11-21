@@ -297,6 +297,7 @@ public sealed class SourceLibraryService(GadflyDbContext db, JobQueue jobs, Time
     public async Task<(bool Ok, string Message)> UpdateConceptAsync(Guid organizationId, Guid collectionId, string key,
         string title, string definition, IReadOnlyList<string> keyFacts, IReadOnlyList<string> misconceptions, CancellationToken ct = default)
     {
+        if (await GetCollectionAsync(organizationId, collectionId, ct) is null) return (false, "That collection doesn't exist in this organization.");
         if (await ProcessingBlocksEditsAsync(organizationId, collectionId, ct) is { } busy) return (false, busy);
         title = (title ?? "").Trim();
         if (title.Length == 0) return (false, "A concept needs a title.");
@@ -325,6 +326,7 @@ public sealed class SourceLibraryService(GadflyDbContext db, JobQueue jobs, Time
         IReadOnlyList<RubricItem> understanding, IReadOnlyList<RubricItem> variants, IReadOnlyList<RubricItem> misconceptions,
         CancellationToken ct = default)
     {
+        if (await GetCollectionAsync(organizationId, collectionId, ct) is null) return (false, "That collection doesn't exist in this organization.");
         if (await ProcessingBlocksEditsAsync(organizationId, collectionId, ct) is { } busy) return (false, busy);
         var points = understanding.Where(i => !string.IsNullOrWhiteSpace(i.Text)).ToList();
         if (points.Count == 0) return (false, "A rubric needs at least one understanding point.");
@@ -363,6 +365,7 @@ public sealed class SourceLibraryService(GadflyDbContext db, JobQueue jobs, Time
 
     private async Task<(bool Ok, string Message)> SetArchivedAsync(Guid organizationId, Guid collectionId, string key, bool archived, CancellationToken ct)
     {
+        if (await GetCollectionAsync(organizationId, collectionId, ct) is null) return (false, "That collection doesn't exist in this organization.");
         if (await ProcessingBlocksEditsAsync(organizationId, collectionId, ct) is { } busy) return (false, busy);
         db.ChangeTracker.Clear();
         var concept = await db.Concepts.FirstOrDefaultAsync(c => c.CollectionId == collectionId && c.OrganizationId == organizationId && c.Key == key, ct);
