@@ -41,7 +41,8 @@ public sealed class SessionOrchestrator(
     IServiceScopeFactory scopes,
     ISocraticVotingClient panel,
     TimeProvider clock,
-    ILogger<SessionOrchestrator> log)
+    ILogger<SessionOrchestrator> log,
+    Platform.UsageMeter meter)
 {
     private sealed class Live(SourceExamEngine engine, Guid organizationId)
     {
@@ -73,7 +74,13 @@ public sealed class SessionOrchestrator(
             .FirstOrDefaultAsync(a => a.Id == assignmentId && a.OrganizationId == organizationId && a.StudentUserId == studentUserId, ct)
             ?? throw new SessionRefusedException("That exam is not assigned to you.");
         var exam = assignment.Exam!;
-        if (exam.Status != ExamStatus.Published) throw new SessionRefusedException("That exam is not open yet.");
+        // An attempt already in progress can always be resumed, even if the exam was archived meanwhile.
+        var inProgress = await db.ExamSessions.Where(s => s.AssignmentId == assignmentId && s.OrganizationId == organizationId
+                && s.State != SessionState.Ended && s.State != SessionState.Failed)
+            .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
+        if (inProgress is { } resume) return resume;
+        if (exam.Status != ExamStatus.Published) throw new SessionRefusedException(
+            exam.Status == ExamStatus.Archived ? "That exam is closed to new attempts." : "That exam is not open yet.");
         var now = clock.GetUtcNow();
         if (assignment.OpensAt is { } opens && now < opens) throw new SessionRefusedException($"That exam opens at {opens:u}.");
         if (assignment.ClosesAt is { } closes && now > closes) throw new SessionRefusedException("That exam has closed.");
@@ -83,6 +90,9 @@ public sealed class SessionOrchestrator(
         var active = sessions.FirstOrDefault(s => s.State is not (SessionState.Ended or SessionState.Failed));
         if (active is not null) return active.Id;
         if (sessions.Count >= assignment.AttemptsAllowed) throw new SessionRefusedException("You have used every attempt for this exam.");
+        var (spent, quota) = await meter.MonthAsync(db, organizationId, ct);
+        if (quota is { } q && spent >= q)
+            throw new SessionRefusedException("Your organization has reached its monthly usage limit. Please contact your instructor.");
 
         var collection = await db.SourceCollections.AsNoTracking()
             .FirstAsync(c => c.Id == exam.CollectionId && c.OrganizationId == organizationId, ct);
@@ -159,6 +169,7 @@ public sealed class SessionOrchestrator(
         try
         {
             Turn? question;
+            using var usage = Gadfly.Socrates.PanelUsage.Track(out var calls);
             try
             {
                 question = await step(live);
@@ -166,7 +177,7 @@ public sealed class SessionOrchestrator(
             finally
             {
                 // Persist whatever happened, even if a panel call failed midway: the transcript is the resume point.
-                await PersistAsync(live, studentUserId, ct);
+                await PersistAsync(live, studentUserId, calls, ct);
             }
             var view = View(live, question);
             log.LogInformation("Session step: turn {Turn}, {Move}, state {State}, {Elapsed} ms.",
@@ -279,7 +290,7 @@ public sealed class SessionOrchestrator(
         ?? throw new SessionRefusedException("That exam session was not found.");
 
     /// <summary>Writes the engine's state to SQL: the resume point plus the review rows for every turn not yet stored.</summary>
-    private async Task PersistAsync(Live live, Guid studentUserId, CancellationToken ct)
+    private async Task PersistAsync(Live live, Guid studentUserId, IReadOnlyList<Gadfly.Socrates.PanelCall> calls, CancellationToken ct)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
@@ -288,6 +299,7 @@ public sealed class SessionOrchestrator(
         var row = await Owned(db, org, s.Id, studentUserId, ct);
         var now = clock.GetUtcNow();
 
+        meter.Stage(db, org, s.Id, calls, "exam-step");   // GAD-T47: estimated LLM usage of this step
         row.TranscriptJson = SessionTranscriptSerializer.Serialize(s);
         row.LedgerJson = live.Engine.Ledger.ToJson();
         row.StartedAt ??= s.StartedAt;

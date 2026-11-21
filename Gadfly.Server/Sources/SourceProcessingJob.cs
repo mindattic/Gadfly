@@ -25,7 +25,8 @@ public static class SourceUploads
 /// unchanged files are skipped by content hash, and the map/rubric builders reconcile with what is
 /// stored (instructor edits are kept).
 /// </summary>
-public sealed class SourceProcessingJob(GadflyDbContext db, ISocraticVotingClient panel, IEnumerable<IDocumentTextExtractor> extractors) : IJobHandler
+public sealed class SourceProcessingJob(GadflyDbContext db, ISocraticVotingClient panel, IEnumerable<IDocumentTextExtractor> extractors,
+    Platform.UsageMeter meter) : IJobHandler
 {
     public const string JobKind = "source.process";
     public string Kind => JobKind;
@@ -33,6 +34,22 @@ public sealed class SourceProcessingJob(GadflyDbContext db, ISocraticVotingClien
     public async Task RunAsync(Job job, IJobProgress progress, CancellationToken ct)
     {
         var request = JobQueue.ReadPayload<SourceProcessingRequest>(job);
+        using var usage = PanelUsage.Track(out var calls);
+        try
+        {
+            await ProcessAsync(request, progress, ct);
+        }
+        finally
+        {
+            // GAD-T47: the panel calls of this run, metered to the organization (estimated).
+            db.ChangeTracker.Clear();
+            meter.Stage(db, request.OrganizationId, null, calls, "source-processing");
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+    }
+
+    private async Task ProcessAsync(SourceProcessingRequest request, IJobProgress progress, CancellationToken ct)
+    {
         var collectionId = request.CollectionId.ToString();
         var store = new SqlSourceStore(db, request.OrganizationId, request.RequestedByUserId);
         var maps = new SqlConceptMapStore(db, request.OrganizationId);

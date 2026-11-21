@@ -97,6 +97,7 @@ builder.Services.AddSignalR(o => o.MaximumReceiveMessageSize = 256 * 1024);
 
 // Platform API (GAD-T46): organization API keys, webhooks with signed deliveries.
 builder.Services.AddScoped<ApiKeyService>();
+builder.Services.AddSingleton<UsageMeter>();
 builder.Services.AddScoped<WebhookService>();
 builder.Services.AddJobHandler<WebhookDeliveryJob>();
 builder.Services.AddHttpClient("webhooks", c => c.Timeout = TimeSpan.FromSeconds(15));
