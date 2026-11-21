@@ -57,6 +57,19 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
     /// <summary>Role every Gadfly account holds in MindAttic.Authentication; organization roles live in memberships.</summary>
     public const string AccountRole = "User";
 
+    /// <summary>The account table's column limit for user names and emails (GAD-T212); longer values would crash with a SQL truncation.</summary>
+    public const int MaxAccountTextLength = 256;
+
+    /// <summary>Why <paramref name="userName"/> or <paramref name="email"/> can't be stored on an account, or null when they can.</summary>
+    internal static string? AccountTextProblem(string userName, string? email)
+    {
+        if (userName.Length > MaxAccountTextLength) return $"The user name must be at most {MaxAccountTextLength} characters.";
+        return email is { Length: > 0 } && !IsValidEmail(email) ? $"The email must be an email address of at most {MaxAccountTextLength} characters." : null;
+    }
+
+    public static bool IsValidEmail(string email) =>
+        email.Length <= MaxAccountTextLength && System.Net.Mail.MailAddress.TryCreate(email, out var parsed) && parsed.Address == email;
+
     public Task<IReadOnlyList<AuthOrganization>> ListOrganizationsAsync(CancellationToken ct = default) => orgs.ListOrganizationsAsync(ct);
 
     public async Task<IReadOnlyList<(AuthOrganization Org, string Role)>> MembershipsOfAsync(Guid userId, CancellationToken ct = default) =>
@@ -139,6 +152,8 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
     public async Task<DirectoryResult> InviteAsync(Guid organizationId, string email, string role, string? actingRole, Guid? actorUserId, CancellationToken ct = default)
     {
         if (!OrgRoles.All.Contains(role, StringComparer.Ordinal)) return new(false, $"'{role}' is not a role.");
+        email = email?.Trim() ?? "";
+        if (!IsValidEmail(email)) return new(false, $"The email must be an email address of at most {MaxAccountTextLength} characters.");
         var r = await invitations.InviteAsync(organizationId, email, role, actorUserId, actingRole, ct);
         return new(r.Ok, r.Message, r.InvitationId);
     }
@@ -169,6 +184,7 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
         var normalized = IUserStore.Normalize(userName);
         var existing = await db.AuthUsers.AsNoTracking().FirstOrDefaultAsync(u => u.NormalizedUserName == normalized, ct);
         if (existing is not null) return (new(existing.Id, null), false);
+        if (AccountTextProblem(userName, email) is { } problem) return (new(Guid.Empty, problem), false);
         var created = await users.CreateAsync(userName, email, AccountRole, temporaryPassword, mustChangePassword: true, ct: ct);
         return !created.Ok || created.UserId is null
             ? (new(Guid.Empty, created.Error ?? "The account could not be created."), false)

@@ -158,6 +158,42 @@ public class OrganizationDirectoryTests : ServerTest
     }
 
     [Test]
+    public async Task AccountTextOverTheColumnLimitOrNotAnEmail_IsRefusedInsteadOfCrashing()
+    {
+        var org = await Seed.OrganizationAsync();
+        var longName = new string('u', 257);
+        var longEmail = new string('e', 250) + "@example.test";
+        var tooLongName = await WithDirectory(d => d.AddMemberAsync(org, longName, null, OrgRoles.Student, Seed.StrongPassword));
+        Assert.That(tooLongName.Ok, Is.False);
+        Assert.That(tooLongName.Message, Does.Contain("256"));
+        var tooLongEmail = await WithDirectory(d => d.AddMemberAsync(org, Seed.UserName(), longEmail, OrgRoles.Student, Seed.StrongPassword));
+        Assert.That(tooLongEmail.Ok, Is.False);
+        var notAnEmail = await WithDirectory(d => d.AddMemberAsync(org, Seed.UserName(), "not an address", OrgRoles.Student, Seed.StrongPassword));
+        Assert.That(notAnEmail.Ok, Is.False);
+        Assert.That(notAnEmail.Message, Does.Contain("email"));
+
+        var name = "Limits " + Guid.NewGuid().ToString("N")[..6];
+        Assert.That((await WithDirectory(d => d.CreateOrganizationAsync(name, longName, "x@example.test", Seed.StrongPassword, Guid.Empty))).Ok, Is.False);
+        Assert.That((await WithDirectory(d => d.CreateOrganizationAsync(name, Seed.UserName(), longEmail, Seed.StrongPassword, Guid.Empty))).Ok, Is.False);
+        Assert.That((await WithDirectory(d => d.CreateOrganizationAsync(new string('o', 201), Seed.UserName(), "x@example.test", Seed.StrongPassword, Guid.Empty))).Ok, Is.False);
+        await using var db = SystemDb();
+        Assert.That(await db.Organizations.AnyAsync(o => o.Name == name), Is.False, "nothing was created");
+
+        Assert.That((await WithDirectory(d => d.InviteAsync(org, longEmail, OrgRoles.Student, null, null))).Ok, Is.False);
+        Assert.That((await WithDirectory(d => d.InviteAsync(org, "nobody", OrgRoles.Student, null, null))).Ok, Is.False);
+    }
+
+    [Test]
+    public async Task AValidEmailAndAUserNameAtTheLimit_AreAccepted()
+    {
+        var org = await Seed.OrganizationAsync();
+        var r = await WithDirectory(d => d.AddMemberAsync(org, Seed.UserName(), "someone@example.test", OrgRoles.Student, Seed.StrongPassword));
+        Assert.That(r.Ok, Is.True, r.Message);
+        Assert.That(OrganizationDirectory.IsValidEmail("someone@example.test"), Is.True);
+        Assert.That(OrganizationDirectory.IsValidEmail(new string('e', 244) + "@example.test"), Is.False, "257 characters");
+    }
+
+    [Test]
     public async Task CreateOrganization_MakesItsOwner_AndRefusesDuplicates()
     {
         var name = "Academy " + Guid.NewGuid().ToString("N")[..6];
