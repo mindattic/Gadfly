@@ -88,10 +88,10 @@ if (-not $DryRun) {
     # Read-only guard: the app must be in mock mode unless the caller says otherwise. Only this one setting is looked at.
     $settingsJson = & az webapp config appsettings list -g $ResourceGroup -n $App -o json
     if ($LASTEXITCODE -ne 0) { Fail "cannot read the app settings of $App" }
-    # Join the lines and assign first: Windows PowerShell 5.1 would otherwise pipe the whole array as one object.
-    $settings = @(($settingsJson -join "`n") | ConvertFrom-Json)
-    $modeSetting = $settings | Where-Object { $_.name -eq 'Gadfly__AiMode' } | Select-Object -First 1
-    $mode = if ($modeSetting) { [string]$modeSetting.value } else { '(unset)' }
+    $mode = '(unset)'
+    foreach ($setting in (ConvertFrom-Json -InputObject ($settingsJson -join "`n"))) {
+        if ($setting.name -eq 'Gadfly__AiMode') { $mode = [string]$setting.value }
+    }
     Write-Host "   Gadfly__AiMode on $App = $mode"
     if ($mode -ne 'mock' -and -not $AllowLive) { Fail "Gadfly__AiMode is '$mode', not 'mock'; pass -AllowLive to deploy anyway." }
 }
@@ -151,9 +151,12 @@ try {
         Start-Sleep -Seconds 10
         $json = & az webapp log deployment list -g $ResourceGroup -n $App -o json
         if ($LASTEXITCODE -ne 0 -or -not $json) { continue }
-        $deployments = @(($json -join "`n") | ConvertFrom-Json)
-        $latest = $deployments | Where-Object { ([DateTimeOffset]$_.received_time).UtcDateTime -ge $startedUtc.AddMinutes(-1) } |
-            Sort-Object { ([DateTimeOffset]$_.received_time).UtcDateTime } | Select-Object -Last 1
+        # foreach (not a pipeline): Windows PowerShell 5.1 emits a parsed JSON array as one object.
+        $latest = $null
+        foreach ($d in (ConvertFrom-Json -InputObject ($json -join "`n"))) {
+            $received = ([DateTimeOffset]$d.received_time).UtcDateTime
+            if ($received -ge $startedUtc.AddMinutes(-1) -and (-not $latest -or $received -gt $latestAt)) { $latest = $d; $latestAt = $received }
+        }
         if (-not $latest) { continue }
         Write-Host "   deployment $($latest.id.Substring(0,8)) status $($latest.status)"
         if ($latest.status -eq 4) { $deployed = $true; break }
