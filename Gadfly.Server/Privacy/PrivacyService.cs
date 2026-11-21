@@ -157,6 +157,9 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
         var turns = await db.SessionTurns.AsNoTracking().Where(t => ids.Contains(t.SessionId)).OrderBy(t => t.Index).ToListAsync(ct);
         var turnIds = turns.Select(t => t.Id).ToList();
         var judgments = await db.Judgments.AsNoTracking().Include(j => j.Votes).Where(j => turnIds.Contains(j.TurnId)).ToListAsync(ct);
+        var responses = await db.StudentResponses.AsNoTracking().Where(r => ids.Contains(r.SessionId)).OrderBy(r => r.SessionId).ThenBy(r => r.Sequence).ToListAsync(ct);
+        var responseIds = responses.Select(r => r.Id).ToList();
+        var versions = await db.TranscriptVersions.AsNoTracking().Where(v => responseIds.Contains(v.ResponseId)).ToListAsync(ct);
         var export = new
         {
             exportedAt = clock.GetUtcNow(),
@@ -188,6 +191,23 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
                 .Select(r => new { r.SessionId, r.Recommendation, r.OverallScore, r.Markdown, r.CreatedAt }).ToListAsync(ct),
             grades = await db.GradeDecisions.AsNoTracking().Where(g => ids.Contains(g.SessionId))
                 .Select(g => new { g.SessionId, g.Grade, g.Score, g.Comment, g.DecidedAt }).ToListAsync(ct),
+            // The response ledger and the grading record (GAD-T193): what the student said and how it was graded.
+            responses = responses.Select(r => new
+            {
+                r.SessionId, r.Sequence, kind = r.Kind.ToString(), r.Modality, r.OriginalText, r.VerifiedText, verificationState = r.VerificationState.ToString(),
+                r.SubmittedAt,
+                versions = versions.Where(v => v.ResponseId == r.Id).OrderBy(v => v.Version).Select(v => new { v.Version, v.Text, v.Source, v.CreatedAt }),
+            }),
+            clarifications = await db.ClarificationEvents.AsNoTracking().Where(c => ids.Contains(c.SessionId)).OrderBy(c => c.AskedAt)
+                .Select(c => new { c.SessionId, type = c.Type.ToString(), c.Question, c.StudentReply, c.AskedAt, c.AnsweredAt }).ToListAsync(ct),
+            humanGrades = await db.HumanObjectiveGrades.AsNoTracking().Where(g => ids.Contains(g.SessionId)).OrderBy(g => g.SubmittedAt)
+                .Select(g => new { g.SessionId, g.ObjectiveId, level = g.Level.ToString(), g.Score, g.MaxScore, g.Comment, g.EvidenceNote, g.SubmittedAt }).ToListAsync(ct),
+            aiGrades = await db.AiObjectiveGrades.AsNoTracking().Where(g => ids.Contains(g.SessionId) && !g.IsMock).OrderBy(g => g.CreatedAt)
+                .Select(g => new { g.SessionId, g.ObjectiveId, level = g.Level.ToString(), g.Score, g.MaxScore, g.Explanation, g.CreatedAt }).ToListAsync(ct),
+            finalGrades = await db.FinalGrades.AsNoTracking().Where(g => ids.Contains(g.SessionId))
+                .Select(g => new { g.SessionId, status = g.Status.ToString(), g.FinalPercent, g.LetterOrLabel, g.UpdatedAt }).ToListAsync(ct),
+            appeals = await db.GradeAppeals.AsNoTracking().Where(a => ids.Contains(a.SessionId)).OrderBy(a => a.OpenedAt)
+                .Select(a => new { a.SessionId, a.Reason, state = a.State.ToString(), a.Resolution, a.OpenedAt, a.ResolvedAt }).ToListAsync(ct),
         };
         return JsonSerializer.Serialize(export, Json);
     }

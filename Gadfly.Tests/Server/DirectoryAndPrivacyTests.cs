@@ -386,6 +386,29 @@ public class PrivacyServiceTests : ServerTest
     }
 
     [Test]
+    public async Task Export_IncludesTheResponseLedgerAndTheGradingRecord()
+    {
+        var (w, sessionId, turnId) = await Seed.EndedSessionAsync(Words);
+        await using (var db = OrgDb(w.Org))
+        {
+            db.StudentResponses.Add(new StudentResponse
+            {
+                OrganizationId = w.Org, SessionId = sessionId, TurnId = turnId, Sequence = 1, OriginalText = Words, VerifiedText = Words,
+                SubmittedAt = DateTimeOffset.UtcNow,
+            });
+            db.FinalGrades.Add(new FinalGrade { OrganizationId = w.Org, SessionId = sessionId, Status = Gadfly.Assessment.GradeStatus.Published, FinalPercent = 81.5m, UpdatedAt = DateTimeOffset.UtcNow });
+            db.GradeAppeals.Add(new GradeAppeal { OrganizationId = w.Org, SessionId = sessionId, StudentUserId = w.StudentId, Reason = "I think question two was misread", State = AppealState.Open, OpenedAt = DateTimeOffset.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var json = await WithPrivacy(w.Org, p => p.ExportStudentAsync(w.Org, w.StudentId));
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        Assert.That(root.GetProperty("responses")[0].GetProperty("originalText").GetString(), Is.EqualTo(Words));
+        Assert.That(root.GetProperty("finalGrades")[0].GetProperty("finalPercent").GetDecimal(), Is.EqualTo(81.5m));
+        Assert.That(root.GetProperty("appeals")[0].GetProperty("reason").GetString(), Does.Contain("misread"));
+    }
+
+    [Test]
     public async Task Export_ForAnotherOrganization_IsEmpty()
     {
         var (w, _, _) = await Seed.EndedSessionAsync(Words);
