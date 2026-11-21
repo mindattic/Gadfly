@@ -76,8 +76,8 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
     public async Task<SessionReviewView?> GetAsync(Guid sessionId, CancellationToken ct = default)
     {
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == organizationId, ct);
-        if (session is null) return null;
         if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session review", ct);
+        if (session is null) return null;
         var exam = await db.Exams.AsNoTracking().FirstOrDefaultAsync(e => e.Id == session.ExamId && e.OrganizationId == organizationId, ct);
         var assignment = await db.ExamAssignments.AsNoTracking().FirstOrDefaultAsync(a => a.Id == session.AssignmentId && a.OrganizationId == organizationId, ct);
 
@@ -164,9 +164,9 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         if (comment is { Length: > 4000 }) return new(false, "Keep the comment under 4,000 characters.");
 
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == organizationId, ct);
+        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session review", ct);
         if (session is null) return new(false, "That session was not found in this organization.");
         if (session.State != SessionState.Ended) return new(false, "This session hasn't ended yet; grade it once it has.");
-        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session review", ct);
         var report = await db.SessionReports.AsNoTracking().Where(r => r.SessionId == sessionId && r.OrganizationId == organizationId)
             .OrderByDescending(r => r.CreatedAt).FirstOrDefaultAsync(ct);
 
@@ -196,9 +196,9 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
     public async Task<ReviewResult> ReleaseAsync(Guid sessionId, bool release, CancellationToken ct = default)
     {
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == organizationId, ct);
+        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session review", ct);
         if (session is null) return new(false, "That session was not found in this organization.");
         if (release && await ResultRelease.BlockerAsync(db, organizationId, session.AssignmentId, ct) is { } blocker)
-        if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session review", ct);
             return new(false, blocker);
         var assignment = await db.ExamAssignments.FirstOrDefaultAsync(a => a.Id == session.AssignmentId && a.OrganizationId == organizationId, ct);
         if (assignment is null) return new(false, "This session's assignment no longer exists.");
