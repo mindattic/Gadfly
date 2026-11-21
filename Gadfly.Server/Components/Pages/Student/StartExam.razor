@@ -170,7 +170,7 @@ else
             if (assignment is not null)
             {
                 var (orgName, retention) = await StudentExams.OrganizationAsync(Scopes, org);
-                notice = ConsentNotice.For(orgName, assignment.ExamTitle, retention, assignment.Mode);
+                notice = ConsentNotice.For(orgName, assignment.ExamTitle, retention, assignment.Mode, assignment.Integrity);
             }
         }
         loading = false;

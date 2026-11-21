@@ -18,6 +18,7 @@ public sealed record StudentAssignmentView
     public required string ExamTitle { get; init; }
     public string? Instructions { get; init; }
     public ExamMode Mode { get; init; }
+    public IntegrityLevel Integrity { get; init; } = IntegrityLevel.Standard;
     public DateTimeOffset? OpensAt { get; init; }
     public DateTimeOffset? ClosesAt { get; init; }
     public int AttemptsUsed { get; init; }
@@ -102,6 +103,7 @@ public static class StudentExams
                 ExamTitle = a.Exam?.Title ?? "Exam",
                 Instructions = a.Exam?.Instructions,
                 Mode = a.Exam?.Mode ?? ExamMode.Text,
+                Integrity = a.Exam?.IntegrityLevel ?? IntegrityLevel.Standard,
                 OpensAt = a.OpensAt,
                 ClosesAt = a.ClosesAt,
                 AttemptsUsed = used,
@@ -193,9 +195,10 @@ public static class StudentExams
 public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraphs)
 {
     /// <summary>Bumped whenever the wording changes; part of the hashed text.</summary>
-    public const string Version = "2026-11-20.1";
+    public const string Version = "2026-11-20.2";
 
-    public static ConsentNotice For(string organizationName, string examTitle, int retentionDays, ExamMode mode)
+    public static ConsentNotice For(string organizationName, string examTitle, int retentionDays, ExamMode mode,
+        IntegrityLevel integrity = IntegrityLevel.Standard)
     {
         var paragraphs = new List<string>
         {
@@ -206,9 +209,25 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
             "Who decides: the AI only recommends. Your instructor reads your answers and decides your result, and releases it to you when ready.",
             "Your choice: you can leave the exam at any time with \"Finish\". Leaving early submits what you have answered so far and uses this attempt.",
         };
+        paragraphs.InsertRange(2, BrowserSignals(integrity, mode));
         if (mode == ExamMode.Voice)
             paragraphs.Add("This exam is set up for voice. Voice and camera are not available yet, so you will answer by typing.");
         return new ConsentNotice("Before you begin", paragraphs);
+    }
+
+    /// <summary>
+    /// The browser integrity signals this exam notes (GAD-T56), in the same words the exam room shows;
+    /// none when the exam's integrity level is Off.
+    /// </summary>
+    private static IEnumerable<string> BrowserSignals(IntegrityLevel integrity, ExamMode mode)
+    {
+        if (integrity == IntegrityLevel.Off) yield break;
+        var what = "switching to another tab or window"
+            + (mode == ExamMode.Text ? ", pasting into the answer box" : "")
+            + (integrity == IntegrityLevel.Strict
+                ? ", copying the question, leaving full screen, and having more than one screen connected (your browser may ask to allow screen detection; you can decline)"
+                : ", and copying the question");
+        yield return $"During the exam your browser also notes {what}: when it happened and for how long. Nothing is blocked; these are notes for your instructor to review, never an automatic fail.";
     }
 
     /// <summary>The exact text the student accepted, as hashed.</summary>

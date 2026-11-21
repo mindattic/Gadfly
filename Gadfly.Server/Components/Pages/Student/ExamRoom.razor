@@ -1,8 +1,9 @@
 @page "/exam/{SessionId:guid}"
 @attribute [Authorize(Policy = GadflyPolicies.Student)]
-@implements IDisposable
+@implements IAsyncDisposable
 @using Gadfly.Engine
 @using Gadfly.Server.Data
+@using Gadfly.Server.Integrity
 @using Gadfly.Server.Sessions
 @using Gadfly.Server.Student
 @using Gadfly.Sources
@@ -12,6 +13,7 @@
 @inject SessionOrchestrator Sessions
 @inject NavigationManager Nav
 @inject ILogger<ExamRoom> Log
+@inject IJSRuntime JS
 
 <HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
 <PageTitle>@(examTitle ?? "Exam") · Gadfly Exams</PageTitle>
@@ -30,6 +32,17 @@
             </div>
         }
     </header>
+
+    @if (integrity is { Level: not IntegrityLevel.Off } watched && phase is Phase.Answering or Phase.Thinking)
+    {
+        <div class="integrity-notice" role="note">
+            <p>@IntegrityNotice(watched)</p>
+            @if (watched.Level == IntegrityLevel.Strict && !fullscreen)
+            {
+                <button type="button" class="secondary small" @onclick="GoFullscreenAsync">Go full screen</button>
+            }
+        </div>
+    }
 
     @switch (phase)
     {
@@ -70,7 +83,7 @@
                 <p class="exam-question" aria-live="polite">@step?.Question</p>
                 <label>
                     Your answer
-                    <textarea rows="7" @bind="answer" @bind:event="oninput" @bind:after="OnTyped" @onkeydown="OnKeyDown"
+                    <textarea id="answer-box" rows="7" @bind="answer" @bind:event="oninput" @bind:after="OnTyped" @onkeydown="OnKeyDown"
                               placeholder="Answer in your own words…" aria-describedby="answer-hint"></textarea>
                 </label>
                 <p id="answer-hint" class="hint">Ctrl+Enter submits. Answers can't be changed after you submit.</p>
@@ -192,7 +205,100 @@
                 error = "This exam session could not continue. Ask your instructor to reset it.";
                 return;
         }
+        if (!integrityStarted)
+        {
+            integrityStarted = true;
+            _ = StartIntegrityAsync(org, user);
+        }
         await RunStepAsync(ThinkingAbout.Question, () => Sessions.CurrentAsync(org, SessionId, user));
+    }
+
+    // ---------------------------------------------------------------- browser integrity signals (GAD-T56)
+
+    private IntegritySettings? integrity;
+    private IJSObjectReference? integrityModule;
+    private DotNetObjectReference<ExamRoom>? integrityRef;
+    private Guid integrityOrg, integrityUser;
+    private bool fullscreen, integrityStarted;
+    private TimeSpan? clientSkew;
+
+    /// <summary>Loads the exam's integrity level and, unless it is Off, starts wwwroot/js/integrity.js. Never blocks the exam.</summary>
+    private async Task StartIntegrityAsync(Guid org, Guid user)
+    {
+        try
+        {
+            await using (var scope = Scopes.CreateAsyncScope())
+                integrity = await IntegrityRecorder.Create(scope.ServiceProvider).SettingsAsync(org, user, SessionId, stop.Token);
+            if (integrity is not { Level: not IntegrityLevel.Off } settings) return;
+            integrityOrg = org;
+            integrityUser = user;
+            integrityRef ??= DotNetObjectReference.Create(this);
+            integrityModule = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/integrity.js");
+            await integrityModule.InvokeAsync<bool>("start", stop.Token, integrityRef, new
+            {
+                sessionId = SessionId,
+                level = settings.Level.ToString(),
+                // Pastes matter where answers are typed; voice exams will block typing (ET voice mode).
+                recordPaste = settings.Mode == ExamMode.Text,
+            });
+            fullscreen = await integrityModule.InvokeAsync<bool>("isFullscreen", stop.Token);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
+        {
+            Log.LogDebug(ex, "Browser integrity signals did not start for session {SessionId}.", SessionId);
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Browser integrity signals did not start for session {SessionId}.", SessionId);
+        }
+    }
+
+    /// <summary>Called by integrity.js with a batch of signals. Returns false when the browser should stop sending.</summary>
+    [JSInvokable]
+    public async Task<bool> RecordIntegrity(BrowserSignalBatch batch)
+    {
+        if (integrityOrg == Guid.Empty || integrityUser == Guid.Empty || batch is null) return false;
+        // The smallest clock offset seen on this connection is the best estimate (no queueing delay in it).
+        if (IntegrityRecorder.ObservedSkew(batch, Clock.GetUtcNow()) is { } seen && (clientSkew is null || seen < clientSkew)) clientSkew = seen;
+        try
+        {
+            bool keepGoing;
+            await using (var scope = Scopes.CreateAsyncScope())
+                keepGoing = await IntegrityRecorder.Create(scope.ServiceProvider).RecordAsync(integrityOrg, integrityUser, SessionId, batch, clockSkew: clientSkew);
+            if (fullscreen && batch.Events.Any(e => e.Type == "fullscreen-exit"))
+            {
+                fullscreen = false;
+                await InvokeAsync(StateHasChanged);
+            }
+            return keepGoing;
+        }
+        catch (Exception ex)
+        {
+            // Never the student's problem: log and let the browser keep its queue moving.
+            Log.LogWarning(ex, "Could not record browser integrity signals for session {SessionId}.", SessionId);
+            return true;
+        }
+    }
+
+    private async Task GoFullscreenAsync()
+    {
+        if (integrityModule is null) return;
+        try { fullscreen = await integrityModule.InvokeAsync<bool>("enterFullscreen"); }
+        catch (JSException) { fullscreen = false; }
+    }
+
+    /// <summary>What is noted, in the student's words: no surprise monitoring (matches the consent notice).</summary>
+    private static string IntegrityNotice(IntegritySettings s)
+    {
+        var what = new List<string> { "switch to another tab or window" };
+        if (s.Mode == ExamMode.Text) what.Add("paste into the answer box");
+        what.Add("copy the question");
+        if (s.Level == IntegrityLevel.Strict) what.AddRange(["leave full screen", "have more than one screen connected"]);
+        var list = what.Count == 1 ? what[0] : string.Join(", ", what.Take(what.Count - 1)) + " or " + what[^1];
+        return $"Integrity notes are on for this exam: if you {list}, the browser notes when and for how long, for your instructor to review. "
+            + "They are notes, never an automatic fail, and nothing is blocked."
+            + (s.Level == IntegrityLevel.Strict ? " Your browser may ask to allow screen detection; you can decline." : "");
     }
 
     /// <summary>Runs one orchestrator step with the thinking state shown, then shows its result.</summary>
@@ -332,10 +438,20 @@
     private static string Format(TimeSpan t) =>
         t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{t.Minutes:00}:{t.Seconds:00}";
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         stop.Cancel();
         ticker?.Dispose();
+        if (integrityModule is not null)
+        {
+            try
+            {
+                await integrityModule.InvokeVoidAsync("stop", true);
+                await integrityModule.DisposeAsync();
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or ObjectDisposedException) { }
+        }
+        integrityRef?.Dispose();
         stop.Dispose();
     }
 }
