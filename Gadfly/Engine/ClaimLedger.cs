@@ -183,9 +183,9 @@ public sealed class ClaimAnalyzer(ISocraticVotingClient panel, PromptSet prompts
             foreach (var el in doc.RootElement.EnumerateArray())
             {
                 if (el.ValueKind != JsonValueKind.Object) continue;
-                var text = el.TryGetProperty("claim", out var c) ? c.GetString() : null;
+                var text = el.TryGetProperty("claim", out var c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
                 if (string.IsNullOrWhiteSpace(text)) continue;
-                var quote = el.TryGetProperty("quote", out var q) ? q.GetString() : null;
+                var quote = el.TryGetProperty("quote", out var q) && q.ValueKind == JsonValueKind.String ? q.GetString() : null;
                 list.Add((quote ?? text, text));
             }
             return list;

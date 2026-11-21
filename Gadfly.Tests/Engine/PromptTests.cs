@@ -291,6 +291,7 @@ public class ClaimLedgerTests
     [TestCase("Here you go:\n```json\n[{\"quote\": \"q\", \"claim\": \"c\"}, {\"claim\": \"d\"}]\n```", 2)]
     [TestCase("[]", 0)]
     [TestCase("[{\"quote\": \"only a quote\"}, 7, \"str\", {\"claim\": \"  \"}]", 0)]
+    [TestCase("[{\"quote\": [\"q\"], \"claim\": 5}, {\"quote\": 3, \"claim\": \"c\"}]", 1)]
     public void ParseClaims_ToleratesProseAndFences(string raw, int count) =>
         Assert.That(ClaimAnalyzer.ParseClaims(raw), Has.Count.EqualTo(count));
 
