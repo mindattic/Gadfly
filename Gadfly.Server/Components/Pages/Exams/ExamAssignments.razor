@@ -122,6 +122,8 @@ else
     private int attempts = 1;
     private decimal timeMultiplier = 1m;
     private TimeSpan offset = TimeSpan.Zero;
+    /// <summary>The browser's own time zone; null until known (then <see cref="offset"/>, today's UTC offset, stands in).</summary>
+    private TimeZoneInfo? zone;
     private string? message;
     private bool ok, busy;
 
@@ -153,6 +155,8 @@ else
             await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/exams.js");
             var minutes = await module.InvokeAsync<int>("timezoneOffsetMinutes");
             offset = TimeSpan.FromMinutes(-minutes);
+            zone = AssignmentTime.Find(await module.InvokeAsync<string?>("timeZoneId"));
+            if (zone is not null) offset = zone.GetUtcOffset(DateTimeOffset.UtcNow);
             StateHasChanged();
         }
         catch (JSException)
@@ -195,10 +199,9 @@ else
         finally { busy = false; }
     }
 
-    private DateTimeOffset? ToUtc(DateTime? local) =>
-        local is { } l ? new DateTimeOffset(DateTime.SpecifyKind(l, DateTimeKind.Unspecified), offset).ToUniversalTime() : null;
+    private DateTimeOffset? ToUtc(DateTime? local) => local is { } l ? AssignmentTime.ToUtc(l, zone, offset) : null;
 
-    private string Local(DateTimeOffset t) => t.ToOffset(offset).ToString("yyyy-MM-dd HH:mm");
+    private string Local(DateTimeOffset t) => AssignmentTime.ToLocal(t, zone, offset).ToString("yyyy-MM-dd HH:mm");
 
     private string Window(AssignmentRow r) => (r.OpensAt, r.ClosesAt) switch
     {
