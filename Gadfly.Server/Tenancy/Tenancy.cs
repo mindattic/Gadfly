@@ -13,15 +13,19 @@ public static class OrgRoles
     public const string Admin = "Admin";
     public const string Instructor = "Instructor";
     public const string Student = "Student";
+    /// <summary>Human Examiner: scores examinations, independently of the AI (master plan Part 8).</summary>
+    public const string Examiner = "Examiner";
+    /// <summary>Second Reviewer: resolves AI/human disagreements (master plan Part 10.3).</summary>
+    public const string SecondReviewer = "SecondReviewer";
 
     /// <summary>An integrating app authenticated by an organization API key (GAD-T46); never a person.</summary>
     public const string Api = "Api";
 
     /// <summary>The roles a person can hold.</summary>
-    public static readonly IReadOnlyList<string> All = [Owner, Admin, Instructor, Student];
+    public static readonly IReadOnlyList<string> All = [Owner, Admin, Instructor, Examiner, SecondReviewer, Student];
 
     /// <summary>Roles that must use MFA (staff): everyone but students.</summary>
-    public static bool RequiresMfa(string role) => role is Owner or Admin or Instructor;
+    public static bool RequiresMfa(string role) => role is Owner or Admin or Instructor or Examiner or SecondReviewer;
 
     public static bool IsValid(string role) => All.Contains(role, StringComparer.Ordinal) || role == Api;
 }

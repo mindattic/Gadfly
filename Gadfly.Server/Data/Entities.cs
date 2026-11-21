@@ -64,6 +64,8 @@ public sealed class SourceCollection : ITenantOwned
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OrganizationId { get; set; }
+    /// <summary>The course whose approved materials these are (master plan Part 14.1).</summary>
+    public Guid? CourseId { get; set; }
     public string Title { get; set; } = "";
     public string? Description { get; set; }
     public Guid CreatedByUserId { get; set; }
@@ -179,6 +181,12 @@ public sealed class Exam : ITenantOwned
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OrganizationId { get; set; }
     public Guid CollectionId { get; set; }
+    /// <summary>The course this assessment belongs to (master plan Part 12.1).</summary>
+    public Guid? CourseId { get; set; }
+    public string Subject { get; set; } = "";
+    public string Topic { get; set; } = "";
+    /// <summary>Examination evaluates; Learning develops (Part 3). Evidence never mixes without a policy rule.</summary>
+    public Gadfly.Assessment.AssessmentMode AssessmentMode { get; set; } = Gadfly.Assessment.AssessmentMode.Examination;
     public string Title { get; set; } = "";
     public string? Instructions { get; set; }
     /// <summary>Serialized Gadfly.Engine.SessionPolicy (concept keys, budget, difficulty...).</summary>

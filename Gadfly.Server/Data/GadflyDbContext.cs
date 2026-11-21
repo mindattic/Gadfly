@@ -69,6 +69,27 @@ public sealed class GadflyDbContext : DbContext, IAuthDataContext
     public DbSet<UsageEntry> UsageEntries => Set<UsageEntry>();
     public DbSet<Job> Jobs => Set<Job>();
 
+    // Master-plan assessment model (docs/MASTER-PLAN.md Part 17.4).
+    public DbSet<Course> Courses => Set<Course>();
+    public DbSet<LearningObjective> LearningObjectives => Set<LearningObjective>();
+    public DbSet<RubricCriterion> RubricCriteria => Set<RubricCriterion>();
+    public DbSet<RubricLevelDescriptor> RubricLevelDescriptors => Set<RubricLevelDescriptor>();
+    public DbSet<GradingPolicy> GradingPolicies => Set<GradingPolicy>();
+    public DbSet<GradingPolicyChange> GradingPolicyChanges => Set<GradingPolicyChange>();
+    public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+    public DbSet<StudentResponse> StudentResponses => Set<StudentResponse>();
+    public DbSet<TranscriptVersion> TranscriptVersions => Set<TranscriptVersion>();
+    public DbSet<ResponseVerification> ResponseVerifications => Set<ResponseVerification>();
+    public DbSet<ClarificationEvent> ClarificationEvents => Set<ClarificationEvent>();
+    public DbSet<AssessmentEvidence> AssessmentEvidence => Set<AssessmentEvidence>();
+    public DbSet<AiObjectiveGrade> AiObjectiveGrades => Set<AiObjectiveGrade>();
+    public DbSet<HumanObjectiveGrade> HumanObjectiveGrades => Set<HumanObjectiveGrade>();
+    public DbSet<GradeDisagreement> GradeDisagreements => Set<GradeDisagreement>();
+    public DbSet<GradeReconciliation> GradeReconciliations => Set<GradeReconciliation>();
+    public DbSet<FinalGrade> FinalGrades => Set<FinalGrade>();
+    public DbSet<ApprovalRecord> ApprovalRecords => Set<ApprovalRecord>();
+    public DbSet<GradeAppeal> GradeAppeals => Set<GradeAppeal>();
+
     protected override void ConfigureConventions(ModelConfigurationBuilder c)
     {
         c.Properties<ProcessingStatus>().HaveConversion<string>().HaveMaxLength(32);
@@ -82,6 +103,19 @@ public sealed class GadflyDbContext : DbContext, IAuthDataContext
         c.Properties<UsageKind>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<JobState>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<decimal>().HavePrecision(18, 6);
+        c.Properties<Gadfly.Assessment.MasteryLevel>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<Gadfly.Assessment.AssessmentDimension>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<Gadfly.Assessment.AssessmentMode>().HaveConversion<string>().HaveMaxLength(20);
+        c.Properties<Gadfly.Assessment.VerificationState>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<Gadfly.Assessment.CorrectionKind>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<Gadfly.Assessment.GradeStatus>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<Gadfly.Assessment.DisagreementBand>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<InconclusiveProcedure>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<ResponseKind>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<ClarificationType>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<EvidenceStance>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<ApprovalAction>().HaveConversion<string>().HaveMaxLength(40);
+        c.Properties<AppealState>().HaveConversion<string>().HaveMaxLength(40);
     }
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -264,6 +298,127 @@ public sealed class GadflyDbContext : DbContext, IAuthDataContext
             e.HasIndex(x => new { x.State, x.RunAfter });
         });
 
+        // ---- master-plan assessment model
+        b.Entity<Course>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(300);
+            e.Property(x => x.Subject).HasMaxLength(200);
+            e.HasIndex(x => new { x.OrganizationId, x.Title });
+        });
+        b.Entity<Exam>(e =>
+        {
+            e.Property(x => x.Subject).HasMaxLength(200);
+            e.Property(x => x.Topic).HasMaxLength(200);
+            e.HasOne<Course>().WithMany().HasForeignKey(x => x.CourseId);
+        });
+        b.Entity<SourceCollection>(e => e.HasOne<Course>().WithMany().HasForeignKey(x => x.CourseId));
+        b.Entity<LearningObjective>(e =>
+        {
+            e.Property(x => x.Key).HasMaxLength(120);
+            e.Property(x => x.Title).HasMaxLength(300);
+            e.Property(x => x.ConceptKey).HasMaxLength(120);
+            e.HasOne<Exam>().WithMany().HasForeignKey(x => x.ExamId);
+            e.HasIndex(x => new { x.ExamId, x.Key }).IsUnique();
+            e.HasMany(x => x.Criteria).WithOne().HasForeignKey(x => x.ObjectiveId);
+        });
+        b.Entity<RubricCriterion>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.HasMany(x => x.Levels).WithOne().HasForeignKey(x => x.CriterionId);
+        });
+        b.Entity<RubricLevelDescriptor>(e => e.HasIndex(x => new { x.CriterionId, x.Level }).IsUnique());
+        b.Entity<GradingPolicy>(e =>
+        {
+            e.HasKey(x => x.ExamId);
+            e.HasOne<Exam>().WithOne().HasForeignKey<GradingPolicy>(x => x.ExamId);
+        });
+        b.Entity<GradingPolicyChange>(e =>
+        {
+            e.HasOne<Exam>().WithMany().HasForeignKey(x => x.ExamId);
+            e.Property(x => x.Reason).HasMaxLength(1000);
+        });
+        b.Entity<AuditEvent>(e =>
+        {
+            e.Property(x => x.Action).HasMaxLength(80);
+            e.Property(x => x.EntityType).HasMaxLength(80);
+            e.Property(x => x.EntityId).HasMaxLength(80);
+            e.Property(x => x.ActorRole).HasMaxLength(40);
+            e.Property(x => x.Reason).HasMaxLength(1000);
+            e.HasIndex(x => new { x.OrganizationId, x.At });
+            e.HasIndex(x => x.SessionId);
+        });
+        b.Entity<StudentResponse>(e =>
+        {
+            e.Property(x => x.Modality).HasMaxLength(16);
+            e.HasOne<ExamSession>().WithMany().HasForeignKey(x => x.SessionId);
+            e.HasOne<SessionTurn>().WithMany().HasForeignKey(x => x.TurnId);
+            e.HasOne<StudentResponse>().WithMany().HasForeignKey(x => x.RevisesResponseId);
+            e.HasIndex(x => new { x.SessionId, x.Sequence }).IsUnique();
+            e.HasMany(x => x.Versions).WithOne().HasForeignKey(x => x.ResponseId);
+        });
+        b.Entity<TranscriptVersion>(e =>
+        {
+            e.Property(x => x.Source).HasMaxLength(40);
+            e.HasIndex(x => new { x.ResponseId, x.Version }).IsUnique();
+        });
+        b.Entity<ResponseVerification>(e =>
+        {
+            e.Property(x => x.Reason).HasMaxLength(500);
+            e.HasOne<StudentResponse>().WithMany().HasForeignKey(x => x.ResponseId);
+        });
+        b.Entity<ClarificationEvent>(e =>
+        {
+            e.HasOne<StudentResponse>().WithMany().HasForeignKey(x => x.ResponseId);
+            e.HasIndex(x => x.SessionId);
+        });
+        b.Entity<AssessmentEvidence>(e =>
+        {
+            e.Property(x => x.Note).HasMaxLength(2000);
+            e.HasOne<LearningObjective>().WithMany().HasForeignKey(x => x.ObjectiveId);
+            e.HasOne<StudentResponse>().WithMany().HasForeignKey(x => x.ResponseId);
+            e.HasIndex(x => new { x.SessionId, x.ObjectiveId });
+        });
+        b.Entity<AiObjectiveGrade>(e =>
+        {
+            e.Property(x => x.Confidence).HasMaxLength(40);
+            e.HasOne<LearningObjective>().WithMany().HasForeignKey(x => x.ObjectiveId);
+            e.HasIndex(x => new { x.SessionId, x.ObjectiveId });
+        });
+        b.Entity<HumanObjectiveGrade>(e =>
+        {
+            e.Property(x => x.ReviewerRole).HasMaxLength(40);
+            e.HasOne<LearningObjective>().WithMany().HasForeignKey(x => x.ObjectiveId);
+            e.HasIndex(x => new { x.SessionId, x.ObjectiveId });
+        });
+        b.Entity<GradeDisagreement>(e =>
+        {
+            e.HasOne<LearningObjective>().WithMany().HasForeignKey(x => x.ObjectiveId);
+            e.HasIndex(x => x.SessionId);
+        });
+        b.Entity<GradeReconciliation>(e =>
+        {
+            e.Property(x => x.Cause).HasMaxLength(60);
+            e.HasOne<GradeDisagreement>().WithMany().HasForeignKey(x => x.DisagreementId);
+        });
+        b.Entity<FinalGrade>(e =>
+        {
+            e.HasKey(x => x.SessionId);
+            e.Property(x => x.LetterOrLabel).HasMaxLength(40);
+            e.Property(x => x.RowVersion).IsRowVersion();
+            e.HasOne<ExamSession>().WithOne().HasForeignKey<FinalGrade>(x => x.SessionId);
+            e.HasIndex(x => new { x.OrganizationId, x.Status });
+        });
+        b.Entity<ApprovalRecord>(e =>
+        {
+            e.Property(x => x.ActorRole).HasMaxLength(40);
+            e.HasIndex(x => x.SessionId);
+        });
+        b.Entity<GradeAppeal>(e =>
+        {
+            e.Property(x => x.Reason).HasMaxLength(4000);
+            e.HasIndex(x => x.SessionId);
+        });
+
         // Never cascade in Gadfly's schema: deletions are explicit, audited jobs (retention, data-subject
         // deletion). The library's own auth-schema relationships keep the behavior it configured.
         foreach (var fk in b.Model.GetEntityTypes().Where(t => t.GetSchema() == Schema).SelectMany(t => t.GetForeignKeys()))
@@ -303,6 +458,15 @@ public sealed class GadflyDbContext : DbContext, IAuthDataContext
 
     private void GuardTenantWrites()
     {
+        // The audit log is append-only for everyone, system work included (GAD-T84).
+        foreach (var entry in ChangeTracker.Entries<AuditEvent>())
+            if (entry.State is EntityState.Modified or EntityState.Deleted)
+                throw new InvalidOperationException("Audit events are append-only; they cannot be changed or deleted.");
+        // A response's original text is immutable (master plan Part 4.2).
+        foreach (var entry in ChangeTracker.Entries<StudentResponse>())
+            if (entry.State == EntityState.Modified && entry.Property(x => x.OriginalText).IsModified)
+                throw new InvalidOperationException("A student's original response cannot be rewritten.");
+
         if (TenantBypass) return;
         foreach (var entry in ChangeTracker.Entries<ITenantOwned>())
         {
