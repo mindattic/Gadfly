@@ -22,14 +22,19 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
     {
         var now = clock.GetUtcNow();
         var settings = await db.OrganizationSettings.AsNoTracking().ToDictionaryAsync(s => s.OrganizationId, s => s.RetentionDays, ct);
+        // A session the student walked away from (closed laptop, lost connection) is never ended: it counts from when it started,
+        // with a day's margin so a paused attempt that is still being worked on is not pulled out from under the student (GAD-T192).
         var candidates = await db.ExamSessions.AsNoTracking()
-            .Where(s => s.EndedAt != null && s.RedactedAt == null)
-            .Select(s => new { s.Id, s.OrganizationId, s.EndedAt })
+            .Where(s => s.RedactedAt == null && (s.EndedAt != null || s.State == SessionState.Running || s.State == SessionState.Paused))
+            .Select(s => new { s.Id, s.OrganizationId, s.EndedAt, s.State, Started = s.StartedAt ?? s.CreatedAt })
             .ToListAsync(ct);
-        var due = candidates.Where(s => s.EndedAt!.Value.AddDays(settings.GetValueOrDefault(s.OrganizationId, 90)) <= now).ToList();
+        var due = candidates.Where(s => (s.EndedAt ?? s.Started.AddDays(1)).AddDays(settings.GetValueOrDefault(s.OrganizationId, 90)) <= now).ToList();
         foreach (var s in due)
         {
             await RedactSessionAsync(s.Id, ct);
+            if (s.EndedAt is null)
+                await db.ExamSessions.Where(x => x.Id == s.Id && (x.State == SessionState.Running || x.State == SessionState.Paused))
+                    .ExecuteUpdateAsync(u => u.SetProperty(x => x.State, SessionState.Failed).SetProperty(x => x.EndReason, "Abandoned").SetProperty(x => x.EndedAt, now), ct);
             log.LogInformation("Retention: redacted session {SessionId} (organization {OrganizationId}).", s.Id, s.OrganizationId);
         }
         return due.Count;

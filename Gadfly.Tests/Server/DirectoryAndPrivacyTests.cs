@@ -341,6 +341,29 @@ public class PrivacyServiceTests : ServerTest
     }
 
     [Test]
+    public async Task Retention_RedactsAnAbandonedSessionThatWasNeverEnded()
+    {
+        var abandoned = await Seed.EndedSessionAsync(Words, endedAt: DateTimeOffset.UtcNow.AddDays(-200));
+        var inProgress = await Seed.EndedSessionAsync(Words, endedAt: DateTimeOffset.UtcNow.AddDays(-1));
+        await using (var db = SystemDb())
+        {
+            await db.ExamSessions.Where(s => s.Id == abandoned.SessionId)
+                .ExecuteUpdateAsync(u => u.SetProperty(s => s.State, SessionState.Running).SetProperty(s => s.EndedAt, (DateTimeOffset?)null).SetProperty(s => s.EndReason, (string?)null));
+            await db.ExamSessions.Where(s => s.Id == inProgress.SessionId)
+                .ExecuteUpdateAsync(u => u.SetProperty(s => s.State, SessionState.Running).SetProperty(s => s.EndedAt, (DateTimeOffset?)null).SetProperty(s => s.EndReason, (string?)null));
+        }
+        await using (var scope = Scope(TenantSnapshot.System))
+            await scope.ServiceProvider.GetRequiredService<PrivacyService>().ApplyRetentionAsync();
+
+        await using var check = SystemDb();
+        var row = await check.ExamSessions.AsNoTracking().SingleAsync(s => s.Id == abandoned.SessionId);
+        Assert.That(row.RedactedAt, Is.Not.Null, "never ended, started 200 days ago");
+        Assert.That(row.State, Is.EqualTo(SessionState.Failed), "a redacted session cannot be resumed");
+        Assert.That(await check.SessionTurns.AsNoTracking().Where(t => t.SessionId == abandoned.SessionId).Select(t => t.AnswerText).SingleAsync(), Does.Not.Contain("chlorophyll"));
+        Assert.That((await check.ExamSessions.AsNoTracking().SingleAsync(s => s.Id == inProgress.SessionId)).RedactedAt, Is.Null, "a session in progress is left alone");
+    }
+
+    [Test]
     public async Task Export_ContainsEverythingAboutTheStudent_AndNothingElse()
     {
         var (w, sessionId, _) = await Seed.EndedSessionAsync(Words);
