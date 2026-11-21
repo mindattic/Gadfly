@@ -500,7 +500,7 @@ else if (collection is not null)
 
     private async Task SaveConceptAsync()
     {
-        if (conceptForm is null) return;
+        if (conceptForm is null || busy) return;   // a second click would wait on the gate and then find the form already saved and cleared (GAD-T203)
         busy = true;
         try
         {
@@ -521,7 +521,7 @@ else if (collection is not null)
 
     private async Task SaveRubricAsync()
     {
-        if (rubricForm is null) return;
+        if (rubricForm is null || busy) return;   // as SaveConceptAsync (GAD-T203)
         busy = true;
         try
         {
