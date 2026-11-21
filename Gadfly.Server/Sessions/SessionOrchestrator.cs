@@ -232,6 +232,8 @@ public sealed class SessionOrchestrator(
                     policy = policy with { ConceptIds = subject.Map.Concepts.Select(c => c.Key).ToList() };
                 engine = await SourceExamEngine.StartAsync(panel, subject, policy, clock, sessionId, ct);
             }
+            // The answer-text signal is an integrity signal: off when the exam's integrity level is Off.
+            engine.AssessTextStyle = exam.IntegrityLevel != IntegrityLevel.Off;
             var live = new Live(engine, organizationId);
             _live[sessionId] = live;
             return live;
@@ -293,6 +295,7 @@ public sealed class SessionOrchestrator(
             t.Question = turn.Question;
             t.AskedAt = turn.AskedAt;
             t.TargetClaimIdsJson = JsonSerializer.Serialize(turn.TargetClaimIds);
+            t.PlannerReason = string.IsNullOrEmpty(turn.Reason) ? null : turn.Reason;
             if (turn.Answer is { } a)
             {
                 t.AnswerText = a.Text;
@@ -381,14 +384,12 @@ public sealed class SessionOrchestrator(
                 CreatedAt = now,
             });
             _live.TryRemove(s.Id, out _);
-            await db.SaveChangesAsync(ct);
-            // Integrating apps hear about it (GAD-T46): signed webhook deliveries, queued as jobs.
-            await scope.ServiceProvider.GetRequiredService<Platform.WebhookService>().PublishAsync(org, Platform.WebhookService.SessionCompleted, new
+            // Integrating apps hear about it (GAD-T46): the deliveries commit with the report (outbox, GAD-T71).
+            await Platform.WebhookOutbox.StageAsync(db, org, Platform.WebhookService.SessionCompleted, new
             {
                 sessionId = s.Id, assignmentId = row.AssignmentId, studentUserId = row.StudentUserId, examId = row.ExamId,
                 endReason = s.EndReason.ToString(), recommendation = report.Recommendation, overallScore = report.OverallScore,
-            }, ct);
-            return;
+            }, now, ct);
         }
         await db.SaveChangesAsync(ct);
     }

@@ -41,12 +41,32 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
         await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            await db.SessionTurns.Where(t => t.SessionId == sessionId).ExecuteUpdateAsync(u => u
+            await db.SessionTurns.Where(t => t.SessionId == sessionId && t.AnswerText != null).ExecuteUpdateAsync(u => u
                 .SetProperty(t => t.AnswerText, (string?)"[redacted after the retention period]")
                 .SetProperty(t => t.WordsJson, (string?)null)
                 .SetProperty(t => t.SpeechMetricsJson, (string?)null)
                 .SetProperty(t => t.AudioRef, (string?)null), ct);
             await db.SessionClaims.Where(c => c.SessionId == sessionId).ExecuteDeleteAsync(ct);
+            // The student's words also live in judge text and the report's evidence quotes: keep the scores, drop the words.
+            var turnIds = db.SessionTurns.Where(t => t.SessionId == sessionId).Select(t => t.Id);
+            var judgmentIds = db.Judgments.Where(j => turnIds.Contains(j.TurnId)).Select(j => j.Id);
+            await db.JudgeVotes.Where(v => judgmentIds.Contains(v.JudgmentId))
+                .ExecuteUpdateAsync(u => u.SetProperty(v => v.Verdict, "[redacted after the retention period]"), ct);
+            foreach (var j in await db.Judgments.Where(j => turnIds.Contains(j.TurnId)).ToListAsync(ct))
+            {
+                j.Summary = "[redacted after the retention period]";
+                j.CriteriaJson = RedactCriteria(j.CriteriaJson);
+            }
+            foreach (var r in await db.SessionReports.Where(r => r.SessionId == sessionId).ToListAsync(ct))
+            {
+                if (Gadfly.Engine.SessionReport.FromJson(r.ReportJson) is { } report)
+                {
+                    var redacted = report.WithoutStudentWords();
+                    r.ReportJson = redacted.ToJson();
+                    r.Markdown = redacted.ToMarkdown();
+                }
+            }
+            await db.SaveChangesAsync(ct);
             await db.IntegrityEvents.Where(e => e.SessionId == sessionId).ExecuteUpdateAsync(u => u.SetProperty(e => e.DataJson, (string?)null), ct);
             await db.ExamSessions.Where(s => s.Id == sessionId).ExecuteUpdateAsync(u => u
                 .SetProperty(s => s.TranscriptJson, (string?)null)
@@ -55,6 +75,20 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
                 .SetProperty(s => s.RedactedAt, now), ct);
             await tx.CommitAsync(ct);
         });
+    }
+
+    /// <summary>Keeps each criterion's name and score; drops rationales and quoted passages tied to the answer.</summary>
+    internal static string RedactCriteria(string criteriaJson)
+    {
+        try
+        {
+            var criteria = JsonSerializer.Deserialize<List<Gadfly.Engine.CriterionScore>>(criteriaJson, Json) ?? [];
+            return JsonSerializer.Serialize(criteria.Select(c => c with { Rationale = "", Citations = c.Citations.Select(x => x with { Quote = null }).ToList() }), Json);
+        }
+        catch (JsonException)
+        {
+            return "[]";
+        }
     }
 
     /// <summary>Everything the platform holds about one student in one organization, as JSON (a data-subject export).</summary>

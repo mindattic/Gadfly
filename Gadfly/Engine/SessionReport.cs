@@ -58,6 +58,17 @@ public sealed record SessionReport
 
     public string ToJson() => JsonSerializer.Serialize(this, Json);
 
+    public static SessionReport? FromJson(string json) => JsonSerializer.Deserialize<SessionReport>(json, Json);
+
+    /// <summary>The same report with every quote of the student's words removed (retention redaction).</summary>
+    public SessionReport WithoutStudentWords() => this with
+    {
+        Concepts = Concepts.Select(c => c with
+        {
+            Evidence = c.Evidence.Select(e => e with { Quote = "[redacted after the retention period]", JudgeSummary = "" }).ToList(),
+        }).ToList(),
+    };
+
     /// <summary>
     /// Builds the report from a session. <paramref name="conceptTitles"/> maps concept ids to
     /// display titles (missing ids show the id). <paramref name="evidencePerConcept"/> caps quotes.

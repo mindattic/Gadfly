@@ -119,7 +119,7 @@ public sealed class SourceExamEngine
             RubricForGuard = rubric.Describe(),
         }, ct);
         Diagnostics?.Report($"[{decision.Move} on {concept.Key}: {decision.Reason} Question {_generator.LastOutcome}.]");
-        return Session.Ask(concept.Key, decision.Move, question, _clock.GetUtcNow(), decision.TargetClaimIds);
+        return Session.Ask(concept.Key, decision.Move, question, _clock.GetUtcNow(), decision.TargetClaimIds, decision.Reason);
     }
 
     /// <summary>

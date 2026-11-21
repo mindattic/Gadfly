@@ -53,7 +53,7 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
         });
         var replies = await panel.FanOutAsync(PanelJson.JsonOnlySystem, prompt, maxTokens: 1500, temperature: 0.1, ct: ct);
 
-        var votes = new List<(string Provider, Dictionary<string, (double Score, string Rationale, List<string> Refs)> Criteria, string Verdict)>();
+        var votes = new List<(string Provider, Dictionary<string, (double Score, string Rationale, List<string> Refs)> Criteria, string Verdict, string Model)>();
         foreach (var reply in replies.Where(r => !r.IsError))
         {
             using var doc = PanelJson.ParseObject(reply.Text);
@@ -68,7 +68,7 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
                 parsed[name] = (score / 10.0, PanelJson.Str(c, "rationale"), PanelJson.PassageRefs(c, input.Passages));
             }
             if (parsed.Count == 0) continue;
-            votes.Add((reply.ProviderId, parsed, PanelJson.Str(doc.RootElement, "verdict")));
+            votes.Add((reply.ProviderId, parsed, PanelJson.Str(doc.RootElement, "verdict"), reply.Model));
         }
 
         if (votes.Count == 0)
@@ -118,7 +118,7 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
         {
             Criteria = criteria,
             OverallScore = Math.Round(mean, 3),
-            Votes = votes.Zip(overalls).Select(x => new JudgeVote(x.First.Provider, "", Math.Round(x.Second, 3), x.First.Verdict)).ToList(),
+            Votes = votes.Zip(overalls).Select(x => new JudgeVote(x.First.Provider, x.First.Model, Math.Round(x.Second, 3), x.First.Verdict)).ToList(),
             Agreement = Math.Round(agreement, 3),
             NeedsHumanReview = agreement < ReviewBelowAgreement,
             RubricVersion = rubricVersion,

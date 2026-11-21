@@ -68,12 +68,13 @@ public static class GadflyEndpoints
     private static void MapPrivacy(WebApplication app)
     {
         // A student downloads their own data; an org admin downloads any member's.
-        app.MapGet("/privacy/export/{userId:guid}", async (Guid userId, ITenantContext tenant, Privacy.PrivacyService privacy, CancellationToken ct) =>
+        app.MapGet("/privacy/export/{userId:guid}", async (Guid userId, HttpContext http, ITenantContext tenant, IAuthorizationService authz,
+            Privacy.PrivacyService privacy, CancellationToken ct) =>
         {
             if (tenant.OrganizationId is not { } org) return Results.Forbid();
+            // Your own data, or (as an org admin, through the same MFA-aware policy as every admin page) a member's.
             var isSelf = tenant.UserId == userId;
-            var isAdmin = tenant.Role is OrgRoles.Owner or OrgRoles.Admin;
-            if (!isSelf && !isAdmin) return Results.Forbid();
+            if (!isSelf && !(await authz.AuthorizeAsync(http.User, GadflyPolicies.OrgAdmin)).Succeeded) return Results.Forbid();
             var json = await privacy.ExportStudentAsync(org, userId, ct);
             return Results.File(System.Text.Encoding.UTF8.GetBytes(json), "application/json", $"gadfly-data-{userId:N}.json");
         });

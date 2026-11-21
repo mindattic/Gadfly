@@ -63,9 +63,16 @@ public sealed class SourceProcessingJob(GadflyDbContext db, ISocraticVotingClien
         var builder = new RubricBuilder(panel);
         var done = 0;
         var updated = new List<ConceptRubric>();
+        // Only concepts that need it get a (new) rubric: no rubric yet, the material changed, or a rebuild was asked for.
+        var rebuildAll = request.RebuildConceptMap || ingest.DocumentsIngested > 0;
         foreach (var concept in map.Concepts)
         {
             var prior = rubrics.FirstOrDefault(r => r.ConceptKey == concept.Key);
+            if (prior is not null && !rebuildAll)
+            {
+                done++;
+                continue;
+            }
             await progress.ReportAsync(0.5 + 0.5 * done / Math.Max(1, map.Concepts.Count), $"Writing rubric: {concept.Title}", ct);
             var single = new ConceptMap { CollectionId = collectionId, Version = map.Version, Concepts = [concept] };
             var rebuilt = await builder.BuildAsync(single, retriever, prior is null ? null : [prior], ct: ct);

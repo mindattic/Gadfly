@@ -77,6 +77,8 @@ public sealed record Turn
     public required MoveKind Move { get; init; }
     public required string Question { get; init; }
     public required DateTimeOffset AskedAt { get; init; }
+    /// <summary>Why the planner chose this move (for the reviewer: "why this question").</summary>
+    public string Reason { get; init; } = "";
     /// <summary>Claim ids from the ledger this question targets (e.g. the two sides of a Contradiction).</summary>
     public IReadOnlyList<string> TargetClaimIds { get; init; } = [];
     public Answer? Answer { get; init; }

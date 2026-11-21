@@ -33,7 +33,7 @@ public interface ISocraticVotingClient
 }
 
 /// <summary>One provider's raw reply from <see cref="ISocraticVotingClient.FanOutAsync"/>.</summary>
-public sealed record PanelReply(string ProviderId, string Text, string? Error = null)
+public sealed record PanelReply(string ProviderId, string Text, string? Error = null, string Model = "")
 {
     public bool IsError => Error is not null;
 }

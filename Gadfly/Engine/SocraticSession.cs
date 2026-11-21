@@ -77,7 +77,8 @@ public sealed class SocraticSession
     public int TurnsOn(string conceptId) => _turns.Count(t => t.ConceptId == conceptId);
 
     /// <summary>Asks a new question. The previous turn must be answered first.</summary>
-    public Turn Ask(string conceptId, MoveKind move, string question, DateTimeOffset askedAt, IReadOnlyList<string>? targetClaimIds = null)
+    public Turn Ask(string conceptId, MoveKind move, string question, DateTimeOffset askedAt, IReadOnlyList<string>? targetClaimIds = null,
+        string reason = "")
     {
         EnsureRunning();
         if (OpenTurn is not null) throw new InvalidOperationException("The previous turn has not been answered yet.");
@@ -90,6 +91,7 @@ public sealed class SocraticSession
             Question = question,
             AskedAt = askedAt,
             TargetClaimIds = targetClaimIds ?? [],
+            Reason = reason,
         };
         _turns.Add(turn);
         return turn;

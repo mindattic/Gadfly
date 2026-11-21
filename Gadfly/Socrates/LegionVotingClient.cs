@@ -43,11 +43,14 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
         if (ids.Count == 0) return [];
         var calls = ids.Select(async id =>
         {
+            var model = config.ModelOverrides.GetValueOrDefault(id)
+                        ?? LlmProviderRuntimeConfigurationResolver.GetModel(id)
+                        ?? LegionClient.DefaultModels.GetValueOrDefault(id, "");
             try
             {
                 var text = await provider.CallAsync(id, systemPrompt, userMessage, maxTokens, temperature, null, ct);
                 Health.RecordSuccess(id, DateTimeOffset.UtcNow);
-                return new PanelReply(id, text ?? "");
+                return new PanelReply(id, text ?? "", Model: model);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -56,7 +59,7 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
             catch (Exception ex)
             {
                 Health.RecordFailure(id, ex.Message, DateTimeOffset.UtcNow);
-                return new PanelReply(id, "", ex.Message);
+                return new PanelReply(id, "", ex.Message, model);
             }
         });
         return await Task.WhenAll(calls);
