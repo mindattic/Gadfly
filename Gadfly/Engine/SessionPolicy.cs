@@ -60,7 +60,10 @@ public sealed record SessionPolicy
     /// <summary>Throws when the policy is not usable.</summary>
     public void Validate()
     {
-        if (double.IsNaN(TimeMultiplier) || TimeMultiplier < 1 || TimeMultiplier > 4)
+        // NaN and the infinities pass every ordinary comparison below, so each double field is checked finite first (GAD-T195).
+        if (!double.IsFinite(MasteryThreshold)) throw new ArgumentException("MasteryThreshold must be a finite number.");
+        if (!double.IsFinite(AporiaThreshold)) throw new ArgumentException("AporiaThreshold must be a finite number.");
+        if (!double.IsFinite(TimeMultiplier) || TimeMultiplier < 1 || TimeMultiplier > 4)
             throw new ArgumentException("TimeMultiplier must be between 1 and 4.");
         if (MinCorroboratingAnswers is < 2 or > 5) throw new ArgumentException("MinCorroboratingAnswers must be 2 to 5.");
         if (MaxAssistsPerObjective is < 0 or > 5) throw new ArgumentException("MaxAssistsPerObjective must be 0 to 5.");

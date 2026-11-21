@@ -161,6 +161,11 @@ public class SessionPolicyTests
         yield return new TestCaseData(new SessionPolicy { MinTurnsBeforeAporia = 0 }).SetName("Policy_MinAporiaTurnsZero");
         yield return new TestCaseData(new SessionPolicy { Difficulty = 0 }).SetName("Policy_DifficultyZero");
         yield return new TestCaseData(new SessionPolicy { Difficulty = 6 }).SetName("Policy_DifficultySix");
+        yield return new TestCaseData(new SessionPolicy { MasteryThreshold = double.NaN }).SetName("Policy_MasteryNaN");
+        yield return new TestCaseData(new SessionPolicy { MasteryThreshold = double.PositiveInfinity }).SetName("Policy_MasteryInfinity");
+        yield return new TestCaseData(new SessionPolicy { AporiaThreshold = double.NaN }).SetName("Policy_AporiaNaN");
+        yield return new TestCaseData(new SessionPolicy { AporiaThreshold = double.NegativeInfinity }).SetName("Policy_AporiaNegativeInfinity");
+        yield return new TestCaseData(new SessionPolicy { TimeMultiplier = double.PositiveInfinity }).SetName("Policy_TimeMultiplierInfinity");
     }
 
     [TestCaseSource(nameof(Invalid))]
