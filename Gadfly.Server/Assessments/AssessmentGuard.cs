@@ -50,7 +50,8 @@ public sealed class AssessmentGuard(GadflyDbContext db, ITenantContext tenant, T
         $"Your role in this organization does not allow this ({permission}). The attempt was recorded.";
 
     /// <summary>Adds (does not save) an audit event; the caller saves it with the change it describes.</summary>
-    public void Audit(string action, string entityType, string? entityId, object? before = null, object? after = null, string? reason = null)
+    public void Audit(string action, string entityType, string? entityId, object? before = null, object? after = null, string? reason = null,
+        Guid? sessionId = null)
     {
         db.AuditEvents.Add(new AuditEvent
         {
@@ -60,6 +61,7 @@ public sealed class AssessmentGuard(GadflyDbContext db, ITenantContext tenant, T
             Action = Trim(action, 80)!,
             EntityType = Trim(entityType, 80)!,
             EntityId = Trim(entityId, 80),
+            SessionId = sessionId,
             BeforeJson = before is null ? null : before as string ?? JsonSerializer.Serialize(before, Json),
             AfterJson = after is null ? null : after as string ?? JsonSerializer.Serialize(after, Json),
             Reason = Trim(reason, 1000),

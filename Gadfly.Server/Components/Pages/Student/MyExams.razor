@@ -72,7 +72,13 @@ else
                         <p><a href="my-results/@pub.SessionId">See the assessment report</a></p>
                     </div>
                 }
-                @if (!Published(r.AssignmentId).Any() && r.Standing == AssignmentStanding.Completed)
+                @if (!Published(r.AssignmentId).Any() && r.ScoresClearedAt is not null && r.AttemptsUsed > 0)
+                {
+                    <p class="hint">Your instructor cleared the scores of this exam for review on @Local(r.ScoresClearedAt.Value).
+                        Your answers are kept, and @(r.AttemptsUsed == 1 ? "the attempt you made still counts" : $"the {r.AttemptsUsed} attempts you made still count")
+                        toward the @r.AttemptsAllowed allowed. A new result appears here once an examiner has graded it and it has been published.</p>
+                }
+                else if (!Published(r.AssignmentId).Any() && r.Standing == AssignmentStanding.Completed)
                 {
                     <p class="hint">Your answers were submitted. Your result appears here once examiners have graded it and it has been approved and published.</p>
                 }

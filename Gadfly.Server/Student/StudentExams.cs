@@ -35,6 +35,11 @@ public sealed record StudentAssignmentView
     public ReleasedResult? Result { get; init; }
     /// <summary>The instructor archived the exam: no new attempts, but one in progress can still be finished.</summary>
     public bool ExamArchived { get; init; }
+    /// <summary>
+    /// When an administrator last cleared this assignment's scores (GAD-T262), if they did: the attempts are kept and still
+    /// count as used, and any result shown before is withdrawn until it is graded and published again.
+    /// </summary>
+    public DateTimeOffset? ScoresClearedAt { get; init; }
 
     /// <summary>True when the attempt in progress already has consent, so "Resume" can go straight to the exam room.</summary>
     public bool CanResumeDirectly => ActiveSessionId is not null && ActiveSessionState is SessionState.ConsentGiven or SessionState.Running or SessionState.Paused;
@@ -86,6 +91,20 @@ public static class StudentExams
             .Select(r => new { r.SessionId, r.Recommendation, r.CreatedAt })
             .ToListAsync(ct);
 
+        // Clear scores leaves an audit row on the assignment (GAD-T262); the student is told the attempts still count. A
+        // later reset (the student starts fresh) or a later attempt makes that notice stale, so only the latest clear counts.
+        var assignmentKeys = ids.Select(i => i.ToString()).ToList();
+        var deskEvents = await db.AuditEvents.AsNoTracking()
+            .Where(e => e.OrganizationId == organizationId && e.EntityType == "ExamAssignment" && e.EntityId != null
+                        && assignmentKeys.Contains(e.EntityId)
+                        && (e.Action == "desk.scores-cleared" || e.Action == "desk.assignment-reset"))
+            .Select(e => new { e.EntityId, e.Action, e.At })
+            .ToListAsync(ct);
+        var cleared = deskEvents.GroupBy(e => e.EntityId!)
+            .Select(g => g.OrderByDescending(e => e.At).First())
+            .Where(e => e.Action == "desk.scores-cleared")
+            .ToDictionary(e => e.EntityId!, e => e.At);
+
         var rows = new List<StudentAssignmentView>();
         foreach (var a in assignments)
         {
@@ -120,6 +139,8 @@ public static class StudentExams
                 ActiveSessionState = active?.State,
                 Result = result,
                 ExamArchived = a.Exam?.Status == ExamStatus.Archived,
+                ScoresClearedAt = cleared.TryGetValue(a.Id.ToString(), out var clearedAt) && active is null
+                                  && !mine.Any(s => s.EndedAt > clearedAt) ? clearedAt : null,
                 Standing = StandingOf(a, active is not null, used, now),
             });
         }

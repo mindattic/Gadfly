@@ -105,7 +105,8 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
     /// <summary>
     /// Removes the student's words from the response ledger (GAD-T86) of the given sessions: original and verified
     /// text, transcript versions, clarification replies, evidence notes, and the before/after JSON of the
-    /// "response.*" and "clarification.*" audit events (or of every audit event of those sessions, when <paramref name="allAuditJson"/>).
+    /// "response.*", "clarification.*" and "desk.scores-archived" audit events (or of every audit event of those sessions, when
+    /// <paramref name="allAuditJson"/>).
     /// This is the one deliberate exception to the ledger's immutability and the audit log's append-only rule: it
     /// runs as set-based updates that bypass the SaveChanges guards, and audit rows keep who did what and when (GAD-T110).
     /// </summary>
@@ -123,7 +124,9 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
             .SetProperty(r => r.OriginalText, Redacted)
             .SetProperty(r => r.VerifiedText, Redacted)
             .SetProperty(r => r.SpeechRecognitionText, (string?)null), ct);
-        await db.AuditEvents.Where(a => a.SessionId != null && sessionIds.Contains(a.SessionId.Value) && (allAuditJson || a.Action.StartsWith("response.") || a.Action.StartsWith("clarification.")))
+        await db.AuditEvents.Where(a => a.SessionId != null && sessionIds.Contains(a.SessionId.Value) && (allAuditJson || a.Action.StartsWith("response.") || a.Action.StartsWith("clarification.")
+                        // Clear scores' archived copy holds the AI grades and reports, which quote the answers (GAD-T262).
+                        || a.Action == "desk.scores-archived"))
             .ExecuteUpdateAsync(u => u.SetProperty(a => a.BeforeJson, (string?)null).SetProperty(a => a.AfterJson, (string?)null), ct);
         // The student's own appeal text is the audit event's reason; an erasure takes it too (GAD-T185).
         if (allAuditJson)

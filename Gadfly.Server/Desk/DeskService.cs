@@ -545,8 +545,9 @@ public sealed class DeskService(IServiceProvider sp)
     }
 
     /// <summary>
-    /// Clear scores: every score, grade, report and grading record of this assignment's attempts is removed and results are
-    /// un-released. The attempts and transcripts stay (and still count as used). Audited.
+    /// Clear scores: every score, grade, report and grading record of this assignment's attempts is copied to the audit log
+    /// (one <c>desk.scores-archived</c> row per attempt), then removed, and results are un-released. The attempts and
+    /// transcripts stay (and still count as used, which the student's page says). Audited (GAD-T262).
     /// </summary>
     public async Task<DeskResult> ClearScoresAsync(Guid assignmentId, CancellationToken ct = default)
     {
@@ -566,6 +567,9 @@ public sealed class DeskService(IServiceProvider sp)
         {
             db.ChangeTracker.Clear();   // a retried attempt starts clean, so it adds one audit row, not two
             await using var tx = await db.Database.BeginTransactionAsync(ct);
+            // Archive before removing (GAD-T262): this is a high-risk educational use with record-keeping duties (EU AI Act
+            // Annex III 3(b), Article 14), so how a grade was reached and then cleared stays on the append-only audit log.
+            await ArchiveGradesAsync(db, org, assignmentId, ids, ct);
             await DeleteGradesAsync(db, org, ids, ct);
             await db.ExamAssignments.Where(x => x.Id == assignmentId && x.OrganizationId == org)
                 .ExecuteUpdateAsync(u => u.SetProperty(x => x.ResultsReleasedAt, (DateTimeOffset?)null), ct);
@@ -573,12 +577,61 @@ public sealed class DeskService(IServiceProvider sp)
             foreach (var id in ended)
                 db.FinalGrades.Add(new FinalGrade { SessionId = id, OrganizationId = org, Status = GradeStatus.ExaminationInProgress, UpdatedAt = now });
             Audit("desk.scores-cleared", "ExamAssignment", assignmentId.ToString(), new { Sessions = ids },
-                reason: "Scores cleared from the admin desk: grades, reports and grading records removed; attempts and transcripts kept.");
+                reason: "Scores cleared from the admin desk: grades, reports and grading records archived to the audit log and removed; attempts and transcripts kept; the attempts still count as used.");
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
         });
         db.ChangeTracker.Clear();
-        return new(true, ids.Count == 0 ? "No attempts, so no scores to clear." : "Scores and grades cleared. The attempts and transcripts are kept.", assignmentId);
+        return new(true, ids.Count == 0
+            ? "No attempts, so no scores to clear."
+            : "Scores and grades cleared, with an archived copy kept in the audit log. The attempts and transcripts are kept and still count as used; the student is told so.", assignmentId);
+    }
+
+    /// <summary>
+    /// Copies every grading record of each attempt (grades, reports, disagreements, reconciliations, approvals, appeals) into
+    /// one <c>desk.scores-archived</c> audit row per attempt, tied to the session so a privacy erasure of that student still
+    /// reaches it. Adds the rows; the caller saves them with the deletion in the same transaction.
+    /// </summary>
+    private async Task ArchiveGradesAsync(GadflyDbContext db, Guid org, Guid assignmentId, IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0) return;
+        var ai = await db.AiObjectiveGrades.AsNoTracking().Where(g => g.OrganizationId == org && ids.Contains(g.SessionId)).ToListAsync(ct);
+        var human = await db.HumanObjectiveGrades.AsNoTracking().Where(g => g.OrganizationId == org && ids.Contains(g.SessionId)).ToListAsync(ct);
+        var disagreements = await db.GradeDisagreements.AsNoTracking().Where(d => d.OrganizationId == org && ids.Contains(d.SessionId)).ToListAsync(ct);
+        var disagreementIds = disagreements.Select(d => d.Id).ToList();
+        var reconciliations = disagreementIds.Count == 0 ? [] : await db.GradeReconciliations.AsNoTracking()
+            .Where(r => r.OrganizationId == org && disagreementIds.Contains(r.DisagreementId)).ToListAsync(ct);
+        var approvals = await db.ApprovalRecords.AsNoTracking().Where(r => r.OrganizationId == org && ids.Contains(r.SessionId)).ToListAsync(ct);
+        var appeals = await db.GradeAppeals.AsNoTracking().Where(r => r.OrganizationId == org && ids.Contains(r.SessionId)).ToListAsync(ct);
+        var finals = await db.FinalGrades.AsNoTracking().Where(g => g.OrganizationId == org && ids.Contains(g.SessionId)).ToListAsync(ct);
+        var decisions = await db.GradeDecisions.AsNoTracking().Where(g => g.OrganizationId == org && ids.Contains(g.SessionId)).ToListAsync(ct);
+        var reports = await db.SessionReports.AsNoTracking().Where(r => r.OrganizationId == org && ids.Contains(r.SessionId)).ToListAsync(ct);
+        foreach (var id in ids)
+        {
+            var sessionDisagreements = disagreements.Where(d => d.SessionId == id).ToList();
+            var sessionDisagreementIds = sessionDisagreements.Select(d => d.Id).ToHashSet();
+            var snapshot = new
+            {
+                AssignmentId = assignmentId,
+                FinalGrade = finals.Where(g => g.SessionId == id)
+                    .Select(g => new { g.Status, g.FinalPercent, g.LetterOrLabel, g.ResultJson, g.PolicyJson, g.UpdatedAt }).FirstOrDefault(),
+                AiObjectiveGrades = ai.Where(g => g.SessionId == id).ToList(),
+                HumanObjectiveGrades = human.Where(g => g.SessionId == id).ToList(),
+                Disagreements = sessionDisagreements,
+                Reconciliations = reconciliations.Where(r => sessionDisagreementIds.Contains(r.DisagreementId)).ToList(),
+                Approvals = approvals.Where(r => r.SessionId == id).ToList(),
+                Appeals = appeals.Where(r => r.SessionId == id).ToList(),
+                GradeDecisions = decisions.Where(g => g.SessionId == id).ToList(),
+                Reports = reports.Where(r => r.SessionId == id).ToList(),
+            };
+            if (snapshot.FinalGrade is null && snapshot.AiObjectiveGrades.Count == 0 && snapshot.HumanObjectiveGrades.Count == 0
+                && snapshot.Disagreements.Count == 0 && snapshot.Approvals.Count == 0 && snapshot.Appeals.Count == 0
+                && snapshot.GradeDecisions.Count == 0 && snapshot.Reports.Count == 0)
+                continue;
+            Assessments.Guard.Audit("desk.scores-archived", "ExamSession", id.ToString(), before: snapshot,
+                reason: "Archived copy of this attempt's grading records, taken by Clear scores before they were removed (GAD-T262).",
+                sessionId: id);
+        }
     }
 
     /// <summary>The questions and answers of one attempt, in order.</summary>

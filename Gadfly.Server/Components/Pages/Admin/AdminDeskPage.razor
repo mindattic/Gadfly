@@ -521,7 +521,7 @@ else
     private async Task ClearScoresAsync(DeskAssignment a)
     {
         if (!await JS.InvokeAsync<bool>("confirm",
-                $"Clear the scores of {a.StudentName}'s \"{a.ExamTitle}\"? Grades and reports are removed; the attempts and transcripts stay.")) return;
+                $"Clear the scores of {a.StudentName}'s \"{a.ExamTitle}\"? Grades and reports are removed (a copy is archived in the audit log); the attempts and transcripts stay and still count as used, and the student is told so.")) return;
         await ActAsync(desk => desk.ClearScoresAsync(a.Id));
     }
 
