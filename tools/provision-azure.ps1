@@ -20,13 +20,22 @@ param(
   [string]$ResourceGroup = 'MyApps',
   [string]$Plan = 'ASP-MyApps-99fe',
   [string]$App = 'mindattic-gadfly',
+  [string]$DataResourceGroup = 'rg-mindattic-data',
   [string]$SqlServer = 'sql-mindattic-f65744',
   [string]$Database = 'Gadfly',
   [string]$KeyVault = 'kv-tutor-f65744',
-  [Parameter(Mandatory)][string]$StorageAccount,
+  [string]$StorageAccount = 'stmindatticdbf65744',
   [switch]$WhatIf
 )
 $ErrorActionPreference = 'Stop'
+
+# "Does it exist?" checks: a missing resource is an expected answer, not an error (PowerShell 5.1 would
+# otherwise stop the script on the native command's stderr).
+function Get-AzValue([string[]]$AzArgs) {
+  $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+  try { $v = & az @AzArgs 2>$null; if ($LASTEXITCODE -ne 0) { return $null }; return $v }
+  finally { $ErrorActionPreference = $old }
+}
 
 function Invoke-Az([string[]]$AzArgs) {
   Write-Host ("az " + ($AzArgs -join ' ')) -ForegroundColor Cyan
@@ -37,7 +46,7 @@ function Invoke-Az([string[]]$AzArgs) {
 }
 
 Write-Host "== App Service" -ForegroundColor Green
-$exists = az webapp show -g $ResourceGroup -n $App --query name -o tsv 2>$null
+$exists = Get-AzValue @('webapp','show','-g',$ResourceGroup,'-n',$App,'--query','name','-o','tsv')
 if (-not $exists) {
   Invoke-Az @('webapp','create','-g',$ResourceGroup,'-p',$Plan,'-n',$App,'--runtime','dotnet:10')
 }
@@ -46,15 +55,15 @@ Invoke-Az @('webapp','config','set','-g',$ResourceGroup,'-n',$App,'--web-sockets
 $principal = Invoke-Az @('webapp','identity','assign','-g',$ResourceGroup,'-n',$App,'--query','principalId','-o','tsv')
 
 Write-Host "== Azure SQL database" -ForegroundColor Green
-$db = az sql db show -g $ResourceGroup -s $SqlServer -n $Database --query name -o tsv 2>$null
+$db = Get-AzValue @('sql','db','show','-g',$DataResourceGroup,'-s',$SqlServer,'-n',$Database,'--query','name','-o','tsv')
 if (-not $db) {
-  Invoke-Az @('sql','db','create','-g',$ResourceGroup,'-s',$SqlServer,'-n',$Database,'--edition','GeneralPurpose','--compute-model','Serverless',
+  Invoke-Az @('sql','db','create','-g',$DataResourceGroup,'-s',$SqlServer,'-n',$Database,'--edition','GeneralPurpose','--compute-model','Serverless',
               '--family','Gen5','--capacity','1','--auto-pause-delay','60','--backup-storage-redundancy','Local')
 }
 
 Write-Host "== Data Protection key ring" -ForegroundColor Green
 Invoke-Az @('storage','container','create','--account-name',$StorageAccount,'-n','gadfly-dp-keys','--auth-mode','login')
-$keyId = az keyvault key show --vault-name $KeyVault -n gadfly-dp-protect --query key.kid -o tsv 2>$null
+$keyId = Get-AzValue @('keyvault','key','show','--vault-name',$KeyVault,'-n','gadfly-dp-protect','--query','key.kid','-o','tsv')
 if (-not $keyId) { $keyId = Invoke-Az @('keyvault','key','create','--vault-name',$KeyVault,'-n','gadfly-dp-protect','--kty','RSA','--size','2048','--query','key.kid','-o','tsv') }
 $storageId = Invoke-Az @('storage','account','show','-n',$StorageAccount,'--query','id','-o','tsv')
 $vaultId = Invoke-Az @('keyvault','show','-n',$KeyVault,'--query','id','-o','tsv')
@@ -83,7 +92,18 @@ $settings = @(
   "MindAttic__Vault__LLM__elevenlabs__apiKey=$(& $kvRef 'elevenlabs')",
   "ASPNETCORE_ENVIRONMENT=Production"
 )
-Invoke-Az (@('webapp','config','appsettings','set','-g',$ResourceGroup,'-n',$App,'--settings') + $settings)
+# az is a .cmd wrapper: values with ';' or '(' break on the command line, so the settings go in a JSON file.
+$settings += @(
+  # No LLM spend until the owner says go live: the app starts on the labelled mock panel (GAD-T100).
+  "Gadfly__AiMode=mock",
+  # When Claude is in the panel, Sonnet 5 (owner, 2026-11-21).
+  "Gadfly__ClaudeModel=claude-sonnet-5"
+)
+$settingsFile = Join-Path ([IO.Path]::GetTempPath()) "gadfly-appsettings-$([guid]::NewGuid().ToString('N')).json"
+$settings | ForEach-Object { $i = $_.IndexOf('='); [pscustomobject]@{ name = $_.Substring(0, $i); value = $_.Substring($i + 1); slotSetting = $false } } |
+  ConvertTo-Json | Set-Content -Path $settingsFile -Encoding UTF8
+try { Invoke-Az @('webapp','config','appsettings','set','-g',$ResourceGroup,'-n',$App,'--settings',"@$settingsFile",'-o','none') }
+finally { Remove-Item $settingsFile -ErrorAction SilentlyContinue }
 
 Write-Host ""
 Write-Host "== Still to do by hand" -ForegroundColor Yellow
