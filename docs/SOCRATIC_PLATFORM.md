@@ -324,31 +324,31 @@ Epics: Gadfly `SA` foundation, `SB` engine, `SC` sources and grounding, `SD` ser
 
 ## Open decisions
 
-Answer by code, e.g. "D3: B". Until a decision is answered, work proceeds on the **default** (bold).
+Answer by code, e.g. "D3: B". Until a decision is answered, work proceeds on the **default** (bold). On 2026-11-21 the owner accepted every open default and said go live (D23).
 
 | Code | Decision | Options |
 |---|---|---|
-| D1 | Product name, and where the exam app lives | **A: inside the Gadfly repo as Gadfly.Exam, working name "Gadfly Exams"** · B: its own branded repo (give a name) |
-| D2 | What eye/face signals are used for | **A: integrity evidence plus "thinking" annotation only, no deception or emotion inference** · B: also show instructors raw gaze heatmaps |
-| D3 | Avatar look | **A: stylized 3D head (TalkingHead GLB), one default examiner** · B: a Socrates-like character · C: photoreal 2D from a photo (needs a GPU server) |
-| D4 | ElevenLabs usage | **A: ElevenLabs for TTS and for STT (Scribe)** · B: TTS only, OpenAI for STT. Also: which voice ID? |
+| D1 | Product name, and where the exam app lives | Resolved by the owner, 2026-11-21 (defaults accepted): A, inside the Gadfly repo as Gadfly.Exam, working name "Gadfly Exams" |
+| D2 | What eye/face signals are used for | Resolved by the owner, 2026-11-21 (defaults accepted): A, integrity evidence plus "thinking" annotation only, no deception or emotion inference |
+| D3 | Avatar look | Resolved by the owner, 2026-11-21 (defaults accepted): A, stylized 3D head (TalkingHead GLB), one default examiner |
+| D4 | ElevenLabs usage | Resolved by the owner, 2026-11-21: A, ElevenLabs for both the voice (TTS) and speech recognition (Scribe); default examiner voice XrExE9yKIg1WjnnlVkGX (ElevenLabs premade voice Matilda) |
 | D5 | Hosting | Resolved: LocalDB for development, Azure App Service + Azure SQL live at mindattic-gadfly (owner confirmed 2026-11-20) |
-| D6 | First customers | **A: adults (universities, corporate training, certification)** · B: also K-12 (adds COPPA, FERPA and parental consent work) |
-| D7 | Recording retention | **A: audio + transcript kept 90 days (per-org setting), video never stored, derived events only** · B: no audio stored at all |
-| D8 | Billing | **A: none in v1, manual invoicing, usage metered anyway** · B: Stripe subscriptions in v1 |
-| D9 | New library repos public or private | **A: private until v1** · B: public (MIT) now, like Webcam and Legion |
+| D6 | First customers | Resolved by the owner, 2026-11-21 (defaults accepted): A, adults (universities, corporate training, certification) |
+| D7 | Recording retention | Resolved by the owner, 2026-11-21 (defaults accepted): A, audio + transcript kept 90 days (per-org setting), video never stored, derived events only |
+| D8 | Billing | Resolved by the owner, 2026-11-21 (defaults accepted): A, none in v1, manual invoicing, usage metered anyway |
+| D9 | New library repos public or private | Resolved by the owner, 2026-11-21 (defaults accepted): A, private until v1 |
 | D10 | EyeTracker → Webcam | Resolved: renamed in place to MindAttic.Webcam (ET-T12; history kept, GitHub redirects old URLs) |
-| D11 | Student identity | **A: login + same-face-throughout check** · B: photo-ID match at start |
-| D12 | Languages | **A: English only in v1** · B: multilingual (ElevenLabs and Scribe support it) |
+| D11 | Student identity | Resolved by the owner, 2026-11-21 (defaults accepted): A, login + same-face-throughout check |
+| D12 | Languages | Resolved by the owner, 2026-11-21 (defaults accepted): A, English only in v1 |
 | D13 | Who grades | Resolved by the master plan: AI grades are preliminary; blind human grading, reconciliation and an authorized approval come before anything is published |
 | D14 | Cross-repo work from the Gadfly window | Resolved: the owner typed `/crossrepo all` |
 | D15 | LLM provider billing | Resolved: Anthropic credits bought (2026-11-20); OpenAI Low tier is now gpt-6-luna (M.LEGN-T51). Spending rule: mock mode everywhere, Claude pinned to Sonnet 5, no live calls without the owner's OK each time |
 | D16 | Create the Azure resources | Resolved: owner said go (2026-11-20) |
-| D18 | What a teacher sees | **A: teachers see only their own assessments and students; Owner/Admin see the whole organization** · B: every teacher sees the whole organization (today's behavior) | **Proceeding on default A (GAD-T170).**
-| D19 | Voice consent wording | **A: keep the wording now in the exam room (consent version .4)** · B: owner rewrites it |
-| D20 | Voice-only exams | **A: typing is always available (accessibility, broken mic); typed answers are marked as text** · B: allow an exam to require voice |
-| D21 | When webcam notes reach the reviewer | **A: also send an update every minute while an episode lasts** · B: only when an episode ends (today's behavior). **Proceeding on default A (GAD-T171)** |
-| D22 | 3D avatar on Azure | **A: upload the 37 MB model to blob storage and point Gadfly:Voice:AvatarModelUrl at it** · B: keep the 2D portrait on Azure |
-| D23 | Live AI | **A: stay in mock mode until the owner says go** · B: turn on the live panel (and, with D4, ElevenLabs voice) for named test sessions |
-| D24 | MFA for the classroom test staff (Teacher_A..C, Classroom_Owner) on Azure | **A: keep MFA required for staff; each tester enrolls an authenticator app at first sign-in** · B: exempt only the "Gadfly Classroom" test organization's staff from MFA while testing |
-| D25 | Blind grading and exam-time evidence | **A: hide the exam-time judge's per-answer stance (Supports/Uncertain…) and its notes from the examiner until they have submitted their blind grade** · B: keep showing them (today's behavior; they're evidence, not the AI grade) | **Proceeding on default A (GAD-T218).** |
+| D18 | What a teacher sees | Resolved by the owner, 2026-11-21 (defaults accepted): A, teachers see only their own assessments and students; Owner/Admin see the whole organization (GAD-T170) |
+| D19 | Voice consent wording | Resolved by the owner, 2026-11-21 (defaults accepted): A, keep the wording now in the exam room (consent version .4) |
+| D20 | Voice-only exams | Resolved by the owner, 2026-11-21 (defaults accepted): A, typing is always available (accessibility, broken mic); typed answers are marked as text |
+| D21 | When webcam notes reach the reviewer | Resolved by the owner, 2026-11-21 (defaults accepted): A, also send an update every minute while an episode lasts (GAD-T171) |
+| D22 | 3D avatar on Azure | Resolved by the owner, 2026-11-21 (defaults accepted): A, upload the 37 MB model to blob storage and point Gadfly:Voice:AvatarModelUrl at it |
+| D23 | Live AI | Resolved by the owner, 2026-11-21: B, live. The Legion panel (Claude pinned to Sonnet 5) and ElevenLabs voice are on at mindattic-gadfly |
+| D24 | MFA for the classroom test staff (Teacher_A..C, Classroom_Owner) on Azure | Resolved by the owner, 2026-11-21 (defaults accepted): A, keep MFA required for staff; each tester enrolls an authenticator app at first sign-in |
+| D25 | Blind grading and exam-time evidence | Resolved by the owner, 2026-11-21 (defaults accepted): A, hide the exam-time judge's per-answer stance (Supports/Uncertain…) and its notes from the examiner until they have submitted their blind grade (GAD-T218) |
