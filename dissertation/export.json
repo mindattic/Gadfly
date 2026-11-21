@@ -1,0 +1,28 @@
+{
+  // MindAttic.Export bundle definition for the manuscript.
+  // Run: scripts\export.ps1   (or: mindattic-export --config export.json)
+  "title": "Elenchus at Scale",
+  "subtitle": "Socratic Oral Assessment by Synthetic Examiners",
+  "author": "MindAttic",
+  "description": "A dissertation on Socratic oral assessment conducted by synthetic examiners: systems of language models that question a student aloud, write each follow-up from the student's own previous answer, and judge the answers against the instructor's material. Using Gadfly as its case, it argues that a Socratic examination is a procedure for gathering evidence about understanding, and that whether that evidence is fit to inform a grade depends less on the capability of the models than on wide sampling of objectives, scoring anchored to fixed rubrics, controls for anxiety, accent and transcription error, blind human grading with reconciliation, and integrity signals kept as context rather than verdicts. It reviews six literatures against a recorded verification ledger and designs the empirical test that would show whether a system meets these conditions.",
+  "keywords": [
+    "Socratic method",
+    "elenchus",
+    "oral assessment",
+    "large language models",
+    "LLM-as-a-judge",
+    "automated scoring",
+    "dynamic assessment",
+    "academic integrity",
+    "speech recognition fairness"
+  ],
+  "sources": [ "chapters/*.md" ],
+  "outputDirectory": "D:\\Projects\\MindAttic\\ePub\\MindAttic\\GAD-DISS",
+  "fileBaseName": "GAD-DISS",
+  "formats": [ "txt", "md", "docx", "pdf", "epub" ],
+  "profile": "letter",
+  "toc": true,
+  "docxPageNumbers": true,
+  "headingStyle": "em-dash",
+  "math": true
+}

@@ -1,0 +1,80 @@
+# Chapter 1: Introduction
+
+## 1.1 The problem
+
+For most of its history, the written examination rested on an assumption so basic that it was rarely stated: the words on the page were produced by the person whose name was at the top. Remote examination weakened that assumption, and capable language models have broken it. A student who can type a question into a chat window can now return, within seconds, a fluent and usually correct answer to almost any question a course examination is likely to ask. The difficulty is not only that such answers can be copied. It is that a finished answer, however good, no longer carries much information about the understanding of the person who submitted it.
+
+The responses on offer fall into two families. The first tries to restore the old assumption by watching the student: remote proctoring, webcam and screen monitoring, and software that claims to detect machine-written text. The literature reviewed in Chapter 2 gives reasons to doubt each of these. Proctored online examinations do produce lower scores than unproctored ones (Alessio et al., 2017; Dendir & Maxwell, 2020), which suggests that unproctored scores are inflated, but no surveillance signal has been shown to identify an individual who cheated. Detectors of machine-written text are neither accurate nor reliable (Weber-Wulff et al., 2023), and seven widely used detectors labelled more than half of a set of essays by non-native English writers as machine-generated (Liang et al., 2023). Face detection in one widely used proctoring product flagged students with darker skin more often (Yoder-Himes et al., 2022). The second family changes the assessment instead of the surveillance: it asks for work whose production is hard to delegate. The oldest such form is the oral examination, in which the examiner hears the answer being made and can ask about it.
+
+Oral examination has a long record in doctoral defences, professional certification and medical licensing, and Chapter 2 shows that it can be made reliable (Wass et al., 2003; van der Vleuten et al., 2010). It has one decisive weakness: it does not scale. Each examination costs the full attention of at least one qualified examiner for its whole length, and reliable scores in assessments of competence require wide sampling across content and examiners, with estimates of at least three to four hours of testing time for minimally reliable scores (van der Vleuten et al., 2010). In postgraduate medical certification, some countries have moved away from oral examinations altogether because of continuing concerns about whether they support certification decisions reliably and fairly (Memon et al., 2010).
+
+This dissertation asks whether that weakness can now be removed without giving up what makes oral examination worth having. Language models can do more than write answers. They can ask questions, listen to answers transcribed from speech, follow up on what was said, and judge answers against a rubric. A synthetic examiner could, in principle, conduct a Socratic oral examination for every student in a course, at any hour, in parallel. Whether it should, and under what conditions the evidence it gathers can bear the weight of a grade, are the questions this work sets out to answer.
+
+## 1.2 The case: Gadfly
+
+The dissertation is built around a working system. Gadfly is a platform, developed by MindAttic, in which a student demonstrates understanding of a subject by being questioned out loud, in the manner of Socrates, by a synthetic examiner that follows up on what the student has just said. Its design, as recorded in the project's own plan, rests on five commitments.
+
+1. **Grounding in the instructor's material.** The instructor supplies the source material. It is parsed and divided into passages, a set of language models extracts a concept map from it, and for each concept a rubric is built listing the points that a real understanding covers, the acceptable variants and the common misconceptions, each point tied to the passages it came from. The instructor reviews and edits both.
+2. **Questions written from the student's own words.** The examiner chooses, for each concept, one of a small set of moves: Elicit ("what is it, in your own words?"), Clarify (pin down a vague term), Probe ("why does that follow?"), Counterexample (offer a case that breaks the student's definition), Contradiction (confront the student with two of their own claims that conflict), Apply or Transfer (a new situation that needs the concept rather than its definition), Synthesize (connect two concepts) and Close (end the concept because understanding has been shown, the student has reached an acknowledged impasse, or time has run out). Each follow-up is generated from the student's previous answer, so it cannot be prepared in advance.
+3. **A ledger of claims.** The examiner extracts the claims the student makes and keeps them, so that later claims can be checked against earlier ones. This is the device that gives the elenchus, the Socratic examination of a person's beliefs, its name in the system.
+4. **Judgment by a panel, with a human in charge.** Each answer is judged against the source material by a panel of language models from different families, each citing the passages it relied on and free to dissent. A human examiner grades blind, without seeing the panel's scores until their own are submitted. Combined scores are computed under a policy fixed before grading begins, large disagreements block finalization until a second reviewer reconciles them, and only a human can approve and publish a grade.
+5. **Integrity signals as evidence, never as verdicts.** Webcam and audio signals (another face, a second voice, sustained gaze at a region off the screen) are recorded for a human reviewer. They never fail a student automatically and never enter the grade.
+
+Gadfly is used here as a case in the methodological sense: a concrete, inspectable instance of the general design the dissertation examines. The argument does not depend on Gadfly's particular code, and Chapter 4 states the method in terms that any implementation could meet or fail. But a working system disciplines theory. Every claim made about synthetic Socratic examination must be one that a system like Gadfly could be built to satisfy, and every requirement the literature imposes must be one that can be checked against a specification.
+
+## 1.3 The thesis
+
+The thesis of this dissertation is that **a Socratic oral examination is a procedure for gathering evidence about understanding, and that a synthetic examiner can conduct one at scale whose evidence is fit to inform a grade, but only under conditions that the literature makes explicit and that are largely independent of how capable the examiner's language models are.**
+
+The thesis has three parts.
+
+The first is a reframing. An examination is not a container of questions but a sequence of observations, each chosen in the light of the ones before, from which an inference about a student's understanding is drawn. Socratic questioning is distinctive because each question is chosen to be maximally informative given what the student has just said, and because the answers it elicits are hard to produce without the understanding they are meant to reveal. Chapter 3 states this as a formal model of evidence-gathering by questioning.
+
+The second is a claim of possibility. The elements of a Socratic examination that once required a skilled human examiner (following an answer, choosing a probing next question, noticing that two claims conflict, judging an explanation against a body of material) are elements that current language models can perform, imperfectly but measurably. Scale removes the main practical objection to oral examination.
+
+The third is a claim about conditions, and it carries most of the weight. The literature reviewed in Chapter 2 shows that the validity of an oral examination depends on things that have little to do with the examiner's intelligence: how widely it samples the content, how far the scoring is anchored to fixed criteria rather than to the path the conversation took, whether anxiety, accent and disfluency are kept from contaminating the score, how human judgment is combined with machine judgment, and whether integrity signals are kept in their place. A more capable examiner makes the conversation better. It does not, by itself, make the evidence sound. The conditions under which it is sound are institutional and procedural, and the dissertation's main contribution is to state them, ground each in evidence, and design the test that would show whether a system meets them.
+
+## 1.4 Research questions
+
+The dissertation addresses five questions.
+
+- **RQ1. What does a Socratic examination measure, and what can it not measure?** In particular, what does a contradiction between two of a student's claims show, and what does a correct answer to a probing follow-up show? (Chapters 2 and 3.)
+- **RQ2. Under what conditions can adaptive questioning by a synthetic examiner produce evidence that is comparable across students?** Adaptive follow-up is the method's strength and the main threat to its reliability, since no two students receive the same questions. (Chapters 3, 4 and 5.)
+- **RQ3. How should the judgments of a panel of language models and of a human examiner be combined into a grade?** What does the evidence on machine judgment, human marking reliability and automation bias require of that combination? (Chapters 2, 4 and 5.)
+- **RQ4. What is the proper role of integrity signals in a spoken examination?** What do webcam gaze and acoustic features of speech actually measure, and what does the law of the jurisdictions in which such a system would operate permit? (Chapters 2 and 5.)
+- **RQ5. What empirical study would test whether a synthetic Socratic examination meets these conditions?** (Chapter 7.)
+
+## 1.5 Contributions
+
+The dissertation makes four contributions.
+
+1. **A verified synthesis** of six literatures that bear on synthetic oral examination and have not previously been brought together: the philosophical literature on the Socratic elenchus, the clinical interview and the psychology of verbal reports; the validity, reliability and fairness of oral assessment; retrieval practice, self-explanation and transfer; dynamic assessment; the reliability and biases of language models as judges; and the evidence on proctoring, gaze tracking and voice-stress analysis. Every source was checked at a recorded level, and Appendix A records that level for each.
+2. **A formal model** of the examination as sequential evidence-gathering, which separates what a question is for (reducing uncertainty about a student's understanding of an objective) from what the score is (an inference about that understanding), and which makes precise why adaptive questioning and comparable scoring are compatible only if the score is anchored to the objective and not to the conversational path.
+3. **A statement of method,** the Gadfly method, as a set of requirements an implementation can be checked against, each traced to the evidence that motivates it.
+4. **A design for an empirical test,** stating the measures, comparisons and thresholds that would show whether a system that implements the method produces evidence fit to inform a grade, and the results that would show it does not.
+
+## 1.6 Scope and limits
+
+The work is a theoretical and design dissertation. It does not report an empirical evaluation of Gadfly, because none has yet been run, and it does not claim that synthetic Socratic examination works. It states the conditions under which it would, and the study that would find out. Several limits follow and are stated here so that no later chapter appears to claim more.
+
+- **No source tests the central practice.** The verification pass behind Chapter 2 found no study of language models grading spoken, transcribed Socratic answers, multi-turn follow-ups or per-objective scoring in an oral examination. Agreement figures from essays and short written answers are evidence about neighbouring tasks, not about this one, and the dissertation never quotes them as Gadfly's expected accuracy.
+- **The integrity claim is a hypothesis.** It is often said that a person relaying another source's answers will contradict themselves under questioning. No verified source supports this, and Chapter 2 records it as a hypothesis for the empirical test.
+- **Some populations are not covered by the evidence.** No source on neurodivergent students in oral or voice examinations was verified, and the dissertation says nothing about them beyond the need to find out.
+- **The method serves examination, not tutoring.** A Socratic tutor that hints is a different instrument with a different purpose. Chapter 2 reviews dynamic assessment, in which help given during the test is part of the measurement, and Chapter 4 argues that any such mode must be kept apart from the scored examination.
+- **The legal analysis is descriptive.** The dissertation reports what the European Union's Artificial Intelligence Act and the European Commission's guidelines on it say about systems that evaluate learning outcomes or infer emotions in education. It is not legal advice, and the application dates of the high-risk rules are recorded in Appendix A as an item to confirm.
+
+## 1.7 Method, authorship and verification
+
+This dissertation was written in collaboration between its author and a large language model, and its research notes were prepared by language-model agents working under the project's verification rule. That fact bears on the subject. A dissertation that argues synthetic systems can examine students, but only under human oversight and with every claim checked, should be held to the same standard, and the method of its own production should be open to inspection.
+
+Three rules governed the work.
+
+1. **No source is described as checked unless it was.** Every work cited was located during a research pass on 21 November 2026, through its publisher page, a registry or index record, a repository or author copy, or its full text. Each is recorded at one of three levels: full text read (in whole or in the relevant parts, stated), abstract or publisher page read, or record located only. A claim attributed to a work read only at the abstract level is confined to what the abstract establishes.
+2. **Record-only works are not cited for their content.** Where a primary work could not be opened but its content is known from a secondary source that was read, the dissertation cites it in the secondary form ("as cited in"), and the reference list names only the source that was read. Appendix A lists the primary works that appear in the text in this way, as a list for a library.
+3. **Corrections are kept, not hidden.** The verification pass found 28 claims, in popular retellings of the literature or in the project's own documentation, that were wrong or overstated. They are listed in Appendix A, Section A.4, and several of them shape the argument of Chapter 2.
+
+The research notes on which Chapter 2 draws, with the full reference, the page opened, the verified quotation or paraphrase, and a confidence rating for each source, are kept with the project (Gadfly repository, `docs/research/`). Quotations from them appear in this dissertation only where the exact text was seen.
+
+## 1.8 Structure of the dissertation
+
+Chapter 2 reviews the six literatures and closes with the gaps that the rest of the dissertation addresses. Chapter 3 states the formal model of an examination as sequential evidence-gathering by questioning. Chapter 4 states the Gadfly method as a set of requirements, each traced to its evidence. Chapter 5 examines validity, fairness and integrity: what the scores mean, for whom they might mean something different, and what integrity signals can and cannot do. Chapter 6 sets out the limitations of the argument. Chapter 7 designs the empirical test. Chapter 8 concludes. Appendix A is the source verification ledger.

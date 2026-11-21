@@ -1,0 +1,82 @@
+# Appendix A: Source Verification Ledger
+
+This manuscript follows a strict rule: no source is cited as if it had been checked unless it was. This appendix records the level at which each work in the reference list was verified, so that a reader or examiner can see how much weight each citation bears. Every work was located in the research pass of 21 November 2026 (Gadfly ticket GAD-T254). The research notes, with the full reference, the page opened, the verified quotation or paraphrase, and a confidence rating for each source, are kept with the project in `docs/research/`, and their consolidated ledger is `docs/research/references/VERIFICATION.md`.
+
+**Levels.**
+
+- **Full text read.** The work itself (or, where noted in brackets, the relevant chapters or sections) was opened and the cited content was checked against it. Books whose cited passages were located by searching the work's own text, with the rest unread, would be listed separately in A.1; there are none at present.
+- **Abstract or publisher page read.** The abstract, publisher landing page or index record was read; the body was not. Claims attributed to these works are confined to what such pages establish.
+- **Record located.** The bibliographic record was confirmed but the content was not read. Such works are cited only for central, widely documented claims and are flagged for a library check.
+
+## A.1 Full text read (in whole or in the relevant parts)
+
+Bisra et al. (2018) [abstract, introduction, moderator table, discussion]; Bloom et al. (1956) [OCR of the 1956 edition: introduction to the six classes, Comprehension on extrapolation, Application on writing test items]; Bransford & Schwartz (1999) [framing sections, pp. 8–9 of the laboratory copy, and the closing section]; Casabianca et al. (2023) [Introduction and Discussion]; Chi et al. (1994) [abstract, pp. 452–454]; Coghlan et al. (2021) [open-access copy, the argument sections]; Damphousse et al. (2007) [abstract and executive summary, pp. i–iii]; De Beer (2006); Dunlosky et al. (2013) [abstract, Sections 1, 2.5 and 8.5]; Ericsson & Simon (1998) [pp. 178–184]; European Commission (2025) [Section 7 on Article 5(1)(f), paras. 247–263, and para. 5 on status]; Feuerstein et al. (n.d.) [opening section, the structure of the instruments, the passages on mediation and graduated prompting]; Fuchs et al. (2011) [author manuscript: introduction, measure, discussion]; Joughin (2010) [pp. 7, 10–12, 14–16]; Karpicke & Blunt (2011) [abstract, Experiment 1, Fig. 1]; Krathwohl (2002); Meadows & Billington (2005) [title page, pp. 18 and 41]; Milani et al. (2025) [repository copy: abstract, Sections 3 and 4.1]; National Research Council (2003) [Chapter 6, the subsection on voice stress analysis]; Pan & Rickard (2018) [abstract, coding, the three-factor framework]; Papoutsaki et al. (2016) [author copy: abstract, evaluation]; Piaget (1929) [Introduction, Sections 1–2, pp. 2–14]; Plato (1966) [Stephanus 21b–23a and 30e–31a, Perseus]; Plato (1967) [82b, 82e and 84a–85d, Perseus]; Rayner (2009) [benchmark data, pp. 2–3]; Regulation (EU) 2024/1689 [EUR-Lex: Recitals 18, 44 and 56; Arts. 3(34), 3(39), 5(1)(f), 6(3), 14 and 113; Annex III, point 3]; Roediger & Karpicke (2006) [abstract, Experiment 1, Experiment 2 design]; Rowland (2014) [abstract, method, overall effect, moderator table]; Sarabi Asl et al. (2024) [introduction and models section, pp. 2–5]; Shermis (2014) [abstract, data, agreement results, limitations]; Stad et al. (2019) [abstract, introduction, procedure, scoring]; van der Vleuten et al. (2010) [the sections on specificity, objectivity and sampling]; van Gog & Sweller (2015) [abstract and introduction]; Verga et al. (2024) [arXiv version 2: Sections 2.2, 3.1, 4.1–4.4, Tables 1–2]; Vygotsky (1978) [Chapter 6, pp. 85–87, community scan]; Wang et al. (2024) [arXiv version: Sections 1–3]; Wolfsdorf (2013) [introduction, the sections on Vlastos and Benson, conclusion; proof copy]; Yoder-Himes et al. (2022) [abstract, methods, results, limitations]; Zheng et al. (2023) [arXiv version 4: Sections 3.3, 3.4, 4.2].
+
+## A.2 Abstract or publisher page read
+
+Adesope et al. (2017); Akimov & Malin (2020); Alessio et al. (2017); Barnett & Ceci (2002); Benson (1995) [with Wolfsdorf's (2013) summary of the argument]; Benson (2000); Bond & DePaulo (2006); Buolamwini & Gebru (2018); Caffrey et al. (2008); Chi et al. (1989) [abstract on p. 145, from the page image]; Chiang & Lee (2023); Chiang et al. (2024); Dendir & Maxwell (2020); DePaulo et al. (2003); Ericsson & Simon (1980); Fox et al. (2011); Giddens et al. (2013); Ginsburg (1997); Harnsberger et al. (2009); Haywood & Lidz (2007) [description and Chapter 1 preview]; Hembree (1988); Henkel et al. (2023) [preprint]; Henkel et al. (2024); Horwitz et al. (1986); Huxham et al. (2012); Karpicke & Aue (2015); Koenecke et al. (2020); Kortemeyer (2023) [APS abstract and arXiv abstract; the quoted sentence is from the arXiv abstract]; Lantolf & Poehner (2004); Liang et al. (2023) [abstract, with the PMC summary and results passage]; Memon et al. (2010); Mizumoto & Eguchi (2023); Mujtaba et al. (2024); Nisbett & Wilson (1977); Pack et al. (2024); Panickssery et al. (2024) [preprint; abstract and Fig. 1]; Seeskin (1987); Semmelmann & Weigelt (2018); Sotiriadou et al. (2020); von der Embse et al. (2018); Wass et al. (2003); Weber-Wulff et al. (2023); Woldeab & Brothen (2019).
+
+## A.3 Record located
+
+**Cited directly at this level.** Biggs & Collis (1982). The book was not opened. Section 2.7 uses only the commonly described distinction between answers of one point, several unconnected points, integrated points and generalized points, and attributes no wording to the book.
+
+**Named in the text only through a secondary source that was read.** These primary works were located but not opened. Each appears in the text in the form "as cited in" and is not in the reference list:
+
+- Vlastos, G. (1983). The Socratic elenchus. *Oxford Studies in Ancient Philosophy, 1*, 27–58. Quoted as cited in Wolfsdorf (2013), with Vlastos's page numbers.
+- Poehner, M. E. (2008). *Dynamic assessment: A Vygotskian approach to understanding and promoting L2 development*. Springer. Quoted as cited in Sarabi Asl et al. (2024).
+- Williamson, D. M., Xi, X., & Breyer, F. J. (2012). A framework for evaluation and use of automated scoring. *Educational Measurement: Issues and Practice, 31*(1), 2–13. Thresholds as reported by Casabianca et al. (2023).
+- Grigorenko, E. L., & Sternberg, R. J. (1998). Dynamic testing. *Psychological Bulletin, 124*(1), 75–111. Named inside a quotation from De Beer (2006).
+- Joughin, G. (1998). Dimensions of oral assessment. *Assessment & Evaluation in Higher Education, 23*(4), 367–378. The six dimensions are cited from Joughin's own 2010 restatement.
+
+## A.4 Corrections made to the working draft
+
+Numbered, cumulative and never renumbered. Items 1 to 28 were found by the research pass (GAD-T254) in popular retellings of the literature or in the project's own documentation, and the dissertation was drafted to avoid them; items from 29 were found while drafting.
+
+1. **The elenchus shows inconsistency, not falsity.** A contradiction probe tests whether a student's claims fit together; it cannot decide which is wrong (Section 2.2).
+2. **There is no single "Socratic method."** Vlastos's standard elenchus fits only part of the dialogues (Wolfsdorf, 2013).
+3. **The *Meno* slave-boy passage is not a model of non-leading questions.** Many questions at 84d–85b lead; Piaget's rule against suggestion is the better model (Sections 2.2, 2.3).
+4. **"Thinking aloud changes reasoning" is overstated.** Plain think-aloud did not change accuracy; explaining to a listener did, and every form of verbalizing slowed people down (Fox et al., 2011).
+5. **Nisbett and Wilson (1977) did not show verbal reports are worthless.** Reports can be accurate when the cause is salient and plausible.
+6. **"Someone relaying another source's answers tends to contradict themselves"** has no support in the sources reviewed. It is treated as a hypothesis (Sections 1.6, 2.12).
+7. **"Structure makes oral exams reliable" is overstated.** Reliability comes mostly from sampling; in Wass et al. (2003) content accounted for more score variance than examiners.
+8. **The accent-credibility effect is not settled.** Replications of the finding usually cited for it are mixed; the dissertation does not rely on it.
+9. **Huxham et al. (2012) does not show that anxiety has no effect on oral scores.**
+10. **"Test anxiety causes poor performance" (Hembree, 1988)** is a causal reading of mostly correlational data; the stronger evidence is that scores rise when anxiety is treated.
+11. **Roediger and Karpicke (2006) shows retention, not understanding.** Restudying led at five minutes, and the final test was free recall of the same passage.
+12. **The testing effect can vanish** without feedback when practice-test success is 50% or lower (Rowland, 2014).
+13. **Testing benefits do not spread to untested material** (Pan & Rickard, 2018).
+14. **Chi et al. (1989) is correlational,** and answering an examiner is explaining to another, not self-explanation in the strict sense.
+15. **Bloom's taxonomy is not a strict ladder,** and a "what would change if" question inside the student's own scenario is extrapolation, not application.
+16. **The ZPD passage says "more capable peers."** "More knowledgeable other" is not in it, and the term "scaffolding" is not Vygotsky's. The 1978 text is an edited translation.
+17. **"Dynamic assessment predicts better than static tests" is overstated** (Caffrey et al., 2008; Fuchs et al., 2011).
+18. **Prompt counts and gain scores are not "learning potential"** when students start at different levels (De Beer, 2006).
+19. **Zheng et al. (2023) does not show self-enhancement bias,** and its headline agreement figure is for pairwise preferences with ties excluded.
+20. **"Machines grade essays as well as humans" needs its context:** human–human agreement was only 0.61–0.85, and construct validity and gaming were left open (Shermis, 2014).
+21. **The .70 / .10 / .15 thresholds apply to a set of answers, not to one answer** (Williamson et al., 2012, as cited in Casabianca et al., 2023).
+22. **Liang et al. (2023) is about detectors, not graders.**
+23. **Gender Shades measured gender classification, not face detection.** The direct proctoring evidence is Yoder-Himes et al. (2022).
+24. **The webcam tracker's error of about four degrees** was measured against a commercial tracker with four participants; it does not mean webcam tracking matches a commercial eye tracker.
+25. **Jitter tends to fall, not rise, under stress** where any effect is found, and findings are mixed (Giddens et al., 2013).
+26. **The voice-stress "15%" in the NIJ field study** is the average share of lies detected, not overall accuracy (Damphousse et al., 2007).
+27. **Dendir and Maxwell (2020) inferred cheating from a score drop;** they did not observe it.
+28. **The project's privacy documentation says "Nothing infers emotion."** The Commission's guidelines give detecting "emotional arousal and anxiousness" during examinations as an example of prohibited emotion recognition in education (Section 2.11).
+29. **Memon et al. (2010) does not support a cost argument.** The first draft of Section 1.1 said institutions abandoned oral examinations partly because of their cost. The abstract, the level at which the work was read, says only that some countries moved away from oral examinations in postgraduate medical certification because of continuing concerns about reliability and fairness. The cost point now rests on the testing time estimated by van der Vleuten et al. (2010).
+
+## A.5 Checks closed
+
+- **Citation details corrected by the research pass** and used in the reference list: Woldeab and Brothen (2019) is in the *International Journal of E-Learning & Distance Education*; Bond and DePaulo (2006) is in *Personality and Social Psychology Review*; Memon et al. is dated 2010; the Sotiriadou et al. (2020) DOI resolves to the title given in the reference list.
+- **AI Act Annex III, point 3,** was read on EUR-Lex, closing an earlier reading from an unofficial mirror.
+
+## A.6 First drafting pass (GAD-T256, 21 November 2026)
+
+Drafted the abstract, Chapters 1 and 2 and the reference list, and outlined Chapters 3 to 8. Every work cited in Chapters 1 and 2 is listed above at its recorded level, and every quotation was taken from a passage recorded as seen in the research notes. Item 29 was found and corrected.
+
+**Open items.**
+
+- **Read the primary works now cited only through secondary sources** (A.3), and Biggs and Collis (1982), before quoting any of them directly.
+- **Check figures blocked by paywalls:** the effect sizes in Adesope et al. (2017) and Caffrey et al. (2008); the nine dimensions in Barnett and Ceci (2002); the agreement statistics in Mizumoto and Eguchi (2023) and Pack et al. (2024); the marks and anxiety measures in Huxham et al. (2012).
+- **Read in full the works Chapter 2 relies on most heavily at the abstract level:** Wass et al. (2003), Koenecke et al. (2020), Huxham et al. (2012) and Fox et al. (2011).
+- **Plato translations:** the Perseus translations (Fowler, Lamb) were used; their copyright status for long quotation was not checked.
+- **AI Act dates:** confirm the application dates for the high-risk rules (Annex III) after any amendments of 2025–2026.
+- **Bibliographic details:** the end page of Wolfsdorf (2013) and the book's catalogue year (2012 or 2013); the date and publication details of Feuerstein et al. (n.d.); the volume number of Benson (1995), taken from search listings.
+- **Sources still to find for Chapter 3:** the measurement-theory literature (item response theory, adaptive testing, the design of experiments) on which the formal model will draw.
