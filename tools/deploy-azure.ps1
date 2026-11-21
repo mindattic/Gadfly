@@ -88,7 +88,10 @@ if (-not $DryRun) {
     # Read-only guard: the app must be in mock mode unless the caller says otherwise. Only this one setting is looked at.
     $settingsJson = & az webapp config appsettings list -g $ResourceGroup -n $App -o json
     if ($LASTEXITCODE -ne 0) { Fail "cannot read the app settings of $App" }
-    $mode = ($settingsJson | ConvertFrom-Json | Where-Object { $_.name -eq 'Gadfly__AiMode' } | Select-Object -First 1).value
+    # Join the lines and assign first: Windows PowerShell 5.1 would otherwise pipe the whole array as one object.
+    $settings = @(($settingsJson -join "`n") | ConvertFrom-Json)
+    $modeSetting = $settings | Where-Object { $_.name -eq 'Gadfly__AiMode' } | Select-Object -First 1
+    $mode = if ($modeSetting) { [string]$modeSetting.value } else { '(unset)' }
     Write-Host "   Gadfly__AiMode on $App = $mode"
     if ($mode -ne 'mock' -and -not $AllowLive) { Fail "Gadfly__AiMode is '$mode', not 'mock'; pass -AllowLive to deploy anyway." }
 }
@@ -148,7 +151,8 @@ try {
         Start-Sleep -Seconds 10
         $json = & az webapp log deployment list -g $ResourceGroup -n $App -o json
         if ($LASTEXITCODE -ne 0 -or -not $json) { continue }
-        $latest = $json | ConvertFrom-Json | Where-Object { ([DateTimeOffset]$_.received_time).UtcDateTime -ge $startedUtc.AddMinutes(-1) } |
+        $deployments = @(($json -join "`n") | ConvertFrom-Json)
+        $latest = $deployments | Where-Object { ([DateTimeOffset]$_.received_time).UtcDateTime -ge $startedUtc.AddMinutes(-1) } |
             Sort-Object { ([DateTimeOffset]$_.received_time).UtcDateTime } | Select-Object -Last 1
         if (-not $latest) { continue }
         Write-Host "   deployment $($latest.id.Substring(0,8)) status $($latest.status)"
