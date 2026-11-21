@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Gadfly.Assessment;
 using Gadfly.Engine;
 using Gadfly.Server.Data;
 using Gadfly.Sources.Verification;

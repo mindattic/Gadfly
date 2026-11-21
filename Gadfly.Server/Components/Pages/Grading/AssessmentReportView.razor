@@ -51,6 +51,16 @@
             @if (o.HumanLevel is not null) { <p><strong>Examiner:</strong> @o.HumanLevel@(o.HumanComment is { } c ? ". " + c : "")</p> }
             @if (o.AiLevel is not null) { <p><strong>AI (preliminary):</strong> @o.AiLevel, confidence @o.AiConfidence. @o.AiExplanation</p> }
             @if (o.Reconciliation is not null) { <p><strong>Reconciliation:</strong> @o.Reconciliation</p> }
+            @if (Report.ChangeLine(o) is { } change) { <p class="hint">@change</p> }
+            @if (o.WhatWasMissing.Count > 0)
+            {
+                <p><strong>What was missing</strong></p>
+                <ul>@foreach (var m in o.WhatWasMissing) { <li>@m</li> }</ul>
+            }
+            else if (o.Combined is { } full && full >= o.MaxScore)
+            {
+                <p><strong>What was missing:</strong> nothing. Every part of this objective was shown.</p>
+            }
             @if (o.Evidence.Count > 0)
             {
                 <p><strong>Evidence</strong> <span class="hint">(verified responses)</span></p>

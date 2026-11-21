@@ -227,6 +227,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             .. reconciliations.SelectMany(g => g).Select(r => r.ReviewerUserId), .. reconciliations.SelectMany(g => g).Select(r => r.SecondReviewerUserId).OfType<Guid>(),
             .. requested.Values], ct);
         var jobs = await LatestJobsAsync([sessionId], ct);
+        var prior = await PriorAttemptsAsync(session, ct);
 
         return new GradingWorkspace
         {
@@ -239,7 +240,43 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
                 .Select(a => (a, a.ActorUserId is { } u ? names.GetValueOrDefault(u) ?? "(unknown)" : "Gadfly")).ToList(),
             Names = names, SecondReviewers = secondReviewers.Select(s => (s.UserId, s.UserName)).ToList(), RequestedSecondReviews = requested,
             JobState = jobs.GetValueOrDefault(sessionId).State, JobError = jobs.GetValueOrDefault(sessionId).Error, Viewer = Actor,
+            PriorAttempts = prior,
         };
+    }
+
+    /// <summary>
+    /// The student's earlier attempts on the same assignment that have a computed result, latest first (GAD-T273):
+    /// their per-objective combined scores, whether the student may see them, and whether their feedback was
+    /// published before this attempt started (retakes without feedback give about no benefit: research note 03).
+    /// </summary>
+    private async Task<IReadOnlyList<PriorAttempt>> PriorAttemptsAsync(ExamSession session, CancellationToken ct)
+    {
+        if (session.Attempt <= 1) return [];
+        var org = Org;
+        var rows = await (from s in db.ExamSessions.AsNoTracking()
+                          join g in db.FinalGrades.AsNoTracking() on s.Id equals g.SessionId
+                          where s.OrganizationId == org && g.OrganizationId == org && s.AssignmentId == session.AssignmentId
+                                && s.StudentUserId == session.StudentUserId && s.Attempt < session.Attempt && g.ResultJson != null
+                          orderby s.Attempt descending
+                          select new { s.Id, s.Attempt, g.Status, g.ResultJson }).Take(50).ToListAsync(ct);
+        if (rows.Count == 0) return [];
+        var ids = rows.Select(r => r.Id).ToList();
+        var approvals = await db.ApprovalRecords.AsNoTracking()
+            .Where(a => a.OrganizationId == org && ids.Contains(a.SessionId) && (a.Action == ApprovalAction.Publish || a.Action == ApprovalAction.Finalize))
+            .Select(a => new { a.SessionId, a.Action, a.At }).ToListAsync(ct);
+        var started = session.StartedAt ?? session.CreatedAt;
+        var result = new List<PriorAttempt>();
+        foreach (var r in rows)
+        {
+            if (GradingJson.Read<StoredResult>(r.ResultJson)?.Result is not { } stored) continue;
+            var published = approvals.Where(a => a.SessionId == r.Id && a.Action == ApprovalAction.Publish).Select(a => (DateTimeOffset?)a.At).Min();
+            var finalized = approvals.Any(a => a.SessionId == r.Id && a.Action == ApprovalAction.Finalize);
+            var visible = published is not null && finalized && r.Status is GradeStatus.Published or GradeStatus.UnderAppeal or GradeStatus.Amended;
+            var combined = new Dictionary<string, decimal?>(StringComparer.Ordinal);
+            foreach (var o in stored.Objectives) combined[o.ObjectiveKey] = o.Combined;
+            result.Add(new PriorAttempt(r.Id, r.Attempt, combined, visible, published is { } p && p <= started));
+        }
+        return result;
     }
 
     private sealed record SecondReviewRequest(Guid ReviewerUserId);

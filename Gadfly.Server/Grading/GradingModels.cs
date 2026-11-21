@@ -40,6 +40,16 @@ public sealed record ObjectiveView(LearningObjective Objective, AiGradeView? Ai,
     public bool NeedsReconciliation => Disagreement is { Band: DisagreementBand.MandatoryReconciliation, ResolvedAt: null };
 }
 
+/// <summary>
+/// An earlier graded attempt on the same assignment (GAD-T273), so each objective's score change between attempts
+/// can be reported and split by whether that attempt's feedback reached the student before this attempt started.
+/// </summary>
+/// <param name="Combined">Combined score per objective key, as computed for that attempt.</param>
+/// <param name="VisibleToStudent">Approved and published to the student (so the student may see it compared).</param>
+/// <param name="FeedbackBeforeThisAttempt">Its result was published before this attempt started.</param>
+public sealed record PriorAttempt(Guid SessionId, int Attempt, IReadOnlyDictionary<string, decimal?> Combined, bool VisibleToStudent,
+    bool FeedbackBeforeThisAttempt);
+
 /// <summary>What FinalGrade.ResultJson holds.</summary>
 public sealed record StoredResult(CombinedResult Result, IReadOnlyList<string> AiExcludedObjectives, DateTimeOffset ComputedAt);
 
@@ -66,6 +76,8 @@ public sealed record GradingWorkspace
     public string? JobState { get; init; }
     public string? JobError { get; init; }
     public required GradingActor Viewer { get; init; }
+    /// <summary>Earlier graded attempts on the same assignment, latest first (GAD-T273).</summary>
+    public IReadOnlyList<PriorAttempt> PriorAttempts { get; init; } = [];
 
     public GradeStatus? Status => Grade?.Status;
     public bool AnyMock => Objectives.Any(o => o.Ai?.Row.IsMock == true);
