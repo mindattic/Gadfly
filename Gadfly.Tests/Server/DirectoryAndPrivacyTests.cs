@@ -420,6 +420,26 @@ public class PrivacyServiceTests : ServerTest
     }
 
     [Test]
+    public async Task Erasure_RemovesTheAppealTextFromTheAuditTrail()
+    {
+        var (w, sessionId, _) = await Seed.EndedSessionAsync(Words);
+        await using (var db = OrgDb(w.Org))
+        {
+            db.AuditEvents.Add(new AuditEvent
+            {
+                OrganizationId = w.Org, SessionId = sessionId, ActorUserId = w.StudentId, ActorRole = "Student", Action = "grade.appeal.opened",
+                EntityType = "GradeAppeal", EntityId = Guid.NewGuid().ToString(), Reason = Words, At = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+        await WithPrivacy(w.Org, p => p.DeleteStudentDataAsync(w.Org, w.StudentId));
+        await using var check = SystemDb();
+        var events = await check.AuditEvents.AsNoTracking().Where(a => a.SessionId == sessionId && a.Action == "grade.appeal.opened").ToListAsync();
+        Assert.That(events, Has.Count.EqualTo(1), "the audit row itself stays");
+        Assert.That(events[0].Reason, Does.Not.Contain("chlorophyll"));
+    }
+
+    [Test]
     public async Task Erasure_LeavesOtherStudentsAndOrganizationsAlone()
     {
         var target = await Seed.EndedSessionAsync(Words);

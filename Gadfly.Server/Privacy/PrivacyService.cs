@@ -113,6 +113,10 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
             .SetProperty(r => r.SpeechRecognitionText, (string?)null), ct);
         await db.AuditEvents.Where(a => a.SessionId != null && sessionIds.Contains(a.SessionId.Value) && (allAuditJson || a.Action.StartsWith("response.") || a.Action.StartsWith("clarification.")))
             .ExecuteUpdateAsync(u => u.SetProperty(a => a.BeforeJson, (string?)null).SetProperty(a => a.AfterJson, (string?)null), ct);
+        // The student's own appeal text is the audit event's reason; an erasure takes it too (GAD-T185).
+        if (allAuditJson)
+            await db.AuditEvents.Where(a => a.SessionId != null && sessionIds.Contains(a.SessionId.Value) && a.Action == "grade.appeal.opened")
+                .ExecuteUpdateAsync(u => u.SetProperty(a => a.Reason, (string?)Redacted), ct);
     }
 
     /// <summary>The AI objective grade's stored detail without the words: criterion levels and scores stay, quotes and rationales go.</summary>
