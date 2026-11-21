@@ -19,7 +19,9 @@ public sealed record HubIntegrityEvent(string Source, string Type, DateTimeOffse
 /// and speech metrics as <see cref="HubAnswer"/>; MindAttic.Avatar speaks each question it receives).
 /// Every call is the signed-in student acting on their own session; the orchestrator checks ownership,
 /// state and the server-side time limit. Server → client messages: <c>Step</c> (the new state and
-/// question), <c>Thinking</c> (judging has started), <c>Refused</c> (a readable reason).
+/// question, and any pending <see cref="SessionStep.Verification"/> request), <c>Thinking</c> (judging has
+/// started), <c>Refused</c> (a readable reason). A step with Verification set asks the student about the answer
+/// just given (Clarify / ConfirmTranscript / CorrectAnswer) before it is judged.
 /// </summary>
 [Authorize(Policy = GadflyPolicies.Student)]
 public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFactory scopes) : Hub
@@ -84,6 +86,52 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
             Words = answer.Words ?? [],
             SpeechMetrics = answer.SpeechMetrics ?? new Dictionary<string, double>(),
         }, Context.ConnectionAborted));
+        await Clients.OthersInGroup(Group(sessionId)).SendAsync("Step", step);
+        return step;
+    }
+
+    /// <summary>
+    /// Replies to a pending meaning clarification (step.Verification.Kind "meaning"). The reply is stored beside
+    /// the answer, never over it; an empty reply declines (the answer then goes to a human reviewer as recorded).
+    /// </summary>
+    public Task<SessionStep> Clarify(Guid sessionId, Guid responseId, string? reply)
+    {
+        var (org, user) = Caller();
+        if (reply is { Length: > 5000 }) throw new HubException("That clarification is too long.");
+        return SignalAndRun(sessionId, () => orchestrator.ClarifyAsync(org, sessionId, user, responseId, reply, Context.ConnectionAborted));
+    }
+
+    /// <summary>"Yes, this is what I said" for a pending transcript confirmation (Kind "transcript"). Confirms wording only, not correctness.</summary>
+    public Task<SessionStep> ConfirmTranscript(Guid sessionId, Guid responseId)
+    {
+        var (org, user) = Caller();
+        return SignalAndRun(sessionId, () => orchestrator.ConfirmTranscriptAsync(org, sessionId, user, responseId, Context.ConnectionAborted));
+    }
+
+    /// <summary>
+    /// A transcription correction: resolves a pending request with corrected text ("Correct it"), or with
+    /// <paramref name="repeat"/> the newly recognized transcript of a spoken answer said again ("Repeat");
+    /// with nothing pending, fixes a typo in the last judged answer. Small edits only; the original is kept.
+    /// </summary>
+    public Task<SessionStep> CorrectAnswer(Guid sessionId, string text, bool repeat = false)
+    {
+        var (org, user) = Caller();
+        if (text is null || text.Length > 20_000) throw new HubException("The corrected answer needs text.");
+        return SignalAndRun(sessionId, () => orchestrator.CorrectAnswerAsync(org, sessionId, user, text, repeat, Context.ConnectionAborted));
+    }
+
+    /// <summary>"I want to change my answer": a substantive revision of the last judged answer, recorded as a new response event.</summary>
+    public Task<SessionStep> ReviseAnswer(Guid sessionId, string text)
+    {
+        var (org, user) = Caller();
+        if (text is null || text.Length > 20_000) throw new HubException("Your changed answer needs text.");
+        return Guard(() => orchestrator.ReviseAnswerAsync(org, sessionId, user, text, Context.ConnectionAborted));
+    }
+
+    private async Task<SessionStep> SignalAndRun(Guid sessionId, Func<Task<SessionStep>> run)
+    {
+        if (Joined().Contains(sessionId)) await Clients.Group(Group(sessionId)).SendAsync("Thinking", sessionId);
+        var step = await Guard(run);
         await Clients.OthersInGroup(Group(sessionId)).SendAsync("Step", step);
         return step;
     }

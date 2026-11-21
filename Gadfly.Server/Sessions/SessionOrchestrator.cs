@@ -1,11 +1,14 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using Gadfly.Assessment;
 using Gadfly.Engine;
 using Gadfly.Server.Data;
 using Gadfly.Server.Sources;
 using Gadfly.Server.Tenancy;
+using Gadfly.Server.Verification;
 using Gadfly.Socrates;
 using Gadfly.Sources;
+using Gadfly.Sources.Verification;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gadfly.Server.Sessions;
@@ -25,6 +28,16 @@ public sealed record SessionStep
     public string? EndReason { get; init; }
     public int ConceptsTotal { get; init; }
     public int ConceptsClosed { get; init; }
+    /// <summary>
+    /// A request about the answer just given, waiting for the student before it is judged (GAD-T87/T88):
+    /// transcript confirmation for voice answers, or a neutral meaning clarification. One at a time;
+    /// while it is set, <see cref="Question"/> is still the question that answer belongs to.
+    /// </summary>
+    public PendingVerification? Verification { get; init; }
+    /// <summary>The last judged answer, for "correct a typo" and "change my answer" (null before the first one).</summary>
+    public LastAnswer? LastAnswer { get; init; }
+    /// <summary>A one-line confirmation of what the student's last action did, e.g. "Your correction was saved."</summary>
+    public string? Notice { get; init; }
 }
 
 /// <summary>Why a session could not be started or advanced, in words a student can read.</summary>
@@ -45,8 +58,11 @@ public sealed class SessionOrchestrator(
     ILogger<SessionOrchestrator> log,
     Platform.UsageMeter meter)
 {
-    private sealed class Live(SourceExamEngine engine, Guid organizationId, Guid studentUserId)
+    private sealed class Live(SourceExamEngine engine, Guid organizationId, Guid studentUserId, AssessmentMode mode)
     {
+        public AssessmentMode Mode { get; } = mode;
+        /// <summary>Set by a step for the view it returns (cleared on every step).</summary>
+        public string? Notice { get; set; }
         public SourceExamEngine Engine { get; set; } = engine;
         public Guid OrganizationId { get; } = organizationId;
         /// <summary>The session's owner: a cached engine is only handed to them (GAD-T74).</summary>
@@ -58,6 +74,7 @@ public sealed class SessionOrchestrator(
     private sealed record SubjectSnapshot(ConceptMap Map, IReadOnlyList<ConceptRubric> Rubrics);
 
     private readonly ConcurrentDictionary<Guid, Live> _live = new();
+    private readonly ResponseVerifier _verifier = new(panel);
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _loadGates = new();
     private readonly ConcurrentDictionary<(Guid Collection, int Version), SourceMaterialSubject> _subjects = new();
 
@@ -136,32 +153,333 @@ public sealed class SessionOrchestrator(
     public Task<SessionStep> CurrentAsync(Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct = default) =>
         StepAsync(organizationId, sessionId, studentUserId, async live => await live.Engine.NextQuestionAsync(ct), ct);
 
-    /// <summary>Submits the answer to the waiting question, judges it, and returns the next question.</summary>
+    /// <summary>Meaning clarifications per session: beyond this, an unclear answer goes to a human instead of interrupting again.</summary>
+    public const int MaxMeaningClarificationsPerSession = 3;
+
+    /// <summary>With less time than this left, the student is not interrupted; an unclear answer goes to a human.</summary>
+    public static readonly TimeSpan MinTimeForClarification = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Submits the answer to the waiting question. It is recorded as an immutable response (GAD-T86) and
+    /// verified (GAD-T87): a voice answer first asks the student to confirm the transcript, an unclear
+    /// one may get a neutral clarification question (the step then carries <see cref="SessionStep.Verification"/>
+    /// and the same question). Otherwise the verified text is judged and the next question returned.
+    /// </summary>
     public Task<SessionStep> AnswerAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Answer answer, CancellationToken ct = default) =>
         StepAsync(organizationId, sessionId, studentUserId, async live =>
         {
-            if (live.Engine.Session.IsEnded)
+            var s = live.Engine.Session;
+            if (s.IsEnded)
                 throw new SessionRefusedException("This exam has ended; your answers were submitted.");
-            if (live.Engine.Session.OpenTurn is null && live.Engine.Session.AwaitingJudgment is null)
-                throw new SessionRefusedException("There is no question waiting for an answer.");
+            if (s.OpenTurn is null && s.AwaitingJudgment is not null)
+            {
+                // A crash between recording and judging: finish judging what was recorded.
+                await live.Engine.SubmitAnswerAsync(null, ct);
+                return await live.Engine.NextQuestionAsync(ct);
+            }
+            var open = s.OpenTurn ?? throw new SessionRefusedException("There is no question waiting for an answer.");
             // The server's clock is the authority: an answer arriving well after time ran out is not judged.
-            if (live.Engine.Session.Remaining(clock.GetUtcNow()) <= TimeSpan.Zero
-                && clock.GetUtcNow() - (live.Engine.Session.StartedAt + live.Engine.Session.Policy.TimeBudget) > AnswerGrace)
+            if (TooLate(live))
             {
                 live.Engine.End(EndReason.TimeUp);
                 return null;
             }
-            await live.Engine.SubmitAnswerAsync(answer, ct);
+
+            using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            var ledger = new ResponseLedger(db, clock);
+            var turnId = await TurnIdAsync(db, s.Id, open.Index, ct)
+                ?? throw new SessionRefusedException("Your question is still being saved; please submit again.");
+            if (await ledger.PendingAsync(s.Id, turnId, ct) is not null)
+                throw new SessionRefusedException("Please answer the request about your last answer first.");
+
+            var response = await ledger.CaptureAsync(live.OrganizationId, s.Id, turnId, studentUserId, answer, ct: ct);
+            await db.SaveChangesAsync(ct);
+            if (await VerifyAsync(live, db, ledger, response, open, answer, ct))
+            {
+                await db.SaveChangesAsync(ct);
+                return open;   // the same question, now with a pending request
+            }
+            await db.SaveChangesAsync(ct);
+            await live.Engine.SubmitAnswerAsync(answer with { Text = response.VerifiedText }, ct);
             return await live.Engine.NextQuestionAsync(ct);
         }, ct);
 
-    /// <summary>Ends a session early (student finished early, or the host stopped it).</summary>
-    public Task<SessionStep> EndAsync(Guid organizationId, Guid sessionId, Guid studentUserId, EndReason reason, CancellationToken ct = default) =>
-        StepAsync(organizationId, sessionId, studentUserId, live =>
+    /// <summary>
+    /// The student's reply to a meaning clarification (Part 4.3 Type B). The reply is stored beside the
+    /// answer (never over it) and judged with it; an empty reply declines, which leaves the ambiguity
+    /// unresolved and sends the answer to a human reviewer.
+    /// </summary>
+    public Task<SessionStep> ClarifyAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Guid responseId, string? reply, CancellationToken ct = default) =>
+        ResolveAsync(organizationId, sessionId, studentUserId, responseId, ClarificationType.Meaning, (live, ledger, p) =>
         {
-            live.Engine.End(reason);
-            return Task.FromResult<Turn?>(null);
+            var text = (reply ?? "").Trim();
+            if (text.Length > 5000) throw new SessionRefusedException("That clarification is too long.");
+            if (text.Length == 0 || ResponseVerifier.IsAporiaWord(text))
+            {
+                ledger.Answer(p.Request!, p.Response, text.Length == 0 ? null : text, studentUserId, "The student did not clarify.");
+                ledger.MovePath(p.Response, "The student chose not to clarify; the ambiguity goes to a human reviewer.", studentUserId, OrgRoles.Student,
+                    VerificationState.Unresolved, VerificationState.FlaggedForHumanReview);
+                live.Notice = "No problem. Your answer was kept exactly as you wrote it.";
+                return Task.FromResult(Compose(p.Response.VerifiedText, null, null));
+            }
+            ledger.Answer(p.Request!, p.Response, text, studentUserId, "The student clarified their meaning.");
+            ledger.AddVersion(p.Response, text, CorrectionKind.MeaningClarification, "student", studentUserId);
+            ledger.Move(p.Response, VerificationState.Clarified, "The student clarified their meaning.", studentUserId, OrgRoles.Student);
+            live.Notice = "Thanks. Your clarification was saved alongside your answer.";
+            return Task.FromResult(Compose(p.Response.VerifiedText, p.Request!.Question, text));
         }, ct);
+
+    /// <summary>"Yes, this is what I said" (Part 4.3 Type A). Confirms the wording only, never that the answer is correct.</summary>
+    public Task<SessionStep> ConfirmTranscriptAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Guid responseId, CancellationToken ct = default) =>
+        ResolveAsync(organizationId, sessionId, studentUserId, responseId, ClarificationType.Transcription, (live, ledger, p) =>
+        {
+            ledger.Answer(p.Request!, p.Response, "confirmed", studentUserId, "The student confirmed the recording matches what they said.");
+            ledger.Move(p.Response, VerificationState.Confirmed,
+                "The student confirmed the transcript. This confirms the wording only, not that the answer is correct.", studentUserId, OrgRoles.Student);
+            return Task.FromResult(Compose(p.Response.VerifiedText, null, null));
+        }, ct);
+
+    /// <summary>
+    /// A transcription correction (Part 4.7): while a request is pending (correct the transcript, or fix a
+    /// typo instead of clarifying), or afterwards on the last judged answer ("correct a typo in my last
+    /// answer"). Adds a transcript version and updates the verified text; the original is kept and the
+    /// score is never reduced for it. <paramref name="repeat"/>: a voice answer said again (re-recognized),
+    /// which has no word limit because it replaces a mishearing, not a typo.
+    /// </summary>
+    public Task<SessionStep> CorrectAnswerAsync(Guid organizationId, Guid sessionId, Guid studentUserId, string corrected, bool repeat = false,
+        CancellationToken ct = default) =>
+        StepAsync(organizationId, sessionId, studentUserId, async live =>
+        {
+            var s = live.Engine.Session;
+            if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            var text = (corrected ?? "").Trim();
+            if (text.Length == 0 || text.Length > 20_000) throw new SessionRefusedException("The corrected answer needs text.");
+            using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            var ledger = new ResponseLedger(db, clock);
+
+            // 1. A request is pending on the open question: the correction resolves it, then the answer is judged.
+            if (s.OpenTurn is { } open && await TurnIdAsync(db, s.Id, open.Index, ct) is { } openId
+                && await ledger.PendingAsync(s.Id, openId, ct) is { } p)
+            {
+                var voice = p.Response.Modality == "voice";
+                if (repeat && !voice) throw new SessionRefusedException("Only a spoken answer can be repeated.");
+                if (!repeat && CorrectionRules.Check(p.Response.VerifiedText, text, voice) is { Allowed: false } refused)
+                    throw new SessionRefusedException(refused.Reason);
+                if (TooLate(live)) return await ExpireAsync(live, db, ledger, p, open, ct);
+                if (p.Request is { } request)
+                    ledger.Answer(request, p.Response, request.Type == ClarificationType.Transcription ? text : null, studentUserId,
+                        request.Type == ClarificationType.Transcription
+                            ? (repeat ? "The student repeated their answer." : "The student corrected the transcript.")
+                            : "The student fixed a typo instead of clarifying.");
+                ledger.AddVersion(p.Response, text, CorrectionKind.Transcription, repeat ? "speech-recognition" : "student", studentUserId);
+                ledger.Move(p.Response, VerificationState.Corrected,
+                    repeat ? "The student repeated a misrecognized answer." : "Transcription correction by the student.", studentUserId, OrgRoles.Student);
+                await db.SaveChangesAsync(ct);
+                live.Notice = "Your correction was saved. Your original answer is kept on record too.";
+                await JudgePendingAsync(live, ledger, p.Response, Compose(p.Response.VerifiedText, null, null), ct);
+                return await live.Engine.NextQuestionAsync(ct);
+            }
+
+            // 2. The last judged answer: a typo fix after the fact (verified text for grading; the live judgment stays on version 1).
+            var (response, _) = await LastJudgedAsync(live, db, ledger, ct);
+            if (response.VerificationState != VerificationState.Captured)
+                throw new SessionRefusedException("That answer was already confirmed or clarified, so it can't be edited. Use \"I want to change my answer\" instead.");
+            if (CorrectionRules.Check(response.VerifiedText, text, voice: response.Modality == "voice") is { Allowed: false } no)
+                throw new SessionRefusedException(no.Reason);
+            ledger.MovePath(response, "The student asked to correct a typo in their answer.", studentUserId, OrgRoles.Student,
+                VerificationState.VerificationRequired, VerificationState.AwaitingStudentConfirmation);
+            ledger.AddVersion(response, text, CorrectionKind.Transcription, "student", studentUserId);
+            ledger.Move(response, VerificationState.Corrected,
+                "Transcription correction after judging: graders use the corrected text; the live examiner saw version 1. Never a score penalty.",
+                studentUserId, OrgRoles.Student);
+            await db.SaveChangesAsync(ct);
+            live.Notice = "Your typo fix was saved. Your original answer is kept on record too.";
+            return await live.Engine.NextQuestionAsync(ct);
+        }, ct);
+
+    /// <summary>
+    /// "I want to change my answer" (Part 4.7, Scenario E): a substantive revision of the last judged answer,
+    /// recorded as a new response event that points at what it revises. The original and its judgment are
+    /// untouched; the reviewer sees both and applies the exam's rule (<see cref="ResponseLedger.RevisionRule"/>).
+    /// </summary>
+    public Task<SessionStep> ReviseAnswerAsync(Guid organizationId, Guid sessionId, Guid studentUserId, string revised, CancellationToken ct = default) =>
+        StepAsync(organizationId, sessionId, studentUserId, async live =>
+        {
+            var s = live.Engine.Session;
+            if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            var text = (revised ?? "").Trim();
+            if (text.Length == 0 || text.Length > 20_000) throw new SessionRefusedException("Your changed answer needs text.");
+            if (TooLate(live)) throw new SessionRefusedException("Time is up, so answers can no longer be changed.");
+            using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            var ledger = new ResponseLedger(db, clock);
+            if (s.OpenTurn is { } open && await TurnIdAsync(db, s.Id, open.Index, ct) is { } openId && await ledger.PendingAsync(s.Id, openId, ct) is not null)
+                throw new SessionRefusedException("Please answer the request about your last answer first.");
+            var (original, turnId) = await LastJudgedAsync(live, db, ledger, ct);
+            var revisions = await db.StudentResponses.Where(r => r.TurnId == turnId && r.Kind == ResponseKind.SubstantiveRevision)
+                .OrderBy(r => r.Sequence).ToListAsync(ct);
+            if (revisions.Count >= ResponseLedger.MaxRevisionsPerTurn)
+                throw new SessionRefusedException($"You've already changed this answer {revisions.Count} times.");
+            var latest = revisions.LastOrDefault() ?? original;
+            if (string.Equals(latest.OriginalText.Trim(), text, StringComparison.Ordinal))
+                throw new SessionRefusedException("That is the same as your answer on record.");
+            await ledger.CaptureAsync(live.OrganizationId, s.Id, turnId, studentUserId,
+                new Answer { Text = text, Mode = "text", CompletedAt = clock.GetUtcNow() }, ResponseKind.SubstantiveRevision, latest.Id, ct);
+            await db.SaveChangesAsync(ct);
+            live.Notice = "Your changed answer was recorded as a new answer. Your original stays on record and your instructor sees both.";
+            return await live.Engine.NextQuestionAsync(ct);
+        }, ct);
+
+    /// <summary>Ends a session early (student finished early, time ran out, or the host stopped it).</summary>
+    public Task<SessionStep> EndAsync(Guid organizationId, Guid sessionId, Guid studentUserId, EndReason reason, CancellationToken ct = default) =>
+        StepAsync(organizationId, sessionId, studentUserId, async live =>
+        {
+            // An answer waiting on a clarification was given in time: it is judged as recorded and flagged for a human.
+            if (!live.Engine.Session.IsEnded && live.Engine.Session.OpenTurn is { } open)
+            {
+                using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
+                var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+                var ledger = new ResponseLedger(db, clock);
+                if (await TurnIdAsync(db, live.Engine.Session.Id, open.Index, ct) is { } openId && await ledger.PendingAsync(live.Engine.Session.Id, openId, ct) is { } p)
+                    await ExpireAsync(live, db, ledger, p, open, ct, ended: true);
+            }
+            live.Engine.End(reason);
+            return null;
+        }, ct);
+
+    // ------------------------------------------------------------------ verification flow (GAD-T86..T88)
+
+    private bool TooLate(Live live)
+    {
+        var s = live.Engine.Session;
+        return s.Remaining(clock.GetUtcNow()) <= TimeSpan.Zero && clock.GetUtcNow() - (s.StartedAt + s.Policy.TimeBudget) > AnswerGrace;
+    }
+
+    private static Task<Guid?> TurnIdAsync(GadflyDbContext db, Guid sessionId, int index, CancellationToken ct) =>
+        db.SessionTurns.Where(t => t.SessionId == sessionId && t.Index == index).Select(t => (Guid?)t.Id).FirstOrDefaultAsync(ct);
+
+    /// <summary>The original response of the most recent judged turn (the one "my last answer" means).</summary>
+    private static async Task<(StudentResponse Original, Guid TurnId)> LastJudgedAsync(Live live, GadflyDbContext db, ResponseLedger ledger, CancellationToken ct)
+    {
+        var s = live.Engine.Session;
+        var judged = s.Turns.LastOrDefault(t => t.Judgment is not null) ?? throw new SessionRefusedException("You haven't answered a question yet.");
+        var turnId = await TurnIdAsync(db, s.Id, judged.Index, ct) ?? throw new SessionRefusedException("Your last answer is still being saved; try again.");
+        var original = await ledger.OriginalForTurnAsync(s.Id, turnId, ct) ?? throw new SessionRefusedException("Your last answer can't be changed here.");
+        return (original, turnId);
+    }
+
+    /// <summary>
+    /// Decides whether the answer needs the student before judging. Returns true when a request is now
+    /// pending (the response is AwaitingStudentConfirmation with an open ClarificationEvent).
+    /// </summary>
+    private async Task<bool> VerifyAsync(Live live, GadflyDbContext db, ResponseLedger ledger, StudentResponse response, Turn open, Answer answer, CancellationToken ct)
+    {
+        var s = live.Engine.Session;
+        var text = response.VerifiedText;
+        if (text.Length == 0 || ResponseVerifier.IsAporiaWord(text)) return false;
+        var concept = live.Engine.Subject.Concept(open.ConceptId);
+        var input = new VerificationInput
+        {
+            Question = open.Question, AnswerText = text, Modality = response.Modality, SpeechConfidence = response.SpeechRecognitionConfidence,
+            Words = answer.Words, ConceptTitle = concept.Title,
+        };
+        var hints = ResponseVerifier.Hints(input);
+
+        // Part 4.3 Type A: a spoken answer is shown back to the student before it is judged.
+        if (response.Modality == "voice")
+        {
+            var low = hints.FirstOrDefault(h => h.Trigger == ClarificationTrigger.LowSpeechConfidence);
+            ledger.MovePath(response, "transcript-confirmation: spoken answers are confirmed by the student" + (low is null ? "" : "; " + low.Reason),
+                null, "System", VerificationState.VerificationRequired, VerificationState.AwaitingStudentConfirmation);
+            ledger.Ask(response, ClarificationType.Transcription, $"I recorded your answer as: \"{text}\" Is this what you said?", true,
+                low is null ? "Voice answer." : $"Voice answer; {low.Reason}");
+            return true;
+        }
+
+        // Part 4.5: no interruption when there is no time for it; an unclear answer then goes to a human.
+        var shortOnTime = s.Remaining(clock.GetUtcNow()) < MinTimeForClarification;
+        var budgetSpent = await ledger.MeaningClarificationsAsync(s.Id, ct) >= MaxMeaningClarificationsPerSession;
+        var decision = await _verifier.DecideAsync(input with { Grounding = (await live.Engine.Subject.GetGroundingAsync(concept.Key, text, ct)).Text }, ct);
+        ledger.Audit(live.OrganizationId, null, "response.verification.checked", response, s.Id, null,
+            JsonSerializer.Serialize(new
+            {
+                decision.NeedsClarification, trigger = ResponseVerifier.TriggerName(decision.Trigger), decision.Phrase, decision.Voters,
+                hints = hints.Select(h => ResponseVerifier.TriggerName(h.Trigger)),
+            }), decision.Reason, "System");
+        if (!decision.NeedsClarification) return false;
+        if (shortOnTime || budgetSpent)
+        {
+            ledger.MovePath(response, $"{ResponseVerifier.TriggerName(decision.Trigger)}: {decision.Reason} Not asked ({(shortOnTime ? "too little time left" : "clarification limit for this exam reached")}); a human reviews it.",
+                null, "System", VerificationState.VerificationRequired, VerificationState.FlaggedForHumanReview);
+            return false;
+        }
+        ledger.MovePath(response, $"{ResponseVerifier.TriggerName(decision.Trigger)}: {decision.Reason}", null, "System",
+            VerificationState.VerificationRequired, VerificationState.AwaitingStudentConfirmation);
+        var question = await _verifier.WordAsync(input, decision, live.Engine.Subject.Rubric(concept.Key).Describe(), Dialogue(s, open, text), ct);
+        ledger.Ask(response, ClarificationType.Meaning, question.Text, question.NonLeadingChecked, $"{question.Outcome}; {decision.Reason}");
+        return true;
+    }
+
+    /// <summary>Loads and checks the pending request, applies <paramref name="resolve"/> (which returns the text to judge), then judges and moves on.</summary>
+    private Task<SessionStep> ResolveAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Guid responseId, ClarificationType type,
+        Func<Live, ResponseLedger, (StudentResponse Response, ClarificationEvent? Request), Task<string>> resolve, CancellationToken ct) =>
+        StepAsync(organizationId, sessionId, studentUserId, async live =>
+        {
+            var s = live.Engine.Session;
+            if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            var open = s.OpenTurn ?? throw new SessionRefusedException("There is nothing waiting for you to confirm.");
+            using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            var ledger = new ResponseLedger(db, clock);
+            var p = await TurnIdAsync(db, s.Id, open.Index, ct) is { } openId ? await ledger.PendingAsync(s.Id, openId, ct) : null;
+            if (p is not { Request: { } request } pending || pending.Response.Id != responseId || request.Type != type)
+                throw new SessionRefusedException("That request has already been answered.");
+            if (TooLate(live)) return await ExpireAsync(live, db, ledger, pending, open, ct);
+            var judgeText = await resolve(live, ledger, pending);
+            await db.SaveChangesAsync(ct);
+            await JudgePendingAsync(live, ledger, pending.Response, judgeText, ct);
+            return await live.Engine.NextQuestionAsync(ct);
+        }, ct);
+
+    /// <summary>Time ran out (or the exam ended) with a request open: the answer is judged as recorded and flagged for a human.</summary>
+    private async Task<Turn?> ExpireAsync(Live live, GadflyDbContext db, ResponseLedger ledger, (StudentResponse Response, ClarificationEvent? Request) p,
+        Turn open, CancellationToken ct, bool ended = false)
+    {
+        if (p.Request is { } request) ledger.Answer(request, p.Response, null, live.StudentUserId, "The exam ended before the student replied.");
+        ledger.MovePath(p.Response, "The exam ended before the student replied; a human reviews the answer as recorded.", null, "System",
+            VerificationState.Unresolved, VerificationState.FlaggedForHumanReview);
+        await db.SaveChangesAsync(ct);
+        await JudgePendingAsync(live, ledger, p.Response, Compose(p.Response.VerifiedText, null, null), ct);
+        if (!ended) live.Engine.End(EndReason.TimeUp);
+        return null;
+    }
+
+    /// <summary>Records the pending answer in the engine (with its capture timings) and judges it.</summary>
+    private async Task JudgePendingAsync(Live live, ResponseLedger ledger, StudentResponse response, string text, CancellationToken ct)
+    {
+        var capture = await ledger.CaptureOfAsync(response.Id, ct);
+        await live.Engine.SubmitAnswerAsync(new Answer
+        {
+            Text = text,
+            Mode = response.Modality,
+            StartedAt = capture?.StartedAt,
+            CompletedAt = capture?.CompletedAt ?? response.SubmittedAt,
+            Words = capture?.Words ?? [],
+            SpeechMetrics = capture?.SpeechMetrics ?? new Dictionary<string, double>(),
+        }, ct);
+    }
+
+    /// <summary>The text the judge sees: the verified answer, plus the clarification exchange when there was one.</summary>
+    private static string Compose(string verified, string? clarificationQuestion, string? reply) =>
+        reply is null ? verified
+            : $"{verified}\n\n(The examiner asked a neutral clarification question: \"{clarificationQuestion}\" The student's clarification: {reply})";
+
+    private static string Dialogue(SocraticSession s, Turn open, string answer) =>
+        string.Join("\n", s.Turns.TakeLast(6).SelectMany(t => t.Answer is null
+            ? new[] { $"Examiner: {t.Question}", t.Index == open.Index ? $"Student: {ExamPrompts.Student(answer)}" : "" }
+            : new[] { $"Examiner: {t.Question}", $"Student: {ExamPrompts.Student(t.Answer.Text)}" }).Where(l => l.Length > 0));
 
     private async Task<SessionStep> StepAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Func<Live, Task<Turn?>> step, CancellationToken ct)
     {
@@ -173,6 +491,7 @@ public sealed class SessionOrchestrator(
         try
         {
             Turn? question;
+            live.Notice = null;
             using var usage = Gadfly.Socrates.PanelUsage.Track(out var calls);
             try
             {
@@ -183,7 +502,7 @@ public sealed class SessionOrchestrator(
                 // Persist whatever happened, even if a panel call failed midway: the transcript is the resume point.
                 await PersistAsync(live, studentUserId, calls, ct);
             }
-            var view = View(live, question);
+            var view = await ViewAsync(live, question, ct);
             log.LogInformation("Session step: turn {Turn}, {Move}, state {State}, {Elapsed} ms.",
                 view.TurnIndex, view.Move ?? "-", view.State, (long)clock.GetElapsedTime(started).TotalMilliseconds);
             return view;
@@ -199,10 +518,35 @@ public sealed class SessionOrchestrator(
         }
     }
 
-    private SessionStep View(Live live, Turn? question)
+    private async Task<SessionStep> ViewAsync(Live live, Turn? question, CancellationToken ct)
     {
         var s = live.Engine.Session;
         var concepts = s.Policy.ConceptIds;
+        PendingVerification? pending = null;
+        LastAnswer? last = null;
+        using (var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId)))
+        {
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            var ledger = new ResponseLedger(db, clock);
+            if (!s.IsEnded && question is not null && s.OpenTurn is { } open && open.Index == question.Index
+                && await TurnIdAsync(db, s.Id, open.Index, ct) is { } openId
+                && await ledger.PendingAsync(s.Id, openId, ct) is { Request: { } request } p)
+            {
+                pending = new PendingVerification(p.Response.Id,
+                    request.Type == ClarificationType.Transcription ? ResponseLedger.TranscriptKind : ResponseLedger.MeaningKind,
+                    request.Question, p.Response.VerifiedText);
+            }
+            if (!s.IsEnded && s.Turns.LastOrDefault(t => t.Judgment is not null) is { } judged
+                && await TurnIdAsync(db, s.Id, judged.Index, ct) is { } judgedId
+                && await ledger.OriginalForTurnAsync(s.Id, judgedId, ct) is { } original)
+            {
+                var revisions = await db.StudentResponses.Where(r => r.TurnId == judgedId && r.Kind == ResponseKind.SubstantiveRevision)
+                    .OrderBy(r => r.Sequence).Select(r => r.OriginalText).ToListAsync(ct);
+                last = new LastAnswer(original.Id, judged.Index, judged.Question, revisions.LastOrDefault() ?? original.VerifiedText,
+                    original.Versions.Count, original.VerificationState == VerificationState.Captured && pending is null,
+                    pending is null && revisions.Count < ResponseLedger.MaxRevisionsPerTurn, revisions.Count, ResponseLedger.RevisionRule(live.Mode));
+            }
+        }
         return new SessionStep
         {
             SessionId = s.Id,
@@ -215,6 +559,9 @@ public sealed class SessionOrchestrator(
             EndReason = s.IsEnded ? s.EndReason.ToString() : null,
             ConceptsTotal = concepts.Count,
             ConceptsClosed = concepts.Count(c => QuestionPlanner.StatusOf(s, c) is ConceptStatus.Mastered or ConceptStatus.Aporia or ConceptStatus.Exhausted),
+            Verification = pending,
+            LastAnswer = last,
+            Notice = live.Notice,
         };
     }
 
@@ -264,7 +611,7 @@ public sealed class SessionOrchestrator(
             }
             // The answer-text signal is an integrity signal: off when the exam's integrity level is Off.
             engine.AssessTextStyle = exam.IntegrityLevel != IntegrityLevel.Off;
-            var live = new Live(engine, organizationId, row.StudentUserId);
+            var live = new Live(engine, organizationId, row.StudentUserId, exam.AssessmentMode);
             _live[sessionId] = live;
             return live;
         }

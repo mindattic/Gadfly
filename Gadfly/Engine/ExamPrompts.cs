@@ -10,8 +10,9 @@ public static partial class ExamPrompts
 {
     public const string SetId = "exam";
 
-    /// <summary>2: student text fenced and declared data, never instructions (GAD-T77).</summary>
-    public const int Version = 2;
+    /// <summary>2: student text fenced and declared data, never instructions (GAD-T77).
+    /// 3: response verification and neutral meaning clarification prompts (GAD-T87).</summary>
+    public const int Version = 3;
 
     /// <summary>Delimits text the student wrote or said; <see cref="Student"/> strips forged copies of these tags from the text it wraps.</summary>
     public const string StudentOpen = "<student_text>", StudentClose = "</student_text>";
@@ -32,6 +33,8 @@ public static partial class ExamPrompts
     public const string ConceptMapKey = "concept-map";
     public const string RubricKey = "rubric";
     public const string TextStyleKey = "text-style";
+    public const string VerificationKey = "verification";
+    public const string ClarificationKey = "clarification";
 
     public const string Question = $$"""
         You are the examiner in a spoken Socratic oral exam. Your purpose is to find out what the
@@ -218,6 +221,70 @@ public static partial class ExamPrompts
         {answer}
         """;
 
+    public const string Verification = $$"""
+        You check whether the examiner understood a student's answer well enough to grade it fairly,
+        before it is graded. You do not grade it. Decide whether a short, neutral clarification
+        question is needed. Ask for one only when the uncertainty could materially change how the
+        answer is graded; never because the answer is wrong, incomplete in content, weak or brief.
+        A wrong but clear answer needs no clarification. An answer saying the student does not know
+        needs no clarification. Filler words, typos and informal wording that do not change meaning
+        need no clarification.
+
+        Reasons that can justify a clarification:
+        - incomplete-sentence: the answer stops mid-thought, so its point cannot be determined.
+        - ambiguous-reference: a word like "it", "this" or "they" could refer to different things,
+          and the grade depends on which.
+        - multiple-interpretations: a statement can reasonably be read in two ways that would be
+          graded differently.
+        - unrecognized-terminology: the student uses a term that does not appear in the source
+          material and whose meaning here is unclear (possibly a mistyped or misheard term).
+        - student-request: the student asks to clarify or rephrase.
+
+        {{StudentTextRule}}
+
+        Concept: {concept}
+        Possible issues noticed by simple checks: {hints}
+
+        Source material (for recognizing terminology only):
+        {grounding}
+
+        Question:
+        {question}
+
+        Student's answer:
+        {answer}
+
+        Return JSON only:
+        {"clarify": true|false, "trigger": "<one reason above, or none>",
+         "phrase": "<the student's exact words that are unclear, copied from the answer, at most 12 words, or empty>",
+         "material": true|false, "reason": "<one sentence on why this could or could not change the grade>"}
+        """;
+
+    public const string Clarification = $$"""
+        You write one neutral clarification question for a student in an exam. The student's answer
+        contains a phrase whose meaning is unclear. Your question asks the student to explain, in
+        their own words, what they meant by that phrase.
+
+        Rules:
+        - Quote or point to the student's own words; use no technical term, fact, definition,
+          example or relationship the student did not say themselves.
+        - Never suggest an interpretation, never offer options to choose from, and never ask the
+          student to confirm a meaning ("Do you mean ...?" is forbidden).
+        - Do not say whether the answer is right or wrong, and do not hint at what a good answer contains.
+        - One question, at most 30 words, plain spoken English. Output only the question.
+
+        {{StudentTextRule}}
+
+        Why it is unclear: {trigger}
+        The unclear phrase: {phrase}
+
+        Question the student was answering:
+        {question}
+
+        Student's answer:
+        {answer}
+        """;
+
     /// <summary>The exam prompt set, version <see cref="Version"/>.</summary>
     public static readonly PromptSet Set = new(SetId, Version, new Dictionary<string, string>
     {
@@ -230,6 +297,8 @@ public static partial class ExamPrompts
         [ConceptMapKey] = ConceptMap,
         [RubricKey] = Rubric,
         [TextStyleKey] = TextStyle,
+        [VerificationKey] = Verification,
+        [ClarificationKey] = Clarification,
     });
 
     /// <summary>
