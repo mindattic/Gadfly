@@ -178,7 +178,7 @@ public static class GradingActionEndpoints
             sessionId = w.Session.Id, examTitle = w.ExamTitle, student = w.StudentName, attempt = w.Session.Attempt,
             status = w.Status?.ToString(), statusLabel = w.Status is { } s ? GradeStatusMachine.Label(s) : "Not started",
             aiVisible = visible, isMock = visible && w.AnyMock,
-            finalPercent = visible ? w.Grade?.FinalPercent : null, label = w.Grade?.LetterOrLabel,
+            finalPercent = visible ? w.Grade?.FinalPercent : null, label = visible ? w.Grade?.LetterOrLabel : null,
             policy = new { aiWeight = p.AiWeight, humanWeight = p.HumanWeight, additionalReviewAt = p.AdditionalReviewAt,
                 mandatoryReconciliationAt = p.MandatoryReconciliationAt, blindHumanGrading = p.BlindHumanGrading, source = w.Policy.Source },
             aiGradingJob = new { state = w.JobState, error = w.JobError },

@@ -56,10 +56,10 @@ public sealed record AssessmentReport
             var rec = o.LatestReconciliation;
             return new ReportObjective(o.Objective.Key, o.Objective.Title, o.Objective.MaxScore, o.Objective.Weight,
                 showAi ? o.Combined?.AiScore is { } a && !o.AiExcluded ? a : o.Ai!.Row.Score : null,
-                showAi ? MasteryLevels.Label(o.Ai!.Row.Level) : null, showAi ? o.Ai!.Row.Confidence : null, o.AiExcluded, o.Ai?.Row.IsMock == true,
+                showAi ? MasteryLevels.Label(o.Ai!.Row.Level) : null, showAi ? o.Ai!.Row.Confidence : null, showAi && o.AiExcluded, showAi && o.Ai!.Row.IsMock,
                 o.Combined?.HumanScore ?? o.Human?.Score, o.Human is { } h ? MasteryLevels.Label(h.Level) : null, o.Human?.Comment,
                 w.AiVisible ? o.Combined?.Combined : null, w.AiVisible ? o.Combined?.Band?.ToString() : null,
-                rec is null ? null : $"{ReconciliationCauses.Label(rec.Cause)}: {rec.Resolution}",
+                !w.AiVisible || rec is null ? null : $"{ReconciliationCauses.Label(rec.Cause)}: {rec.Resolution}",
                 evidenceIds, showAi ? o.Ai!.Row.Explanation : null);
         }).ToList();
 
@@ -72,7 +72,7 @@ public sealed record AssessmentReport
                 gaps.Add($"{o.Objective.Title}: examiner judged {MasteryLevels.Label(h.Level)}.");
             if (w.AiVisible && o.Ai is { } ai)
                 foreach (var m in ai.Misconceptions.Take(3)) gaps.Add($"{o.Objective.Title}: misconception noted: {m.Text}");
-            if (o.Ai?.Insufficient == true && o.Human?.Level == MasteryLevel.InsufficientEvidence)
+            if (w.AiVisible && o.Ai?.Insufficient == true && o.Human?.Level == MasteryLevel.InsufficientEvidence)
                 gaps.Add($"{o.Objective.Title}: not enough evidence was gathered to judge this objective (not a judgment of zero understanding).");
         }
 
@@ -81,7 +81,7 @@ public sealed record AssessmentReport
         {
             SessionId = w.Session.Id, StudentName = w.StudentName, ExamTitle = w.ExamTitle, Attempt = w.Session.Attempt, EndedAt = w.Session.EndedAt,
             Status = w.Status is { } s ? GradeStatusMachine.Label(s) : "Not started",
-            FinalPercent = w.AiVisible ? w.Grade?.FinalPercent : null, Label = w.Grade?.LetterOrLabel,
+            FinalPercent = w.AiVisible ? w.Grade?.FinalPercent : null, Label = w.AiVisible ? w.Grade?.LetterOrLabel : null,
             Policy = $"AI {Pct(p.AiWeight * 100)} / human {Pct(p.HumanWeight * 100)}; additional review at {p.AdditionalReviewAt.ToString("0.##", ci)} points, " +
                      $"reconciliation at {p.MandatoryReconciliationAt.ToString("0.##", ci)} points; {(p.BlindHumanGrading ? "blind" : "open")} human grading ({w.Policy.Source}).",
             Objectives = objectives, KnowledgeGaps = gaps,
@@ -90,7 +90,7 @@ public sealed record AssessmentReport
                              (string.IsNullOrWhiteSpace(a.Record.Note) || forStudent && a.Record.Action == ApprovalAction.Finalize ? "" : $": {a.Record.Note}")).ToList(),
             Appeals = w.Appeals.Select(a => $"{When(a.Appeal.OpenedAt)} · appeal {a.Appeal.State.ToString().ToLowerInvariant()}" +
                                             (a.Appeal.Resolution is { } r ? $": {r}" : "")).ToList(),
-            IsMock = w.AnyMock, ForStudent = forStudent, IsApproved = w.HasFinalizeApproval,
+            IsMock = w.AiVisible && w.AnyMock, ForStudent = forStudent, IsApproved = w.HasFinalizeApproval,
         };
     }
 
