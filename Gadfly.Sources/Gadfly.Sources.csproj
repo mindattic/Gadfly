@@ -24,6 +24,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- PDF, DOCX, EPUB and HTML parsers (GAD-T155); the feed copy is in lib/local-packages for CI. -->
+    <PackageReference Include="Tutor.Ingestion" Version="1.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Gadfly.Tests" />
   </ItemGroup>
 

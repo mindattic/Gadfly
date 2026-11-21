@@ -137,7 +137,9 @@ customer organizations).
   their agreement. Options: refuse like the API, or wait for email invitations (M.AUTH-T35).
 - **Upload quota per collection**: the number of 20 MB files a collection may hold is unbounded (instructors
   and API keys only). Add a per-collection and per-organization byte cap with the parser sandboxing that
-  arrives with PDF/DOCX ingestion (TUT-T64); those parsers must run with size, page and time limits.
+  arrived with PDF/DOCX ingestion (GAD-T155): per-file caps are in place (20 MB upload, 500 pages, 5M characters,
+  200 MB expanded zip, 2 minute read, file signature must match the extension, no OCR or external processes); the
+  per-collection and per-organization byte cap is still open.
 - **Prompt injection is mitigated, not solved.** LLM defences are probabilistic; the controls that hold
   regardless are the human grade decision (D13: the AI recommends, the instructor decides) and the forced
   review of grader-directed answers. Uploaded source material also reaches the concept-map and rubric

@@ -5,7 +5,11 @@ namespace Gadfly.Sources;
 
 /// <summary>What one ingest run did.</summary>
 public sealed record IngestResult(string CollectionId, int DocumentsIngested, int DocumentsUnchanged,
-    IReadOnlyList<string> Skipped, int PassagesWritten);
+    IReadOnlyList<string> Skipped, int PassagesWritten, IReadOnlyList<string>? Failed = null)
+{
+    /// <summary>One message per file that was recognised but could not be read (damaged, over a limit, no text).</summary>
+    public IReadOnlyList<string> Failures { get; init; } = Failed ?? [];
+}
 
 /// <summary>
 /// Ingests files into a collection: extract text, chunk it into passages of roughly
@@ -35,6 +39,7 @@ public sealed class SourceIngestor(ISourceStore store, IReadOnlyList<IDocumentTe
 
         int ingested = 0, unchanged = 0, passagesWritten = 0;
         var skipped = new List<string>();
+        var failures = new List<string>();
         foreach (var file in files)
         {
             ct.ThrowIfCancellationRequested();
@@ -54,7 +59,18 @@ public sealed class SourceIngestor(ISourceStore store, IReadOnlyList<IDocumentTe
             }
 
             progress?.Report($"Reading {relative}");
-            var blocks = await extractor.ExtractAsync(file, ct);
+            IReadOnlyList<ExtractedBlock> blocks;
+            try
+            {
+                blocks = await extractor.ExtractAsync(file, ct);
+            }
+            catch (DocumentReadException ex)
+            {
+                // One bad file never stops the others; the message is already user-safe.
+                failures.Add(ex.Message);
+                progress?.Report(ex.Message);
+                continue;
+            }
             var texts = Chunk(blocks);
             float[][]? vectors = null;
             if (embeddings is not null && texts.Count > 0)
@@ -80,7 +96,7 @@ public sealed class SourceIngestor(ISourceStore store, IReadOnlyList<IDocumentTe
             ingested++;
             passagesWritten += passages.Count;
         }
-        return new IngestResult(collectionId, ingested, unchanged, skipped, passagesWritten);
+        return new IngestResult(collectionId, ingested, unchanged, skipped, passagesWritten) { Failures = failures };
     }
 
     /// <summary>Groups blocks into passages near the target size; a heading always starts a new passage.</summary>

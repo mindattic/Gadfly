@@ -105,10 +105,12 @@ public static class ExamCommand
         var progress = new Progress<string>(msg => Console.WriteLine($"  {msg}"));
 
         Console.WriteLine($"Reading source material into collection '{collectionId}'...");
-        var ingest = await new SourceIngestor(store, [new PlainTextExtractor()]).IngestAsync(source, collectionId, progress: progress);
+        var ingest = await new SourceIngestor(store, [new PlainTextExtractor(), new TutorIngestionExtractor()]).IngestAsync(source, collectionId, progress: progress);
         Console.WriteLine($"  {ingest.DocumentsIngested} new or changed, {ingest.DocumentsUnchanged} unchanged, {ingest.Skipped.Count} skipped (unsupported type).");
         if (ingest.Skipped.Count > 0)
-            Console.WriteLine("  Only .txt and Markdown are read for now; PDF, DOCX, EPUB and HTML arrive with Tutor.Ingestion.");
+            Console.WriteLine("  Readable types: .txt, .md, .pdf, .docx, .epub, .html.");
+        foreach (var failure in ingest.Failures)
+            Console.Error.WriteLine($"  could not read: {failure}");
 
         var passages = await store.GetPassagesAsync(collectionId);
         if (passages.Count == 0)

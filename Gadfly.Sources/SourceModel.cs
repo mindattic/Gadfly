@@ -37,7 +37,7 @@ public sealed record ExtractedBlock(string Text, string? Location, bool IsHeadin
 
 /// <summary>
 /// Turns a file into text blocks. <see cref="PlainTextExtractor"/> covers .txt and Markdown; PDF,
-/// DOCX, EPUB and HTML arrive through Tutor.Ingestion's parsers (TUT-T64).
+/// DOCX, EPUB and HTML are read by <see cref="TutorIngestionExtractor"/> over Tutor.Ingestion (TUT-T64).
 /// </summary>
 public interface IDocumentTextExtractor
 {

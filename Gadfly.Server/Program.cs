@@ -87,8 +87,9 @@ builder.Services.AddGadflyJobs();
 // The AI panel: live Legion or the clearly labelled mock (Gadfly:AiMode = live | mock | auto) (GAD-T100).
 builder.Services.AddGadflyPanel(builder.Configuration, builder.Environment.IsDevelopment());
 
-// Source material: text extractors (PDF/DOCX/EPUB/HTML join with Tutor.Ingestion) and processing jobs.
+// Source material: text extractors (.txt/.md, and PDF/DOCX/EPUB/HTML through Tutor.Ingestion, GAD-T155) and processing jobs.
 builder.Services.AddSingleton<IDocumentTextExtractor, PlainTextExtractor>();
+builder.Services.AddSingleton<IDocumentTextExtractor, TutorIngestionExtractor>();
 builder.Services.AddJobHandler<SourceProcessingJob>();
 
 // Live exam sessions: one engine per active session, persisted after every step (GAD-T44).

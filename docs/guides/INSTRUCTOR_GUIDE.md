@@ -32,7 +32,7 @@ textbook chapter, lecture notes or a set of readings. Then open it and upload do
 
 | Rule | Detail |
 |---|---|
-| File types | Plain text and Markdown: `.txt`, `.text`, `.md`, `.markdown`. PDF, Word (DOCX), EPUB and HTML arrive with Tutor.Ingestion. |
+| File types | Plain text and Markdown (`.txt`, `.text`, `.md`, `.markdown`), PDF, Word (`.docx`), EPUB and HTML (`.html`, `.htm`). PDF passages are cited by page; the others by chapter or heading. Scanned (image-only) PDFs are not read, and a damaged file is skipped with a message while the rest are processed. |
 | Size | Up to 20 MB per file, up to 50 files per pick. |
 | Same name | Uploading a file with a name that's already there replaces it. The next processing run notices the change. |
 | File names | Unusual characters are replaced with `_`; the page tells you when a name was changed. |

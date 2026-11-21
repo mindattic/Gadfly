@@ -42,8 +42,9 @@ public sealed class SourceLibraryService(GadflyDbContext db, JobQueue jobs, Time
     /// <summary>Per-file upload cap.</summary>
     public const long MaxFileBytes = 20L * 1024 * 1024;
 
-    /// <summary>Extensions the server can read today; PDF, DOCX, EPUB and HTML arrive with Tutor.Ingestion (TUT-T64).</summary>
-    public static readonly IReadOnlyList<string> AcceptedExtensions = [".txt", ".text", ".md", ".markdown"];
+    /// <summary>Extensions the server reads: text and Markdown, plus PDF, DOCX, EPUB and HTML through Tutor.Ingestion (GAD-T155).</summary>
+    public static readonly IReadOnlyList<string> AcceptedExtensions =
+        [".txt", ".text", ".md", ".markdown", ".pdf", ".docx", ".epub", ".html", ".htm"];
 
     public static string AcceptAttribute => string.Join(",", AcceptedExtensions);
 
@@ -131,7 +132,7 @@ public sealed class SourceLibraryService(GadflyDbContext db, JobQueue jobs, Time
             return new(false, "That collection doesn't exist in this organization.");
         var name = SanitizeFileName(originalName);
         if (name is null)
-            return new(false, $"\"{originalName}\": only {string.Join(", ", AcceptedExtensions)} files can be read for now.");
+            return new(false, $"\"{originalName}\": only {string.Join(", ", AcceptedExtensions)} files can be read.");
         if (declaredSize > MaxFileBytes)
             return new(false, $"\"{originalName}\" is larger than the {MaxFileBytes / (1024 * 1024)} MB limit.");
 

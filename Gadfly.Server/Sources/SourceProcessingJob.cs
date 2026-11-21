@@ -58,10 +58,14 @@ public sealed class SourceProcessingJob(GadflyDbContext db, ISocraticVotingClien
         var ingest = await new SourceIngestor(store, extractors.ToList())
             .IngestAsync(request.UploadFolder, collectionId, request.Title, ct: ct);
         var passages = await store.GetPassagesAsync(collectionId, ct);
+        if (ingest.Failures.Count > 0)
+            await progress.ReportAsync(0.1, $"{ingest.Failures.Count} file(s) skipped: {string.Join(" ", ingest.Failures)}", ct);
         if (passages.Count == 0)
-            throw new InvalidOperationException(ingest.Skipped.Count > 0
-                ? $"None of the uploaded files could be read ({ingest.Skipped.Count} unsupported)."
-                : "The uploaded files contain no readable text.");
+            throw new InvalidOperationException(ingest.Failures.Count > 0
+                ? $"None of the uploaded files could be read. {string.Join(" ", ingest.Failures)}"
+                : ingest.Skipped.Count > 0
+                    ? $"None of the uploaded files could be read ({ingest.Skipped.Count} unsupported)."
+                    : "The uploaded files contain no readable text.");
 
         var map = await maps.LoadMapAsync(collectionId, ct);
         if (map is null || request.RebuildConceptMap || ingest.DocumentsIngested > 0)

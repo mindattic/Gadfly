@@ -401,7 +401,7 @@ public static class ApiEndpoints
         var clean = new string(raw.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c).ToArray()).Trim().TrimEnd('.', ' ');
         var ext = Path.GetExtension(clean).ToLowerInvariant();
         if (!SourceLibraryService.AcceptedExtensions.Contains(ext))
-            return (null, $"{original}: only {string.Join(", ", SourceLibraryService.AcceptedExtensions)} files are accepted for now");
+            return (null, $"{original}: only {string.Join(", ", SourceLibraryService.AcceptedExtensions)} files are accepted");
         var device = clean.Split('.')[0].TrimEnd(' ');
         if (ReservedDeviceNames.Contains(device))
             return (null, $"{original}: {device.ToUpperInvariant()} is a reserved device name; rename the file");
