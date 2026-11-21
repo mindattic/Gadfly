@@ -27,6 +27,7 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
         var batches = Batch(passages);
         var found = new List<(ConceptEntry Concept, int Support)>();
         var relations = new List<(string FromTitle, string ToTitle, string Kind)>();
+        var anyUsableReply = false;
 
         for (var b = 0; b < batches.Count; b++)
         {
@@ -41,6 +42,7 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
             foreach (var r in replies.Where(r => !r.IsError && PanelJson.ParseObject(r.Text) is null))
                 progress?.Report($"{r.ProviderId} returned no JSON: {Snippet(r.Text)}");
             if (parsed.Count == 0) continue;
+            anyUsableReply = true;
             var needed = parsed.Count <= 2 ? 1 : (parsed.Count + 1) / 2;
 
             var batchConcepts = new List<(ConceptEntry Concept, int Support)>();
@@ -76,6 +78,10 @@ public sealed class ConceptMapBuilder(ISocraticVotingClient panel, PromptSet? pr
             foreach (var (concept, support) in batchConcepts.Where(x => x.Support >= needed))
                 MergeInto(found, concept, support);
         }
+
+        // The panel gave nothing usable for any batch (providers down, malformed replies): that is not "the material has
+        // no concepts", so keep the map as it was rather than replacing it with only the instructor-edited ones (GAD-T177).
+        if (!anyUsableReply && previous is not null) return previous;
 
         var ranked = found.OrderByDescending(x => x.Support).ThenByDescending(x => x.Concept.PassageIds.Count).Select(x => x.Concept);
         if (MaxConcepts > 0) ranked = ranked.Take(MaxConcepts);

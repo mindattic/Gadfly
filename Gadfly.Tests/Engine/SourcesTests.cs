@@ -201,6 +201,23 @@ public class ConceptMapBuilderTests
     }
 
     [Test]
+    public async Task Rebuild_WhenNoReplyIsUsable_KeepsThePreviousMapUnchanged()
+    {
+        var previous = new ConceptMap
+        {
+            CollectionId = "bio",
+            Version = 3,
+            Concepts =
+            [
+                new ConceptEntry { Key = "photo-key", Title = "Photosynthesis", Definition = "Edited by hand.", EditedByInstructor = true },
+                new ConceptEntry { Key = "resp-old", Title = "Respiration", Definition = "Old." },
+            ],
+        };
+        var map = await new ConceptMapBuilder(Panel("no json", "")).BuildAsync("bio", Passages, previous);
+        Assert.That(map, Is.SameAs(previous), "a panel outage must not drop concepts or bump the version");
+    }
+
+    [Test]
     public async Task Rebuild_KeepsInstructorEdits_ReusesKeys_BumpsVersion()
     {
         var previous = new ConceptMap
