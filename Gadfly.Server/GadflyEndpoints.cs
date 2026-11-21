@@ -18,7 +18,7 @@ public static class GadflyEndpoints
 
     /// <summary>Every route a signed-out visitor may reach.</summary>
     public static readonly IReadOnlyList<string> AnonymousRoutes =
-        ["login", "mfa", "healthz", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p)];
+        ["login", "mfa", "healthz", "launch", "openapi/{documentName}.json", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p)];
 
     private static readonly IReadOnlyList<string> AnonymousPrefixes = ["_framework/"];
 
@@ -46,6 +46,9 @@ public static class GadflyEndpoints
             .RequireAuthorization(GadflyPolicies.SuperAdmin);
 
         MapPrivacy(app);
+        Platform.ApiEndpoints.Map(app);
+        Review.ReviewExportEndpoints.Map(app);
+        app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
 
         // Switch the active organization: only to one the caller is a member of (checked against the
         // sign-in claims by HttpTenantContext on every request, so a forged cookie just falls back).

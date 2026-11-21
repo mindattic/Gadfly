@@ -2,6 +2,7 @@ using Gadfly.Server;
 using Gadfly.Server.Components;
 using Gadfly.Server.Data;
 using Gadfly.Server.Jobs;
+using Gadfly.Server.Platform;
 using Gadfly.Server.Privacy;
 using Gadfly.Server.Sessions;
 using Gadfly.Server.Sources;
@@ -51,6 +52,8 @@ builder.Services.AddMindAtticAuthentication<GadflyDbContext>(builder.Configurati
     // then a production start fails closed, which is what the library intends.
 });
 builder.Services.AddScoped<IAuthorizationHandler, OrgRoleHandler>();
+builder.Services.AddAuthentication().AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
+    ApiKeyAuthenticationHandler.SchemeName, null);
 builder.Services.AddScoped<IOrganizationDirectory, OrganizationDirectory>();
 builder.Services.AddScoped<IMaClaimsAugmentor, OrganizationClaimsAugmentor>();
 
@@ -76,10 +79,21 @@ builder.Services.AddJobHandler<SourceProcessingJob>();
 // Live exam sessions: one engine per active session, persisted after every step (GAD-T44).
 builder.Services.AddSingleton<SessionOrchestrator>();
 
+// Platform API (GAD-T46): organization API keys, webhooks with signed deliveries.
+builder.Services.AddScoped<ApiKeyService>();
+builder.Services.AddScoped<WebhookService>();
+builder.Services.AddJobHandler<WebhookDeliveryJob>();
+builder.Services.AddHttpClient("webhooks", c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddOpenApi();
+
 // Privacy (GAD-T61): daily retention redaction, per-student export and erasure.
 builder.Services.AddScoped<PrivacyService>();
 builder.Services.AddJobHandler<RetentionJob>();
 builder.Services.AddHostedService<RetentionScheduler>();
+
+// Instructor and student pages' services (GAD-T49, GAD-T50).
+builder.Services.AddScoped<SourceLibraryService>();
+builder.Services.AddScoped<Gadfly.Server.Exams.ExamService>();
 
 // The Gadfly Exams web app (GAD-T48): Blazor Server.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();

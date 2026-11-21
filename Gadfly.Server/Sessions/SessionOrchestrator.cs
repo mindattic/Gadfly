@@ -56,6 +56,9 @@ public sealed class SessionOrchestrator(
 
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
+    /// <summary>How late an answer may arrive after time runs out and still be judged (network and typing lag).</summary>
+    public static readonly TimeSpan AnswerGrace = TimeSpan.FromSeconds(20);
+
     /// <summary>
     /// Starts the student's next attempt at an assignment, or returns the attempt already in
     /// progress (one active session per assignment).
@@ -123,6 +126,13 @@ public sealed class SessionOrchestrator(
         {
             if (live.Engine.Session.OpenTurn is null && live.Engine.Session.AwaitingJudgment is null)
                 throw new SessionRefusedException("There is no question waiting for an answer.");
+            // The server's clock is the authority: an answer arriving well after time ran out is not judged.
+            if (live.Engine.Session.Remaining(clock.GetUtcNow()) <= TimeSpan.Zero
+                && clock.GetUtcNow() - (live.Engine.Session.StartedAt + live.Engine.Session.Policy.TimeBudget) > AnswerGrace)
+            {
+                live.Engine.End(EndReason.TimeUp);
+                return null;
+            }
             await live.Engine.SubmitAnswerAsync(answer, ct);
             return await live.Engine.NextQuestionAsync(ct);
         }, ct);
@@ -369,6 +379,14 @@ public sealed class SessionOrchestrator(
                 CreatedAt = now,
             });
             _live.TryRemove(s.Id, out _);
+            await db.SaveChangesAsync(ct);
+            // Integrating apps hear about it (GAD-T46): signed webhook deliveries, queued as jobs.
+            await scope.ServiceProvider.GetRequiredService<Platform.WebhookService>().PublishAsync(org, Platform.WebhookService.SessionCompleted, new
+            {
+                sessionId = s.Id, assignmentId = row.AssignmentId, studentUserId = row.StudentUserId, examId = row.ExamId,
+                endReason = s.EndReason.ToString(), recommendation = report.Recommendation, overallScore = report.OverallScore,
+            }, ct);
+            return;
         }
         await db.SaveChangesAsync(ct);
     }
