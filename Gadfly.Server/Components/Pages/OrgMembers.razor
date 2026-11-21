@@ -184,64 +184,73 @@
         invitations = await Directory.InvitationsAsync(Tenant.OrganizationId!.Value);
     }
 
-    private async Task InviteAsync()
+    /// <summary>
+    /// The directory shares the circuit's DbContext, which allows one operation at a time: a second click while one is in flight
+    /// (a double click) is ignored, and the guard is released even when the operation throws (GAD-T204).
+    /// </summary>
+    private async Task GuardedAsync(Func<Task> work)
     {
+        if (busy) return;
         busy = true;
+        try { await work(); }
+        finally { busy = false; }
+    }
+
+    private Task InviteAsync() => GuardedAsync(async () =>
+    {
         var r = await Directory.InviteAsync(Tenant.OrganizationId!.Value, invite.Email, invite.Role, Tenant.Role, Tenant.UserId);
         inviteOk = r.Ok;
         inviteMessage = r.Message;
         if (r.Ok) invite = new();
         await LoadAsync();
-        busy = false;
-    }
+    });
 
-    private async Task InviteBulkAsync()
+    private Task InviteBulkAsync() => GuardedAsync(async () =>
     {
-        busy = true;
         bulkResult = await Directory.InviteBulkAsync(Tenant.OrganizationId!.Value, bulk.Csv, bulk.DefaultRole, Tenant.Role, Tenant.UserId);
         if (bulkResult.Rows.All(x => x.Ok)) bulk = new() { DefaultRole = bulk.DefaultRole };
         await LoadAsync();
-        busy = false;
-    }
+    });
 
-    private async Task ResendAsync(Guid id)
+    private Task ResendAsync(Guid id) => GuardedAsync(async () =>
     {
         var r = await Directory.ResendInvitationAsync(Tenant.OrganizationId!.Value, id, Tenant.UserId);
         inviteOk = r.Ok;
         inviteMessage = r.Message;
         await LoadAsync();
-    }
+    });
 
-    private async Task RevokeAsync(Guid id)
+    private Task RevokeAsync(Guid id) => GuardedAsync(async () =>
     {
         var r = await Directory.RevokeInvitationAsync(Tenant.OrganizationId!.Value, id, Tenant.UserId);
         inviteOk = r.Ok;
         inviteMessage = r.Message;
         await LoadAsync();
-    }
+    });
 
-    private async Task AddAsync()
+    private Task AddAsync()
     {
         if (form.Role == OrgRoles.Owner && Tenant.Role != OrgRoles.Owner)
         {
             ok = false;
             message = "Only an owner can add another owner.";
-            return;
+            return Task.CompletedTask;
         }
-        busy = true;
-        var r = await Directory.AddMemberAsync(Tenant.OrganizationId!.Value, form.UserName, form.Email, form.Role, form.Password, actingRole: Tenant.Role, actorUserId: Tenant.UserId);
-        ok = r.Ok;
-        message = r.Message;
-        if (r.Ok) form = new();
-        await LoadAsync();
-        busy = false;
+        return GuardedAsync(async () =>
+        {
+            var r = await Directory.AddMemberAsync(Tenant.OrganizationId!.Value, form.UserName, form.Email, form.Role, form.Password, actingRole: Tenant.Role, actorUserId: Tenant.UserId);
+            ok = r.Ok;
+            message = r.Message;
+            if (r.Ok) form = new();
+            await LoadAsync();
+        });
     }
 
-    private async Task ToggleAsync(Guid memberId, bool active)
+    private Task ToggleAsync(Guid memberId, bool active) => GuardedAsync(async () =>
     {
         var r = await Directory.SetMemberActiveAsync(Tenant.OrganizationId!.Value, memberId, active, actingRole: Tenant.Role, actorUserId: Tenant.UserId);
         ok = r.Ok;
         message = r.Message;
         await LoadAsync();
-    }
+    });
 }
