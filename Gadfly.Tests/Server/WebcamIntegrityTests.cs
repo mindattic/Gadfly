@@ -101,7 +101,7 @@ public class WebcamIntegrityTests
         Assert.That(strict, Does.Contain("No video, photo, screenshot"));
         Assert.That(strict, Does.Contain("emotions, mood or honesty"));
         Assert.That(strict, Does.Contain("never an automatic fail"));
-        Assert.That(strict, Does.Contain("You can say no"));
+        Assert.That(strict, Does.Contain("The camera must be on to take this exam"));
         foreach (var level in new[] { IntegrityLevel.Off, IntegrityLevel.Standard })
             Assert.That(string.Join("\n", ConsentNotice.For("Org", "Exam", 90, ExamMode.Text, level).Paragraphs), Does.Not.Contain("uses your camera"));
         Assert.That(ConsentNotice.For("Org", "Exam", 90, ExamMode.Text, IntegrityLevel.Strict).Sha256,
