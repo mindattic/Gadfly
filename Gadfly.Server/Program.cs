@@ -138,6 +138,12 @@ using (var scope = app.Services.GetRequiredService<IServiceScopeFactory>().Creat
 _ = app.Services.GetRequiredService<IPanelInfo>();   // decide live/mock at startup (GAD-T100)
 // Demo institution for pilots and the tour (GAD-T103); --seed-demo must be the last argument.
 if (args.Contains(Gadfly.Server.Demo.DemoSeeder.SeedArgument)) await Gadfly.Server.Demo.DemoSeeder.RunAsync(app);
+// Classroom test accounts: Teacher_A..C, Student_A..Z across their assessments (GAD-T151). --then-exit makes it a one-shot.
+if (args.Contains(Gadfly.Server.Demo.ClassroomSeeder.SeedArgument) || app.Configuration["Gadfly:Demo:SeedClassroomOnStartup"] == "true")
+{
+    await Gadfly.Server.Demo.ClassroomSeeder.RunAsync(app);
+    if (args.Contains("--then-exit")) return;
+}
 
 var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto };
 forwarded.KnownIPNetworks.Clear();

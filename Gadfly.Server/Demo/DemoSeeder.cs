@@ -211,7 +211,8 @@ public static class DemoSeeder
                 log.LogError("Demo assessment {Title} not created: the collection has no concept map.", assessment.Title);
                 continue;
             }
-            await CreateAssessmentAsync(db, clock, plan, assessment, courseId, collectionId, map, ct);
+            await CreateAssessmentAsync(db, clock, plan.OrganizationId, plan.TeacherId, [plan.StudentId], assessment, courseId, collectionId, map,
+                "Demonstration assessment seeded by --seed-demo (GAD-T103).", ct);
             log.LogWarning("Demo assessment ready: {Title}.", assessment.Title);
         }
     }
@@ -240,11 +241,11 @@ public static class DemoSeeder
 
     private static readonly JsonSerializerOptions Camel = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    private static async Task CreateAssessmentAsync(GadflyDbContext db, TimeProvider clock, SeedPlan plan, DemoAssessment a, Guid courseId,
-        Guid collectionId, ConceptMap map, CancellationToken ct)
+    /// <summary>Creates a published, policy-locked assessment from a seeded collection and assigns it (also used by ClassroomSeeder).</summary>
+    internal static async Task<Guid> CreateAssessmentAsync(GadflyDbContext db, TimeProvider clock, Guid org, Guid teacherId,
+        IReadOnlyList<Guid> studentIds, DemoAssessment a, Guid courseId, Guid collectionId, ConceptMap map, string reason, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
-        var org = plan.OrganizationId;
         // Each objective is grounded in the concept whose title matches it best (exact keys in mock mode, titles in live mode).
         var concepts = a.Objectives.Select(o => BestConcept(map, o.ConceptTitle)).ToList();
         var policy = new SessionPolicy
@@ -264,7 +265,7 @@ public static class DemoSeeder
             AssessmentMode = AssessmentMode.Examination, Title = a.Title, Instructions = a.Instructions,
             PolicyJson = JsonSerializer.Serialize(policy, Camel), Mode = ExamMode.Text,
             PromptSetId = ExamPrompts.SetId, PromptSetVersion = ExamPrompts.Version,
-            Status = ExamStatus.Published, CreatedByUserId = plan.TeacherId, CreatedAt = now, PublishedAt = now,
+            Status = ExamStatus.Published, CreatedByUserId = teacherId, CreatedAt = now, PublishedAt = now,
         };
         db.Exams.Add(exam);
 
@@ -302,24 +303,26 @@ public static class DemoSeeder
         {
             ExamId = exam.Id, OrganizationId = org, AiWeight = 0.4m, HumanWeight = 0.6m, AdditionalReviewAt = 10m,
             MandatoryReconciliationAt = 20m, BlindHumanGrading = true, InconclusiveProcedure = InconclusiveProcedure.HumanReview,
-            AllowAssistedEvidence = false, LockedAt = now, LockedByUserId = plan.TeacherId,
+            AllowAssistedEvidence = false, LockedAt = now, LockedByUserId = teacherId,
         });
-        db.ExamAssignments.Add(new ExamAssignment
-        {
-            OrganizationId = org, ExamId = exam.Id, StudentUserId = plan.StudentId, AttemptsAllowed = 50,
-            AssignedByUserId = plan.TeacherId, AssignedAt = now,
-        });
+        foreach (var studentId in studentIds.Distinct())
+            db.ExamAssignments.Add(new ExamAssignment
+            {
+                OrganizationId = org, ExamId = exam.Id, StudentUserId = studentId, AttemptsAllowed = 50,
+                AssignedByUserId = teacherId, AssignedAt = now,
+            });
         db.AuditEvents.Add(new AuditEvent
         {
-            OrganizationId = org, ActorUserId = plan.TeacherId, ActorRole = OrgRoles.Instructor, Action = SeededAction,
+            OrganizationId = org, ActorUserId = teacherId, ActorRole = OrgRoles.Instructor, Action = SeededAction,
             EntityType = nameof(Exam), EntityId = exam.Id.ToString(), At = now,
             AfterJson = JsonSerializer.Serialize(new { exam.Title, objectives = a.Objectives.Select(o => o.Key), policy = "40/60, 10/20" }),
-            Reason = "Demonstration assessment seeded by --seed-demo (GAD-T103).",
+            Reason = reason,
         });
         await db.SaveChangesAsync(ct);
+        return exam.Id;
     }
 
-    private static ConceptEntry BestConcept(ConceptMap map, string title)
+    internal static ConceptEntry BestConcept(ConceptMap map, string title)
     {
         static HashSet<string> Words(string s) => s.ToLowerInvariant().Split([' ', '-', ',', '.'], StringSplitOptions.RemoveEmptyEntries)
             .Where(w => w.Length > 3).ToHashSet();
@@ -356,7 +359,7 @@ public static class DemoSeeder
         return created;
     }
 
-    private static string MaterialPath(string contentRoot, string file)
+    internal static string MaterialPath(string contentRoot, string file)
     {
         foreach (var root in new[] { contentRoot, AppContext.BaseDirectory })
         {
@@ -366,7 +369,7 @@ public static class DemoSeeder
         throw new FileNotFoundException($"Demo material {file} not found under Demo/Material (start the server with --contentRoot pointing at Gadfly.Server).", file);
     }
 
-    private static string GeneratePassword() =>
+    internal static string GeneratePassword() =>
         "Demo-" + Convert.ToBase64String(RandomNumberGenerator.GetBytes(15)).Replace('+', 'x').Replace('/', 'y').TrimEnd('=') + "-42!";
 
     private static void Print(ILogger log, string password, bool configured, string? apiKey)
