@@ -20,7 +20,16 @@ public static class GadflyEndpoints
 
     /// <summary>Every route a signed-out visitor may reach.</summary>
     public static readonly IReadOnlyList<string> AnonymousRoutes =
-        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "launch", "openapi/{documentName}.json", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p)];
+        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "launch", "error", "openapi/{documentName}.json", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p)];
+
+    /// <summary>The path <c>UseExceptionHandler</c> re-executes in production (Program.cs).</summary>
+    public const string ErrorPath = "/error";
+
+    private const string ErrorPageHtml =
+        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\" /><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />" +
+        "<title>Something went wrong · Gadfly Exams</title><link rel=\"stylesheet\" href=\"/app.css\" /></head><body><main><h1>Something went wrong</h1>" +
+        "<p class=\"notice\">Gadfly hit an unexpected problem on our side. Nothing you typed was lost on your device, and an exam in progress keeps its place: " +
+        "go back and try again. If it keeps happening, tell your instructor.</p><p><a href=\"/\">Back to Gadfly</a></p></main></body></html>";
 
     private static readonly IReadOnlyList<string> AnonymousPrefixes = ["_framework/"];
 
@@ -49,6 +58,18 @@ public static class GadflyEndpoints
         app.MapHealthChecks("/healthz").AllowAnonymous();
         app.MapGet("/healthz/providers", (Gadfly.Socrates.LegionVotingClient panel) => Results.Json(panel.Health.Snapshot()))
             .RequireAuthorization(GadflyPolicies.SuperAdmin);
+
+        // Where Program.cs's production exception handler re-executes (GAD-T190): an anonymous, data-free page, whatever the verb of the
+        // failed request. Without this endpoint the handler found nothing, the fallback policy would have redirected it to sign-in, and the
+        // visitor got a bare 500 and an extra "handler produced a 404" exception in the log.
+        app.MapMethods(ErrorPath, ["GET", "POST", "PUT", "PATCH", "DELETE"], (HttpContext http) =>
+            {
+                http.Response.Headers.CacheControl = "no-store";
+                var failed = http.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>() is not null;
+                return Results.Content(ErrorPageHtml, "text/html; charset=utf-8", System.Text.Encoding.UTF8,
+                    failed ? StatusCodes.Status500InternalServerError : StatusCodes.Status404NotFound);
+            })
+            .AllowAnonymous().ExcludeFromDescription();
 
         MapPrivacy(app);
         app.MapHub<Sessions.SessionHub>(Sessions.SessionHub.Path).RequireRateLimiting(Platform.RateLimits.Hub);

@@ -141,6 +141,17 @@ public class RouteAuthorizationTests : ServerTest
         var body = await client.GetStringAsync("/healthz");
         Assert.That(body, Is.EqualTo("Healthy"));
     }
+
+    /// <summary>GAD-T190: the production exception handler re-executes /error, so it must answer anonymously with a page, not a sign-in redirect or nothing.</summary>
+    [TestCase("GET")]
+    [TestCase("POST")]
+    public async Task ErrorPath_AnswersSignedOut_WithAPage_ForAnyVerb(string method)
+    {
+        using var client = Factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, BaseAddress = new Uri("https://localhost") });
+        using var response = await client.SendAsync(new HttpRequestMessage(new HttpMethod(method), GadflyEndpoints.ErrorPath));
+        Assert.That((int)response.StatusCode, Is.EqualTo(404), "reached directly (no failed request) it is a plain not-found page");
+        Assert.That(await response.Content.ReadAsStringAsync(), Does.Contain("Something went wrong"));
+    }
 }
 
 /// <summary>The platform API (GAD-T46/T69/T78): authentication, validation, tenant scoping, launch links and rate limits.</summary>
