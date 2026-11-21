@@ -315,19 +315,27 @@ function openMic() {
  * transcribed into the answer while she speaks, and reopen it, without resetting the answer so far, when she has finished (GAD-T245).
  */
 function remarkHold(s, active) {
-    if (!s || !s.running) return;
+    if (!s) return;
     if (active) {
-        if (s.remarkHold || s.gate) return;   // not listening, so nothing to hold
+        // Always mark the remark, even when the gate is already closed (thinking, sending): the avatar's speaking-start for a remark must never set
+        // the speaking flag, nothing clears it but this room's own utterances.
         s.remarkHold = true;
+        s.remarkClosedGate = false;
+        if (!s.running || s.gate) return;   // not listening, so nothing to close
+        s.remarkClosedGate = true;
         s.gate = true;
         s.partial = "";
         clearCue();
         talking(s, false);
+        // Words already spoken are finalized now (the gate would swallow the speech-end commit), so none is lost to the remark.
+        if (s.inSpeech && s.speechConn) s.speechConn.send("Commit").catch(() => { });
         drawTranscript();
-        status("The examiner is speaking…");
+        status("The examiner is speaking...");
     } else if (s.remarkHold) {
+        const closed = s.remarkClosedGate;
         s.remarkHold = false;
-        if (!s.allowed || s.speaking) return;
+        s.remarkClosedGate = false;
+        if (!closed || !s.running || !s.gate || !s.allowed || s.speaking) return;   // something else (a question, a send) took over the gate
         s.gate = false;
         if (s.avatar) s.avatar.state = "listening";
         status(s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.");
