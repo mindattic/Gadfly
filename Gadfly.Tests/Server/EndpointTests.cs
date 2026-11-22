@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.StaticAssets;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
@@ -52,10 +53,17 @@ public class RouteAuthorizationTests : ServerTest
     [Test]
     public void TheAppMapsRoutes() => Assert.That(Routes(), Has.Count.GreaterThan(10));
 
+    /// <summary>
+    /// The build's static files (stylesheets, scripts and their fingerprinted and compressed copies), mapped by
+    /// <c>MapStaticAssets().AllowAnonymous()</c> (GAD-T492: the default-deny fallback sent every stylesheet to the login page).
+    /// They carry their <see cref="StaticAssetDescriptor"/>, so they are recognized as a kind rather than listed file by file.
+    /// </summary>
+    private static bool IsStaticAsset(Endpoint e) => e.Metadata.GetMetadata<StaticAssetDescriptor>() is not null;
+
     [Test]
     public void EveryAnonymousRoute_IsOnTheAllowList()
     {
-        var anonymous = Routes().Where(IsAnonymous).Select(Raw).Distinct().ToList();
+        var anonymous = Routes().Where(r => IsAnonymous(r) && !IsStaticAsset(r)).Select(Raw).Distinct().ToList();
         var unexpected = anonymous.Where(r => !Allowed(r)).ToList();
         Assert.That(unexpected, Is.Empty, "routes reachable signed-out that are not on GadflyEndpoints.AnonymousRoutes");
     }

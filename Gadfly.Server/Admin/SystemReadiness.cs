@@ -93,9 +93,11 @@ public sealed class SystemReadinessService(IServiceScopeFactory scopes, HealthCh
         // The AI panel: the selected panel's mode (live or mock, and why), and each live provider's recorded health.
         var panelInfo = services.GetService<IPanelInfo>();
         var selected = services.GetService<Gadfly.Socrates.Mock.SelectedPanel>();
-        var live = services.GetService<LegionVotingClient>();
-        var models = services.GetService<Grading.PanelModelInventory>();
         var mock = panelInfo?.IsMock ?? true;
+        // A mock panel calls no provider, so there is no provider health to read, and the live client is never built for it
+        // (a host may not even be able to build one: the test server refuses to, GAD-T518).
+        var live = mock ? null : services.GetService<LegionVotingClient>();
+        var models = services.GetService<Grading.PanelModelInventory>();
         var providers = (live?.Health.Snapshot() ?? []).Select(p => new ProviderLine(p.ProviderId, models?.ModelOf(p.ProviderId) ?? "", p.Failing,
             p.ConsecutiveFailures, p.TotalCalls, p.TotalFailures, p.LastSuccessAt, p.LastFailureAt, includeErrorText ? p.LastError : null)).ToList();
 
