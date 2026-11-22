@@ -1,0 +1,61 @@
+@page "/grading/panel"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Server.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+<PageTitle>Panel calibration · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<h1>Panel calibration <span>How far the AI grading panel may be trusted on each exam, checked against blind human marking</span> <HelpLink Topic="grading-guide" /></h1>
+<p><a href="grading">← Grading queue</a></p>
+
+@if (rows is null)
+{
+    <p class="@(loaded ? "notice" : "hint")" role="status">@(loaded ? "Your role in this organization does not include grading." : "Loading…")</p>
+}
+else if (rows.Count == 0)
+{
+    <p class="notice">No examinations yet. Calibration needs an exam whose sessions have been graded by the panel and by two examiners.</p>
+}
+else
+{
+    <div class="gr-table-wrap">
+        <table class="grid">
+            <thead><tr><th>Exam</th><th>Ended sessions</th><th>Calibration</th><th>Panel weight</th><th>Double marking</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var r in rows)
+                {
+                    <tr>
+                        <td>@r.Title</td>
+                        <td>@r.EndedSessions</td>
+                        <td>
+                            @if (r.Calibration is null) { <span class="hint">none recorded</span> }
+                            else if (r.Calibration.Expired) { <span class="gr-band-MandatoryReconciliation">expired</span> }
+                            else if (r.Calibration.Accepted) { <span>met the thresholds</span> }
+                            else { <span class="gr-band-AdditionalReview">did not meet the thresholds</span> }
+                            @if (r.Calibration is { RecheckDue: true }) { <text> </text><span class="hint">· re-run due</span> }
+                        </td>
+                        <td>@(r.Settings.GateUntilCalibrated ? (r.Calibration is { Effective: true } ? "policy weight" : "0 until calibrated") : "policy weight")</td>
+                        <td>@(r.Settings.DoubleMarking ? "on" : "off")</td>
+                        <td>
+                            <a href="grading/panel/@r.ExamId">Calibration</a>
+                            @if (r.Settings.DoubleMarking) { <text> · </text><a href="grading/second-mark/@r.ExamId">Second marking</a> }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="hint">A calibration describes agreement over a set of answers, never whether one student's grade is right. It expires when any panel member's model changes.</p>
+}
+
+@code {
+    private IReadOnlyList<PanelExamRow>? rows;
+    private bool loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        rows = await PanelDb.RunAsync(Scopes, Tenant, sp => sp.GetRequiredService<PanelGovernanceService>().ExamsAsync());
+        loaded = true;
+    }
+}

@@ -87,6 +87,12 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel, Random? shuff
 
     // ------------------------------------------------------------------ evidence selection
 
+    /// <summary>
+    /// The responses the panel would be shown for this input, in exam order (GAD-T428): a blind second marker grades from exactly
+    /// the same evidence, so the human-human and panel-human comparisons rest on the same answers.
+    /// </summary>
+    public static IReadOnlyList<EvidenceItem> UsableEvidence(ObjectiveGradingInput input) => Partition(input).Usable;
+
     internal static (List<EvidenceItem> Usable, List<string> Flags, List<string> Ambiguities) Partition(ObjectiveGradingInput input)
     {
         var usable = new List<EvidenceItem>();

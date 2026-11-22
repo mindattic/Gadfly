@@ -45,12 +45,46 @@ public sealed record ExamPanelSettings(bool GateUntilCalibrated = false, bool Do
 /// <param name="Applied">True when the gate set the panel's weight to 0 for this session.</param>
 public sealed record PanelGateNote(bool Applied, string Reason);
 
+/// <summary>One exam on the panel calibration index.</summary>
+public sealed record PanelExamRow(Guid ExamId, string Title, int EndedSessions, ExamPanelSettings Settings, PanelCalibrationStatus? Calibration);
+
+/// <summary>Runs panel-governance work from a Blazor component in its own DI scope acting as the circuit's tenant.</summary>
+public static class PanelDb
+{
+    public static async Task<T> RunAsync<T>(IServiceScopeFactory scopes, ITenantContext tenant, Func<IServiceProvider, Task<T>> work)
+    {
+        await using var scope = scopes.CreateAsyncScopeFor(TenantSnapshot.Of(tenant));
+        return await work(scope.ServiceProvider);
+    }
+}
+
 /// <summary>Reads and changes an exam's <see cref="ExamPanelSettings"/>, and applies the calibration gate to a policy.</summary>
-public sealed class PanelGovernanceService(GadflyDbContext db, ITenantContext tenant, TimeProvider clock)
+public sealed class PanelGovernanceService(GadflyDbContext db, ITenantContext tenant, TimeProvider clock, PanelModelInventory models, IConfiguration config)
 {
     public const string SettingsAction = "panel.settings.updated";
 
     private GradingActor Actor => new(tenant.UserId, tenant.Role);
+
+    /// <summary>The organization's exams with their calibration and panel settings; null when the caller cannot read transcripts.</summary>
+    public async Task<IReadOnlyList<PanelExamRow>?> ExamsAsync(CancellationToken ct = default)
+    {
+        if (tenant.OrganizationId is not { } org || !Actor.Has(Permission.ViewTranscripts)) return null;
+        const string notAnAttempt = nameof(Gadfly.Engine.EndReason.PromptSetChanged);
+        var exams = await db.Exams.AsNoTracking().Where(e => e.OrganizationId == org && e.AssessmentMode == AssessmentMode.Examination)
+            .Select(e => new
+            {
+                e.Id, e.Title,
+                Ended = db.ExamSessions.Count(s => s.ExamId == e.Id && s.OrganizationId == org && s.State == SessionState.Ended && s.EndReason != notAnAttempt),
+            })
+            .OrderBy(e => e.Title).ToListAsync(ct);
+        var now = clock.GetUtcNow();
+        var days = PanelCalibrationService.RecheckDays(config);
+        var rows = new List<PanelExamRow>();
+        foreach (var e in exams)
+            rows.Add(new PanelExamRow(e.Id, e.Title, e.Ended, await LatestAsync(db, org, e.Id, ct),
+                await PanelCalibrationService.LatestAsync(db, org, e.Id, models.Current, now, days, ct)));
+        return rows;
+    }
 
     /// <summary>The exam's settings (defaults when never set), or null when the exam is not visible to the caller.</summary>
     public async Task<ExamPanelSettings?> SettingsAsync(Guid examId, CancellationToken ct = default)

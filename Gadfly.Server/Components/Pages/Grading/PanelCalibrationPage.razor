@@ -1,0 +1,231 @@
+@page "/grading/panel/{ExamId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Assessment
+@using Gadfly.Server.Grading
+@using Gadfly.Socrates
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+<PageTitle>Panel calibration · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<h1>Panel calibration <span>@(summary?.ExamTitle ?? examTitle)</span> <HelpLink Topic="grading-guide" /></h1>
+<p><a href="grading/panel">← All exams</a> · <a href="grading/bias/@ExamId">Bias probes</a> · <a href="grading/self-preference/@ExamId">Self-preference check</a>@if (settings?.DoubleMarking == true) { <text> · </text><a href="grading/second-mark/@ExamId">Second marking</a> }</p>
+
+@if (message is not null)
+{
+    <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+}
+
+@if (settings is null)
+{
+    <p class="@(loaded ? "notice" : "hint")" role="status">@(loaded ? "That exam was not found, or your role does not include grading." : "Loading…")</p>
+}
+else
+{
+    <section class="gr-section">
+        <h2>Current calibration</h2>
+        @if (status is null)
+        {
+            <p>@PanelCalibrationWording.Describe(null)</p>
+        }
+        else
+        {
+            <p>@PanelCalibrationWording.Describe(status.ToNote())</p>
+            <div class="gr-summary">
+                <div><span class="hint">Recorded</span>@AdminDbWhen(status.At) · @(status.Source == PanelCalibrationService.SourceDoubleMarking ? "from in-app double marking" : "from levels posted through the API")</div>
+                <div><span class="hint">Answers</span>@status.Report.Items</div>
+                <div><span class="hint">Panel-human QWK</span>@Num(status.Report.PanelHumanQwk) (human-human @Num(status.Report.HumanHumanQwk))</div>
+                <div><span class="hint">SMD</span>@Num(status.Report.Smd)</div>
+                <div><span class="hint">Models covered</span>@PanelModelSet.Describe(status.Models)</div>
+                <div><span class="hint">Models now</span>@PanelModelSet.Describe(currentModels)</div>
+            </div>
+            @if (status.Report.Failures.Count > 0)
+            {
+                <ul class="gr-flags">@foreach (var f in status.Report.Failures) { <li>@f</li> }</ul>
+            }
+            @if (status.RecheckDue)
+            {
+                <p class="gr-banner warn">This calibration is more than @recheckDays days old. Re-run it, and the bias probes, so drift in the providers' models is caught. Nothing re-runs by itself: every run is started by a person.</p>
+            }
+        }
+    </section>
+
+    <section class="gr-section">
+        <h2>Settings for this exam</h2>
+        <div class="gr-form-row">
+            <label class="check"><input type="checkbox" @bind="gate" /> Human-only until calibrated: the panel's grade counts for nothing (AI weight 0, human weight 1) in sessions whose grading starts while this exam has no accepted, current calibration</label>
+        </div>
+        <div class="gr-form-row">
+            <label class="check"><input type="checkbox" @bind="doubleMarking" /> Double marking: a second examiner grades this exam's sessions blind to the panel and to the first examiner, to build the calibration set here</label>
+        </div>
+        <div class="gr-actions"><button type="button" disabled="@busy" @onclick="SaveSettingsAsync">Save settings</button></div>
+        <p class="hint">Sessions already in grading keep the policy frozen when their grading started. With the gate on, the panel's grade is still shown to examiners after they grade and a large difference still asks for a second look; it simply adds nothing to the mark.</p>
+    </section>
+
+    <section class="gr-section">
+        <h2>Double-marking results</h2>
+        @if (summary is null)
+        {
+            <p class="hint">Agreement figures are shown to people who approve grading policy or view analytics.</p>
+        }
+        else if (summary.Items.Count == 0)
+        {
+            <p class="notice">No answer has all three grades yet: the panel's, the first examiner's original blind grade, and a blind second mark. @summary.SessionsEnded session(s) of this exam have ended.</p>
+        }
+        else
+        {
+            @if (summary.AnyMock)
+            {
+                <p class="gr-banner mock">Some panel grades here come from the mock panel. They show the workflow, not an AI evaluation, and a calibration built from them is never accepted.</p>
+            }
+            <div class="gr-summary">
+                <div><span class="hint">Answers</span>@summary.Items.Count from @summary.SessionsSecondMarked of @summary.SessionsEnded sessions</div>
+                <div><span class="hint">Human-human QWK</span>@Num(summary.Preview.HumanHumanQwk)</div>
+                <div><span class="hint">Panel vs first examiner</span>QWK @Num(summary.PanelVsFirst) · SMD @Num(summary.SmdVsFirst)</div>
+                <div><span class="hint">Panel vs second marker</span>QWK @Num(summary.PanelVsSecond) · SMD @Num(summary.SmdVsSecond)</div>
+            </div>
+            <p>@(summary.Preview.Accepted ? "On this set the panel meets every threshold." : "On this set the panel does not meet the thresholds:")</p>
+            @if (summary.Preview.Failures.Count > 0)
+            {
+                <ul class="gr-flags">@foreach (var f in summary.Preview.Failures) { <li>@f</li> }</ul>
+            }
+            <div class="gr-actions">
+                <button type="button" disabled="@busy" @onclick="RecordAsync">Record as this exam's calibration</button>
+                <span class="hint">Needs the permission to approve grading-policy changes. It is recorded against the models the panel runs now.</span>
+            </div>
+
+            <h3>What the set suggests for the grading policy</h3>
+            <ul>@foreach (var n in summary.Advice.Notes) { <li>@n</li> }</ul>
+            <div class="gr-table-wrap">
+                <table class="grid">
+                    <thead><tr><th>AI weight</th><th>Agreement of the combined grade with the other marker (QWK)</th></tr></thead>
+                    <tbody>
+                        @foreach (var w in summary.Advice.Weights)
+                        {
+                            <tr><td>@((w.AiWeight * 100m).ToString("0"))%@(w.AiWeight == summary.Advice.RecommendedAiWeight ? " (suggested)" : "")</td><td>@Num(w.Qwk)</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="hint">Suggested thresholds: additional review at @summary.Advice.RecommendedAdditionalReviewAt.ToString("0.#") points, mandatory reconciliation at @summary.Advice.RecommendedMandatoryReconciliationAt.ToString("0.#")@(summary.Advice.RecommendedBoundaryMargin is { } m ? $", boundary margin {m:0.#} points" : "")@(summary.Advice.RecommendedMaxPanelSpread is { } s ? $", panel spread limit {s} level(s)" : ""). To use them, request a grading-policy change on the assessment; an approver decides.</p>
+
+            <h3>Systematic difference by group</h3>
+            <p class="hint">An overall SMD can hide a gap that one group of students carries. Paste one "student email or session code, group" per line. The list is used for this check only and is never stored.</p>
+            <div class="gr-form-row gr-wide"><textarea rows="5" @bind="grouping" placeholder="student@example.edu, group A"></textarea></div>
+            <div class="gr-actions"><button type="button" disabled="@busy" @onclick="CheckGroupsAsync">Check by group</button></div>
+            @if (summary.GroupProblems.Count > 0)
+            {
+                <ul class="gr-flags">@foreach (var p in summary.GroupProblems) { <li>@p</li> }</ul>
+            }
+            @if (summary.Groups.Count > 0)
+            {
+                <div class="gr-table-wrap">
+                    <table class="grid">
+                        <thead><tr><th>Group</th><th>Answers</th><th>SMD (panel vs markers)</th><th></th></tr></thead>
+                        <tbody>
+                            @foreach (var g in summary.Groups)
+                            {
+                                <tr>
+                                    <td>@g.Group</td><td>@g.Items</td>
+                                    <td>@(g.Smd is null ? (g.Items < CalibrationAdvice.MinGroupItems ? $"too few answers (needs {CalibrationAdvice.MinGroupItems})" : "not measurable") : Num(g.Smd))</td>
+                                    <td>@if (g.Flagged) { <span class="gr-band-MandatoryReconciliation">|SMD| at or over @summary.Preview.Thresholds.MaxAbsSmd.ToString("0.00")</span> }</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (summary.Ungrouped > 0) { <p class="hint">@summary.Ungrouped answer(s) matched no line of the list and were left out.</p> }
+            }
+
+            <details>
+                <summary>Every double-marked answer (@summary.Items.Count)</summary>
+                <div class="gr-table-wrap">
+                    <table class="grid">
+                        <thead><tr><th>Session</th><th>Objective</th><th>Panel</th><th>First examiner</th><th>Second marker</th><th>Panel members</th></tr></thead>
+                        <tbody>
+                            @foreach (var i in summary.Items)
+                            {
+                                <tr><td>@i.Code</td><td>@i.ObjectiveTitle</td><td>@i.PanelLevel@(i.Mock ? " (mock)" : "")</td><td>@i.FirstLevel</td><td>@i.SecondLevel</td><td>@string.Join(", ", i.MemberLevels)</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public Guid ExamId { get; set; }
+
+    private ExamPanelSettings? settings;
+    private PanelCalibrationStatus? status;
+    private DoubleMarkingSummary? summary;
+    private IReadOnlyDictionary<string, string>? currentModels;
+    private string examTitle = "";
+    private string grouping = "";
+    private int recheckDays;
+    private bool gate, doubleMarking, busy, ok, loaded;
+    private string? message;
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private sealed record Loaded(ExamPanelSettings? Settings, string Title, PanelCalibrationStatus? Status, DoubleMarkingSummary? Summary,
+        IReadOnlyDictionary<string, string>? Models, int RecheckDays);
+
+    private async Task LoadAsync()
+    {
+        var l = await PanelDb.RunAsync(Scopes, Tenant, async sp =>
+        {
+            var s = await sp.GetRequiredService<PanelGovernanceService>().SettingsAsync(ExamId);
+            if (s is null) return new Loaded(null, "", null, null, null, 0);
+            var title = await sp.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>().Exams
+                .Where(e => e.Id == ExamId && e.OrganizationId == Tenant.OrganizationId).Select(e => e.Title).FirstOrDefaultAsync() ?? "";
+            var c = await sp.GetRequiredService<PanelCalibrationService>().StatusAsync(ExamId);
+            var d = await sp.GetRequiredService<DoubleMarkingService>().SummaryAsync(ExamId, grouping);
+            return new Loaded(s, title, c, d, sp.GetRequiredService<PanelModelInventory>().Current,
+                PanelCalibrationService.RecheckDays(sp.GetRequiredService<IConfiguration>()));
+        });
+        (settings, examTitle, status, summary, currentModels, recheckDays) = (l.Settings, l.Title, l.Status, l.Summary, l.Models, l.RecheckDays);
+        if (settings is not null) (gate, doubleMarking) = (settings.GateUntilCalibrated, settings.DoubleMarking);
+        loaded = true;
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await PanelDb.RunAsync(Scopes, Tenant, sp => sp.GetRequiredService<PanelGovernanceService>().SaveAsync(ExamId, new ExamPanelSettings(gate, doubleMarking)));
+            (ok, message) = (r.Ok, r.Message);
+            await LoadAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task RecordAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var (r, _) = await PanelDb.RunAsync(Scopes, Tenant, sp => sp.GetRequiredService<DoubleMarkingService>().RecordCalibrationAsync(ExamId));
+            (ok, message) = (r.Ok, r.Message);
+            await LoadAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task CheckGroupsAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try { await LoadAsync(); }
+        finally { busy = false; }
+    }
+
+    private static string Num(double? x) => x is { } v ? v.ToString("0.00") : "n/a";
+    private static string AdminDbWhen(DateTimeOffset at) => at.UtcDateTime.ToString("yyyy-MM-dd HH:mm") + " UTC";
+}

@@ -1,0 +1,65 @@
+@page "/grading/second-mark/{ExamId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Server.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+<PageTitle>Second marking · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<h1>Second marking <span>@queue?.ExamTitle</span> <HelpLink Topic="grading-guide" /></h1>
+<p><a href="grading/panel/@ExamId">← Panel calibration</a></p>
+
+@if (queue is null)
+{
+    <p class="@(loaded ? "notice" : "hint")" role="status">@(loaded ? "That exam was not found, or your role does not include grading. The attempt was recorded." : "Loading…")</p>
+}
+else
+{
+    <p>You mark each session blind: you will not see the AI panel's grade, the first examiner's grade, the student's name or any integrity notes. Your marks measure how well markers agree; they never change the student's grade.</p>
+    @if (!queue.DoubleMarking)
+    {
+        <p class="notice">This exam is not set for double marking. Someone who manages the assessment can turn it on from the panel calibration page.</p>
+    }
+    else if (queue.Rows.Count == 0)
+    {
+        <p class="notice">No session of this exam has ended yet.</p>
+    }
+    else
+    {
+        <div class="gr-table-wrap">
+            <table class="grid">
+                <thead><tr><th>Session</th><th>Ended</th><th>State</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var r in queue.Rows)
+                    {
+                        <tr>
+                            <td>@r.Code</td>
+                            <td>@(r.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm") ?? "—")</td>
+                            <td>
+                                @if (r.IAmFirstExaminer) { <span class="hint">you are its examiner</span> }
+                                else if (r.MarkedByOther) { <span class="hint">second-marked by someone else</span> }
+                                else if (!r.Ready) { <span class="hint">not ready yet</span> }
+                                else if (r.MarkedByMe) { <span>marked by you</span> }
+                                else { <span class="gr-band-AdditionalReview">to mark</span> }
+                            </td>
+                            <td>@if (r.Open) { <a href="grading/second-mark/session/@r.SessionId">@(r.MarkedByMe ? "Revise" : "Mark")</a> }</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="hint">@queue.Rows.Count(r => r.MarkedByMe) of @queue.Rows.Count session(s) marked by you. A session is ready once its transcripts are checked and the panel has graded it.</p>
+    }
+}
+
+@code {
+    [Parameter] public Guid ExamId { get; set; }
+    private SecondMarkQueue? queue;
+    private bool loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        queue = await PanelDb.RunAsync(Scopes, Tenant, sp => sp.GetRequiredService<DoubleMarkingService>().QueueAsync(ExamId));
+        loaded = true;
+    }
+}

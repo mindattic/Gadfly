@@ -1,0 +1,100 @@
+@page "/grading/second-mark/session/{SessionId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Server.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+<PageTitle>Second marking · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<h1>Second marking <span>@sheet?.Code</span> <HelpLink Topic="grading-guide" /></h1>
+
+@if (sheet is null)
+{
+    <p class="@(refusal is null ? "hint" : "notice")" role="status">@(refusal ?? "Loading…")</p>
+}
+else
+{
+    <p><a href="grading/second-mark/@sheet.ExamId">← @sheet.ExamTitle</a></p>
+    <p class="gr-banner">Blind second mark. Grade each objective from the answers below against its rubric. You are not shown the AI panel's grade or the first examiner's, and your mark does not change the student's grade: it measures how well markers agree.</p>
+    @if (message is not null)
+    {
+        <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+    }
+    @foreach (var o in sheet.Objectives)
+    {
+        <section class="gr-objective">
+            <h3>@o.Title</h3>
+            @if (!string.IsNullOrWhiteSpace(o.Description)) { <p class="hint">@o.Description</p> }
+            <details>
+                <summary>Rubric (@o.Criteria.Count criteria)</summary>
+                @foreach (var c in o.Criteria)
+                {
+                    <p><strong>@c.Name</strong>@(string.IsNullOrWhiteSpace(c.Description) ? "" : ": " + c.Description)</p>
+                    <ul>@foreach (var l in c.Levels) { <li>@l.Level @l.Label: @l.Descriptor</li> }</ul>
+                }
+            </details>
+            @if (o.Evidence.Count == 0)
+            {
+                <p class="notice">No verified answer addresses this objective. Level 0 means not enough evidence, not zero understanding.</p>
+            }
+            @foreach (var e in o.Evidence)
+            {
+                <div class="gr-response">
+                    <p class="q">@e.Sequence. @e.Question</p>
+                    <blockquote>@e.Answer</blockquote>
+                </div>
+            }
+            <div class="gr-form-row">
+                <label>Level
+                    <select @bind="levels[o.ObjectiveId]">
+                        <option value="-1">Choose…</option>
+                        @for (var l = 0; l <= 5; l++)
+                        {
+                            var level = l;
+                            <option value="@level">@level @Gadfly.Assessment.MasteryLevels.Label((Gadfly.Assessment.MasteryLevel)level)</option>
+                        }
+                    </select>
+                </label>
+                <label>Comment (optional)
+                    <textarea rows="2" maxlength="@DoubleMarkingService.MaxCommentLength" @bind="comments[o.ObjectiveId]"></textarea>
+                </label>
+            </div>
+        </section>
+    }
+    <div class="gr-actions">
+        <button type="button" disabled="@(busy || levels.Values.Any(v => v < 0))" @onclick="SubmitAsync">Record second marks</button>
+        @if (levels.Values.Any(v => v < 0)) { <span class="hint">Choose a level for every objective.</span> }
+    </div>
+}
+
+@code {
+    [Parameter] public Guid SessionId { get; set; }
+    private SecondMarkSheet? sheet;
+    private string? refusal, message;
+    private bool busy, ok;
+    private Dictionary<Guid, int> levels = [];
+    private Dictionary<Guid, string?> comments = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        (sheet, refusal) = await PanelDb.RunAsync(Scopes, Tenant, sp => sp.GetRequiredService<DoubleMarkingService>().SheetAsync(SessionId));
+        if (sheet is not null)
+        {
+            levels = sheet.Objectives.ToDictionary(o => o.ObjectiveId, o => o.MyLevel ?? -1);
+            comments = sheet.Objectives.ToDictionary(o => o.ObjectiveId, o => o.MyComment);
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (busy || sheet is null) return;
+        busy = true;
+        try
+        {
+            var marks = sheet.Objectives.Select(o => new SecondMarkInput(o.ObjectiveId, levels[o.ObjectiveId], comments[o.ObjectiveId])).ToList();
+            var r = await PanelDb.RunAsync(Scopes, Tenant, sp => sp.GetRequiredService<DoubleMarkingService>().SubmitAsync(SessionId, marks));
+            (ok, message) = (r.Ok, r.Message);
+        }
+        finally { busy = false; }
+    }
+}
