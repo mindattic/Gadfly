@@ -48,7 +48,9 @@ public class LtiUserProvisionerTests : ServerTest
         var org = await Seed.OrganizationAsync();
         var reg = await RegistrationAsync(org);
         var local = Unique();
-        var r = await ProvisionAsync(reg, Claims(Subject(), LtiClaims.RoleLearner, $"{local}@school.example"));
+        // Display names are unique across the whole (shared) test database, so this one is the test's own (GAD-T520).
+        var name = "Ada Lovelace " + local;
+        var r = await ProvisionAsync(reg, Claims(Subject(), LtiClaims.RoleLearner, $"{local}@school.example", name));
 
         Assert.That(r.Ok, Is.True, r.Error);
         Assert.That(r.Created, Is.True);
@@ -57,11 +59,27 @@ public class LtiUserProvisionerTests : ServerTest
         var user = await db.AuthUsers.AsNoTracking().SingleAsync(u => u.Id == r.UserId);
         Assert.That(user.UserName, Is.EqualTo(local), "named after the email's local part");
         Assert.That(user.Email, Is.EqualTo($"{local}@school.example"));
-        Assert.That(user.DisplayName, Is.EqualTo("Ada Lovelace"));
+        Assert.That(user.DisplayName, Is.EqualTo(name));
         var member = await db.OrganizationMembers.AsNoTracking().SingleAsync(m => m.OrganizationId == org && m.UserId == r.UserId);
         Assert.That(member.Role, Is.EqualTo(OrgRoles.Student));
         Assert.That(await db.LtiUserMappings.CountAsync(m => m.RegistrationId == reg.Id && m.GadflyUserId == r.UserId), Is.EqualTo(1));
         Assert.That(await db.AuditEvents.CountAsync(a => a.OrganizationId == org && a.Action == "lti.user-provisioned" && a.EntityId == r.UserId.ToString()), Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Two_people_with_the_same_name_both_get_accounts_the_second_name_numbered()
+    {
+        // GAD-T520: MindAttic.Authentication keeps display names unique, real people don't.
+        var org = await Seed.OrganizationAsync();
+        var reg = await RegistrationAsync(org);
+        var name = "Grace Hopper " + Unique();
+        var first = await ProvisionAsync(reg, Claims(Subject(), LtiClaims.RoleLearner, $"{Unique()}@school.example", name));
+        var second = await ProvisionAsync(reg, Claims(Subject(), LtiClaims.RoleLearner, $"{Unique()}@school.example", name));
+        Assert.That(first.Ok, Is.True, first.Error);
+        Assert.That(second.Ok, Is.True, second.Error);
+        await using var db = SystemDb();
+        Assert.That((await db.AuthUsers.AsNoTracking().SingleAsync(u => u.Id == first.UserId)).DisplayName, Is.EqualTo(name));
+        Assert.That((await db.AuthUsers.AsNoTracking().SingleAsync(u => u.Id == second.UserId)).DisplayName, Is.EqualTo(name + " (2)"));
     }
 
     [Test]

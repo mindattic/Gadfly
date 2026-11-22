@@ -88,7 +88,7 @@ public sealed class LtiUserProvisioner(GadflyDbContext db, IUserAdminService use
         // A random password nobody is told: the account is reached through the LMS (or, for staff who want the full app,
         // through "forgot password" to the email the LMS gave, then their own MFA set-up).
         var password = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)) + "aA1!";
-        var displayName = claims.DisplayName.Length > 200 ? claims.DisplayName[..200] : claims.DisplayName;
+        var displayName = await UniqueDisplayNameAsync(claims.DisplayName, ct);
         var created = await users.CreateAsync(candidate, email, OrganizationDirectory.AccountRole, password,
             mustChangePassword: false, displayName: displayName, ct: ct);
         if (!created.Ok || created.UserId is not { } userId)
@@ -152,6 +152,33 @@ public sealed class LtiUserProvisioner(GadflyDbContext db, IUserAdminService use
         }
         return new(userId, null, Role: member.Role);
     }
+
+    /// <summary>The longest display name MindAttic.Authentication stores (<c>AuthUsers.DisplayName</c>).</summary>
+    internal const int DisplayNameMax = 64;
+
+    /// <summary>
+    /// The LMS's name for the person, made unique (GAD-T520). MindAttic.Authentication keeps display names unique across all
+    /// accounts (a unique index on the normalized name, since a person can sign in by it), but two real people can share a
+    /// name, so a taken one gets " (2)", " (3)"... the way a taken user name gets a number. Cut to the column's length.
+    /// </summary>
+    private async Task<string> UniqueDisplayNameAsync(string name, CancellationToken ct)
+    {
+        var baseName = name.Trim();
+        if (baseName.Length == 0) return baseName;
+        for (var n = 1; ; n++)
+        {
+            var candidate = Fit(baseName, n == 1 ? "" : $" ({n})");
+            var normalized = NormalizeDisplayName(candidate);
+            if (!await db.AuthUsers.AsNoTracking().AnyAsync(u => u.NormalizedDisplayName == normalized, ct)) return candidate;
+        }
+
+        static string Fit(string name, string suffix) =>
+            (name.Length + suffix.Length > DisplayNameMax ? name[..(DisplayNameMax - suffix.Length)].TrimEnd() : name) + suffix;
+    }
+
+    /// <summary>MindAttic.Authentication's display-name normalization (the key of its unique index).</summary>
+    internal static string NormalizeDisplayName(string displayName) =>
+        displayName.Normalize(System.Text.NormalizationForm.FormKC).Trim().ToUpperInvariant();
 
     private Task<bool> EmailVerifiedAsync(Guid userId, CancellationToken ct) =>
         db.AuthUsers.AsNoTracking().AnyAsync(u => u.Id == userId && u.IsActive && u.EmailVerified && u.Email != null, ct);
