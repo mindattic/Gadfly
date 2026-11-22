@@ -1,0 +1,94 @@
+@using Gadfly.Server.Translation
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+@* The languages an exam is offered in (GAD-T539): used by the assessment editor and the admin desk. Staff pages stay in English. *@
+<link rel="stylesheet" href="languages.css" />
+<section class="lang-panel" aria-labelledby="@($"lang-h-{ExamId:N}")">
+    <h2 id="@($"lang-h-{ExamId:N}")">Languages</h2>
+    @if (view is null)
+    {
+        <p class="hint" role="status">@(loaded ? "This exam's languages are not visible to you." : "Loading…")</p>
+    }
+    else
+    {
+        <p class="hint">Students choose one of the offered languages before they begin, and the examiner asks and listens in it.
+            The source material and rubric stay as written; an attempt keeps the language it started in.</p>
+        <fieldset class="lang-offered" disabled="@(!view.CanEdit || busy)">
+            <legend>Offered in</legend>
+            @foreach (var l in view.Languages)
+            {
+                <label class="lang-check">
+                    <input type="checkbox" checked="@offered.Contains(l.Tag)" @onchange="e => Toggle(l.Tag, e.Value is true)" />
+                    <span><strong>@l.EnglishName</strong> <span lang="@l.Tag">@(l.NativeName != l.EnglishName ? $"({l.NativeName})" : "")</span>@(l.IsSource ? " · the language the exam is written in" : "")</span>
+                </label>
+            }
+        </fieldset>
+        @if (view.CanEdit)
+        {
+            <div class="lang-actions">
+                <button type="button" disabled="@(busy || !Changed)" @onclick="SaveAsync">Save languages</button>
+            </div>
+        }
+        @if (message is not null)
+        {
+            <p role="status" class="lang-message @(ok ? "ok" : "error")">@message</p>
+        }
+        @ChildContent?.Invoke(view)
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public Guid ExamId { get; set; }
+    /// <summary>More of the panel below the offered languages (the per-language texts, GAD-T540).</summary>
+    [Parameter] public RenderFragment<ExamLanguagesView>? ChildContent { get; set; }
+    /// <summary>Raised after the offered languages change.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private ExamLanguagesView? view;
+    private readonly HashSet<string> offered = new(StringComparer.Ordinal);
+    private string? message;
+    private bool ok, busy, loaded;
+    private Guid? loadedFor;
+
+    private bool Changed => view is not null && !offered.SetEquals(view.Offered);
+
+    private Task<T> Run<T>(Func<ExamLanguageService, Task<T>> work) => LanguageOps.RunAsync(Scopes, Tenant, work);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedFor == ExamId) return;
+        loadedFor = ExamId;
+        message = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        view = await Run(s => s.GetAsync(ExamId));
+        offered.Clear();
+        if (view is not null) offered.UnionWith(view.Offered);
+        loaded = true;
+    }
+
+    private void Toggle(string tag, bool on)
+    {
+        if (on) offered.Add(tag); else offered.Remove(tag);
+        message = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await Run(s => s.SetOfferedAsync(ExamId, offered.ToList()));
+            ok = r.Ok;
+            message = r.Message;
+            await LoadAsync();
+            if (r.Ok) await OnChanged.InvokeAsync();
+        }
+        finally { busy = false; }
+    }
+}

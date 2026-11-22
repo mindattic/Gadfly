@@ -293,6 +293,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
             AvatarId = source.AvatarId,
             PromptSetId = source.PromptSetId,
             PromptSetVersion = source.PromptSetVersion,
+            Languages = source.Languages,   // the offered languages (GAD-T539); the copy's texts are drafted and approved on their own
             Status = ExamStatus.Draft,
             CreatedByUserId = createdBy,
             CreatedAt = now,

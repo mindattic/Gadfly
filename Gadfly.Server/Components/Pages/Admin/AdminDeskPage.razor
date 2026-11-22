@@ -116,6 +116,8 @@
                                         <button type="button" @onclick="SaveEditAsync" disabled="@busy">Save</button>
                                         <button class="link" type="button" @onclick="() => edit = null">Cancel</button>
                                     </div>
+                                    @* GAD-T539/T540: the languages the exam is offered in and their texts, saved on their own. *@
+                                    <Gadfly.Server.Components.Pages.Assessments.ExamLanguagesPanel ExamId="e.Id" />
                                 </div>
                             </td>
                         </tr>

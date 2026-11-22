@@ -305,6 +305,12 @@ else
                 </div>
             }
         </form>
+        @if (Id is { } examId)
+        {
+            @* GAD-T539: the languages students may take the exam in, and their texts (GAD-T540). Open after publishing too:
+               the wording a student reads can be corrected without touching what is graded. *@
+            <ExamLanguagesPanel ExamId="examId" />
+        }
     };
 
     private void CourseChanged(ChangeEventArgs e)
