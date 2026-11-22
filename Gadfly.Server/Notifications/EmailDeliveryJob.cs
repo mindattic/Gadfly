@@ -4,6 +4,7 @@ using Gadfly.Server.Jobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MimeKit;
+using Gadfly.Socrates;
 using MindAttic.Authentication.Services;
 
 namespace Gadfly.Server.Notifications;
@@ -13,7 +14,8 @@ namespace Gadfly.Server.Notifications;
 /// transport MindAttic.Authentication's own invitation and password-reset email uses (no second mailer, GAD-T310).
 /// Stays silently off, like the rest of Gadfly's optional providers, when SMTP isn't configured
 /// (<see cref="AuthEmailStatus"/>): the email is marked Failed with a plain reason rather than throwing, so one
-/// unconfigured environment never blocks the job queue's other work.
+/// unconfigured environment never blocks the job queue's other work. A mock-mode server never sends either; its
+/// emails are rendered and logged as Skipped (<see cref="EmailDeliveryGate"/>).
 /// </summary>
 public sealed class EmailDeliveryJob(GadflyDbContext db, AuthEmailStatus emailStatus, IServiceProvider services, TimeProvider clock, ILogger<EmailDeliveryJob> log) : IJobHandler
 {
@@ -47,13 +49,14 @@ public sealed class EmailDeliveryJob(GadflyDbContext db, AuthEmailStatus emailSt
             return;
         }
 
-        if (emailStatus.Settings is null)
+        // Same rule as every other optional provider (ElevenLabs, Stripe...): absent configuration means the feature
+        // stays off, never a broken send retried forever. And a mock-mode server never emails real people.
+        if (EmailDeliveryGate.BlockedReason(emailStatus, services.GetService<IPanelInfo>(), services.GetRequiredService<IConfiguration>()) is { } blocked)
         {
-            // Same rule as every other optional provider (ElevenLabs, Stripe...): absent configuration means the
-            // feature stays off, never a broken send retried forever.
-            await MarkAsync(EmailLogStatus.Failed, "Outgoing email is not configured for this server (MindAttic:Vault:Notifications:email).");
-            log.LogWarning("Gadfly notification email ({Kind}) not sent: SMTP is not configured.", payload.Kind);
-            await progress.ReportAsync(1, "email not configured", ct);
+            var unconfigured = emailStatus.Settings is null;
+            await MarkAsync(unconfigured ? EmailLogStatus.Failed : EmailLogStatus.Skipped, blocked);
+            log.LogWarning("Gadfly notification email ({Kind}) not sent: {Reason}", payload.Kind, unconfigured ? "SMTP is not configured" : "mock mode");
+            await progress.ReportAsync(1, unconfigured ? "email not configured" : "mock mode: not sent", ct);
             return;
         }
 

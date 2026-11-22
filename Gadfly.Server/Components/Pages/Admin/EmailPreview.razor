@@ -1,0 +1,128 @@
+@page "/admin/email-preview"
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Notifications
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+@inject MindAttic.Authentication.Services.AuthEmailStatus EmailStatus
+@inject Gadfly.Socrates.IPanelInfo Panel
+@inject IConfiguration Config
+
+@* Admin preview and test-send of every notification email template (GAD-T310/GAD-T376). *@
+
+<PageTitle>Email preview · Gadfly Exams</PageTitle>
+<h1>Email preview &amp; test-send <HelpLink Topic="admin-guide" Anchor="email-preview" /></h1>
+<AdminNav />
+
+<p class="hint">
+    Previews use sample data; nothing is sent. A test send uses your own account's email address, bypasses this
+    organization's on/off switch and any opt-out, and is logged below like any other send.
+</p>
+
+@if (EmailDeliveryGate.BlockedReason(EmailStatus, Panel, Config) is { } blocked)
+{
+    <p class="notice">@blocked Test sends and notifications are still logged below, marked with why they didn't go out.</p>
+}
+else
+{
+    <p class="hint">This server can deliver email: notifications and test sends go out through the job queue, retried if a send fails.</p>
+}
+
+@if (message is not null)
+{
+    <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+}
+
+<div class="email-preview-list">
+    @foreach (var kind in EmailKinds.All)
+    {
+        var rendered = EmailTemplates.Render(kind, SampleData(kind));
+        <section class="panel">
+            <h2>@EmailKinds.Describe(kind)</h2>
+            <p class="hint"><code>@kind</code> &middot; Subject: @rendered.Subject</p>
+            <iframe title="@EmailKinds.Describe(kind) preview" srcdoc="@rendered.Html"
+                     style="width:100%;max-width:620px;height:420px;border:1px solid var(--line);border-radius:8px;background:#fff"></iframe>
+            <div class="row-actions">
+                <button type="button" @onclick="() => SendTestAsync(kind)" disabled="@busy">Send test to my email</button>
+            </div>
+        </section>
+    }
+</div>
+
+<h2 class="section">Recent sends</h2>
+@if (recent.Count == 0)
+{
+    <p class="hint">Nothing sent yet.</p>
+}
+else
+{
+    <table class="grid">
+        <thead><tr><th>When</th><th>Kind</th><th>To</th><th>Status</th><th>Detail</th></tr></thead>
+        <tbody>
+            @foreach (var e in recent)
+            {
+                <tr>
+                    <td>@e.CreatedAt.UtcDateTime.ToString("d MMM yyyy HH:mm")</td>
+                    <td>@EmailKinds.Describe(e.Kind)</td>
+                    <td>@(e.ToEmail ?? e.ToUserId?.ToString("D") ?? "")</td>
+                    <td>@e.Status</td>
+                    <td>@(e.Error ?? "")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private bool ok, busy;
+    private string? message;
+    private List<EmailLog> recent = [];
+
+    protected override Task OnInitializedAsync() => LoadRecentAsync();
+
+    private async Task LoadRecentAsync()
+    {
+        if (Tenant.OrganizationId is not { } org) return;
+        await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
+        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+        recent = await db.Set<EmailLog>().AsNoTracking().Where(e => e.OrganizationId == org)
+            .OrderByDescending(e => e.CreatedAt).Take(50).ToListAsync();
+    }
+
+    private EmailData SampleData(string kind) => new("Your organization", "You",
+        ExamTitle: "Introduction to Logic: Midterm", DueAtUtc: Clock.GetUtcNow().AddDays(2), AttemptsAllowed: 2,
+        Score: "82% (B)", AppealOutcome: "Dismissed", AppealResolution: "The transcript shows the question was answered as scored; the grade stands.",
+        ActionUrl: "https://example.org/my-exams", ActionLabel: kind == EmailKinds.ResultReleased || kind == EmailKinds.AppealDecided ? "View my result" : "Open my exams");
+
+    private async Task SendTestAsync(string kind)
+    {
+        if (busy || Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me) return;
+        busy = true;
+        message = null;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            var email = await db.AuthUsers.AsNoTracking().Where(u => u.Id == me).Select(u => u.Email).FirstOrDefaultAsync();
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                ok = false;
+                message = "Your own account has no email address on file, so a test can't be sent.";
+                return;
+            }
+            EmailOutbox.StageTest(db, org, kind, email, SampleData(kind), Clock.GetUtcNow());
+            await db.SaveChangesAsync();
+            ok = true;
+            message = $"Queued a test {EmailKinds.Describe(kind).ToLowerInvariant()} email to {email}.";
+            await LoadRecentAsync();
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            message = "The test could not be queued: " + ex.Message;
+        }
+        finally { busy = false; }
+    }
+}

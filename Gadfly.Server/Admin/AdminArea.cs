@@ -67,6 +67,7 @@ public static class AdminArea
             new("org/webhooks", "Webhooks", Audience.OrgAdmin),
             new("admin/audit", "Audit log", Audience.OrgAdmin),
             new("admin/status", "System status", Audience.OrgAdmin),
+            new("admin/email-preview", "Email preview", Audience.OrgAdmin),
         ]),
         new("Platform",
         [

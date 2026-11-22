@@ -281,6 +281,7 @@ setting with consequences is written to the audit log.
 | **Separate reconciler and approver** | Automatic | Or **Always**, or **Off**. See **Separation of duties in grading**. |
 | **This organization is in the EU or EEA, or examines students there** | off | With **Voice measurements in voice exams**, decides whether the exam room measures students' voices (see below). |
 | **Voice measurements in voice exams** | Default: off in the EU/EEA, on elsewhere | Or **Off for everyone**, or **On for everyone, EU included**. |
+| **Send Gadfly's own notification emails** | on | See **Email notifications**. |
 
 ### Voice measurements and the EU
 
@@ -328,6 +329,33 @@ second reviewer on it) from also approving that grade, so a reviewer independent
 
 A refused attempt is audited (`grade.reconciler-approver.refused`), and so is changing the setting
 (`settings.approver-separation.changed`).
+
+## Email notifications
+
+Gadfly emails students on its own (separate from invitation and password emails) when:
+
+| Email | Sent when |
+|---|---|
+| **Exam assigned** | An exam is assigned to them. |
+| **Reminder before the due date** | An assigned exam closes within the next 48 hours and they haven't finished it. One reminder per assignment, ever. |
+| **Result released** | Their result is published. |
+| **Appeal received**, **Appeal decided** | They appeal a grade, and when the appeal is decided (with the outcome and the reason). |
+| **Attempt reset** | Their attempts at an exam are reset from the admin desk. |
+
+**Send Gadfly's own notification emails** on **Settings** turns all of these off for the organization (the change is
+audited as `settings.email-notifications.changed`). A student can turn off reminders only, from **Email
+preferences** in their own account; the other emails still come.
+
+Emails go out through the background job queue over the same outgoing mail (SMTP) the sign-in emails use, and a
+failed send is retried with growing waits. Nothing is sent when the server has no SMTP configured, or while it runs in
+mock mode (see **Mock mode**): the email is still rendered and logged, marked **Failed** or **Skipped** with the reason.
+
+<a id="email-preview"></a>
+**Email preview** (`/admin/email-preview`, owners and admins) shows each email as students would see it, with sample
+data, and **Send test to my email** queues a copy to your own account's address (it ignores the organization switch
+and opt-outs). The page says up front whether this server can deliver email right now. **Recent sends** lists the
+last 50 emails for the organization with their status: Queued, Sent, Failed (with the error) or Skipped (with why: the
+organization switch, a student's opt-out, mock mode).
 
 ## Data retention
 
@@ -414,7 +442,7 @@ platform staff can open any organization's log, and that is recorded in it. See 
 When the AI panel runs without a real provider, every page shows a **MOCK MODE** banner: "No AI provider is in use.
 Questions, scores, grades and reports on this site are simulated by fixed rules to test the workflow; they are not
 genuine AI evaluations and must not be used to grade anyone." It is set by the server setting `Gadfly:AiMode`
-(`live`, `mock` or `auto`).
+(`live`, `mock` or `auto`). A mock-mode server never sends notification emails (see **Email notifications**).
 
 ## Server settings worth knowing
 
@@ -422,6 +450,7 @@ genuine AI evaluations and must not be used to grade anyone." It is set by the s
 |---|---|
 | `Gadfly:OpenExams` | When `true`, every published exam is offered to every student who opens **My exams** (with 50 attempts), without assigning it. Useful for a demo; turn it off for real classes. |
 | `Gadfly:AdminDesk:Enabled`, `Gadfly:AdminDesk:Admins`, `Gadfly:AdminDesk:Organization` | The admin desk and who may use it (see above). |
+| `Gadfly:Notifications:SendInMockMode` | `true` lets a mock-mode server send notification emails, for a developer whose SMTP points at a local test inbox. Off by default. |
 | `Gadfly:Voice:Mode` | `live`, `mock` or `off`. With `off`, the get-ready page's **Spoken examiner** check fails and no exam can begin. |
 | `Gadfly:RequireMfaInDevelopment` | Two-step verification on a development machine. |
 
