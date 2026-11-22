@@ -83,6 +83,7 @@ public static class GadflyEndpoints
         Admin.PlanExportEndpoints.MapPlanExport(app);   // invoice-ready usage CSV (GAD-T371)
         Platform.CheckoutEndpoints.MapCheckout(app);   // optional card checkout, off without Stripe keys (GAD-T372)
         Admin.ExamAuditEndpoints.Map(app);   // exam definition JSON (GAD-T297), audit log CSV/JSON (GAD-T301)
+        Research.ResearchEndpoints.Map(app);   // de-identified research export (GAD-T451)
         app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
         Help.HelpEndpoints.Map(app);   // images the help guides show (GAD-T292)
         Site.PublicSite.MapPublicSite(app);   // robots.txt and sitemap.xml (GAD-T308)

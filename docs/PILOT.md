@@ -115,3 +115,50 @@ per ten claims and failed resolutions only between sessions of similar mean answ
 miss rate first (`gadfly contradiction-audit`), since a detector that misses most contradictions hides any difference.
 These measures are a research instrument: they are never computed for a real student, never shown as an integrity note
 and never part of a grade. A room and ear check at the start of the exam is a separate, later owner decision (GAD-T244).
+
+## Research consent, study arms and the research export (GAD-T451, GAD-T452)
+
+The study after the pilot (ElenchusAtScale Chapter 7) runs on real exams in the server, not on CLI runs. An owner or
+admin sets it up on **Research** (`/org/research`; docs/guides/ADMIN_GUIDE.md, "Research").
+
+**Consent (7.5).** Research use is a separate, optional consent, asked below the exam notice on the get-ready page and
+never needed to begin. The student's choice is stored append-only (`ResearchConsents`) with the notice's version and
+the SHA-256 of the exact text shown; the latest choice counts. A student withdraws on **My research choice**, after
+which none of their records go into any later export (a copy already handed over can't be recalled; it holds no
+names). Erasing a student removes their choices too. Students who agree see their study code there, so a separate
+study questionnaire (for example one asking about first language or speech, which Gadfly does not collect) can be
+matched to their exam records without a name.
+
+**Study arms (7.2).** Arms are per exam, one per assignment, fixed once the student starts an attempt, and can be
+filled at random keeping the arms even. They are labels: Gadfly does not run an arm differently. The relay arm
+(above) is run by telling its participants to relay; the feedback-withheld arm by not releasing their results until the
+study's later attempt. An arm that would switch off an owner decision (the gaze fade, decision (c), ElenchusAtScale
+5.7.3) is not built and needs the owner's approval first.
+
+**Research export (7.1-7.3).** `GET /admin/research/export.zip[?exam={id}]` (owners and admins; docs/API.md) gives a
+ZIP of CSVs with a README and a manifest. Only students whose current choice is "agreed" are in it. It never holds a
+name, email, user name, answer or question text, audio, video, free-text comment, appeal text or database id; every
+id is a keyed pseudonym (HMAC-SHA256 with the organization's research key), stable across exports until the key is
+replaced. Times are relative. Voice measurements are blank wherever they were off, and always for an EU/EEA
+organization or student. An exam with fewer consenting students than the smallest group (default 5) is held back, and
+a rarer accommodation within an exam is shown as `suppressed`. Each download is audited (`research.exported`).
+
+| File | One row per | Columns |
+|---|---|---|
+| `sessions.csv` | attempt | `session, student, exam, arm, attempt, state, end_reason, started_week, days_since_first_attempt, duration_s, answer_channel, extra_time, eye_contact_accommodation, typed_answer_accommodation, voice_measures, result_published, feedback_released_before_attempt, final_status, final_percent, turns, cues_total, integrity_notes, integrity_notes_info_or_low, words_redacted_by_retention` |
+| `turns.csv` | question | `session, turn, concept, move, asked_at_s, answer_latency_s, answer_duration_s, answer_channel, word_count, recognizer_confidence, low_confidence_words, time_to_first_word_s, speech_rate_wpm, pause_ratio, long_pauses, disfluency_per_100_words, voice_vs_baseline, panel_score, panel_agreement, panel_needs_human_review, panel_votes, text_style_score, mastery_after, cue_count, cue_kinds, probe_pressure` |
+| `objectives.csv` | objective | `objective, exam, key, ordinal, weight, max_score` |
+| `panel_scores.csv` | AI panel grade per objective | `session, objective, level, score, max_score, confidence` (mock grades never) |
+| `human_scores.csv` | human mark | `session, objective, rater, rater_role, level, score, max_score, blind, superseded, hours_after_session` (double marks are two rows) |
+| `reconciliations.csv` | panel-human disagreement | `session, objective, panel_score, human_score, difference_points, band, hours_to_resolve, cause, second_reviewer, resolved_panel_score, resolved_human_score` |
+| `integrity_events.csv` | integrity note | `session, source, type, severity, confidence, started_at_s, duration_s, turn` |
+| `arms.csv` | study arm | `arm, exam, name, students` |
+
+What each measure of 7.3 comes from: QWK and SMD from `panel_scores` against `human_scores` (and human against human
+where an objective has two raters); the rate and causes of reconciliation from `reconciliations` (`cause` is the
+reconciler's coded cause); per-objective change between attempts with and without released feedback from
+`human_scores`/`panel_scores` by `attempt` and `feedback_released_before_attempt`; relay against honest from `arm`.
+Word error rate by speaker group needs a reference transcript and a speaker group, neither of which the export carries
+(answers are never exported): the study collects both itself, with its own consent, and matches them by study code.
+Integrity notes are exported because 7.5 asks how they are treated; they are low-confidence notes, never a verdict and
+never part of a grade, and the analysis must treat them so.
