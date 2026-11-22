@@ -83,6 +83,10 @@
                 {
                     <div class="help-body">@((MarkupString)doc.Html)</div>
                 }
+                @if (topic.Slug == HelpTopics.GuidedTours)
+                {
+                    <TourReplayList Viewer="viewer" />
+                }
                 @if (related.Count > 0)
                 {
                     <footer class="help-related">

@@ -1,3 +1,5 @@
+using Gadfly.Server.Help;
+
 namespace Gadfly.Server.Tours;
 
 /// <summary>
@@ -12,10 +14,11 @@ public sealed record TourStep(string? Anchor, string Title, string Body);
 /// A guided tour of one page. <see cref="Version"/> is part of the key that remembers, per account in the browser, that the
 /// tour was shown: raise it when the steps change enough that people should see the tour again. <see cref="Page"/> is the
 /// address (no leading slash) the help topic links to for a replay; for a page that needs an id (one grading session, one
-/// get-ready page) it is the list the reader picks one from, and <see cref="ReplayHint"/> says so.
+/// get-ready page) it is the list the reader picks one from, and <see cref="ReplayHint"/> says so. <see cref="Audience"/> is who
+/// can open the page, so Help offers each reader only the tours of pages they can reach.
 /// </summary>
 public sealed record TourDefinition(string Id, int Version, string Title, string Page, IReadOnlyList<TourStep> Steps,
-    int StartDelayMs = 700, string? ReplayHint = null)
+    int StartDelayMs = 700, string? ReplayHint = null, HelpAudience Audience = HelpAudience.Admin)
 {
     /// <summary>The address that opens <see cref="Page"/> and starts this tour straight away.</summary>
     public string ReplayHref => Page + (Page.Contains('?') ? "&" : "?") + "tour=" + Id;
@@ -147,35 +150,35 @@ public static class TourCatalog
             new("grading-table", "Open a session",
                 "Start grading runs the AI's preliminary grading; Open takes you to the grading page. The Attention column flags disagreements to reconcile, open appeals and AI grading that failed."),
             Replay,
-        ]),
+        ], Audience: HelpAudience.Grader),
 
         new(TourIds.GradingSession, 1, "Grading a session", "grading",
         [
             new("grading-summary", "Where this attempt stands",
-                "The grading status, the combined grade, how the policy weighs the AI and human scores, and links to the report and transcript."),
+                "The grading status, the combined grade, how the policy weighs the AI and human scores, whether the AI panel is calibrated for this exam, and links to the report and transcript."),
             new("grading-evaluate", "Your evaluation",
                 "For each objective choose a level and a score, and add a comment and the evidence you relied on. Then submit all objectives together. With blind grading, the AI's evaluation stays hidden until you submit."),
             new("grading-compare", "Score comparison",
                 "Once both are in, the AI and human scores are compared objective by objective. A difference at or above the policy's threshold must be reconciled, with a written resolution, before the grade can be approved."),
             new("grading-approve", "Approve, then publish",
-                "An instructor or admin approves the final grade and then publishes it to the student. Normally the person who entered the human score cannot also approve it."),
+                "An instructor or admin approves the final grade and then publishes it to the student. Normally whoever entered the human score or reconciled a disagreement cannot also approve it; when the button is off, the page says why."),
             new("grading-objectives", "Objectives and rubrics",
                 "Each objective with its rubric, and the AI's preliminary evaluation once it may be shown."),
             new("grading-transcript", "Transcript",
                 "Every response the student gave. Words the student corrected after speech recognition misheard them are marked; a correction is a recording fix, never a new answer."),
             Replay,
-        ], ReplayHint: "Open any session from the grading queue, then press Show me around."),
+        ], ReplayHint: "Open any session from the grading queue, then press Show me around.", Audience: HelpAudience.Grader),
 
         new(TourIds.ReviewSession, 1, "Reviewing a session", "review",
         [
             new(".review-summary", "The session at a glance",
-                "When it started and ended, the AI's recommendation (hidden during blind grading), a link to the grading workspace, and downloads of the turns, report and transcript."),
+                "When it started and ended, the AI's level for each learning objective (hidden during blind grading), a link to the grading workspace, and downloads of the turns, report and transcript."),
             new(".integrity-summary", "Integrity notes",
                 "Signals such as looking away or reading are low-confidence notes for you to weigh, never a verdict and never part of the grade. During blind grading they stay hidden until you have submitted your scores."),
             new(".timeline", "Timeline",
                 "Every question and answer in order, with how the judging panel scored each answer and any integrity notes from that moment."),
             Replay,
-        ], ReplayHint: "Open any session from the review list, then press Show me around."),
+        ], ReplayHint: "Open any session from the review list, then press Show me around.", Audience: HelpAudience.Instructor),
 
         new(TourIds.MyExams, 1, "My exams", "my-exams",
         [
@@ -192,9 +195,9 @@ public static class TourCatalog
             new(".exam-item .result", "Your result",
                 "When an exam has been graded and published, your grade and a link to the full report appear here."),
             new("my-exams-data", "Your data",
-                "Download everything this organization keeps about you, as a file."),
+                "Download everything this organization keeps about you, as a file, and choose which emails you get."),
             Replay,
-        ]),
+        ], Audience: HelpAudience.Student),
 
         // The get-ready page runs its system check (camera, microphone) on its own; the tour only points at it. It waits a
         // little longer before it starts so the check is already under way, and it never touches the camera or microphone.
@@ -209,12 +212,20 @@ public static class TourCatalog
             new("ready-consent", "Agree and begin",
                 "Read the notice, tick the box and press Begin exam. Your time starts when the examiner asks the first question, not when you press the button."),
             Replay,
-        ], StartDelayMs: 2000, ReplayHint: "Press Start on an exam in My exams, then press Show me around on the get-ready page."),
+        ], StartDelayMs: 2000, ReplayHint: "Press Start on an exam in My exams, then press Show me around on the get-ready page.", Audience: HelpAudience.Student),
     ];
 
     private static readonly Dictionary<string, TourDefinition> ById = All.ToDictionary(t => t.Id, StringComparer.OrdinalIgnoreCase);
 
     public static TourDefinition? Find(string? id) => id is not null && ById.TryGetValue(id.Trim(), out var t) ? t : null;
+
+    /// <summary>
+    /// The tours Help offers a reader to replay: those of pages they can open. The student pages are for students only (staff
+    /// read the student help topics, but My exams is not theirs to open); platform staff see every tour.
+    /// </summary>
+    public static IReadOnlyList<TourDefinition> ForReader(HelpViewer viewer, bool isStudent) =>
+        !viewer.SignedIn ? [] : All.Where(t => ReferenceEquals(viewer, HelpViewer.Everything)
+            || (t.Audience == HelpAudience.Student ? isStudent : !isStudent && viewer.Audiences.Contains(t.Audience))).ToList();
 
     /// <summary>
     /// The shape tour.js reads. <paramref name="userKey"/> keeps one account's "already shown" separate from another's on

@@ -153,7 +153,7 @@ public static class HelpCatalog
             "Before your exam: a checklist", "Ten minutes of preparation that prevents most problems on the day.",
             "prepare ready checklist setup room headset test"),
         new(HelpTopics.GuidedTours, "guided-tours.md", HelpAudience.Public, HelpSectionId.StartHere,
-            "Guided tours", "Step-by-step walkthroughs on each page.", "tutorial walkthrough show me around tour", "GAD-T293"),
+            "Guided tours", "Short walkthroughs of each main page, and how to replay them.", "tutorial walkthrough show me around tour replay help"),
 
         // Taking an exam
         new(HelpTopics.StudentGuide, "STUDENT_GUIDE.md", HelpAudience.Student, HelpSectionId.TakingAnExam,

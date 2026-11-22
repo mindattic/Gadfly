@@ -1,0 +1,53 @@
+@using Gadfly.Server.Help
+@using Gadfly.Server.Tours
+@using Gadfly.Server.Desk
+@inject ITenantContext Tenant
+@inject IConfiguration Config
+
+@* The guided-tours help topic's replay links (GAD-T342): the tours of the pages this reader can open. A link opens the page and
+   starts its tour at once (?tour=<id>); a tour of a page that needs one item picked first says how to reach it instead. *@
+@if (!Viewer.SignedIn)
+{
+    <section class="help-tours" aria-labelledby="help-tours-h">
+        <h2 id="help-tours-h">Replay a tour</h2>
+        <p class="notice"><a href="@SignInHref">Sign in</a> to see the tours for the pages you use.</p>
+    </section>
+}
+else if (tours.Count > 0)
+{
+    <section class="help-tours" aria-labelledby="help-tours-h">
+        <h2 id="help-tours-h">Replay a tour</h2>
+        <p class="hint">The tours for the pages you can open. Each link opens the page and starts its tour.</p>
+        <ul>
+            @foreach (var t in tours)
+            {
+                <li>
+                    @if (t.ReplayHint is null)
+                    {
+                        <a href="@t.ReplayHref">@t.Title</a>
+                    }
+                    else
+                    {
+                        <strong>@t.Title</strong> <span class="hint">@t.ReplayHint</span> <a href="@t.Page">Go there</a>
+                    }
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public HelpViewer Viewer { get; set; } = HelpViewer.Anonymous;
+
+    private IReadOnlyList<TourDefinition> tours = [];
+
+    private static string SignInHref => "login?ReturnUrl=" + Uri.EscapeDataString("/" + HelpPaths.Topic(HelpTopics.GuidedTours));
+
+    protected override void OnParametersSet()
+    {
+        var deskOn = DeskAccess.IsEnabled(Config);
+        tours = TourCatalog.ForReader(Viewer, Tenant.Role == OrgRoles.Student)
+            .Where(t => deskOn || t.Id != TourIds.AdminDesk)
+            .ToList();
+    }
+}
