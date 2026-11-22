@@ -15,6 +15,8 @@ Prepared 2026-11-21 (GAD-T254).
 | [05-ai-examiner-llm-grading.md](05-ai-examiner-llm-grading.md) | LLM-as-judge biases, panels of models, LLM scoring of student work against human raters, human marking reliability, prompt injection, the EU AI Act's high-risk education category |
 | [06-integrity-proctoring-gaze-voice.md](06-integrity-proctoring-gaze-voice.md) | Cheating in online exams, remote proctoring ethics and bias, AI-text detectors, webcam eye tracking, voice stress analysis, the AI Act's ban on emotion recognition in education |
 
+Engineering note (not part of the literature review): [stt-alternatives.md](stt-alternatives.md) compares the speech-to-text integrations in the Prose repo (Groq and OpenAI Whisper) with Gadfly's ElevenLabs Scribe recognizer (GAD-T414).
+
 ## What the evidence supports
 
 - **Writing each follow-up from the student's own words has a long lineage.** It follows the elenchus's rule of examining only what the answerer actually believes (01) and Piaget's clinical method of following the child's answer without suggesting one (01).
