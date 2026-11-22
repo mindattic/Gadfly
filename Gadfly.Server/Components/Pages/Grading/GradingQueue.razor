@@ -17,7 +17,7 @@ else
 {
     <div class="gr-filters">
         <label>Status
-            <select @bind="StatusFilter" @bind:after="LoadAsync">
+            <select @bind="StatusFilter" @bind:after="ApplyFiltersAsync">
                 <option value="">All</option>
                 @foreach (var s in Enum.GetValues<GradeStatus>().Where(s => s != GradeStatus.ExaminationInProgress))
                 {
@@ -25,7 +25,7 @@ else
                 }
             </select>
         </label>
-        <label class="check"><input type="checkbox" @bind="showUnstarted" @bind:after="LoadAsync" /> Include ended sessions not started</label>
+        <label class="check"><input type="checkbox" @bind="showUnstarted" @bind:after="ApplyFiltersAsync" /> Include ended sessions not started</label>
     </div>
     @if (message is not null)
     {
@@ -33,7 +33,7 @@ else
     }
     @if (rows is null)
     {
-        <p class="hint">Loading…</p>
+        <p class="hint" role="status">Loading…</p>
     }
     else if (rows.Count == 0)
     {
@@ -45,7 +45,7 @@ else
             <table class="grid">
                 <thead><tr><th>Student</th><th>Exam</th><th>Attempt</th><th>Ended</th><th>Status</th><th>Final</th><th>Attention</th><th></th></tr></thead>
                 <tbody>
-                    @foreach (var r in rows)
+                    @foreach (var r in PagedRows)
                     {
                         <tr>
                             <td>@r.StudentName</td>
@@ -85,23 +85,49 @@ else
                 </tbody>
             </table>
         </div>
+        @if (TotalPages > 1)
+        {
+            <nav class="pager" aria-label="Pages">
+                <button type="button" class="link" disabled="@(currentPage <= 1)" @onclick="() => GoToPage(currentPage - 1)">← Previous</button>
+                <span>Page @currentPage of @TotalPages</span>
+                <button type="button" class="link" disabled="@(currentPage >= TotalPages)" @onclick="() => GoToPage(currentPage + 1)">Next →</button>
+            </nav>
+        }
         <p class="hint">@rows.Count session@(rows.Count == 1 ? "" : "s"). AI grades are preliminary; nothing reaches a student until a final grade is approved and published.</p>
     }
 }
 
 @code {
+    /// <summary>Rows per page (GAD-T390): the queue can otherwise render hundreds of rows in one table.</summary>
+    private const int RowsPerPage = 50;
+
     private IReadOnlyList<GradingQueueRow>? rows;
     private string StatusFilter { get; set; } = "";
     private bool showUnstarted = true, denied, busy, ok;
     private string? message;
+    // Not named with a "page" prefix: a bare "@page..." reference in the markup above is parsed as the @page directive.
+    private int currentPage = 1;
+
+    private int TotalPages => rows is null or { Count: 0 } ? 1 : (rows.Count + RowsPerPage - 1) / RowsPerPage;
+    private IReadOnlyList<GradingQueueRow> PagedRows => rows is null ? [] : rows.Skip((currentPage - 1) * RowsPerPage).Take(RowsPerPage).ToList();
 
     protected override Task OnInitializedAsync() => LoadAsync();
+
+    /// <summary>A filter changed: back to page 1, since the rows it used to show may no longer match.</summary>
+    private Task ApplyFiltersAsync()
+    {
+        currentPage = 1;
+        return LoadAsync();
+    }
+
+    private void GoToPage(int n) => currentPage = Math.Clamp(n, 1, TotalPages);
 
     private async Task LoadAsync()
     {
         GradeStatus? status = Enum.TryParse<GradeStatus>(StatusFilter, out var s) ? s : null;
         rows = await GradingDb.RunAsync(Scopes, Tenant, g => g.QueueAsync(status, showUnstarted));
         denied = rows is null;
+        currentPage = Math.Clamp(currentPage, 1, TotalPages);
     }
 
     private async Task StartAsync(Guid sessionId)

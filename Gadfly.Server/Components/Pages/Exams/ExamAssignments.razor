@@ -8,7 +8,7 @@
         <h2>Assign to students</h2>
         @if (students is null)
         {
-            <p class="hint">Loading…</p>
+            <p class="hint" role="status">Loading…</p>
         }
         else if (students.Count == 0)
         {
@@ -59,7 +59,7 @@
 <h2>Assignments</h2>
 @if (rows is null)
 {
-    <p class="hint">Loading…</p>
+    <p class="hint" role="status">Loading…</p>
 }
 else if (rows.Count == 0)
 {
