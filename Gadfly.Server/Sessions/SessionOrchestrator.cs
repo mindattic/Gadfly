@@ -47,6 +47,8 @@ public sealed record SessionStep
     public bool ClockPaused { get; init; }
     /// <summary>How much more paused time can still be added back to this exam (GAD-T263).</summary>
     public TimeSpan PauseAllowanceLeft { get; init; }
+    /// <summary>True while staff have paused the exam from the live monitor (GAD-T299): the clock stands still and answers wait.</summary>
+    public bool HeldByStaff { get; init; }
 }
 
 /// <summary>Why a session could not be started or advanced, in words a student can read.</summary>
@@ -220,7 +222,24 @@ public sealed class SessionOrchestrator(
         StepAsync(organizationId, sessionId, studentUserId, live =>
         {
             var s = live.Engine.Session;
-            ResumeOnActivity(live);
+            if (!s.IsHeld) ResumeOnActivity(live);
+            return Task.FromResult(s.IsEnded ? null : s.OpenTurn);
+        }, ct);
+
+    /// <summary>What the student is told when they answer while staff have paused the exam (GAD-T299).</summary>
+    public const string HeldByStaffMessage = "Your exam is paused by your instructor. Your time is stopped; you can answer again once they resume it.";
+
+    /// <summary>
+    /// A staff action from the live monitor (GAD-T299): runs <paramref name="act"/> on the running session under its step gate and saves it
+    /// like any step. <paramref name="studentUserId"/> is the session's own student (the caller looked it up in their organization).
+    /// </summary>
+    public Task<SessionStep> StaffStepAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Action<SocraticSession, DateTimeOffset> act,
+        CancellationToken ct = default) =>
+        StepAsync(organizationId, sessionId, studentUserId, live =>
+        {
+            var s = live.Engine.Session;
+            if (s.IsEnded) throw new SessionRefusedException("This exam has already ended.");
+            act(s, clock.GetUtcNow());
             return Task.FromResult(s.IsEnded ? null : s.OpenTurn);
         }, ct);
 
@@ -228,6 +247,7 @@ public sealed class SessionOrchestrator(
     private void ResumeOnActivity(Live live)
     {
         var s = live.Engine.Session;
+        if (s.IsHeld) throw new SessionRefusedException(HeldByStaffMessage);
         if (s.ResumeClock(clock.GetUtcNow()))
             log.LogInformation("Exam clock resumed; {Credit} of paused time added back in all.", s.PausedTotal);
     }
@@ -432,14 +452,26 @@ public sealed class SessionOrchestrator(
     public Task<SessionStep> EndAsync(Guid organizationId, Guid sessionId, Guid studentUserId, EndReason reason, CancellationToken ct = default) =>
         StepAsync(organizationId, sessionId, studentUserId, async live =>
         {
+            // The server's clock decides when time is up: an exam room counting down an older deadline (staff added time or paused the
+            // exam since its last step, GAD-T299) gets the open question back with the real time left instead of an ended exam.
+            if (reason == EndReason.TimeUp && !live.Engine.Session.IsEnded && live.Engine.Session.OpenTurn is { } stillOpen
+                && live.Engine.Session.Remaining(clock.GetUtcNow()) > TimeSpan.FromSeconds(5)) return stillOpen;
             // An answer waiting on a clarification was given in time: it is judged as recorded and flagged for a human.
             if (!live.Engine.Session.IsEnded && live.Engine.Session.OpenTurn is { } open)
             {
                 using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
                 var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
                 var ledger = new ResponseLedger(db, clock);
-                if (await TurnIdAsync(db, live.Engine.Session.Id, open.Index, ct) is { } openId && await ledger.PendingAsync(live.Engine.Session.Id, openId, ct) is { } p)
-                    await ExpireAsync(live, db, ledger, p, open, ct, ended: true);
+                if (await TurnIdAsync(db, live.Engine.Session.Id, open.Index, ct) is { } openId)
+                {
+                    if (await ledger.PendingAsync(live.Engine.Session.Id, openId, ct) is { } p)
+                        await ExpireAsync(live, db, ledger, p, open, ct, ended: true);
+                    // An answer saved for the open question whose step then failed (verification or judging threw) and was never resent:
+                    // it was given in time, so it is attached to its turn and judged as recorded, flagged for a human because it was never
+                    // checked with the student (GAD-T323). A panel still failing never stops the student finishing.
+                    else if (await ledger.OriginalForTurnAsync(live.Engine.Session.Id, openId, ct) is { } orphan)
+                        await JudgeOrphanOnEndAsync(live, db, ledger, orphan, ct);
+                }
             }
             // An answer recorded but not judged (a step failed between the two) was given in time too: judge it before ending, as every
             // other step recovers it, so it doesn't stay in the report unjudged. A panel still failing never stops the student finishing.
@@ -455,14 +487,30 @@ public sealed class SessionOrchestrator(
             return null;
         }, ct);
 
+    /// <summary>The exam ends with an answer saved for the open question but never judged (GAD-T323): judged as recorded, for a human to review.</summary>
+    private async Task JudgeOrphanOnEndAsync(Live live, GadflyDbContext db, ResponseLedger ledger, StudentResponse orphan, CancellationToken ct)
+    {
+        if (orphan.VerificationState == VerificationState.Captured)
+        {
+            ledger.MovePath(orphan, "The exam ended before this answer could be checked with the student; a human reviews it as recorded.", null, "System",
+                VerificationState.VerificationRequired, VerificationState.FlaggedForHumanReview);
+            await db.SaveChangesAsync(ct);
+        }
+        try { await JudgePendingAsync(live, ledger, orphan, Compose(orphan.VerifiedText, null, null), ct); }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            log.LogWarning(ex, "The last answer could not be judged before the exam ended; it is kept for a human to grade.");
+        }
+    }
+
     // ------------------------------------------------------------------ verification flow (GAD-T86..T88)
 
     private bool TooLate(Live live)
     {
         var s = live.Engine.Session;
         var now = clock.GetUtcNow();
-        // The deadline moves with the paused time added back (GAD-T263).
-        return s.Remaining(now) <= TimeSpan.Zero && now - (s.StartedAt + s.Policy.EffectiveTimeBudget + s.PausedCredit(now)) > AnswerGrace;
+        // The deadline moves with the paused time added back (GAD-T263) and with staff extra time and pauses (GAD-T299).
+        return s.Remaining(now) <= TimeSpan.Zero && now - s.Deadline(now) > AnswerGrace;
     }
 
     private static Task<Guid?> TurnIdAsync(GadflyDbContext db, Guid sessionId, int index, CancellationToken ct) =>
@@ -643,6 +691,7 @@ public sealed class SessionOrchestrator(
                 await PersistAsync(live, studentUserId, calls, CancellationToken.None);
             }
             var view = await ViewAsync(live, question, ct);
+            Admin.LiveSessionFeed.Shared.Stepped(live.OrganizationId, live.StudentUserId, view, clock.GetUtcNow());   // live monitor (GAD-T299)
             log.LogInformation("Session step: turn {Turn}, {Move}, state {State}, {Elapsed} ms.",
                 view.TurnIndex, view.Move ?? "-", view.State, (long)clock.GetElapsedTime(started).TotalMilliseconds);
             return view;
@@ -706,6 +755,7 @@ public sealed class SessionOrchestrator(
             ClockStarted = !s.ClockHeld,
             ClockPaused = s.IsPaused && !s.IsEnded,
             PauseAllowanceLeft = s.PauseAllowanceLeft(clock.GetUtcNow()),
+            HeldByStaff = s.IsHeld && !s.IsEnded,
         };
     }
 
@@ -824,7 +874,7 @@ public sealed class SessionOrchestrator(
         row.TranscriptJson = SessionTranscriptSerializer.Serialize(s);
         row.LedgerJson = live.Engine.Ledger.ToJson();
         row.StartedAt = s.StartedAt;   // moves once, when a held clock starts (GAD-T239)
-        row.State = s.IsEnded ? SessionState.Ended : SessionState.Running;
+        row.State = s.IsEnded ? SessionState.Ended : s.IsHeld ? SessionState.Paused : SessionState.Running;   // Paused: by staff (GAD-T299)
         row.EndedAt = s.EndedAt;
         row.EndReason = s.IsEnded ? s.EndReason.ToString() : null;
 

@@ -346,6 +346,37 @@ public class SessionOrchestratorTests : ServerTest
         Assert.That(await db.Judgments.AnyAsync(j => j.TurnId == turn.Id), Is.True, "the answer given in time is judged before the exam ends");
     }
 
+    /// <summary>
+    /// GAD-T323: an answer saved for the open question whose step then failed during verification (so it was never attached to the
+    /// turn) is judged as recorded when the student presses Finish instead of resubmitting, and flagged for a human.
+    /// </summary>
+    [Test]
+    public async Task Finish_JudgesAnAnswerSavedButNeverAttachedToItsTurn()
+    {
+        var w = await Seed.ExamAsync();
+        var id = await StartedAsync(w);
+        await Orchestrator.CurrentAsync(w.Org, id, w.StudentId);
+        Guid responseId;
+        await using (var org = OrgDb(w.Org))
+        {
+            // What AnswerAsync leaves behind when verification throws after the capture was saved.
+            var turnId = await org.SessionTurns.Where(t => t.SessionId == id && t.Index == 0).Select(t => t.Id).SingleAsync();
+            var ledger = new Gadfly.Server.Verification.ResponseLedger(org, Clock);
+            var response = await ledger.CaptureAsync(w.Org, id, turnId, w.StudentId, Typed("Plants make sugar from light energy."));
+            await org.SaveChangesAsync();
+            responseId = response.Id;
+        }
+
+        var end = await Orchestrator.EndAsync(w.Org, id, w.StudentId, EndReason.Abandoned);
+        Assert.That(end.State, Is.EqualTo(SessionState.Ended));
+        await using var db = SystemDb();
+        var turn = await db.SessionTurns.AsNoTracking().SingleAsync(t => t.SessionId == id && t.Index == 0);
+        Assert.That(turn.AnswerText, Is.EqualTo("Plants make sugar from light energy."));
+        Assert.That(await db.Judgments.AnyAsync(j => j.TurnId == turn.Id), Is.True, "the saved answer is judged before the exam ends");
+        var saved = await db.StudentResponses.AsNoTracking().SingleAsync(r => r.Id == responseId);
+        Assert.That(saved.VerificationState, Is.EqualTo(Gadfly.Assessment.VerificationState.FlaggedForHumanReview));
+    }
+
     /// <summary>GAD-T314: an ended session leaves the in-memory cache once its end is saved, also when only reloaded to be viewed.</summary>
     [Test]
     public async Task AnEndedSession_IsNotKeptInMemory()
