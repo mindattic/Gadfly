@@ -841,8 +841,12 @@ public sealed class SessionOrchestrator(
                 if (recorded != row.PolicyJson)
                     await db.ExamSessions.Where(x => x.Id == sessionId).ExecuteUpdateAsync(u => u.SetProperty(x => x.PolicyJson, recorded), ct);
             }
-            // The answer-text signal is an integrity signal: off when the exam's integrity level is Off.
-            engine.AssessTextStyle = exam.IntegrityLevel != IntegrityLevel.Off;
+            // The "sounds read aloud from AI-generated text" check is disabled outright (owner, 2026-11-22):
+            // it is an unvalidated integrity signal (GAD-T284), hidden from graders until blind scoring is
+            // in and never affects a grade, but it was still a full extra AI panel call on the critical
+            // path of every answer. The owner asked to trim calls and favor a fluid live conversation over
+            // catching cheaters for now (GAD-T412); catching cheaters can come back later behind a setting.
+            engine.AssessTextStyle = false;
             var live = new Live(engine, organizationId, row.StudentUserId, exam.AssessmentMode);
             _live[sessionId] = live;
             return live;
