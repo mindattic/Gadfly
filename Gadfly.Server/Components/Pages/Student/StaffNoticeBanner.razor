@@ -1,0 +1,127 @@
+@using Gadfly.Server.Admin
+@using Gadfly.Server.Data
+@using Microsoft.EntityFrameworkCore
+@implements IDisposable
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+@inject NavigationManager Nav
+@inject ILogger<StaffNoticeBanner> Log
+
+@*
+    What staff do from the live monitor, shown in the student's exam room (GAD-T299): a short notice, a pause (the exam waits, the clock
+    is stopped), a resume, extra time, an early end. Text only: nothing is spoken, recorded or sent back. Opening this component also
+    tells the monitor the exam room is open.
+*@
+@if (owned)
+{
+    <HeadContent><link rel="stylesheet" href="staff-notice.css" /></HeadContent>
+    @if (held)
+    {
+        <div class="staff-hold" role="alertdialog" aria-modal="true" aria-labelledby="staff-hold-h">
+            <div class="staff-hold-box">
+                <h2 id="staff-hold-h">Your exam is paused</h2>
+                <p>Your instructor paused your exam. Your time is stopped and nothing you say counts until they resume it. Please stay here.</p>
+                @if (notice is { } n)
+                {
+                    <p class="staff-hold-note">Message from your instructor: “@n.Text”</p>
+                }
+            </div>
+        </div>
+    }
+    else if (message is not null || notice is not null)
+    {
+        <div class="staff-notice" role="alert">
+            <div>
+                @if (notice is { } n)
+                {
+                    <p><strong>Message from your instructor:</strong> @n.Text</p>
+                }
+                @if (message is not null)
+                {
+                    <p>@message</p>
+                }
+            </div>
+            @if (!ended)
+            {
+                <button type="button" class="link" @onclick="Dismiss">OK</button>
+            }
+        </div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public Guid SessionId { get; set; }
+
+    private bool owned, held, ended;
+    private StaffNotice? notice;
+    private string? message;
+    private Guid org;
+    private IDisposable? subscription, room;
+    private readonly CancellationTokenSource stop = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.OrganizationId is not { } o || Tenant.UserId is not { } user) return;
+        org = o;
+        try
+        {
+            // Only the session's own student sees its notices.
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            var state = await db.ExamSessions.AsNoTracking().Where(s => s.Id == SessionId && s.OrganizationId == o && s.StudentUserId == user)
+                .Select(s => (SessionState?)s.State).FirstOrDefaultAsync(stop.Token);
+            if (state is null or SessionState.Ended or SessionState.Failed) return;
+            owned = true;
+            held = state == SessionState.Paused || LiveSessionFeed.Shared.Snapshot(o, SessionId)?.HeldByStaff == true;
+            notice = LiveSessionFeed.Shared.RecentNotice(SessionId, Clock.GetUtcNow());
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Staff notices could not start for session {SessionId}.", SessionId);
+            return;
+        }
+        subscription = LiveSessionFeed.Shared.Subscribe(OnFeed);
+        room = LiveSessionFeed.Shared.RoomOpened(org, SessionId, Clock.GetUtcNow());
+    }
+
+    private void OnFeed(LiveSessionEvent e)
+    {
+        if (e.SessionId != SessionId || e.OrganizationId != org) return;
+        if (e.Kind is not (LiveEventKind.Notice or LiveEventKind.StaffAction or LiveEventKind.Stepped)) return;
+        _ = InvokeAsync(async () =>
+        {
+            if (e.Kind == LiveEventKind.Notice && e.Text is { } text) notice = new StaffNotice(text, e.At);
+            if (e.Kind == LiveEventKind.StaffAction && e.Text is { } said) message = said;
+            if (e.Snapshot is { } snap)
+            {
+                held = snap.HeldByStaff;
+                if (snap.State == SessionState.Ended && e.Kind == LiveEventKind.StaffAction)
+                {
+                    ended = true;
+                    StateHasChanged();
+                    // Give the student a moment to read it, then show the exam's ended page.
+                    try { await Task.Delay(TimeSpan.FromSeconds(5), stop.Token); } catch (OperationCanceledException) { return; }
+                    Nav.Refresh(forceReload: true);
+                    return;
+                }
+            }
+            StateHasChanged();
+        });
+    }
+
+    private void Dismiss()
+    {
+        message = null;
+        notice = null;
+    }
+
+    public void Dispose()
+    {
+        subscription?.Dispose();
+        room?.Dispose();
+        stop.Cancel();
+        stop.Dispose();
+    }
+}

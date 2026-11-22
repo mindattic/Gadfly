@@ -34,6 +34,7 @@
         }
     </header>
     <WebcamIntegrity SessionId="SessionId" />
+    <StaffNoticeBanner SessionId="SessionId" />
 
     @if (integrity is { Level: not IntegrityLevel.Off } watched && phase is Phase.Answering or Phase.Thinking)
     {
