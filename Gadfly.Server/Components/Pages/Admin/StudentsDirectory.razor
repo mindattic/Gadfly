@@ -12,7 +12,7 @@
 <HeadContent><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-desk.css" /><link rel="stylesheet" href="admin-people.css" /></HeadContent>
 
 <div class="people-head">
-    <h1>Students</h1>
+    <h1>Students <HelpLink Topic="admin-students" /></h1>
     <div class="row-actions" data-tour="students-add">
         <button type="button" class="@(panel == "add" ? null : "people-ghost")" @onclick='() => Toggle("add")'>Add a student</button>
         <button type="button" class="@(panel == "invite" ? null : "people-ghost")" @onclick='() => Toggle("invite")'>Invite by email</button>

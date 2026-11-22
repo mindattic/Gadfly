@@ -35,12 +35,23 @@
             {
                 <p class="error" role="alert">@(notice ?? "This browser can't run the spoken exam.")</p>
                 <p class="hint">@(TypedAnswers ? "This exam needs a camera, and sound to hear the examiner." : "This exam is spoken and needs a microphone and a camera.") Use a current Chrome, Edge, Firefox or Safari on a secure connection, then reload this page.</p>
+                @* GAD-T320: help appears only in these states, when the examiner is not on screen and no answer is being given, and
+                   opens in a new tab so the exam page stays where it is. Never while the examiner is speaking or listening. *@
+                <p class="hint"><HelpLink Topic="troubleshooting-browser" Label="Help with browsers and connections" /></p>
             }
             else if (state == VoiceState.Failed)
             {
                 <p class="error" role="alert"><strong>@(needsClick ? "One click to go." : "The exam is paused.")</strong> @notice</p>
                 <button type="button" data-voice-action="start">@(needsClick ? "Continue to the examiner" : "Try again")</button>
                 <p class="hint">@(TypedAnswers ? "Your camera must stay on for the whole exam: you type your answers, and your camera shows you during the exam." : "Your microphone and camera must stay on for the whole exam: you answer the examiner out loud, and your camera shows you during the exam.") Once the first question has been asked, the clock stops while the exam is paused, for up to 10 minutes in all.</p>
+                @if (!needsClick)
+                {
+                    @* The exam is paused here (the clock is stopped), so a help link opening in a new tab pulls no one away mid-answer. *@
+                    <p class="hint">
+                        @if (!TypedAnswers) { <HelpLink Topic="troubleshooting-microphone" Label="Microphone help" /> <text> · </text> }
+                        <HelpLink Topic="troubleshooting-camera" Label="Camera help" />
+                    </p>
+                }
             }
             else
             {

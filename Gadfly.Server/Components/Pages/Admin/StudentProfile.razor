@@ -34,7 +34,7 @@ else
 {
     var p = profile;
     <div class="people-head">
-        <h1>@p.Name <span>@p.UserName</span></h1>
+        <h1>@p.Name <span>@p.UserName</span> <HelpLink Topic="admin-students" Anchor="a-students-profile" /></h1>
         <div class="row-actions">
             <span class="pill state-@(p.Active ? "active" : "deactivated")">@(p.Active ? "Active" : "Deactivated")</span>
             <a href="admin/assignments?student=@Uri.EscapeDataString(p.UserName)">Manage assignments</a>

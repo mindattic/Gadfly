@@ -26,7 +26,8 @@ else if (Tenant.OrganizationId is null && !Tenant.IsSuperAdmin)
 }
 else
 {
-    <h1>@Greeting</h1>
+    @* GAD-T320: the "?" opens the quick start for the reader's role. *@
+    <h1>@Greeting <HelpLink Topic="@Gadfly.Server.Help.HelpCatalog.StartFor(Gadfly.Server.Help.HelpViewer.For(Tenant)).Slug" /></h1>
     <div class="cards">
         <AuthorizeView Policy="@Gadfly.Server.Desk.DeskAccess.Policy">
             <Authorized>

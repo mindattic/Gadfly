@@ -269,6 +269,9 @@
                     <p>@endNote</p>
                 }
                 <p>Your instructor will review your exam and release results. You'll see them on <a href="my-exams">My exams</a>.</p>
+                @* GAD-T320: help sits only on the ended and error cards, never in the header while the examiner is on screen, so
+                   nothing covers her or draws the student away mid-answer. *@
+                <p class="hint"><HelpLink Topic="grading-and-results" Label="How grading and results work" /></p>
                 <a class="button" href="my-exams">Back to my exams</a>
             </section>
             break;
@@ -276,6 +279,7 @@
         case Phase.Error:
             <section class="panel wide exam-card">
                 <p class="error" role="alert">@error</p>
+                <p class="hint"><HelpLink Topic="troubleshooting-browser" Label="Help with browser and connection problems" /></p>
                 <div class="actions">
                     <button type="button" @onclick="RetryAsync">Try again</button>
                     <a class="button secondary" href="my-exams">Back to my exams</a>
