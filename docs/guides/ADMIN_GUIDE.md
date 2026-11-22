@@ -64,6 +64,18 @@ figure to see what it was worked out from; **Analytics** and **Usage** have more
 The dashboard only reads: it changes nothing. It shows your current organization only, and **Refresh**
 reloads it.
 
+## Exams
+
+**Exams** (`/admin/exams`) lists every exam with its status, objectives, how many students it is assigned to, completed
+attempts, average completed time and whether its window is open. From a row's **Actions** you can change its
+**settings** (duration and minimum objectives are frozen once it is published; integrity level, read-out check and
+examiner voice and avatar apply to attempts that start from then on, with a reason once anyone has started), see
+**objective coverage** (how many attempts examined each objective), set its **window**, **open now** or **close now**
+for everyone it is assigned to, **preview it as a student** (the real examiner logic on the practice panel; nothing is
+saved and it never counts as an attempt), **duplicate** it (a new draft with everything but its assignments and
+attempts), **export** it as JSON, see its **history**, and **archive** or **restore** it. **Import from a file** brings in
+an exported exam as a draft, listing every problem in the file if it can't. Every change is in the audit log. See
+[Exams manager](admin-exams.md).
 ## Students
 
 **Students** (`/admin/students`) lists every student of your organization, a page at a time.
@@ -345,8 +357,13 @@ may be needed: erasure can't be undone.
 Gadfly records every change that matters: settings, members and invitations, the admin desk, assessments and their
 grading policy, accommodations, every grading step (including refusals and waivers), corrections to transcripts,
 analytics exports, transcript downloads and access refusals. Each session's events are at the bottom of its grading
-page (**Audit trail**), and each student's on their profile (**History**). See [Audit log](admin-audit-log.md) for the
-organization-wide viewer.
+page (**Audit trail**), and each student's on their profile (**History**).
+
+**Audit log** (`/admin/audit`) is the organization-wide viewer, for owners and admins only: filter by who, action (or a
+whole family such as `grade.*`), student, exam, attempt and dates, search the words in an event and its before/after
+detail, open any event to read its before and after values in full, and export what matches as CSV or JSON (the export is
+recorded too). Events a privacy job removed a student's words from stay in the log, marked **Redacted**. MindAttic
+platform staff can open any organization's log, and that is recorded in it. See [Audit log](admin-audit-log.md).
 
 ## Mock mode
 

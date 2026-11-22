@@ -362,6 +362,10 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.Property(x => x.Reason).HasMaxLength(1000);
             e.HasIndex(x => new { x.OrganizationId, x.At });
             e.HasIndex(x => x.SessionId);
+            // The audit log viewer's filters (GAD-T301): by actor, by action, by record, each within the organization.
+            e.HasIndex(x => new { x.OrganizationId, x.ActorUserId, x.At });
+            e.HasIndex(x => new { x.OrganizationId, x.Action, x.At });
+            e.HasIndex(x => new { x.OrganizationId, x.EntityId });
         });
         b.Entity<StudentResponse>(e =>
         {
