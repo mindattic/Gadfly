@@ -8,7 +8,7 @@ feedback becomes tickets. It is ready to start as soon as the owner says go. Not
 | Step | Who | Notes |
 |---|---|---|
 | Decide live AI or mock (D23) | Owner | In mock mode the questions and judgments are simulated. That is enough to try the workflow and the screens, but not to judge question quality. A real pilot needs D23 = live for the named pilot sessions. |
-| Pick the ElevenLabs voice (D4) | Owner | Only needed for voice sessions. Text sessions work without it. |
+| Pick the ElevenLabs voice (D4) | Owner | Needed for every live session: every exam is spoken by the examiner, also for a student granted typed answers. Mock mode needs no voice. |
 | Answer D24 (staff MFA) | Owner | Erin's teacher account needs an authenticator app unless D24 = B. |
 | Create Erin's organization and teacher account | Claude, on the owner's word | Her own organization, separate from the "Gadfly Classroom" test data. She gets an email invitation (or a temporary password if email isn't set up). |
 | Students | Erin | Real students, or the owner and friends playing students. At least five sessions in total (the ticket's target). |
@@ -18,7 +18,7 @@ feedback becomes tickets. It is ready to start as soon as the owner says go. Not
 1. Signs in at https://mindattic-gadfly.azurewebsites.net and sets up her authenticator app.
 2. Creates a course and uploads her source material: Markdown, text, PDF, Word (.docx), EPUB or HTML, up to 20 MB each.
 3. Processes it and reads the concept map. She fixes any concept that is wrong or missing and adjusts the rubric.
-4. Builds an exam on two or three concepts, picks text or voice, and the integrity level (Strict turns on the webcam check, with the student's consent).
+4. Builds an exam on two or three concepts and picks the integrity level (Strict adds the camera integrity checks, with the student's consent). Every exam is spoken to the examiner on camera; a student who cannot answer aloud can be granted typed answers on that one exam (GAD-T260), and the examiner still speaks every question.
 5. Assigns it to her students and sends them the link.
 6. After each session, grades it on the Grading page. She grades blind first, then sees the AI's view, reconciles any big disagreement, approves and publishes.
 7. Fills in the feedback form below for each session, or just says it aloud and the owner writes it down.
@@ -36,13 +36,15 @@ These are the questions the pilot exists to answer:
 - **Is the source material used correctly?** Did questions and judgments stay within her material, and cite it?
 - **Does cheating get harder?** Was there anything a student could paste from another AI that passed? Did the webcam
   and audio notes help or just add noise?
-- **Is the voice usable?** Speech recognition errors, the "is this what you said?" check, the talking head.
-- **Does speech recognition treat every student alike?** Analytics' "Speech recognition accuracy by group" section shows
-  word error rate against the transcripts students checked, how often they had to correct one, and how often the
-  recognizer was unsure, by a transcript-based proxy or by a grouping pasted in (accent, dialect, a self-described
-  speech group; never stored). In grading, words the recognizer was unsure of and the student never checked are marked
-  for the AI panel and the human so they are not scored as wrong content, and a student's correction is shown with how
-  many words it changed (GAD-T265).
+- **Is the voice usable?** Speech recognition errors, the talking head, the short "let me think" lines and the page-turn sound while the examiner judges an answer (GAD-T290, GAD-T409), and the eye-contact setup on the get-ready page (GAD-T305). A spoken answer is judged as heard: there is no read-back for the student to confirm or correct (GAD-T405), so note every answer that was mis-heard and whether the grade suffered for it.
+- **Does speech recognition treat every student alike?** In grading, words the recognizer was unsure of are marked for
+  the AI panel and the human so they are not scored as wrong content (GAD-T265). Analytics' "Speech recognition accuracy
+  by group" section shows how often the recognizer was unsure, by a transcript-based proxy or by a grouping pasted in
+  (accent, dialect, a self-described speech group; never stored). Its word error rate is measured against transcripts the
+  student checked, and since the read-back was removed (GAD-T405) no spoken answer is checked, so for pilot sessions that
+  column stays empty. Gadfly keeps no audio ([PRIVACY.md](PRIVACY.md)), so measuring it needs a person listening: where a
+  student agrees, Erin or an observer sitting in writes down what was actually said for a few answers per session, and the
+  owner compares that with the recorded transcript.
 - **Workload:** how long did setup, each session and each grading take?
 
 ## Feedback form

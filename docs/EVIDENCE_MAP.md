@@ -4,29 +4,33 @@ This map links each exam-room mechanic to the research for and against it, using
 [docs/research/](research/README.md) (GAD-T254) and their verification ledger. For each mechanic it says what the code
 does now, what the evidence supports, what it argues against, and which proposed ticket would act on it. Where the owner
 has decided something the research questions, the decision is recorded as it stands, with the evidence on both sides.
-The owner decides. Every ticket listed here is **proposed and unapproved**.
+The owner decides. The tickets GAD-T257 filed were proposed and unapproved when it was written; the owner has since
+approved every one of them and all are done.
 
-Prepared 2026-11-21 (GAD-T257). Note numbers (01-06) refer to the research notes, and source keys (Wass2003 and so on)
-to the entries in them. Nothing here changes code.
+Prepared 2026-11-21 (GAD-T257). Checked against the code on main again on 2026-11-22 (GAD-T454, after ElenchusAtScale
+Appendix A, corrections 34, 42 and 43, and Section 6.7, which found this map describing behaviour the code no longer
+had). Note numbers (01-06) refer to the research notes, and source keys (Wass2003 and so on) to the entries in them.
+Nothing here changes code.
 
-| # | Mechanic | Where it lives | Verdict | Proposed tickets |
+| # | Mechanic | Where it lives | Verdict | Tickets (all done) |
 |---|---|---|---|---|
 | 1 | Follow-up moves | `Gadfly/Engine/Moves.cs`, `QuestionPlanner.cs`, `ExamPrompts.cs` | Supported, with changes | GAD-T266, GAD-T267, GAD-T268 |
-| 2 | Probing on hesitation | `AnswerDelivery.cs`, `QuestionGenerator.cs` (GAD-T233) | Content cues supported; strain cue not | GAD-T258 (done), GAD-T267 |
+| 2 | Probing on hesitation | `AnswerDelivery.cs`, `QuestionGenerator.cs` (GAD-T233) | Content cues supported; strain cue not | GAD-T258, GAD-T267 |
 | 3 | Recitation check | `RecitationCheck.cs` (GAD-T242) | Source-overlap supported; read-out pattern weak | GAD-T272 |
 | 4 | Gaze fade and "look at me" | `wwwroot/js/examiner-gaze.js` (GAD-T240) | Legal, weak as evidence; owner decision (c) | GAD-T261, GAD-T305 |
-| 5 | Voice strain | `Gadfly.Server/Voice/VoiceStrain.cs` | Not supported; legal risk; owner decision (b) reversed 2026-11-21 | GAD-T258 (done), GAD-T259 (done) |
-| 6 | Time limits and the end-of-answer cue | `SessionPolicy.cs`, `voice-room.js`, `StudentExams.cs` | Time budget supported; two choices questioned | GAD-T263, GAD-T264 |
-| 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273, GAD-T285 (done) |
+| 5 | Voice strain | `Gadfly.Server/Voice/VoiceStrain.cs` | Not supported; legal risk; owner decision (b) reversed 2026-11-21 | GAD-T258, GAD-T259 |
+| 6 | Time limits, the end-of-answer cue and the judging wait | `SessionPolicy.cs`, `SocraticSession.cs`, `voice-room.js`, `ExaminerFiller.cs` | Time budget supported; the two questioned choices changed | GAD-T263, GAD-T264, GAD-T290, GAD-T409 |
+| 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273, GAD-T285, GAD-T405 |
 | 8 | Learning Mode hints | `HintLadders`, `QuestionGenerator`, `MoveKind.Hint` | Supported only as a fixed ladder, kept apart | GAD-T271 |
-| 9 | Text-style estimate | `Gadfly.Sources/TextStyleAssessor.cs` (GAD-T59) | Not supported (a detector in all but name); kept as unvalidated reviewer-only context | GAD-T284 (done), GAD-T285 (done) |
-| - | Owner decisions (a) to (d) | see below | Recorded, not overridden; (b) reversed by the owner 2026-11-21; (a) narrowed by the owner 2026-11-22 (typed answers as a granted accommodation) | GAD-T260 (done), GAD-T261, GAD-T258/T259, GAD-T262 |
+| 9 | Text-style estimate | `Gadfly.Sources/TextStyleAssessor.cs` (GAD-T59) | Not supported (a detector in all but name); switched off 2026-11-22 | GAD-T284, GAD-T285, GAD-T412 |
+| - | Owner decisions (a) to (d) | see below | Recorded, not overridden; (b) reversed by the owner 2026-11-21; (a) narrowed by the owner 2026-11-22 (typed answers as a granted accommodation) | GAD-T258/T259, GAD-T260, GAD-T261, GAD-T262 |
 
 ## 1. Follow-up moves
 
 **What Gadfly does.** The planner picks a move per turn: Elicit ("what is it?"), Clarify, Probe, CausalReasoning,
 Counterexample, ScenarioVariation, Apply, Contradiction (two of the student's own ledger claims), AssumptionTesting,
-IndependentExplanation, Synthesize, Close. Each question is written from the student's own words, at most 40 words, and a
+IndependentExplanation, Synthesize. Close is a move kind the planner never asks: an objective ends when the evidence
+rules settle it or a limit closes it (ElenchusAtScale, correction 32). Each question is written from the student's own words, at most 40 words, and a
 guard redrafts any question that reveals expected answer points.
 
 **Evidence for.**
@@ -39,7 +43,9 @@ guard redrafts any question that reveals expected answer points.
 - Why and how questions are a reasonable probe of understanding, and they help learning a little (03: Chi1994, Chi1989,
   Bisra2018 g = .55; Dunlosky2013 rates the evidence moderate). Question prompts work at least as well as instructions.
 - The never-hint rule in the scored exam is supported (03: Bisra2018; 04: keep the unaided score unaided).
-- The fixed opening Elicit question per objective anchors comparability (02: Joughin2010).
+- A fixed opening per objective anchors comparability (02: Joughin2010). Gadfly fixes the opening move (Elicit) and the
+  rubric, but each opening question is newly worded by the panel, so the stronger condition, the same opening question
+  for every student, is not met (ElenchusAtScale, correction 31).
 
 **Evidence against or limits.**
 - A Contradiction shows that two claims are inconsistent. It does not show which one is wrong (01: Benson1995, Benson2000).
@@ -54,10 +60,12 @@ guard redrafts any question that reveals expected answer points.
   thread ran can turn into a score without anyone seeing it.
 - Explaining to a listener changes performance, usually for the better (01: EricssonSimon1998, Fox2011). Gains late in a
   session are not proof of knowledge the student brought in.
-
-**Proposed.** GAD-T266 (score how a contradiction is resolved, and extend the no-hint guard to presupposition), GAD-T268
-(count transfer only from Apply, and label transfer items), GAD-T267 (report probe counts, and set minimum objectives
-for summative exams).
+**Done.** GAD-T266 (a contradiction is settled by how well the student resolves it, either revision being legitimate,
+and the no-hint guard also catches a question whose form presupposes an answer point), GAD-T268 (transfer is credited
+only from Apply, and each Apply question carries a transfer label), GAD-T267 (each objective's report shows how many
+follow-ups it received, and `SessionPolicy.MinSummativeObjectives`, 4 by default, sets the fewest objectives an
+examination must cover for summative use). The figure of four is a setting, not an estimate: no source gives it as
+enough for any target reliability, and only a double-marked pilot can (ElenchusAtScale, correction 38).
 
 ## 2. Probing on hesitation
 
@@ -67,7 +75,7 @@ reason or example where the move asked for one (Probe, CausalReasoning, Scenario
 IndependentExplanation, Apply, Synthesize, Counterexample, Contradiction), a judged overall score below 0.6 (not yet
 positive evidence), the response analysis's evidence against understanding (a misconception, or contradicting evidence)
 or unclear meaning, and the recitation flag. One cue sets the probing pressure to Some, two or more to Shaky, and a
-recitation flag to Recited. The prompt (prompt set version 8) then asks the examiner to press harder.
+recitation flag to Recited. The prompt (since prompt set version 8; version 9 now) then asks the examiner to press harder.
 
 Nothing from the voice steers it: not the voice comparison (pitch, jitter, loudness, `strain.vsBaseline`), and not the
 wait before the first word, the hesitation count or long pauses. The owner reversed decision (b) on 2026-11-21 (mechanic
@@ -95,8 +103,9 @@ accommodation rule (GAD-T272); the Recited probe follows from that decision.
   reason checks are English word lists. They only steer the next question, never the score.
 
 **Done.** GAD-T258 (approved by the owner on 2026-11-21): probing driven by content and the judges' reading, not by the
-voice or its timing. **Proposed.** GAD-T267 (report how many probes each objective got, so harder probing does not
-silently lower a score).
+voice or its timing. This closes the gap ElenchusAtScale recorded as correction 40 (with voice measurements off, timing
+still steered probing): on main no voice-derived cue reaches the question prompt, with measurements on or off. GAD-T267:
+each objective's report shows how many follow-ups it got, so harder probing does not silently lower a score.
 
 ## 3. Recitation check
 
@@ -116,9 +125,11 @@ It is never a cheating verdict.
   reproductions (01: NisbettWilson1977 on reconstructions; 03 on transfer).
 
 **Evidence against or limits.**
-- The read-out pattern depends on timing and fluency. A long pause followed by a smooth answer is also what careful
-  thinkers and some confident speakers do (01: Fox2011; `IntegrityExplanations` already says so to reviewers). Its false
-  flag rate is unknown, and timing signals vary with anxiety and language background (02).
+- The read-out pattern depends on timing and fluency. A long pause followed by a smooth answer has innocent explanations
+  too (planning an answer before speaking, a confident speaker), and `IntegrityExplanations` tells reviewers so; no
+  verified source ties the pattern to reading aloud. Explaining aloud is slow in general (01: Fox2011), which is about
+  time, not about this pattern. Its false flag rate is unknown, and timing signals vary with anxiety and language
+  background (02).
 - Direct evidence that conversational follow-up reduces cheating was not verified (06: Sotiriadou2020 found but not read).
   Do not claim that Gadfly detects cheating.
 
@@ -130,10 +141,12 @@ source-overlap check is kept as is.
 
 ## 4. Gaze fade and "look at me" (owner decision (c))
 
-**What Gadfly does.** During an answer, if the student looks away from the examiner for 2 seconds (`GAZE.fadeStartMs`),
-the screen fades toward a heavy dim and blur over 3 seconds, with a prompt to look back. A longer look away, a reading
-pattern, no face or a second face makes the examiner say "Please look at me while you answer". Each episode goes to
-reviewers as low-confidence context. Only notes leave the device, never frames.
+**What Gadfly does.** During an answer, in any exam whose integrity level is not Off, if the student looks away from the
+examiner for 2 seconds (`GAZE.fadeStartMs`; 6 seconds early in an answer, see GAD-T261 below), the screen fades toward a
+heavy dim and blur over 3 seconds, with a prompt to look back. A longer look away, a reading-like pattern, no face or a
+second face makes the examiner say so out loud ("Please look at me while you answer", and a variant for each). Each
+episode goes to reviewers as low-confidence context (confidence at most 0.4, severity at most Low), hidden from a blind
+grader until their score is in (GAD-T285). Only notes and numbers leave the device, never frames.
 
 **Owner decision (c):** looking away fades the screen and the examiner says "look at me". It stands.
 
@@ -149,15 +162,21 @@ reviewers as low-confidence context. Only notes leave the device, never frames.
 - Webcam gaze error is about 4 degrees, or 100 to 250 pixels, and worse online (06: Papoutsaki2016,
   SemmelmannWeigelt2018). Reading involves jumps of 7 to 9 letters (06: Rayner2009). A webcam cannot reliably tell
   reading notes from thinking or looking away.
-- People look away while thinking, and explaining aloud slows them down (01: Fox2011). A fade that starts after 2 seconds
-  will often fire on honest thinking.
+- Looking away has many causes besides reading: recalling, planning an answer, a noise in the room, a habit, a
+  disability, cultural norms about eye contact. No source in the verified research addresses gaze aversion while
+  thinking, so this map does not claim that looking away *is* thinking, only that a webcam cannot tell it from reading
+  (06: Rayner2009, above), and that explaining aloud is slow (01: Fox2011, which concerns time, not gaze; ElenchusAtScale
+  Appendix A, corrections 34 and 42). A fade that starts after 2 seconds will therefore often fire on an honest student.
+  The reviewer wording says the same (GAD-T446).
 - Rates of face and eye detection failure can differ by skin tone and sex (06: YoderHimes2022). Anxious students already
   do worse under proctoring (06: WoldeabBrothen2019). A visual penalty adds time pressure and anxiety, which fall hardest
   on these students (02).
 
 **Done (GAD-T261).** The decision stands and is fairer:
-- **Thinking grace.** A look away that begins in the first 10 seconds of an answer (`GAZE.thinkingGraceMs`) starts the
-  fade only after 6 seconds (`GAZE.thinkingFadeStartMs`), not 2, and the spoken request moves later by as much.
+- **Grace at the start of an answer.** A look away that begins in the first 10 seconds of an answer
+  (`GAZE.thinkingGraceMs`) starts the fade only after 6 seconds (`GAZE.thinkingFadeStartMs`), not 2, and the spoken
+  request moves later by as much. The code calls it "thinking grace"; it is a precaution against fading the screen on a
+  student gathering an answer, not a finding that such a look is thinking.
 - **Accommodation.** An instructor can declare the eye-contact accommodation on any assignment (Exams, Assignments,
   "Declare accommodation"; audited). The screen then never fades and the examiner never asks for eye contact or remarks
   on reading-like eyes. Face presence and a second face are still checked. Episodes are still noted, marked as
@@ -225,12 +244,27 @@ instead of "strain", and the PRIVACY.md wording fixed. GAD-T258 (approved by the
 (b)): the voice comparison no longer drives probing anywhere, nor do the wait before the first word or the hesitation
 count; they are recorded and shown to reviewers as raw numbers where voice measurements are on.
 
-## 6. Time limits and the end-of-answer cue
+## 6. Time limits, the end-of-answer cue and the judging wait
 
 **What Gadfly does.** Each session has a time budget (20 minutes by default), which `TimeMultiplier` can extend as an
-accommodation (up to 4 times). It also has a turn cap and a per-concept turn cap. The clock starts at the first question,
-and keeps running while the exam is paused because a microphone or camera stopped. In the voice room, an answer is
-submitted after `EndOfAnswerSeconds` of silence (4 seconds by default).
+accommodation (up to 4 times). It also has a turn cap and a per-concept turn cap. The clock starts when the examiner
+begins the first question (GAD-T239), not while the room connects.
+
+- **Pauses (GAD-T263).** While the exam is paused because the microphone, the camera or the examiner's connection was
+  lost, the clock stands still: the paused time is added back to the server's clock, up to 10 minutes or half the time
+  budget, whichever is less, per exam (`SocraticSession.PauseAllowance`). The cap exists because the browser reports the
+  pause, so a microphone pulled on purpose cannot buy unlimited time. Any answer ends an open pause. Staff can also pause
+  an exam from the live monitor, which stops the clock separately (GAD-T299).
+- **End of an answer (GAD-T264).** In the voice room an answer is handed in after a silence that adapts to the student's
+  own pauses: it starts at `EndOfAnswerSeconds` (4 seconds by default) and, once three or more pauses within answers have
+  been seen, becomes 1.5 times the student's 80th-percentile pause, never below that floor and never above
+  `EndOfAnswerMaxSeconds` (12 by default). It only ever lengthens; both bounds lengthen with the extra-time accommodation.
+- **The judging wait (GAD-T290, GAD-T409).** After every answer, while the panel judges it and writes the next question,
+  the examiner says one short neutral line if the question is not ready within 2 seconds ("Let me think about that"), and
+  one more after 20 seconds, over a quiet page-turn sound. The lines are fixed, picked at random and never about the
+  answer, so they carry no hint of how it was judged (mechanic 1's never-hint rule), and they are never part of the
+  transcript. The microphone stays shut throughout. The exam clock keeps running during this wait: the time the panel
+  takes counts against the student's budget.
 
 **Evidence for.**
 - A bounded session, and caps per concept that spread time across objectives, support reliability, which comes from
@@ -239,13 +273,16 @@ submitted after `EndOfAnswerSeconds` of silence (4 seconds by default).
   on adjustments; anxiety reduction improves validity, Hembree1988, vonderEmbse2018).
 
 **Evidence against.**
-- Note 02 names both current choices for re-examination. A clock that runs during a pause the student did not cause, and
-  a fixed 4-second silence, add time pressure that anxious, second-language and disfluent speakers feel most. Explaining
-  aloud is normally slow (01: Fox2011).
+- Note 02 named two choices for re-examination: a clock that ran during a pause the student did not cause, and a fixed
+  4-second silence. Both add time pressure that anxious, second-language and disfluent speakers feel most, and explaining
+  aloud is normally slow (01: Fox2011). Both are changed (below).
+- The judging wait is time the student does not control, and it still runs the clock. How long it lasts depends on the
+  panel's speed, not on the student, so on a slow day every student loses some answering time. No source measures the
+  effect; it is noted here as the remaining time pressure of the same kind.
 
-**Proposed.** GAD-T263 (the clock stops while the exam is paused, with a cap on total pause time) and GAD-T264 (the
+**Done.** GAD-T263 (the clock stops while the exam is paused, with a cap on total pause time) and GAD-T264 (the
 end-of-answer silence adapts to the student's own pauses, with a floor and a ceiling, and lengthens under an
-accommodation).
+accommodation). GAD-T290 and GAD-T409 fill the judging wait with neutral speech and sound; they do not stop the clock.
 
 ## 7. Grading panel, blind human, reconciliation and release
 
@@ -268,22 +305,30 @@ grammar, accent or fluency. The AI grade is never final.
 **Evidence against or gaps.**
 - No source tests LLM grading of spoken, transcribed Socratic answers (05). Gadfly's real agreement figures can only come
   from its own double-marked pilot (`docs/PILOT.md`).
-- Known judge biases need controls that are not all in place yet: position (randomise order), verbosity (length earns
-  nothing; quote evidence before the score), self-preference (do not let the family that wrote the questions dominate),
-  and language background (05: Zheng2023, Wang2024, Panickssery2024, Liang2023).
+- Known judge biases need controls: position (randomise order), verbosity (length earns nothing; quote evidence before
+  the score), self-preference (do not let the family that wrote the questions dominate), and language background (05:
+  Zheng2023, Wang2024, Panickssery2024, Liang2023). GAD-T269 and GAD-T430 (below) cover position, verbosity and fluency;
+  self-preference is not separately controlled.
 - Speech recognition is the largest documented fairness risk. Word error rates differ by dialect and for people who
   stutter (02: Koenecke2020, Mujtaba2024), and a transcription error can be scored as wrong content. Since GAD-T405
   (owner decision 2026-11-22) a spoken answer is judged as heard, with no read-back for the student to confirm or correct
   and no later fix or change, because a second, considered pass changes the Socratic exchange. That removes the student's
   own check on a mishearing, so this risk now rests on the graders' instruction to ignore transcription errors and on the
-  human reviewer, who sees the recognizer's low-confidence words and its advice to check (recorded on each answer).
+  human reviewer, who sees the recognizer's low-confidence words and its advice to check (recorded on each answer). It
+  also leaves the word error rate comparison of GAD-T265 without new references: its reference is a transcript the
+  student checked, and no spoken answer taken since GAD-T405 has one. A human listener's transcript of a sample of
+  answers is needed before it can be run on them (ElenchusAtScale, Appendix A, correction 43; `docs/PILOT.md`).
 - Without feedback, repeated attempts give about no benefit when students mostly fail (03: Rowland2014, Dunlosky2013).
   Gains transfer weakly to objectives that were not tested (03: PanRickard2018).
 
-**Proposed.** GAD-T269 (bias controls in grading prompts, plus padded-answer and fluency checks), GAD-T270 (calibration
-thresholds per exam: QWK at least .70, within .10 of human-human agreement, |SMD| under .15, plus triggers for
-reconciling single answers), GAD-T265 (word error rate by group, and low-confidence segments marked for graders), GAD-T273
-(feedback per objective on released results).
+**Done.** GAD-T269 (bias controls in the grading prompt: length, repetition and restatement earn nothing, fluency is never
+penalized, evidence and a quote come before each level, rubric criteria and level order are shuffled per call, and
+`PanelBiasCheck` probes the panel with padded and fluency-paraphrased answers), GAD-T270 (a panel is accepted per exam
+only after a blind double-marked calibration set meets QWK at least .70, within .10 of human-human agreement and |SMD|
+under .15, plus triggers that send a single objective to reconciliation when the panel is split or the score sits on a
+grade boundary; the boundary trigger is a precaution by analogy, not a finding, ElenchusAtScale correction 41), GAD-T265
+(words the recognizer was unsure of are named to the panel and marked for the human grader; word error rate by group in
+Analytics, limited as above), GAD-T273 (released results say, objective by objective, what was missing).
 
 **Done.** GAD-T285 (approved by the owner; found by GAD-T282), two gaps in the oversight above:
 - **Integrity context waits for the blind score.** The blind grader used to see gaze episodes, recitation flags and
@@ -336,6 +381,14 @@ the answer's exam-time judgment. At `TextStyleAssessor.ReviewerThreshold` (0.7) 
 low-severity integrity event (`text-reads-as-written`). It never enters the score and never changes what the examiner
 asks. Found by GAD-T282 (dissertation Appendix A, correction 37), it was missing from this map.
 
+**Switched off (GAD-T412, 2026-11-22).** Every live session now sets `AssessTextStyle = false`
+(`SessionOrchestrator`), so no answer is assessed, no estimate is stored and no new `text-reads-as-written` event is
+recorded, on spoken or typed answers. The owner turned it off to take one panel call off the critical path of every
+answer, favouring a fluid conversation for now; it can come back later behind a setting. The code, the labels below and
+the measuring command remain, so estimates and events recorded before the switch still show on the review page with
+their "unvalidated" label and can still be counted. The rest of this section describes it as it ran, and applies again
+if it is turned back on.
+
 **Evidence for.**
 - Comparing a student with their own other answers is the least unfair form such a signal could take: it does not compare
   them with a population whose style may differ by first language.
@@ -367,8 +420,9 @@ asks. Found by GAD-T282 (dissertation Appendix A, correction 37), it was missing
 
 ## Owner decisions the research questions
 
-The owner has decided these. This map records each one and does not override it. The tickets that would change them are
-proposed and wait for the owner, unless marked as approved. The owner reversed decision (b) on 2026-11-21 (GAD-T258).
+The owner has decided these. This map records each one and does not override it. Every ticket named below was approved
+by the owner and is done. The owner reversed decision (b) on 2026-11-21 (GAD-T258) and narrowed (a) on 2026-11-22
+(GAD-T260); (c) and (d) stand.
 
 ### (a) Voice and camera only; typed answers only as a granted accommodation (narrowed 2026-11-22)
 
@@ -399,7 +453,9 @@ Every other student's exam is unchanged.
     box; a meaning clarification is typed too; at time-up what is typed is handed in.
   - Typed answers are stored with mode `text` and shown to reviewers as **typed** (review page, grading ledger, admin desk
     transcript). Voice-derived cues (delivery, recitation read-out pattern, voice measurements) never run on them; the
-    content-based cues, the text-style estimate and the Socratic follow-ups do.
+    content-based cues, the source-overlap recitation check and the Socratic follow-ups do. The text-style estimate
+    would too, but it is switched off for every answer (mechanic 9, GAD-T412). Unlike a spoken answer, a typed one keeps
+    its meaning clarification and typo fix (GAD-T405 removed those only for spoken answers).
   - **Copy and paste:** pasting into the typed answer box is recorded, not blocked. When the exam's integrity level is not
     Off, the browser integrity signals note each paste with its length (`paste`: Info, Low from 20 characters or three
     pastes, Medium from 80 characters), the student is told so in the exam room, on the start page and in the consent
@@ -431,17 +487,19 @@ voice comparison, the wait before the first word or the hesitation count. The vo
 
 **Decision:** looking away fades the screen and the examiner says "look at me".
 
-- **For** and **against:** see mechanic 4. The use is legal, but the signal is coarse, often fires on thinking, and may
-  differ by group.
-- **Ticket:** GAD-T261, approved and done. It keeps the decision and adds a grace period, an accommodation switch and
-  group measurement.
+- **For** and **against:** see mechanic 4. The use is legal, but the signal is coarse, cannot tell reading from any other
+  reason for looking away, will often fire on honest students, and may differ by group.
+- **Tickets:** GAD-T261, approved and done. It keeps the decision and adds a grace period, an accommodation switch and
+  group measurement. GAD-T305, done: a calibrated gaze vector and a per-session quality score sent with every note.
 
 ### (d) Clear scores holds the attempt out of grading
 
-**Decision:** Clear scores holds the attempt out of grading. `DeskService.ClearScoresAsync` deletes the grades, reports,
-reconciliations, approvals and appeals, un-releases results, and parks each ended attempt at Examination In Progress, so
-the grading sweeper does not grade it again. The attempt and transcript stay, and it still counts as used. The action is
-audited.
+**Decision:** Clear scores holds the attempt out of grading. `DeskService.ClearScoresAsync` removes the grades, reports,
+disagreements, reconciliations, approvals and appeals, un-releases results, and parks each ended attempt at Examination
+In Progress, so the grading sweeper does not grade it again. The attempt and transcript stay, and it still counts as
+used. The action is audited. Since GAD-T262 the removed records are first archived to one `desk.scores-archived` audit
+row per attempt (tied to the session, redacted by privacy erasure), and the student's My exams page says the scores were
+cleared for review and that the attempt still counts.
 
 - **For:** an attempt an administrator has cleared should not be graded again by the AI, unseen, seconds later. A human
   decides whether and when it is graded, as Article 14 human oversight requires (05). The audit row records who cleared
@@ -450,12 +508,14 @@ audited.
   reconciliations and approval records loses the oversight trail that would show how a grade was reached and then
   removed. Clearing also withdraws the released feedback that makes a retake worthwhile (03: Rowland2014), while the
   attempt still counts against the student's limit.
-- **Ticket:** GAD-T262, proposed. It keeps the decision, archives the records instead of deleting them, and tells the
-  student the attempt still counts.
+- **Ticket:** GAD-T262, approved and done. It keeps the decision, archives the records before removing them, and tells
+  the student the attempt still counts. The archive answers the record-keeping objection; the withdrawn feedback and the
+  used attempt remain as the decision sets them.
 
-## Proposed tickets
+## Tickets
 
-All were filed by GAD-T257 as proposed and unapproved. None changes code until the owner approves it.
+All were filed by GAD-T257 as proposed and unapproved; GAD-T284 and GAD-T285 were filed by GAD-T282. The owner has
+approved every one, and all are done.
 
 | Ticket | Mechanic | Change | Conflicts with an owner decision |
 |---|---|---|---|
@@ -463,10 +523,10 @@ All were filed by GAD-T257 as proposed and unapproved. None changes code until t
 | GAD-T259 | 5 | Voice strain off by default for the EU, relabelled as raw acoustic deltas, PRIVACY.md fixed | Yes, (b) |
 | GAD-T260 | (a) | Instructor-granted typed-answer accommodation (approved 2026-11-22, narrowing (a); done) | Yes, (a) |
 | GAD-T261 | 4 | Gaze fade: thinking grace, accommodation switch, rates by group | Touches (c) |
-| GAD-T262 | (d) | Clear scores archives grading records instead of deleting them | Touches (d) |
+| GAD-T262 | (d) | Clear scores archives grading records before removing them | Touches (d) |
 | GAD-T263 | 6 | Exam clock stops while the exam is paused | No |
 | GAD-T264 | 6 | End-of-answer silence adapts to the student's own pauses | No |
-| GAD-T265 | 7 | Word error rate by group, low-confidence segments marked for graders | No |
+| GAD-T265 | 7 | Word error rate by group, low-confidence segments marked for graders (the error rate has no new references since GAD-T405) | No |
 | GAD-T266 | 1 | Score how a contradiction is resolved; no-hint guard checks presupposition | No |
 | GAD-T267 | 1, 2 | Report probe counts per objective; minimum objectives for summative exams | No |
 | GAD-T268 | 1 | Credit transfer only from Apply; label transfer items | No |
@@ -477,6 +537,10 @@ All were filed by GAD-T257 as proposed and unapproved. None changes code until t
 | GAD-T273 | 7 | Feedback per objective on released results | No |
 | GAD-T284 | 9 | Text-style estimate kept only as unvalidated, reviewer-only context, with a command that measures its false-flag rate (filed by GAD-T282; approved and done) | No |
 | GAD-T285 | 7, 9 | Integrity flags hidden from the blind grader until their score is in; a different person reconciles and approves (filed by GAD-T282; approved and done) | No |
+
+Later changes by the owner that this map now records, not filed from it: GAD-T305 (calibrated gaze and a quality score,
+mechanic 4), GAD-T290 and GAD-T409 (the judging wait, mechanic 6), GAD-T405 (no read-back of spoken answers, mechanic 7),
+GAD-T412 (text-style estimate switched off, mechanic 9).
 
 ## What the evidence does not let Gadfly claim
 

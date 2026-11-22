@@ -22,9 +22,11 @@ public sealed class SpeechRecognitionAudit(GadflyDbContext db, Guid organization
     public const double DisparityRatio = 1.25;
 
     public const string Caveat =
-        "Word error rate here is measured against transcripts the student confirmed or corrected. The exam asks for that check mostly " +
-        "when the recognizer is unsure, so these rates describe the answers most at risk: compare groups with each other, not with " +
-        "published benchmarks. Recognizers make more errors for some accents and dialects and for people who stutter.";
+        "Word error rate here is measured against transcripts the student confirmed or corrected. Spoken answers are no longer read " +
+        "back to the student (since 22 November 2026), so only earlier answers have that check and newer ones add no word error rate; " +
+        "the unsure-word share still covers every spoken answer. The check was asked mostly when the recognizer was unsure, so the " +
+        "rates describe the answers most at risk: compare groups with each other, not with published benchmarks. Recognizers make " +
+        "more errors for some accents and dialects and for people who stutter.";
 
     /// <summary>The analytics scope's assessments (published or archived, as the analytics page reports on).</summary>
     public async Task<IReadOnlyList<Guid>> ExamIdsAsync(AnalyticsScope scope, CancellationToken ct = default)
