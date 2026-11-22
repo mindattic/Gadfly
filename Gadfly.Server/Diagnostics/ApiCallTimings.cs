@@ -69,8 +69,16 @@ public sealed class ApiCallRecorder(ILogger<ApiCallRecorder> log)
             context ??= ApiCallScope.Current;
             if (callName.Length > 80) callName = callName[..80];
             if (error is { Length: > 300 }) error = error[..300];
-            log.LogInformation("API call {CallName} took {DurationMs} ms ({Outcome}) session {SessionId} turn {TurnIndex}{Error}",
-                callName, durationMs, succeeded ? "ok" : "failed", context?.SessionId, context?.TurnIndex, error is null ? "" : ": " + error);
+            // GAD-T411: a line per call (including every recognizer commit and every provider in a fan-out) was Information,
+            // so a single live exam could write more of these than everything else combined and help fill the Azure file
+            // log's 10MB cap in minutes. The durable row below is still written either way and is what /healthz/call-timings
+            // reads (GAD-T413); a failure still logs (rare, and worth seeing without turning on Debug).
+            if (succeeded)
+                log.LogDebug("API call {CallName} took {DurationMs} ms (ok) session {SessionId} turn {TurnIndex}",
+                    callName, durationMs, context?.SessionId, context?.TurnIndex);
+            else
+                log.LogWarning("API call {CallName} took {DurationMs} ms (failed) session {SessionId} turn {TurnIndex}: {Error}",
+                    callName, durationMs, context?.SessionId, context?.TurnIndex, error);
             _queue.Writer.TryWrite(new ApiCallTiming
             {
                 Id = Guid.NewGuid(),
