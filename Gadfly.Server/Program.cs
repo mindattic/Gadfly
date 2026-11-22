@@ -99,6 +99,8 @@ builder.Services.AddGadflyJobs();
 
 // The AI panel: live Legion or the clearly labelled mock (Gadfly:AiMode = live | mock | auto) (GAD-T100).
 builder.Services.AddGadflyPanel(builder.Configuration, builder.Environment.IsDevelopment());
+// How long every outside call on a live exam takes, in gadfly.ApiCallTimings and the log (GAD-T413).
+Gadfly.Server.Diagnostics.ApiCallTimingServices.AddApiCallTimings(builder.Services);
 
 // Source material: text extractors (.txt/.md, and PDF/DOCX/EPUB/HTML through Tutor.Ingestion, GAD-T155) and processing jobs.
 builder.Services.AddSingleton<IDocumentTextExtractor, PlainTextExtractor>();

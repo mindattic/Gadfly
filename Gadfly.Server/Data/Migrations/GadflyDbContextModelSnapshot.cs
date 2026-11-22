@@ -95,6 +95,48 @@ namespace Gadfly.Server.Data.Migrations
                     b.ToTable("AiObjectiveGrades", "gadfly");
                 });
 
+            modelBuilder.Entity("Gadfly.Server.Data.ApiCallTiming", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CallName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("DurationMs")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ErrorSummary")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("TurnIndex")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StartedAtUtc");
+
+                    b.HasIndex("SessionId", "StartedAtUtc");
+
+                    b.ToTable("ApiCallTimings", "gadfly");
+                });
+
             modelBuilder.Entity("Gadfly.Server.Data.ApiKey", b =>
                 {
                     b.Property<Guid>("Id")

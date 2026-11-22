@@ -683,8 +683,11 @@ public sealed class SessionOrchestrator(
     {
         // Every log line inside a step carries the session and organization (GAD-T62).
         using var scope = log.BeginScope(new Dictionary<string, object> { ["SessionId"] = sessionId, ["OrganizationId"] = organizationId });
+        // Every outside call in this step (panel, voice) is timed against this session and turn (GAD-T413).
+        using var timing = Diagnostics.ApiCallScope.Begin(organizationId, sessionId);
         var started = clock.GetTimestamp();
         var live = await GetLiveAsync(organizationId, sessionId, studentUserId, ct);
+        timing.TurnIndex = live.Engine.Session.Turns.Count - 1;
         await live.Gate.WaitAsync(ct);
         try
         {

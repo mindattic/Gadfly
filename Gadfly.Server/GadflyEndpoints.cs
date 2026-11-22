@@ -54,6 +54,8 @@ public static class GadflyEndpoints
         app.MapHealthChecks("/healthz").AllowAnonymous();
         app.MapGet("/healthz/providers", (Gadfly.Socrates.LegionVotingClient panel) => Results.Json(panel.Health.Snapshot()))
             .RequireAuthorization(GadflyPolicies.SuperAdmin);
+        // Outside-call durations on live exams (GAD-T413): /healthz/call-timings?session=<id>&limit=200, staff-only.
+        Diagnostics.ApiCallTimingServices.MapCallTimings(app).RequireAuthorization(GadflyPolicies.SuperAdmin);
 
         // Where Program.cs's production exception handler re-executes (GAD-T190): an anonymous, data-free page, whatever the verb of the
         // failed request. Without this endpoint the handler found nothing, the fallback policy would have redirected it to sign-in, and the

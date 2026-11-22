@@ -76,10 +76,13 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
         var calls = ids.Select(async id =>
         {
             var model = ModelOf(id);
+            var startedAt = DateTimeOffset.UtcNow;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 using var real = PanelUsage.CaptureReal("fan-out");
                 var text = await provider.CallAsync(id, systemPrompt, userMessage, maxTokens, temperature, null, ct);
+                PanelTimings.Report(new ProviderCallTiming(id, startedAt, watch.ElapsedMilliseconds, true, null));   // GAD-T413
                 Health.RecordSuccess(id, DateTimeOffset.UtcNow);
                 if (real.Count == 0)
                     PanelUsage.Record(new PanelCall(id, model, PanelUsage.Tokens(systemPrompt.Length + userMessage.Length), PanelUsage.Tokens((text ?? "").Length), "fan-out"));
@@ -87,10 +90,12 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
+                PanelTimings.Report(new ProviderCallTiming(id, startedAt, watch.ElapsedMilliseconds, false, "cancelled"));
                 throw;
             }
             catch (Exception ex)
             {
+                PanelTimings.Report(new ProviderCallTiming(id, startedAt, watch.ElapsedMilliseconds, false, ex.GetType().Name + ": " + ex.Message));
                 Health.RecordFailure(id, ex.Message, DateTimeOffset.UtcNow);
                 return new PanelReply(id, "", ex.Message, model);
             }

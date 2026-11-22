@@ -73,6 +73,22 @@ public sealed class VoiceGrants(TimeProvider clock)
         return true;
     }
 
+    /// <summary>The organization and session of the student's most recently armed grant, for tagging voice call timings (GAD-T413).</summary>
+    public (Guid Organization, Guid Session)? Current(Guid user)
+    {
+        var now = clock.GetUtcNow();
+        (Guid, Guid)? best = null;
+        var bestUntil = DateTimeOffset.MinValue;
+        foreach (var (k, a) in _armed)
+        {
+            if (k.User != user) continue;
+            DateTimeOffset until;
+            lock (a) until = a.Until;
+            if (until > now && until > bestUntil) (best, bestUntil) = ((a.Organization, k.Session), until);
+        }
+        return best;
+    }
+
     public bool MaySpeak(Guid user, string? text)
     {
         if (string.IsNullOrWhiteSpace(text)) return false;

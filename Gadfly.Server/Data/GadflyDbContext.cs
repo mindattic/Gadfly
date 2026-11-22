@@ -83,6 +83,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     public DbSet<UsageEntry> UsageEntries => Set<UsageEntry>();
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<ContactRequest> ContactRequests => Set<ContactRequest>();   // public site contact form (GAD-T308)
+    public DbSet<ApiCallTiming> ApiCallTimings => Set<ApiCallTiming>();   // outside-call durations on live exams (GAD-T413)
 
     // Master-plan assessment model (docs/MASTER-PLAN.md Part 17.4).
     public DbSet<Course> Courses => Set<Course>();
@@ -305,6 +306,14 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.Property(x => x.Message).HasMaxLength(4000);
             e.Property(x => x.Note).HasMaxLength(1000);
             e.HasIndex(x => new { x.HandledAt, x.ReceivedAt });
+        });
+        // Outside-call durations on live exams (GAD-T413): platform diagnostics, not tenant-owned; names and times only.
+        b.Entity<ApiCallTiming>(e =>
+        {
+            e.Property(x => x.CallName).HasMaxLength(80);
+            e.Property(x => x.ErrorSummary).HasMaxLength(300);
+            e.HasIndex(x => new { x.SessionId, x.StartedAtUtc });
+            e.HasIndex(x => x.StartedAtUtc);
         });
         b.Entity<Job>(e =>
         {

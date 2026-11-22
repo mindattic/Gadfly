@@ -11,7 +11,7 @@ namespace Gadfly.Server.Voice;
 /// (<see cref="VoiceGrants"/>), the avatar hub speaks only texts the server offered for that student, and the recognizer opens
 /// only while a session is armed.
 /// </summary>
-public sealed class VoiceHubFilter(VoiceGrants grants) : IHubFilter
+public sealed class VoiceHubFilter(VoiceGrants grants, Diagnostics.ApiCallRecorder timings) : IHubFilter
 {
     private static Guid Student(HubCallerContext context)
     {
@@ -32,6 +32,27 @@ public sealed class VoiceHubFilter(VoiceGrants grants) : IHubFilter
         if (invocation.Hub is AvatarSpeechHub && invocation.HubMethodName == nameof(AvatarSpeechHub.Speak)
             && !grants.MaySpeak(user, invocation.HubMethodArguments.FirstOrDefault() as string))
             throw new HubException("The examiner can only say what the exam asked.");
-        return next(invocation);
+        return Timed(user, invocation, next);
+    }
+
+    /// <summary>
+    /// Tags the call with the student's session, so the examiner's voice (synthesized in the background from Speak) is timed
+    /// against it, and times the recognizer calls a student waits on (GAD-T413). Async so the tag is scoped to this call.
+    /// </summary>
+    private async ValueTask<object?> Timed(Guid user, HubInvocationContext invocation, Func<HubInvocationContext, ValueTask<object?>> next)
+    {
+        var current = grants.Current(user);
+        using var scope = Diagnostics.ApiCallScope.Begin(current?.Organization, current?.Session);
+        var name = invocation.Hub is MindAttic.SpeechRecognition.AspNetCore.SpeechRecognitionHub ? invocation.HubMethodName switch
+        {
+            "StartSession" => "stt.startSession",
+            "Commit" => "stt.commit",
+            "StopSession" => "stt.stopSession",
+            _ => null,
+        } : null;
+        if (name is null) return await next(invocation);
+        object? result = null;
+        await timings.TimeAsync(name, async () => result = await next(invocation));
+        return result;
     }
 }

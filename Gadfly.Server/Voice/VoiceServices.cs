@@ -57,6 +57,8 @@ public static class VoiceServices
         });
         // The mock voice is the client's primary handler: no request can reach api.elevenlabs.io, whatever else is configured.
         if (mock) services.AddHttpClient("ElevenLabsTtsClient").ConfigurePrimaryHttpMessageHandler(() => new MockTextToSpeech());
+        // How long the examiner's voice takes, to first byte and to the end of the audio (GAD-T413).
+        services.AddHttpClient("ElevenLabsTtsClient").AddHttpMessageHandler<Diagnostics.ElevenLabsTimingHandler>();
 
         services.AddSignalR()
             .AddHubOptions<SpeechRecognitionHub>(o => o.AddFilter<VoiceHubFilter>())
