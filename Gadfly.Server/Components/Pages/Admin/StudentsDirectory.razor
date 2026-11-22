@@ -13,11 +13,12 @@
 
 <div class="people-head">
     <h1>Students</h1>
-    <div class="row-actions">
+    <div class="row-actions" data-tour="students-add">
         <button type="button" class="@(panel == "add" ? null : "people-ghost")" @onclick='() => Toggle("add")'>Add a student</button>
         <button type="button" class="@(panel == "invite" ? null : "people-ghost")" @onclick='() => Toggle("invite")'>Invite by email</button>
         <button type="button" class="@(panel == "import" ? null : "people-ghost")" @onclick='() => Toggle("import")'>Import CSV</button>
         <a class="people-button people-ghost" href="@PeopleExportEndpoints.StudentsCsv(CurrentQuery)" download data-enhance-nav="false">Export CSV</a>
+        <Tour Id="@Tours.TourIds.AdminStudents" />
     </div>
 </div>
 
@@ -117,7 +118,7 @@ else if (panel == "import")
     </section>
 }
 
-<form class="people-filters" @onsubmit="ApplySearch" @onsubmit:preventDefault>
+<form class="people-filters" data-tour="students-filters" @onsubmit="ApplySearch" @onsubmit:preventDefault>
     <label class="grow">Search <input type="search" @bind="searchBox" placeholder="Name, user name or email" /></label>
     <label>Assigned to
         <select @onchange='e => Go(examId: ParseGuid(e.Value) ?? Guid.Empty)'>
@@ -194,7 +195,7 @@ else
 {
     <p class="hint" role="status">@list.Total.ToString("N0") @(CurrentStatus == StudentStatusFilter.Invited ? "invitation" : "student")@(list.Total == 1 ? "" : "s")@(HasFilters ? " match" : "")</p>
     <div class="table-scroll">
-        <table class="grid people-table">
+        <table class="grid people-table" data-tour="students-table">
             @if (CurrentStatus == StudentStatusFilter.Invited)
             {
                 <thead><tr><th scope="col">Email</th><th scope="col">Invited</th><th scope="col"><span class="people-sr">Actions</span></th></tr></thead>

@@ -15,10 +15,11 @@
 
 <div class="xm-head">
     <h1>Exams</h1>
-    <div class="row-actions">
+    <div class="row-actions" data-tour="exams-new">
         <a href="assessments/new">New exam</a>
         <button type="button" class="link" @onclick="() => ShowImport(!importing)">@(importing ? "Close import" : "Import from a file")</button>
         <button type="button" class="link" @onclick="LoadAsync" disabled="@loading">Refresh</button>
+        <Tour Id="@Tours.TourIds.AdminExams" />
     </div>
 </div>
 
@@ -100,7 +101,7 @@ else if (rows.Count == 0)
 }
 else
 {
-    <div class="xm-filters">
+    <div class="xm-filters" data-tour="exams-filters">
         <label>Find <input type="search" placeholder="Title, course or source material" @bind="search" @bind:event="oninput" /></label>
         <label>Status
             <select @bind="statusFilter">
@@ -120,7 +121,7 @@ else
     }
     else
     {
-        <table class="grid xm-table">
+        <table class="grid xm-table" data-tour="exams-table">
             <thead>
                 <tr>
                     <th scope="col">Exam</th>
@@ -148,7 +149,7 @@ else
                         <td class="num">@Duration(r.AverageTime)</td>
                         <td>@r.Window.Describe()</td>
                         <td>
-                            <details class="xm-actions">
+                            <details class="xm-actions" data-tour="exams-actions">
                                 <summary>Actions</summary>
                                 <div>
                                     <button type="button" class="link" @onclick="() => OpenSettingsAsync(r.Id)">Settings</button>

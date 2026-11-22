@@ -16,7 +16,8 @@
         {
             <span class="hint">Updated @data.GeneratedAt.UtcDateTime.ToString("HH:mm") UTC</span>
         }
-        <button type="button" class="link" @onclick="LoadAsync" disabled="@loading">Refresh</button>
+        <button type="button" class="link" data-tour="dash-refresh" @onclick="LoadAsync" disabled="@loading">Refresh</button>
+        <Tour Id="@Tours.TourIds.AdminDashboard" />
     </div>
 </div>
 
@@ -36,7 +37,7 @@ else
     @if (data.IsNew)
     {
         var done = data.Setup.Count(s => s.Done);
-        <section class="panel dash-setup" aria-labelledby="setup-h">
+        <section class="panel dash-setup" data-tour="dash-setup" aria-labelledby="setup-h">
             <h2 id="setup-h">Getting started <span class="hint">@done of @data.Setup.Count done</span></h2>
             <ol class="dash-steps">
                 @foreach (var s in data.Setup)
@@ -60,7 +61,7 @@ else
         </section>
     }
 
-    <section aria-labelledby="attention-h">
+    <section data-tour="dash-attention" aria-labelledby="attention-h">
         <h2 id="attention-h" class="section">Needs attention
             @if (data.AttentionTotal > 0)
             {
@@ -93,7 +94,7 @@ else
 
     <section aria-labelledby="numbers-h">
         <h2 id="numbers-h" class="section">The last 7 and 30 days</h2>
-        <table class="grid dash-numbers">
+        <table class="grid dash-numbers" data-tour="dash-numbers">
             <thead><tr><th scope="col"></th><th scope="col" class="num">Last 7 days</th><th scope="col" class="num">Last 30 days</th></tr></thead>
             <tbody>
                 <tr>
@@ -127,7 +128,7 @@ else
 
     <section aria-labelledby="actions-h">
         <h2 id="actions-h" class="section">Quick actions</h2>
-        <div class="cards dash-actions">
+        <div class="cards dash-actions" data-tour="dash-actions">
             <a class="card" href="admin/exams"><h3>Create an exam</h3><p>From pasted or uploaded notes.</p></a>
             <a class="card" href="admin/students"><h3>Add students</h3><p>One at a time, or invite by email.</p></a>
             <a class="card" href="admin/assignments"><h3>Assign an exam</h3><p>Who sits it, attempts and closing date.</p></a>

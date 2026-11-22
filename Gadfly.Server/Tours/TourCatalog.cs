@@ -127,6 +127,8 @@ public static class TourCatalog
         [
             new(null, "Live sessions",
                 "The exams in progress right now. The page updates on its own as students answer. No audio or video is ever shown or stored."),
+            new("live-empty", "Nobody is sitting an exam",
+                "Each exam appears here the moment a student opens it, and leaves when it ends. You do not need to refresh."),
             new(".live-card", "One card per exam",
                 "The student and exam, the time left, the current question, how many objectives are covered, and whether their connection, microphone and camera are working."),
             new(".live-actions", "Step in when needed",
@@ -141,7 +143,7 @@ public static class TourCatalog
             new(null, "Grading",
                 "Every ended exam session, waiting to be graded or already graded. Nothing reaches a student until a final grade is approved and published."),
             new("grading-filters", "Filter the queue",
-                "Show one status at a time. Include ended sessions not started also lists sessions where grading has not begun yet."),
+                "Show every status, or just one. Include ended sessions not started also lists sessions where grading has not begun yet."),
             new("grading-table", "Open a session",
                 "Start grading runs the AI's preliminary grading; Open takes you to the grading page. The Attention column flags disagreements to reconcile, open appeals and AI grading that failed."),
             Replay,

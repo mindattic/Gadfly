@@ -7,6 +7,7 @@
 
 <PageTitle>Grading · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<Tour Id="@Tours.TourIds.GradingQueue" Float="true" />
 <h1>Grading <span>AI preliminary grades, human examination, reconciliation and approval</span> <HelpLink Topic="grading-guide" /></h1>
 
 @if (denied)
@@ -15,7 +16,7 @@
 }
 else
 {
-    <div class="gr-filters">
+    <div class="gr-filters" data-tour="grading-filters">
         <label>Status
             <select @bind="StatusFilter" @bind:after="ApplyFiltersAsync">
                 <option value="">All</option>
@@ -41,7 +42,7 @@ else
     }
     else
     {
-        <div class="gr-table-wrap">
+        <div class="gr-table-wrap" data-tour="grading-table">
             <table class="grid">
                 <thead><tr><th>Student</th><th>Exam</th><th>Attempt</th><th>Ended</th><th>Status</th><th>Final</th><th>Attention</th><th></th></tr></thead>
                 <tbody>

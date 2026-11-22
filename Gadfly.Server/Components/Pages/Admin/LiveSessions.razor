@@ -20,6 +20,7 @@
             <span class="hint" role="status">Updated @data.GeneratedAt.UtcDateTime.ToString("HH:mm:ss") UTC · updates on its own</span>
         }
         <button type="button" class="link" @onclick="() => LoadAsync()" disabled="@loading">Refresh</button>
+        <Tour Id="@Tours.TourIds.AdminLive" />
     </div>
 </div>
 
@@ -36,7 +37,7 @@ else if (data is null)
 }
 else if (data.Sessions.Count == 0)
 {
-    <div class="panel">
+    <div class="panel" data-tour="live-empty">
         <p><strong>No one is sitting an exam right now.</strong></p>
         <p class="hint">Exams appear here the moment a student opens one, and leave when they end. To try it, add yourself a test student on
             <a href="admin/students">Students</a>, sign in as them and take the practice interview from My exams.</p>
