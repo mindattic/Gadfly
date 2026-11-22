@@ -23,12 +23,18 @@ public sealed record WordErrorCount(int Substitutions, int Deletions, int Insert
 /// <param name="TranscriptChecked">True when the student confirmed or corrected the transcript, so <paramref name="ReferenceText"/> is a reference.</param>
 /// <param name="Corrected">True when a transcription correction changed the text.</param>
 /// <param name="Words">Words with recognizer confidence (empty when timings were not kept).</param>
+/// <param name="HumanReference">
+/// True when <paramref name="ReferenceText"/> is a human listener's transcript of what was said (GAD-T426), not the student's
+/// check; <paramref name="TranscriptChecked"/> is then true too, so the answer counts toward word error rate.
+/// </param>
 public sealed record SpeechSample(string StudentKey, string RecognizedText, string ReferenceText, bool TranscriptChecked, bool Corrected,
-    int Words, int LowConfidenceWords, double? MeanConfidence);
+    int Words, int LowConfidenceWords, double? MeanConfidence, bool HumanReference = false);
 
 /// <summary>The audit's figures for one group of students.</summary>
+/// <param name="HumanReferenced">Answers whose word error rate is measured against a human listener's transcript (GAD-T426).</param>
 public sealed record SpeechGroupStats(string Group, int Students, int Responses, int CheckedResponses, int CorrectedResponses,
-    int ReferenceWords, int WordErrors, double? WordErrorRate, double? MeanConfidence, double? LowConfidenceShare, bool Reportable)
+    int ReferenceWords, int WordErrors, double? WordErrorRate, double? MeanConfidence, double? LowConfidenceShare, bool Reportable,
+    int HumanReferenced = 0)
 {
     /// <summary>Share of all voice answers whose transcript the student had to correct.</summary>
     public double? CorrectedShare => Responses == 0 ? null : (double)CorrectedResponses / Responses;
@@ -155,8 +161,8 @@ public static partial class SpeechAccuracy
     // ------------------------------------------------------------------ group summary
 
     /// <summary>
-    /// One group's figures. Word error rate is measured only on answers whose transcript the student checked
-    /// (confirmed or corrected): their verified text is the reference. Because the exam asks for a check mostly when
+    /// One group's figures. Word error rate is measured only on answers with a reference: a human listener's transcript
+    /// (GAD-T426), or, for answers before GAD-T405, the transcript the student checked (confirmed or corrected). Because the exam asks for a check mostly when
     /// the recognizer was unsure, the rate describes the answers most at risk; compare groups with each other, not
     /// with published benchmarks. Confidence figures cover every voice answer that kept its word timings.
     /// </summary>
@@ -178,7 +184,8 @@ public static partial class SpeechAccuracy
         var meanConfidence = ratedWords == 0 ? (double?)null : rated.Sum(s => s.MeanConfidence!.Value * s.Words) / ratedWords;
         return new SpeechGroupStats(group, students, list.Count, list.Count(s => s.TranscriptChecked), list.Count(s => s.Corrected),
             refWords, errors, refWords == 0 ? null : (double)errors / refWords, meanConfidence,
-            words == 0 ? null : (double)timed.Sum(s => s.LowConfidenceWords) / words, students >= MinStudentsPerGroup);
+            words == 0 ? null : (double)timed.Sum(s => s.LowConfidenceWords) / words, students >= MinStudentsPerGroup,
+            list.Count(s => s.HumanReference));
     }
 
     [GeneratedRegex(@"[\p{L}\p{N}']+")]

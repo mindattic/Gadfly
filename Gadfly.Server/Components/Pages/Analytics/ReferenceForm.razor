@@ -1,0 +1,54 @@
+@using Gadfly.Server.Analytics
+
+@* One sampled spoken answer on the reference-transcript page (GAD-T426): where to find it, what the recognizer wrote and the
+   words it was unsure of, and the form for what was actually said. *@
+
+<article class="analytics-section reference-item" aria-labelledby="ref-@Item.ResponseId">
+    <h3 id="ref-@Item.ResponseId">@Item.Exam · @Item.Student · attempt @Item.Attempt · question @(Item.QuestionNumber > 0 ? Item.QuestionNumber : "?")</h3>
+    <p class="hint">Answered @Item.AnsweredAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm") UTC@(string.IsNullOrWhiteSpace(Item.Question) ? "" : $". Question: {Item.Question}")</p>
+    <p><strong>The recognizer wrote:</strong> @Item.Recognized</p>
+    @if (Item.Unsure.Count > 0)
+    {
+        <p class="hint">It was unsure of: @string.Join(" · ", Item.Unsure)</p>
+    }
+    @if (Item.Existing is { } x)
+    {
+        <p class="hint">Reference recorded @x.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm") UTC (@(ReferenceTranscripts.HowLabels.GetValueOrDefault(x.How, "how not recorded"))).</p>
+    }
+    <label>What the student actually said
+        <textarea rows="4" maxlength="@ReferenceTranscripts.MaxLength" @bind="State.Text" placeholder="Type every word you heard"></textarea>
+    </label>
+    <button type="button" class="link" disabled="@Busy" @onclick="() => State.Text = Item.Recognized">Start from the recognizer's text</button>
+    <fieldset>
+        <legend>How did you hear it?</legend>
+        @foreach (var (key, label) in ReferenceTranscripts.HowLabels)
+        {
+            <label class="check"><input type="radio" name="how-@Item.ResponseId" checked="@(State.How == key)" @onchange="() => State.How = key" /> @label</label>
+        }
+    </fieldset>
+    <label class="check"><input type="checkbox" @bind="State.Consented" /> The student agreed to their answer being listened to for this check.</label>
+    <div>
+        <button type="button" disabled="@Busy" @onclick="() => OnSave.InvokeAsync((Item, State))">@(State.Saved ? "Save changes" : "Save reference")</button>
+        @if (State.Saved)
+        {
+            <button type="button" class="link" disabled="@Busy" @onclick="WithdrawAsync">Withdraw</button>
+        }
+        @if (State.Message is { } m)
+        {
+            <span class="@(State.IsError ? "notice" : "hint")" role="status">@m</span>
+        }
+    </div>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public ReferenceItem Item { get; set; } = default!;
+    [Parameter, EditorRequired] public ReferenceFormState State { get; set; } = default!;
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<(ReferenceItem Item, ReferenceFormState State)> OnSave { get; set; }
+
+    private async Task WithdrawAsync()
+    {
+        State.Text = null;
+        await OnSave.InvokeAsync((Item, State));
+    }
+}

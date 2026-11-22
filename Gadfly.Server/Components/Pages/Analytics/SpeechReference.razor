@@ -1,0 +1,183 @@
+@page "/analytics/speech-reference"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Server.Analytics
+@using Gadfly.Server.Components.Pages.Admin
+@using Gadfly.Server.Data
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+
+@* Human-reference transcripts for word error rate (GAD-T426, docs/EVIDENCE_MAP.md mechanic 7). Owners and Admins draw a sample
+   of spoken answers; a person who heard an answer types what was actually said; the speech-recognition accuracy section of
+   Analytics measures word error rate against it. Each reference is an audit event: never read by grading, never changing the
+   answer, cleared with the answer's words by retention and erasure. *@
+
+<PageTitle>Reference transcripts · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="analytics.css" /></HeadContent>
+<h1>Reference transcripts <span>for the speech recognition check</span></h1>
+
+@if (denied)
+{
+    <p class="notice" role="alert">Reference transcripts are kept by Owners and Admins only. The attempt was recorded.</p>
+}
+else if (counts is null)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else
+{
+    <p><a href="@BackHref">Back to Analytics</a></p>
+    <section class="analytics-section" aria-labelledby="h-how">
+        <h2 id="h-how">How this works</h2>
+        <p>Spoken answers are taken as heard: the student no longer checks the transcript, so Gadfly has nothing to measure the speech
+            recognizer's mistakes against. Here a person who <strong>heard</strong> an answer types exactly what the student said,
+            including false starts, and Gadfly compares it with what the recognizer wrote. The result is the word error rate in
+            Analytics, by group.</p>
+        <ul>
+            <li>Gadfly stores no audio. Type a reference only if you heard the answer: present while it was given, or from a recording
+                the student agreed to and your institution keeps under its own consent.</li>
+            <li>Type what was said, not what was meant. Leave out nothing you heard; don't correct grammar.</li>
+            <li>A reference is never used for grading and never changes the answer. It is recorded in the audit log with your name and
+                removed with the answer's words when the retention period ends or the student's data is erased.</li>
+        </ul>
+        <p class="hint">@counts.Value.Referenced of @counts.Value.Spoken spoken answer(s) in this scope have a reference.</p>
+    </section>
+
+    <section class="analytics-section" aria-labelledby="h-sample">
+        <h2 id="h-sample">Sample</h2>
+        <div class="analytics-filters">
+            <label>Answers to draw
+                <select @bind="size">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                </select>
+            </label>
+            <button type="button" disabled="@busy" @onclick="DrawAsync">@(sample is null ? "Draw a sample" : "Draw another sample")</button>
+        </div>
+        <p class="hint">The draw spreads across students and across how many fillers and repetitions the recognizer heard, so the answers
+            most at risk of being misheard are not crowded out. Answers that already have a reference are never drawn again.</p>
+        @if (sample is not null && sample.Count == 0)
+        {
+            <p class="notice">Every spoken answer in this scope already has a reference, or there are none yet.</p>
+        }
+        @foreach (var item in sample ?? [])
+        {
+            <ReferenceForm Item="item" Busy="busy" State="StateOf(item)" OnSave="SaveAsync" />
+        }
+    </section>
+
+    @if (done.Count > 0)
+    {
+        <section class="analytics-section" aria-labelledby="h-done">
+            <details>
+                <summary><span id="h-done">Answers with a reference (@done.Count)</span></summary>
+                @foreach (var item in done)
+                {
+                    <ReferenceForm Item="item" Busy="busy" State="StateOf(item)" OnSave="SaveAsync" />
+                }
+            </details>
+        </section>
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "exam")] public Guid? ExamQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "course")] public Guid? CourseQuery { get; set; }
+
+    private bool denied, busy;
+    private (int Spoken, int Referenced)? counts;
+    private IReadOnlyList<ReferenceItem>? sample;
+    private IReadOnlyList<ReferenceItem> done = [];
+    private string size = "10";
+    private readonly Dictionary<Guid, ReferenceFormState> states = [];
+
+    private AnalyticsScope Scope => ExamQuery is { } e ? new AnalyticsScope(ExamId: e) : CourseQuery is { } c ? new AnalyticsScope(CourseId: c) : AnalyticsScope.All;
+
+    private string BackHref => ExamQuery is { } e ? $"analytics?exam={e}" : CourseQuery is { } c ? $"analytics?course={c}" : "analytics";
+
+    private ReferenceFormState StateOf(ReferenceItem item)
+    {
+        if (!states.TryGetValue(item.ResponseId, out var s))
+            states[item.ResponseId] = s = new ReferenceFormState
+            {
+                Text = item.Existing?.Text, How = item.Existing?.How, Consented = item.Existing is not null, Saved = item.Existing is not null,
+            };
+        return s;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!RendererInfo.IsInteractive) return;
+        if (Tenant.OrganizationId is not { } org) { denied = true; return; }
+        if (!GroupFairness.ViewerAllowed(Tenant.Role))
+        {
+            denied = true;
+            await AdminDb.RunAsync(Scopes, Tenant, async (_, db) =>
+            {
+                db.AuditEvents.Add(new AuditEvent
+                {
+                    OrganizationId = org, ActorUserId = Tenant.UserId, ActorRole = Tenant.Role is { Length: > 40 } r ? r[..40] : Tenant.Role,
+                    Action = "access.denied", EntityType = "Analytics",
+                    Reason = $"Reference transcripts are for Owners and Admins; role {Tenant.Role ?? "(none)"} is not one.", At = Clock.GetUtcNow(),
+                });
+                await db.SaveChangesAsync();
+                return 0;
+            });
+            return;
+        }
+        await RefreshAsync();
+    }
+
+    private async Task RefreshAsync()
+    {
+        var org = Tenant.OrganizationId!.Value;
+        var scope = Scope;
+        (counts, done) = await AdminDb.RunAsync(Scopes, Tenant, async (sp, db) =>
+        {
+            var refs = new ReferenceTranscripts(db, org);
+            var exams = await GroupFairness.ExamIdsAsync(db, org, scope);
+            return (await refs.CountsAsync(exams), await refs.DoneAsync(exams, await NamesAsync(sp, org)));
+        });
+    }
+
+    private async Task DrawAsync()
+    {
+        if (busy || Tenant.OrganizationId is not { } org) return;
+        busy = true;
+        try
+        {
+            var scope = Scope;
+            var n = int.TryParse(size, out var v) ? v : 10;
+            var seed = Random.Shared.Next();
+            sample = await AdminDb.RunAsync(Scopes, Tenant, async (sp, db) =>
+            {
+                var exams = await GroupFairness.ExamIdsAsync(db, org, scope);
+                return await new ReferenceTranscripts(db, org).DrawAsync(exams, n, seed, await NamesAsync(sp, org));
+            });
+            foreach (var item in sample) states.Remove(item.ResponseId);
+        }
+        finally { busy = false; }
+    }
+
+    private async Task SaveAsync((ReferenceItem Item, ReferenceFormState State) e)
+    {
+        if (busy || Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        busy = true;
+        try
+        {
+            var (item, s) = e;
+            var error = await AdminDb.RunAsync(Scopes, Tenant, (_, db) =>
+                new ReferenceTranscripts(db, org).SaveAsync(item.ResponseId, s.Text, s.How, s.Consented, user, Tenant.Role, Clock.GetUtcNow()));
+            s.Message = error ?? (ReferenceTranscripts.Clean(s.Text) is null ? "Reference withdrawn." : "Saved.");
+            s.IsError = error is not null;
+            s.Saved = error is null && ReferenceTranscripts.Clean(s.Text) is not null;
+            if (error is null) await RefreshAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private static async Task<IReadOnlyDictionary<Guid, string>> NamesAsync(IServiceProvider sp, Guid org) =>
+        (await sp.GetRequiredService<IOrganizationDirectory>().MembersAsync(org))
+            .GroupBy(m => m.Member.UserId).ToDictionary(g => g.Key, g => g.First().UserName);
+}

@@ -24,7 +24,7 @@
     {
         <table class="grid">
             <caption>@(grouped ? "By the grouping you supplied" : "By fillers and repetitions in the recognized answers (a proxy, not a diagnosis)") · @report.Responses spoken answer(s)</caption>
-            <thead><tr><th>Group</th><th>Students</th><th>Answers</th><th>Checked by the student</th><th>Word error rate</th><th>Answers corrected</th><th>Words the recognizer was unsure of</th><th>Mean recognizer confidence</th></tr></thead>
+            <thead><tr><th>Group</th><th>Students</th><th>Answers</th><th>With a reference (human listener)</th><th>Word error rate</th><th>Answers corrected</th><th>Words the recognizer was unsure of</th><th>Mean recognizer confidence</th></tr></thead>
             <tbody>
                 @foreach (var g in report.Groups)
                 {
@@ -38,7 +38,7 @@
                         else
                         {
                             <td>@g.Responses</td>
-                            <td>@g.CheckedResponses</td>
+                            <td>@g.CheckedResponses (@g.HumanReferenced)</td>
                             <td>@AnalyticsService.Pct(g.WordErrorRate)@(g.ReferenceWords > 0 ? $" ({g.WordErrors} of {g.ReferenceWords} words)" : "")</td>
                             <td>@AnalyticsService.Pct(g.CorrectedShare)</td>
                             <td>@AnalyticsService.Pct(g.LowConfidenceShare)</td>
@@ -61,6 +61,11 @@
             <p class="hint">@report.Unplaced student(s) with spoken answers had no group; @unmatched line(s) matched no member of this organization.</p>
         }
     }
+    @if (GroupFairness.ViewerAllowed(Tenant.Role))
+    {
+        <p><a href="@SamplerHref">Mark reference transcripts</a> <span class="hint">A person who heard a sampled answer types what was
+            actually said, so word error rate can be measured on spoken answers again.</span></p>
+    }
     <details>
         <summary>Compare other groups</summary>
         <p class="hint">Paste one line per student: their email or user name, a comma, and a group label (for example an accent, dialect
@@ -82,6 +87,9 @@
     private string? groupingText;
     private bool grouped, busy;
     private int unmatched;
+
+    private string SamplerHref => Scope.ExamId is { } e ? $"analytics/speech-reference?exam={e}"
+        : Scope.CourseId is { } c ? $"analytics/speech-reference?course={c}" : "analytics/speech-reference";
 
     protected override async Task OnParametersSetAsync()
     {

@@ -22,11 +22,12 @@ public sealed class SpeechRecognitionAudit(GadflyDbContext db, Guid organization
     public const double DisparityRatio = 1.25;
 
     public const string Caveat =
-        "Word error rate here is measured against transcripts the student confirmed or corrected. Spoken answers are no longer read " +
-        "back to the student (since 22 November 2026), so only earlier answers have that check and newer ones add no word error rate; " +
-        "the unsure-word share still covers every spoken answer. The check was asked mostly when the recognizer was unsure, so the " +
-        "rates describe the answers most at risk: compare groups with each other, not with published benchmarks. Recognizers make " +
-        "more errors for some accents and dialects and for people who stutter.";
+        "Word error rate here is measured against a reference: a human listener's transcript of a sampled answer (Owners and Admins " +
+        "mark these from the link below), or, for answers before 22 November 2026, the transcript the student confirmed or corrected. " +
+        "Spoken answers are no longer read back to the student, so newer answers add to the word error rate only once a listener has " +
+        "transcribed them; the unsure-word share still covers every spoken answer. Student checks were asked mostly when the recognizer " +
+        "was unsure, so those rates describe the answers most at risk: compare groups with each other, not with published benchmarks. " +
+        "Recognizers make more errors for some accents and dialects and for people who stutter.";
 
     /// <summary>The analytics scope's assessments (published or archived, as the analytics page reports on).</summary>
     public async Task<IReadOnlyList<Guid>> ExamIdsAsync(AnalyticsScope scope, CancellationToken ct = default)
@@ -59,15 +60,18 @@ public sealed class SpeechRecognitionAudit(GadflyDbContext db, Guid organization
         foreach (var chunk in responses.Chunk(500))
         {
             var marks = await SpeechMarks.LoadAsync(db, organizationId, chunk, ct);
+            // A human listener's transcript (GAD-T426) is the reference wherever one exists; otherwise the student's check, if any.
+            var references = await ReferenceTranscripts.LoadAsync(db, organizationId, chunk.Select(r => r.Id).ToList(), ct);
             foreach (var r in chunk)
             {
                 var m = marks.GetValueOrDefault(r.Id);
                 var words = m?.Words ?? [];
                 var student = studentOf.GetValueOrDefault(r.SessionId);
-                samples.Add((student, new SpeechSample(student.ToString(), r.SpeechRecognitionText ?? r.OriginalText, r.VerifiedText,
-                    m?.TranscriptChecked ?? false, m?.Corrected ?? false, words.Count,
+                var human = references.GetValueOrDefault(r.Id);
+                samples.Add((student, new SpeechSample(student.ToString(), r.SpeechRecognitionText ?? r.OriginalText, human?.Text ?? r.VerifiedText,
+                    human is not null || (m?.TranscriptChecked ?? false), m?.Corrected ?? false, words.Count,
                     words.Count(w => w.Confidence < Gadfly.Sources.Verification.ResponseVerifier.LowSpeechConfidenceThreshold),
-                    words.Count == 0 ? r.SpeechRecognitionConfidence : words.Average(w => w.Confidence))));
+                    words.Count == 0 ? r.SpeechRecognitionConfidence : words.Average(w => w.Confidence), human is not null)));
             }
         }
 
