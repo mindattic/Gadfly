@@ -175,11 +175,21 @@ every stored webhook secret and the LTI private key unreadable.
 
 **Gadfly's LTI signing key.** Generated once, the first time it is needed (2048-bit RSA), stored in
 `gadfly.LtiToolKeys` with the private half encrypted by the Data Protection ring, and published at `/lti/jwks.json`.
-One key serves every organization. **There is no rotation feature**: the app always signs with the oldest row. If the
-key must be replaced (it leaked, or the key ring was lost), the only way today is to delete the row
-(`DELETE FROM gadfly.LtiToolKeys`) with the app stopped; the next LTI call creates a new key and `/lti/jwks.json`
-publishes it. Connected LMSs fetch the key set from that URL, so nothing needs re-registering, but an LMS that caches
-keys may refuse Gadfly's deep-linking replies and grade passback until its cache expires. Do it out of term time.
+One key serves every organization, and the newest row signs. **To rotate it** (GAD-T478), a platform admin opens
+**Organizations → LTI signing key** (`/platform/lti-key`) and presses **Rotate the signing key**, then confirms:
+
+1. A new key is made and signs everything from that moment (deep-linking replies, roster and gradebook token requests).
+2. The old key stays in `/lti/jwks.json` next to the new one for a grace period, `Gadfly:Lti:KeyGraceDays` (default
+   **7** days, 1 to 90), so an LMS that cached the old key set keeps accepting Gadfly's signatures.
+3. After the grace period the old key is left out of the key set and its row, private key included, is deleted. This
+   happens the next time the key set is fetched or the page is opened.
+
+Both steps are audited: `lti.key.rotated` (who, the new and old key ids, when the old one retires) and `lti.key.retired`
+(system). Key material is never written to the log. Connected LMSs fetch keys from the key-set URL, so nothing needs
+re-registering in any LMS. Rotate on a schedule (yearly is plenty) or at once if the key may have leaked; after a leak,
+expect the old key to stay valid for the grace period, so lower `Gadfly__Lti__KeyGraceDays` to 1 first if that matters
+more than an LMS with a stale cache. If the Data Protection key ring is lost, the stored private key can't be read:
+rotate, and the new key is usable at once.
 
 **Organization API keys and webhook secrets.** Owners and Admins rotate their own on **API keys** (`/org/api-keys`) and
 **Webhooks** (`/org/webhooks`); platform staff need not be involved.

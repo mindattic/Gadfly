@@ -1,0 +1,134 @@
+@page "/platform/lti-key"
+@attribute [Authorize(Policy = GadflyPolicies.SuperAdmin)]
+@using Gadfly.Server.Lti
+@using Gadfly.Server.Platform
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+
+@* A platform admin rotates Gadfly's LTI 1.3 signing key (GAD-T478). The key is tool-wide: every connected LMS in every
+   organization verifies Gadfly's JWTs against /lti/jwks.json. *@
+
+<PageTitle>LTI signing key · Gadfly Exams</PageTitle>
+<p class="hint"><a href="platform/organizations">&larr; Customer organizations</a></p>
+<h1>LTI signing key</h1>
+<p class="hint">
+    Gadfly signs what it sends to a connected LMS (deep-linking replies, and the requests for roster and gradebook access)
+    with one key, shared by every organization. Each LMS checks those signatures against the public key set at
+    <a href="lti/jwks.json" target="_blank" rel="noopener">/lti/jwks.json</a>. Nothing needs changing in any LMS when the key rotates.
+</p>
+
+@if (keys is null)
+{
+    <p class="hint">Loading&hellip;</p>
+}
+else
+{
+    <section class="panel">
+        <h2>Keys</h2>
+        @if (keys.Count == 0)
+        {
+            <p class="hint">No key yet. One is made the first time an LMS asks for the key set or Gadfly signs something.</p>
+        }
+        else
+        {
+            <table class="grid">
+                <thead><tr><th>Key id</th><th>Created</th><th>Status</th></tr></thead>
+                <tbody>
+                    @foreach (var k in keys)
+                    {
+                        <tr>
+                            <td><code>@k.Kid</code></td>
+                            <td>@k.CreatedAt.ToString("yyyy-MM-dd HH:mm") UTC</td>
+                            <td>@StatusText(k)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </section>
+
+    <section class="panel">
+        <h2>Rotate</h2>
+        <p class="hint">
+            Rotate if you think the key may have leaked, or on your regular schedule. A new key signs from the moment you
+            rotate. The old key stays in the key set for @graceDays days, so an LMS that saved the old key set keeps
+            working, then it is removed and deleted. Both steps are recorded in the audit log.
+        </p>
+        @if (!confirming)
+        {
+            <button type="button" disabled="@busy" @onclick="() => confirming = true">Rotate the signing key&hellip;</button>
+        }
+        else
+        {
+            <p><strong>Make a new signing key now?</strong> The current key keeps being published for @graceDays days.</p>
+            <button type="button" class="danger" disabled="@busy" @onclick="RotateAsync">Yes, rotate</button>
+            <button type="button" class="link" disabled="@busy" @onclick="() => confirming = false">Cancel</button>
+        }
+        @if (message is not null)
+        {
+            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+        }
+    </section>
+}
+
+@code {
+    private IReadOnlyList<LtiKeyStatus>? keys;
+    private double graceDays = LtiKeys.DefaultGraceDays;
+    private bool confirming, busy, ok;
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { await LoadAsync(); }
+        catch (Exception ex)
+        {
+            keys = [];
+            ok = false;
+            message = "The keys could not be loaded: " + ex.Message;
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        using var scope = Scopes.CreateSystemScope();
+        var lti = scope.ServiceProvider.GetRequiredService<LtiKeys>();
+        await lti.RetireExpiredAsync();
+        graceDays = lti.GracePeriod.TotalDays;
+        keys = await lti.StatusAsync();
+    }
+
+    private string StatusText(LtiKeyStatus k)
+    {
+        if (k.Signing) return "Signing now";
+        var now = Clock.GetUtcNow();
+        return k.PublishedUntil is { } until && until > now
+            ? $"Replaced {k.ReplacedAt:yyyy-MM-dd}; still published until {until:yyyy-MM-dd HH:mm} UTC"
+            : "Replaced; being retired";
+    }
+
+    private async Task RotateAsync()
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try
+        {
+            LtiKeyRotation r;
+            using (var scope = Scopes.CreateSystemScope())
+                r = await scope.ServiceProvider.GetRequiredService<LtiKeys>().RotateAsync(Tenant.UserId);
+            ok = true;
+            message = r.PreviousKid is null
+                ? $"Key {r.NewKid} made. It signs from now on."
+                : $"Key {r.NewKid} signs from now on. Key {r.PreviousKid} stays published until {r.PreviousRetiresAt:yyyy-MM-dd HH:mm} UTC.";
+            confirming = false;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            message = "The key could not be rotated: " + ex.Message;
+        }
+        finally { busy = false; }
+    }
+}

@@ -33,7 +33,9 @@ Replace `https://gadfly.example.com` with your Gadfly address (the page shows th
 | Public JWK URL / Keyset URL / Tool JWKS URL | `https://gadfly.example.com/lti/jwks.json` |
 | Domain | `gadfly.example.com` |
 
-Signing is RS256 with Gadfly's public key set. There is no shared secret to copy or rotate.
+Signing is RS256 with Gadfly's public key set. There is no shared secret to copy or rotate. When MindAttic rotates
+Gadfly's signing key, the new key appears in the key set at once and the old one stays there for 7 days, so your LMS
+picks up the change by itself: use the key-set URL (not a pasted key) and there is nothing to update.
 
 ## Canvas
 
