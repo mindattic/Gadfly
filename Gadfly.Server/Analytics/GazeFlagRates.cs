@@ -11,9 +11,20 @@ namespace Gadfly.Server.Analytics;
 // arithmetic over stored rows; no student is named and groups too small to report are withheld.
 
 /// <summary>One group's eye-contact episode rates over its students' answering time.</summary>
+/// <param name="AbsentFaces">Episodes with no face in view (the voice room's while answering, and the Strict camera check's).</param>
+/// <param name="SecondFaces">Episodes with more than one face in view.</param>
+/// <param name="ChangedFaces">Episodes where the face no longer resembled the one at the start (Strict camera check only).</param>
+/// <param name="QualitySessions">Sessions whose episodes carried a tracking quality score (GAD-T305).</param>
+/// <param name="MedianQuality">The median of those sessions' quality scores (0 to 100).</param>
+/// <param name="PoorQualityShare">Share of those sessions whose quality was poor (below <see cref="GazeQuality.FairFrom"/>).</param>
+/// <param name="CalibratedShare">Share of those sessions set up to the student's screen by the five-dot calibration.</param>
 public sealed record GazeRateGroup(string Group, int Students, int Sessions, double AnswerMinutes, int LookAways, int Readings,
-    int Fades, double FadeSeconds, int SessionsWithFade, int Remarks)
+    int Fades, double FadeSeconds, int SessionsWithFade, int Remarks, int AbsentFaces = 0, int SecondFaces = 0, int ChangedFaces = 0,
+    int QualitySessions = 0, double? MedianQuality = null, double? PoorQualityShare = null, double? CalibratedShare = null)
 {
+    public double? AbsentFacesPer10Min => AnswerMinutes <= 0 ? null : AbsentFaces / AnswerMinutes * 10;
+    public double? SecondFacesPer10Min => AnswerMinutes <= 0 ? null : SecondFaces / AnswerMinutes * 10;
+    public double? ChangedFacesPer10Min => AnswerMinutes <= 0 ? null : ChangedFaces / AnswerMinutes * 10;
     /// <summary>True when the group has too few students to report without risking identifying someone or reading noise.</summary>
     public bool TooFew => Students < GazeFlagRates.MinStudents;
     public double? LookAwaysPer10Min => AnswerMinutes <= 0 ? null : LookAways / AnswerMinutes * 10;
@@ -37,12 +48,47 @@ public sealed class GazeFlagRates(GadflyDbContext db, Guid organizationId)
     /// </summary>
     public const double DisparityRatio = 1.25;
 
+    /// <summary>Groups whose median tracking quality differs by at least this many points (of 100) are flagged (GAD-T447).</summary>
+    public const double QualityGap = 10;
+
     public const string Caveat =
         "Until these rates have been compared across groups, read eye-contact episodes as context only, never as evidence on their own. " +
         "A webcam estimates head and eye direction to about 4 degrees, cannot tell reading notes from thinking, and face detection can fail more often for some people than others.";
 
     /// <summary>The label for students whose assignment declares the eye-contact accommodation, and for the rest.</summary>
     public const string Accommodated = "Eye-contact accommodation", NotAccommodated = "No accommodation";
+
+    /// <summary>
+    /// Camera episodes the face-detection evidence concerns most (GAD-T447; ElenchusAtScale Section 5.6.1: Yoder-Himes 2022,
+    /// Buolamwini and Gebru 2018): no face, a second face, and a face that no longer resembles the one at the start.
+    /// </summary>
+    public const string FaceCaveat =
+        "Face detection has failed more often for some people than others (darker skin in one proctoring product), so an absent, second " +
+        "or changed face can be the camera failing rather than the student. The changed-face check runs only in Strict exams. Tracking " +
+        "quality is the eye-tracking score sent with each episode (0 to 100); a group whose quality is lower gets more false look-aways.";
+
+    /// <summary>Episode types counted as an absent face, a second face and a changed face.</summary>
+    public static readonly IReadOnlySet<string> AbsentFaceTypes = new HashSet<string>(StringComparer.Ordinal) { "examiner-face-absent", "face-absent" },
+        SecondFaceTypes = new HashSet<string>(StringComparer.Ordinal) { "examiner-second-face", "multiple-faces" },
+        ChangedFaceTypes = new HashSet<string>(StringComparer.Ordinal) { "identity-drift" };
+
+    /// <summary>The tracking-quality group of a session (GAD-T305 bands), for grouping the rates by quality instead of by student.</summary>
+    public static string QualityGroup(GazeQuality? q) => q is null ? "No quality score (older page)"
+        : q.Score >= GazeQuality.GoodFrom ? $"Tracking good ({GazeQuality.GoodFrom}+)"
+        : q.Score >= GazeQuality.FairFrom ? $"Tracking fair ({GazeQuality.FairFrom}-{GazeQuality.GoodFrom - 1})"
+        : $"Tracking poor (under {GazeQuality.FairFrom})";
+
+    /// <summary>A session's tracking quality: the lowest score its episodes carried (the session's weakest stretch), or null.</summary>
+    public static GazeQuality? SessionQuality(IEnumerable<GazeQuality?> episodes) =>
+        episodes.Where(q => q is not null).MinBy(q => q!.Score);
+
+    /// <summary>The median of <paramref name="values"/>, or null when empty.</summary>
+    public static double? Median(IEnumerable<double> values)
+    {
+        var v = values.OrderBy(x => x).ToList();
+        if (v.Count == 0) return null;
+        return v.Count % 2 == 1 ? v[v.Count / 2] : (v[v.Count / 2 - 1] + v[v.Count / 2]) / 2;
+    }
 
     /// <summary>The analytics scope's assessments (published or archived; the same set the analytics page reports on).</summary>
     public async Task<IReadOnlyList<Guid>> ExamIdsAsync(AnalyticsScope scope, CancellationToken ct = default)
@@ -58,7 +104,14 @@ public sealed class GazeFlagRates(GadflyDbContext db, Guid organizationId)
     /// <paramref name="groupOf"/> (student id to group label; null leaves the student out as unplaced). Without a grouping the
     /// groups are the eye-contact accommodation's.
     /// </summary>
-    public async Task<GazeRatesReport> BuildAsync(IReadOnlyCollection<Guid> examIds, Func<Guid, string?>? groupOf = null, CancellationToken ct = default)
+    public async Task<GazeRatesReport> BuildAsync(IReadOnlyCollection<Guid> examIds, Func<Guid, string?>? groupOf = null, CancellationToken ct = default) =>
+        await BuildAsync(examIds, groupOf, byQuality: false, ct);
+
+    /// <summary>
+    /// As above; with <paramref name="byQuality"/> each session is grouped by its tracking quality band instead (GAD-T447), so the
+    /// rates can be read against how well the camera could follow the eyes.
+    /// </summary>
+    public async Task<GazeRatesReport> BuildAsync(IReadOnlyCollection<Guid> examIds, Func<Guid, string?>? groupOf, bool byQuality, CancellationToken ct = default)
     {
         var exams = await db.Exams.AsNoTracking()
             .Where(e => e.OrganizationId == organizationId && examIds.Contains(e.Id) && e.IntegrityLevel != IntegrityLevel.Off)
@@ -73,11 +126,11 @@ public sealed class GazeFlagRates(GadflyDbContext db, Guid organizationId)
             .Select(t => new { t.SessionId, t.AskedAt, t.AnswerStartedAt, t.AnswerCompletedAt }).ToListAsync(ct);
         var answerSeconds = turns.GroupBy(t => t.SessionId).ToDictionary(g => g.Key,
             g => g.Sum(t => Math.Clamp((t.AnswerCompletedAt!.Value - (t.AnswerStartedAt ?? t.AskedAt)).TotalSeconds, 0, 3600)));
-        var types = WebcamIntegrityRecorder.ExaminerTypes.ToArray();
+        var types = WebcamIntegrityRecorder.ExaminerTypes.Concat(AbsentFaceTypes).Concat(SecondFaceTypes).Concat(ChangedFaceTypes).Distinct().ToArray();
         var events = await db.IntegrityEvents.AsNoTracking()
             .Where(e => e.OrganizationId == organizationId && ids.Contains(e.SessionId) && e.Source == WebcamIntegrityRecorder.Source
                 && types.Contains(e.Type))
-            .Select(e => new { e.SessionId, e.Type, e.StartedAt, e.EndedAt, e.Summary }).ToListAsync(ct);
+            .Select(e => new { e.SessionId, e.Type, e.StartedAt, e.EndedAt, e.Summary, e.DataJson }).ToListAsync(ct);
         var bySession = events.GroupBy(e => e.SessionId).ToDictionary(g => g.Key, g => g.ToList());
 
         // Only sessions with answering time: a session never answered says nothing about rates.
@@ -85,24 +138,37 @@ public sealed class GazeFlagRates(GadflyDbContext db, Guid organizationId)
         {
             var ev = bySession.GetValueOrDefault(s.Id) ?? [];
             var fades = ev.Where(e => e.Type == "examiner-fade").ToList();
+            var quality = SessionQuality(ev.Where(e => WebcamIntegrityRecorder.ExaminerTypes.Contains(e.Type)).Select(e => GazeQuality.FromJson(e.DataJson)));
             return new
             {
                 s.StudentUserId,
-                Group = groupOf is null ? (s.GazeAccommodation ? Accommodated : NotAccommodated) : Clean(groupOf(s.StudentUserId)),
+                Group = byQuality ? QualityGroup(quality)
+                    : groupOf is null ? (s.GazeAccommodation ? Accommodated : NotAccommodated) : Clean(groupOf(s.StudentUserId)),
                 Minutes = answerSeconds[s.Id] / 60,
                 LookAways = ev.Count(e => e.Type == "examiner-look-away"),
                 Readings = ev.Count(e => e.Type == "examiner-reading"),
                 Fades = fades.Count,
                 FadeSeconds = fades.Sum(e => e.EndedAt is { } end ? Math.Max(0, (end - e.StartedAt).TotalSeconds) : 0),
                 Remarks = ev.Count(e => e.Summary.Contains("asked out loud", StringComparison.Ordinal)),
+                AbsentFaces = ev.Count(e => AbsentFaceTypes.Contains(e.Type)),
+                SecondFaces = ev.Count(e => SecondFaceTypes.Contains(e.Type)),
+                ChangedFaces = ev.Count(e => ChangedFaceTypes.Contains(e.Type)),
+                Quality = quality,
             };
         }).ToList();
 
         var unplaced = rows.Where(r => r.Group is null).Select(r => r.StudentUserId).Distinct().Count();
         var groups = rows.Where(r => r.Group is not null).GroupBy(r => r.Group!, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new GazeRateGroup(g.First().Group!, g.Select(r => r.StudentUserId).Distinct().Count(), g.Count(),
-                Math.Round(g.Sum(r => r.Minutes), 1), g.Sum(r => r.LookAways), g.Sum(r => r.Readings), g.Sum(r => r.Fades),
-                Math.Round(g.Sum(r => r.FadeSeconds), 1), g.Count(r => r.Fades > 0), g.Sum(r => r.Remarks)))
+            .Select(g =>
+            {
+                var q = g.Where(r => r.Quality is not null).Select(r => r.Quality!).ToList();
+                return new GazeRateGroup(g.First().Group!, g.Select(r => r.StudentUserId).Distinct().Count(), g.Count(),
+                    Math.Round(g.Sum(r => r.Minutes), 1), g.Sum(r => r.LookAways), g.Sum(r => r.Readings), g.Sum(r => r.Fades),
+                    Math.Round(g.Sum(r => r.FadeSeconds), 1), g.Count(r => r.Fades > 0), g.Sum(r => r.Remarks),
+                    g.Sum(r => r.AbsentFaces), g.Sum(r => r.SecondFaces), g.Sum(r => r.ChangedFaces), q.Count,
+                    Median(q.Select(x => (double)x.Score)), q.Count == 0 ? null : q.Count(x => x.Poor) / (double)q.Count,
+                    q.Count == 0 ? null : q.Count(x => x.Calibrated) / (double)q.Count);
+            })
             .OrderBy(g => g.Group, StringComparer.OrdinalIgnoreCase).ToList();
         // Withheld groups keep only their name and size.
         groups = groups.Select(g => g.TooFew ? new GazeRateGroup(g.Group, g.Students, 0, 0, 0, 0, 0, 0, 0, 0) : g).ToList();
@@ -131,6 +197,19 @@ public sealed class GazeFlagRates(GadflyDbContext db, Guid organizationId)
         }
         Check("Look-away episodes", g => g.LookAwaysPer10Min);
         Check("Screen fades", g => g.FadesPer10Min);
+        Check("Absent-face episodes", g => g.AbsentFacesPer10Min);
+        Check("Second-face episodes", g => g.SecondFacesPer10Min);
+        Check("Changed-face episodes", g => g.ChangedFacesPer10Min);
+        // Tracking quality (GAD-T447): a group the camera follows worse gets more false look-aways.
+        var rated = usable.Where(g => g.MedianQuality is not null && g.QualitySessions > 0).ToList();
+        if (rated.Count >= 2)
+        {
+            var best = rated.MaxBy(g => g.MedianQuality!.Value)!;
+            var worst = rated.MinBy(g => g.MedianQuality!.Value)!;
+            if (best.MedianQuality!.Value - worst.MedianQuality!.Value >= QualityGap)
+                w.Add($"Eye-tracking quality differs between groups: median {worst.MedianQuality:0} for {worst.Group} against {best.MedianQuality:0} for " +
+                      $"{best.Group} (of 100). The camera follows {worst.Group} less well, so their look-away notes are weaker evidence still.");
+        }
         return w;
     }
 
