@@ -100,10 +100,14 @@ else
     private bool busy;
     private Timer? ticker;
 
-    protected override async Task OnInitializedAsync()
+    // Started once the page is interactive, not during prerendering: a prerendered preview would be thrown away at once and
+    // leave a second assessment.previewed row in the audit log.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
         await StartAsync();
         ticker = new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        StateHasChanged();
     }
 
     private async Task StartAsync()
