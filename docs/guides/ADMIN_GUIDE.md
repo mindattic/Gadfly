@@ -367,6 +367,9 @@ preferences** in their own account; the other emails still come.
 Emails go out through the background job queue over the same outgoing mail (SMTP) the sign-in emails use, and a
 failed send is retried with growing waits. Nothing is sent when the server has no SMTP configured, or while it runs in
 mock mode (see **Mock mode**): the email is still rendered and logged, marked **Failed** or **Skipped** with the reason.
+An email's button links to the server's public address (the one invitations use,
+`MindAttic:Auth:Organizations:Invitations:PublicBaseUrl` or `MindAttic:Auth:Reset:PublicBaseUrl`); without one the
+email goes out without a button. A reminder goes only to a current member, for an exam that is still published.
 
 <a id="email-preview"></a>
 **Email preview** (`/admin/email-preview`, owners and admins) shows each email as students would see it, with sample
@@ -540,7 +543,9 @@ The thresholds and their reasons are in docs/EVIDENCE_MAP.md (mechanics 2, 4 and
 Students can't erase their own data; they ask you. The sign-in account itself is not deleted, because the person may
 belong to other organizations. Only an owner can erase an owner, and never the last one. Export first if the data
 may be needed: erasure can't be undone. Erasure also removes the person's research choices and study arms, so they
-are never in a later research export.
+are never in a later research export. For a student who came in through an LMS, it removes their assignments' grade
+links to the LMS gradebook and any LMS sign-in waiting to be linked to their account. Notification emails still waiting
+to go out are not sent, and the email log keeps that an email was sent but no longer the address it went to.
 
 ## Research
 

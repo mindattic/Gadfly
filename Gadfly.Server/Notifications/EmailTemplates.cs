@@ -42,7 +42,7 @@ public static class EmailTemplates
         {
             EmailKinds.ExamAssigned => (
                 $"{Req(d.ExamTitle)} has been assigned to you",
-                $"{Esc(d.OrganizationName)} assigned you an exam.",
+                $"{d.OrganizationName} assigned you an exam.",
                 Paragraphs(
                     $"<strong>{Esc(Req(d.ExamTitle))}</strong> is now on your list of exams.",
                     d.DueAtUtc is { } due ? $"Due by {When(due)}." : null,
@@ -51,7 +51,7 @@ public static class EmailTemplates
 
             EmailKinds.Reminder => (
                 $"Reminder: {Req(d.ExamTitle)} is due soon",
-                $"A friendly reminder from {Esc(d.OrganizationName)}.",
+                $"A friendly reminder from {d.OrganizationName}.",
                 Paragraphs(
                     $"<strong>{Esc(Req(d.ExamTitle))}</strong> is due {(d.DueAtUtc is { } due ? $"by {When(due)}" : "soon")} and you haven't finished it yet.",
                     "If you've already taken it, there's nothing to do."),
@@ -59,7 +59,7 @@ public static class EmailTemplates
 
             EmailKinds.ResultReleased => (
                 $"Your result for {Req(d.ExamTitle)} is ready",
-                $"{Esc(d.OrganizationName)} has released your result.",
+                $"{d.OrganizationName} has released your result.",
                 Paragraphs(
                     $"Your result for <strong>{Esc(Req(d.ExamTitle))}</strong> is ready to view.",
                     d.Score is { } s ? $"Result: <strong>{Esc(s)}</strong>." : null,
@@ -84,7 +84,7 @@ public static class EmailTemplates
 
             EmailKinds.AttemptReset => (
                 $"Your attempts for {Req(d.ExamTitle)} were reset",
-                $"{Esc(d.OrganizationName)} reset your exam.",
+                $"{d.OrganizationName} reset your exam.",
                 Paragraphs(
                     $"Your attempts for <strong>{Esc(Req(d.ExamTitle))}</strong> were reset by your organization. Your previous answers, scores and grades for it no longer count.",
                     "You can take it again from the start."),
@@ -92,7 +92,7 @@ public static class EmailTemplates
 
             EmailKinds.LmsLink => (
                 "Connect your LMS sign-in to your Gadfly account",
-                $"{Esc(d.OrganizationName)}: confirm it's you.",
+                $"{d.OrganizationName}: confirm it's you.",
                 Paragraphs(
                     "Someone opened a Gadfly exam from your school's learning system (LMS) with this email address, and asked to use the Gadfly account you already have instead of a new one.",
                     "If that was you, open the link below <strong>in the same browser</strong> within 24 hours. After that, opening Gadfly from your course takes you to this account.",
@@ -108,10 +108,35 @@ public static class EmailTemplates
             _ => (kind, "", Paragraphs(Esc(kind)), ((string?)null, (string?)null)),
         };
 
+        // The lead is plain text: Wrap encodes it once (GAD-T479: it used to be encoded above as well, so "A & B" showed "A &amp; B").
         var html = Wrap(d.OrganizationName, lead, body, action.Item1 ?? d.ActionLabel, action.Item2 ?? d.ActionUrl);
         var text = PlainText(d.OrganizationName, lead, body, action.Item1 ?? d.ActionLabel, action.Item2 ?? d.ActionUrl);
         return new RenderedEmail(subject, html, text);
     }
+
+    /// <summary>Where the server's public address is configured, first match wins (the same keys invitations and resets use).</summary>
+    public static readonly string[] PublicBaseUrlKeys =
+    [
+        "MindAttic:Auth:Organizations:Invitations:PublicBaseUrl", "MindAttic:Auth:Reset:PublicBaseUrl", "MindAttic:Vault:Payments:stripe:publicBaseUrl",
+    ];
+
+    /// <summary>
+    /// The link an email can carry (GAD-T479): callers stage app paths such as "/my-exams", which mean nothing in a mail client.
+    /// A path is joined to the configured public address; an absolute http(s) URL is kept; anything else, or a path when no public
+    /// address is configured, gives null, so the email goes out without a button rather than with a dead one.
+    /// </summary>
+    public static string? AbsoluteActionUrl(string? url, string? publicBaseUrl)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+        if (Uri.TryCreate(url, UriKind.Absolute, out var abs) && abs.Scheme is "https" or "http") return url;
+        if (!url.StartsWith('/') || url.StartsWith("//", StringComparison.Ordinal)) return null;
+        if (string.IsNullOrWhiteSpace(publicBaseUrl) || !Uri.TryCreate(publicBaseUrl.Trim(), UriKind.Absolute, out var b) || b.Scheme is not ("https" or "http")) return null;
+        return publicBaseUrl.Trim().TrimEnd('/') + url;
+    }
+
+    /// <inheritdoc cref="AbsoluteActionUrl(string?, string?)"/>
+    public static string? AbsoluteActionUrl(string? url, IConfiguration configuration) =>
+        AbsoluteActionUrl(url, PublicBaseUrlKeys.Select(k => configuration[k]).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)));
 
     private static string Req(string? s) => string.IsNullOrWhiteSpace(s) ? "your exam" : s;
     private static string Esc(string s) => WebUtility.HtmlEncode(s);

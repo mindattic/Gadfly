@@ -26,7 +26,17 @@ public sealed class EmailDeliveryJob(GadflyDbContext db, AuthEmailStatus emailSt
     {
         var payload = JobQueue.ReadPayload<EmailJobPayload>(job);
         var data = JsonSerializer.Deserialize<EmailData>(payload.DataJson) ?? throw new InvalidOperationException("Empty email template data.");
+        // GAD-T479: callers stage app paths ("/my-exams"); a mail client needs the full address, or no button at all.
+        data = data with { ActionUrl = EmailTemplates.AbsoluteActionUrl(data.ActionUrl, services.GetRequiredService<IConfiguration>()) };
         var now = clock.GetUtcNow();
+
+        // GAD-T479: an email whose log was settled before it went out (the student's data was erased meanwhile) is never sent.
+        var logStatus = await db.Set<EmailLog>().AsNoTracking().Where(e => e.Id == payload.EmailLogId).Select(e => (EmailLogStatus?)e.Status).FirstOrDefaultAsync(ct);
+        if (logStatus == EmailLogStatus.Skipped)
+        {
+            await progress.ReportAsync(1, "skipped before sending", ct);
+            return;
+        }
 
         string? toEmail = payload.ToEmailOverride;
         if (toEmail is null && payload.ToUserId is { } userId)

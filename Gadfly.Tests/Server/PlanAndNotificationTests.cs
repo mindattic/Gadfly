@@ -119,6 +119,29 @@ public class EmailTemplatesTests
     {
         foreach (var kind in EmailKinds.All) Assert.That(EmailKinds.Describe(kind), Is.Not.EqualTo(kind));
     }
+
+    [Test]
+    public void An_organization_name_is_encoded_once_in_the_lead_and_not_at_all_in_the_plain_text()
+    {
+        // GAD-T479: the lead used to be encoded twice, so "Smith & Jones" read "Smith &amp; Jones" in the email.
+        var rendered = EmailTemplates.Render(EmailKinds.ExamAssigned, new EmailData("Smith & Jones", "Alex", ExamTitle: "Midterm"));
+        Assert.That(rendered.Html, Does.Contain("Smith &amp; Jones assigned you an exam."));
+        Assert.That(rendered.Html, Does.Not.Contain("&amp;amp;"));
+        Assert.That(rendered.Text, Does.Contain("Smith & Jones assigned you an exam."));
+    }
+
+    [TestCase("/my-exams", "https://gadfly.example/", "https://gadfly.example/my-exams")]
+    [TestCase("/my-results", "https://gadfly.example", "https://gadfly.example/my-results")]
+    [TestCase("https://lms.example/x", null, "https://lms.example/x")]
+    [TestCase("/my-exams", null, null)]
+    [TestCase("//evil.example/x", "https://gadfly.example", null)]
+    [TestCase("javascript:alert(1)", "https://gadfly.example", null)]
+    [TestCase(null, "https://gadfly.example", null)]
+    public void An_action_link_is_made_absolute_or_dropped(string? url, string? publicBase, string? expected)
+    {
+        // GAD-T479: callers stage app paths, which are dead links in a mail client.
+        Assert.That(EmailTemplates.AbsoluteActionUrl(url, publicBase), Is.EqualTo(expected));
+    }
 }
 
 /// <summary>When a notification email may reach real SMTP (GAD-T310/GAD-T374): never unconfigured, never in mock mode unless asked. Pure.</summary>

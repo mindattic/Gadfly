@@ -57,6 +57,10 @@ public sealed class ReminderSweepJob(GadflyDbContext db, TimeProvider clock) : I
         var due = await (from a in db.ExamAssignments.IgnoreQueryFilters().AsNoTracking()
                           join e in db.Exams.IgnoreQueryFilters().AsNoTracking() on a.ExamId equals e.Id
                           where a.ClosesAt != null && a.ClosesAt > now && a.ClosesAt <= until
+                                // GAD-T479: only an exam still open, to a student still in the organization (a removed or erased
+                                // student, or an archived exam, is never reminded).
+                                && e.Status == ExamStatus.Published
+                                && db.OrganizationMembers.Any(m => m.OrganizationId == a.OrganizationId && m.UserId == a.StudentUserId && m.IsActive)
                                 && !db.ExamSessions.IgnoreQueryFilters().Any(s => s.AssignmentId == a.Id && s.State == SessionState.Ended)
                                 && !db.Set<EmailLog>().Any(l => l.Kind == EmailKinds.Reminder && l.RelatedId == a.Id)
                           select new { a.Id, a.OrganizationId, a.StudentUserId, a.ClosesAt, ExamTitle = e.Title })
