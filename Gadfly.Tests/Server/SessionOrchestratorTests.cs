@@ -181,6 +181,26 @@ public class SessionOrchestratorTests : ServerTest
         Assert.That(turn.ConceptKey, Is.EqualTo("photosynthesis"));
     }
 
+    /// <summary>GAD-T321: an answer resent after the first was judged carries the old turn number and is dropped, never taken for the next question.</summary>
+    [Test]
+    public async Task AResentAnswer_ForAnOlderTurn_IsDroppedNotTakenForTheNext()
+    {
+        var w = await Seed.ExamAsync(policy: new SessionPolicy { ConceptIds = ["photosynthesis"], MaxTurns = 3 });
+        var id = await StartedAsync(w);
+        var first = await Orchestrator.CurrentAsync(w.Org, id, w.StudentId);
+        var answer = Typed("Plants capture light energy and store it as chemical energy in glucose.");
+        var second = await Orchestrator.AnswerAsync(w.Org, id, w.StudentId, answer, expectedTurn: first.TurnIndex);
+        Assert.That(second.TurnIndex, Is.EqualTo(first.TurnIndex + 1));
+
+        var again = await Orchestrator.AnswerAsync(w.Org, id, w.StudentId, answer, expectedTurn: first.TurnIndex);
+        Assert.That(again.TurnIndex, Is.EqualTo(second.TurnIndex), "the current question comes back unchanged");
+        Assert.That(again.Question, Is.EqualTo(second.Question));
+        await using var db = SystemDb();
+        var turns = await db.SessionTurns.AsNoTracking().Where(t => t.SessionId == id).OrderBy(t => t.Index).ToListAsync();
+        Assert.That(turns, Has.Count.EqualTo(2));
+        Assert.That(turns[1].AnswerText, Is.Null, "the resend did not answer the next question");
+    }
+
     [Test]
     public async Task AnsweringPersistsTheJudgment_ThenEndsWithAReport()
     {

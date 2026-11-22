@@ -187,7 +187,7 @@ public partial class ExamRoom
                 pendingAnswer = text;
                 pendingVoiceAnswer = answer;
                 answerStartedAt = answer.StartedAt;
-                await RunStepAsync(ThinkingAbout.Answer, () => Sessions.AnswerAsync(org, SessionId, user, answer));
+                await RunStepAsync(ThinkingAbout.Answer, () => Sessions.AnswerAsync(org, SessionId, user, answer, expectedTurn: payload.Turn));
                 break;
             case { Kind: ResponseLedger.MeaningKind } request:
                 await ClarifyAsync(request, text);

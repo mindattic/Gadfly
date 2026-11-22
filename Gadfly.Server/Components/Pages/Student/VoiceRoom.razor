@@ -514,6 +514,8 @@
     [JSInvokable]
     public Task OnVoiceAnswer(VoiceAnswerPayload payload) => InvokeAsync(async () =>
     {
+        // The question it answers, as shown when it arrived: the awaits below can let the exam move on first (GAD-T321).
+        if (payload is not null) payload.Turn = TurnIndex;
         // The words as heard, joined the way VoiceAnswerBuilder joins them; the delay is the one the student watched (display only).
         var said = string.Join(' ', (payload?.Segments ?? []).Select(s => (s.Text ?? "").Trim()).Where(t => t.Length > 0));
         var delay = payload?.ResponseDelayMs is { } ms && double.IsFinite(ms) && ms >= 0 && ms / 1000 <= MaxDelaySeconds ? ms / 1000 : (double?)null;

@@ -25,6 +25,8 @@ public sealed class VoiceSegment
 public sealed class VoiceAnswerPayload
 {
     public List<VoiceSegment> Segments { get; set; } = [];
+    /// <summary>The question this answers, as shown when the browser captured it (GAD-T321): set by VoiceRoom, not sent by the browser.</summary>
+    public int? Turn { get; set; }
     /// <summary>The capture-clock time the examiner stopped speaking (the microphone opened), for time to first word.</summary>
     public double? ListeningStartMs { get; set; }
     /// <summary>Wall-clock time of the first speech (Unix ms), the answer's start.</summary>

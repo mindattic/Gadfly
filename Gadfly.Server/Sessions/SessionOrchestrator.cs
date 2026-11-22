@@ -265,12 +265,27 @@ public sealed class SessionOrchestrator(
     /// one may get a neutral clarification question (the step then carries <see cref="SessionStep.Verification"/>
     /// and the same question). Otherwise the verified text is judged and the next question returned.
     /// </summary>
-    public Task<SessionStep> AnswerAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Answer answer, CancellationToken ct = default) =>
+    /// <param name="expectedTurn">
+    /// The <see cref="SessionStep.TurnIndex"/> of the question the client is answering (GAD-T321). When given, an answer meant for another
+    /// question (a double submit or a resend that arrives after the first was judged) is dropped and the current state returned, so it
+    /// can never become the answer to the next question. Null (older clients) keeps the previous behaviour.
+    /// </param>
+    public Task<SessionStep> AnswerAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Answer answer, CancellationToken ct = default,
+        int? expectedTurn = null) =>
         StepAsync(organizationId, sessionId, studentUserId, async live =>
         {
             var s = live.Engine.Session;
             if (s.IsEnded)
+            {
+                // A duplicate of the answer that ended the exam: the exam's end is the current state, not an error.
+                if (expectedTurn is not null) return null;
                 throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            }
+            if (expectedTurn is { } expected && IsStaleAnswer(s, expected))
+            {
+                log.LogInformation("Dropped an answer meant for turn {Expected}; the session is on turn {Current}.", expected, s.Turns.Count - 1);
+                return s.OpenTurn;
+            }
             ResumeOnActivity(live);
             if (s.OpenTurn is null && s.AwaitingJudgment is not null)
             {
@@ -292,7 +307,11 @@ public sealed class SessionOrchestrator(
             var turnId = await TurnIdAsync(db, s.Id, open.Index, ct)
                 ?? throw new SessionRefusedException("Your question is still being saved; please submit again.");
             if (await ledger.PendingAsync(s.Id, turnId, ct) is not null)
+            {
+                // The same answer sent twice: the first is waiting on its confirmation, which is the current state (GAD-T321).
+                if (expectedTurn is not null) return open;
                 throw new SessionRefusedException("Please answer the request about your last answer first.");
+            }
 
             // An answer given while the clock is still held (the examiner-speaks signal never arrived) releases it where it stands,
             // counting from when the session started: a later start can't hand out a fresh time budget (GAD-T239).
@@ -512,6 +531,9 @@ public sealed class SessionOrchestrator(
             log.LogWarning(ex, "The last answer could not be judged before the exam ended; it is kept for a human to grade.");
         }
     }
+
+    /// <summary>An answer meant for a question other than the session's latest one (GAD-T321): stale, so it is dropped.</summary>
+    internal static bool IsStaleAnswer(SocraticSession s, int expectedTurn) => s.Turns.Count > 0 && s.Turns[^1].Index != expectedTurn;
 
     // ------------------------------------------------------------------ verification flow (GAD-T86..T88)
 

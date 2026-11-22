@@ -6,8 +6,10 @@ using Microsoft.AspNetCore.SignalR;
 namespace Gadfly.Server.Sessions;
 
 /// <summary>An answer as a client sends it.</summary>
+/// <param name="ExpectedTurn">The step's TurnIndex this answers (GAD-T321): with it, a double submit or late resend is dropped, never
+/// taken as the answer to the next question. Optional for older clients.</param>
 public sealed record HubAnswer(string Text, string Mode = "text", DateTimeOffset? StartedAt = null,
-    IReadOnlyList<TimedWord>? Words = null, IReadOnlyDictionary<string, double>? SpeechMetrics = null);
+    IReadOnlyList<TimedWord>? Words = null, IReadOnlyDictionary<string, double>? SpeechMetrics = null, int? ExpectedTurn = null);
 
 /// <summary>A batch of client-side integrity signals (browser, webcam, audio modules).</summary>
 public sealed record HubIntegrityEvent(string Source, string Type, DateTimeOffset StartedAt, DateTimeOffset? EndedAt,
@@ -88,7 +90,7 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
         // Only a connection that already proved ownership (Start/Current) may signal the session's channel (GAD-T74).
         if (Joined().Contains(sessionId)) await Clients.Group(Group(sessionId)).SendAsync("Thinking", sessionId);
         var sanitized = await ToAnswerAsync(org, sessionId, answer, DateTimeOffset.UtcNow);
-        var step = await Guard(() => orchestrator.AnswerAsync(org, sessionId, user, sanitized, Context.ConnectionAborted));
+        var step = await Guard(() => orchestrator.AnswerAsync(org, sessionId, user, sanitized, Context.ConnectionAborted, answer.ExpectedTurn));
         await Clients.OthersInGroup(Group(sessionId)).SendAsync("Step", step);
         return step;
     }
