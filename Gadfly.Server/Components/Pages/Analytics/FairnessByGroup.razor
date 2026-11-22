@@ -86,6 +86,130 @@
                     <p class="notice" role="status">@w</p>
                 }
             }
+
+            @* ---------------------------------------------------------- path drivers (GAD-T434) *@
+            <h3 id="h-path-drivers">What made the examiner press harder, by group</h3>
+            <p class="hint">@PathDrivers.Caveat</p>
+            @if (data.Paths.Answers == 0)
+            {
+                <p class="hint">No answered questions with a stored transcript in this scope yet.</p>
+            }
+            else
+            {
+                <table class="grid">
+                    <caption>@data.Paths.Answers answer(s); shares are of answers</caption>
+                    <thead><tr><th>Group</th><th>Students</th><th>Answers</th><th>Typed</th><th>Pressed harder</th><th>Pressed hard</th><th>Hedging</th><th>Vague wording</th><th>No reason or example</th><th>Not convincing</th><th>Evidence against</th><th>Unclear meaning</th><th>Recited</th><th>Long pauses / spoken minute</th><th>Sessions with a device pause</th><th>Exam time paused</th></tr></thead>
+                    <tbody>
+                        @foreach (var g in data.Paths.Groups)
+                        {
+                            <tr>
+                                <td>@g.Group</td>
+                                <td>@g.Students</td>
+                                @if (g.TooFew)
+                                {
+                                    <td colspan="14" class="hint">Withheld: fewer than @GroupFairness.MinStudents students.</td>
+                                }
+                                else
+                                {
+                                    <td>@g.Answers</td>
+                                    <td>@AnalyticsService.Pct(g.TypedShare)</td>
+                                    <td>@AnalyticsService.Pct(g.PressureRaised)</td>
+                                    <td>@AnalyticsService.Pct(g.Shaky)</td>
+                                    <td>@AnalyticsService.Pct(g.Hedging)</td>
+                                    <td>@AnalyticsService.Pct(g.Vague)</td>
+                                    <td>@AnalyticsService.Pct(g.NoReason)</td>
+                                    <td>@AnalyticsService.Pct(g.NotConvincing)</td>
+                                    <td>@AnalyticsService.Pct(g.EvidenceAgainst)</td>
+                                    <td>@AnalyticsService.Pct(g.Unclear)</td>
+                                    <td>@AnalyticsService.Pct(g.Recited)</td>
+                                    <td>@Num(g.LongPausesPerMinute)</td>
+                                    <td>@AnalyticsService.Pct(g.SessionsWithDevicePause)</td>
+                                    <td>@AnalyticsService.Pct(g.DevicePausedShare)</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                <p class="hint">"Pressed harder" is any cue (one cue presses a little, two or more press hard, a recited answer is asked
+                    again differently). "No reason or example" counts only answers whose question asked for one.</p>
+                @foreach (var w in data.Paths.Warnings)
+                {
+                    <p class="notice" role="status">@w</p>
+                }
+            }
+
+            @* ---------------------------------------------------------- typed versus spoken (GAD-T438) *@
+            <h3 id="h-typed-spoken">Typed answers against spoken answers</h3>
+            <p class="notice caveat"><strong>The typed group chose itself.</strong> @TypedSpoken.Caveat</p>
+            var ts = data.Modes;
+            @if (ts.Typed.Students == 0)
+            {
+                <p class="hint">No student in this scope has the typed-answers accommodation, so there is nothing to compare yet.</p>
+            }
+            else
+            {
+                <table class="grid">
+                    <caption>All objectives (this table ignores the grouping above)</caption>
+                    <thead><tr><th>Answers</th><th>Students</th><th>Sessions</th><th>Objective levels</th><th>Mean human level</th><th>Mean panel level</th><th>Panel and human agree</th><th>Mean difference (levels)</th><th>Integrity notes / 10 min</th><th>Sessions with a note</th></tr></thead>
+                    <tbody>
+                        @foreach (var (label, side) in new[] { ("Typed", ts.Typed), ("Spoken", ts.Spoken) })
+                        {
+                            <tr>
+                                <td>@label</td>
+                                <td>@side.Students</td>
+                                @if (side.TooFew)
+                                {
+                                    <td colspan="8" class="hint">Withheld: fewer than @GroupFairness.MinStudents students.</td>
+                                }
+                                else
+                                {
+                                    <td>@side.Sessions</td>
+                                    <td>@side.Graded</td>
+                                    <td>@Num(side.MeanHuman)</td>
+                                    <td>@Num(side.MeanPanel)</td>
+                                    <td>@AnalyticsService.Pct(side.SameLevel)</td>
+                                    <td>@Num(side.MeanAbsGap)</td>
+                                    <td>@(side.NotesPer10Min is { } n ? n.ToString("0.0") : "—")</td>
+                                    <td>@AnalyticsService.Pct(side.SessionsWithNotes)</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (ts.HumanGapSameObjective is { } hg)
+                {
+                    <p>At the same objective, typed answers' human levels are @ScoreGaps.Signed(hg) against spoken ones
+                        @(ts.PanelGapSameObjective is { } pg ? $"(the panel's {ScoreGaps.Signed(pg)})" : ""), averaged over objectives with
+                        @GroupFairness.MinStudents or more students on each side.</p>
+                }
+                @if (ts.Objectives.Count > 0)
+                {
+                    <details>
+                        <summary>By objective (@ts.Objectives.Count)</summary>
+                        <table class="grid">
+                            <thead><tr><th>Objective</th><th>Typed: students</th><th>Typed: mean human</th><th>Typed: agree</th><th>Spoken: students</th><th>Spoken: mean human</th><th>Spoken: agree</th></tr></thead>
+                            <tbody>
+                                @foreach (var o in ts.Objectives)
+                                {
+                                    <tr>
+                                        <td>@o.Objective</td>
+                                        <td>@o.Typed.Students</td>
+                                        <td>@(o.Typed.TooFew ? "withheld" : Num(o.Typed.MeanHuman))</td>
+                                        <td>@(o.Typed.TooFew ? "withheld" : AnalyticsService.Pct(o.Typed.SameLevel))</td>
+                                        <td>@o.Spoken.Students</td>
+                                        <td>@(o.Spoken.TooFew ? "withheld" : Num(o.Spoken.MeanHuman))</td>
+                                        <td>@(o.Spoken.TooFew ? "withheld" : AnalyticsService.Pct(o.Spoken.SameLevel))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </details>
+                }
+                @foreach (var w in ts.Warnings)
+                {
+                    <p class="notice" role="status">@w</p>
+                }
+            }
         }
     </section>
 }
@@ -94,7 +218,7 @@
     [Parameter, EditorRequired] public AnalyticsScope Scope { get; set; } = AnalyticsScope.All;
 
     /// <summary>Everything the section shows, loaded together for one grouping.</summary>
-    private sealed record Reports(ScoreGapsReport Gaps, int Unplaced);
+    private sealed record Reports(ScoreGapsReport Gaps, PathDriversReport Paths, TypedSpokenReport Modes, int Unplaced);
 
     private AnalyticsScope? loaded;
     private Reports? data;
@@ -143,8 +267,10 @@
                 }
                 var groupOf = GroupFairness.Grouper(map);
                 var gaps = await new ScoreGaps(db, org).BuildAsync(sessions, groupOf);
+                var paths = await new PathDrivers(db, org).BuildAsync(sessions, groupOf);
                 var unplaced = sessions.Where(s => groupOf(s) is null).Select(s => s.StudentUserId).Distinct().Count();
-                return (new Reports(gaps, unplaced), miss);
+                var modes = await new TypedSpoken(db, org).BuildAsync(sessions);
+                return (new Reports(gaps, paths, modes, unplaced), miss);
             });
             grouped = grouping is not null;
         }
