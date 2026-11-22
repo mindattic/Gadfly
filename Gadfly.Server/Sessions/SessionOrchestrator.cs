@@ -882,18 +882,19 @@ public sealed class SessionOrchestrator(
             m.UpdatedAt = now;
         }
 
-        // Answer-text integrity: a strong "read aloud" signal becomes reviewable evidence (never a score).
-        foreach (var turn in s.Turns.Where(t => t.Judgment?.TextStyle is { Score: >= 0.7 }))
+        // Answer-text integrity: a high text-style estimate becomes reviewer-only context (never a score, never a verdict). It is an
+        // unvalidated, detector-like estimate (GAD-T284): ReviewService hides it from a blind grader until their grade is submitted.
+        foreach (var turn in s.Turns.Where(t => t.Judgment?.TextStyle is { Score: >= Gadfly.Sources.TextStyleAssessor.ReviewerThreshold }))
         {
             var turnRow = stored[turn.Index];
-            if (await db.IntegrityEvents.AnyAsync(e => e.SessionId == s.Id && e.TurnId == turnRow.Id && e.Type == "text-reads-as-written", ct)) continue;
+            if (await db.IntegrityEvents.AnyAsync(e => e.SessionId == s.Id && e.TurnId == turnRow.Id && e.Type == Review.IntegrityExplanations.TextStyleEventType, ct)) continue;
             var style = turn.Judgment!.TextStyle!;
             db.IntegrityEvents.Add(new IntegrityEvent
             {
-                OrganizationId = org, SessionId = s.Id, TurnId = turnRow.Id, Source = "text", Type = "text-reads-as-written",
+                OrganizationId = org, SessionId = s.Id, TurnId = turnRow.Id, Source = "text", Type = Review.IntegrityExplanations.TextStyleEventType,
                 StartedAt = turn.Answer!.StartedAt ?? turn.Answer.CompletedAt, EndedAt = turn.Answer.CompletedAt,
                 Confidence = style.Score, Severity = IntegritySeverity.Low,
-                Summary = $"This answer reads more like written text than the student's other answers ({style.Reason}). Weak evidence on its own.",
+                Summary = $"Unvalidated estimate: this answer reads more like written text than the student's other answers ({style.Reason}). False-flag rate not yet measured; weak evidence on its own, never a verdict.",
             });
         }
 

@@ -17,8 +17,9 @@ to the entries in them. Nothing here changes code.
 | 4 | Gaze fade and "look at me" | `wwwroot/js/examiner-gaze.js` (GAD-T240) | Legal, weak as evidence; owner decision (c) | GAD-T261 |
 | 5 | Voice strain | `Gadfly.Server/Voice/VoiceStrain.cs` | Not supported; legal risk; owner decision (b) | GAD-T258, GAD-T259 |
 | 6 | Time limits and the end-of-answer cue | `SessionPolicy.cs`, `voice-room.js`, `StudentExams.cs` | Time budget supported; two choices questioned | GAD-T263, GAD-T264 |
-| 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273 |
+| 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273, GAD-T285 (done) |
 | 8 | Learning Mode hints | `HintLadders`, `QuestionGenerator`, `MoveKind.Hint` | Supported only as a fixed ladder, kept apart | GAD-T271 |
+| 9 | Text-style estimate | `Gadfly.Sources/TextStyleAssessor.cs` (GAD-T59) | Not supported (a detector in all but name); kept as unvalidated reviewer-only context | GAD-T284 (done), GAD-T285 (done) |
 | - | Owner decisions (a) to (d) | see below | Recorded, not overridden | GAD-T260, GAD-T261, GAD-T258/T259, GAD-T262 |
 
 ## 1. Follow-up moves
@@ -243,6 +244,20 @@ thresholds per exam: QWK at least .70, within .10 of human-human agreement, |SMD
 reconciling single answers), GAD-T265 (word error rate by group, and low-confidence segments marked for graders), GAD-T273
 (feedback per objective on released results).
 
+**Done.** GAD-T285 (approved by the owner; found by GAD-T282), two gaps in the oversight above:
+- **Integrity context waits for the blind score.** The blind grader used to see gaze episodes, recitation flags and
+  the text-style event while grading, although the research notes say to show integrity context only after the
+  content-based score (06) and a flag primes a judgment of the student rather than of the answer (05: Zheng2023).
+  While a session's grading is blind, the review page, its CSV and Markdown exports and the review list now give a
+  grader no integrity event of any kind (gaze and camera, browser, recitation, text style); the list shows "hidden"
+  in place of a flag count. They appear once the human score is submitted. Owners and Admins, who do not score,
+  keep the full view. A policy that turns blind grading off shows them from the start, as it does the AI's grade.
+- **Separation of duties.** One person could score, reconcile and approve the same grade, which leaves the human
+  oversight Article 14 asks for to a single judgment. `GradingService` now refuses reconciliation and approval by
+  anyone who entered a human score on that grade (audited as `grade.separation-of-duties.refused`), on the page and
+  the endpoints alike. An organization with one grader can turn on "Allow a single grader" (off by default, the
+  change audited); every act it lets through is audited as `grade.separation-of-duties.waived`.
+
 ## 8. Learning Mode hints
 
 **What Gadfly does.** In Learning Mode only, Hint and GuidedExplanation moves teach, and everything after them is tagged
@@ -263,6 +278,44 @@ gain or learning-potential score is computed. Examination Mode refuses to teach.
 
 **Done.** GAD-T271 (approved by the owner): a fixed hint ladder per objective, where the planner picks when to give a hint,
 never what it says, reported beside the unaided score.
+
+## 9. Text-style estimate
+
+**What Gadfly does.** `TextStyleAssessor` (GAD-T59) asks the panel how likely it is that a spoken answer "was read aloud
+from AI-generated or written text rather than composed while speaking," compared with the same student's other answers
+(at least two earlier answers, answers of 120 characters or more). The providers' estimates are averaged and stored with
+the answer's exam-time judgment. At `TextStyleAssessor.ReviewerThreshold` (0.7) or more it is also recorded as a
+low-severity integrity event (`text-reads-as-written`). It never enters the score and never changes what the examiner
+asks. Found by GAD-T282 (dissertation Appendix A, correction 37), it was missing from this map.
+
+**Evidence for.**
+- Comparing a student with their own other answers is the least unfair form such a signal could take: it does not compare
+  them with a population whose style may differ by first language.
+- Shown only to a human, with its ceiling stated, it informs rather than acts (06: integrity context informs a reviewer,
+  it is not a finding).
+
+**Evidence against.**
+- It is a detector of machine-written text in all but name, applied to transcribed speech. Seven widely used detectors
+  labelled more than half of a set of essays by non-native English writers as machine-generated (05: Liang2023, average
+  false-positive rate 61.3%), and detectors as a class were found neither accurate nor reliable (06: WeberWulff2023). The research
+  notes recommend that they never be used as integrity signals (05).
+- No source tests a language-model estimate of this kind on transcribed speech, or within a student's own answers. Speech
+  recognition errors and accent already differ by group (02: Koenecke2020), so a transcript that "reads like written text"
+  may say as much about the recognizer as about the student.
+- Shown to a grader while grading, it can prime the judgment of the student rather than of the answer (05: Zheng2023 on
+  anchoring to a machine verdict).
+
+**Done.** GAD-T284 (the owner chose to keep it, as reviewer-only context, over dropping it):
+- It is labelled everywhere as an **unvalidated estimate** whose false-flag rate has not been measured: the reviewer's
+  explanation and the per-answer line on the review page (`IntegrityExplanations`), and the event's summary.
+- It is never an integrity verdict and never affects the score (unchanged; the score never read it).
+- It is hidden from a blind human grader until their score is submitted: the estimate with the exam-time judgments (as
+  before), and the integrity event with every other integrity flag (GAD-T285).
+- `TextStyleAssessor.Measure` and `gadfly textstyle-rate <transcripts>` count how often the estimate reaches the reviewer
+  threshold over session transcripts, from the estimates already stored (no model calls). Over sessions from students
+  known to be answering honestly, every answer at or above the threshold is a false flag; run it once per group (for
+  example, by first language) to compare rates. The rate stays unknown until it is run on pilot data
+  (`docs/PILOT.md`). Until then, treat any high estimate as noise unless the answers around it say otherwise.
 
 ## Owner decisions the research questions
 
@@ -345,6 +398,8 @@ All were filed by GAD-T257 as proposed and unapproved. None changes code until t
 | GAD-T271 | 8 | Fixed, instructor-written hint ladder in Learning Mode | No |
 | GAD-T272 | 3 | Measure false flags from the read-out pattern; suppress it under an accommodation | No |
 | GAD-T273 | 7 | Feedback per objective on released results | No |
+| GAD-T284 | 9 | Text-style estimate kept only as unvalidated, reviewer-only context, with a command that measures its false-flag rate (filed by GAD-T282; approved and done) | No |
+| GAD-T285 | 7, 9 | Integrity flags hidden from the blind grader until their score is in; a different person reconciles and approves (filed by GAD-T282; approved and done) | No |
 
 ## What the evidence does not let Gadfly claim
 

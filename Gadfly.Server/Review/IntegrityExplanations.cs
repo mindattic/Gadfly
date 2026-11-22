@@ -70,8 +70,8 @@ public static class IntegrityExplanations
             "A weak guess from the window's size: developer tools may have been open. Window zoom and browser side panels look the same; ignore it unless other signals line up."),
         ["signals-capped"] = new("More browser signals not stored",
             "The browser kept reporting signals past the per-session limit, so later ones were not stored. Usually a flickering window or connection; look at the signals that were stored."),
-        ["text-reads-as-written"] = new("Answer reads like written text",
-            "This answer reads more like text read aloud than the student's other answers. Weak evidence: never a score, and never meaningful on its own."),
+        [TextStyleEventType] = new("Text style estimate (unvalidated)",
+            "An unvalidated panel estimate that this answer reads more like text read aloud than the student's other answers. Estimates of this kind (detectors of machine-written text) misfire often, especially on non-native speakers, and this one's false-flag rate has not been measured. Context only: never a verdict, never a score, never meaningful on its own, and hidden from a blind grader until their grade is in."),
         [RecitationView.EventType] = new("Possibly recited",
             "The recitation check found this answer closely follows the source material's wording, or was a long, fluent spoken answer that began only after a long silent wait (a read-out pattern; never applied to a student with extra time or on an exam that switched it off, since thinking before speaking looks the same); the turn shows the overlap, the copied stretch and which pattern fired. The examiner did not count it as evidence of the student's own understanding, either way, and asked them to say it differently, apply it, or explain why; read the next answer. Students quote and memorize honestly, so this is never a verdict of cheating."),
     };
@@ -89,11 +89,17 @@ public static class IntegrityExplanations
             $"A {source} signal. Treat it as evidence to weigh with the answers around it, not as a finding.", false);
     }
 
-    /// <summary>How the text-style score should be read.</summary>
+    /// <summary>
+    /// The integrity event a text-style estimate at or above the reviewer threshold becomes (GAD-T284): reviewer-only context,
+    /// hidden from a blind grader until their grade is submitted.
+    /// </summary>
+    public const string TextStyleEventType = "text-reads-as-written";
+
+    /// <summary>How the text-style score should be read. It is an unvalidated estimate (GAD-T284), and every reading says so.</summary>
     public static string TextStyle(double score) => score switch
     {
-        >= 0.7 => "Reads noticeably more like written text than this student's other answers. Weak evidence on its own; it never changes the score.",
-        >= 0.4 => "Somewhat more polished than this student's other answers. Not meaningful on its own.",
-        _ => "Reads like this student's other spoken answers.",
+        >= 0.7 => "Unvalidated estimate: reads noticeably more like written text than this student's other answers. Its false-flag rate is not yet measured; weak evidence on its own, never a verdict, and it never changes the score.",
+        >= 0.4 => "Unvalidated estimate: somewhat more polished than this student's other answers. Not meaningful on its own.",
+        _ => "Unvalidated estimate: reads like this student's other spoken answers.",
     };
 }
