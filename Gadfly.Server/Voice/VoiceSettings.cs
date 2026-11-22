@@ -3,7 +3,11 @@ namespace Gadfly.Server.Voice;
 /// <summary>How the voice exam room runs. Nothing but <see cref="Live"/> can reach a paid provider.</summary>
 public enum VoiceMode
 {
-    /// <summary>Voice is not offered (the default outside Development): exams are answered by typing.</summary>
+    /// <summary>
+    /// Voice is not offered (the default outside Development unless Gadfly:Voice:Mode is set). Exams are spoken, so with
+    /// voice off the get-ready page's spoken-examiner check fails and no exam can begin; a deployment that runs exams sets
+    /// the mode (docs/DEPLOY.md).
+    /// </summary>
     Off,
     /// <summary>
     /// Simulated speech recognition (placeholder words timed to the microphone) and an in-process fake text-to-speech with
