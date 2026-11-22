@@ -120,6 +120,37 @@ Click a name to open the student's **profile** (`/admin/students/{id}`):
 
 Every change on these pages is recorded in the audit log with who made it.
 
+## Assignments
+
+**Assignments** (`/admin/assignments`) shows who sits what, in two views.
+
+- **List**: one row per student and exam, with its status (not started, in progress, interrupted, awaiting
+  grading, graded but not released, released), opening and due dates in your own time zone, attempts used of
+  those allowed, the latest score and any accommodations. Filter by exam, student, status, accommodation and
+  due date range, sort by student, exam, due date or date assigned, and page through. **Export CSV** downloads
+  every row the filters match (the export is recorded in the audit log).
+- **Grid: students by exam**: active students down the side, published exams across the top (or one exam you
+  choose). Each assigned cell shows its status, attempts and due date; an empty cell says "not assigned".
+
+**Assign an exam** takes a published exam, an optional opening and due date, the attempts allowed and extra
+time, and assigns it to the students you tick on the grid (each ticked exam goes to its own students), to a
+pasted list of user names or emails (names that are not active students are listed and skipped), or to every
+active student. Students who already have the exam are skipped.
+
+Tick rows in the list (or assigned cells in the grid) to change many at once:
+
+| Action | What it does |
+|---|---|
+| **Set dates** | Sets or removes the opening time and the due date. A window that would close before it opens is left alone and listed. |
+| **Move due date** | Moves each due date by a number of days, forward or back; assignments with no due date are skipped. |
+| **Grant another attempt** | One more attempt each (at most 20). Needs a reason. |
+| **Reset attempt** | Clears the scores of the attempts so far, keeping an archived copy of every grade, report, reconciliation, approval and appeal in the audit log (the same rule as the desk's **Clear scores**); the attempts and transcripts stay, still count, and are not graded again unless someone decides to; then grants one more attempt so the student can sit it again. Needs a reason; refused while an attempt is in progress or when there is no attempt yet. |
+| **Accommodations** | Extra time (from the next attempt), no eye contact expected, and typed answers (both from the next answer). Granted by staff for one student on one exam; students never see a switch for them. |
+| **Unassign** | Removes assignments with no attempt yet. An assignment with an attempt is kept, since its transcript and grades belong to it. Needs a reason. |
+
+Every change is recorded in the audit log once per assignment, with the reason where one is asked for, so it
+also shows in the student's history.
+
 ## The admin desk
 
 The **admin desk** (`/admin/desk`, **Desk** in the admin navigation) puts the everyday work on one page, in three

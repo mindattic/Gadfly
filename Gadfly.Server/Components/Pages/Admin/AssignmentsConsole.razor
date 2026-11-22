@@ -1,10 +1,655 @@
 @page "/admin/assignments"
 @attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Admin
+@using Gadfly.Server.Data
+@using Gadfly.Server.Exams
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject ILogger<AssignmentsConsole> Log
 
-@* Placeholder (GAD-T300) so the admin navigation never leads nowhere. GAD-T298 replaces this file with the real page. *@
+@* The assignments console (GAD-T298): who sits what, as a list or a students-by-exams grid, with bulk changes. *@
 <PageTitle>Assignments · Gadfly Exams</PageTitle>
-<h1>Assignments</h1>
-<div class="panel admin-soon">
-    <p><strong>Coming in this release.</strong> Who sits what: assign in bulk, set dates and attempts, and follow progress.</p>
-    <p class="hint">Until then, the <a href="admin/desk">admin desk</a> and the <a href="admin">dashboard</a> cover the everyday work.</p>
+<HeadContent><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-desk.css" /><link rel="stylesheet" href="admin-people.css" /></HeadContent>
+
+<div class="people-head">
+    <h1>Assignments</h1>
+    <div class="row-actions">
+        <button type="button" class="@(assignOpen ? null : "people-ghost")" @onclick="ToggleAssign">Assign an exam</button>
+        @if (!IsGrid)
+        {
+            <a class="people-button people-ghost" href="@PeopleExportEndpoints.AssignmentsCsv(CurrentQuery)" download data-enhance-nav="false">Export CSV</a>
+        }
+    </div>
 </div>
+
+<nav class="console-tabs" aria-label="View">
+    <a href="@Address(view: "list")" class="@(IsGrid ? null : "active")" aria-current="@(IsGrid ? null : "page")">List</a>
+    <a href="@Address(view: "grid")" class="@(IsGrid ? "active" : null)" aria-current="@(IsGrid ? "page" : null)">Grid: students by exam</a>
+</nav>
+
+@if (message is not null)
+{
+    <div role="status" class="people-message @(ok ? "ok" : "error")">
+        <p style="margin:0">@message</p>
+        @foreach (var p in problems)
+        {
+            <p class="hint" style="margin:.2rem 0 0">@p</p>
+        }
+    </div>
+}
+
+@if (assignOpen)
+{
+    <section class="panel people-form" aria-labelledby="assign-h">
+        <h2 id="assign-h">Assign an exam</h2>
+        <label>Exam
+            <select @bind="assign.ExamId">
+                <option value="@Guid.Empty">Choose a published exam…</option>
+                @foreach (var e in exams.Where(e => e.Status == ExamStatus.Published))
+                {
+                    <option value="@e.Id">@e.Title</option>
+                }
+            </select>
+        </label>
+        <fieldset class="checks" style="border:0;padding:0;margin:0">
+            <legend class="hint">To whom</legend>
+            <label><input type="radio" name="who" checked="@(assign.Who == "picked")" @onchange='() => assign.Who = "picked"' disabled="@(pickedPairs.Count == 0)" />
+                Students ticked on the grid@(pickedPairs.Count > 0 ? $" ({pickedPairs.Select(p => p.Student).Distinct().Count()})" : " (none ticked)")</label>
+            <label><input type="radio" name="who" checked="@(assign.Who == "list")" @onchange='() => assign.Who = "list"' /> A list of user names or emails</label>
+            <label><input type="radio" name="who" checked="@(assign.Who == "all")" @onchange='() => assign.Who = "all"' /> Every active student</label>
+        </fieldset>
+        @if (assign.Who == "list")
+        {
+            <label>User names or emails <span class="hint">(one per line, or separated by commas)</span>
+                <textarea @bind="assign.Names" rows="4" spellcheck="false"></textarea></label>
+        }
+        <div class="desk-row">
+            <label>Opens <span class="hint">(optional, your time @OffsetLabel)</span> <input type="datetime-local" @bind="assign.Opens" /></label>
+            <label>Due <span class="hint">(optional, your time @OffsetLabel)</span> <input type="datetime-local" @bind="assign.Closes" /></label>
+        </div>
+        <div class="desk-row">
+            <label>Attempts allowed <input type="number" min="1" max="@AssignmentAdminService.MaxAttempts" @bind="assign.Attempts" /></label>
+            <label>Extra time
+                <select @bind="assign.Time">
+                    @foreach (var m in ExamService.TimeMultipliers)
+                    {
+                        <option value="@m">@AdminPeople.Time(m)</option>
+                    }
+                </select>
+            </label>
+        </div>
+        <p class="hint">Students who already have this exam are skipped. Eye-contact and typed-answer accommodations are set per student afterwards, from the list.</p>
+        <div class="row-actions">
+            <button type="button" @onclick="AssignAsync" disabled="@(busy || assign.ExamId == Guid.Empty)">Assign</button>
+            <button type="button" class="link" @onclick="ToggleAssign">Cancel</button>
+        </div>
+    </section>
+}
+
+@if (!IsGrid)
+{
+    <form class="people-filters" @onsubmit="ApplySearch" @onsubmit:preventDefault>
+        <label class="grow">Student <input type="search" @bind="studentBox" placeholder="Name, user name or email" /></label>
+        <label>Exam
+            <select @onchange='e => Go(examId: ParseGuid(e.Value) ?? Guid.Empty)'>
+                <option value="" selected="@(Exam is null)">Any exam</option>
+                @foreach (var x in exams)
+                {
+                    <option value="@x.Id" selected="@(Exam == x.Id)">@x.Title@(x.Status == ExamStatus.Archived ? " (archived)" : "")</option>
+                }
+            </select>
+        </label>
+        <label>Status
+            <select @onchange='e => Go(status: PeopleExportEndpoints.Enum(e.Value?.ToString(), AssignmentProgressFilter.Any))'>
+                @foreach (var f in Enum.GetValues<AssignmentProgressFilter>())
+                {
+                    <option value="@f" selected="@(CurrentStatus == f)">@AssignmentAdminService.Describe(f)</option>
+                }
+            </select>
+        </label>
+        <label>Accommodation
+            <select @onchange='e => Go(acc: PeopleExportEndpoints.Enum(e.Value?.ToString(), AssignmentAccommodationFilter.Any))'>
+                <option value="Any" selected="@(CurrentAcc == AssignmentAccommodationFilter.Any)">Any</option>
+                <option value="AnyAccommodation" selected="@(CurrentAcc == AssignmentAccommodationFilter.AnyAccommodation)">Has an accommodation</option>
+                <option value="ExtraTime" selected="@(CurrentAcc == AssignmentAccommodationFilter.ExtraTime)">Extra time</option>
+                <option value="EyeContact" selected="@(CurrentAcc == AssignmentAccommodationFilter.EyeContact)">No eye contact expected</option>
+                <option value="TypedAnswers" selected="@(CurrentAcc == AssignmentAccommodationFilter.TypedAnswers)">Typed answers</option>
+            </select>
+        </label>
+        <label>Due from <input type="date" value="@DateBox(DueFrom)" @onchange='e => Go(from: FromDateBox(e.Value), setFrom: true)' /></label>
+        <label>Due before <input type="date" value="@DateBox(DueTo)" @onchange='e => Go(to: FromDateBox(e.Value), setTo: true)' /></label>
+        <label>Sort
+            <select @onchange='e => Go(sort: PeopleExportEndpoints.Enum(e.Value?.ToString(), AssignmentSort.Student))'>
+                <option value="Student" selected="@(CurrentSort == AssignmentSort.Student)">Student</option>
+                <option value="Exam" selected="@(CurrentSort == AssignmentSort.Exam)">Exam</option>
+                <option value="Due" selected="@(CurrentSort == AssignmentSort.Due)">Due date</option>
+                <option value="Assigned" selected="@(CurrentSort == AssignmentSort.Assigned)">Date assigned</option>
+            </select>
+        </label>
+        <button type="button" class="link" @onclick="() => Go(desc: !Descending)">@(Descending ? "↓ descending" : "↑ ascending")</button>
+        <button type="submit">Search</button>
+        @if (HasFilters)
+        {
+            <a href="admin/assignments">Clear filters</a>
+        }
+    </form>
+}
+else
+{
+    <form class="people-filters" @onsubmit="ApplySearch" @onsubmit:preventDefault>
+        <label class="grow">Student <input type="search" @bind="studentBox" placeholder="Name, user name or email" /></label>
+        <label>Exam
+            <select @onchange='e => Go(examId: ParseGuid(e.Value) ?? Guid.Empty)'>
+                <option value="" selected="@(Exam is null)">Every published exam</option>
+                @foreach (var x in exams)
+                {
+                    <option value="@x.Id" selected="@(Exam == x.Id)">@x.Title@(x.Status == ExamStatus.Archived ? " (archived)" : "")</option>
+                }
+            </select>
+        </label>
+        <button type="submit">Search</button>
+    </form>
+}
+
+@if (selected.Count > 0)
+{
+    <section class="panel console-bulk" aria-labelledby="bulk-h">
+        <h2 id="bulk-h">@selected.Count assignment@(selected.Count == 1 ? "" : "s") selected <button type="button" class="link" @onclick="() => selected.Clear()">clear</button></h2>
+        <div class="row-actions">
+            <button type="button" class="@(bulk == "dates" ? null : "people-ghost")" @onclick='() => Bulk("dates")'>Set dates</button>
+            <button type="button" class="@(bulk == "move" ? null : "people-ghost")" @onclick='() => Bulk("move")'>Move due date</button>
+            <button type="button" class="@(bulk == "attempt" ? null : "people-ghost")" @onclick='() => Bulk("attempt")'>Grant another attempt</button>
+            <button type="button" class="@(bulk == "reset" ? null : "people-ghost")" @onclick='() => Bulk("reset")'>Reset attempt</button>
+            <button type="button" class="@(bulk == "access" ? null : "people-ghost")" @onclick='() => Bulk("access")'>Accommodations</button>
+            <button type="button" class="people-ghost danger-text" @onclick='() => Bulk("remove")'>Unassign</button>
+        </div>
+        @switch (bulk)
+        {
+            case "dates":
+                <div class="desk-row">
+                    <label class="check"><input type="checkbox" @bind="form.ChangeOpens" /> Change the opening</label>
+                    <label>Opens (your time @OffsetLabel) <input type="datetime-local" @bind="form.Opens" disabled="@(!form.ChangeOpens)" /></label>
+                </div>
+                <div class="desk-row">
+                    <label class="check"><input type="checkbox" @bind="form.ChangeCloses" /> Change the due date</label>
+                    <label>Due (your time @OffsetLabel) <input type="datetime-local" @bind="form.Closes" disabled="@(!form.ChangeCloses)" /></label>
+                </div>
+                <p class="hint">Leave a date empty to remove it (no opening time, or no due date).</p>
+                <button type="button" @onclick="SetDatesAsync" disabled="@busy">Apply to @selected.Count</button>
+                break;
+            case "move":
+                <label>Move the due date by <input type="number" min="-365" max="365" @bind="form.Days" style="width:6rem" /> days <span class="hint">(negative moves it earlier; assignments with no due date are skipped)</span></label>
+                <button type="button" @onclick="MoveAsync" disabled="@busy">Move</button>
+                break;
+            case "attempt":
+                <label>Reason <span class="hint">(kept in the audit log)</span> <input @bind="form.Reason" maxlength="500" /></label>
+                <button type="button" @onclick="GrantAsync" disabled="@(busy || string.IsNullOrWhiteSpace(form.Reason))">Grant one more attempt</button>
+                break;
+            case "reset":
+                <p>Resetting clears the scores of the attempts so far, keeping an archived copy of every grade, report, reconciliation, approval and appeal in the audit log. The attempts and transcripts stay and still count as used, the student is told so, and one more attempt is granted so they can sit the exam again. An attempt in progress can't be reset until it ends.</p>
+                <label>Reason <span class="hint">(kept in the audit log)</span> <input @bind="form.Reason" maxlength="500" /></label>
+                <button type="button" class="danger" @onclick="ResetAsync" disabled="@(busy || string.IsNullOrWhiteSpace(form.Reason))">Reset @selected.Count</button>
+                break;
+            case "access":
+                <div class="desk-row">
+                    <label>Extra time
+                        <select @bind="form.Time">
+                            @foreach (var m in ExamService.TimeMultipliers)
+                            {
+                                <option value="@m">@AdminPeople.Time(m)</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+                <div class="row-actions">
+                    <button type="button" @onclick="ExtraTimeAsync" disabled="@busy">Set extra time</button>
+                    <button type="button" class="people-ghost" @onclick="() => EyeContactAsync(true)" disabled="@busy">No eye contact expected: on</button>
+                    <button type="button" class="people-ghost" @onclick="() => EyeContactAsync(false)" disabled="@busy">off</button>
+                    @if (TypedAvailable)
+                    {
+                        <button type="button" class="people-ghost" @onclick="() => TypedAsync(true)" disabled="@busy">Typed answers: on</button>
+                        <button type="button" class="people-ghost" @onclick="() => TypedAsync(false)" disabled="@busy">off</button>
+                    }
+                </div>
+                <p class="hint">Accommodations are granted per student and exam, by staff only; a student can never switch them on. Extra time applies from the next attempt; the eye-contact @(TypedAvailable ? "and typed-answer accommodations take" : "accommodation takes") effect from the next answer. Every change is audited.</p>
+                break;
+            case "remove":
+                <p>Only assignments with no attempt yet are removed; one with an attempt is kept, since its transcript and grades belong to it.</p>
+                <label>Reason <span class="hint">(kept in the audit log)</span> <input @bind="form.Reason" maxlength="500" /></label>
+                <button type="button" class="danger" @onclick="UnassignAsync" disabled="@(busy || string.IsNullOrWhiteSpace(form.Reason))">Unassign</button>
+                break;
+        }
+    </section>
+}
+
+@if (error is not null)
+{
+    <div class="notice people-error" role="alert">
+        <p><strong>The assignments could not load.</strong> @error</p>
+        <button type="button" @onclick="LoadAsync" disabled="@busy">Try again</button>
+    </div>
+}
+else if (IsGrid)
+{
+    @if (grid is null)
+    {
+        <p class="hint" role="status">Loading…</p>
+    }
+    else if (grid.Exams.Count == 0)
+    {
+        <div class="notice"><p>No published exams yet. <a href="admin/exams">Create and publish one</a> first.</p></div>
+    }
+    else if (grid.Students.Count == 0)
+    {
+        <div class="notice"><p>@(string.IsNullOrWhiteSpace(StudentSearch) ? "No active students yet." : "No student matches that search.") <a href="admin/students">Students</a></p></div>
+    }
+    else
+    {
+        <p class="hint">Tick an empty cell to pick that student for the exam, then <strong>Assign an exam</strong>. Tick an assigned cell to select it for the changes above. @(grid.Exams.Count == AssignmentAdminService.MaxGridExams ? $"Showing the first {AssignmentAdminService.MaxGridExams} exams; choose one to narrow it." : "")</p>
+        <div class="table-scroll">
+            <table class="grid console-grid">
+                <thead>
+                    <tr>
+                        <th scope="col">Student</th>
+                        @foreach (var e in grid.Exams)
+                        {
+                            <th scope="col" title="@e.Title"><a href="@Address(view: "list", examId: e.Id)">@e.Title</a></th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in grid.Students)
+                    {
+                        <tr>
+                            <th scope="row"><a href="admin/students/@s.UserId">@s.Name</a></th>
+                            @foreach (var e in grid.Exams)
+                            {
+                                @if (grid.Cells.TryGetValue((s.UserId, e.Id), out var c))
+                                {
+                                    <td>
+                                        <label>
+                                            <input type="checkbox" checked="@selected.Contains(c.AssignmentId)" @onchange="ev => ToggleSelected(c.AssignmentId, ev)" aria-label="Select @s.Name, @e.Title" />
+                                            <span class="pill @AdminPeople.Css(c.Progress)">@AdminPeople.Describe(c.Progress)</span>
+                                        </label>
+                                        <span class="hint">@c.AttemptsUsed/@c.AttemptsAllowed@(c.ClosesAt is { } due ? " · due " + Local(due, "d MMM") : "")</span>
+                                    </td>
+                                }
+                                else
+                                {
+                                    <td class="cell-empty">
+                                        <label title="Pick for assigning">
+                                            <input type="checkbox" checked="@pickedPairs.Contains((s.UserId, e.Id))" @onchange="ev => TogglePair(s.UserId, e.Id, ev)" aria-label="Pick @s.Name for @e.Title" />
+                                            <span>not assigned</span>
+                                        </label>
+                                    </td>
+                                }
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <nav class="pager" aria-label="Pages">
+            <button type="button" class="link" disabled="@(grid.Page <= 1)" @onclick="() => Go(pageNo: grid.Page - 1)">← Previous</button>
+            <span>Students @((grid.Page - 1) * grid.PageSize + 1)–@Math.Min(grid.Page * grid.PageSize, grid.TotalStudents) of @grid.TotalStudents</span>
+            <button type="button" class="link" disabled="@(grid.Page >= grid.Pages)" @onclick="() => Go(pageNo: grid.Page + 1)">Next →</button>
+        </nav>
+    }
+}
+else if (list is null)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else if (list.Total == 0)
+{
+    <div class="notice">
+        @if (HasFilters)
+        {
+            <p>No assignment matches these filters. <a href="admin/assignments">Show all</a>.</p>
+        }
+        else
+        {
+            <p><strong>Nothing assigned yet.</strong> Use <strong>Assign an exam</strong>, or the grid to pick students exam by exam.</p>
+        }
+    </div>
+}
+else
+{
+    <p class="hint" role="status">@list.Total.ToString("N0") assignment@(list.Total == 1 ? "" : "s")@(HasFilters ? " match" : "")</p>
+    <div class="table-scroll">
+        <table class="grid people-table">
+            <thead>
+                <tr>
+                    <th scope="col" class="console-row-check"><input type="checkbox" checked="@AllOnPageSelected" @onchange="TogglePage" aria-label="Select every assignment on this page" /></th>
+                    <th scope="col">Student</th><th scope="col">Exam</th><th scope="col">Status</th><th scope="col">Due</th>
+                    <th scope="col" class="num">Attempts</th><th scope="col">Score</th><th scope="col">Accommodations</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in list.Rows)
+                {
+                    <tr class="@(r.StudentActive ? null : "muted")">
+                        <td><input type="checkbox" checked="@selected.Contains(r.Id)" @onchange="ev => ToggleSelected(r.Id, ev)" aria-label="Select @r.StudentName, @r.ExamTitle" /></td>
+                        <td><a href="admin/students/@r.StudentUserId">@r.StudentName</a>@(r.StudentActive ? "" : " (deactivated)")</td>
+                        <td>@r.ExamTitle@(r.ExamStatus == ExamStatus.Archived ? " (archived)" : "")</td>
+                        <td><span class="pill @AdminPeople.Css(r.Progress)">@AdminPeople.Describe(r.Progress)</span></td>
+                        <td>@(r.ClosesAt is { } c ? Local(c, "d MMM yyyy HH:mm") : "none")@if (r.OpensAt is { } o) { <br /><span class="hint">opens @Local(o, "d MMM HH:mm")</span> }</td>
+                        <td class="num">@r.AttemptsUsed of @r.AttemptsAllowed</td>
+                        <td>@(r.Score ?? "")</td>
+                        <td>@Accommodations(r)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <nav class="pager" aria-label="Pages">
+        <button type="button" class="link" disabled="@(list.Page <= 1)" @onclick="() => Go(pageNo: list.Page - 1)">← Previous</button>
+        <span>Page @list.Page of @list.Pages</span>
+        <button type="button" class="link" disabled="@(list.Page >= list.Pages)" @onclick="() => Go(pageNo: list.Page + 1)">Next →</button>
+        <label>Per page
+            <select @onchange='e => Go(size: int.TryParse(e.Value?.ToString(), out var s) ? s : 50)'>
+                @foreach (var s in new[] { 25, 50, 100, 200 })
+                {
+                    <option value="@s" selected="@(list.PageSize == s)">@s</option>
+                }
+            </select>
+        </label>
+    </nav>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "view")] public string? View { get; set; }
+    [SupplyParameterFromQuery(Name = "exam")] public Guid? Exam { get; set; }
+    [SupplyParameterFromQuery(Name = "student")] public string? StudentSearch { get; set; }
+    [SupplyParameterFromQuery(Name = "status")] public string? Status { get; set; }
+    [SupplyParameterFromQuery(Name = "acc")] public string? Acc { get; set; }
+    [SupplyParameterFromQuery(Name = "from")] public string? From { get; set; }
+    [SupplyParameterFromQuery(Name = "to")] public string? To { get; set; }
+    [SupplyParameterFromQuery(Name = "sort")] public string? Sort { get; set; }
+    [SupplyParameterFromQuery(Name = "desc")] public string? Desc { get; set; }
+    [SupplyParameterFromQuery(Name = "page")] public int? PageNo { get; set; }
+    [SupplyParameterFromQuery(Name = "size")] public int? Size { get; set; }
+
+    private sealed class AssignForm
+    {
+        public Guid ExamId { get; set; }
+        public string Who { get; set; } = "list";
+        public string? Names { get; set; }
+        public DateTime? Opens { get; set; }
+        public DateTime? Closes { get; set; }
+        public int Attempts { get; set; } = 1;
+        public decimal Time { get; set; } = 1m;
+    }
+
+    private sealed class BulkForm
+    {
+        public bool ChangeOpens { get; set; }
+        public DateTime? Opens { get; set; }
+        public bool ChangeCloses { get; set; } = true;
+        public DateTime? Closes { get; set; }
+        public int Days { get; set; } = 7;
+        public string? Reason { get; set; }
+        public decimal Time { get; set; } = 1m;
+    }
+
+    private AssignmentPage? list;
+    private AssignmentGrid? grid;
+    private IReadOnlyList<(Guid Id, string Title, ExamStatus Status)> exams = [];
+    private readonly HashSet<Guid> selected = [];
+    private readonly HashSet<(Guid Student, Guid Exam)> pickedPairs = [];
+    private string? error;
+    private string? message;
+    private IReadOnlyList<string> problems = [];
+    private bool ok;
+    private bool busy;
+    private bool assignOpen;
+    private string? bulk;
+    private string? studentBox;
+    private AssignForm assign = new();
+    private BulkForm form = new();
+    private TimeSpan offset = TimeSpan.Zero;
+    private TimeZoneInfo? zone;
+
+    /// <summary>Typed answers (GAD-T260) are granted here like the other accommodations.</summary>
+    private const bool TypedAvailable = true;
+
+    private bool IsGrid => View == "grid";
+    private AssignmentProgressFilter CurrentStatus => PeopleExportEndpoints.Enum(Status, AssignmentProgressFilter.Any);
+    private AssignmentAccommodationFilter CurrentAcc => PeopleExportEndpoints.Enum(Acc, AssignmentAccommodationFilter.Any);
+    private AssignmentSort CurrentSort => PeopleExportEndpoints.Enum(Sort, AssignmentSort.Student);
+    private bool Descending => Desc == "1";
+    private DateTimeOffset? DueFrom => PeopleExportEndpoints.ParseInstant(From);
+    private DateTimeOffset? DueTo => PeopleExportEndpoints.ParseInstant(To);
+    private bool HasFilters => Exam is not null || !string.IsNullOrWhiteSpace(StudentSearch) || CurrentStatus != AssignmentProgressFilter.Any
+                               || CurrentAcc != AssignmentAccommodationFilter.Any || DueFrom is not null || DueTo is not null;
+    private string OffsetLabel => offset == TimeSpan.Zero ? "(UTC)" : $"(UTC{(offset < TimeSpan.Zero ? "-" : "+")}{offset.Duration():hh\\:mm})";
+
+    private AssignmentQuery CurrentQuery => new()
+    {
+        ExamId = Exam, Student = StudentSearch, Progress = CurrentStatus, Accommodation = CurrentAcc, DueFrom = DueFrom, DueTo = DueTo,
+        Sort = CurrentSort, Descending = Descending, Page = PageNo ?? 1, PageSize = Size ?? 50,
+    };
+
+    private bool AllOnPageSelected => list is { Rows.Count: > 0 } && list.Rows.All(r => selected.Contains(r.Id));
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { exams = await WithAsync(s => s.ExamOptionsAsync()); }
+        catch (Exception ex) { Log.LogWarning(ex, "Assignments console: exam list failed"); }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        studentBox = StudentSearch;
+        await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/exams.js");
+            offset = TimeSpan.FromMinutes(-await module.InvokeAsync<int>("timezoneOffsetMinutes"));
+            zone = AssignmentTime.Find(await module.InvokeAsync<string?>("timeZoneId"));
+            if (zone is not null) offset = zone.GetUtcOffset(DateTimeOffset.UtcNow);
+            StateHasChanged();
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or InvalidOperationException or TaskCanceledException)
+        {
+            // Pre-rendering or a closed circuit: times stay in UTC, which the labels say.
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        error = null;
+        try
+        {
+            if (IsGrid) grid = await WithAsync(s => s.GridAsync(StudentSearch, Exam, PageNo ?? 1, Size ?? 50));
+            else list = await WithAsync(s => s.ListAsync(CurrentQuery));
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Assignments console failed to load");
+            error = "Something went wrong reading the assignments. Try again in a moment.";
+        }
+    }
+
+    private async Task<T> WithAsync<T>(Func<AssignmentAdminService, Task<T>> work)
+    {
+        await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+        return await work(new AssignmentAdminService(scope.ServiceProvider));
+    }
+
+    private async Task ActAsync(Func<AssignmentAdminService, Task<BulkResult>> work, bool clearSelection = true)
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        problems = [];
+        try
+        {
+            var r = await WithAsync(work);
+            ok = r.Ok;
+            message = r.Message;
+            problems = r.Problems;
+            if (r.Ok)
+            {
+                if (clearSelection) { selected.Clear(); bulk = null; }
+                form.Reason = null;
+                await LoadAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Assignments console action failed");
+            ok = false;
+            message = "That did not go through. Nothing was changed; try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private void ToggleAssign()
+    {
+        assignOpen = !assignOpen;
+        if (assignOpen) assign = new AssignForm { Who = pickedPairs.Count > 0 ? "picked" : "list", ExamId = PickedExam ?? Exam ?? Guid.Empty };
+    }
+
+    /// <summary>The exam all ticked grid cells share, if they share one.</summary>
+    private Guid? PickedExam => pickedPairs.Select(p => p.Exam).Distinct().Count() == 1 ? pickedPairs.First().Exam : null;
+
+    private async Task AssignAsync()
+    {
+        if (busy) return;
+        var opens = ToUtc(assign.Opens);
+        var closes = ToUtc(assign.Closes);
+        if (assign.Who == "picked")
+        {
+            // Ticked cells may span exams: each exam is assigned to its own ticked students; the exam chosen above is ignored.
+            var byExam = pickedPairs.GroupBy(p => p.Exam).ToList();
+            await ActAsync(async s =>
+            {
+                var changed = new List<string>();
+                var issues = new List<string>();
+                foreach (var g in byExam)
+                {
+                    var r = await s.AssignAsync(g.Key, g.Select(p => p.Student).ToList(), opens, closes, assign.Attempts, assign.Time);
+                    var title = exams.FirstOrDefault(e => e.Id == g.Key).Title ?? "exam";
+                    (r.Ok ? changed : issues).Add($"{title}: {r.Message}");
+                }
+                return new BulkResult(changed.Count > 0, changed.Count > 0 ? string.Join(" ", changed) : issues.FirstOrDefault() ?? "Nothing assigned.", 0, issues);
+            });
+            if (ok) { pickedPairs.Clear(); assignOpen = false; }
+            return;
+        }
+        if (assign.Who == "list")
+        {
+            await ActAsync(async s =>
+            {
+                var (ids, unknown) = await s.ResolveStudentsAsync(assign.Names);
+                IReadOnlyList<string> notFound = unknown.Count == 0 ? [] : [$"Not active students here, so skipped: {string.Join(", ", unknown.Take(20))}{(unknown.Count > 20 ? $" and {unknown.Count - 20} more" : "")}."];
+                if (ids.Count == 0) return new BulkResult(false, unknown.Count == 0 ? "List at least one user name or email." : "None of those are active students here.", 0, notFound);
+                var r = await s.AssignAsync(assign.ExamId, ids, opens, closes, assign.Attempts, assign.Time);
+                return r with { Problems = notFound };
+            });
+        }
+        else
+        {
+            await ActAsync(s => s.AssignAsync(assign.ExamId, null, opens, closes, assign.Attempts, assign.Time));
+        }
+        if (ok) assignOpen = false;
+    }
+
+    private void Bulk(string which)
+    {
+        bulk = bulk == which ? null : which;
+        form.Reason = null;
+        message = null;
+    }
+
+    private IReadOnlyCollection<Guid> Selection => selected.ToList();
+
+    private Task SetDatesAsync() => ActAsync(s => s.SetDatesAsync(Selection, form.ChangeOpens, ToUtc(form.Opens), form.ChangeCloses, ToUtc(form.Closes)));
+    private Task MoveAsync() => ActAsync(s => s.MoveDueDatesAsync(Selection, form.Days));
+    private Task GrantAsync() => ActAsync(s => s.GrantAttemptAsync(Selection, form.Reason));
+    private Task ResetAsync() => ActAsync(s => s.ResetAttemptAsync(Selection, form.Reason));
+    private Task UnassignAsync() => ActAsync(s => s.UnassignAsync(Selection, form.Reason));
+    private Task ExtraTimeAsync() => ActAsync(s => s.SetExtraTimeAsync(Selection, form.Time), clearSelection: false);
+    private Task EyeContactAsync(bool on) => ActAsync(s => s.SetEyeContactAsync(Selection, on), clearSelection: false);
+    private Task TypedAsync(bool on) => ActAsync(s => s.SetTypedAnswersAsync(Selection, on), clearSelection: false);
+
+    private void ToggleSelected(Guid id, ChangeEventArgs e)
+    {
+        if (e.Value is true) selected.Add(id); else selected.Remove(id);
+    }
+
+    private void TogglePair(Guid student, Guid exam, ChangeEventArgs e)
+    {
+        if (e.Value is true) pickedPairs.Add((student, exam)); else pickedPairs.Remove((student, exam));
+    }
+
+    private void TogglePage(ChangeEventArgs e)
+    {
+        if (list is null) return;
+        foreach (var r in list.Rows)
+            if (e.Value is true) selected.Add(r.Id); else selected.Remove(r.Id);
+    }
+
+    private void ApplySearch() => Go(student: studentBox ?? "");
+
+    private DateTimeOffset? ToUtc(DateTime? local) => local is { } l ? AssignmentTime.ToUtc(l, zone, offset) : null;
+
+    private string Local(DateTimeOffset t, string format) => AssignmentTime.ToLocal(t, zone, offset).ToString(format);
+
+    private string DateBox(DateTimeOffset? d) => d is { } x ? AssignmentTime.ToLocal(x, zone, offset).ToString("yyyy-MM-dd") : "";
+
+    /// <summary>A picked date as the start of that day in the admin's time zone; an emptied box gives null (no limit).</summary>
+    private DateTimeOffset? FromDateBox(object? value) =>
+        DateTime.TryParse(value?.ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var d)
+            ? AssignmentTime.ToUtc(d.Date, zone, offset) : null;
+
+    private static Guid? ParseGuid(object? v) => Guid.TryParse(v?.ToString(), out var g) ? g : null;
+
+    private static string Accommodations(AssignmentListRow r)
+    {
+        var list = new List<string>();
+        if (r.TimeMultiplier > 1m) list.Add($"extra time {AdminPeople.Time(r.TimeMultiplier)}");
+        if (r.EyeContact) list.Add("no eye contact expected");
+        if (r.TypedAnswers) list.Add("typed answers");
+        return string.Join(", ", list);
+    }
+
+    private string Address(string? view = null, Guid? examId = null)
+    {
+        var q = CurrentQuery with { ExamId = examId ?? Exam, Page = 1 };
+        var v = view ?? View;
+        return "admin/assignments" + PeopleExportEndpoints.Query([("view", v == "grid" ? "grid" : null), .. PeopleExportEndpoints.AssignmentPairs(q)]);
+    }
+
+    /// <summary>Moves to the same page with one setting changed; the filters live in the address, so Back and links work.</summary>
+    private void Go(string? student = null, Guid? examId = null, AssignmentProgressFilter? status = null, AssignmentAccommodationFilter? acc = null,
+        DateTimeOffset? from = null, bool setFrom = false, DateTimeOffset? to = null, bool setTo = false, AssignmentSort? sort = null, bool? desc = null,
+        int? pageNo = null, int? size = null)
+    {
+        var q = CurrentQuery;
+        var next = q with
+        {
+            Student = student ?? q.Student,
+            ExamId = examId is not null ? (examId == Guid.Empty ? null : examId) : q.ExamId,
+            Progress = status ?? q.Progress,
+            Accommodation = acc ?? q.Accommodation,
+            DueFrom = setFrom ? from : q.DueFrom,
+            DueTo = setTo ? to : q.DueTo,
+            Sort = sort ?? q.Sort,
+            Descending = desc ?? q.Descending,
+            PageSize = size ?? q.PageSize,
+            Page = pageNo ?? 1,
+        };
+        Nav.NavigateTo("admin/assignments" + PeopleExportEndpoints.Query([
+            ("view", IsGrid ? "grid" : null), .. PeopleExportEndpoints.AssignmentPairs(next),
+            ("page", next.Page <= 1 ? null : next.Page.ToString()), ("size", next.PageSize == 50 ? null : next.PageSize.ToString())]));
+    }
+}

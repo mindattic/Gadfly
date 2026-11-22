@@ -17,6 +17,27 @@ public static class PeopleExportEndpoints
             ("acc", q.Accommodation == StudentAccommodationFilter.Any ? null : q.Accommodation.ToString()),
             ("sort", q.Sort == StudentSort.Name ? null : q.Sort.ToString()), ("desc", q.Descending ? "1" : null));
 
+    public const string AssignmentsPath = "/admin/export/assignments.csv";
+
+    /// <summary>The address values of an assignments query (shared by the page's own address and its export link).</summary>
+    public static (string Key, string? Value)[] AssignmentPairs(AssignmentQuery q) =>
+    [
+        ("exam", q.ExamId?.ToString("D")), ("student", q.Student),
+        ("status", q.Progress == AssignmentProgressFilter.Any ? null : q.Progress.ToString()),
+        ("acc", q.Accommodation == AssignmentAccommodationFilter.Any ? null : q.Accommodation.ToString()),
+        ("from", Iso(q.DueFrom)), ("to", Iso(q.DueTo)),
+        ("sort", q.Sort == AssignmentSort.Student ? null : q.Sort.ToString()), ("desc", q.Descending ? "1" : null),
+    ];
+
+    public static string AssignmentsCsv(AssignmentQuery q) => AssignmentsPath + Query(AssignmentPairs(q));
+
+    private static string? Iso(DateTimeOffset? d) =>
+        d?.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>An instant from an address value, or null.</summary>
+    public static DateTimeOffset? ParseInstant(string? value) =>
+        DateTimeOffset.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal, out var d) ? d : null;
+
     /// <summary>A query string from the pairs that have a value ("" when none do).</summary>
     public static string Query(params (string Key, string? Value)[] pairs)
     {
@@ -46,6 +67,25 @@ public static class PeopleExportEndpoints
                 {
                     var csv = await svc.ExportCsvAsync(query, ct);
                     return Csv(csv, $"gadfly-students-{clock.GetUtcNow().UtcDateTime:yyyyMMdd-HHmm}.csv");
+                }
+                catch (UnauthorizedAccessException) { return Results.Forbid(); }
+            })
+            .RequireAuthorization(GadflyPolicies.OrgAdmin);
+
+        app.MapGet(AssignmentsPath, async (Guid? exam, string? student, string? status, string? acc, string? from, string? to, string? sort, string? desc,
+                HttpContext http, TimeProvider clock, CancellationToken ct) =>
+            {
+                var svc = new AssignmentAdminService(http.RequestServices);
+                var query = new AssignmentQuery
+                {
+                    ExamId = exam, Student = student, Progress = Enum(status, AssignmentProgressFilter.Any),
+                    Accommodation = Enum(acc, AssignmentAccommodationFilter.Any), DueFrom = ParseInstant(from), DueTo = ParseInstant(to),
+                    Sort = Enum(sort, AssignmentSort.Student), Descending = desc == "1",
+                };
+                try
+                {
+                    var csv = await svc.ExportCsvAsync(query, ct);
+                    return Csv(csv, $"gadfly-assignments-{clock.GetUtcNow().UtcDateTime:yyyyMMdd-HHmm}.csv");
                 }
                 catch (UnauthorizedAccessException) { return Results.Forbid(); }
             })
