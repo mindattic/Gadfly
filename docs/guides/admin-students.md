@@ -5,4 +5,4 @@
 
 ## Until then
 
-Add students on the admin desk's **Students** tab, or invite them on **Members**. See the [Admin guide](ADMIN_GUIDE.md).
+The page has just landed; the [Admin guide](ADMIN_GUIDE.md#students) already describes it under **Students**.

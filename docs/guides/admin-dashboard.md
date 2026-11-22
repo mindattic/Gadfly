@@ -5,4 +5,4 @@
 
 ## Until then
 
-The [Admin guide](ADMIN_GUIDE.md) describes the admin desk, members, settings and the other organization pages that exist today.
+The page has just landed; the [Admin guide](ADMIN_GUIDE.md#dashboard) already describes it under **Dashboard**.
