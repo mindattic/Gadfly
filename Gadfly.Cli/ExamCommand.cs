@@ -181,15 +181,19 @@ public static class ExamCommand
         Console.WriteLine("type \"Aporia\" if you honestly don't know. An empty line ends your answer early; Ctrl+Z / Ctrl+D quits.");
         Console.WriteLine();
 
-        var (session, report) = await new SourceExamRunner(client, subject)
+        var runner = new SourceExamRunner(client, subject)
         {
             Diagnostics = verbose ? new Progress<string>(msg => Console.WriteLine(msg)) : null,
-        }.RunAsync(policy, new ConsoleConversation(subject));
+        };
+        var (session, report) = await runner.RunAsync(policy, new ConsoleConversation(subject));
 
         Directory.CreateDirectory(DefaultExamsDir);
         var stamp = $"{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}";
         var sessionPath = Path.Combine(DefaultExamsDir, $"{stamp}.session.json");
         await File.WriteAllTextAsync(sessionPath, SessionTranscriptSerializer.Serialize(session));
+        // The claim ledger beside it: what `gadfly contradiction-audit` reads (GAD-T440).
+        if (runner.Ledger is { } ledger)
+            await File.WriteAllTextAsync(Path.Combine(DefaultExamsDir, $"{stamp}.ledger.json"), ledger.ToJson());
         reportPath ??= Path.Combine(DefaultExamsDir, $"{stamp}.report.md");
         await File.WriteAllTextAsync(reportPath, report.ToMarkdown());
         var jsonReportPath = Path.ChangeExtension(reportPath, ".json");

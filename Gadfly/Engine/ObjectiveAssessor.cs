@@ -56,8 +56,19 @@ public sealed record ObjectiveAssessment
     public int AssistsGiven { get; init; }
     /// <summary>At least the policy's minimum of independent answers support the stated level.</summary>
     public bool Corroborated { get; init; }
-    /// <summary>No unresolved contradiction between the student's claims on this objective.</summary>
+    /// <summary>
+    /// No unresolved contradiction was detected between the student's claims on this objective. With
+    /// <see cref="ContradictionsDetected"/> at 0 this is the detector's silence, "no contradiction detected", never proof that
+    /// the answers are consistent (ElenchusAtScale 3.4, GAD-T440): read <see cref="Consistency"/> for what to report.
+    /// </summary>
     public bool Consistent { get; init; } = true;
+    /// <summary>Contradictions the detector found (firmly enough to put to the student) on this objective's concepts.</summary>
+    public int ContradictionsDetected { get; init; }
+    /// <summary>
+    /// What may be said about consistency (GAD-T440): "no contradiction detected", "contradiction resolved", "contradiction
+    /// withdrawn by the student", "contradiction pending" or "contradiction not resolved". Never "consistent".
+    /// </summary>
+    public string Consistency { get; init; } = ObjectiveAssessor.NoContradictionDetected;
     public bool ReasoningShown { get; init; }
     public bool TransferShown { get; init; }
     public bool CriticalReasoningShown { get; init; }
@@ -105,6 +116,17 @@ public static class ObjectiveAssessor
     public const double PositiveAtOrAbove = 0.6;
     /// <summary>An answer below this score is evidence against the level its question probed.</summary>
     public const double NegativeBelow = 0.4;
+
+    /// <summary>The detector's silence (GAD-T440): never reported as "consistent".</summary>
+    public const string NoContradictionDetected = "no contradiction detected";
+
+    /// <summary>What may be said about an objective's consistency from its contradiction counts (GAD-T440).</summary>
+    public static string ConsistencyOf(int detected, int unconfronted, int unjudged, int failed, int withdrawn) =>
+        detected == 0 ? NoContradictionDetected
+        : failed > 0 ? "contradiction not resolved"
+        : unconfronted > 0 || unjudged > 0 ? "contradiction pending"
+        : withdrawn == detected ? "contradiction withdrawn by the student"
+        : "contradiction resolved";
 
     /// <summary>Moves whose answers need reasoning a leaked definition does not supply: a replacement question uses one.</summary>
     public static readonly IReadOnlyList<MoveKind> LeakResistantMoves =
@@ -350,6 +372,8 @@ public static class ObjectiveAssessor
             AssistsGiven = turns.Count(t => MoveProfiles.IsAssistance(t.Move)),
             Corroborated = enough && topCorroborated,
             Consistent = consistent,
+            ContradictionsDetected = mine.Count,
+            Consistency = ConsistencyOf(mine.Count, unconfronted, unjudgedConfrontations, failedConfrontations, withdrawn),
             ReasoningShown = independent.Any(o => o.Result == AnswerResult.Positive && o.ProbedLevel >= 3),
             // Only Apply, a situation new to the student, shows transfer; a ScenarioVariation what-if is extrapolation (GAD-T268).
             TransferShown = independent.Any(o => o.Result == AnswerResult.Positive && MoveProfiles.CreditsTransfer(o.Move)),

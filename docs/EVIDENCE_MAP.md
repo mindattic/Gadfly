@@ -80,6 +80,16 @@ enough for any target reliability, and only a double-marked pilot can (ElenchusA
   call. The withdrawn claim stays on record (marked withdrawn in the earlier-claims list the judges see, and on the review
   page) but is never checked against new claims, and a contradiction resting on it is not put to the student; one already
   put to them is still judged on how they resolved it.
+- Contradiction detector honesty (GAD-T440; M7, 3.4, 4.4). The detector is a filter, so its silence is reported as "no
+  contradiction detected", never "consistent": each objective's report states one of "no contradiction detected",
+  "contradiction resolved", "contradiction withdrawn by the student", "contradiction pending" or "contradiction not
+  resolved". Candidate pairs are wider (same concept at word overlap 0.1, another concept at 0.25, at most 4 per claim and
+  8 per answer), all checked in the one parallel round of GAD-T404, so the wait per answer is still one check; no
+  embeddings are computed on that path. The panel's confidence is used: a split panel's finding (half or less) is shown
+  to the reviewer as a possible contradiction and is never put to the student. Every pair compared is kept in the claim
+  ledger with its overlap and verdict, and `gadfly contradiction-audit <ledgers>` draws a stratified sample of claim
+  pairs (flagged, possible, checked and clear, never checked) for a person to label, then estimates the false-flag and
+  miss rates from the labels. The rates are unknown until a pilot is labelled.
 
 ## 2. Probing on hesitation
 

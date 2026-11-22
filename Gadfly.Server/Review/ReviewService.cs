@@ -132,12 +132,14 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                     j.TextStyleScore);
             }
             var contradictions = ledger.Contradictions
-                .Select(c => (First: ledger.Find(c.FirstClaimId), Second: ledger.Find(c.SecondClaimId)))
+                .Select(c => (Found: c, First: ledger.Find(c.FirstClaimId), Second: ledger.Find(c.SecondClaimId)))
                 .Where(x => x.First is not null && x.Second is not null && x.Second.TurnIndex == t.Index)
                 .Select(x => new ContradictionView(x.Second!.Quote, x.First!.Quote)
                 {
                     EarlierTurn = x.First.TurnIndex + 1,
                     Withdrawn = ledger.IsWithdrawn(x.First.Id) || ledger.IsWithdrawn(x.Second.Id),
+                    Confidence = x.Found.Confidence,
+                    Possible = !Gadfly.Engine.ClaimLedger.IsFirm(x.Found),
                 }).ToList();
             var retractions = ledger.Retractions.Where(r => r.TurnIndex == t.Index)
                 .Select(r => new RetractionView(r.Quote, r.Text, r.ClaimId is { } id && ledger.Find(id) is { } earlier ? earlier.TurnIndex + 1 : null))

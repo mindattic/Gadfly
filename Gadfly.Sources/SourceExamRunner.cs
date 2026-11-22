@@ -384,11 +384,15 @@ public sealed class SourceExamRunner(ISocraticVotingClient panel, SourceMaterial
     /// <summary>Receives diagnostics (why each move, how each question was produced); null = silent.</summary>
     public IProgress<string>? Diagnostics { get; init; }
 
+    /// <summary>The last run's claim ledger (claims, contradictions, withdrawals and every pair checked), for saving beside the transcript.</summary>
+    public ClaimLedger? Ledger { get; private set; }
+
     public async Task<(SocraticSession Session, SessionReport Report)> RunAsync(SessionPolicy policy, IExamConversation student,
         CancellationToken ct = default)
     {
         var engine = await SourceExamEngine.StartAsync(panel, subject, policy, clock, ct: ct);
         engine.Diagnostics = Diagnostics;
+        Ledger = engine.Ledger;
         while (await engine.NextQuestionAsync(ct) is { } turn)
         {
             await student.AskAsync(turn, ct);

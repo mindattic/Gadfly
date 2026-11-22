@@ -59,6 +59,10 @@ public sealed record ContradictionView(string Quote, string EarlierQuote)
     public int? EarlierTurn { get; init; }
     /// <summary>The student later withdrew one of the two claims (GAD-T441).</summary>
     public bool Withdrawn { get; init; }
+    /// <summary>Share of the panel that found the contradiction (0 when not reported, GAD-T440).</summary>
+    public double Confidence { get; init; }
+    /// <summary>A split panel: kept as a possible contradiction for the reviewer, never put to the student (GAD-T440).</summary>
+    public bool Possible { get; init; }
 }
 
 /// <summary>

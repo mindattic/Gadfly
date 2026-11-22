@@ -52,7 +52,19 @@ public sealed record ObjectiveReport
     /// <see cref="Level"/>, never folded into it. No gain or "learning potential" score is derived from it.
     /// </summary>
     public int HintsGiven { get; init; }
+    /// <summary>
+    /// No unresolved contradiction was detected (GAD-T440). Kept for older readers; it is not proof of consistency, so a report
+    /// states <see cref="Consistency"/> instead ("no contradiction detected" when the detector found none).
+    /// </summary>
     public bool Consistent { get; init; } = true;
+    /// <summary>What may be said about consistency: "no contradiction detected", "contradiction resolved", and so on (GAD-T440).
+    /// Null in reports made before GAD-T440: <see cref="ConsistencyText"/> reads those from <see cref="Consistent"/>.</summary>
+    public string? Consistency { get; init; }
+    public int ContradictionsDetected { get; init; }
+
+    /// <summary>The consistency wording to show, for this report or an older one.</summary>
+    [JsonIgnore]
+    public string ConsistencyText => Consistency ?? (Consistent ? ObjectiveAssessor.NoContradictionDetected : "contradiction not resolved");
     public IReadOnlyList<string> UnresolvedMisconceptions { get; init; } = [];
     public IReadOnlyList<string> Uncertainties { get; init; } = [];
     public IReadOnlyList<int> LeakedTurns { get; init; } = [];
@@ -82,6 +94,8 @@ public sealed record ObjectiveReport
         AssistedAnswers = a.AssistedAnswers,
         HintsGiven = a.AssistsGiven,
         Consistent = a.Consistent,
+        Consistency = a.Consistency,
+        ContradictionsDetected = a.ContradictionsDetected,
         UnresolvedMisconceptions = a.UnresolvedMisconceptions,
         Uncertainties = a.Uncertainties,
         LeakedTurns = a.LeakedTurns,
@@ -267,11 +281,13 @@ public sealed record SessionReport
                     notes.Add($"unaided level {o.Level}; after {o.HintsGiven} hint{(o.HintsGiven == 1 ? "" : "s")} from the fixed ladder: " +
                         (o.AssistedLevel is { } al ? $"assisted level {al}" : "no assisted level yet"));
                 if (o.ContaminatedAnswers > 0) notes.Add($"{o.ContaminatedAnswers} contaminated answer(s) excluded");
-                if (!o.Consistent) notes.Add("inconsistent claims");
+                notes.Add(o.ConsistencyText);
                 if (o.UnresolvedMisconceptions.Count > 0) notes.Add("misconception: " + string.Join("; ", o.UnresolvedMisconceptions));
                 sb.AppendLine($"| {Escape(o.Title)} | {o.Level} {o.LevelLabel} | {o.Status} | {o.Questions} | {o.FollowUps} | {o.IndependentAnswers} | {Escape(string.Join("; ", notes))} |");
             }
             sb.AppendLine();
+            sb.AppendLine("> \"No contradiction detected\" means the contradiction check found none among the pairs of claims it compared. " +
+                          "It is not proof that the answers are consistent.").AppendLine();
             foreach (var o in Objectives.Where(o => o.Status == "inconclusive"))
                 sb.AppendLine($"> **{Escape(o.Title)}: Level 0, Insufficient Evidence.** {o.Explanation} Follow the institution's procedure (human review or further examination).").AppendLine();
         }

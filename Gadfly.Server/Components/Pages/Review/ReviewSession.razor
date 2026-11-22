@@ -81,7 +81,7 @@ else
         }
         @if (integrity.Normal.Count > 0)
         {
-            <p class="hint">Normal behavior, not counted: @string.Join("; ", integrity.Normal.Select(n => $"{n.Label} ({n.Count}×)")). Looking away while thinking is expected.</p>
+            <p class="hint">Normal behavior, not counted: @string.Join("; ", integrity.Normal.Select(n => $"{n.Label} ({n.Count}×)")). Brief looks away happen in every conversation and have many causes; the camera cannot tell which.</p>
         }
         <p class="hint">Each signal also appears on the timeline below, next to the answer it happened during. The grade is your decision; no signal fails a student automatically.</p>
     </section>
@@ -152,7 +152,8 @@ else
 
                     @foreach (var c in t.Contradictions)
                     {
-                        <p class="notice warn">Contradicts an earlier answer@(c.EarlierTurn is { } et ? $" (turn {et})" : ""): “@c.Quote” vs earlier “@c.EarlierQuote”.@(c.Withdrawn ? " The student later withdrew one of the two claims." : "")</p>
+                        @* GAD-T440: a split panel's finding is shown as possible and was never put to the student. *@
+                        <p class="notice @(c.Possible ? "" : "warn")">@(c.Possible ? "Possibly contradicts" : "Contradicts") an earlier answer@(c.EarlierTurn is { } et ? $" (turn {et})" : ""): “@c.Quote” vs earlier “@c.EarlierQuote”.@(c.Confidence > 0 ? $" {Pct(c.Confidence)} of the panel found it." : "")@(c.Possible ? " The panel was split, so it was not put to the student and does not count against consistency." : "")@(c.Withdrawn ? " The student later withdrew one of the two claims." : "")</p>
                     }
                     @foreach (var r in t.Retractions)
                     {
@@ -251,7 +252,8 @@ else
 
     <p class="hint">
         Integrity events are evidence for you to weigh, never findings: the platform doesn't infer dishonesty or emotion
-        and never fails anyone on its own. Looking up or away while answering is a normal sign of thinking.
+        and never fails anyone on its own. Looking away while answering has many causes (recalling, planning an answer, nerves, a noise, reading something),
+        and the camera cannot tell which, so on its own it is not a sign of dishonesty.
     </p>
 
     @if (view.Mastery.Count > 0)

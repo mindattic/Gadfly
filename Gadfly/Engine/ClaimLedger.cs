@@ -8,8 +8,19 @@ namespace Gadfly.Engine;
 /// <summary>One thing the student asserted, in their words and restated plainly.</summary>
 public sealed record StudentClaim(string Id, int TurnIndex, string ConceptId, string Quote, string Text);
 
-/// <summary>Two of the student's claims the panel judged incompatible.</summary>
+/// <summary>
+/// Two of the student's claims the panel judged incompatible. <see cref="Confidence"/> is the share of the panel that said so
+/// (0 when the panel did not report it); see <see cref="ClaimLedger.IsFirm"/>.
+/// </summary>
 public sealed record ClaimContradiction(string FirstClaimId, string SecondClaimId, string ConceptId, double Confidence);
+
+/// <summary>
+/// One pair of claims the contradiction detector compared (GAD-T440), kept so its false-flag and miss rates can be estimated on
+/// pilot data: the word overlap that selected the pair, whether the two claims were on different concepts, the panel's verdict
+/// ("contradict", "consistent" or "undecided") and the share of the panel behind it.
+/// </summary>
+public sealed record ContradictionCheck(int TurnIndex, string FirstClaimId, string SecondClaimId, double Overlap, bool CrossConcept,
+    string Verdict, double Confidence);
 
 /// <summary>
 /// The student explicitly withdrew an earlier claim ("I was wrong earlier", GAD-T441). <see cref="ClaimId"/> is the ledger claim
@@ -28,11 +39,28 @@ public sealed class ClaimLedger
     private readonly List<StudentClaim> _claims = [];
     private readonly List<ClaimContradiction> _contradictions = [];
     private readonly List<ClaimRetraction> _retractions = [];
+    private readonly List<ContradictionCheck> _checks = [];
 
     public IReadOnlyList<StudentClaim> Claims => _claims;
     public IReadOnlyList<ClaimContradiction> Contradictions => _contradictions;
     /// <summary>Claims the student withdrew, in the order they withdrew them (GAD-T441).</summary>
     public IReadOnlyList<ClaimRetraction> Retractions => _retractions;
+    /// <summary>Every pair the contradiction detector compared, with its verdict (GAD-T440).</summary>
+    public IReadOnlyList<ContradictionCheck> Checks => _checks;
+
+    /// <summary>
+    /// A contradiction is put to the student only when more than this share of the panel found it (GAD-T440). A split panel's
+    /// finding is kept as a possible contradiction for the reviewer, never confronted and never counted against consistency.
+    /// </summary>
+    public const double ConfrontAbove = 0.5;
+
+    /// <summary>
+    /// True when the panel's finding is firm enough to put to the student: a majority (more than <see cref="ConfrontAbove"/>),
+    /// or a confidence the panel did not report (0), as with a single judge.
+    /// </summary>
+    public static bool IsFirm(ClaimContradiction c) => c.Confidence <= 0 || c.Confidence > ConfrontAbove;
+
+    public void AddCheck(ContradictionCheck check) => _checks.Add(check);
 
     /// <summary>Least word overlap between a retraction and an earlier claim for the two to be matched.</summary>
     public const double RetractionMatch = 0.3;
@@ -80,20 +108,22 @@ public sealed class ClaimLedger
     /// <summary>
     /// The ledger's contradictions in the shape the <see cref="QuestionPlanner"/> takes. A contradiction resting on a claim the
     /// student has since withdrawn carries the turn they withdrew it at: the planner does not put it to them, and the assessor
-    /// counts it as withdrawn rather than pending, unless it had already been put to them (GAD-T441).
+    /// counts it as withdrawn rather than pending, unless it had already been put to them (GAD-T441). A split panel's finding
+    /// (not <see cref="IsFirm"/>) is left out: it is shown to the reviewer as a possible contradiction, never confronted (GAD-T440).
     /// </summary>
     public IReadOnlyList<ContradictionCandidate> ForPlanner() =>
-        _contradictions.Select(c => new ContradictionCandidate(c.ConceptId, c.FirstClaimId, c.SecondClaimId)
+        _contradictions.Where(IsFirm).Select(c => new ContradictionCandidate(c.ConceptId, c.FirstClaimId, c.SecondClaimId)
         {
             WithdrawnAtTurn = WithdrawnAt(c.FirstClaimId) is { } a ? (WithdrawnAt(c.SecondClaimId) is { } b ? Math.Min(a, b) : a) : WithdrawnAt(c.SecondClaimId),
         }).ToList();
 
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    private sealed record LedgerDto(List<StudentClaim> Claims, List<ClaimContradiction> Contradictions, List<ClaimRetraction>? Retractions = null);
+    private sealed record LedgerDto(List<StudentClaim> Claims, List<ClaimContradiction> Contradictions, List<ClaimRetraction>? Retractions = null,
+        List<ContradictionCheck>? Checks = null);
 
     /// <summary>The whole ledger as JSON, persisted beside the session so a resumed exam keeps its memory.</summary>
-    public string ToJson() => JsonSerializer.Serialize(new LedgerDto([.. _claims], [.. _contradictions], [.. _retractions]), Json);
+    public string ToJson() => JsonSerializer.Serialize(new LedgerDto([.. _claims], [.. _contradictions], [.. _retractions], [.. _checks]), Json);
 
     public static ClaimLedger FromJson(string? json)
     {
@@ -104,6 +134,7 @@ public sealed class ClaimLedger
         ledger._claims.AddRange(dto.Claims ?? []);
         ledger._contradictions.AddRange(dto.Contradictions ?? []);
         ledger._retractions.AddRange(dto.Retractions ?? []);
+        ledger._checks.AddRange(dto.Checks ?? []);
         return ledger;
     }
 
@@ -121,16 +152,22 @@ public sealed class ClaimLedger
 /// <summary>
 /// Fills the <see cref="ClaimLedger"/> from each answer through the Legion panel: claim extraction
 /// (merged across voters, keeping claims a majority found), then contradiction checks against
-/// earlier claims on the same concept. Candidate pairs are pre-filtered by word overlap and capped,
-/// so the number of panel calls per answer stays small.
+/// earlier standing claims, on the same concept or (with more word overlap) another one. Candidate
+/// pairs are pre-filtered by word overlap and capped per claim and per answer, and run together in
+/// one round, so the wait per answer stays that of one check (GAD-T404, GAD-T440). The detector is
+/// a filter: a pair it never compared, or compared and passed, is "no contradiction detected", not
+/// proof of consistency (ElenchusAtScale 3.4).
 /// </summary>
 public sealed class ClaimAnalyzer(ISocraticVotingClient panel, PromptSet prompts)
 {
     /// <summary>Most earlier claims compared against each new claim.</summary>
-    public int MaxComparisonsPerClaim { get; init; } = 3;
+    public int MaxComparisonsPerClaim { get; init; } = 4;
 
-    /// <summary>Minimum word overlap (Jaccard) for two claims to be worth a contradiction check.</summary>
-    public double MinOverlap { get; init; } = 0.15;
+    /// <summary>
+    /// Minimum word overlap (Jaccard) for two claims on the same concept to be worth a contradiction check. Lowered from 0.15 in
+    /// GAD-T440: a contradiction often restates the idea in other words, and the per-answer cap keeps the extra pairs bounded.
+    /// </summary>
+    public double MinOverlap { get; init; } = 0.1;
 
     public const string Contradict = "CONTRADICT";
     public const string Consistent = "CONSISTENT";
@@ -170,46 +207,76 @@ public sealed class ClaimAnalyzer(ISocraticVotingClient panel, PromptSet prompts
         if (turn.Answer is null || string.IsNullOrWhiteSpace(turn.Answer.Text)) return [];
         ApplyRetractions(ledger, turn, retractions);
         // A withdrawn claim is no longer a premise: it stays on record but is never a side of a new contradiction.
-        var earlier = ledger.Claims.Where(c => c.ConceptId == turn.ConceptId && c.TurnIndex < turn.Index && !ledger.IsWithdrawn(c.Id)).ToList();
+        var earlier = ledger.Claims.Where(c => c.TurnIndex < turn.Index && !ledger.IsWithdrawn(c.Id)).ToList();
+        var added = extracted.Select(x => ledger.Add(turn.Index, turn.ConceptId, x.Quote, x.Text)).ToList();
+        var pairs = SelectPairs(earlier, added, turn.ConceptId);
+        if (pairs.Count == 0) return [];
         // Each candidate pair's CONTRADICT/CONSISTENT check reads only that pair, independent of every other pair's check
-        // (whether a new claim disagrees with one earlier claim never depends on its verdict against another), so a turn
-        // whose claims accumulate several candidates (later in a longer exam, as the ledger fills up) no longer pays one
-        // sequential panel round trip per pair: they all run together instead (GAD-T404).
-        var checks = new List<(StudentClaim Claim, StudentClaim Prior, Task<DecisionResult> Vote)>();
-        foreach (var (quote, text) in extracted)
-        {
-            var claim = ledger.Add(turn.Index, turn.ConceptId, quote, text);
-            var candidates = earlier
-                .Select(e => (Claim: e, Overlap: Jaccard(e.Text, claim.Text)))
-                .Where(x => x.Overlap >= MinOverlap)
-                .OrderByDescending(x => x.Overlap)
-                .Take(MaxComparisonsPerClaim);
-            foreach (var (prior, _) in candidates)
+        // (whether a new claim disagrees with one earlier claim never depends on its verdict against another), so they all run
+        // together in one round (GAD-T404). The wider selection of GAD-T440 (cross-concept pairs, a lower same-concept overlap
+        // floor) adds pairs to that one round, never a second round: the wait grows only with the slowest single check, and
+        // MaxChecksPerAnswer bounds how many calls one answer can start.
+        var checks = pairs.Select(p => (p.Claim, p.Prior, p.Overlap, Vote: panel.DecideAsync(ExamPrompts.Fill(prompts[ExamPrompts.ContradictionKey],
+            new Dictionary<string, string?>
             {
-                var question = ExamPrompts.Fill(prompts[ExamPrompts.ContradictionKey], new Dictionary<string, string?>
-                {
-                    ["first_turn"] = (prior.TurnIndex + 1).ToString(),
-                    ["first_claim"] = ExamPrompts.Student(prior.Text),
-                    ["second_turn"] = (claim.TurnIndex + 1).ToString(),
-                    ["second_claim"] = ExamPrompts.Student(claim.Text),
-                });
-                checks.Add((claim, prior, panel.DecideAsync(question, [Contradict, Consistent], "", ct)));
-            }
-        }
-        if (checks.Count == 0) return [];
+                ["first_turn"] = (p.Prior.TurnIndex + 1).ToString(),
+                ["first_claim"] = ExamPrompts.Student(p.Prior.Text),
+                ["second_turn"] = (p.Claim.TurnIndex + 1).ToString(),
+                ["second_claim"] = ExamPrompts.Student(p.Claim.Text),
+            }), [Contradict, Consistent], "", ct))).ToList();
         await Task.WhenAll(checks.Select(c => c.Vote));
         var found = new List<ClaimContradiction>();
-        foreach (var (claim, prior, vote) in checks)
+        foreach (var (claim, prior, overlap, vote) in checks)
         {
             var d = await vote;
-            if (string.Equals(d.Choice, Contradict, StringComparison.OrdinalIgnoreCase))
-            {
-                var c = new ClaimContradiction(prior.Id, claim.Id, turn.ConceptId, d.Confidence);
-                ledger.AddContradiction(c);
-                found.Add(c);
-            }
+            var verdict = string.Equals(d.Choice, Contradict, StringComparison.OrdinalIgnoreCase) ? "contradict"
+                : string.Equals(d.Choice, Consistent, StringComparison.OrdinalIgnoreCase) ? "consistent" : "undecided";
+            // Every compared pair is recorded with its verdict and the panel's share behind it, so the detector's false-flag and
+            // miss rates can be estimated on pilot data (GAD-T440, ElenchusAtScale 4.4).
+            ledger.AddCheck(new ContradictionCheck(turn.Index, prior.Id, claim.Id, Math.Round(overlap, 3), prior.ConceptId != claim.ConceptId,
+                verdict, Math.Round(d.Confidence, 3)));
+            if (verdict != "contradict") continue;
+            // A contradiction across concepts is confronted on the objective now being examined: the later claim's concept.
+            var c = new ClaimContradiction(prior.Id, claim.Id, turn.ConceptId, d.Confidence);
+            ledger.AddContradiction(c);
+            found.Add(c);
         }
         return found;
+    }
+
+    /// <summary>Most contradiction checks one answer can start, across all its claims (they run together, GAD-T404).</summary>
+    public int MaxChecksPerAnswer { get; init; } = 8;
+
+    /// <summary>
+    /// Minimum word overlap (Jaccard) for an earlier claim on a different concept to be worth a check (GAD-T440). Higher than
+    /// <see cref="MinOverlap"/>: claims on different concepts share fewer words by chance, so a pair must share more to be a
+    /// plausible contradiction.
+    /// </summary>
+    public double MinCrossConceptOverlap { get; init; } = 0.25;
+
+    /// <summary>
+    /// The pairs to check (GAD-T440): for each new claim, the earlier standing claims on the same concept with at least
+    /// <see cref="MinOverlap"/> word overlap and those on another concept with at least <see cref="MinCrossConceptOverlap"/>,
+    /// closest first (same concept ahead on a tie), at most <see cref="MaxComparisonsPerClaim"/> each and
+    /// <see cref="MaxChecksPerAnswer"/> in all, the closest pairs kept. Deterministic. No embeddings: none are computed on the
+    /// per-answer path, and computing them would add a round trip before the checks (bottleneck: panel latency per pair).
+    /// </summary>
+    public IReadOnlyList<(StudentClaim Claim, StudentClaim Prior, double Overlap)> SelectPairs(IReadOnlyList<StudentClaim> earlier,
+        IReadOnlyList<StudentClaim> added, string conceptId)
+    {
+        var all = new List<(StudentClaim Claim, StudentClaim Prior, double Overlap, double Rank, int Order)>();
+        foreach (var claim in added)
+        {
+            var mine = earlier
+                .Select(e => (Prior: e, Overlap: Jaccard(e.Text, claim.Text), Same: e.ConceptId == claim.ConceptId))
+                .Where(x => x.Overlap >= (x.Same ? MinOverlap : MinCrossConceptOverlap))
+                .OrderByDescending(x => x.Overlap).ThenByDescending(x => x.Same).ThenBy(x => x.Prior.TurnIndex)
+                .Take(MaxComparisonsPerClaim);
+            foreach (var (prior, overlap, same) in mine)
+                all.Add((claim, prior, overlap, overlap + (same ? 0.05 : 0), all.Count));
+        }
+        return all.OrderByDescending(x => x.Rank).ThenBy(x => x.Order).Take(Math.Max(0, MaxChecksPerAnswer))
+            .OrderBy(x => x.Order).Select(x => (x.Claim, x.Prior, x.Overlap)).ToList();
     }
 
     private async Task<(IReadOnlyList<(string Quote, string Text)> Claims, IReadOnlyList<(string Quote, string Text)> Retractions)> ExtractAsync(
