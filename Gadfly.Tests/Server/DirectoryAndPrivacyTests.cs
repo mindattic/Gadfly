@@ -56,6 +56,14 @@ public class OrganizationDirectoryTests : ServerTest
     public async Task EveryPersonRole_CanBeAdded()
     {
         var org = await Seed.OrganizationAsync();
+        // Five staff roles: more than a Trial's 3 staff seats (GAD-T369), so the organization is on the Standard plan (GAD-T524).
+        await using (var db = SystemDb())
+        {
+            var settings = await db.OrganizationSettings.SingleAsync(s => s.OrganizationId == org);
+            settings.Plan = Gadfly.Server.Platform.PlanCatalog.Standard;
+            settings.StaffSeatLimit = Gadfly.Server.Platform.PlanCatalog.DefaultsFor(settings.Plan).StaffSeats;
+            await db.SaveChangesAsync();
+        }
         foreach (var role in OrgRoles.All)
         {
             var r = await Add(org, Seed.UserName(), role, OrgRoles.Owner);
