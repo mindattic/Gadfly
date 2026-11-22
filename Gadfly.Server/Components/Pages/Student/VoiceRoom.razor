@@ -210,6 +210,12 @@
     /// short neutral line (<see cref="ExaminerFiller"/>) unless the next question is ready first.
     /// </summary>
     [Parameter] public bool Pondering { get; set; }
+    /// <summary>
+    /// The answer so far while the student is still speaking (GAD-T497): the question's turn and the running transcript (finished
+    /// segments plus the current partial), sent by voice-room.js at most every few hundred milliseconds. A hint for the server's
+    /// prefetch only; not an EventCallback, so it never re-renders the exam room.
+    /// </summary>
+    [Parameter] public Func<int, string, Task>? OnPartialAnswer { get; set; }
 
     private VoiceState state;
     private bool supported = true, armed, needsClick;
@@ -716,6 +722,17 @@
             StateHasChanged();
         });
         return taken;
+    }
+
+    /// <summary>
+    /// The running transcript while the student is still answering (GAD-T497), from voice-room.js (throttled there). Handed to the exam
+    /// room for the server's prefetch; never changes the page.
+    /// </summary>
+    [JSInvokable]
+    public Task OnPartialTranscript(int turn, string text)
+    {
+        if (OnPartialAnswer is not { } partial || string.IsNullOrWhiteSpace(text) || text.Length > 20_000) return Task.CompletedTask;
+        return InvokeAsync(() => partial(turn, text));
     }
 
     /// <summary>The turn whose spoken answer was sent last and not yet marked as cut off (GAD-T462); null once marked.</summary>

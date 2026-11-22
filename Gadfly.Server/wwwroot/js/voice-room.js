@@ -37,6 +37,9 @@ const AVATAR_HUB = "/hubs/avatar";
  * "Connecting you to the examiner…" forever: there is no error and no close event to react to while it's simply slow. */
 const CONNECT_TIMEOUT_MS = 15000;
 
+/** The running answer goes to the server's prefetch (GAD-T497) at most this often while the student is speaking. */
+const PARTIAL_SEND_MS = 300;
+
 let S = null;
 
 const q = (name) => document.querySelector(`[data-voice-${name}]`);
@@ -97,6 +100,7 @@ export function init(dotnet, cfg) {
         hubUp: true, replayQueue: [],   // reconnect buffering (GAD-T360): audio and commits sent while the hub is down are replayed, in order
         commitSentAt: [], latenciesMs: [],   // recognizer latency (GAD-T361): commit-to-final time, kept for the next answer's diagnostics
         displayPartial: "", displayShrinkTimer: null,   // the stabilized partial shown to the student (GAD-T360): never flickers down and up
+        partialTimer: null, partialDue: false, partialAt: 0, partialSent: "",   // the running answer for the prefetch (GAD-T497)
         sessionId: cfg.sessionId || null, turn: null, draftChecked: false, recovered: false,   // draft kept across a reload mid-answer (GAD-T306)
     };
     S.onRemark = (e) => remarkHold(S, !!(e.detail && e.detail.active));
@@ -226,6 +230,7 @@ async function start() {
             // while the recognizer is still hearing more, e.g. a provider-side commit in the middle of one unbroken stretch of speech.
             if (s.partial.trim() && !s.gate && s.cueTimer) { clearCue(); status("Hearing you…"); }
             drawTranscript();
+            notePartial(s);
         });
         s.speechConn.on("final", onFinal);
         s.speechConn.on("problem", (kind, message, fatal) => { if (fatal) problem("recognizer", message, true); });
@@ -1034,6 +1039,28 @@ function roomStatus(s) {
     return "The examiner is ready.";
 }
 
+/**
+ * The answer so far, while the student is still speaking (GAD-T497): the finished segments and the recognizer's current partial,
+ * sent to the page for the server's prefetch at most every PARTIAL_SEND_MS (the latest words always go out). Only while the
+ * microphone is open for a question; never audio, and nothing on the page changes.
+ */
+function notePartial(s) {
+    if (S !== s || s.gate || s.turn === null || s.turn === undefined) return;
+    s.partialDue = true;
+    if (s.partialTimer) return;
+    const send = () => {
+        s.partialTimer = null;
+        if (S !== s || !s.running || !s.partialDue || s.gate) return;
+        s.partialDue = false;
+        const said = [...s.segments.map((g) => (g.text || "").trim()), (s.partial || "").trim()].filter(Boolean).join(" ");
+        if (!said || said === s.partialSent) return;
+        s.partialSent = said;
+        s.partialAt = performance.now();
+        s.dotnet.invokeMethodAsync("OnPartialTranscript", s.turn, said).catch(() => { });
+    };
+    s.partialTimer = setTimeout(send, Math.max(0, PARTIAL_SEND_MS - (performance.now() - s.partialAt)));
+}
+
 function onFinal(seg) {
     const s = S;
     if (!s) return;
@@ -1066,6 +1093,7 @@ function onFinal(seg) {
     // Kept as a draft in case the page reloads or the browser crashes before this answer is sent (GAD-T306).
     VoiceDraft.save(s.sessionId, s.turn, s.segments);
     drawTranscript();
+    notePartial(s);
     if (s.gate) return;   // the remark is still on: its end arms the cue for these words
     // The end-of-answer cue: a stretch of silence after what was said. Speaking again cancels it; "Done answering" skips it.
     // While the student is still speaking (a provider commit mid-speech) it is not armed: onSpeechEnd arms it.

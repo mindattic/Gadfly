@@ -365,8 +365,10 @@ session in the meantime, the answer step adopts the copy: the submitted answer, 
 replaces the partial on record, the recitation check is re-run on it, and the next question is ready at once. Otherwise the
 copy is dropped and the answer is judged as usual. Cost limits: one speculation in flight per session, at most `MaxPerTurn`
 (default 2) per question, none while a step runs. Every speculative call is metered as `exam-prefetch` and timed, used or not.
-`Gadfly:LiveTurn:Prefetch=false` turns it off. The client half (VoiceRoom's `OnPartialAnswer` callback into
-`ExamRoom.OnPartialAnswerAsync`, fed from `voice-room.js` on each recognizer partial) is wired separately.
+`Gadfly:LiveTurn:Prefetch=false` turns it off. The browser feeds it: `voice-room.js` sends the running answer (finished
+segments plus the current partial) on each recognizer partial and final, at most every 300 ms (`PARTIAL_SEND_MS`, the latest
+words always go out), only while the microphone is open for a question; VoiceRoom's `OnPartialAnswer` callback hands it to
+`ExamRoom.OnPartialAnswerAsync`. Never audio, and nothing on the page changes.
 
 **Streaming seam (GAD-T495).** `ILiveTurnModel.StreamAsync` returns the reply as an `IAsyncEnumerable<string>` of text deltas.
 MindAttic.Legion has no streaming call yet, so today the Legion-backed model yields the whole reply as one delta. A
