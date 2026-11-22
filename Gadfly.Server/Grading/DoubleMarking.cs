@@ -217,11 +217,10 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
         if (tenant.OrganizationId is not { } org) return (GradingResult.Fail("No active organization."), null);
         var sessions = await EndedSessionsAsync(org, examId, ct);
         // GAD-T480: the calibration is recorded against the models the panel runs now, so only answers those models graded count.
-        var (items, otherModels) = await ItemsAsync(org, examId, sessions, currentModelsOnly: true, ct);
+        // GAD-T484: and under the grading prompts it uses now, since the calibration also records the prompt-set version.
+        var (items, otherModels, otherPrompts) = await ItemsAsync(org, examId, sessions, currentModelsOnly: true, ct);
         if (items.Count == 0)
-            return (GradingResult.Fail(otherModels > 0
-                ? $"No double-marked answer was graded by the models the panel runs now ({otherModels} were graded by earlier models). Re-grade or double-mark new answers, then record the calibration."
-                : "No answer has a panel grade, a blind first grade and a second mark yet."), null);
+            return (GradingResult.Fail(StaleRefusal(otherModels, otherPrompts)), null);
         return await calibration.EvaluateAsync(examId, null, items.Select(i => i.ToCalibration()).ToList(), ct,
             PanelCalibrationService.SourceDoubleMarking, fromMockGrades: items.Any(i => i.Mock));
     }
@@ -254,18 +253,38 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
     private async Task<List<DoubleMarkItem>> ItemsAsync(Guid org, Guid examId, List<EndedSession> sessions, CancellationToken ct) =>
         (await ItemsAsync(org, examId, sessions, currentModelsOnly: false, ct)).Items;
 
-    /// <param name="currentModelsOnly">Leave out answers the panel graded with other models than it runs now (counted in OtherModels).</param>
-    private async Task<(List<DoubleMarkItem> Items, int OtherModels)> ItemsAsync(Guid org, Guid examId, List<EndedSession> sessions, bool currentModelsOnly,
-        CancellationToken ct)
+    /// <summary>
+    /// Why no double-marked answer can be recorded as a calibration: none graded by the panel's current models (GAD-T480) or under
+    /// the current grading prompts (GAD-T484), or none double-marked at all.
+    /// </summary>
+    public static string StaleRefusal(int otherModels, int otherPrompts)
+    {
+        if (otherModels == 0 && otherPrompts == 0) return "No answer has a panel grade, a blind first grade and a second mark yet.";
+        var why = new List<string>();
+        if (otherModels > 0) why.Add($"{otherModels} were graded by earlier models");
+        if (otherPrompts > 0) why.Add($"{otherPrompts} were graded under earlier grading prompts");
+        return $"No double-marked answer was graded by the models and grading prompts the panel uses now ({string.Join("; ", why)}). " +
+               "Re-grade or double-mark new answers, then record the calibration.";
+    }
+
+    /// <summary>True when the grade was made under the grading prompt-set version in use now (GAD-T484).</summary>
+    public static bool GradedUnderCurrentPrompts(int gradingPromptVersion, int current = AiObjectiveGrader.PromptVersion) =>
+        gradingPromptVersion == current;
+
+    /// <param name="currentModelsOnly">Leave out answers the panel graded with other models than it runs now (counted in OtherModels) or
+    /// under other grading prompts (counted in OtherPrompts).</param>
+    private async Task<(List<DoubleMarkItem> Items, int OtherModels, int OtherPrompts)> ItemsAsync(Guid org, Guid examId, List<EndedSession> sessions,
+        bool currentModelsOnly, CancellationToken ct)
     {
         var otherModels = 0;
+        var otherPrompts = 0;
         var ids = sessions.Select(s => s.Id).ToList();
-        if (ids.Count == 0) return ([], 0);
+        if (ids.Count == 0) return ([], 0, 0);
         var marks = (await MarksAsync(org, ids, ct)).GroupBy(m => (m.SessionId, m.ObjectiveId)).ToDictionary(g => g.Key, g => g.OrderBy(m => m.At).First());
-        if (marks.Count == 0) return ([], 0);
+        if (marks.Count == 0) return ([], 0, 0);
         var objectives = (await GradingInputs.LoadObjectivesAsync(db, examId, org, ct)).ToDictionary(o => o.Id);
         var ai = (await db.AiObjectiveGrades.AsNoTracking().Where(g => g.OrganizationId == org && ids.Contains(g.SessionId))
-            .Select(g => new { g.SessionId, g.ObjectiveId, g.Level, g.IsMock, g.CriteriaJson, g.CreatedAt }).ToListAsync(ct))
+            .Select(g => new { g.SessionId, g.ObjectiveId, g.Level, g.IsMock, g.CriteriaJson, g.GradingPromptVersion, g.CreatedAt }).ToListAsync(ct))
             .GroupBy(g => (g.SessionId, g.ObjectiveId)).ToDictionary(g => g.Key, g => g.OrderByDescending(x => x.CreatedAt).First());
         // The first examiner's original grade, given blind to the panel: an adjustment made after seeing the AI is anchored on it.
         var first = (await db.HumanObjectiveGrades.AsNoTracking().Where(h => h.OrganizationId == org && ids.Contains(h.SessionId) && h.WasBlind && h.SupersedesId == null)
@@ -283,13 +302,15 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
             // GAD-T480: a calibration is recorded against the models the panel runs now, so it may only rest on grades those models gave.
             // A grade from before a model change would otherwise renew an expired calibration on the old models' agreement.
             if (currentModelsOnly && !GradedByCurrentModels(voters, current)) { otherModels++; continue; }
+            // GAD-T484: likewise the calibration records the grading prompt-set version, so a grade made under other prompts is left out.
+            if (currentModelsOnly && !GradedUnderCurrentPrompts(a.GradingPromptVersion)) { otherPrompts++; continue; }
             var members = voters.Select(v => (int)v.Level).ToList();
             var code = AnonymousMarking.Code(sessionId);
             var title = objectives.TryGetValue(objectiveId, out var o) ? o.Title : "(removed objective)";
             items.Add(new DoubleMarkItem($"{code} / {(o?.Key ?? objectiveId.ToString("N")[..8])}", sessionId, objectiveId, code, title,
                 (int)a.Level, (int)h.Level, mark.Level, members, a.IsMock, student[sessionId]));
         }
-        return (items, otherModels);
+        return (items, otherModels, otherPrompts);
     }
 
     /// <summary>

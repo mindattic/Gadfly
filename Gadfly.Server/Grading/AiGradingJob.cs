@@ -96,12 +96,12 @@ public sealed class AiGradingJob(GadflyDbContext db, ISocraticVotingClient panel
                 CriteriaJson = GradingJson.Write(new StoredAiDetail(result.Criteria, result.Voters)),
                 EvidenceRefsJson = GradingJson.Write(result.EvidenceRefs), MisconceptionsJson = GradingJson.Write(result.Misconceptions),
                 AmbiguitiesJson = GradingJson.Write(result.Ambiguities), ReviewFlagsJson = GradingJson.Write(result.ReviewFlags),
-                Confidence = result.Confidence, IsMock = result.IsMock, CreatedAt = clock.GetUtcNow(),
+                Confidence = result.Confidence, IsMock = result.IsMock, GradingPromptVersion = AiObjectiveGrader.PromptVersion, CreatedAt = clock.GetUtcNow(),
             };
             db.AiObjectiveGrades.Add(row);
             GradingAudit.Add(db, session.OrganizationId, GradingActor.System, "grade.ai.recorded", "AiObjectiveGrade", row.Id.ToString(), session.Id, row.CreatedAt,
                 after: new { objective = objective.Key, level = result.Level.ToString(), score = result.Score, maxScore = result.MaxScore, confidence = result.Confidence,
-                    flags = result.ReviewFlags, voters = result.Voters.Count, isMock = result.IsMock });
+                    flags = result.ReviewFlags, voters = result.Voters.Count, isMock = result.IsMock, gradingPromptVersion = row.GradingPromptVersion });
             await db.SaveChangesAsync(ct);
             log.LogInformation("AI graded objective {Objective} of session {SessionId}: level {Level}, {Score}/{Max}, {Confidence}.",
                 objective.Key, session.Id, result.Level, result.Score, result.MaxScore, result.Confidence);

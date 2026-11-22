@@ -1001,7 +1001,9 @@ from `gradingPromptVersion` (GAD-T469; a calibration recorded before versions we
 `expiryReasons` says which. `effective` is
 `accepted && !expired`. `recheckDue` is true once the calibration is older than `Gadfly:Grading:RecalibrateAfterDays`
 (default 180): a prompt to re-run it and the bias probes; nothing re-runs by itself. `source` is `api` (posted here) or
-`double-marking` (built in the app from blind second marks, GAD-T428).
+`double-marking` (built in the app from blind second marks, GAD-T428; only answers whose AI grade came from the models the
+panel runs now and the current grading prompt-set version count, GAD-T480/GAD-T484 — every AI grade records its version, and
+grades made before versions were kept count as version 1).
 
 When AI grading of a session starts, the status is frozen into its policy snapshot (`panel`, with `expired`). An exam
 set to **human-only until calibrated** (GAD-T427) also freezes `gate`: `{ "applied": true, "reason": "…" }` when the

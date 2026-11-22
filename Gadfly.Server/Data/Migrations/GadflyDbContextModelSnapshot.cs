@@ -53,6 +53,9 @@ namespace Gadfly.Server.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("GradingPromptVersion")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsMock")
                         .HasColumnType("bit");
 

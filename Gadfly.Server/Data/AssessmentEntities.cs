@@ -243,6 +243,8 @@ public sealed class AiObjectiveGrade : ITenantOwned
     public string Confidence { get; set; } = "";
     /// <summary>Produced in mock mode: never shown or used as a genuine AI evaluation.</summary>
     public bool IsMock { get; set; }
+    /// <summary>The grading prompt-set version it was made under (AiObjectiveGrader.PromptVersion, GAD-T484); grades from before it was recorded are version 1.</summary>
+    public int GradingPromptVersion { get; set; } = 1;
     public DateTimeOffset CreatedAt { get; set; }
 }
 
