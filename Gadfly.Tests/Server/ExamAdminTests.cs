@@ -26,7 +26,7 @@ public class ExamAdminTests : ServerTest
         {
             OrganizationId = org, CollectionId = Guid.NewGuid(), CourseId = Guid.NewGuid(), Title = "Cell biology", Subject = "Biology", Topic = "Cells",
             Instructions = "Speak clearly.", AssessmentMode = AssessmentMode.Examination, Mode = ExamMode.Voice, IntegrityLevel = IntegrityLevel.Strict,
-            VoiceId = "voice-1", AvatarId = "avatar-1", Status = ExamStatus.Published, PublishedAt = DateTimeOffset.UtcNow,
+            VoiceId = "examinerVoice01", AvatarId = "avatar-1", Status = ExamStatus.Published, PublishedAt = DateTimeOffset.UtcNow,
             PolicyJson = JsonSerializer.Serialize(new SessionPolicy
             {
                 ConceptIds = ["photosynthesis", "respiration"], TimeBudget = TimeSpan.FromMinutes(25), MaxTurns = 14, Difficulty = 4,
