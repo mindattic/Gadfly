@@ -46,6 +46,8 @@ public sealed class OrganizationSettings
     /// audited as grade.separation-of-duties.waived. Turning it on or off is audited too.
     /// </summary>
     public bool AllowSingleGrader { get; set; }
+    /// <summary>GAD-T444: whether a grade's approver must be someone other than whoever reconciled it. See <see cref="ApproverSeparationSetting"/>.</summary>
+    public ApproverSeparationSetting ApproverSeparation { get; set; } = ApproverSeparationSetting.Automatic;
     // ---- plans, seats and licences (GAD-T309). Numbers mirror Platform/PlanCatalog.cs, which also lists them for the
     // pricing page (GAD-T308); a platform admin may override any of them for one organization (e.g. a Custom plan). ----
     /// <summary>Trial, Standard, Institution or Custom; see <see cref="Gadfly.Server.Platform.PlanCatalog"/>.</summary>
@@ -105,6 +107,14 @@ public sealed class EmailLog : ITenantOwned
 /// marked as living in the EU/EEA (EU AI Act Art. 5(1)(f)), on elsewhere. Off and On apply to every student.
 /// </summary>
 public enum VoiceMeasuresSetting { RegionDefault, Off, On }
+
+/// <summary>
+/// GAD-T444 (ElenchusAtScale M13, Section 3.8): whether the person who reconciled a grade's disagreement may also approve it.
+/// Automatic (the default): not while someone else in the organization could approve it; when no one else can (a two-person
+/// team, or "Allow a single grader" is on) it goes ahead and is audited. Always: never. Off: allowed, each time audited.
+/// Stored as a number.
+/// </summary>
+public enum ApproverSeparationSetting { Automatic, Always, Off }
 
 // ---------------------------------------------------------------- source material
 
