@@ -1,14 +1,19 @@
 /* Grading workflow (GAD-T94..T99): queue, workspace, reconciliation, report. Uses app.css tokens. */
+/* The mock-mode badge colour, same values as demo.css's --mock-tag-bg/--mock-tag-ink (GAD-T396): kept here too so it
+   stays correct in dark mode on a grading page even when demo.css isn't loaded. */
+:root { --mock-tag-bg: #8a5a00; --mock-tag-ink: #ffffff; }
+@media (prefers-color-scheme: dark) { :root { --mock-tag-bg: #f0c050; --mock-tag-ink: #1d1d1f; } }
 .gr-filters { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: end; margin-bottom: 1rem; }
 .gr-filters label { margin: 0; }
 .gr-status { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-size: .8rem; border: 1px solid var(--line); white-space: nowrap; }
 .gr-status.s-HumanReviewPending, .gr-status.s-AwaitingFinalApproval { border-color: var(--accent); color: var(--accent); }
 .gr-status.s-ReconciliationRequired, .gr-status.s-TranscriptVerificationPending, .gr-status.s-UnderAppeal { border-color: var(--error); color: var(--error); }
 .gr-status.s-Finalized, .gr-status.s-Published, .gr-status.s-Amended { border-color: var(--ok); color: var(--ok); }
-.gr-mock { display: inline-block; padding: .1rem .45rem; border-radius: 4px; background: #8a6d00; color: #fff; font-weight: 700; font-size: .75rem; letter-spacing: .04em; }
+/* The same mock-mode colour as demo.css's .mock-label (GAD-T396): fixed hex before, so it didn't stay legible in dark mode. */
+.gr-mock { display: inline-block; padding: .1rem .45rem; border-radius: 4px; background: var(--mock-tag-bg, #8a5a00); color: var(--mock-tag-ink, #fff); font-weight: 700; font-size: .75rem; letter-spacing: .04em; }
 .gr-banner { padding: .75rem 1rem; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); margin: 0 0 1rem; }
 .gr-banner.warn { border-color: var(--error); }
-.gr-banner.mock { border-color: #8a6d00; }
+.gr-banner.mock { border-color: var(--mock-tag-bg, #8a5a00); }
 .gr-summary { display: grid; gap: .5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); margin-bottom: 1rem; }
 .gr-summary .hint { display: block; }
 .gr-section { margin-top: 2rem; }
