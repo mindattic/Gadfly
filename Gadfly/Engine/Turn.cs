@@ -103,4 +103,6 @@ public sealed record Turn
     /// older transcripts. When <see cref="ApplyNoveltyCheck.Novel"/> is false the answer is extrapolation, never transfer.
     /// </summary>
     public ApplyNoveltyCheck? Novelty { get; init; }
+    /// <summary>Who wrote the question (GAD-T431): the drafting provider(s) and model(s), or a fixed source. Null in older transcripts.</summary>
+    public QuestionAuthorship? QuestionAuthor { get; init; }
 }

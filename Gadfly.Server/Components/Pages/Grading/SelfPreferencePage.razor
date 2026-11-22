@@ -1,0 +1,72 @@
+@page "/grading/self-preference/{ExamId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Server.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+<PageTitle>Self-preference check · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<h1>Self-preference check <span>@report?.ExamTitle</span> <HelpLink Topic="grading-guide" /></h1>
+<p><a href="grading/panel/@ExamId">← Panel calibration</a></p>
+
+@if (report is null)
+{
+    <p class="@(loaded ? "notice" : "hint")" role="status">@(loaded ? "That exam was not found, or this check is shown only to people who approve grading policy or view analytics." : "Loading…")</p>
+}
+else
+{
+    <p>The same AI providers write the examiner's questions and grade the answers. This check asks whether a grading member gives higher levels on answers to questions its own provider family wrote than on answers to questions other families wrote, measured against the other members on the same answers so that easier or harder questions do not look like favouritism. It reads the stored transcripts and grades; nothing is sent to a model.</p>
+    @if (report.AnyMock)
+    {
+        <p class="gr-banner mock">These grades and questions come from the mock panel: one simulated member writes and grades everything, so the figures show the workflow, not a real panel.</p>
+    }
+    <div class="gr-summary">
+        <div><span class="hint">Sessions</span>@report.SessionsWithAuthorship of @report.Sessions record who wrote each question</div>
+        <div><span class="hint">Member grades compared</span>@report.Observations</div>
+        <div><span class="hint">Questions written by</span>@(report.Authors.Count == 0 ? "—" : string.Join(", ", report.Authors.OrderByDescending(a => a.Value).Select(a => $"{a.Key} {a.Value}")))</div>
+    </div>
+    @if (report.SessionsWithAuthorship == 0)
+    {
+        <p class="notice">No session of this exam records who wrote its questions yet. Authorship is recorded for questions asked from this release on.</p>
+    }
+    else if (report.Rows.Count == 0)
+    {
+        <p class="notice">No AI grade of this exam lines up with a recorded question yet.</p>
+    }
+    else
+    {
+        <div class="gr-table-wrap">
+            <table class="grid">
+                <thead><tr><th>Member</th><th>Answers to own family's questions</th><th>To others'</th><th>Lift vs other members (levels)</th><th>Lift vs human</th><th>Finding</th></tr></thead>
+                <tbody>
+                    @foreach (var r in report.Rows)
+                    {
+                        <tr>
+                            <td>@r.Member</td>
+                            <td>@r.OwnAnswers</td>
+                            <td>@r.OtherAnswers</td>
+                            <td>@Num(r.LiftVsPeers)@(r.LiftLow is { } lo && r.LiftHigh is { } hi ? $" ({lo:0.00} to {hi:0.00})" : "")</td>
+                            <td>@Num(r.LiftVsHuman)</td>
+                            <td>@if (r.Flagged) { <span class="gr-band-MandatoryReconciliation">possible self-preference</span><br /> }@r.Finding</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="hint">An objective counts as answering a member's own family's questions when that family wrote at least half of the model-written questions on it in the session, and as others' when it wrote none; mixed ones are left out. The interval is a rough 95% interval. A flag is a reason to look closer (for example by giving that member less weight, or no part in grading questions its family wrote), not proof.</p>
+    }
+}
+
+@code {
+    [Parameter] public Guid ExamId { get; set; }
+    private SelfPreferenceReport? report;
+    private bool loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        report = await PanelDb.RunAsync(Scopes, Tenant, sp => sp.GetRequiredService<SelfPreferenceService>().AnalyzeAsync(ExamId));
+        loaded = true;
+    }
+
+    private static string Num(double? x) => x is { } v ? v.ToString("0.00") : "n/a";
+}

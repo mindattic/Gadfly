@@ -60,6 +60,12 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     /// <summary>What the leak guard decided about the last question.</summary>
     public LeakGuardResult LastGuard { get; private set; } = LeakGuardResult.Skipped;
 
+    /// <summary>Who wrote the last question (GAD-T431): the drafting provider(s) and their models, or a fixed source.</summary>
+    public QuestionAuthorship? LastAuthor { get; private set; }
+
+    /// <summary>The provider whose judge synthesizes a fused question (Legion's judge; Gadfly configures claude).</summary>
+    public string JudgeProviderId { get; init; } = "claude";
+
     /// <summary>Turns of dialogue included in the prompt.</summary>
     public int DialogueTurns { get; init; } = 8;
 
@@ -69,7 +75,12 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     public async Task<string> GenerateAsync(QuestionRequest r, CancellationToken ct = default)
     {
         var dialogue = Dialogue(r.Session);
-        if (MoveProfiles.IsAssistance(r.Decision.Move)) return Assist(r);
+        LastAuthor = null;
+        if (MoveProfiles.IsAssistance(r.Decision.Move))
+        {
+            LastAuthor = QuestionAuthorship.Fixed(QuestionAuthorship.HintLadder);
+            return Assist(r);
+        }
         // Adaptive probing (GAD-T233, GAD-T258): what each recent answer said (hedging, vague wording, a missing reason or
         // example) and how the judges read it go into the prompt, and the last one sets how hard the question presses. Nothing
         // from the voice or its timing does.
@@ -81,6 +92,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         {
             LastOutcome = FixedOpeningOutcome;
             LastGuard = LeakGuardResult.Safe;
+            LastAuthor = QuestionAuthorship.Fixed(QuestionAuthorship.InstructorText);
             return fixedOpening;
         }
         var targets = string.Join("\n", r.Decision.TargetClaimIds.Select(id => r.Ledger.Find(id))
@@ -123,8 +135,12 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             var result = await panel.AskAsync(ask, "", Quorum.Plurality, ct);
             var fused = Clean(PanelText(result));
             var question = Usable(fused);
+            var how = QuestionAuthorship.PanelDraft;
             if (question.Length == 0)
+            {
                 question = await PickDraftAsync(result, r.Decision.Move, dialogue, ct);
+                how = QuestionAuthorship.ChosenDraft;
+            }
             if (question.Length == 0)
             {
                 // A draft asking how the student arrived at their answer is dropped before any guard call: introspective reports
@@ -139,6 +155,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             {
                 LastOutcome = attempt == 0 ? "drafted" : "redrafted";
                 LastGuard = LeakGuardResult.Skipped;
+                LastAuthor = Author(result, question, how);
                 return question;
             }
             var verdict = await CheckLeakAsync(question, r.RubricForGuard, dialogue, ct);
@@ -146,6 +163,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             {
                 LastOutcome = attempt == 0 ? "drafted" : "redrafted";
                 LastGuard = LeakGuardResult.Safe;
+                LastAuthor = Author(result, question, how);
                 return question;
             }
             reasons.Add(verdict == true ? $"leaked: \"{question}\"" : "leak guard undecided");
@@ -156,7 +174,27 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         LastOutcome = "fallback: " + string.Join(" | ", reasons);
         // Only a guard verdict is reported as one: with no draft to check (or no rubric), no guard ran.
         LastGuard = !guarded ? LeakGuardResult.Skipped : undecided ? LeakGuardResult.UndecidedReplaced : LeakGuardResult.LeakedReplaced;
+        LastAuthor = QuestionAuthorship.Fixed(QuestionAuthorship.FallbackText);
         return Fallback(r.Decision.Move, r.ConceptTitle, r.RelatedConceptTitle);
+    }
+
+    /// <summary>
+    /// Who wrote the question asked (GAD-T431): the voters whose own draft is the question, word for word after cleaning; when
+    /// none is, the judge that synthesized it from the drafts. Recorded so self-preference can be tested: whether a grading member
+    /// favours answers to questions its own provider family wrote (ElenchusAtScale Section 5.4.2, M12).
+    /// </summary>
+    private QuestionAuthorship Author(VotingResult result, string question, string how)
+    {
+        var drafters = result.IndividualVotes.Where(v => !v.IsError && string.Equals(Usable(Clean(v.Decision)), question, StringComparison.Ordinal))
+            .Select(v => v.ProviderId).Where(p => p.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (drafters.Count == 0)
+        {
+            if (how == QuestionAuthorship.ChosenDraft) return new QuestionAuthorship(how, [], []);
+            drafters = [JudgeProviderId];
+            how = QuestionAuthorship.JudgeSynthesis;
+        }
+        var models = panel as IPanelModels;
+        return new QuestionAuthorship(how, drafters, drafters.Select(p => models?.ConfiguredModels.GetValueOrDefault(p) ?? "").ToList());
     }
 
     /// <summary>What <see cref="LastOutcome"/> says when the question was the objective's fixed opening question (GAD-T436).</summary>

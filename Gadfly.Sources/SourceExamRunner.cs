@@ -234,7 +234,7 @@ public sealed class SourceExamEngine
             reason = $"{reason} Fixed opening question: approved by the instructor and asked word for word to every student (GAD-T436).".Trim();
         Diagnostics?.Report($"[{decision.Move} on {decision.ObjectiveKey ?? concept.Key}{(decision.IsReplacement ? " (replacement)" : "")}: {reason} Question {_generator.LastOutcome}.]");
         return Session.Ask(concept.Key, decision.Move, question, _clock.GetUtcNow(), decision.TargetClaimIds, reason,
-            decision.ObjectiveKey, decision.IsReplacement, novelty);
+            decision.ObjectiveKey, decision.IsReplacement, novelty, _generator.LastAuthor);
     }
 
     /// <summary>
