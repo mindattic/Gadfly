@@ -14,6 +14,7 @@
 @inject Gadfly.Server.Voice.VoiceSettings VoiceConfig
 @inject UiText T
 @inject IWebHostEnvironment Env
+@inject Gadfly.Server.Voice.VoiceGrants Grants
 
 @* The get-ready studio (GAD-T506): one screen with everything a student needs before the first question, in their language
    (GAD-T544): the camera, microphone and eye-tracking checks, a plain statement of what the camera is for, the eye-contact
@@ -109,6 +110,49 @@ else
             else
             {
                 <p class="exam-language-lock">@T["getReady.language.only"] <span lang="@examLanguage">@StudentLanguages.NativeName(examLanguage)</span></p>
+            }
+            @* Voice calibration (GAD-T594): optional, short, redoable. The student reads a known sentence three times through the real
+               recognizer in that language; only derived numbers are stored on their language profile, never audio or words. *@
+            @if (VoiceConfig.Available && !TypedAnswers)
+            {
+                <details class="calibration" open="@(!CalibrationOptional || calibrating is not null)">
+                    <summary>@(CalibrationOptional ? T["getReady.calibration.summaryOptional"] : T["getReady.calibration.summary"])</summary>
+                    <p class="hint">@T["getReady.calibration.why"]</p>
+                    @if (calibrating is { } lang)
+                    {
+                        var text = StudentLanguages.CalibrationFor(lang);
+                        <p>@T["getReady.calibration.readThis"]</p>
+                        <p class="calibration-text" lang="@lang">@text.Text</p>
+                        <div class="calibration-progress" aria-hidden="true">
+                            @for (var i = 0; i < StudentLanguages.CalibrationReadings; i++)
+                            {
+                                <i class="@(i < calibrationDone ? "done" : "")"></i>
+                            }
+                        </div>
+                        <div class="syscheck-level" @ref="calibrationLevel" aria-hidden="true"><i></i></div>
+                        <p role="status">@T[calibrationStatus, calibrationDone + 1, StudentLanguages.CalibrationReadings]</p>
+                        <div class="actions"><button type="button" class="secondary" @onclick="StopCalibrationAsync">@T["getReady.calibration.stop"]</button></div>
+                    }
+                    else
+                    {
+                        @if (calibrationStatus is not "getReady.calibration.reading" and not "")
+                        {
+                            <p role="status">@T[calibrationStatus]</p>
+                        }
+                        <div class="actions">
+                            @foreach (var l in CalibrationLanguages)
+                            {
+                                <button type="button" class="secondary" @onclick="() => CalibrateAsync(l)" disabled="@(microphone != "ok")">
+                                    @(calibrated.Contains(l) ? T["getReady.calibration.redo", StudentLanguages.NativeName(l)] : T["getReady.calibration.start", StudentLanguages.NativeName(l)])
+                                </button>
+                            }
+                        </div>
+                        @if (microphone != "ok")
+                        {
+                            <p class="hint">@T["getReady.calibration.waitMic"]</p>
+                        }
+                    }
+                </details>
             }
         </section>
 
@@ -457,6 +501,91 @@ else
         await LanguageSwitch.RememberAsync(JS, T.Language);
     }
 
+    /// <summary>Voice calibration (GAD-T594): the languages calibrated already, and the reading in progress.</summary>
+    private IReadOnlyCollection<string> calibrated = [];
+    private string? calibrating;
+    private int calibrationDone;
+    private string calibrationStatus = "";
+    private Guid? calibrationGrant;
+    private IJSObjectReference? calibrationModule;
+    private ElementReference calibrationLevel;
+
+    /// <summary>The exam language, and the primary language too when Gadfly can run exams in it.</summary>
+    private IEnumerable<string> CalibrationLanguages =>
+        new[] { examLanguage }.Concat(Gadfly.Engine.ExamLanguage.IsSupported(primary) ? [Gadfly.Engine.ExamLanguage.Normalize(primary)] : Array.Empty<string>()).Distinct();
+
+    /// <summary>English primary and an English exam: today's experience, so calibration is offered but folded away (owner rule).</summary>
+    private bool CalibrationOptional => Gadfly.Engine.ExamLanguage.IsEnglish(examLanguage) && Gadfly.Engine.ExamLanguage.IsEnglish(primary);
+
+    private async Task CalibrateAsync(string language)
+    {
+        if (calibrating is not null || Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        calibrating = language;
+        calibrationDone = 0;
+        calibrationStatus = "getReady.calibration.opening";
+        StateHasChanged();
+        var terms = StudentLanguages.CalibrationTerms(language);
+        var grant = Guid.NewGuid();
+        calibrationGrant = grant;
+        // A short recognizer grant for this calibration only: the hub filter allows exactly this language and these words.
+        Grants.Arm(user, org, grant);
+        Grants.SetVocabulary(user, grant, language, terms);
+        var readings = new List<StudentLanguages.CalibrationReading>();
+        try
+        {
+            calibrationModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/voice-calibration.js");
+            await Task.Yield();
+            if (!await calibrationModule.InvokeAsync<bool>("open", language, terms, calibrationLevel))
+            {
+                calibrationStatus = "getReady.calibration.couldntStart";
+                return;
+            }
+            var text = StudentLanguages.CalibrationFor(language).Text;
+            while (calibrating == language && readings.Count < StudentLanguages.CalibrationReadings)
+            {
+                calibrationStatus = "getReady.calibration.reading";
+                StateHasChanged();
+                var r = await calibrationModule.InvokeAsync<StudentLanguages.CalibrationReading>("reading", TimeSpan.FromSeconds(40), text);
+                if (calibrating != language) return;
+                readings.Add(r);
+                calibrationDone = readings.Count;
+            }
+            var summary = StudentLanguages.Summarize(language, readings, Clock.GetUtcNow());
+            if (summary is null) { calibrationStatus = "getReady.calibration.notHeard"; return; }
+            await StudentLanguages.SaveCalibrationAsync(Scopes, org, user, new LanguageAnswers(spoken, primary), language, summary, Clock.GetUtcNow());
+            calibrated = calibrated.Append(language).Distinct().ToList();
+            calibrationStatus = "getReady.calibration.done";
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException or Microsoft.EntityFrameworkCore.DbUpdateException)
+        {
+            calibrationStatus = "getReady.calibration.couldntStart";
+        }
+        finally
+        {
+            if (calibrationGrant == grant) await EndCalibrationAsync();
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>The student stopped the calibration: nothing from this round is kept.</summary>
+    private async Task StopCalibrationAsync()
+    {
+        calibrationStatus = "getReady.calibration.skipped";
+        await EndCalibrationAsync();
+    }
+
+    private async Task EndCalibrationAsync()
+    {
+        calibrating = null;
+        if (calibrationModule is not null)
+        {
+            try { await calibrationModule.InvokeVoidAsync("close"); }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
+        }
+        if (calibrationGrant is { } g && Tenant.UserId is { } user) Grants.Disarm(user, g);
+        calibrationGrant = null;
+    }
+
     private void ToggleSpoken(string tag, ChangeEventArgs e)
     {
         if (e.Value is true) { if (!spoken.Contains(tag)) spoken.Add(tag); }
@@ -474,6 +603,7 @@ else
     {
         var saved = await StudentLanguages.LoadAsync(Scopes, org, user);
         offered = await StudentLanguages.OfferedAsync(Scopes, org, AssignmentId);
+        calibrated = await StudentLanguages.CalibratedAsync(Scopes, org, user);
         examLanguage = StudentLanguages.DefaultExamLanguage(offered, saved?.Primary, T.Language);
         // The page speaks the exam language from the start, so what the student reads is what the exam will be in.
         if (examLanguage != T.Language && UiCatalog.Languages.Contains(examLanguage))
@@ -827,6 +957,7 @@ else
             await Sessions.RecordConsentAsync(org, sessionId, user, notice.Sha256);
             if (research is not null) await research.RecordAsync(sessionId);   // optional; never blocks the exam (GAD-T452)
             // Hand the microphone and camera over to the exam room, which opens them again straight away (GAD-T239).
+            await EndCalibrationAsync();
             await StopMediaAsync();
             Nav.NavigateTo($"exam/{sessionId}");
         }
@@ -847,6 +978,12 @@ else
     public async ValueTask DisposeAsync()
     {
         T.Changed -= OnLanguageChanged;
+        await EndCalibrationAsync();
+        if (calibrationModule is not null)
+        {
+            try { await calibrationModule.DisposeAsync(); }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
+        }
         if (module is not null)
         {
             await StopMediaAsync();

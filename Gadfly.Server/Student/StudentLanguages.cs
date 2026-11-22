@@ -110,6 +110,87 @@ public static class StudentLanguages
         return offered.Contains(ExamLanguage.English) ? ExamLanguage.English : offered.FirstOrDefault() ?? ExamLanguage.English;
     }
 
+    // ----------------------------------------------------------------------------------------------- voice calibration (GAD-T594)
+
+    /// <summary>The sentence read for voice calibration in one language: a pangram, with its word and syllable counts.</summary>
+    public sealed record CalibrationText(string Language, string Text, int Words, int Syllables);
+
+    /// <summary>The calibration sentence per language: English "The quick brown fox…", Korean "다람쥐 헌 쳇바퀴에 타고파" (each Hangul block a syllable).</summary>
+    public static CalibrationText CalibrationFor(string language) => ExamLanguage.Normalize(language) switch
+    {
+        ExamLanguage.Korean => new(ExamLanguage.Korean, "다람쥐 헌 쳇바퀴에 타고파.", 4, 11),
+        _ => new(ExamLanguage.English, "The quick brown fox jumps over the lazy dog.", 9, 11),
+    };
+
+    /// <summary>The words of the sentence, allowed as recognizer hints for the calibration's grant.</summary>
+    public static IReadOnlyList<string> CalibrationTerms(string language) =>
+        CalibrationFor(language).Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(w => w.Trim('.', ',')).Where(w => w.Length > 0).ToList();
+
+    /// <summary>How many times the sentence is read.</summary>
+    public const int CalibrationReadings = 3;
+
+    /// <summary>One reading's numbers, as js/voice-calibration.js measures them (no audio, no words).</summary>
+    public sealed record CalibrationReading(bool Heard, double SpanMs, IReadOnlyList<double> PausesMs, double? Confidence, double Match);
+
+    /// <summary>
+    /// The readings summarized into the stored measures: speech rate from the known sentence's words and syllables over the mean
+    /// reading time, mean and longest pause, and the recognizer's confidence (its own word confidences when it gives them, else how
+    /// closely its words matched the sentence). Null when no reading was heard.
+    /// </summary>
+    public static VoiceCalibration? Summarize(string language, IReadOnlyList<CalibrationReading> readings, DateTimeOffset at)
+    {
+        var heard = readings.Where(r => r.Heard && r.SpanMs >= 300).ToList();
+        if (heard.Count == 0) return null;
+        var text = CalibrationFor(language);
+        var span = heard.Average(r => r.SpanMs);
+        var pauses = heard.SelectMany(r => r.PausesMs).Where(p => p > 0 && double.IsFinite(p)).ToList();
+        return new VoiceCalibration
+        {
+            SpeechRateWordsPerMinute = Math.Round(text.Words / (span / 60000.0), 1),
+            SpeechRateSyllablesPerSecond = Math.Round(text.Syllables / (span / 1000.0), 2),
+            MeanPauseMs = pauses.Count == 0 ? 0 : Math.Round(pauses.Average()),
+            LongestPauseMs = pauses.Count == 0 ? 0 : Math.Round(pauses.Max()),
+            RecognitionConfidence = Math.Round(heard.Average(r => Math.Clamp(r.Confidence ?? r.Match, 0, 1)), 3),
+            Readings = heard.Count,
+            MeasuredAt = at,
+        };
+    }
+
+    /// <summary>The languages this student has a calibration for (empty when none).</summary>
+    public static async Task<IReadOnlyCollection<string>> CalibratedAsync(IServiceScopeFactory scopes, Guid organizationId, Guid userId, CancellationToken ct = default)
+    {
+        await using var scope = scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(organizationId));
+        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+        var row = await db.StudentLanguageProfiles.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.UserId == userId, ct);
+        return row is null ? [] : row.ReadVoiceCalibration().Keys.ToList();
+    }
+
+    /// <summary>
+    /// Stores a calibration for one language on the student's profile, creating the profile from <paramref name="answers"/> when
+    /// there is none yet. Only the derived measures are stored.
+    /// </summary>
+    public static async Task SaveCalibrationAsync(IServiceScopeFactory scopes, Guid organizationId, Guid userId, LanguageAnswers answers,
+        string language, VoiceCalibration calibration, DateTimeOffset now, CancellationToken ct = default)
+    {
+        await using var scope = scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(organizationId));
+        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+        var row = await db.StudentLanguageProfiles.FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.UserId == userId, ct);
+        if (row is null)
+        {
+            var (spoken, primary) = Clean(answers);
+            row = new StudentLanguageProfile
+            {
+                OrganizationId = organizationId, UserId = userId,
+                PrimaryLanguage = primary ?? ExamLanguage.Normalize(language),
+                LanguagesSpoken = ExamLanguage.FormatList(spoken.Count > 0 ? spoken : [ExamLanguage.Normalize(language)]),
+            };
+            db.StudentLanguageProfiles.Add(row);
+        }
+        row.WriteVoiceCalibration(language, calibration, now);
+        await db.SaveChangesAsync(ct);
+    }
+
     private static List<string> Tags(string? list) =>
         (list ?? "").Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries).Select(ExamLanguage.Normalize).Distinct().ToList();
 }

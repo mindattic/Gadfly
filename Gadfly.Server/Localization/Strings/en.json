@@ -168,5 +168,19 @@
   "getReady.language.editable": "Your answers are saved when you begin and filled in for you next time; you can change them here before any exam.",
   "getReady.language.exam": "Which language do you want to take this exam in?",
   "getReady.language.lock": "This page, the rules and the examiner switch to it straight away. You can change it until you press Begin exam; then it stays for this attempt.",
-  "getReady.language.only": "This exam is in:"
+  "getReady.language.only": "This exam is in:",
+  "getReady.calibration.summary": "Help the examiner hear you (about a minute)",
+  "getReady.calibration.summaryOptional": "Help the examiner hear you (optional; you can skip this)",
+  "getReady.calibration.why": "Read one short sentence aloud three times. It helps the speech recognizer get used to how you speak, so it waits for you at your own pace and mishears you less. Only a few numbers are kept (how fast you read, how long your pauses are, how sure the recognizer was): never a recording and never your words. It is never used to grade you. You can skip it, or do it again any time.",
+  "getReady.calibration.start": "Read the sentence in {0}",
+  "getReady.calibration.redo": "Read again in {0} (done ✓)",
+  "getReady.calibration.readThis": "Read this aloud at your normal pace:",
+  "getReady.calibration.opening": "Getting the microphone ready…",
+  "getReady.calibration.reading": "Read it now ({0} of {1}). Take your time; pause when you're done.",
+  "getReady.calibration.stop": "Stop",
+  "getReady.calibration.done": "Thank you, that's all. The examiner will use it to hear you better.",
+  "getReady.calibration.notHeard": "We couldn't hear the sentence that time. Check the microphone above and try again, or skip this.",
+  "getReady.calibration.couldntStart": "This couldn't start right now. That's fine: the exam works without it.",
+  "getReady.calibration.skipped": "Stopped. Nothing from that round was kept.",
+  "getReady.calibration.waitMic": "This turns on once the microphone check above has heard you."
 }
