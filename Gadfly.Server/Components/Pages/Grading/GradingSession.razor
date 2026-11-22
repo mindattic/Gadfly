@@ -25,7 +25,7 @@ else if (w is null)
 else
 {
     var status = w.Status;
-    <h1>@w.StudentName <span>· @w.ExamTitle · attempt @w.Session.Attempt</span></h1>
+    <h1>@w.StudentName <span>· @w.ExamTitle · attempt @w.Session.Attempt</span> <HelpLink Topic="grading-guide" /></h1>
 
     @if (w.AiVisible && w.AnyMock)
     {

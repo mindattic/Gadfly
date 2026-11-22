@@ -21,7 +21,7 @@ else if (view is null)
 else
 {
     var s = view.Session;
-    <h1>@view.StudentName <span>· @view.ExamTitle · attempt @s.Attempt</span></h1>
+    <h1>@view.StudentName <span>· @view.ExamTitle · attempt @s.Attempt</span> <HelpLink Topic="integrity-notes" /></h1>
 
     <div class="review-summary">
         <div><span class="hint">State</span> @s.State@(s.EndReason is { } er ? $" ({er})" : "")</div>
