@@ -3,6 +3,8 @@
 // shows the camera in the page's preview, draws the microphone level, and tells the page (OnMedia) when
 // each one works: the camera once it delivers a picture, the microphone once it hears the student speak.
 // Nothing is recorded or sent; both are released when the page leaves or the exam begins.
+import * as prefs from "./device-prefs.js";
+
 export function check() {
     const w = window;
     return {
@@ -19,6 +21,31 @@ export function check() {
 
 export function ping() {
     return true;
+}
+
+// ------------------------------------------------------------------------------------- choosing the devices (GAD-T593)
+
+/**
+ * The cameras and microphones this browser lists, with the one in use (or remembered) marked: { cameras, microphones }, each
+ * [{ id, label, selected }]. Labels are empty until the browser has allowed the device, so call it again once media is open.
+ */
+export async function devices() {
+    const list = await prefs.list();
+    const inUse = (kind) => {
+        const track = M && M.streams.flatMap((s) => (kind === "camera" ? s.getVideoTracks() : s.getAudioTracks()))[0];
+        const settings = track && track.getSettings ? track.getSettings() : null;
+        return (settings && settings.deviceId) || prefs.get(kind);
+    };
+    const pick = (kind) => {
+        const current = inUse(kind);
+        return list.filter((d) => d.kind === kind).map((d, i) => ({ id: d.deviceId, label: d.label || "", index: i + 1, selected: d.deviceId === current }));
+    };
+    return { cameras: pick("camera"), microphones: pick("microphone") };
+}
+
+/** Remembers the student's choice for "camera" or "microphone" (an empty id goes back to the default). Reopen with startMedia. */
+export function chooseDevice(kind, id) {
+    if (kind === "camera" || kind === "microphone") prefs.set(kind, id || "");
 }
 
 // ------------------------------------------------------------------------------------- microphone and camera (GAD-T239)
@@ -67,7 +94,8 @@ export async function startMedia(dotnet, video, level, options) {
 async function openMicrophone(m) {
     let stream;
     try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
+        // The microphone the student chose (GAD-T593), else the browser's default.
+        stream = await prefs.open("microphone", { echoCancellation: true, noiseSuppression: true });
     } catch (err) {
         report(m, "microphone", outcome(err));
         return;
@@ -126,7 +154,8 @@ async function startMicCheck(m, stream) {
 async function openCamera(m) {
     let stream;
     try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+        // The camera the student chose (GAD-T593), else the browser's default.
+        stream = await prefs.open("camera", { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } });
     } catch (err) {
         report(m, "camera", outcome(err));
         return;

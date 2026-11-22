@@ -74,6 +74,34 @@ else
                     <video @ref="preview" class="syscheck-camera" muted playsinline autoplay aria-label="@T["getReady.check.cameraPreview"]"></video>
                     <div class="syscheck-level" @ref="meter" aria-hidden="true"><i></i></div>
                 </div>
+                @* Choose the camera and microphone (GAD-T593): switching reopens the preview and the meter on that device, and the
+                   choice is remembered on this device for the exam room (js/device-prefs.js). *@
+                <div class="device-pickers">
+                    <label>
+                        @T["getReady.devices.camera"]
+                        <select @onchange="e => ChooseDeviceAsync(DeviceKind.Camera, e)" disabled="@(cameras.Count == 0)">
+                            @if (cameras.Count == 0) { <option>@T["getReady.devices.default"]</option> }
+                            @foreach (var d in cameras)
+                            {
+                                <option value="@d.Id" selected="@d.Selected">@(string.IsNullOrWhiteSpace(d.Label) ? T["getReady.devices.unnamedCamera", d.Index].Value : d.Label)</option>
+                            }
+                        </select>
+                    </label>
+                    @if (!TypedAnswers)
+                    {
+                        <label>
+                            @T["getReady.devices.microphone"]
+                            <select @onchange="e => ChooseDeviceAsync(DeviceKind.Microphone, e)" disabled="@(microphones.Count == 0)">
+                                @if (microphones.Count == 0) { <option>@T["getReady.devices.default"]</option> }
+                                @foreach (var d in microphones)
+                                {
+                                    <option value="@d.Id" selected="@d.Selected">@(string.IsNullOrWhiteSpace(d.Label) ? T["getReady.devices.unnamedMicrophone", d.Index].Value : d.Label)</option>
+                                }
+                            </select>
+                        </label>
+                    }
+                </div>
+                <p class="hint">@T["getReady.devices.hint"]</p>
                 @* Microphone test (GAD-T359): noise floor, clipping and an echo hint, filled by js/mic-check.js once the
                    microphone is open. Advice only, like the eye-tracking panel below; never blocks Begin exam. *@
                 @if (!TypedAnswers)
@@ -408,8 +436,46 @@ else
         if (device == "microphone") microphone = state;
         else if (device == "camera") camera = state;
         else return;
+        // Device names appear once the browser has allowed them: list them again (GAD-T593).
+        if (state == "ok" || state == "listening") _ = LoadDevicesAsync();
         StateHasChanged();
     });
+
+    private enum DeviceKind { Camera, Microphone }
+    private sealed record DeviceOption(string Id, string Label, int Index, bool Selected);
+    private sealed class DeviceList
+    {
+        public List<DeviceOption> Cameras { get; set; } = [];
+        public List<DeviceOption> Microphones { get; set; } = [];
+    }
+    private List<DeviceOption> cameras = [], microphones = [];
+
+    /// <summary>The cameras and microphones the browser lists, the one in use selected (GAD-T593).</summary>
+    private async Task LoadDevicesAsync()
+    {
+        if (module is null) return;
+        try
+        {
+            var list = await InvokeBoundedAsync<DeviceList>("devices");
+            cameras = list.Cameras;
+            microphones = list.Microphones;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or OperationCanceledException or ObjectDisposedException or InvalidOperationException) { }
+    }
+
+    /// <summary>The student picked another device: remember it on this device and reopen the preview and meter on it.</summary>
+    private async Task ChooseDeviceAsync(DeviceKind kind, ChangeEventArgs e)
+    {
+        if (module is null) return;
+        try
+        {
+            await module.InvokeVoidAsync("chooseDevice", kind == DeviceKind.Camera ? "camera" : "microphone", e.Value as string ?? "");
+            if (kind == DeviceKind.Camera) camera = "waiting"; else microphone = "waiting";
+            await StartMediaAsync();
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
+    }
 
     private async Task RunChecksAsync()
     {

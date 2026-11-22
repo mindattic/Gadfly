@@ -149,5 +149,11 @@
   "getReady.consent.agree": "I have read this notice and agree to take the exam on these terms.",
   "getReady.begin.begin": "Begin exam",
   "getReady.begin.continue": "Continue to the exam",
-  "getReady.begin.starting": "Starting…"
+  "getReady.begin.starting": "Starting…",
+  "getReady.devices.camera": "Camera",
+  "getReady.devices.microphone": "Microphone",
+  "getReady.devices.default": "Your browser's default",
+  "getReady.devices.unnamedCamera": "Camera {0}",
+  "getReady.devices.unnamedMicrophone": "Microphone {0}",
+  "getReady.devices.hint": "Pick the camera and microphone you want to use: the picture and the level meter above switch to it. Your choice is remembered on this device for the exam."
 }

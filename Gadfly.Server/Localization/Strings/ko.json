@@ -149,5 +149,11 @@
   "getReady.consent.agree": "위 안내를 읽었으며, 이 조건으로 시험을 보는 데 동의합니다.",
   "getReady.begin.begin": "시험 시작",
   "getReady.begin.continue": "시험으로 이동",
-  "getReady.begin.starting": "시작하는 중…"
+  "getReady.begin.starting": "시작하는 중…",
+  "getReady.devices.camera": "카메라",
+  "getReady.devices.microphone": "마이크",
+  "getReady.devices.default": "브라우저 기본 장치",
+  "getReady.devices.unnamedCamera": "카메라 {0}",
+  "getReady.devices.unnamedMicrophone": "마이크 {0}",
+  "getReady.devices.hint": "사용할 카메라와 마이크를 골라 주세요. 위의 화면과 소리 막대가 고른 장치로 바뀌어요. 선택한 장치는 시험을 위해 이 기기에 기억돼요."
 }
