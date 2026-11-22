@@ -87,13 +87,21 @@ public sealed class UiCatalog
 
     private static Dictionary<string, IReadOnlyDictionary<string, string>> LoadEmbedded()
     {
+        // One main file per language ("ko.json") plus any area files ("examRoom.ko.json"), all merged; an area file may not
+        // redefine a key another file defines (LocalizationTests checks), so the merge order never matters.
         var asm = typeof(UiCatalog).Assembly;
+        var names = asm.GetManifestResourceNames().Where(n => n.StartsWith("Gadfly.Ui/", StringComparison.Ordinal)).Order(StringComparer.Ordinal).ToList();
         var result = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var lang in Languages)
         {
-            using var stream = asm.GetManifestResourceStream($"Gadfly.Ui/{lang}.json");
-            if (stream is null) continue;
-            result[lang] = Parse(stream);
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (var name in names.Where(n => n == $"Gadfly.Ui/{lang}.json" || n.EndsWith($".{lang}.json", StringComparison.Ordinal)))
+            {
+                using var stream = asm.GetManifestResourceStream(name);
+                if (stream is null) continue;
+                foreach (var (k, v) in Parse(stream)) map[k] = v;
+            }
+            if (map.Count > 0) result[lang] = map;
         }
         return result;
     }
