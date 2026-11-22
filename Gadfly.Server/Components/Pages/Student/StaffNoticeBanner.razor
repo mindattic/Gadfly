@@ -74,7 +74,7 @@
             if (state is null or SessionState.Ended or SessionState.Failed) return;
             owned = true;
             held = state == SessionState.Paused || LiveSessionFeed.Shared.Snapshot(o, SessionId)?.HeldByStaff == true;
-            notice = LiveSessionFeed.Shared.RecentNotice(SessionId, Clock.GetUtcNow());
+            notice = LiveSessionFeed.Shared.RecentNotice(o, SessionId, Clock.GetUtcNow());
         }
         catch (OperationCanceledException) { return; }
         catch (Exception ex)

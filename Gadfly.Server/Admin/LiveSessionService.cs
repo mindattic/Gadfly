@@ -157,7 +157,7 @@ public sealed class LiveSessionService(GadflyDbContext db, ITenantContext tenant
         var rows = sessions.Select(s =>
         {
             var snap = feed.Snapshot(org, s.Id);
-            var rooms = feed.RoomsOpen(s.Id);
+            var rooms = feed.RoomsOpen(org, s.Id);
             var last = snap?.At ?? s.StartedAt ?? s.CreatedAt;
             var connection = rooms > 0 ? LiveConnection.Connected : now - last <= RecentFor ? LiveConnection.Recent : LiveConnection.Quiet;
             var clockStarted = snap?.ClockStarted ?? s.StartedAt is not null && s.State is SessionState.Running or SessionState.Paused;
@@ -273,7 +273,7 @@ public sealed class LiveSessionService(GadflyDbContext db, ITenantContext tenant
         Auditor.Audit(NoticeAction, "ExamSession", sessionId.ToString(), after: new { text = notice }, reason: notice, sessionId: sessionId);
         await db.SaveChangesAsync(ct);
         feed.Notice(org, sessionId, notice, clock.GetUtcNow());
-        return new(true, feed.RoomsOpen(sessionId) > 0
+        return new(true, feed.RoomsOpen(org, sessionId) > 0
             ? "Sent. It is on the student's screen now."
             : "Sent. The student's exam room is not open on this server right now; they will see it if they come back within a few minutes.");
     }

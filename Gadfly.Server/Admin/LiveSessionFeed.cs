@@ -195,12 +195,21 @@ public sealed class LiveSessionFeed
         if (snapshot.State != SessionState.Ended) _snapshots.TryAdd(snapshot.SessionId, snapshot);
     }
 
-    /// <summary>How many exam rooms are open on the session on this server.</summary>
-    public int RoomsOpen(Guid sessionId) => _rooms.TryGetValue(sessionId, out var n) ? n : 0;
+    /// <summary>
+    /// How many exam rooms are open on the session on this server, in that organization (GAD-T387: every caller already
+    /// knows the session is theirs, but the signature checks it too, the same discipline as <see cref="Snapshot"/>,
+    /// so a future caller can't skip it by accident).
+    /// </summary>
+    public int RoomsOpen(Guid organizationId, Guid sessionId) =>
+        _snapshots.TryGetValue(sessionId, out var s) && s.OrganizationId != organizationId ? 0
+            : _rooms.TryGetValue(sessionId, out var n) ? n : 0;
 
-    /// <summary>The latest staff notice for the session, while it is recent enough to show again.</summary>
-    public StaffNotice? RecentNotice(Guid sessionId, DateTimeOffset now) =>
-        _notices.TryGetValue(sessionId, out var n) && now - n.At <= NoticeKeptFor ? n : null;
+    /// <summary>The latest staff notice for the session, while it is recent enough to show again (GAD-T387: organization-checked, see <see cref="RoomsOpen"/>).</summary>
+    public StaffNotice? RecentNotice(Guid organizationId, Guid sessionId, DateTimeOffset now)
+    {
+        if (_snapshots.TryGetValue(sessionId, out var s) && s.OrganizationId != organizationId) return null;
+        return _notices.TryGetValue(sessionId, out var n) && now - n.At <= NoticeKeptFor ? n : null;
+    }
 
     private void Trim(DateTimeOffset now)
     {
