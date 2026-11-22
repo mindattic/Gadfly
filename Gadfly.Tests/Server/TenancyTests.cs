@@ -28,6 +28,10 @@ public class TenancyTests : ServerTest
         // LTI OIDC login state (GAD-T380): looked up by its long random state token before any tenant is known; the row
         // carries its organization and registration, which the launch then checks (GAD-T420).
         typeof(LtiLoginState),
+        // Stripe webhook idempotency (GAD-T482): one row per Stripe event id, written and looked up by the signed-out webhook
+        // before any tenant is known; it must see every row or a re-sent event would be applied twice. Ids only, read by no
+        // organization (GAD-T525).
+        typeof(ProcessedStripeEvent),
     ];
 
     [Test]
