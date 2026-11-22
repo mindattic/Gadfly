@@ -204,14 +204,15 @@ public sealed class PracticeInterview
     /// </summary>
     public string? Remark(VoiceGrants grants, Guid user, string? kind)
     {
-        if (kind is null || !WebcamIntegrityRecorder.ExaminerRemarks.TryGetValue(kind, out var text)) return null;
+        // In the student's language (GAD-T532): Korean lines when the practice runs in Korean, English otherwise.
+        if (kind is null || Voice.ExaminerFiller.Remark(kind, Language) is not { } text) return null;
         // A reminder (GAD-T561) is a warm line, never the same twice in one practice; once all are said she starts over.
         if (kind is "look-away" or "reading")
         {
-            if (WebcamIntegrityRecorder.NextReminder(remindersSaid) is not { } line)
+            if (WebcamIntegrityRecorder.NextReminder(remindersSaid, Language) is not { } line)
             {
                 remindersSaid.Clear();
-                line = WebcamIntegrityRecorder.NextReminder(remindersSaid)!;
+                line = WebcamIntegrityRecorder.NextReminder(remindersSaid, Language)!;
             }
             text = line;
         }
@@ -219,6 +220,9 @@ public sealed class PracticeInterview
     }
 
     private readonly HashSet<string> remindersSaid = new(StringComparer.Ordinal);
+
+    /// <summary>The language the examiner's spoken remarks use in this practice (GAD-T532): the student's UI language; English by default.</summary>
+    public string Language { get; set; } = Gadfly.Engine.ExamLanguage.English;
 
     /// <summary>
     /// Whether a spoken answer sounds like "I don't know": the exam's own aporia word, or the usual ways of saying it. Only used to

@@ -82,10 +82,24 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         "I'm still with you. Carry on whenever you like.",
     ];
 
+    /// <summary>The same warm reminders in Korean (GAD-T532, GAD-T561): polite, never a request to look at her.</summary>
+    public static readonly IReadOnlyList<string> GentleRemindersKorean =
+    [
+        "천천히 생각하세요. 저는 여기 있어요.",
+        "준비되시면 더 말씀해 주세요.",
+        "듣고 있어요. 준비되시면 계속해 주세요.",
+        "서두르지 않으셔도 돼요. 어떻게 생각하시는지 말씀해 주세요.",
+        "계속 함께 있어요. 편하실 때 이어서 말씀해 주세요.",
+    ];
+
+    /// <summary>The gentle reminders in the attempt's language (English for anything but Korean).</summary>
+    public static IReadOnlyList<string> RemindersFor(string? language) =>
+        Gadfly.Engine.ExamLanguage.Normalize(language) == Gadfly.Engine.ExamLanguage.Korean ? GentleRemindersKorean : GentleReminders;
+
     /// <summary>The next reminder not said yet in this session (recorded in <paramref name="said"/>), or null once all have been.</summary>
-    public static string? NextReminder(ISet<string> said)
+    public static string? NextReminder(ISet<string> said, string? language = null)
     {
-        var next = GentleReminders.FirstOrDefault(l => !said.Contains(l));
+        var next = RemindersFor(language).FirstOrDefault(l => !said.Contains(l));
         if (next is not null) said.Add(next);
         return next;
     }

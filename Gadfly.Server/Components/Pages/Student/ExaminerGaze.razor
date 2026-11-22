@@ -13,6 +13,7 @@
 @using Gadfly.Server.Integrity
 @using Gadfly.Server.Sessions
 @using Gadfly.Server.Voice
+@using Microsoft.EntityFrameworkCore
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
 @inject VoiceGrants Grants
@@ -67,6 +68,10 @@
             if (!enabled) return;
             await using (var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org)))
                 accommodated = await WebcamIntegrityRecorder.Create(scope.ServiceProvider).ExaminerGazeAccommodationAsync(org, user, SessionId, stop.Token);
+            await using (var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org)))
+                language = await scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>().ExamSessions
+                    .Where(s => s.Id == SessionId && s.OrganizationId == org).Select(s => s.Language)
+                    .FirstOrDefaultAsync(stop.Token);
             await InvokeAsync(StateHasChanged);   // renders the indicator and the fade before the module needs them
             self = DotNetObjectReference.Create(this);
             module = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/examiner-gaze.js");
@@ -107,17 +112,21 @@
     [JSInvokable]
     public Task<string?> Remark(string? kind)
     {
-        if (!enabled || kind is null || !WebcamIntegrityRecorder.ExaminerRemarks.TryGetValue(kind, out var text)) return Task.FromResult<string?>(null);
+        // In the attempt's language (GAD-T532): Korean lines for a Korean attempt, English otherwise.
+        if (!enabled || kind is null || Gadfly.Server.Voice.ExaminerFiller.Remark(kind, language) is not { } text) return Task.FromResult<string?>(null);
         // Under the eye-contact accommodation the examiner never asks for eye contact, whatever the browser asks for (GAD-T261).
         if (accommodated && WebcamIntegrityRecorder.AccommodatedTypes.Contains("examiner-" + kind)) return Task.FromResult<string?>(null);
         // A reminder (GAD-T561) is a warm line never said twice in this session; none left, she says nothing.
         if (kind is "look-away" or "reading")
         {
-            if (WebcamIntegrityRecorder.NextReminder(remindersSaid) is not { } line) return Task.FromResult<string?>(null);
+            if (WebcamIntegrityRecorder.NextReminder(remindersSaid, language) is not { } line) return Task.FromResult<string?>(null);
             text = line;
         }
         return Task.FromResult(Grants.Offer(user, SessionId, text) ? text : null);
     }
+
+    /// <summary>The attempt's language (GAD-T532), read when the check starts; English until then.</summary>
+    private string? language;
 
     /// <summary>The gentle reminders already said in this exam room (GAD-T561).</summary>
     private readonly HashSet<string> remindersSaid = new(StringComparer.Ordinal);

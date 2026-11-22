@@ -6,6 +6,7 @@
 @inject VoiceSettings Settings
 @inject TimeProvider Clock
 @inject ILogger<PracticePage> Log
+@inject Gadfly.Server.Localization.UiText UiLanguage
 
 @* "Meet your examiner" (GAD-T294): an ungraded practice interview any student can take from My exams at any time. It runs the
    real exam room's pieces (VoiceRoom: the talking examiner, captions, microphone, self-view, transcript, the judging-wait filler
@@ -137,6 +138,7 @@
     private void Start()
     {
         started = true;
+        practice.Language = UiLanguage.Language;   // her remarks in the student's language (GAD-T532)
         ticker ??= new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
