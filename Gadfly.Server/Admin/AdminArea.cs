@@ -65,6 +65,7 @@ public static class AdminArea
             new("org/usage", "Usage", Audience.OrgAdmin),
             new("org/api-keys", "API keys", Audience.OrgAdmin),
             new("org/webhooks", "Webhooks", Audience.OrgAdmin),
+            new("org/lti", "LMS connection", Audience.OrgAdmin),
             new("admin/audit", "Audit log", Audience.OrgAdmin),
             new("admin/status", "System status", Audience.OrgAdmin),
             new("admin/email-preview", "Email preview", Audience.OrgAdmin),

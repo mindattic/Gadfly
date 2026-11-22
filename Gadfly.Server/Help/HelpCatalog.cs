@@ -112,6 +112,7 @@ public static class HelpTopics
     public const string AdminLiveSessions = "admin-live-sessions";
     public const string AdminAuditLog = "admin-audit-log";
     public const string AdminSystemStatus = "admin-system-status";
+    public const string LtiSetup = "lti-setup";
 }
 
 /// <summary>
@@ -226,6 +227,9 @@ public static class HelpCatalog
             "Audit log", "Who changed what, and when.", "audit log history changes who", "GAD-T301"),
         new(HelpTopics.AdminSystemStatus, "admin-system-status.md", HelpAudience.Admin, HelpSectionId.RunningYourOrganization,
             "System status and jobs", "The health of the app, its providers and its background jobs.", "status health jobs providers version", "GAD-T302"),
+        new(HelpTopics.LtiSetup, "lti-setup.md", HelpAudience.Admin, HelpSectionId.RunningYourOrganization,
+            "Connecting your LMS (LTI 1.3)", "Set up Canvas, Moodle, Blackboard or Brightspace: exams added from the course, one-click student launch, grades back to the gradebook.",
+            "lti lms canvas moodle blackboard brightspace d2l integration gradebook roster deep linking single sign-on"),
     ];
 
     private static readonly Dictionary<string, HelpTopic> BySlug = Topics.ToDictionary(t => t.Slug, StringComparer.OrdinalIgnoreCase);

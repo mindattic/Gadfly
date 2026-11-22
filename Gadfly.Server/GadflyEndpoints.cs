@@ -86,6 +86,7 @@ public static class GadflyEndpoints
         app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
         Help.HelpEndpoints.Map(app);   // images the help guides show (GAD-T292)
         Site.PublicSite.MapPublicSite(app);   // robots.txt and sitemap.xml (GAD-T308)
+        Lti.LtiSetup.MapLti(app);   // LTI 1.3 login, launch, JWKS, deep linking (GAD-T312)
 
         // Switch the active organization: only to one the caller is a member of (checked against the
         // sign-in claims by HttpTenantContext on every request, so a forged cookie just falls back).

@@ -47,6 +47,10 @@ public sealed class LtiRegistration : ITenantOwned
     public string AuthTokenUrl { get; set; } = "";
     /// <summary>The platform's JWKS URL, to verify the launch JWT's signature.</summary>
     public string KeySetUrl { get; set; } = "";
+    /// <summary>The <c>aud</c> Gadfly's client assertion must name when the platform wants something other than its
+    /// token URL (Brightspace: <c>https://api.brightspace.com/auth/token</c>); null means the token URL (GAD-T383).</summary>
+    [System.ComponentModel.DataAnnotations.MaxLength(1000)]
+    public string? TokenAudience { get; set; }
     public bool Enabled { get; set; } = true;
     public Guid CreatedByUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
@@ -127,4 +131,11 @@ public sealed class LtiAssignmentLink : ITenantOwned
     public Guid ResourceLinkId { get; set; }
     public string LtiSubject { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
+    /// <summary>When grade passback last sent a score for this assignment's released result (GAD-T383); null until then.
+    /// A polling sweeper (<see cref="Lti.LtiPassbackSweeper"/>), not a direct hook off publication, drives passback
+    /// (GAD-T312 simplification: a short delay, not the instant of release). A score is sent once per released
+    /// result; an amendment that changes the percentage differs from <see cref="LastPassbackPercent"/>, so the new
+    /// score goes out too.</summary>
+    public DateTimeOffset? PassbackSentAt { get; set; }
+    public decimal? LastPassbackPercent { get; set; }
 }

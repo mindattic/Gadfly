@@ -151,6 +151,8 @@ builder.Services.AddJobHandler<WebhookDeliveryJob>();
 WebhookTargets.AllowPrivate = builder.Environment.IsDevelopment() && builder.Configuration[WebhookTargets.AllowPrivateSetting] == "true";
 builder.Services.AddHttpClient("webhooks", c => c.Timeout = TimeSpan.FromSeconds(15))
     .ConfigurePrimaryHttpMessageHandler(WebhookTargets.CreateHandler);
+// LMS connection, LTI 1.3 (GAD-T312): launch, deep linking, roster, grade passback.
+Gadfly.Server.Lti.LtiSetup.AddLti(builder.Services);
 builder.Services.AddOpenApi();
 builder.Services.AddRateLimiter(RateLimits.Configure);   // GAD-T78: API by key, hub by user, anonymous posts by IP
 

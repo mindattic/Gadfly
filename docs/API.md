@@ -589,6 +589,55 @@ A launch link takes a student from your app straight to the exam's get-ready pag
 The student still signs in with their Gadfly user name and password; one-click sign-in from the link
 needs trusted-launch support in MindAttic.Authentication and is not built yet.
 
+## LMS connection (LTI 1.3)
+
+Gadfly is an LTI 1.3 / LTI Advantage tool (Core 1.3, Deep Linking 2.0, Names and Role Provisioning 2.0,
+Assignment and Grade Services 2.0), set up per organization on **Organization → LMS connection** (`/org/lti`);
+the step-by-step guide for Canvas, Moodle, Blackboard and Brightspace is docs/guides/lti-setup.md. These are the
+addresses a platform calls. None takes an API key: each is checked on LTI's own terms.
+
+| Endpoint | Called by | What it does |
+|---|---|---|
+| `GET` or `POST /lti/login` | the platform (OIDC third-party-initiated login) | Takes `iss`, `login_hint`, and optionally `client_id`, `lti_deployment_id`, `lti_message_hint`, `target_link_uri`. Finds the one enabled connection they name, records a single-use `state` and `nonce` (10 minutes), sets them in a `SameSite=None; Secure; Partitioned` cookie on `/lti`, and redirects to the platform's authorization endpoint (`response_type=id_token`, `response_mode=form_post`, `prompt=none`). An unknown or ambiguous platform gets a plain error page. |
+| `POST /lti/launch` | the platform (form post of `id_token` and `state`) | The redirect URI, target link URI and deep-linking URL. Validates the launch (below), then: a deep-linking request shows instructors the exam picker; a resource-link request signs a student in and opens `/my-exams/{assignmentId}/start` (inside a frame it offers an "open in a new window" button instead); an instructor is told the placement is linked and pointed at the normal MFA sign-in. |
+| `GET /lti/jwks.json` | the platform | Gadfly's public key set (`{"keys":[{"kty":"RSA","kid":…,"use":"sig","alg":"RS256","n":…,"e":…}]}`), for verifying the deep-linking response and the client assertion. Cached 5 minutes. |
+| `POST /lti/deep-link/submit` | the picker page | Turns the chosen exam(s) into a signed `LtiDeepLinkingResponse` and posts it to the platform's `deep_link_return_url`. Carries a protected 30-minute continuation token, never a session. |
+| `POST /lti/continue` | the "open in a new window" button | Exchanges a protected, single-use, two-minute hand-off token for the student's sign-in. |
+
+**Launch validation.** A launch is accepted only when all of these hold: the `state` is one Gadfly issued, unused
+and under 10 minutes old (it is consumed atomically, so a launch posts at most once); the browser presents the same
+state in its cookie (so someone else's launch can't be posted into your browser); the `id_token` is a JWS signed with
+**RS256** (never `none` or HMAC) by a key in the platform's JWKS (fetched over https, cached 10 minutes, re-fetched
+once when the `kid` is unknown); `iss` is the connection's issuer; `aud` contains its client id and `azp`, when present
+or when there are several audiences, equals it; `exp` and `iat` are present and current (60 seconds of skew); the
+`nonce` matches the one issued with this state; the LTI version is `1.3.0`; the `deployment_id` is the connection's;
+and a message type and `sub` are present.
+
+**People and roles.** A platform user (`sub`, per connection) maps to one Gadfly account, created on first sight with
+the name and email the platform sent and a random password nobody is told. Course roles map as: Instructor, Teaching
+Assistant, Content Developer and course Administrator → **Instructor**; Learner → **Student**; anything else is refused.
+The LMS can move a student up to instructor, never down, never to Owner or Admin, and never restore a member an admin
+removed. New members take a seat under the organization's plan. An LTI sign-in (`amr=lti`) never satisfies MFA, so it
+only ever reaches student pages.
+
+**Deep linking.** Each exam chosen becomes an `ltiResourceLink` content item with `custom.examId` and a `lineItem`
+(`scoreMaximum` 100, labelled with the exam title). The first launch of that placement records it.
+
+**Roster (NRPS).** An admin syncs a placement's course roster from the LMS connection page; Gadfly reads every page of
+the membership container (following `Link: rel="next"`), skips inactive and deleted members, and maps the rest exactly
+as a launch would.
+
+**Grades (AGS).** Within about two minutes of a result being released to the student (finalized and published with
+approval), Gadfly posts the latest attempt's final percentage to the placement's line item: `POST {lineitem}/scores`,
+`application/vnd.ims.lis.v1.score+json`, `scoreGiven` 0 to 100, `scoreMaximum` 100, `activityProgress` `Completed`,
+`gradingProgress` `FullyGraded`. If the launch gave only a line-items collection, Gadfly creates the line item first.
+An amended grade is sent again; an unchanged one never is. Integrity notes are never sent. Service tokens come from the
+platform's token endpoint with a signed RS256 client assertion (RFC 7523), audience the token URL or the connection's
+token audience (Brightspace).
+
+All outgoing calls (key set, token, roster, gradebook) go only to public https hosts, checked after DNS resolution,
+without following redirects.
+
 ## Webhooks
 
 Deliveries go only to public addresses: the host is resolved at each delivery and a name that

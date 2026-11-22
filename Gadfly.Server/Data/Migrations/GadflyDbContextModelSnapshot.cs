@@ -1589,6 +1589,10 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<decimal?>("LastPassbackPercent")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
                     b.Property<string>("LtiSubject")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -1596,6 +1600,9 @@ namespace Gadfly.Server.Data.Migrations
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("PassbackSentAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<Guid>("ResourceLinkId")
                         .HasColumnType("uniqueidentifier");
@@ -1697,6 +1704,10 @@ namespace Gadfly.Server.Data.Migrations
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TokenAudience")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.HasKey("Id");
 
