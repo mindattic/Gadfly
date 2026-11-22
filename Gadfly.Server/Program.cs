@@ -235,7 +235,9 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseResponseCompression();   // brotli/gzip every compressible response (GAD-T317); must run before static files
 app.UseStaticFiles(VoiceServices.StaticFiles());   // adds .glb (the examiner avatar) and .mjs (GAD-T53)
-app.MapStaticAssets();   // fingerprinted, precompressed, long-cached URLs for assets referenced via @Assets[...] (GAD-T317)
+// Fingerprinted, precompressed, long-cached URLs for assets referenced via @Assets[...] (GAD-T317). These are endpoints, so
+// the default-deny fallback policy would send every stylesheet and image to the login page without AllowAnonymous (GAD-T492).
+app.MapStaticAssets().AllowAnonymous();
 app.UseMindAtticAuthentication();   // authn + authz + forced steps (change password, enroll MFA) + CSP
 app.UseGadflySecurityHeaders();   // CSP and the rest of the security headers for every other page (GAD-T385)
 app.UseRateLimiter();
