@@ -209,6 +209,43 @@ public class GradingWorkflowScenarioTests : ServerTest
         Assert.That((await Grade(w.SessionId)).Status, Is.EqualTo(GradeStatus.Amended));
     }
 
+    /// <summary>GAD-T324: amending a grade under appeal without naming the appeal is refused, so the appeal is never left open behind it.</summary>
+    [Test]
+    public async Task AmendingAGradeUnderAppeal_MustNameTheAppeal()
+    {
+        var w = await GradedByAi(80);
+        var examiner = As(w.Org, OrgRoles.Examiner, null, out var edb);
+        await using (edb) await examiner.SubmitHumanGradesAsync(w.SessionId, [new HumanGradeInput(w.ObjectiveId, MasteryLevel.Application, 82, null, null)]);
+        var teacher = As(w.Org, OrgRoles.Instructor, null, out var tdb);
+        await using (tdb)
+        {
+            await teacher.ApproveAsync(w.SessionId, null, null);
+            await teacher.PublishAsync(w.SessionId, null);
+        }
+        var student = As(w.Org, OrgRoles.Student, w.StudentId, out var sdb);
+        await using (sdb) Assert.That((await student.AppealAsync(w.SessionId, "Turn 3 was misread.")).Ok, Is.True);
+        Assert.That((await Grade(w.SessionId)).Status, Is.EqualTo(GradeStatus.UnderAppeal));
+
+        var change = new[] { new HumanGradeInput(w.ObjectiveId, MasteryLevel.TransferAndCriticalReasoning, 95, null, null) };
+        var amender = As(w.Org, OrgRoles.Instructor, null, out var adb);
+        await using (adb)
+        {
+            var r = await amender.AmendAsync(w.SessionId, change, "Re-read turn 3.", null);
+            Assert.That(r.Ok, Is.False);
+            Assert.That(r.Message, Does.Contain("under appeal"));
+        }
+        Assert.That((await Grade(w.SessionId)).Status, Is.EqualTo(GradeStatus.UnderAppeal), "nothing changed");
+
+        Guid appealId;
+        await using (var check = SystemDb())
+            appealId = await check.GradeAppeals.Where(a => a.SessionId == w.SessionId).Select(a => a.Id).SingleAsync();
+        var amender2 = As(w.Org, OrgRoles.Instructor, null, out var adb2);
+        await using (adb2) Assert.That((await amender2.AmendAsync(w.SessionId, change, "Re-read turn 3.", appealId)).Ok, Is.True);
+        Assert.That((await Grade(w.SessionId)).Status, Is.EqualTo(GradeStatus.Amended));
+        await using var after = SystemDb();
+        Assert.That((await after.GradeAppeals.SingleAsync(a => a.Id == appealId)).State, Is.EqualTo(AppealState.Amended));
+    }
+
     [Test]
     public async Task Scenario_J_AStudentCannotEnterScoresOrApprove()
     {

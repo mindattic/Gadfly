@@ -746,7 +746,7 @@ Every path below starts with `/grading/actions/{sessionId}`. Bodies are JSON. Ea
 | `POST .../publish` | Teacher, Admin, Owner (PublishGrade) | `{ "note"? }` | Finalized → Published, with a Publish record. Refused (`409`) without a Finalize record |
 | `POST .../appeals` | The student whose published result it is (AppealOwnResult) | `{ "reason" }` | Published or Amended → Under Appeal |
 | `POST .../appeals/{appealId}/resolve` | Teacher, Admin, Owner (ResolveAppeal) | `{ "outcome": "Upheld" or "Dismissed", "resolution" }` | The grade stands: back to Published |
-| `POST .../amend` | Teacher, Admin, Owner (AmendGrade, plus ResolveAppeal with `appealId`) | `{ "grades": [ changed objectives ], "reason", "appealId"? }` | Published or Under Appeal → Amended: new human grades supersede the old ones, the combined score is recalculated under the frozen policy, and the appeal (if given) is resolved as Amended |
+| `POST .../amend` | Teacher, Admin, Owner (AmendGrade, plus ResolveAppeal with `appealId`) | `{ "grades": [ changed objectives ], "reason", "appealId"? }` | Published or Under Appeal → Amended: new human grades supersede the old ones, the combined score is recalculated under the frozen policy, and the appeal (if given) is resolved as Amended. While an appeal is open, `appealId` is required: an amendment that doesn't name it is refused, so the appeal is never left open behind an amended grade |
 
 **Separation of duties (GAD-T285).** Reconciliation and approval are refused (`409`, `"Refused: you entered this
 grade's human score, ..."`, audited as `grade.separation-of-duties.refused`) when the caller entered any human

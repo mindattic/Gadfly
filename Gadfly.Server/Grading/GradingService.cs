@@ -717,6 +717,10 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             appeal = await db.GradeAppeals.FirstOrDefaultAsync(a => a.Id == aid && a.SessionId == sessionId && a.OrganizationId == Org, ct);
             if (appeal is null || appeal.State != AppealState.Open) return GradingResult.Fail("That appeal is not open.");
         }
+        // An open appeal is resolved by the amendment that answers it: amending around it would leave it open, so the student could
+        // not appeal again and resolving it later would move the amended grade back to Published (GAD-T324).
+        else if (await db.GradeAppeals.AnyAsync(a => a.SessionId == sessionId && a.OrganizationId == Org && a.State == AppealState.Open, ct))
+            return GradingResult.Fail("This grade is under appeal. Amend it from the open appeal so the appeal is resolved with the amendment.");
         var objectives = (await GradingInputs.LoadObjectivesAsync(db, session.ExamId, Org, ct)).ToDictionary(o => o.Id);
         var existing = await db.HumanObjectiveGrades.AsNoTracking().Where(h => h.SessionId == sessionId && h.OrganizationId == Org).ToListAsync(ct);
         var changed = 0;
