@@ -50,11 +50,4 @@ button.link { background: none; color: var(--accent); padding: 0; text-decoratio
 .grid th { color: var(--muted); font-weight: 600; }
 .ok { color: var(--ok); } .error { color: var(--error); }
 .notice { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: .75rem 1rem; border-radius: 6px; }
-/* Help (GAD-T292): the top-bar Help link and the small "?" a page puts next to its title (<HelpLink>). */
-.nav-help { padding: .35rem .65rem; border-radius: 6px; text-decoration: none; color: var(--ink); }
-.nav-help:hover, .nav-help:focus-visible { color: var(--accent); }
-.help-link { display: inline-flex; align-items: center; gap: .35rem; vertical-align: middle; margin-left: .35rem; font-size: .85rem; font-weight: 600; text-decoration: none; color: var(--accent); }
-.help-link-mark { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border: 1.5px solid currentColor; border-radius: 50%; font-size: .8rem; line-height: 1; }
-.help-link:hover .help-link-mark, .help-link:focus-visible .help-link-mark { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.help-link-label { font-weight: 500; }
 @media (max-width: 640px) { .who { margin-left: 0; width: 100%; } .grid { display: block; overflow-x: auto; } }

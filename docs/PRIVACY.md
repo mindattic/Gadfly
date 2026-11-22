@@ -21,7 +21,8 @@ human grades and an authorized person approves before a student sees a result (D
 Redaction (`privacy.retention`, daily) keeps the outcome and removes what the student said. Export
 (`GET /privacy/export/{userId}`, the student or an org admin) returns everything held about a student in
 one organization as JSON. Erasure (`POST /privacy/erase/{userId}`, org admin, typed confirmation)
-deletes every session record of that student in that organization and deactivates the membership.
+deletes every session record of that student in that organization (including the webhook deliveries that announced
+their sessions, so one still waiting is never sent) and deactivates the membership.
 
 ### Exported transcripts (GAD-T295)
 

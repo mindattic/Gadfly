@@ -266,6 +266,11 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
             await db.SessionReports.Where(r => ids.Contains(r.SessionId)).ExecuteDeleteAsync(ct);
             await db.GradeDecisions.Where(g => ids.Contains(g.SessionId)).ExecuteDeleteAsync(ct);
             await db.UsageEntries.Where(u => u.SessionId != null && ids.Contains(u.SessionId.Value)).ExecuteUpdateAsync(u => u.SetProperty(x => x.SessionId, (Guid?)null), ct);
+            // Webhook deliveries copy the session's outcome and the student's id into their payload (session.completed): erase them
+            // too, so nothing of the student is left in the organization and a delivery still waiting is never sent (GAD-T315). Their
+            // queued jobs find no delivery and stop.
+            var studentKey = studentUserId.ToString();
+            await db.WebhookDeliveries.Where(d => d.OrganizationId == organizationId && d.PayloadJson.Contains(studentKey)).ExecuteDeleteAsync(ct);
             await db.SessionTurns.Where(t => ids.Contains(t.SessionId)).ExecuteDeleteAsync(ct);
             await db.ExamSessions.Where(s => ids.Contains(s.Id)).ExecuteDeleteAsync(ct);
             await db.ExamAssignments.Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId).ExecuteDeleteAsync(ct);
