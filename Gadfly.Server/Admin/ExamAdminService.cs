@@ -40,6 +40,8 @@ public sealed class ExamSettingsForm
     public int MinSummativeObjectives { get; set; } = ExamObjectives.DefaultMinSummativeObjectives;
     public string? VoiceId { get; set; }
     public string? AvatarId { get; set; }
+    /// <summary>The spoken language this exam expects (GAD-T357), e.g. "en"; blank lets the recognizer detect it.</summary>
+    public string? Language { get; set; }
     /// <summary>Why, recorded in the audit log. Required once students have started the exam.</summary>
     public string? Reason { get; set; }
 }
@@ -160,6 +162,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
             MinSummativeObjectives = p.MinSummativeObjectives,
             VoiceId = e.VoiceId,
             AvatarId = e.AvatarId,
+            Language = p.Language,
         }, e.Title, e.Status, started);
     }
 
@@ -431,6 +434,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
         if (voice?.Length > 100 || avatar?.Length > 100) return new(false, "Keep the voice and avatar ids under 100 characters.");
         var reason = string.IsNullOrWhiteSpace(form.Reason) ? null : form.Reason.Trim();
         if (reason?.Length > 1000) return new(false, "Keep the reason under 1000 characters.");
+        var language = string.IsNullOrWhiteSpace(form.Language) ? null : form.Language.Trim();
 
         var policy = ExamService.ReadPolicy(exam.PolicyJson);
         var frozen = exam.Status != ExamStatus.Draft;
@@ -448,7 +452,10 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
             TimeBudget = TimeSpan.FromMinutes(form.DurationMinutes),
             ReadOutCheck = form.ReadOutCheck,
             MinSummativeObjectives = form.MinSummativeObjectives,
+            Language = language,
         };
+        try { updated.Validate(); }
+        catch (ArgumentException ex) { return new(false, ex.Message); }
         exam.IntegrityLevel = form.IntegrityLevel;
         exam.VoiceId = voice;
         exam.AvatarId = avatar;
@@ -479,6 +486,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
         p.MinSummativeObjectives,
         e.VoiceId,
         e.AvatarId,
+        p.Language,
     };
 
     // ================================================================== export / import

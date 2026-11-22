@@ -62,6 +62,8 @@ public sealed class ExamSettingsDefinition
     public bool? ReadOutCheck { get; set; }
     /// <summary>Concept keys of an exam without learning objectives (the older exam builder), in order.</summary>
     public List<string>? ConceptKeys { get; set; }
+    /// <summary>The spoken language expected on this exam (GAD-T357), e.g. "en" or "en-US"; null lets the recognizer detect it.</summary>
+    public string? Language { get; set; }
 }
 
 /// <summary>The grading policy with weights as fractions (0.4 / 0.6), as <see cref="PolicySnapshot"/>.</summary>
@@ -170,6 +172,7 @@ public static class ExamDefinitionJson
                     MinSummativeObjectives = p.MinSummativeObjectives,
                     ReadOutCheck = p.ReadOutCheck,
                     ConceptKeys = [.. p.ConceptIds],
+                    Language = p.Language,
                 },
                 GradingPolicy = new GradingPolicyDefinition
                 {
@@ -361,6 +364,7 @@ public static class ExamDefinitionJson
             MinSummativeObjectives = s.MinSummativeObjectives ?? basis.MinSummativeObjectives,
             ReadOutCheck = s.ReadOutCheck ?? basis.ReadOutCheck,
             ConceptIds = s.ConceptKeys is { } keys ? keys.Select(k => k.Trim()).Where(k => k.Length > 0).Distinct(StringComparer.Ordinal).ToList() : basis.ConceptIds,
+            Language = s.Language is null ? basis.Language : (s.Language.Trim() is { Length: > 0 } lang ? lang : null),
         };
     }
 

@@ -225,6 +225,16 @@ else
             <span class="hint">Integrity notes are low-confidence reviewer notes, never a verdict and never part of a grade.</span>
         </label>
         <label class="xm-check"><input type="checkbox" @bind="sv.Form.ReadOutCheck" /> Read-out check (flags a long, fluent answer after a long silent wait for a reviewer; never for a student with extra time)</label>
+        <label>Spoken language
+            <select @bind="sv.Form.Language">
+                <option value="">Let the recognizer detect it</option>
+                @foreach (var (lang, name) in SpokenLanguages)
+                {
+                    <option value="@lang">@name</option>
+                }
+            </select>
+            <span class="hint">What the student is expected to speak. Also used as the recognizer's vocabulary hint language (GAD-T357).</span>
+        </label>
         <label>Examiner voice id <input @bind="sv.Form.VoiceId" maxlength="100" placeholder="Organization default" /></label>
         <label>Examiner avatar id <input @bind="sv.Form.AvatarId" maxlength="100" placeholder="Organization default" /></label>
         <span class="hint">The voice and avatar are used where this deployment's voice service supports a choice per exam.</span>
@@ -318,6 +328,14 @@ else
     private string? importJson, importFileName;
     private Guid importCollection, importCourse;
     private IReadOnlyList<string> importErrors = [], importWarnings = [];
+
+    /// <summary>Common spoken languages offered for the recognizer (GAD-T357); any other IETF-ish code can still be imported via the exam definition file.</summary>
+    private static readonly (string Code, string Name)[] SpokenLanguages =
+    [
+        ("en", "English"), ("es", "Spanish"), ("fr", "French"), ("de", "German"), ("pt", "Portuguese"),
+        ("it", "Italian"), ("nl", "Dutch"), ("pl", "Polish"), ("zh", "Chinese"), ("ja", "Japanese"),
+        ("ko", "Korean"), ("ar", "Arabic"), ("hi", "Hindi"), ("ru", "Russian"),
+    ];
 
     protected override Task OnInitializedAsync() => LoadAsync();
 

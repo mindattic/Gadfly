@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Gadfly.Assessment;
 
 namespace Gadfly.Engine;
@@ -8,6 +9,8 @@ namespace Gadfly.Engine;
 /// </summary>
 public sealed record SessionPolicy
 {
+    private static readonly Regex LanguagePattern = new(@"^[a-zA-Z]{2,8}(-[a-zA-Z0-9]{1,8})?$", RegexOptions.Compiled);
+
     /// <summary>Concept ids to examine, in the order the instructor prefers. Empty means "the subject decides".</summary>
     public IReadOnlyList<string> ConceptIds { get; init; } = [];
 
@@ -80,9 +83,18 @@ public sealed record SessionPolicy
     [System.Text.Json.Serialization.JsonIgnore]
     public TimeSpan EffectiveTimeBudget => TimeSpan.FromTicks((long)(TimeBudget.Ticks * Math.Max(1.0, TimeMultiplier)));
 
+    /// <summary>
+    /// The spoken language expected on this exam (GAD-T357), an IETF-ish code such as <c>en</c> or <c>en-US</c>, passed to the
+    /// speech recognizer. Null lets the recognizer detect it (the provider's own default). Stored in the exam's existing
+    /// policy JSON, so adding it needed no schema change.
+    /// </summary>
+    public string? Language { get; init; }
+
     /// <summary>Throws when the policy is not usable.</summary>
     public void Validate()
     {
+        if (Language is { Length: > 0 } lang && !LanguagePattern.IsMatch(lang))
+            throw new ArgumentException("Language must be a short code such as 'en' or 'en-US', or left blank.");
         // NaN and the infinities pass every ordinary comparison below, so each double field is checked finite first (GAD-T195).
         if (!double.IsFinite(MasteryThreshold)) throw new ArgumentException("MasteryThreshold must be a finite number.");
         if (!double.IsFinite(AporiaThreshold)) throw new ArgumentException("AporiaThreshold must be a finite number.");
