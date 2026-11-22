@@ -244,34 +244,21 @@ async function start() {
     if (S !== s || !s.running) return;
 
     // 3. The talking head. Voice answers work without it: the question is then only shown as text.
+    // The 3D model can take a long while to load on a slow connection (it used to hold the first question for up to 90 s). When this
+    // device will show 3D, the portrait stands in at once and asks the questions, with its moving mouth (GAD-T328), while the model
+    // loads out of sight behind it; the 3D examiner takes over between sentences once she is ready (promote3d).
     try {
         const stage = q("stage");
         const pkg = await import(`${LIB}/avatar/index.js`);
         if (S !== s || !s.running) return;
-        const el = document.createElement("ma-avatar");
-        if (s.cfg.modelUrl) el.setAttribute("src", s.cfg.modelUrl);
-        if (s.cfg.portraitUrl) el.setAttribute("portrait", s.cfg.portraitUrl);
-        el.setAttribute("view", "upper");
-        el.setAttribute("camera-x", "-0.2");
-        el.setAttribute("aria-hidden", "true");
-        el.addEventListener("fallback", (e) => s.dotnet.invokeMethodAsync("OnAvatarMode", "portrait", (e.detail && e.detail.reason) || "").catch(() => { }));
-        // A gaze remark (examiner-gaze.js speaks through the same avatar) is not one of this room's own utterances: its flag is
-        // never set here, so it can't stay set and keep the microphone from reopening (GAD-T245).
-        // Only while one of this room's own speak() calls is still waiting: a late start after its allowance ran out, or a remark's
-        // start, must not set the flag after the call has cleared it (nothing would clear it again).
-        el.addEventListener("speaking-start", () => {
-            if (!s.remarkHold && s.speakToken) s.speaking = true;
-            // This room's own utterance has started playing (not a gaze remark, which speaks through another connection): the
-            // caption and mouth clock starts with her audio, so the words light as she says them.
-            if (s.ours && !s.ours.started && !s.remarkHold) { s.ours.started = true; s.presenter && s.presenter.started(); }
-        });
-        el.addEventListener("speech-error", (e) => { if (s.ours && e.detail && e.detail.id === s.utterId) s.ours.failed = true; });
+        const standIn = !!(s.cfg.modelUrl && s.cfg.portraitUrl) && hasWebGl() && !prefersReducedMotion();
+        const el = createAvatar(s, standIn ? null : s.cfg.modelUrl);
         stage.appendChild(el);
         s.avatar = el;
-        s.presenter = (await import("./examiner-voice.js")).createPresenter(el, stage, q("caption"), { portraitMouth: s.cfg.portraitMouth },
-            (reason) => s.dotnet.invokeMethodAsync("OnAvatarMode", "portrait", reason).catch(() => { }));
+        s.presenter = await createPresenter(s, el);
         s.avatarConn = new signalR.HubConnectionBuilder().withUrl(AVATAR_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
         s.speech = pkg.attachSpeechHub(el, s.avatarConn);
+        s.avatarPkg = pkg;
         s.avatarConn.on("speechStart", (m) => { s.utterId = m && m.id; });
         s.avatarConn.on("speechChunk", (m) => { if (m && m.id === s.utterId && s.ours) s.presenter && s.presenter.words(m.words); });
         // A dropped connection to the examiner's own hub (previously not even noticed) retries a few times on its own
@@ -279,16 +266,22 @@ async function start() {
         // camera (GAD-T306): without this, a lost connection here just left the examiner silent and unresponsive.
         s.avatarConn.onreconnecting(() => status("Reconnecting…"));
         s.avatarConn.onclose(() => { if (s.running) problem("hub", "The connection to the examiner was lost.", true); });
+        // The model starts downloading now, alongside the hub connect below, not after it.
+        if (standIn) load3d(s, stage);
         // Bounded (GAD-T306), like the hub above: a connect that never resolves must not hold up the fallback below.
         await withTimeout(s.avatarConn.start(), CONNECT_TIMEOUT_MS);
+        // With the stand-in this is at once (a portrait has nothing to load); without one it is the library's own quick
+        // portrait fallback, or a 3D model the get-ready page already put in the browser's cache.
         await Promise.race([el.ready, new Promise((r) => setTimeout(r, 90000))]);
         if (S !== s || !s.running) return;
         s.avatarOk = true;
         void startFaceFollow(s);   // the self-view may already be on: the examiner looks toward the student's face
-        s.dotnet.invokeMethodAsync("OnAvatarMode", el.mode || "3d", "").catch(() => { });
+        // The stand-in is not a fallback: no "instead of the 3D head" note while the 3D examiner is still on her way.
+        s.dotnet.invokeMethodAsync("OnAvatarMode", standIn ? "3d" : (el.mode || "3d"), "").catch(() => { });
     } catch (err) {
         if (S !== s || !s.running) return;
         s.avatarOk = false;
+        dropLoading3d(s);
         // Without the talking head the questions are still read out by the browser's own speech, with the caption lit word by word.
         try { s.presenter?.dispose(); } catch { }
         try { s.presenter = (await import("./examiner-voice.js")).createPresenter(null, null, q("caption"), {}, () => { }); } catch { s.presenter = null; }
@@ -304,6 +297,124 @@ async function start() {
 function fail(kind, message, s) {
     problem(kind, message, true);
     stop();
+}
+
+// ------------------------------------------------------------------------------------- the examiner on screen (GAD-T328)
+
+function prefersReducedMotion() {
+    try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; }
+}
+
+/**
+ * One <ma-avatar>. With no `src` it is the portrait at once (the stand-in while the 3D model loads); with one, the library loads the
+ * model and falls back to the portrait itself when it can't show 3D. Its events feed this room's own utterances, whichever avatar
+ * is speaking them.
+ */
+function createAvatar(s, src) {
+    const el = document.createElement("ma-avatar");
+    el.gadflyRole = src ? "examiner" : "stand-in";
+    if (src) el.setAttribute("src", src);
+    if (s.cfg.portraitUrl) el.setAttribute("portrait", s.cfg.portraitUrl);
+    el.setAttribute("view", "upper");
+    el.setAttribute("camera-x", "-0.2");
+    el.setAttribute("aria-hidden", "true");
+    el.addEventListener("fallback", (e) => {
+        const reason = (e.detail && e.detail.reason) || "";
+        el.gadflyFallback = reason;
+        // The stand-in is the portrait on purpose, and a model still loading behind it is settled by load3d: neither is news.
+        if (el.gadflyRole !== "examiner") return;
+        s.dotnet.invokeMethodAsync("OnAvatarMode", "portrait", reason).catch(() => { });
+    });
+    // A gaze remark (examiner-gaze.js speaks through the same avatar) is not one of this room's own utterances: its flag is
+    // never set here, so it can't stay set and keep the microphone from reopening (GAD-T245).
+    // Only while one of this room's own speak() calls is still waiting: a late start after its allowance ran out, or a remark's
+    // start, must not set the flag after the call has cleared it (nothing would clear it again).
+    el.addEventListener("speaking-start", () => {
+        if (s.avatar !== el) return;
+        if (!s.remarkHold && s.speakToken) s.speaking = true;
+        // This room's own utterance has started playing (not a gaze remark, which speaks through another connection): the
+        // caption and mouth clock starts with her audio, so the words light as she says them.
+        if (s.ours && !s.ours.started && !s.remarkHold) { s.ours.started = true; s.presenter && s.presenter.started(); }
+    });
+    el.addEventListener("speech-error", (e) => { if (s.avatar === el && s.ours && e.detail && e.detail.id === s.utterId) s.ours.failed = true; });
+    return el;
+}
+
+/** The delivery helpers (examiner-voice.js) for the avatar on screen: captions, speaking style, the portrait's mouth, quality tiers. */
+async function createPresenter(s, el) {
+    s.delivery ??= await import("./examiner-voice.js");
+    return presenterFor(s, el);
+}
+
+/** As createPresenter, once examiner-voice.js is loaded: at once, so a swap never leaves a moment with no presenter. */
+function presenterFor(s, el) {
+    return s.delivery.createPresenter(el, q("stage"), q("caption"), { portraitMouth: s.cfg.portraitMouth },
+        (reason) => s.dotnet.invokeMethodAsync("OnAvatarMode", "portrait", reason).catch(() => { }));
+}
+
+/**
+ * Loads the 3D examiner out of sight behind the portrait that stands in for her (GAD-T328). Invisible but laid out at full size,
+ * so the 3D scene is framed for the stage it will fill. A model that can't load leaves the portrait where it is, with the usual note.
+ */
+function load3d(s, stage) {
+    const el = createAvatar(s, s.cfg.modelUrl);
+    el.gadflyRole = "loading";
+    el.style.cssText = "position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .45s ease";
+    stage.appendChild(el);
+    s.loading3d = el;
+    el.ready.then(() => {
+        if (S !== s || !s.running || s.loading3d !== el) return;
+        if (el.mode === "3d") { promote3d(s, el); return; }
+        dropLoading3d(s);
+        s.dotnet.invokeMethodAsync("OnAvatarMode", "portrait", el.gadflyFallback || "load-failed").catch(() => { });
+    }, () => dropLoading3d(s));
+}
+
+function dropLoading3d(s) {
+    if (s.promoteTimer) { clearTimeout(s.promoteTimer); s.promoteTimer = null; }
+    const el = s.loading3d;
+    s.loading3d = null;
+    try { el && el.remove(); } catch { }
+}
+
+/**
+ * The 3D examiner is ready: she takes over from the portrait between sentences, never while she (or a filler line or a gaze
+ * remark) is speaking, and not while the student is mid-sentence. Her voice moves to her, she fades in over the portrait, and
+ * the portrait is released.
+ */
+function promote3d(s, el) {
+    const attempt = () => {
+        s.promoteTimer = null;
+        if (S !== s || !s.running || s.loading3d !== el) return;
+        const old = s.avatar;
+        const busy = !s.avatarOk || !s.speech || !s.avatarPkg || !s.delivery || s.speaking || s.speakToken || s.fillPlaying || s.remarkHold
+            || (old && old.state === "speaking") || (s.inSpeech && !s.gate);
+        if (busy) { s.promoteTimer = setTimeout(attempt, 250); return; }
+        s.loading3d = null;
+        try { s.speech.dispose(); } catch { }
+        s.speech = s.avatarPkg.attachSpeechHub(el, s.avatarConn);
+        const presenter = s.presenter;
+        el.gadflyRole = "examiner";
+        el.state = old ? old.state : "idle";
+        s.avatar = el;
+        try { presenter && presenter.dispose(); } catch { }
+        try { s.presenter = presenterFor(s, el); } catch { s.presenter = null; }
+        el.style.opacity = "1";
+        setTimeout(() => {
+            if (old && old !== s.avatar) { try { old.remove(); } catch { } }
+            if (s.avatar === el) el.style.cssText = "";
+        }, 500);
+        void startFaceFollow(s);   // she can look at the student now (the portrait can't)
+        s.dotnet.invokeMethodAsync("OnAvatarMode", "3d", "").catch(() => { });
+    };
+    attempt();
+}
+
+/** Who is reading her lines: the voice provider, or the browser's own speech when the provider failed. Told to the page on a change. */
+function voiceSource(s, source) {
+    const was = s.voiceSource || "provider";
+    s.voiceSource = source;
+    if (was !== source) s.dotnet.invokeMethodAsync("OnExaminerVoice", source).catch(() => { });
 }
 
 /** How long the tab must stay hidden before this counts as a possible sleep or a closed lid, not a quick tab switch. */
@@ -408,11 +519,14 @@ async function deliver(s, token, what, cacheable) {
         }
         if (s.ours === ours) s.ours = null;
         if (!mine()) return;
-        if (!ours.failed) { s.presenter && s.presenter.ended(); return; }
+        if (!ours.failed) { voiceSource(s, "provider"); s.presenter && s.presenter.ended(); return; }
         viaBrowser = true;
     }
     if (!mine()) return;
     const spoke = s.presenter ? await s.presenter.speakWithBrowser(what) : false;
+    // The provider failed but her picture is up: a short note says why she sounds different (GAD-T328). With no talking head at
+    // all, the exam room's own note already says the browser reads the questions.
+    if (spoke && s.avatarOk && s.speech) voiceSource(s, "browser");
     if (!mine()) return;
     if (!spoke) {
         if (s.presenter) s.presenter.plain(what); else showCaption(what);
@@ -631,6 +745,8 @@ export function stop() {
     try { s.avatarConn && s.avatarConn.stop(); } catch { }
     try { s.speech && s.speech.dispose(); } catch { }
     try { s.avatar && s.avatar.remove(); } catch { }
+    dropLoading3d(s);   // a 3D examiner still loading behind the portrait (GAD-T328)
+    s.voiceSource = null;
     s.mic = s.speechConn = s.avatarConn = s.avatar = s.speech = null;
 }
 

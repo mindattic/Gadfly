@@ -117,6 +117,11 @@
                 {
                     <p class="hint" role="note">@avatarNote</p>
                 }
+                @if (browserVoice)
+                {
+                    @* The voice provider stopped answering and the browser's own speech reads her lines (GAD-T328). *@
+                    <p class="hint" role="status">The examiner's usual voice isn't responding right now, so your browser's own voice is reading the questions for her. Nothing is wrong with your exam, and every question is also shown on screen.</p>
+                }
                 @if (TypedAnswers)
                 {
                     @* Typed answers (GAD-T260): the answer box is the exam room's; only the question can be repeated here. *@
@@ -187,6 +192,8 @@
     private VoiceState state;
     private bool supported = true, armed, needsClick;
     private string? notice, avatarNote;
+    /// <summary>The browser's own speech is reading her lines because the voice provider failed (GAD-T328).</summary>
+    private bool browserVoice;
     private string? spokenKey;
     private bool lastAllowed;
     /// <summary>The last <see cref="Pondering"/> sent to the browser, and the last filler line said (the next one differs).</summary>
@@ -501,6 +508,7 @@
         notice = null;
         needsClick = false;
         avatarNote = null;
+        browserVoice = false;
         selfState = "starting";
         await SetStateAsync(VoiceState.Starting);
     });
@@ -533,6 +541,20 @@
             "none" => reason.Length > 0 ? reason : "The examiner's picture could not start; questions are shown as text.",
             _ => null,
         };
+        StateHasChanged();
+    });
+
+    /// <summary>
+    /// Who is reading the examiner's lines (GAD-T328): "browser" when the voice provider failed and the browser's own speech took
+    /// over, "provider" when her usual voice is back. Shown as a short note, so a change in how she sounds is never a mystery.
+    /// </summary>
+    [JSInvokable]
+    public Task OnExaminerVoice(string source) => InvokeAsync(() =>
+    {
+        var browser = source == "browser";
+        if (browser == browserVoice) return;
+        browserVoice = browser;
+        if (browser) Log.LogInformation("The examiner's voice fell back to the browser's speech for session {SessionId}.", SessionId);
         StateHasChanged();
     });
 
