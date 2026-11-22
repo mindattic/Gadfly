@@ -90,3 +90,28 @@ the reliability of an examination of 1 to 20 objectives (relative, for ranking s
 mark), and the fewest objectives reaching the target. `--raters N` projects for a different number of markers per
 answer. Students, objectives or raters with gaps are left out and named. With fewer than about 30 students the
 estimate is rough: set the minimum from it, then re-run as more double-marked exams come in.
+
+### The relay arm (GAD-T449)
+
+A student who hears answers through a hidden earpiece and speaks them in their own voice is the one cheating case
+Gadfly is not designed against. The webcam cannot see an in-ear device, the second-voice check cannot hear one, and
+the recitation check does not fire on an answer spoken naturally. The only control is the follow-up question, written
+from the student's own earlier answer, so whoever relays must answer each new question about what was just said, live.
+Whether that works is hypothesis H1 (ElenchusAtScale 3.3): relayed answers are less coherent across turns, with more
+contradictions in the claim ledger and more failed resolutions, than answers from students who understand the material,
+at equal quality of the individual answers. No verified source supports it yet; the pilot tests it.
+
+Run a set of consenting participants honestly and a set who relay answers from a helper or a model (by earpiece or any
+other channel), each with `gadfly exam`, which saves a `*.session.json` and its `*.ledger.json` per run. Keep each
+condition in its own folder, then:
+
+```
+gadfly coherence honest=runs/honest relay=runs/relay --out coherence.csv
+```
+
+It writes one row per session (answers, mean answer score, claims, contradictions, possible contradictions,
+confrontations, failed resolutions, withdrawals) and prints each condition's counts and means. Compare contradictions
+per ten claims and failed resolutions only between sessions of similar mean answer score, and estimate the detector's
+miss rate first (`gadfly contradiction-audit`), since a detector that misses most contradictions hides any difference.
+These measures are a research instrument: they are never computed for a real student, never shown as an integrity note
+and never part of a grade. A room and ear check at the start of the exam is a separate, later owner decision (GAD-T244).

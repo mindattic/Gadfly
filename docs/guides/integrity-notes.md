@@ -33,6 +33,17 @@ important, how little each one proves on its own.
 
 Notes from a student with the **eye-contact accommodation** are kept at the lowest level and labelled as such.
 
+## What no note can catch
+
+**A hidden earpiece.** A student who hears answers through an earpiece and says them in their own voice leaves no
+note: the camera can't see an in-ear device, the second-voice check can't hear one, and the read-out check doesn't
+fire on an answer spoken naturally. Gadfly doesn't try to detect it, and no note means "no earpiece". The examiner's
+defence is its questions: every follow-up is written from the student's own previous answer and asks for the reasoning
+behind it, so whoever is helping has to answer each new question, live, about what was just said. Whether that is
+enough is not yet known: the pilot study tests it with participants who relay answers on purpose. Until it is known, treat an oral exam taken
+unsupervised at home as you would any unsupervised assessment. If you need more certainty for a high-stakes exam,
+run it in a supervised room.
+
 ## How to read them
 
 1. Grade the answers first (blind grading makes you do this anyway).

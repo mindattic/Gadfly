@@ -25,6 +25,7 @@ public static class GadflyCli
             "readout-rate" => await ReadOutRateCommand.RunAsync(rest),
             "textstyle-rate" => await TextStyleRateCommand.RunAsync(rest),
             "contradiction-audit" => await ContradictionAuditCommand.RunAsync(rest),
+            "coherence" => await CoherenceCommand.RunAsync(rest),
             "reliability" => await ReliabilityCommand.RunAsync(rest),
             "version" => PrintVersion(),
             _ => Unknown(command),
@@ -65,6 +66,7 @@ public static class GadflyCli
         Console.WriteLine("  readout-rate <files> How often the read-out pattern fires over session transcripts.");
         Console.WriteLine("  textstyle-rate <files> How often the text-style estimate reaches the reviewer threshold.");
         Console.WriteLine("  contradiction-audit <ledgers> Sample claim pairs to label; estimate the contradiction detector's false-flag and miss rates.");
+        Console.WriteLine("  coherence <sessions> Pilot relay arm (H1): ledger-based coherence of saved sessions, by study condition.");
         Console.WriteLine("  reliability <grades.csv> From a double-marked pilot, the fewest objectives reaching a target reliability.");
         Console.WriteLine("  version              Print the gadfly version.");
         Console.WriteLine();
