@@ -341,6 +341,7 @@
             await LoadAsync();
             StateHasChanged();
             _ = TickAsync();
+            WatchReconnect();
         }
         // The "Finish the exam now?" prompt (GAD-T365): focus moves to it the moment it opens, once, so a screen
         // reader user is told it's there instead of having to find it; it resets so the next opening focuses again.
@@ -685,6 +686,7 @@
     public async ValueTask DisposeAsync()
     {
         stop.Cancel();
+        DisposeReconnectWatch();
         ticker?.Dispose();
         if (integrityModule is not null)
         {
