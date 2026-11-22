@@ -63,6 +63,50 @@ figure to see what it was worked out from; **Analytics** and **Usage** have more
 The dashboard only reads: it changes nothing. It shows your current organization only, and **Refresh**
 reloads it.
 
+## Students
+
+**Students** (`/admin/students`) lists every student of your organization, a page at a time.
+
+- **Search** by name, user name or email. **Filter** by the exam they are assigned, by status (active, never
+  signed in, deactivated, or invited and not yet accepted) and by accommodation (extra time, no eye contact
+  expected). **Sort** by name, last sign-in, number of exams or date added, either way round. The filters are
+  part of the address, so a filtered list can be bookmarked or shared with another admin.
+- **Add a student** gives them an account now: a name, a user name, a password you hand over and, optionally,
+  an email. By default they choose their own password at first sign-in. A user name that already exists is
+  refused, so the page never takes over someone else's account.
+- **Invite by email** sends a link; they choose their own password and join as a student. Waiting
+  invitations are under the **Invited, not accepted** status, where you can **Resend** or **Withdraw** them.
+- **Import CSV** adds a whole class. The first row names the columns: `email,name,username,password`; only
+  `email` is required and the columns can be in any order. A row with a password gets an account straight
+  away (the student changes the password at first sign-in; the user name is the email when none is given); a
+  row without one is invited by email. **Check the file** first shows what each row would do (create,
+  invite, update the name, no change, skipped, or the error on that line) and saves nothing. **Import** then
+  does it. The email is the key, so importing the same file twice changes nothing the second time. An email
+  that already has a Gadfly account in another organization is invited rather than given a new account, a
+  deactivated student is skipped (reactivate them from their profile), and a member who is staff here is
+  refused. At most 5,000 rows and 2 MB per file.
+- **Export CSV** downloads every student the current filters match (not just the page on screen), in the
+  same columns an import reads. Each export is recorded in the audit log.
+
+Click a name to open the student's **profile** (`/admin/students/{id}`):
+
+- **Account**: email, when they were added, last sign-in, whether they must choose a new password, and
+  whether two-step sign-in is on. **Edit name and email**, **Reset password** (their other sign-ins end within
+  about a minute), **Deactivate** and **Reactivate**. Deactivating needs a reason, which is kept in the audit
+  log; it signs them out and stops them signing in to your organization, and keeps their exams, attempts and
+  results, which reactivating gives back. An account that also belongs to another organization, or is staff
+  anywhere, can be deactivated here but its name, email and password are changed only by its owner.
+- **Exams and attempts**: every assigned exam with its dates, attempts used, status (not started, in
+  progress, interrupted, awaiting grading, graded but not released, released), accommodations and each
+  attempt with its score and a link to its review and transcript. An attempt replaced by an update to the
+  examiner is greyed out and does not count.
+- **Reviewer notes**: how many integrity notes their attempts carry and how many were raised for a reviewer.
+  These are low-confidence signals for a reviewer to weigh, never a verdict and never part of a grade.
+- **History**: the newest 100 audit entries about this student (account changes, membership, assignments,
+  grading); the full log is on **Audit log**.
+
+Every change on these pages is recorded in the audit log with who made it.
+
 ## Organizations
 
 A customer **organization** is a school, department or company. Everything in Gadfly Exams (source

@@ -1,14 +1,314 @@
 @page "/admin/students/{Id:guid}"
 @attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Admin
+@using Gadfly.Server.Data
+@using Gadfly.Server.Desk
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject ILogger<StudentProfile> Log
 
-@* Placeholder (GAD-T300) so the admin navigation never leads nowhere. GAD-T296 replaces this file with the real page. *@
-<PageTitle>Student · Gadfly Exams</PageTitle>
-<h1>Student</h1>
-<div class="panel admin-soon">
-    <p><strong>Coming in this release.</strong> One student: their exams, attempts, results and account.</p>
-    <p class="hint">Until then, the <a href="admin/desk">admin desk</a> and the <a href="admin">dashboard</a> cover the everyday work.</p>
-</div>
+@* One student (GAD-T296): account, every assigned exam and attempt, results, accommodations, reviewer notes and audit history. *@
+<PageTitle>@(profile?.Name ?? "Student") · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-desk.css" /><link rel="stylesheet" href="admin-people.css" /></HeadContent>
+
+<p class="people-back"><a href="admin/students">← All students</a></p>
+
+@if (error is not null)
+{
+    <div class="notice people-error" role="alert">
+        <p><strong>This student could not load.</strong> @error</p>
+        <button type="button" @onclick="LoadAsync" disabled="@busy">Try again</button>
+    </div>
+}
+else if (!loaded)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else if (profile is null)
+{
+    <div class="notice">
+        <p><strong>No such student here.</strong> They may belong to another organization, or the link is out of date.</p>
+    </div>
+}
+else
+{
+    var p = profile;
+    <div class="people-head">
+        <h1>@p.Name <span>@p.UserName</span></h1>
+        <div class="row-actions">
+            <span class="pill state-@(p.Active ? "active" : "deactivated")">@(p.Active ? "Active" : "Deactivated")</span>
+            <a href="admin/assignments?student=@Uri.EscapeDataString(p.UserName)">Manage assignments</a>
+        </div>
+    </div>
+
+    @if (message is not null)
+    {
+        <p role="status" class="people-message @(ok ? "ok" : "error")">@message</p>
+    }
+
+    <div class="people-columns">
+        <section class="panel people-account" aria-labelledby="acct-h">
+            <h2 id="acct-h">Account</h2>
+            <dl class="people-facts">
+                <dt>Email</dt><dd>@(p.Email ?? "none")</dd>
+                <dt>Added</dt><dd>@p.CreatedUtc.ToString("d MMM yyyy")</dd>
+                <dt>Last sign-in</dt><dd>@(p.LastLoginUtc is { } l ? l.ToString("d MMM yyyy HH:mm") + " UTC" : "never")</dd>
+                <dt>Password</dt><dd>@(p.MustChangePassword ? "must choose a new one at next sign-in" : "set")</dd>
+                <dt>Two-step sign-in</dt><dd>@(p.MfaEnabled ? "on" : "off")</dd>
+                @if (!p.AccountActive)
+                {
+                    <dt>Sign-in</dt><dd class="error-text">The account is locked by MindAttic support.</dd>
+                }
+            </dl>
+
+            @if (!p.ManagedHere)
+            {
+                <p class="hint">This account also belongs to another organization or is staff somewhere, so its name, email and password are changed by its owner, not here.</p>
+            }
+            <div class="row-actions">
+                @if (p.ManagedHere)
+                {
+                    <button type="button" class="people-ghost" @onclick='() => Open("edit")'>Edit name and email</button>
+                    @if (p.Active)
+                    {
+                        <button type="button" class="people-ghost" @onclick='() => Open("password")'>Reset password</button>
+                    }
+                }
+                @if (p.Active)
+                {
+                    <button type="button" class="people-ghost danger-text" @onclick='() => Open("deactivate")'>Deactivate</button>
+                }
+                else
+                {
+                    <button type="button" @onclick="ReactivateAsync" disabled="@busy">Reactivate</button>
+                }
+            </div>
+
+            @if (panel == "edit")
+            {
+                <div class="people-form">
+                    <label>Name <input @bind="editName" maxlength="200" autocomplete="off" /></label>
+                    <label>Email <input type="email" @bind="editEmail" maxlength="256" autocomplete="off" /></label>
+                    <div class="row-actions">
+                        <button type="button" @onclick="SaveEditAsync" disabled="@busy">Save</button>
+                        <button type="button" class="link" @onclick="() => panel = null">Cancel</button>
+                    </div>
+                </div>
+            }
+            else if (panel == "password")
+            {
+                <div class="people-form">
+                    <label>New password <input type="password" @bind="newPassword" autocomplete="new-password" /></label>
+                    <label class="check"><input type="checkbox" @bind="mustChange" /> Make them choose their own at next sign-in</label>
+                    <p class="hint">Their other sign-ins end within about a minute.</p>
+                    <div class="row-actions">
+                        <button type="button" @onclick="ResetPasswordAsync" disabled="@busy">Set password</button>
+                        <button type="button" class="link" @onclick="() => panel = null">Cancel</button>
+                    </div>
+                </div>
+            }
+            else if (panel == "deactivate")
+            {
+                <div class="people-form people-danger">
+                    <p>Deactivating signs them out and stops them signing in to this organization. Their exams, attempts and results are kept, and reactivating gives everything back.</p>
+                    <label>Reason <span class="hint">(kept in the audit log)</span> <input @bind="reason" maxlength="500" /></label>
+                    <div class="row-actions">
+                        <button type="button" class="danger" @onclick="DeactivateAsync" disabled="@(busy || string.IsNullOrWhiteSpace(reason))">Deactivate</button>
+                        <button type="button" class="link" @onclick="() => panel = null">Cancel</button>
+                    </div>
+                </div>
+            }
+        </section>
+
+        <section class="panel people-integrity" aria-labelledby="int-h">
+            <h2 id="int-h">Reviewer notes</h2>
+            @if (p.IntegrityNotes == 0)
+            {
+                <p class="hint">No reviewer notes on any attempt.</p>
+            }
+            else
+            {
+                <p><strong>@p.IntegrityNotes</strong> note@(p.IntegrityNotes == 1 ? "" : "s") across their attempts, <strong>@p.IntegrityRaised</strong> raised for a reviewer to look at.</p>
+            }
+            <p class="hint">These are low-confidence signals (where they looked, how they spoke, typing style) for a reviewer to weigh. They are never a verdict and never part of a grade. Open an attempt's review to see them in context.</p>
+        </section>
+    </div>
+
+    <h2 class="section">Exams and attempts</h2>
+    @if (p.Assignments.Count == 0)
+    {
+        <div class="notice"><p>No exams assigned yet. <a href="admin/assignments?student=@Uri.EscapeDataString(p.UserName)">Assign one</a>.</p></div>
+    }
+    else
+    {
+        @foreach (var a in p.Assignments)
+        {
+            <section class="panel people-assignment" aria-label="@a.ExamTitle">
+                <div class="people-assignment-head">
+                    <h3>@a.ExamTitle @if (a.ExamStatus == ExamStatus.Archived) { <span class="hint">(archived)</span> }</h3>
+                    <span class="pill @AdminPeople.Css(a.Progress)">@AdminPeople.Describe(a.Progress)</span>
+                </div>
+                <p class="hint">
+                    @Window(a) · attempts @a.AttemptsUsed of @a.AttemptsAllowed
+                    · extra time @AdminPeople.Time(a.TimeMultiplier)
+                    @if (a.EyeContact) { <text> · no eye contact expected</text> }
+                    @if (a.ReleasedAt is { } rel) { <text> · results released @rel.UtcDateTime.ToString("d MMM yyyy")</text> }
+                </p>
+                @if (a.Attempts.Count > 0)
+                {
+                    <div class="table-scroll">
+                        <table class="grid">
+                            <thead><tr><th scope="col" class="num">Attempt</th><th scope="col">State</th><th scope="col">Started</th><th scope="col">Ended</th><th scope="col">Score</th><th scope="col" class="num">Reviewer notes</th><th scope="col"><span class="people-sr">Links</span></th></tr></thead>
+                            <tbody>
+                                @foreach (var s in a.Attempts)
+                                {
+                                    <tr class="@(s.Counts ? null : "muted")">
+                                        <td class="num">@s.Attempt</td>
+                                        <td>@AttemptState(s)</td>
+                                        <td>@(s.StartedAt is { } st ? st.UtcDateTime.ToString("d MMM yyyy HH:mm") : "")</td>
+                                        <td>@(s.EndedAt is { } en ? en.UtcDateTime.ToString("d MMM yyyy HH:mm") : "")</td>
+                                        <td>@(s.Score ?? "")</td>
+                                        <td class="num">@(s.IntegrityNotes == 0 ? "" : $"{s.IntegrityNotes}{(s.IntegrityRaised > 0 ? $" ({s.IntegrityRaised} raised)" : "")}")</td>
+                                        <td><a href="review/@s.SessionId">Review and transcript</a></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        }
+    }
+
+    <h2 class="section">History</h2>
+    @if (p.Audit.Count == 0)
+    {
+        <p class="hint">Nothing recorded yet.</p>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="grid people-audit">
+                <thead><tr><th scope="col">When (UTC)</th><th scope="col">What</th><th scope="col">Who</th><th scope="col">Detail</th></tr></thead>
+                <tbody>
+                    @foreach (var e in p.Audit)
+                    {
+                        <tr>
+                            <td>@e.At.UtcDateTime.ToString("d MMM yyyy HH:mm")</td>
+                            <td><code>@e.Action</code></td>
+                            <td>@e.Actor</td>
+                            <td>@e.Detail</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="hint">The newest 100 entries about this student. The full log is on the <a href="admin/audit">audit log</a> page.</p>
+    }
+}
 
 @code {
     [Parameter] public Guid Id { get; set; }
+
+    private Gadfly.Server.Admin.StudentProfile? profile;
+    private bool loaded;
+    private string? error;
+    private string? message;
+    private bool ok;
+    private bool busy;
+    private string? panel;
+    private string? editName;
+    private string? editEmail;
+    private string? newPassword;
+    private bool mustChange = true;
+    private string? reason;
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        error = null;
+        try
+        {
+            profile = await WithAsync(s => s.ProfileAsync(Id));
+            loaded = true;
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Student profile failed to load");
+            error = "Something went wrong reading this student. Try again in a moment.";
+        }
+    }
+
+    private async Task<T> WithAsync<T>(Func<StudentAdminService, Task<T>> work)
+    {
+        await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+        return await work(new StudentAdminService(scope.ServiceProvider));
+    }
+
+    private async Task ActAsync(Func<StudentAdminService, Task<DeskResult>> work)
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try
+        {
+            var r = await WithAsync(work);
+            ok = r.Ok;
+            message = r.Message;
+            if (r.Ok)
+            {
+                panel = null;
+                newPassword = null;
+                reason = null;
+                await LoadAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Student profile action failed");
+            ok = false;
+            message = "That did not go through. Nothing was changed; try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private void Open(string which)
+    {
+        message = null;
+        panel = panel == which ? null : which;
+        if (panel == "edit") { editName = profile?.DisplayName; editEmail = profile?.Email; }
+        if (panel == "password") { newPassword = null; mustChange = true; }
+        if (panel == "deactivate") reason = null;
+    }
+
+    private Task SaveEditAsync() => ActAsync(s => s.UpdateAsync(Id, editName, editEmail));
+    private Task ResetPasswordAsync() => ActAsync(s => s.ResetPasswordAsync(Id, newPassword ?? "", mustChange));
+    private Task DeactivateAsync() => ActAsync(s => s.SetActiveAsync(Id, false, reason));
+    private Task ReactivateAsync() => ActAsync(s => s.SetActiveAsync(Id, true, null));
+
+    private static string Window(ProfileAssignment a) => (a.OpensAt, a.ClosesAt) switch
+    {
+        (null, null) => "no dates",
+        ({ } o, null) => $"opens {o.UtcDateTime:d MMM yyyy HH:mm} UTC",
+        (null, { } c) => $"due {c.UtcDateTime:d MMM yyyy HH:mm} UTC",
+        ({ } o, { } c) => $"{o.UtcDateTime:d MMM} to {c.UtcDateTime:d MMM yyyy HH:mm} UTC",
+    };
+
+    private static string AttemptState(ProfileAttempt s) => s.State switch
+    {
+        _ when !s.Counts => "Replaced (exam updated; does not count)",
+        SessionState.Created or SessionState.ConsentGiven => "Opened",
+        SessionState.Running => "Running",
+        SessionState.Paused => "Paused",
+        SessionState.Failed => "Stopped by an error",
+        SessionState.Ended => s.EndReason switch
+        {
+            "Abandoned" => "Left early",
+            "TimeUp" => "Ended (time up)",
+            "Failed" => "Stopped by an error",
+            _ => "Ended",
+        },
+        _ => s.State.ToString(),
+    };
 }

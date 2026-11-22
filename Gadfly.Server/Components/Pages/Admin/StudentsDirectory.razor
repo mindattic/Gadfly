@@ -1,10 +1,451 @@
 @page "/admin/students"
 @attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Admin
+@using Gadfly.Server.Desk
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject NavigationManager Nav
+@inject ILogger<StudentsDirectory> Log
 
-@* Placeholder (GAD-T300) so the admin navigation never leads nowhere. GAD-T296 replaces this file with the real page. *@
+@* The students directory (GAD-T296): search, filter, sort and page every student; add, invite, import and export. *@
 <PageTitle>Students · Gadfly Exams</PageTitle>
-<h1>Students</h1>
-<div class="panel admin-soon">
-    <p><strong>Coming in this release.</strong> Every student in one place: search, add, import and open a profile.</p>
-    <p class="hint">Until then, the <a href="admin/desk">admin desk</a> and the <a href="admin">dashboard</a> cover the everyday work.</p>
+<HeadContent><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-desk.css" /><link rel="stylesheet" href="admin-people.css" /></HeadContent>
+
+<div class="people-head">
+    <h1>Students</h1>
+    <div class="row-actions">
+        <button type="button" class="@(panel == "add" ? null : "people-ghost")" @onclick='() => Toggle("add")'>Add a student</button>
+        <button type="button" class="@(panel == "invite" ? null : "people-ghost")" @onclick='() => Toggle("invite")'>Invite by email</button>
+        <button type="button" class="@(panel == "import" ? null : "people-ghost")" @onclick='() => Toggle("import")'>Import CSV</button>
+        <a class="people-button people-ghost" href="@PeopleExportEndpoints.StudentsCsv(CurrentQuery)" download data-enhance-nav="false">Export CSV</a>
+    </div>
 </div>
+
+@if (message is not null)
+{
+    <p role="status" class="people-message @(ok ? "ok" : "error")">@message</p>
+}
+
+@if (panel == "add")
+{
+    <section class="panel people-form" aria-labelledby="add-h">
+        <h2 id="add-h">Add a student</h2>
+        <p class="hint">Gives the student an account now. Hand them the user name and password; by default they choose their own password at first sign-in.</p>
+        <div class="desk-row">
+            <label>Name <input @bind="form.Name" autocomplete="off" maxlength="200" /></label>
+            <label>User name <input @bind="form.UserName" autocomplete="off" maxlength="256" /></label>
+        </div>
+        <div class="desk-row">
+            <label>Password <input type="password" @bind="form.Password" autocomplete="new-password" /></label>
+            <label>Email <span class="hint">(optional)</span> <input type="email" @bind="form.Email" autocomplete="off" maxlength="256" /></label>
+        </div>
+        <label class="check"><input type="checkbox" @bind="form.MustChange" /> Make them choose their own password at first sign-in</label>
+        <div class="row-actions">
+            <button type="button" @onclick="CreateAsync" disabled="@busy">Add student</button>
+            <button type="button" class="link" @onclick='() => panel = null'>Cancel</button>
+        </div>
+    </section>
+}
+else if (panel == "invite")
+{
+    <section class="panel people-form" aria-labelledby="invite-h">
+        <h2 id="invite-h">Invite a student by email</h2>
+        <p class="hint">They get an email with a link, choose their own password and land in this organization as a student. Invitations wait on the Invited list until accepted.</p>
+        <label>Email <input type="email" @bind="inviteEmail" autocomplete="off" maxlength="256" /></label>
+        <div class="row-actions">
+            <button type="button" @onclick="InviteAsync" disabled="@busy">Send invitation</button>
+            <button type="button" class="link" @onclick='() => panel = null'>Cancel</button>
+        </div>
+    </section>
+}
+else if (panel == "import")
+{
+    <section class="panel people-form people-import" aria-labelledby="import-h">
+        <h2 id="import-h">Import students from a CSV file</h2>
+        <p class="hint">
+            The first row names the columns: <code>@StudentCsv.TemplateHeader</code>. Only <code>email</code> is required.
+            A row with a password gets an account straight away (they change the password at first sign-in); a row without one is invited by email.
+            The email is the key, so importing the same file again changes nothing. You see what will happen before anything is saved.
+        </p>
+        <label>Upload a .csv file <InputFile OnChange="FileChosen" accept=".csv,text/csv,text/plain" /></label>
+        <label>…or paste it here <textarea @bind="csv" rows="6" spellcheck="false" placeholder="email,name&#10;ada@example.edu,Ada Lovelace"></textarea></label>
+        <div class="row-actions">
+            <button type="button" @onclick="PreviewAsync" disabled="@(busy || string.IsNullOrWhiteSpace(csv))">Check the file</button>
+            @if (import is { Applied: false, Changes: > 0 })
+            {
+                <button type="button" @onclick="ApplyAsync" disabled="@busy">Import @import.Changes row@(import.Changes == 1 ? "" : "s")</button>
+            }
+            <button type="button" class="link" @onclick="CloseImport">Close</button>
+        </div>
+
+        @if (import is not null)
+        {
+            @foreach (var e in import.FileErrors)
+            {
+                <p class="people-message error" role="alert">@e</p>
+            }
+            @if (import.IgnoredColumns.Count > 0)
+            {
+                <p class="hint">Columns not used: @string.Join(", ", import.IgnoredColumns).</p>
+            }
+            @if (import.Rows.Count > 0)
+            {
+                <p role="status">
+                    <strong>@(import.Applied ? "Imported." : "Dry run: nothing has been saved yet.")</strong>
+                    @import.Count(ImportAction.Create) to create, @import.Count(ImportAction.Invite) to invite, @import.Count(ImportAction.UpdateName) to rename,
+                    @import.Count(ImportAction.Unchanged) unchanged, @import.Count(ImportAction.Skip) skipped, @import.Errors with errors.
+                </p>
+                <div class="table-scroll">
+                    <table class="grid people-import-rows">
+                        <thead><tr><th scope="col" class="num">Line</th><th scope="col">Email</th><th scope="col">Name</th><th scope="col">What happens</th><th scope="col">Detail</th></tr></thead>
+                        <tbody>
+                            @foreach (var r in import.Rows)
+                            {
+                                <tr class="import-@r.Action.ToString().ToLowerInvariant()">
+                                    <td class="num">@r.Line</td>
+                                    <td>@r.Email</td>
+                                    <td>@r.Name</td>
+                                    <td>@StudentAdminService.Describe(r.Action)@(import.Applied && r.Done ? " ✓" : "")</td>
+                                    <td>@r.Message</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+    </section>
+}
+
+<form class="people-filters" @onsubmit="ApplySearch" @onsubmit:preventDefault>
+    <label class="grow">Search <input type="search" @bind="searchBox" placeholder="Name, user name or email" /></label>
+    <label>Assigned to
+        <select @onchange='e => Go(examId: ParseGuid(e.Value) ?? Guid.Empty)'>
+            <option value="" selected="@(Exam is null)">Any exam</option>
+            @foreach (var x in exams)
+            {
+                <option value="@x.Id" selected="@(Exam == x.Id)">@x.Title</option>
+            }
+        </select>
+    </label>
+    <label>Status
+        <select @onchange='e => Go(status: PeopleExportEndpoints.Enum(e.Value?.ToString(), StudentStatusFilter.All))'>
+            <option value="All" selected="@(CurrentStatus == StudentStatusFilter.All)">Everyone</option>
+            <option value="Active" selected="@(CurrentStatus == StudentStatusFilter.Active)">Active</option>
+            <option value="NeverSignedIn" selected="@(CurrentStatus == StudentStatusFilter.NeverSignedIn)">Never signed in</option>
+            <option value="Deactivated" selected="@(CurrentStatus == StudentStatusFilter.Deactivated)">Deactivated</option>
+            <option value="Invited" selected="@(CurrentStatus == StudentStatusFilter.Invited)">Invited, not accepted@(list is { PendingInvitations: > 0 } ? $" ({list.PendingInvitations})" : "")</option>
+        </select>
+    </label>
+    <label>Accommodation
+        <select @onchange='e => Go(acc: PeopleExportEndpoints.Enum(e.Value?.ToString(), StudentAccommodationFilter.Any))' disabled="@(CurrentStatus == StudentStatusFilter.Invited)">
+            <option value="Any" selected="@(CurrentAcc == StudentAccommodationFilter.Any)">Any</option>
+            <option value="AnyAccommodation" selected="@(CurrentAcc == StudentAccommodationFilter.AnyAccommodation)">Has an accommodation</option>
+            <option value="ExtraTime" selected="@(CurrentAcc == StudentAccommodationFilter.ExtraTime)">Extra time</option>
+            <option value="EyeContact" selected="@(CurrentAcc == StudentAccommodationFilter.EyeContact)">No eye contact expected</option>
+        </select>
+    </label>
+    <label>Sort
+        <select @onchange='e => Go(sort: PeopleExportEndpoints.Enum(e.Value?.ToString(), StudentSort.Name))' disabled="@(CurrentStatus == StudentStatusFilter.Invited)">
+            <option value="Name" selected="@(CurrentSort == StudentSort.Name)">Name</option>
+            <option value="LastSignIn" selected="@(CurrentSort == StudentSort.LastSignIn)">Last sign-in</option>
+            <option value="Assigned" selected="@(CurrentSort == StudentSort.Assigned)">Exams assigned</option>
+            <option value="Added" selected="@(CurrentSort == StudentSort.Added)">Date added</option>
+        </select>
+    </label>
+    <button type="button" class="link" @onclick="() => Go(desc: !Descending)" disabled="@(CurrentStatus == StudentStatusFilter.Invited)"
+            aria-label="@(Descending ? "Sorted high to low; switch to low to high" : "Sorted low to high; switch to high to low")">@(Descending ? "↓ descending" : "↑ ascending")</button>
+    <button type="submit">Search</button>
+    @if (HasFilters)
+    {
+        <a href="admin/students">Clear filters</a>
+    }
+</form>
+
+@if (error is not null)
+{
+    <div class="notice people-error" role="alert">
+        <p><strong>The students could not load.</strong> @error</p>
+        <button type="button" @onclick="LoadAsync" disabled="@busy">Try again</button>
+    </div>
+}
+else if (list is null)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else if (list.Total == 0)
+{
+    <div class="notice">
+        @if (HasFilters)
+        {
+            <p>No student matches these filters. <a href="admin/students">Show everyone</a>.</p>
+        }
+        else if (CurrentStatus == StudentStatusFilter.Invited)
+        {
+            <p>No invitations are waiting.</p>
+        }
+        else
+        {
+            <p><strong>No students yet.</strong> Add one, invite them by email, or import a class list from a CSV file.</p>
+        }
+    </div>
+}
+else
+{
+    <p class="hint" role="status">@list.Total.ToString("N0") @(CurrentStatus == StudentStatusFilter.Invited ? "invitation" : "student")@(list.Total == 1 ? "" : "s")@(HasFilters ? " match" : "")</p>
+    <div class="table-scroll">
+        <table class="grid people-table">
+            @if (CurrentStatus == StudentStatusFilter.Invited)
+            {
+                <thead><tr><th scope="col">Email</th><th scope="col">Invited</th><th scope="col"><span class="people-sr">Actions</span></th></tr></thead>
+                <tbody>
+                    @foreach (var r in list.Rows)
+                    {
+                        <tr>
+                            <td>@r.Email</td>
+                            <td>@r.CreatedUtc.ToString("d MMM yyyy")</td>
+                            <td>
+                                <div class="row-actions">
+                                    <button type="button" class="link" @onclick="() => ResendAsync(r.InvitationId!.Value)" disabled="@busy">Resend</button>
+                                    <button type="button" class="link" @onclick="() => RevokeAsync(r.InvitationId!.Value)" disabled="@busy">Withdraw</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            }
+            else
+            {
+                <thead><tr><th scope="col">Name</th><th scope="col">User name</th><th scope="col">Email</th><th scope="col">Status</th><th scope="col" class="num">Exams</th><th scope="col">Accommodations</th><th scope="col">Last sign-in</th></tr></thead>
+                <tbody>
+                    @foreach (var r in list.Rows)
+                    {
+                        <tr class="@(r.Active ? null : "muted")">
+                            <td><a href="admin/students/@r.UserId"><strong>@r.Name</strong></a></td>
+                            <td>@r.UserName</td>
+                            <td>@r.Email</td>
+                            <td><span class="pill state-@r.State.Replace(" ", "-").ToLowerInvariant()">@r.State</span></td>
+                            <td class="num">@r.Assigned</td>
+                            <td>@Accommodations(r)</td>
+                            <td>@(r.LastLoginUtc is { } l ? l.ToString("d MMM yyyy HH:mm") + " UTC" : "never")</td>
+                        </tr>
+                    }
+                </tbody>
+            }
+        </table>
+    </div>
+    <nav class="pager" aria-label="Pages">
+        <button type="button" class="link" disabled="@(list.Page <= 1)" @onclick="() => Go(pageNo: list.Page - 1)">← Previous</button>
+        <span>Page @list.Page of @list.Pages</span>
+        <button type="button" class="link" disabled="@(list.Page >= list.Pages)" @onclick="() => Go(pageNo: list.Page + 1)">Next →</button>
+        <label>Per page
+            <select @onchange='e => Go(size: int.TryParse(e.Value?.ToString(), out var s) ? s : 25)'>
+                @foreach (var s in new[] { 25, 50, 100, 200 })
+                {
+                    <option value="@s" selected="@(list.PageSize == s)">@s</option>
+                }
+            </select>
+        </label>
+    </nav>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "q")] public string? Search { get; set; }
+    [SupplyParameterFromQuery(Name = "exam")] public Guid? Exam { get; set; }
+    [SupplyParameterFromQuery(Name = "status")] public string? Status { get; set; }
+    [SupplyParameterFromQuery(Name = "acc")] public string? Acc { get; set; }
+    [SupplyParameterFromQuery(Name = "sort")] public string? Sort { get; set; }
+    [SupplyParameterFromQuery(Name = "desc")] public string? Desc { get; set; }
+    [SupplyParameterFromQuery(Name = "page")] public int? PageNo { get; set; }
+    [SupplyParameterFromQuery(Name = "size")] public int? Size { get; set; }
+
+    private StudentPage? list;
+    private IReadOnlyList<(Guid Id, string Title)> exams = [];
+    private string? error;
+    private string? message;
+    private bool ok;
+    private bool busy;
+    private string? panel;
+    private string? searchBox;
+    private StudentForm form = new();
+    private string? inviteEmail;
+    private string? csv;
+    private ImportReport? import;
+
+    private StudentStatusFilter CurrentStatus => PeopleExportEndpoints.Enum(Status, StudentStatusFilter.All);
+    private StudentAccommodationFilter CurrentAcc => PeopleExportEndpoints.Enum(Acc, StudentAccommodationFilter.Any);
+    private StudentSort CurrentSort => PeopleExportEndpoints.Enum(Sort, StudentSort.Name);
+    private bool Descending => Desc == "1";
+    private bool HasFilters => !string.IsNullOrWhiteSpace(Search) || Exam is not null || CurrentAcc != StudentAccommodationFilter.Any
+                               || CurrentStatus is not (StudentStatusFilter.All or StudentStatusFilter.Invited);
+
+    private StudentQuery CurrentQuery => new()
+    {
+        Search = Search, ExamId = Exam, Status = CurrentStatus, Accommodation = CurrentAcc, Sort = CurrentSort, Descending = Descending,
+        Page = PageNo ?? 1, PageSize = Size ?? 25,
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { exams = await WithAsync(s => s.ExamOptionsAsync()); }
+        catch (Exception ex) { Log.LogWarning(ex, "Students directory: exam list failed"); }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        searchBox = Search;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        error = null;
+        try { list = await WithAsync(s => s.ListAsync(CurrentQuery)); }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Students directory failed to load");
+            error = "Something went wrong reading the students. Try again in a moment.";
+        }
+    }
+
+    /// <summary>Each call gets its own scope (and DbContext), acting as the caller in the active organization.</summary>
+    private async Task<T> WithAsync<T>(Func<StudentAdminService, Task<T>> work)
+    {
+        await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+        return await work(new StudentAdminService(scope.ServiceProvider));
+    }
+
+    private async Task ActAsync(Func<StudentAdminService, Task<DeskResult>> work, Action? onOk = null)
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try
+        {
+            var r = await WithAsync(work);
+            ok = r.Ok;
+            message = r.Message;
+            if (r.Ok) { onOk?.Invoke(); await LoadAsync(); }
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Students directory action failed");
+            ok = false;
+            message = "That did not go through. Nothing was changed; try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private void Toggle(string which)
+    {
+        panel = panel == which ? null : which;
+        message = null;
+    }
+
+    private Task CreateAsync() => ActAsync(s => s.CreateAsync(form), () => { form = new(); panel = null; });
+
+    private Task InviteAsync() => ActAsync(s => s.InviteAsync(inviteEmail ?? ""), () => inviteEmail = null);
+
+    private Task ResendAsync(Guid id) => ActAsync(s => s.ResendInvitationAsync(id));
+
+    private Task RevokeAsync(Guid id) => ActAsync(s => s.RevokeInvitationAsync(id, "Withdrawn from the students directory."));
+
+    private async Task FileChosen(InputFileChangeEventArgs e)
+    {
+        message = null;
+        import = null;
+        const long max = 2 * 1024 * 1024;
+        if (e.File.Size > max) { ok = false; message = "That file is larger than 2 MB. Split the class list into smaller files."; return; }
+        try
+        {
+            using var reader = new StreamReader(e.File.OpenReadStream(max));
+            csv = await reader.ReadToEndAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Students import: file read failed");
+            ok = false;
+            message = "That file could not be read. Save it as CSV (comma separated) and try again.";
+        }
+    }
+
+    private async Task PreviewAsync()
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try { import = await WithAsync(s => s.PreviewImportAsync(csv)); }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Students import preview failed");
+            ok = false;
+            message = "The file could not be checked. Try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private async Task ApplyAsync()
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try
+        {
+            import = await WithAsync(s => s.ApplyImportAsync(csv));
+            var done = import.Rows.Count(r => r.Done);
+            ok = import.FileErrors.Count == 0;
+            message = ok ? $"Import finished: {done} change{(done == 1 ? "" : "s")} made{(import.Errors > 0 ? $", {import.Errors} row{(import.Errors == 1 ? "" : "s")} not imported (see the table)" : "")}." : null;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Students import failed");
+            ok = false;
+            message = "The import stopped part way. Check the file again: rows already imported show as no change.";
+        }
+        finally { busy = false; }
+    }
+
+    private void CloseImport()
+    {
+        panel = null;
+        import = null;
+        csv = null;
+    }
+
+    private void ApplySearch() => Go(search: searchBox ?? "");
+
+    private static Guid? ParseGuid(object? v) => Guid.TryParse(v?.ToString(), out var g) ? g : null;
+
+    private static string Accommodations(StudentListRow r)
+    {
+        var list = new List<string>();
+        if (r.ExtraTime) list.Add("extra time");
+        if (r.EyeContact) list.Add("no eye contact expected");
+        return list.Count == 0 ? "" : string.Join(", ", list);
+    }
+
+    /// <summary>Moves to the same page with one setting changed; the filters live in the address, so Back and links work.</summary>
+    private void Go(string? search = null, Guid? examId = null, StudentStatusFilter? status = null, StudentAccommodationFilter? acc = null,
+        StudentSort? sort = null, bool? desc = null, int? pageNo = null, int? size = null)
+    {
+        var q = CurrentQuery;
+        var resetPage = pageNo is null;
+        var next = q with
+        {
+            Search = search ?? q.Search,
+            ExamId = examId is not null ? (examId == Guid.Empty ? null : examId) : q.ExamId,
+            Status = status ?? q.Status,
+            Accommodation = acc ?? q.Accommodation,
+            Sort = sort ?? q.Sort,
+            Descending = desc ?? q.Descending,
+            PageSize = size ?? q.PageSize,
+            Page = pageNo ?? 1,
+        };
+        Nav.NavigateTo("admin/students" + PeopleExportEndpoints.Query(
+            ("q", next.Search), ("exam", next.ExamId?.ToString("D")), ("status", next.Status == StudentStatusFilter.All ? null : next.Status.ToString()),
+            ("acc", next.Accommodation == StudentAccommodationFilter.Any ? null : next.Accommodation.ToString()),
+            ("sort", next.Sort == StudentSort.Name ? null : next.Sort.ToString()), ("desc", next.Descending ? "1" : null),
+            ("page", resetPage || next.Page <= 1 ? null : next.Page.ToString()), ("size", next.PageSize == 25 ? null : next.PageSize.ToString())));
+    }
+}

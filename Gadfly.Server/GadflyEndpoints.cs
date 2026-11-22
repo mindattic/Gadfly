@@ -73,6 +73,7 @@ public static class GadflyEndpoints
         Review.ReviewExportEndpoints.Map(app);
         Transcripts.TranscriptEndpoints.Map(app);   // downloads and the anonymous /transcripts/verify page (GAD-T295)
         app.MapAnalytics();
+        Admin.PeopleExportEndpoints.MapPeopleExports(app);   // students / assignments CSV (GAD-T296, GAD-T298)
         app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
         Help.HelpEndpoints.Map(app);   // images the help guides show (GAD-T292)
         Site.PublicSite.MapPublicSite(app);   // robots.txt and sitemap.xml (GAD-T308)
