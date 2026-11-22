@@ -12,7 +12,7 @@
 
 @* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
-   The interview room (GAD-T231): the student's own camera beside the examiner, an on-screen transcript of every question and
+   The interview room (GAD-T231): the student's own camera with the examiner (picture in picture since GAD-T416), an on-screen transcript of every question and
    spoken answer, and each answer's response delay as it happens.
    Voice and camera are mandatory (GAD-T239): there is no typed answer mode. The examiner starts on its own when the page opens
    (no separate click), and while the microphone or camera is missing or lost the exam is paused here until it is restored.
@@ -46,37 +46,36 @@
         </div>
     }
 
+    @* One screen, picture in picture (GAD-T416): the examiner's stage in the middle with the student's own camera as a small box in
+       its bottom-right corner (kept away from her face, where the eye-contact check calibrates), the transcript to her left and the
+       answer controls to her right, so the student never has to scroll or look away from her. Stacked on narrow screens. *@
     <div class="voice-interview" hidden="@(state is not (VoiceState.On or VoiceState.Starting))">
-        <figure class="voice-party voice-examiner">
-            <div class="voice-stage" data-voice-stage></div>
-            <figcaption>Examiner</figcaption>
-        </figure>
-        <figure class="voice-party voice-self" data-self-state="@selfState">
-            <div class="voice-self-frame">
-                <video data-voice-self muted playsinline autoplay aria-label="Your camera (only you see this)"></video>
-                @if (SelfNote is { } selfNote)
-                {
-                    <p class="voice-self-note">@selfNote</p>
-                }
+        <div class="voice-center">
+            <div class="voice-pip">
+                <figure class="voice-party voice-examiner">
+                    <div class="voice-stage" data-voice-stage></div>
+                    <figcaption>Examiner</figcaption>
+                </figure>
+                <figure class="voice-party voice-self" data-self-state="@selfState">
+                    <div class="voice-self-frame">
+                        <video data-voice-self muted playsinline autoplay aria-label="Your camera (only you see this)"></video>
+                        @if (SelfNote is { } selfNote)
+                        {
+                            <p class="voice-self-note">@selfNote</p>
+                        }
+                    </div>
+                    <figcaption>You</figcaption>
+                </figure>
             </div>
-            <figcaption>You</figcaption>
-        </figure>
-    </div>
+            @if (state is VoiceState.Starting or VoiceState.On)
+            {
+                <p class="voice-caption" data-voice-caption aria-hidden="true"></p>
+            }
+        </div>
 
-    @if (state is VoiceState.Starting or VoiceState.On)
-    {
-        <div class="voice-body">
-            <p class="voice-status" role="status" aria-live="polite" data-voice-status>Connecting you to the examiner…</p>
-            <p class="voice-delay" data-voice-delay data-state="idle" aria-live="off"></p>
-            @if (!TypedAnswers)
-            {
-                <div class="voice-level" data-voice-level aria-hidden="true"><i></i></div>
-            }
-            <p class="voice-caption" data-voice-caption aria-hidden="true"></p>
-            @if (avatarNote is not null)
-            {
-                <p class="hint" role="note">@avatarNote</p>
-            }
+        @if (state is VoiceState.Starting or VoiceState.On)
+        {
+            @* The transcript scrolls inside its own panel (voice-room.js keeps the newest line in view); the page never grows. *@
             <section class="voice-transcript" aria-labelledby="voice-transcript-title">
                 <h2 id="voice-transcript-title" class="verify-label">Transcript</h2>
                 @if (transcript.Count == 0)
@@ -105,31 +104,43 @@
                     </ol>
                 }
             </section>
-            @if (TypedAnswers)
-            {
-                @* Typed answers (GAD-T260): the answer box is the exam room's; only the question can be repeated here. *@
-                <div class="actions voice-actions">
-                    <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
-                </div>
-            }
-            else
-            {
-            <div class="voice-answer">
-                <p class="verify-label">What I heard</p>
-                <p class="voice-draft" data-voice-draft aria-live="polite"></p>
-                <p class="voice-live" data-voice-live aria-live="off"></p>
-                <div class="voice-cue" data-voice-cue data-active="false" aria-hidden="true"><i></i></div>
+            <div class="voice-body">
+                <p class="voice-status" role="status" aria-live="polite" data-voice-status>Connecting you to the examiner…</p>
+                <p class="voice-delay" data-voice-delay data-state="idle" aria-live="off"></p>
+                @if (!TypedAnswers)
+                {
+                    <div class="voice-level" data-voice-level aria-hidden="true"><i></i></div>
+                }
+                @if (avatarNote is not null)
+                {
+                    <p class="hint" role="note">@avatarNote</p>
+                }
+                @if (TypedAnswers)
+                {
+                    @* Typed answers (GAD-T260): the answer box is the exam room's; only the question can be repeated here. *@
+                    <div class="actions voice-actions">
+                        <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="voice-answer">
+                        <p class="verify-label">What I heard</p>
+                        <p class="voice-draft" data-voice-draft aria-live="polite"></p>
+                        <p class="voice-live" data-voice-live aria-live="off"></p>
+                        <div class="voice-cue" data-voice-cue data-active="false" aria-hidden="true"><i></i></div>
+                    </div>
+                    <div class="actions voice-actions">
+                        <button type="button" data-voice-action="done" data-voice-needs-draft disabled>Done answering</button>
+                        <button type="button" class="secondary" data-voice-action="clear" data-voice-needs-draft disabled>Clear and answer again</button>
+                        <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
+                        <button type="button" class="secondary" data-voice-action="mode">Switch to hold-to-talk</button>
+                        <button type="button" class="secondary" data-voice-action="ptt" hidden>Hold to talk</button>
+                    </div>
+                }
             </div>
-            <div class="actions voice-actions">
-                <button type="button" data-voice-action="done" data-voice-needs-draft disabled>Done answering</button>
-                <button type="button" class="secondary" data-voice-action="clear" data-voice-needs-draft disabled>Clear and answer again</button>
-                <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
-                <button type="button" class="secondary" data-voice-action="mode">Switch to hold-to-talk</button>
-                <button type="button" class="secondary" data-voice-action="ptt" hidden>Hold to talk</button>
-            </div>
-            }
-        </div>
-    }
+        }
+    </div>
 </section>
 
 @code {

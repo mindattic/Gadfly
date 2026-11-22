@@ -19,9 +19,31 @@
 <HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
 <PageTitle>@(examTitle ?? "Exam") · Gadfly Exams</PageTitle>
 
-<div class="exam-room">
+@* While the examiner is on screen the room is one screen with no page scroll (GAD-T416, student.css .exam-live): the student keeps
+   eye contact with her, so her stage takes the height left over and everything else stays short. *@
+<div class="exam-room @(phase is Phase.Answering or Phase.Thinking && voiceAvailable ? "exam-live" : null)">
     <header class="exam-head">
         <h1>@(examTitle ?? "Exam")</h1>
+        @* The camera, eye-contact and integrity lines share the title's row (GAD-T416), each one short line until opened. *@
+        <div class="exam-bar">
+            <WebcamIntegrity SessionId="SessionId" />
+            <StaffNoticeBanner SessionId="SessionId" />
+
+            @if (integrity is { Level: not IntegrityLevel.Off } watched && phase is Phase.Answering or Phase.Thinking)
+            {
+                <div class="integrity-notice" role="note">
+                    @* The full notice was already agreed to on the consent page. *@
+                    <details>
+                        <summary>Integrity notes are on</summary>
+                        <p>@IntegrityNotice(watched, typedAnswers)</p>
+                    </details>
+                    @if (watched.Level == IntegrityLevel.Strict && !fullscreen)
+                    {
+                        <button type="button" class="secondary small" @onclick="GoFullscreenAsync">Go full screen</button>
+                    }
+                </div>
+            }
+        </div>
         @if (phase is Phase.Answering or Phase.Thinking && step is not null)
         {
             <div class="exam-status">
@@ -33,19 +55,6 @@
             </div>
         }
     </header>
-    <WebcamIntegrity SessionId="SessionId" />
-    <StaffNoticeBanner SessionId="SessionId" />
-
-    @if (integrity is { Level: not IntegrityLevel.Off } watched && phase is Phase.Answering or Phase.Thinking)
-    {
-        <div class="integrity-notice" role="note">
-            <p>@IntegrityNotice(watched, typedAnswers)</p>
-            @if (watched.Level == IntegrityLevel.Strict && !fullscreen)
-            {
-                <button type="button" class="secondary small" @onclick="GoFullscreenAsync">Go full screen</button>
-            }
-        </div>
-    }
 
     @if (phase is Phase.Answering or Phase.Thinking)
     {
@@ -89,8 +98,8 @@
                         ThinkingAbout.Saving => "Saving…",
                         _ => "Preparing your question…",
                     })
+                    <span class="hint">This can take a few seconds. Please keep this page open.</span>
                 </div>
-                <p class="hint">This can take a few seconds. Please keep this page open.</p>
             </section>
             break;
 
@@ -184,8 +193,8 @@
                 else
                 {
                     @* Spoken answers only (GAD-T239): there is no typed answer box. *@
-                    <p class="hint" role="status">Answer the examiner out loud.</p>
                     <div class="actions">
+                        <p class="hint" role="status">Answer the examiner out loud.</p>
                         <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@busy">I don't know</button>
                     </div>
                 }

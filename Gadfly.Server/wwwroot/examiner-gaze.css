@@ -26,7 +26,14 @@
 .examiner-fade-warning { margin: 0; padding: .9rem 1.3rem; border-radius: var(--radius); background: rgba(16, 21, 29, .9); color: #f3f4f6; font-size: 1.35rem; font-weight: 600; text-align: center; }
 @media (prefers-reduced-motion: reduce) { .examiner-fade { transition: none; } }
 
-.examiner-gaze-note { flex-basis: 100%; margin: .25rem 0 0; font-size: .85em; opacity: .8; }
+/* The explanation, folded to one link (GAD-T416) and opened over the page so the exam room never grows. */
+.examiner-gaze { position: relative; }
+.examiner-gaze-more summary { cursor: pointer; color: var(--accent); font-size: .92em; }
+.examiner-gaze-note { margin: .25rem 0 0; font-size: .85em; }
+.examiner-gaze-more[open] > .examiner-gaze-note {
+    position: absolute; z-index: 20; top: calc(100% + .3rem); left: 0; width: min(32rem, 80vw); margin: 0; padding: .6rem .8rem;
+    background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+}
 
 /* The five-dot eye-tracking setup (GAD-T305, js/gaze-quality.js): a dot to follow over a light dim of the whole page; the examiner
    stays visible behind it. The caption moves (data-alt) when a dot would sit under it. */

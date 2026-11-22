@@ -60,6 +60,44 @@ textarea { width: 100%; resize: vertical; }
 .integrity-notice p { margin: 0; flex: 1 1 22rem; }
 .integrity-notice button.small { padding: .25rem .7rem; font-size: .85rem; }
 
+/* The title row also carries the camera, eye-contact and integrity lines (GAD-T416): short chips, each opening over the page
+   (never pushing it down) when the student asks for the details. */
+.exam-head h1 { flex: 0 1 auto; }
+.exam-room.exam-live { max-width: none; }
+.exam-bar { flex: 1 1 18rem; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; min-width: 0; }
+.exam-bar:empty { display: none; }
+.exam-bar > .webcam-indicator, .exam-bar > .examiner-gaze, .exam-bar > .integrity-notice { margin: 0; padding: .25rem .6rem; }
+.integrity-notice { position: relative; }
+.integrity-notice details { flex: 1 1 auto; }
+.integrity-notice summary { cursor: pointer; }
+.integrity-notice details[open] > p { position: absolute; z-index: 20; top: calc(100% + .3rem); left: 0; width: min(30rem, 80vw); padding: .6rem .8rem; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); }
+
+/* One screen with no page scroll while the examiner is on (GAD-T416). The examiner's stage (voice.css) takes the height that is
+   left; the header, the question card and the finish link stay short and fixed so her stage doesn't jump between questions.
+   Below 960px wide or 560px tall the room stacks and the page scrolls as before. */
+@media (min-width: 960px) and (min-height: 560px) {
+    .shell:has(.exam-live) { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+    /* Scrolls only if something really can't fit (a typed answer's box on a short screen), never the whole page. */
+    .shell:has(.exam-live) > main { flex: 1 1 auto; min-height: 0; overflow-y: auto; width: 100%; max-width: 1500px; box-sizing: border-box; padding: .6rem 1.25rem; display: flex; flex-direction: column; }
+    .exam-live { flex: 1 1 auto; min-height: 0; width: 100%; max-width: none; display: flex; flex-direction: column; gap: .5rem; }
+    .exam-live > * { flex: none; margin-top: 0; margin-bottom: 0; }
+    .exam-live > .voice-room:has(> .voice-interview:not([hidden])) { flex: 1 1 auto; min-height: 17rem; }
+    .exam-live .exam-head { margin: 0; align-items: center; gap: .4rem 1rem; }
+    .exam-live .exam-head h1 { font-size: 1.2rem; }
+    .exam-live .exam-card { max-width: none; margin: 0; padding: .55rem 1rem; gap: .35rem; align-content: start; height: 7.75rem; overflow-y: auto; box-sizing: border-box; }
+    /* A typed answer, a clarification or a typo fix needs its box: the card grows and the stage gives way. */
+    .exam-live .exam-card:has(textarea, .verify) { height: auto; max-height: 50vh; }
+    .exam-live .last-answer { max-width: none; margin: 0; padding: .45rem 1rem; }
+    .exam-live .exam-question { font-size: 1.1rem; line-height: 1.4; }
+    .exam-live .muted-question { font-size: 1rem; }
+    .exam-live .concept { font-size: .8rem; }
+    .exam-live .thinking { flex-wrap: wrap; }
+    .exam-live .thinking .hint { font-weight: 400; }
+    .exam-live .exam-card .actions .hint { margin: 0; }
+    .exam-live .finish { margin: 0; }
+    .exam-live .finish .notice { position: fixed; z-index: 30; left: 50%; bottom: 1rem; transform: translateX(-50%); width: min(36rem, calc(100% - 2rem)); box-shadow: 0 6px 18px rgba(0, 0, 0, .25); }
+}
+
 /* Response verification in the exam room (GAD-T88): one request at a time, then the last-answer controls. */
 .verify { display: grid; gap: .6rem; border-top: 1px solid var(--line); padding-top: .85rem; }
 .verify-label { color: var(--muted); font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }

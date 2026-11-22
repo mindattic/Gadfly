@@ -56,6 +56,12 @@ export function createPresenter(avatar, stage, caption, cfg, onPortrait) {
 
     on(document, "visibilitychange", () => { if (document.hidden) pause(p, "hidden"); else resume(p, "hidden"); });
     on(window, "resize", () => { p.mouthGeo = null; });
+    // The stage also changes size without the window doing so: it fills the height the exam room leaves it (GAD-T416).
+    if (stage && typeof ResizeObserver === "function") {
+        const ro = new ResizeObserver(() => { p.mouthGeo = null; });
+        ro.observe(stage);
+        p.listeners.push(() => ro.disconnect());
+    }
     if (avatar) {
         on(avatar, "fallback", () => { p.mouthGeo = null; stopFps(p); });
         // The library's 'ready' fires for the 3D model and for the portrait alike.

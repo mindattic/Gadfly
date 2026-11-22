@@ -27,6 +27,9 @@
         <span class="examiner-gaze-dot" aria-hidden="true"></span>
         <span class="examiner-gaze-label" data-examiner-gaze-label></span>
         <button type="button" class="link" data-examiner-gaze-action="calibrate" hidden>Set up eye contact again</button>
+        @* Folded to one link (GAD-T416): the exam room fits one screen, and the student was told all this before starting. *@
+        <details class="examiner-gaze-more">
+        <summary>How this works</summary>
         @if (accommodated)
         {
             <p class="examiner-gaze-note">You have an eye-contact accommodation: you don't need to look at the examiner, the screen won't fade and she won't ask you to look at her. Your camera still checks, on your device only, that your face is in view and that you are on your own; if not, the examiner will say so. A short note of when it happened is kept for a person to review.</p>
@@ -35,6 +38,7 @@
         {
             <p class="examiner-gaze-note">Your camera checks, on your device only, that you are looking at the examiner while you answer. Leaning or turning your head a little while still looking at her is fine. "Set up eye contact again" has you follow a dot for about 10 seconds so the camera learns your screen, which makes the check fairer. Looking away to think is fine: at the start of an answer you have several seconds, later a couple of seconds, before the screen starts to fade, and it clears as soon as you look back. If you keep looking away, your eyes move as if reading, your face is out of view or a second face appears, the examiner will say so out loud (for example, "Please look at me while you answer"). Her remark is not recorded as part of your answer. A short note of when it happened is kept for a person to review. If you can't keep eye contact (for example for a disability), ask your instructor for the eye-contact accommodation.</p>
         }
+        </details>
     </div>
     <div class="examiner-fade" data-examiner-fade data-active="false" aria-hidden="true">
         <p class="examiner-fade-warning">Please look at the examiner.</p>
