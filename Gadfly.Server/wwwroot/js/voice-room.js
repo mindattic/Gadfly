@@ -64,6 +64,7 @@ export function init(dotnet, cfg) {
         mic: null, pcm16ToBase64: null, speechConn: null, avatarConn: null, avatar: null, speech: null, avatarOk: false,
         selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null, face: null,
         pauses: [], lastSpeechEndAt: null,   // the student's own mid-answer pauses, which the end-of-answer cue adapts to (GAD-T264)
+        fill: null, fillPlaying: null,       // filling the wait while an answer is judged (GAD-T290): pending lines, the one being said
         acoustics: new VoiceAcoustics(),   // voice strain indicators (GAD-T232): summary numbers only, never audio
     };
     S.onRemark = (e) => remarkHold(S, !!(e.detail && e.detail.active));
@@ -242,6 +243,7 @@ function fail(kind, message, s) {
 export function speak(what, cacheable) {
     const s = S;
     if (!s || !s.running) return;
+    cancelFill(s);   // the next question is here: no more filler for this wait (GAD-T290)
     clearCue();
     s.gate = true;
     s.remarkCommitPending = false;   // a remark's late final belongs to the last answer, not to this question's
@@ -256,13 +258,90 @@ export function speak(what, cacheable) {
     const token = s.speakToken = {};
     const done = () => { if (s.speakToken === token) s.speakToken = null; s.speaking = false; if (S === s && s.allowed) openMic(); else if (S === s) status("Waiting."); };
     if (!s.avatarOk || !s.speech) { done(); return; }
-    s.avatar.state = "idle";
     s.speaking = true;
-    // A stalled synthesis or playback must never leave the student waiting for ever: after a generous allowance, listen anyway.
-    const allowance = new Promise((resolve) => setTimeout(resolve, 20000 + 120 * (what || "").length));
-    Promise.race([s.speech.speak(what, undefined, !!cacheable), allowance])
-        .catch(() => { showCaption(what); })
-        .finally(done);
+    // A filler line still being said (GAD-T290) finishes first, so the two never overlap and its end isn't taken for this one's.
+    // The line is short and stops itself if it stalls; the extra bound here is only a backstop.
+    const filler = s.fillPlaying;
+    const ready = filler ? Promise.race([filler, new Promise((r) => setTimeout(r, FILL.timeoutMs + 1000))]) : Promise.resolve();
+    ready.then(() => {
+        if (S !== s || s.speakToken !== token) return;   // replaced meanwhile: the newer call finishes the turn
+        if (!s.running || !s.speech || !s.avatar) { done(); return; }
+        s.avatar.state = "idle";
+        // A stalled synthesis or playback must never leave the student waiting for ever: after a generous allowance, listen anyway.
+        const allowance = new Promise((resolve) => setTimeout(resolve, 20000 + 120 * (what || "").length));
+        Promise.race([s.speech.speak(what, undefined, !!cacheable), allowance])
+            .catch(() => { showCaption(what); })
+            .finally(done);
+    });
+}
+
+// ---------------------------------------------------------------------------------------------------- filling the wait
+
+/** Filler timings (GAD-T290): a line stops itself after timeoutMs; a blocked attempt retries every retryMs; lines are gapMs apart. */
+const FILL = { timeoutMs: 6000, retryMs: 500, gapMs: 8000, lateMs: 10000 };
+
+/**
+ * The panel is judging the confirmed answer and writing the next question (GAD-T290). If the wait outlasts firstAfterMs the
+ * examiner says <first> (a short neutral line the server chose and offered), and on a long wait <again> at againAfterMs. Nothing is
+ * said while the microphone is open, a question or remark is being spoken, or another line is still playing: the attempt waits
+ * for that (the read-back may still be finishing) and is dropped once its moment has passed. The microphone gate stays closed
+ * the whole time, so a line is never captured or transcribed into an answer, and the next question (speak()) cancels what is left.
+ */
+export function fillWait(first, again, firstAfterMs, againAfterMs) {
+    const s = S;
+    if (!s || !s.running) return;
+    cancelFill(s);
+    const f = s.fill = { timers: [], startedAt: performance.now(), saidAt: null };
+    const attempt = (what, until) => {
+        if (S !== s || s.fill !== f) return;
+        const now = performance.now();
+        if (!canFill(s) || (f.saidAt !== null && now - f.saidAt < FILL.gapMs)) {
+            if (now + FILL.retryMs < until) f.timers.push(setTimeout(() => attempt(what, until), FILL.retryMs));
+            return;
+        }
+        f.saidAt = now;
+        sayFiller(s, what);
+    };
+    const firstUntil = f.startedAt + Math.max(firstAfterMs, againAfterMs || 0);
+    if (first) f.timers.push(setTimeout(() => attempt(first, firstUntil), Math.max(0, firstAfterMs || 0)));
+    if (again && againAfterMs > 0) f.timers.push(setTimeout(() => attempt(again, f.startedAt + againAfterMs + FILL.lateMs), againAfterMs));
+}
+
+/** The wait is over (the next step arrived, or failed): drop the lines not yet said. One already playing just finishes. */
+export function endWait() {
+    if (S) cancelFill(S);
+}
+
+function cancelFill(s) {
+    if (!s || !s.fill) return;
+    s.fill.timers.forEach(clearTimeout);
+    s.fill = null;
+}
+
+/** Only while quietly waiting on the panel: the gate shut, nothing being asked or answered, the examiner free to talk. */
+function canFill(s) {
+    return S === s && s.running && s.avatarOk && !!s.speech && !!s.avatar && s.gate && !s.allowed
+        && !s.speaking && !s.speakToken && !s.remarkHold && !s.fillPlaying;
+}
+
+/** Says one filler line through the avatar hub (cached, so a repeat costs nothing); a stalled one is cut off. */
+function sayFiller(s, what) {
+    s.avatar.state = "idle";
+    showCaption(what);
+    let timer = null;
+    const allowance = new Promise((resolve) => { timer = setTimeout(() => resolve(true), FILL.timeoutMs); });
+    const playing = Promise.race([s.speech.speak(what, undefined, true).then(() => false), allowance])
+        .then((late) => { if (late && S === s && s.speech) s.speech.stop().catch(() => { }); })
+        .catch(() => { })
+        .finally(() => {
+            clearTimeout(timer);
+            if (s.fillPlaying === playing) s.fillPlaying = null;
+            // A question waiting on this line takes it from here (speak()); otherwise go back to what the room was doing.
+            if (S !== s || !s.running || s.speakToken || s.speaking) return;
+            if (s.allowed) { if (s.gate) openMic(); }
+            else { if (s.avatar) s.avatar.state = "thinking"; status("Thinking about your answer…"); }
+        });
+    s.fillPlaying = playing;
 }
 
 /** Barge-in: the student starts talking over a question, or leaves. */
@@ -276,7 +355,9 @@ export function setAllowed(allowed) {
     if (!s) return;
     const was = s.allowed;
     s.allowed = !!allowed;
-    if (!s.running || s.speaking) return;
+    if (s.allowed) cancelFill(s);
+    // A filler line still playing (GAD-T290) keeps the microphone shut until it ends; its end opens it if an answer is wanted.
+    if (!s.running || s.speaking || s.fillPlaying) return;
     if (s.allowed && was && !s.gate) return;
     if (s.allowed) openMic();
     else { s.gate = true; clearCue(); stopDelayTimer(s); if (s.avatar) s.avatar.state = "thinking"; status("Thinking about your answer…"); }
@@ -305,6 +386,8 @@ export function stop() {
     if (!s) return;
     s.running = false;
     s.gate = true;
+    cancelFill(s);
+    s.fillPlaying = null;
     clearCue();
     clearCaptions();
     resetDelay(s);

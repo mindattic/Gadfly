@@ -54,7 +54,7 @@
                the examiner persist from question to question. *@
             <VoiceRoom SessionId="SessionId" TurnIndex="step?.TurnIndex" Question="@step?.Question" Prompt="@VoicePrompt"
                        PromptId="step?.Verification?.ResponseId" CanAnswer="VoiceCanAnswer" Active="voiceOn" ActiveChanged="OnVoiceActive"
-                       OnAnswer="OnVoiceAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaksAsync" />
+                       OnAnswer="OnVoiceAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaksAsync" Pondering="VoicePondering" />
         }
         else
         {
@@ -546,7 +546,11 @@
     {
         if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
         pendingAnswer = null;
-        await RunStepAsync(about, () => run(org, user));
+        // Resolving a request about the answer (the read-back confirmed, a correction, a clarification) sends it to be judged: the
+        // examiner fills that wait out loud (GAD-T290).
+        judgingVerified = about == ThinkingAbout.Answer;
+        try { await RunStepAsync(about, () => run(org, user)); }
+        finally { judgingVerified = false; }
     }
 
     private Task ClarifyAsync(PendingVerification v, string? reply) =>

@@ -136,12 +136,20 @@
     [Parameter] public EventCallback<VoiceAnswerPayload> OnAnswer { get; set; }
     /// <summary>The examiner is beginning to speak a question or request (the exam room starts the held clock on the first, GAD-T239).</summary>
     [Parameter] public EventCallback OnExaminerSpeaks { get; set; }
+    /// <summary>
+    /// True while the panel judges a confirmed answer and the next question is written (GAD-T290): the examiner fills the wait with a
+    /// short neutral line (<see cref="ExaminerFiller"/>) unless the next question is ready first.
+    /// </summary>
+    [Parameter] public bool Pondering { get; set; }
 
     private VoiceState state;
     private bool supported = true, armed, needsClick;
     private string? notice, avatarNote;
     private string? spokenKey;
     private bool lastAllowed;
+    /// <summary>The last <see cref="Pondering"/> sent to the browser, and the last filler line said (the next one differs).</summary>
+    private bool pondered;
+    private string? lastFiller;
     /// <summary>The camera self-view, as voice-room.js reports it: starting, on, hidden, denied or unavailable.</summary>
     private string selfState = "starting";
     /// <summary>The interview so far: every question or request the examiner spoke and every answer spoken back (GAD-T231).</summary>
@@ -318,11 +326,32 @@
                 lastAllowed = CanAnswer;
                 await module!.InvokeVoidAsync("setAllowed", stop.Token, CanAnswer);
             }
+            if (Pondering != pondered)
+            {
+                pondered = Pondering;
+                if (pondered) await FillWaitAsync();
+                else await module!.InvokeVoidAsync("endWait", stop.Token);
+            }
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
         {
             Log.LogDebug(ex, "Voice prompt could not be sent to the browser.");
         }
+    }
+
+    /// <summary>
+    /// Hands the browser this wait's filler lines (GAD-T290), offered to the avatar hub like any question. The browser says them only
+    /// if the wait outlasts <see cref="ExaminerFiller.FirstAfter"/> (and the second after <see cref="ExaminerFiller.AgainAfter"/>), never
+    /// with the microphone open; a question that arrives meanwhile is asked once the line has finished, and cancels the rest.
+    /// </summary>
+    private async Task FillWaitAsync()
+    {
+        var (first, again) = ExaminerFiller.Pick(Random.Shared, lastFiller);
+        if (!Grants.Offer(user, SessionId, first)) return;
+        lastFiller = first;
+        var longWait = Grants.Offer(user, SessionId, again) ? again : null;
+        await module!.InvokeVoidAsync("fillWait", stop.Token, first, longWait,
+            ExaminerFiller.FirstAfter.TotalMilliseconds, ExaminerFiller.AgainAfter.TotalMilliseconds);
     }
 
     private async Task SpeakAsync(string text)
@@ -369,6 +398,7 @@
     {
         spokenKey = null;
         lastAllowed = false;
+        pondered = false;
         await SetStateAsync(VoiceState.On);
         await SyncAsync();
     });

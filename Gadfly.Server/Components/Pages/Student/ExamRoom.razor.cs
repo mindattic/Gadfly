@@ -60,6 +60,15 @@ public partial class ExamRoom
         }
     }
 
+    /// <summary>A request about the last answer was just resolved and the answer is being judged (set around that step only).</summary>
+    private bool judgingVerified;
+
+    /// <summary>
+    /// The panel is judging a verified answer and writing the next question (GAD-T290): the examiner fills the wait with a short
+    /// neutral line if it lasts more than a moment.
+    /// </summary>
+    private bool VoicePondering => judgingVerified && phase == Phase.Thinking;
+
     /// <summary>A request about the last answer is spoken instead of the question.</summary>
     private string? VoicePrompt => step?.Verification?.Prompt;
 
