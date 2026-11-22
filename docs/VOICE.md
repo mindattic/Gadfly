@@ -136,7 +136,7 @@ starts and ends.
 | What | How |
 |---|---|
 | Lip sync | The library asks ElevenLabs for speech **with timestamps** (character alignment), turns the characters into word timings and streams PCM with them; TalkingHead shapes the mouth from each word's sounds over that word's provider-measured time. Per-character (phoneme) timing would be finer: filed as MAA-T9. |
-| Starting quickly | Speech is streamed: she starts on the first audio chunk. The examiner's voice model defaults to ElevenLabs' low-latency `eleven_flash_v2_5` unless `MindAttic:Avatar:ElevenLabs:ModelId` is set (`Gadfly:Voice:TtsModel` changes the default). Faster first audio options are MAA-T15. Quality-vs-latency tiers are below (GAD-T415). |
+| Starting quickly | Speech is streamed: she starts on the first audio chunk. The next question is spoken while it is still being written (GAD-T495, below): she starts on its first guarded sentence. The examiner's voice model defaults to ElevenLabs' low-latency `eleven_flash_v2_5` unless `MindAttic:Avatar:ElevenLabs:ModelId` is set (`Gadfly:Voice:TtsModel` changes the default). Faster first audio options are MAA-T15. Quality-vs-latency tiers are below (GAD-T415). |
 | Prepared ahead | Fixed lines (the wait fillers first, then the eye-contact remarks) are synthesized once per server into the library's phrase cache when the first exam room opens (`ExaminerSpeechWarmup`, off with `Gadfly:Voice:WarmPhrases=false`), so they start at once. The cache is bounded and questions go into it too, so an exam room opened ten minutes or more after the last check checks the lines again: a line still cached costs nothing (and is kept), and only one pushed out is synthesized again (GAD-T329). Questions are cached after their first playing, so **Repeat the question** and a reload replay instantly. The next question itself is written only after the answer is judged; with no read-back (GAD-T405) judging starts the moment the answer is in, and the wait fillers cover that wait after every answer. A supported prefetch is MAA-T14. |
 | Acknowledging the answer | The moment an answer is in (the end-of-answer silence or **Done answering**), she says a short acknowledgement, the backchannel a listener gives when someone stops talking (GAD-T496): "Mm, okay.", "Okay.", "Mm-hm.", "I see.", "Alright.", "Okay, thank you.", "Mm. Okay." or "Thank you." (`ExaminerFiller.Acknowledgements`). Receipt, never assessment: no "good", "right" or "correct", and the same lines follow strong and weak answers alike. The server picks the next one (never the same twice running) and offers it when each answer window opens, so the browser plays it with no round trip; it goes through the avatar hub like every line, so she lip-syncs it, and it is prepared ahead per examiner voice with the other fixed lines (in mock mode by the mock voice), so it costs nothing per turn. The microphone is already shut, so it is never heard as part of the answer. A question ready before it has made a sound skips it; the wait filler below holds off until 1.5 s after it. A kept answer sent again is not acknowledged twice. Optionally (`Gadfly:Voice:BackchannelMs`, off by default), while the student still holds the floor, a finished sentence followed by that many milliseconds of silence (500 is a natural choice) gets a soft "Mm." or "Mm-hm." that does not end the turn: the countdown runs on and speaking again stops her at once. Once per answer; off by default because the microphone is open while she makes it and only the browser's echo cancellation keeps her sound out of the answer. |
 | Filling the wait | While the panel judges an answer and writes the next question (GAD-T290), she says one short neutral line if the question isn't ready within 2 seconds ("Let me think about that.", "Okay, give me a moment.", ...) and one more if the wait passes 20 seconds ("Just a moment more."), over a very quiet distant-typing sound (GAD-T409; typing at gain 0.06 instead of page turns since GAD-T502). The lines are fixed in `Voice/ExaminerFiller.cs`, picked at random (never the same first line twice running), never about the answer (no "good" or "interesting"), spoken with the microphone shut, and never put in the transcript or the record. A question that arrives mid-line waits for the line to finish; the rest are dropped. They are prepared ahead (above), so the first one plays at once. |
@@ -321,11 +321,12 @@ after the other, while ElevenLabs' first audio byte takes about 0.17 s. Now:
 4. **The same model runs the leak guard** on that question, a one-word LEAKS/SAFE reply (`live.questionGeneration.CheckLeakLive`).
    The question is returned only after the guard says SAFE. LEAKS redrafts once and then uses the plain fallback question,
    and a reply that is neither word counts as undecided and also falls back (fail closed), exactly as with the panel guard (GAD-T92).
-5. The question goes to the examiner's voice.
+5. The question goes to the examiner's voice. After a spoken answer it goes there **while it is being written**, a guarded
+   sentence at a time (GAD-T495, below), so she starts on the first sentence instead of waiting for the whole question.
 
 If the fast model fails (provider down, timeout), that attempt goes back to the panel vote and the panel guard, so a
 provider outage costs speed, never safety. Every call is still metered (`PanelCall`, kind `live-turn`) and timed
-(`ApiCallTimings`, with a `.firstChunk` row for the streaming seam below). Mock mode (`Gadfly:AiMode=mock`) uses the mock
+(`ApiCallTimings`, with a `.firstChunk` row for the streamed reply, GAD-T495 below). Mock mode (`Gadfly:AiMode=mock`) uses the mock
 panel's own template replies, so nothing is called or billed.
 
 **The panel judges off the turn (GAD-T508).** The multi-model panel's judgment of an answer (aporia check, judges,
@@ -370,11 +371,59 @@ segments plus the current partial) on each recognizer partial and final, at most
 words always go out), only while the microphone is open for a question; VoiceRoom's `OnPartialAnswer` callback hands it to
 `ExamRoom.OnPartialAnswerAsync`. Never audio, and nothing on the page changes.
 
-**Streaming seam (GAD-T495).** `ILiveTurnModel.StreamAsync` returns the reply as an `IAsyncEnumerable<string>` of text deltas.
-MindAttic.Legion has no streaming call yet, so today the Legion-backed model yields the whole reply as one delta. A
-streaming provider call fits behind the same interface. The generator still guards the whole question before returning it,
-so speaking the text while it is still being generated also needs the guard to run on each sentence before that sentence
-goes to the voice.
+**Spoken as it is written (GAD-T495).** After a spoken answer the examiner starts saying the next question while the rest of it
+is still being written. The path, step by step:
+
+1. The answer comes in (`ExamRoom.TakeVoiceAnswerAsync`, the commit time is noted). VoiceRoom opens a `QuestionVoiceStream`
+   (`Gadfly.Server/Voice/QuestionVoiceStreams.cs`) for the student's own session and the exam room makes it the step's
+   `QuestionSpeech` (an ambient `IQuestionSpeech`, `Gadfly/Engine/QuestionSpeech.cs`) around `SessionOrchestrator.AnswerAsync`.
+   Nothing else has one: the CLI, reflection runs, tests and a speculative prefetch (GAD-T497, on its own background task) get
+   the whole question at once, as before. None is opened without the talking head, for a pending request, or when the voice's
+   output format is not PCM.
+2. The fast model's reply streams (`ClaudeStreamingLiveTurnModel`: the Anthropic Messages API with `stream: true`, read as
+   server-sent events, with the key Legion uses from MindAttic Vault, no `temperature` on the Claude 5 line and thinking turned
+   off on Sonnet/Haiku 5, metered as `live-turn` with the provider's own token counts and timed like the one-shot call;
+   MindAttic.Legion has no streaming call, so other providers still give the reply in one piece, and `Gadfly:LiveTurn:Stream=false`
+   keeps Claude on Legion's one-shot call too). Mock mode streams the mock's template reply a word at a time.
+3. `QuestionGenerator` cleans the reply as it arrives (the first line only, no label or wrapping quotes, as `Clean` does) and
+   splits it into sentences (`SentenceSplitter`: not on "e.g.", "Dr." or "3.5"). Sentences are grouped into parts; the first part
+   has at least four words, so a lone "Okay." waits for the next sentence.
+4. Each part is checked by the same one-word leak guard on the same model, given the dialogue so far and **everything the
+   student would have heard up to and including that part**: part 1, then parts 1 and 2, and so on, the last check being the
+   whole question, the same check as before streaming. A question's last sentence is usually the real question, and the guard
+   always judges it with the sentences before it and the conversation. Guards run while the model keeps writing; parts are
+   handed to the voice strictly in order, each only after its own guard said SAFE. A part that talks about "the student" or
+   asks about the student's own thought process (GAD-T445) is never said either.
+5. The first part that leaks, is undecided (fail closed, GAD-T92) or is unusable stops the reply: the model is cut off and
+   nothing after it is said. If nothing was said yet, the question is redrafted once and then falls back, exactly as before. If
+   something was said already, the plain fallback question for the move is said after it. The question recorded is always
+   exactly what she said (the parts and any fallback, joined), so the transcript, the record and Repeat the question match what
+   the student heard. If the fast model fails before anything was said, the panel drafts that attempt as before; after, the
+   fallback question follows what was said.
+6. Each part is synthesized as soon as it is safe, one ElevenLabs with-timestamps request per part (the same HTTP client and
+   mock handler as every line, so mock mode bills nothing), so the next part's audio is usually ready while the previous one
+   plays. The library's WebSocket stream-input session was not used: it bypasses the mock handler and the request timing.
+7. On the first part the browser is told (`speakStream`). It plays the stream through her own avatar hub connection as one
+   utterance: it calls the hub's `Speak` with the stream's token, which `VoiceHubFilter` hands to `QuestionVoiceStreams.Play`
+   instead of the library (only a stream of this student's, once). The parts go out on the library's own events (`speechStart`,
+   `speechChunk`, `speechEnd`), each part's word timings offset by the audio sent before it, so the lip-sync and the word-lit
+   caption run on as for one sentence; a `questionText` event adds each part's words to the caption (`presenter.append`) when
+   that part is safe. If the next part is not ready when the audio already sent is about to run out, 200 ms of silence is sent
+   at a time, so the player never runs dry (it would end the utterance) and the timings stay true. A stretch of more than 30 s
+   with no next part gives up, and her voice failing at any point (no sound in 9 s, an error, a refused stream) has the
+   browser read the whole question itself once the step shows it, as for any question.
+8. When the step returns, the page shows the question as usual; VoiceRoom sees it is the one already being spoken
+   (`streamDone`) and does not start it again. Any other `Speak` (Repeat the question, a filler) or a `Stop` ends the stream.
+
+Expected time to her first word: the fast model's first sentence (roughly its time to first token plus a sentence of output,
+about 1 to 1.5 s on Claude Sonnet 5), one guard call on that sentence (about 0.5 to 1 s), and ElevenLabs' first audio byte
+(about 0.2 to 0.4 s with `eleven_flash_v2_5`): about 2 to 3 s after the answer is in, instead of waiting for the whole draft,
+its guard, the step's save and the browser's own Speak round trip. The later parts' drafting, guards and synthesis run while
+she speaks. Measured per turn in `ApiCallTimings`, from the answer's commit: `voice.question.firstPart` (the first part
+guarded), `voice.question.firstAudio` (its first audio on the server) and `voice.question.firstAudioSent` (the first audio sent
+to the browser), plus `voice.question.played` for the whole utterance and the usual `tts.elevenlabs*` rows per part.
+Costs: one guard call per part instead of one per question (questions are usually one to three parts), and synthesis of a part
+the student never hears only if the stream is stopped.
 
 **Departure from the blueprint.** ElenchusAtScale has the multi-family panel word the questions and vote on the leak guard.
 The owner moved both onto one model for conversational latency (docs/research/blueprint-gap-analysis.md, owner decision 7),
@@ -458,6 +507,7 @@ pending that library change.
 | `Gadfly:Voice:EndOfAnswerMaxSeconds` | Longest the silence may adapt to for a student who pauses long (up to 30, default 12). Both are multiplied by the extra-time accommodation. |
 | `Gadfly:Voice:EndOfAnswerCompleteSeconds` | The shorter silence that ends an answer whose last words are a finished sentence (1 to the floor, default 2; GAD-T498). Multiplied by the extra-time accommodation. |
 | `Gadfly:Voice:SpeechHangoverMs` | Silence after which the browser commits one stretch of speech to the recognizer (300 to 2000, default 700; GAD-T498). |
+| `Gadfly:LiveTurn:Stream` | `false` keeps Claude's live turn on Legion's one-shot call, so questions are spoken whole instead of as they are written (GAD-T495). Default on. |
 | `Gadfly:Voice:BackchannelMs` | The listening "Mm-hm." after a finished sentence and this much silence, without ending the turn (0 = off, the default; else 300 to 3000; GAD-T496). |
 | `MindAttic:SpeechRecognition:Provider` | Live only: `Fallback` (default in live since GAD-T357: ElevenLabs Scribe, then OpenAI Whisper), or pin to `ElevenLabs` or `OpenAI` alone. |
 | `MindAttic:Avatar:ElevenLabs:VoiceId` | Live only, required (without it voice stays off). |

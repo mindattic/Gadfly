@@ -1,7 +1,8 @@
 // The examiner's delivery (GAD-T303): everything about how she looks and sounds while she speaks that the avatar library
 // (<ma-avatar>, MindAttic.Avatar) does not do itself. voice-room.js owns the exam flow and calls into this module; this module owns:
 //
-//   - Word-synced captions: the whole question is shown at once, dimmed, and each word lights up as she says it. Timed from the
+//   - Word-synced captions: the whole question is shown at once, dimmed, and each word lights up as she says it (a question spoken
+//     as it is written, GAD-T495, grows part by part: each part is shown when it is safe to say). Timed from the
 //     provider's own word timings (ElevenLabs character alignment, assembled into words by the library), counted from the moment
 //     her audio actually starts, on a clock that stops while she is paused.
 //   - Speaking style: a fixed server-side style per kind of question (Voice/ExaminerStyle.cs) played as a small head tilt and brow
@@ -75,6 +76,11 @@ export function createPresenter(avatar, stage, caption, cfg, onPortrait) {
     return {
         /** A new utterance is about to be asked: show its words dimmed and set her speaking style. */
         prepare: (text, style) => prepare(p, text, style),
+        /**
+         * More of a question spoken as it is written (GAD-T495): its words join the caption, dimmed, after those already shown, and
+         * light as she says them like the rest (the word timings keep counting from the start of the whole question).
+         */
+        append: (text) => appendCaption(p, text),
         /** Word timings from the hub (`[{ word, startMs, durationMs }]`, ms from the start of the utterance). */
         words: (words) => addWords(p, words),
         /** Her audio has actually started: the caption and mouth clock starts now. */
@@ -121,6 +127,24 @@ function renderCaption(p, text) {
         el.appendChild(s);
         p.spans.push(s);
     });
+}
+
+function appendCaption(p, text) {
+    const el = p.caption;
+    const tokens = (text || "").split(/\s+/).filter(Boolean);
+    if (!tokens.length) return;
+    if (el && el.dataset.timed !== "true") { el.replaceChildren(); el.dataset.timed = "true"; p.tokens = []; p.spans = []; }
+    for (const t of tokens) {
+        p.tokens.push(t);
+        if (!el) continue;
+        if (p.spans.length > 0) el.appendChild(document.createTextNode(" "));
+        const s = document.createElement("span");
+        s.className = "voice-word";
+        s.textContent = t;
+        el.appendChild(s);
+        p.spans.push(s);
+    }
+    if (p.clock.running) loop(p);
 }
 
 function plainCaption(p, text) {

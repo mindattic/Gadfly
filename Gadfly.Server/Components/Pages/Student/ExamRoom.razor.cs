@@ -232,6 +232,9 @@ public partial class ExamRoom
 
     private async Task<bool> TakeVoiceAnswerAsync(VoiceAnswerPayload payload)
     {
+        // When the answer came in: the next question's spoken-as-written timings (GAD-T495) count the student's wait from here.
+        var committedAt = System.Diagnostics.Stopwatch.GetTimestamp();
+        var committedAtUtc = Clock.GetUtcNow();
         if (busy || phase != Phase.Answering || step is null || !VoiceCanAnswer) return false;
         // Meant for another question (GAD-T321): never the answer to this one.
         if (payload.Turn is { } turn && turn != step.TurnIndex) return false;
@@ -261,7 +264,13 @@ public partial class ExamRoom
                 answerStartedAt = answer.StartedAt;
                 // Refused by the server (a staff pause that landed meanwhile, say): the page shows why, and the browser keeps the words.
                 // A step that failed outright is still taken: the page's Try again resends this answer (pendingVoiceAnswer).
-                return await RunStepAsync(ThinkingAbout.Answer, () => Sessions.AnswerAsync(org, SessionId, user, answer, expectedTurn: payload.Turn));
+                // The next question is spoken as it is written (GAD-T495): the step's question generator hands each guarded part to the
+                // examiner's voice while it writes the rest. Ambient for this step only; null speaks the question whole, as before.
+                var speech = voiceRoom?.OpenQuestionSpeech(payload.Turn ?? step.TurnIndex, committedAt, committedAtUtc);
+                return await RunStepAsync(ThinkingAbout.Answer, () =>
+                {
+                    using (QuestionSpeech.Begin(speech)) return Sessions.AnswerAsync(org, SessionId, user, answer, expectedTurn: payload.Turn);
+                });
             case { Kind: ResponseLedger.MeaningKind } request:
                 await ClarifyAsync(request, text);
                 return true;

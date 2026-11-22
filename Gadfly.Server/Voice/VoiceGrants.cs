@@ -166,6 +166,13 @@ public sealed class VoiceGrants(TimeProvider clock)
         lock (a) a.VoiceId = string.IsNullOrWhiteSpace(voiceId) ? null : voiceId.Trim();
     }
 
+    /// <summary>The examiner's voice for this student's session grant (GAD-T475); null for the platform voice or no grant (GAD-T495).</summary>
+    public string? VoiceOf(Guid user, Guid session)
+    {
+        if (!_armed.TryGetValue((user, session), out var a)) return null;
+        lock (a) return a.Until > clock.GetUtcNow() ? a.VoiceId : null;
+    }
+
     /// <summary>
     /// The voice to say <paramref name="text"/> in: that of the student's live grant that offered it (the most recently armed one
     /// when several did), or null for the platform voice. <see cref="VoiceHubFilter"/> puts this into every <c>Speak</c> call.

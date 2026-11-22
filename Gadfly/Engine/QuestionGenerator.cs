@@ -134,8 +134,37 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             };
             previous = false;
             introspective = false;
+            LiveDraft? single = null;
+            // Spoken as it is written (GAD-T495): with a voice waiting for this question, the live model's reply is split into sentences
+            // and each part is guarded, then said, while the rest is still being written. Nothing is said before its guard passes.
+            if (LiveModel is { } streamer && QuestionSpeech.Current is { } speech)
+            {
+                var streamed = await StreamDraftAsync(streamer, ask, r, dialogue, speech, ct);
+                switch (streamed)
+                {
+                    case { Question: { } spokenQuestion }:
+                        LastOutcome = streamed.Outcome + (attempt == 0 ? "" : " (redrafted)");
+                        LastGuard = streamed.Guard;
+                        LastAuthor = new QuestionAuthorship(QuestionAuthorship.LiveModelDraft, [streamer.ProviderId], [streamer.Model]);
+                        return spokenQuestion;
+                    case { Failed: true }:
+                        single = new LiveDraft(streamed.Outcome, true);   // the panel drafts this attempt, as when the one-shot call fails
+                        break;
+                    default:
+                        // Nothing was said: the first part leaked, was undecided, was not a usable question, or the reply was empty.
+                        reasons.Add(streamed.Outcome);
+                        introspective = streamed.Introspective;
+                        if (streamed.Verdict is not false)
+                        {
+                            undecided = streamed.Verdict is null;
+                            guarded = true;
+                            previous = streamed.Verdict;
+                        }
+                        continue;
+                }
+            }
             // The live turn's one fast model words the question and guards it (GAD-T494); the panel only when none is set or it failed.
-            var single = LiveModel is { } live ? await LiveDraftAsync(live, ask, ct) : null;
+            if (single is null && LiveModel is { } live) single = await LiveDraftAsync(live, ask, ct);
             QuestionAuthorship author;
             string question;
             if (single is { Failed: false } drafted)
@@ -303,6 +332,238 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
             return new LiveDraft($"{ex.GetType().Name}: {ex.Message}", true);
+        }
+    }
+
+    /// <summary>The fewest words the first spoken part of a question may have (the same floor as <see cref="Usable"/>); shorter sentences wait for the next.</summary>
+    public const int FirstPartMinWords = 4;
+
+    /// <summary>
+    /// What one streamed attempt came to (GAD-T495). <see cref="Question"/> is set when something was said (the parts, plus the plain
+    /// fallback question when a later part failed); otherwise nothing was said and the caller redrafts or falls back as for any draft.
+    /// </summary>
+    private sealed record Streamed(string? Question, string Outcome, LeakGuardResult Guard = LeakGuardResult.Skipped, bool Failed = false,
+        bool? Verdict = false, bool Introspective = false);
+
+    /// <summary>
+    /// One draft from the live model, spoken while it is written (GAD-T495). The reply is cleaned as <see cref="Clean"/> would (the
+    /// first line only, without a label or wrapping quotes) and split into sentences as it arrives. Sentences are grouped into parts
+    /// (the first part has at least <see cref="FirstPartMinWords"/> words), and every part is checked by the leak guard together with
+    /// all the parts before it and the dialogue so far, so the guard always judges everything the student would have heard, ending with
+    /// the whole question, the same check as before. Guards run while the model keeps writing; parts are said strictly in order, each
+    /// only once its own guard said SAFE. The first part that leaks, is undecided, or is not usable (talks about "the student", asks
+    /// about the student's own thought process) stops the reply: nothing after it is said. If nothing was said yet, the caller redrafts
+    /// as for a one-shot draft; if something was, the plain fallback question for the move is said after it, and the question recorded
+    /// is exactly what was said. A provider failure before anything was said hands the attempt to the panel.
+    /// </summary>
+    private async Task<Streamed> StreamDraftAsync(ILiveTurnModel live, string prompt, QuestionRequest r, string dialogue, IQuestionSpeech speech,
+        CancellationToken ct)
+    {
+        var guardOn = !string.IsNullOrWhiteSpace(r.RubricForGuard);
+        var move = r.Decision.Move;
+        using var stop = CancellationTokenSource.CreateLinkedTokenSource(ct);     // the model's reply
+        using var guards = CancellationTokenSource.CreateLinkedTokenSource(ct);   // the parts' guards, stopped once a part fails
+        var reply = new ReplyCleaner();
+        var building = new List<string>();          // sentences not yet formed into a part
+        var formed = new List<string>();            // every part formed so far, in order
+        var verdicts = new List<Task<bool?>>();     // each formed part's guard
+        var spoken = new List<string>();            // the parts said
+        string? stopReason = null;
+        bool? stopVerdict = false;
+        var stopIntrospective = false;
+        string? failure = null;
+
+        void Form(bool final)
+        {
+            if (stopReason is not null || building.Count == 0) return;
+            var text = string.Join(" ", building);
+            var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+            if (formed.Count == 0 && words < FirstPartMinWords && !final) return;   // too short to start on: wait for the next sentence
+            building.Clear();
+            if (PartProblem(text, formed.Count == 0) is { } problem)
+            {
+                stopReason = problem;
+                stopIntrospective = IsIntrospective(text);
+                return;
+            }
+            formed.Add(text);
+            var heard = string.Join(" ", formed);
+            verdicts.Add(guardOn ? CheckLeakLiveAsync(heard, r.RubricForGuard, dialogue, guards.Token) : Task.FromResult<bool?>(false));
+        }
+
+        // Says every part whose guard has finished, in order; with wait, waits for each. False once a part stopped the reply.
+        async Task<bool> SayReadyAsync(bool wait)
+        {
+            while (spoken.Count < verdicts.Count)
+            {
+                var guard = verdicts[spoken.Count];
+                if (!wait && !guard.IsCompleted) return true;
+                var verdict = await guard;
+                if (verdict == false)
+                {
+                    speech.Say(formed[spoken.Count], move);
+                    spoken.Add(formed[spoken.Count]);
+                    continue;
+                }
+                stopReason = verdict == true ? $"leaked: \"{string.Join(" ", formed.Take(spoken.Count + 1))}\"" : "leak guard undecided";
+                stopVerdict = verdict;
+                return false;
+            }
+            return stopReason is null;
+        }
+
+        try
+        {
+            var e = live.StreamAsync(LiveSystemPrompt, prompt, maxTokens: 300, temperature: 0.4, ct: stop.Token).GetAsyncEnumerator(stop.Token);
+            try
+            {
+                while (stopReason is null && !reply.LineEnded)
+                {
+                    bool more;
+                    try
+                    {
+                        more = await e.MoveNextAsync();
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+                    {
+                        failure = $"{ex.GetType().Name}: {ex.Message}";
+                        break;
+                    }
+                    if (!more) break;
+                    building.AddRange(reply.Add(e.Current));
+                    Form(final: false);
+                    if (!await SayReadyAsync(wait: false)) break;
+                }
+            }
+            finally
+            {
+                stop.Cancel();   // a reply cut short (a stop, a second line) is not read any further
+                try { await e.DisposeAsync(); } catch (Exception) { /* the provider's own teardown */ }
+            }
+            if (failure is null && stopReason is null)
+            {
+                building.AddRange(reply.Finish());
+                Form(final: true);
+            }
+            // A provider failure says nothing more (the panel takes over, or the fallback follows what was said); otherwise every part
+            // formed is said in order as its guard passes, up to the first one that does not.
+            if (failure is null) await SayReadyAsync(wait: true);
+        }
+        catch (Exception) when (spoken.Count > 0)
+        {
+            speech.Abandon(ct.IsCancellationRequested ? "cancelled" : "failed");
+            throw;
+        }
+        finally
+        {
+            guards.Cancel();   // guards of parts that will never be said
+            foreach (var v in verdicts) _ = v.ContinueWith(static t => _ = t.Exception, TaskScheduler.Default);
+        }
+
+        if (spoken.Count == 0)
+        {
+            if (failure is not null) return new Streamed(null, failure, Failed: true);
+            return stopReason is not null
+                ? new Streamed(null, stopReason, Verdict: stopVerdict, Introspective: stopIntrospective)
+                : new Streamed(null, $"empty draft ({live.ProviderId})");
+        }
+        var reason = stopReason ?? (failure is not null ? $"live model failed mid-question ({failure})" : null);
+        if (reason is null)
+        {
+            var whole = string.Join(" ", spoken);
+            speech.Finish(whole);
+            return new Streamed(whole, $"drafted (spoken as it was written, {spoken.Count} part{(spoken.Count == 1 ? "" : "s")})",
+                guardOn ? LeakGuardResult.Safe : LeakGuardResult.Skipped);
+        }
+        // Something was said already: what failed is never said, and the plain question for the move follows what was.
+        var fallback = Fallback(move, r.ConceptTitle, r.RelatedConceptTitle);
+        speech.Say(fallback, move);
+        var question = string.Join(" ", spoken.Append(fallback));
+        speech.Finish(question);
+        var guardResult = stopVerdict == true ? LeakGuardResult.LeakedReplaced : stopVerdict is null ? LeakGuardResult.UndecidedReplaced
+            : guardOn ? LeakGuardResult.Safe : LeakGuardResult.Skipped;
+        return new Streamed(question, $"spoke {spoken.Count} part(s) as written, then the fallback question: {reason}", guardResult);
+    }
+
+    /// <summary>Why a part of a streamed question can't be said, or null when it can (the per-part form of <see cref="Usable"/>).</summary>
+    internal static string? PartProblem(string part, bool first)
+    {
+        if (string.IsNullOrWhiteSpace(part)) return "empty draft";
+        if (first && part.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length < FirstPartMinWords) return "empty draft (too short)";
+        if (first && Enum.TryParse<MoveKind>(part.Trim('.', '?', ' '), ignoreCase: true, out _)) return "empty draft (a move name)";
+        if (part.Contains("the student", StringComparison.OrdinalIgnoreCase)) return "draft talked about the student instead of to them";
+        if (IsIntrospective(part)) return "draft asked about the student's own thought process";
+        return null;
+    }
+
+    /// <summary>
+    /// Cleans a reply as it streams, the way <see cref="Clean"/> cleans a whole one (GAD-T495): the first non-empty line only, without
+    /// a leading label ("Question:", "Examiner:", "Q:") or wrapping quotes and asterisks; returns its whole sentences as they complete.
+    /// </summary>
+    internal sealed class ReplyCleaner
+    {
+        private const int DecideAfter = 12;   // characters seen before a leading label can be ruled out
+        private readonly System.Text.StringBuilder _head = new();
+        private readonly SentenceSplitter _splitter = new();
+        private bool _started, _wrapped;
+
+        /// <summary>True once the first line has ended: the rest of the reply is not part of the question.</summary>
+        public bool LineEnded { get; private set; }
+
+        public IReadOnlyList<string> Add(string? delta)
+        {
+            if (LineEnded || string.IsNullOrEmpty(delta)) return [];
+            string text;
+            if (!_started)
+            {
+                _head.Append(delta);
+                var head = _head.ToString().TrimStart();
+                if (head.Length < DecideAfter && !head.Contains('\n')) return [];
+                text = Start(head);
+            }
+            else text = delta;
+            return Take(text);
+        }
+
+        /// <summary>The reply has ended: the sentences still held, the last one included.</summary>
+        public IReadOnlyList<string> Finish()
+        {
+            var done = new List<string>();
+            if (!_started && !LineEnded) done.AddRange(Take(Start(_head.ToString().TrimStart())));
+            var rest = Tidy(_splitter.Flush());
+            if (rest.Length > 0) done.Add(rest);
+            return done;
+        }
+
+        private string Start(string head)
+        {
+            _started = true;
+            foreach (var label in new[] { "Question:", "Examiner:", "Q:" })
+                if (head.StartsWith(label, StringComparison.OrdinalIgnoreCase)) head = head[label.Length..].TrimStart();
+            var unwrapped = head.TrimStart('"', '“', '*');
+            _wrapped = unwrapped.Length < head.Length && head[0] != '*';
+            return unwrapped;
+        }
+
+        private IReadOnlyList<string> Take(string text)
+        {
+            var nl = text.IndexOf('\n');
+            if (nl >= 0)
+            {
+                text = text[..nl];
+                LineEnded = true;
+            }
+            var sentences = _splitter.Add(text).Select(Tidy).Where(s => s.Length > 0).ToList();
+            if (LineEnded && Tidy(_splitter.Flush()) is { Length: > 0 } last) sentences.Add(last);
+            return sentences;
+        }
+
+        private string Tidy(string sentence)
+        {
+            var s = sentence.Trim().Trim('*').Trim();
+            // The closing quote of a reply wrapped in quotes (an odd quote left at the end of a sentence).
+            if (_wrapped && s.Length > 0 && s[^1] is '"' or '”' && s.Count(c => c is '"' or '“' or '”') % 2 == 1) s = s[..^1].TrimEnd();
+            return s;
         }
     }
 

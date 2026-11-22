@@ -100,6 +100,7 @@ export function init(dotnet, cfg) {
         hubUp: true, replayQueue: [],   // reconnect buffering (GAD-T360): audio and commits sent while the hub is down are replayed, in order
         commitSentAt: [], latenciesMs: [],   // recognizer latency (GAD-T361): commit-to-final time, kept for the next answer's diagnostics
         displayPartial: "", displayShrinkTimer: null,   // the stabilized partial shown to the student (GAD-T360): never flickers down and up
+        stream: null,   // the question being spoken as it is written (GAD-T495): { token, text } until the step shows it
         partialTimer: null, partialDue: false, partialAt: 0, partialSent: "",   // the running answer for the prefetch (GAD-T497)
         sessionId: cfg.sessionId || null, turn: null, draftChecked: false, recovered: false,   // draft kept across a reload mid-answer (GAD-T306)
     };
@@ -282,6 +283,8 @@ async function start() {
         s.avatarPkg = pkg;
         s.avatarConn.on("speechStart", (m) => { s.utterId = m && m.id; });
         s.avatarConn.on("speechChunk", (m) => { if (m && m.id === s.utterId && s.ours) s.presenter && s.presenter.words(m.words); });
+        // A question spoken as it is written (GAD-T495): each part's words join the caption when that part is safe to say.
+        s.avatarConn.on("questionText", (m) => { if (m && m.id === s.utterId && s.ours && s.presenter && s.presenter.append) s.presenter.append(m.text); });
         // A dropped connection to the examiner's own hub (previously not even noticed) retries a few times on its own
         // before this room gives up and asks the student to press Try again, the same as a dropped microphone or
         // camera (GAD-T306): without this, a lost connection here just left the examiner silent and unresponsive.
@@ -485,8 +488,38 @@ function unwatchVisibility(s) {
  * student pressed Repeat the question (GAD-T474).
  */
 export function speak(what, cacheable, style, turn, repeat) {
+    begin(what, cacheable, style, turn, repeat, null);
+}
+
+/**
+ * The next question is being spoken as it is written (GAD-T495): the server has the first part, guarded, and is synthesizing it. She
+ * plays it as one utterance through her hub (the token names the server's stream; the hub speaks only what the server streamed for
+ * this student), the caption growing part by part. Everything else is as for speak(): it waits for a filler line or remark, closes
+ * the microphone, and opens it once she has finished. <turn> is the question's expected turn; streamDone() confirms it.
+ */
+export function speakStream(token, style, turn) {
+    if (!token) return;
+    begin("", false, style, turn, false, { token, text: null });
+}
+
+/**
+ * The step that wrote the streamed question has shown it (GAD-T495): <text> is the whole question, <turn> its turn. True when this
+ * room is (or was) playing that stream, so it is not spoken again; if her voice failed, the browser reads <text>. False otherwise
+ * (the page then speaks the question as usual).
+ */
+export function streamDone(token, text, turn) {
+    const s = S;
+    const st = s && s.stream;
+    if (!s || !s.running || !st || st.token !== token) return false;
+    st.text = text || "";
+    if (turn !== undefined && turn !== null) s.turn = turn;
+    return true;
+}
+
+function begin(what, cacheable, style, turn, repeat, stream) {
     const s = S;
     if (!s || !s.running) return;
+    s.stream = stream;
     cancelFill(s);   // the next question is here: no more filler for this wait (GAD-T290)
     clearCue();
     s.cutWatch = null;   // the next question: speech from here on is not a cut-off of the last answer (GAD-T462)
@@ -557,7 +590,7 @@ export function speak(what, cacheable, style, turn, repeat) {
         if (S !== s || s.speakToken !== token) return;   // replaced meanwhile: the newer call finishes the turn
         if (!s.running) { done(); return; }
         if (s.presenter) { s.presenter.idle(); s.presenter.prepare(what, style); } else showCaption(what);
-        void deliver(s, token, what, !!cacheable).finally(done);
+        void (stream ? deliverStream(s, token, stream) : deliver(s, token, what, !!cacheable)).finally(done);
     });
 }
 
@@ -591,6 +624,44 @@ async function deliver(s, token, what, cacheable) {
         viaBrowser = true;
     }
     if (!mine()) return;
+    await readWithBrowser(s, mine, what);
+}
+
+/**
+ * Plays a question spoken as it is written (GAD-T495) and resolves when it is over. The same bounds and fallback as deliver(): no
+ * sound within a few seconds, an error from the hub or a refused stream means her voice failed, and the browser reads the whole
+ * question instead once the step has shown it (streamDone).
+ */
+async function deliverStream(s, token, stream) {
+    const mine = () => S === s && s.speakToken === token;
+    if (s.avatarOk && s.speech) {
+        const ours = s.ours = { started: false, failed: false };
+        if (s.avatar) s.avatar.state = "idle";
+        try {
+            const finished = s.speech.speak(stream.token, undefined, false).catch(() => { ours.failed = true; });
+            await visibleWait(9000, () => ours.started || ours.failed || !mine());
+            if (mine() && !ours.started && !ours.failed) { ours.failed = true; try { await s.speech.stop(); } catch { } }
+            if (!ours.failed) {
+                let over = false;
+                void finished.then(() => { over = true; });
+                // Its length isn't known up front: bounded by the server's own wait for a part, plus a long question's playing time.
+                await visibleWait(90000, () => over || !mine());
+            }
+        } catch {
+            ours.failed = true;
+        }
+        if (s.ours === ours) s.ours = null;
+        if (!mine()) return;
+        if (!ours.failed) { voiceSource(s, "provider"); s.presenter && s.presenter.ended(); return; }
+    }
+    // Her voice failed: the browser reads the whole question once the step has shown it.
+    await visibleWait(30000, () => stream.text !== null || !mine());
+    if (!mine()) return;
+    await readWithBrowser(s, mine, stream.text || "");
+}
+
+/** The browser's own speech reads <what> (her voice failed or the talking head is off); with no browser speech it stays on screen. */
+async function readWithBrowser(s, mine, what) {
     const spoke = s.presenter ? await s.presenter.speakWithBrowser(what) : false;
     // The provider failed but her picture is up: a short note says why she sounds different (GAD-T328). With no talking head at
     // all, the exam room's own note already says the browser reads the questions.

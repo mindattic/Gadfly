@@ -12,6 +12,7 @@
 @inject ExaminerSpeechWarmup Warmup
 @inject Gadfly.Server.Diagnostics.VoiceRecognitionTimingRecorder RecognitionTimings
 @inject Gadfly.Server.Sessions.SessionOrchestrator Sessions
+@inject QuestionVoiceStreams QuestionStreams
 
 @* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
@@ -224,6 +225,10 @@
     private bool browserVoice;
     private string? spokenKey;
     private bool lastAllowed, lastHeld;
+    /// <summary>The talking head could not start: questions are read by the browser's speech, so none is streamed (GAD-T495).</summary>
+    private bool noTalkingHead;
+    /// <summary>The next question, being spoken as it is written (GAD-T495), until the step that wrote it shows it here.</summary>
+    private QuestionVoiceStream? questionStream;
     /// <summary>The last <see cref="Pondering"/> sent to the browser, and the last filler line said (the next one differs).</summary>
     private bool pondered;
     private string? lastFiller;
@@ -505,7 +510,7 @@
                     AddLine(true, Prompt is { Length: > 0 } p ? p : Question ?? text, null);
                 }
                 await OnExaminerSpeaks.InvokeAsync();
-                await SpeakAsync(text);
+                if (!await FinishStreamAsync(text)) await SpeakAsync(text);
             }
             if (spoke || CanAnswer != lastAllowed || HeldByStaff != lastHeld)
             {
@@ -556,6 +561,51 @@
         await module!.InvokeVoidAsync("nextAcknowledgement", stop.Token, ack);
         if (Settings.BackchannelMs > 0)
             await module!.InvokeVoidAsync("backchannels", stop.Token, ExaminerFiller.Backchannels.Where(t => Grants.Offer(user, SessionId, t)).ToArray());
+    }
+
+    /// <summary>
+    /// The next question will be spoken as it is written (GAD-T495): a stream the question generator feeds, part by part, once each
+    /// part has passed the leak guard (the exam room makes it the step's <see cref="Gadfly.Engine.QuestionSpeech"/>). The browser is
+    /// told to play it as soon as the first part is safe. Null when it can't be streamed here (the examiner not running, no talking
+    /// head, a voice format that isn't PCM, a request pending): the question is then spoken whole, as before.
+    /// <paramref name="committedAt"/> is when the answer came in, so the stream's timings measure the student's wait.
+    /// </summary>
+    public Gadfly.Engine.IQuestionSpeech? OpenQuestionSpeech(int? answeredTurn, long committedAt, DateTimeOffset committedAtUtc)
+    {
+        if (module is null || state != VoiceState.On || noTalkingHead || !armed || Prompt is { Length: > 0 } || QuestionStreams.SampleRate is null)
+            return null;
+        var stream = QuestionStreams.Open(user, org, SessionId, Grants.VoiceOf(user, SessionId), committedAt, committedAtUtc);
+        var nextTurn = answeredTurn is { } t ? t + 1 : (int?)null;
+        questionStream = stream;
+        stream.Started += started => _ = InvokeAsync(async () =>
+        {
+            if (module is null || state != VoiceState.On || questionStream != started) return;
+            try
+            {
+                await module.InvokeVoidAsync("speakStream", stop.Token, QuestionVoiceStreams.Token(started),
+                    ExaminerStyle.For(started.Move ?? Gadfly.Engine.MoveKind.Elicit), nextTurn);
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
+            {
+                Log.LogDebug(ex, "The streamed question could not be started in the browser.");
+            }
+        });
+        return stream;
+    }
+
+    /// <summary>
+    /// The question the step wrote is the one already being spoken as it was written (GAD-T495): the browser keeps playing it (or reads
+    /// it itself if her voice failed) instead of starting it again. False when it isn't, and the question is spoken whole.
+    /// </summary>
+    private async Task<bool> FinishStreamAsync(string text)
+    {
+        var stream = questionStream;
+        questionStream = null;
+        if (stream is not { HasStarted: true, Question: { } said } || Prompt is { Length: > 0 }
+            || !string.Equals(said.Trim(), text.Trim(), StringComparison.Ordinal)) return false;
+        // Offered like any question, so Repeat the question can say it again through the hub.
+        Grants.Offer(user, SessionId, text);
+        return await module!.InvokeAsync<bool>("streamDone", stop.Token, QuestionVoiceStreams.Token(stream), text, TurnIndex);
     }
 
     private async Task SpeakAsync(string text, bool repeat = false)
@@ -618,6 +668,7 @@
     [JSInvokable]
     public Task OnAvatarMode(string mode, string reason) => InvokeAsync(() =>
     {
+        noTalkingHead = mode == "none";
         avatarNote = mode switch
         {
             "portrait" => "Showing the examiner's picture instead of the 3D head" + (reason switch

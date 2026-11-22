@@ -121,8 +121,12 @@ public static class PanelServiceCollectionExtensions
         // The live turn's one fast model (GAD-T494): the next question and its leak guard, off the multi-model panel.
         var liveProvider = LiveTurnSettings.Provider(configuration[LiveTurnSettings.ProviderSetting]);
         var liveModel = LiveTurnSettings.Model(liveProvider, configuration[LiveTurnSettings.ModelSetting], claudeModel);
+        // On Claude the reply streams (GAD-T495), so the examiner can start speaking the question while it is written;
+        // Gadfly:LiveTurn:Stream=false keeps the one-shot Legion call.
+        var stream = liveProvider == LiveTurnSettings.DefaultProvider && !string.Equals(configuration[LiveTurnSettings.StreamSetting], "false", StringComparison.OrdinalIgnoreCase);
         services.AddSingleton<ILiveTurnModel>(sp => new SelectedLiveTurnModel(sp.GetRequiredService<SelectedPanel>(),
-            new LegionLiveTurnModel(sp.GetRequiredService<LegionVotingClient>(), liveProvider, liveModel), new MockLiveTurnModel()));
+            stream ? new ClaudeStreamingLiveTurnModel(sp.GetRequiredService<LegionVotingClient>(), liveModel)
+                : new LegionLiveTurnModel(sp.GetRequiredService<LegionVotingClient>(), liveProvider, liveModel), new MockLiveTurnModel()));
         return services;
     }
 }
