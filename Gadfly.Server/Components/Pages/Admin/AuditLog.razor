@@ -72,7 +72,7 @@ else
                 }
                 @foreach (var a in choices?.Actions ?? [])
                 {
-                    <option value="@a">@a</option>
+                    <option value="@a">@AuditActionLabels.Option(a)</option>
                 }
             </select>
         </label>
@@ -139,7 +139,7 @@ else
                     <tr class="@(detail?.Row.Id == r.Id ? "al-open" : null)">
                         <td class="al-when">@r.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
                         <td>@r.ActorName @if (r.ActorRole is not null) { <span class="hint">@r.ActorRole</span> }</td>
-                        <td><code>@r.Action</code> @if (r.IsRedacted) { <span class="al-redacted">Redacted</span> }</td>
+                        <td><code>@r.Action</code> @if (AuditActionLabels.For(r.Action) is { } label) { <span class="hint">@label</span> } @if (r.IsRedacted) { <span class="al-redacted">Redacted</span> }</td>
                         <td>@r.EntityType @if (r.EntityId is not null) { <span class="hint al-id">@Short(r.EntityId)</span> }</td>
                         <td class="al-reason">@Clip(r.Reason, 140)</td>
                         <td><button type="button" class="link" @onclick="() => OpenAsync(r.Id)">Details</button></td>
@@ -152,7 +152,7 @@ else
                                     <dl>
                                         <dt>Event</dt><dd>#@d.Row.Id at @d.Row.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
                                         <dt>Who</dt><dd>@d.Row.ActorName@(d.Row.ActorRole is null ? "" : $" ({d.Row.ActorRole})")@(d.Row.ActorUserId is { } u ? $" · {u}" : "")</dd>
-                                        <dt>Action</dt><dd><code>@d.Row.Action</code></dd>
+                                        <dt>Action</dt><dd><code>@d.Row.Action</code>@(AuditActionLabels.For(d.Row.Action) is { } dlabel ? $" ({dlabel})" : "")</dd>
                                         <dt>Record</dt><dd>@d.Row.EntityType @d.Row.EntityId</dd>
                                         @if (d.Row.SessionId is { } sid)
                                         {
