@@ -89,7 +89,7 @@ export function init(dotnet, cfg) {
         selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null, face: null,
         pauses: [], lastSpeechEndAt: null,   // the student's own mid-answer pauses, which the end-of-answer cue adapts to (GAD-T264)
         fill: null, fillPlaying: null,       // filling the wait while an answer is judged (GAD-T290): pending lines, the one being said
-        fillAmbience: null,                  // the quiet page-turn loop under the wait (GAD-T409)
+        fillAmbience: null,                  // the quiet typing loop under the wait (GAD-T409, typing since GAD-T502)
         ack: null, ackPlaying: null, ackEndedAt: null, ackDeferredAllowed: false,   // the acknowledgement as an answer goes in (GAD-T496)
         remarkOver: null, remarkEnded: null, // an eye-contact remark being said, which a question waits for (GAD-T472)
         acoustics: new VoiceAcoustics(),   // voice strain indicators (GAD-T232): summary numbers only, never audio
@@ -632,7 +632,7 @@ const FILL = { timeoutMs: 6000, retryMs: 500, gapMs: 8000, lateMs: 10000, afterA
  * againAfterMs. Nothing is said while the microphone is open, a question or remark is being spoken, or another line is still
  * playing: the attempt waits for that and is dropped once its moment has passed. The microphone gate stays closed
  * the whole time, so a line is never captured or transcribed into an answer, and the next question (speak()) cancels what is left.
- * A quiet page-turn loop (GAD-T409) runs alongside, under the filler line's own volume, so the wait never feels silent.
+ * A very quiet distant-typing loop (GAD-T409, GAD-T502) runs alongside, under the filler line's own volume, so the wait never feels silent.
  */
 export function fillWait(first, again, firstAfterMs, againAfterMs) {
     const s = S;
@@ -669,12 +669,12 @@ function cancelFill(s) {
     s.fill = null;
 }
 
-/** Page-turn/book-rustle ambience under the wait (GAD-T409), a CC0 clip (GAD-T408) alternated so a whole exam never repeats
+/** Soft distant-typing ambience under the wait (GAD-T409; typing instead of page turns since GAD-T502, a synthesized seamless 20 s loop) alternated so a whole exam never repeats
  * the same one twice running. A plain looping <audio>, well under the filler line's own volume, faded in and out so it is
  * never an abrupt start or cut and is always gone before the examiner's next question can be heard. */
 const FILL_AMBIENCE = {
-    sources: ["/sounds/page-turn-1.mp3", "/sounds/page-turn-2.mp3"],
-    gain: 0.12, fadeInMs: 200, fadeOutMs: 300,
+    sources: ["/sounds/typing-1.mp3", "/sounds/typing-2.mp3"],
+    gain: 0.06, fadeInMs: 200, fadeOutMs: 300,
 };
 let fillAmbienceNext = 0;
 
@@ -700,7 +700,7 @@ function stopFillAmbience(s) {
 /**
  * Ramps an <audio> element's volume toward target over ms, then calls done (shared by the wait ambience's fade in/out). Timer
  * steps, not animation frames (GAD-T316): a hidden tab runs no animation frames, so a fade-out begun there never reached its
- * pause() and the page-turn loop played on behind the next question until the tab was shown again.
+ * pause() and the ambience loop played on behind the next question until the tab was shown again.
  */
 function fadeVolume(audio, target, ms, done) {
     const from = audio.volume, startedAt = performance.now();

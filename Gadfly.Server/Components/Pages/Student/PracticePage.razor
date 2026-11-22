@@ -9,7 +9,7 @@
 
 @* "Meet your examiner" (GAD-T294): an ungraded practice interview any student can take from My exams at any time. It runs the
    real exam room's pieces (VoiceRoom: the talking examiner, captions, microphone, self-view, transcript, the judging-wait filler
-   and page-turn sound, the pause on a lost device; and the eye-contact check with its fade, PracticeGaze) against fixed, built-in
+   and typing sound, the pause on a lost device; and the eye-contact check with its fade, PracticeGaze) against fixed, built-in
    practice lines (Student/PracticeInterview.cs). Nothing is stored: no session, attempt, turn, grade, report, integrity note or
    audit row; the practice lives in this page's memory and is gone when it closes. The examiner's lines are fixed text, so a
    practice never calls the AI panel; in live mode it costs only her voice and the speech recognizer. *@
@@ -166,7 +166,7 @@
 
     /// <summary>
     /// A spoken answer, taken as heard as in an exam (GAD-T405): the examiner "thinks" for a moment (her filler line and the
-    /// page-turn sound, GAD-T290/GAD-T409), then moves to the next step. The words are only checked for "I don't know", then dropped.
+    /// typing sound, GAD-T290/GAD-T409/GAD-T502), then moves to the next step. The words are only checked for "I don't know", then dropped.
     /// </summary>
     /// <remarks>Returns whether the answer was taken (GAD-T473): not taken, the browser keeps the words and sends them again once
     /// an answer is wanted, or drops them when the practice has moved to another step.</remarks>
