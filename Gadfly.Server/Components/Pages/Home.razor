@@ -1,11 +1,20 @@
 @page "/"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout Gadfly.Server.Components.Pages.Site.HomeLayout
+@* Signed out: the public landing page in the site layout; signed in: the dashboard in the app shell (GAD-T308). Static
+   rendering, so a visitor at "/" never opens a Blazor circuit. *@
 @inject ITenantContext Tenant
 @inject NavigationManager Nav
 @inject IAuthorizationService Authz
 
 <PageTitle>Gadfly Exams</PageTitle>
 
-@if (toDashboard)
+@if (!signedIn)
+{
+    <Gadfly.Server.Components.Pages.Site.Landing />
+}
+else if (toDashboard)
 {
     <p class="hint">Opening your dashboard…</p>
 }
@@ -46,7 +55,7 @@ else
 @code {
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
-    private bool toDashboard;
+    private bool toDashboard, signedIn;
 
     private string Greeting => Tenant.Role switch
     {
@@ -61,8 +70,10 @@ else
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        if (AuthState is null || !Gadfly.Server.Admin.AdminArea.IsOrgAdmin(Tenant.Role)) return;
+        if (AuthState is null) return;
         var user = (await AuthState).User;
+        signedIn = user.Identity?.IsAuthenticated == true;
+        if (!signedIn || !Gadfly.Server.Admin.AdminArea.IsOrgAdmin(Tenant.Role)) return;
         if (!(await Authz.AuthorizeAsync(user, GadflyPolicies.OrgAdmin)).Succeeded) return;
         toDashboard = true;
         Nav.NavigateTo("admin", replace: true);

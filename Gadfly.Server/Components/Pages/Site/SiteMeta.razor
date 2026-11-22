@@ -1,0 +1,40 @@
+@* One page's title, description, canonical link and Open Graph / Twitter card tags (GAD-T308). *@
+@inject NavigationManager Nav
+
+<PageTitle>@FullTitle</PageTitle>
+<HeadContent>
+    <meta name="description" content="@Description" />
+    @if (!NoIndex)
+    {
+        <link rel="canonical" href="@Url" />
+    }
+    <link rel="apple-touch-icon" href="assets/site/apple-touch-icon.png" />
+    <meta property="og:site_name" content="Gadfly Exams" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="@FullTitle" />
+    <meta property="og:description" content="@Description" />
+    <meta property="og:url" content="@Url" />
+    <meta property="og:image" content="@Image" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Gadfly Exams: an engraving of a gadfly beside the words Oral exams that follow up on what the student said." />
+    <meta name="twitter:card" content="summary_large_image" />
+    @if (NoIndex)
+    {
+        <meta name="robots" content="noindex" />
+    }
+</HeadContent>
+
+@code {
+    /// <summary>The page's own title; " · Gadfly Exams" is added unless it is the home page's.</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter, EditorRequired] public string Description { get; set; } = "";
+    /// <summary>The page's path, e.g. "/pricing", for the canonical and og:url.</summary>
+    [Parameter] public string Path { get; set; } = "/";
+    [Parameter] public bool NoIndex { get; set; }
+
+    private string Base => Nav.BaseUri.TrimEnd('/');
+    private string FullTitle => Path == "/" ? Title : $"{Title} · Gadfly Exams";
+    private string Url => Base + Path;
+    private string Image => Base + "/assets/site/og.png";
+}

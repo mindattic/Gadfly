@@ -1,0 +1,65 @@
+@* The public site's frame (GAD-T308): header, footer and site.css for the landing, product, pricing, contact and legal
+   pages. Those pages render as static HTML (no Blazor circuit), so a signed-out visitor costs one request per page. *@
+@inherits LayoutComponentBase
+
+<HeadContent>
+    <link rel="stylesheet" href="site.css" />
+</HeadContent>
+
+<div class="site">
+    <a class="skip" href="#content">Skip to content</a>
+    <Gadfly.Server.Components.Shared.MockBanner />
+    <header class="site-head">
+        <div class="bar">
+            <a class="site-brand" href="/" aria-label="Gadfly Exams, home">
+                <img class="fly" src="assets/site/logo-192.png" alt="" width="40" height="40" />
+                Gadfly <span>Exams</span>
+            </a>
+            <nav class="site-nav" aria-label="Site">
+                <NavLink href="how-it-works">How it works</NavLink>
+                <NavLink href="science">The science</NavLink>
+                <NavLink href="pricing">Pricing</NavLink>
+                <NavLink href="security">Security</NavLink>
+                <AuthorizeView>
+                    <Authorized><a class="sign-in" href="/">Your dashboard</a></Authorized>
+                    <NotAuthorized><a class="sign-in" href="login">Sign in</a></NotAuthorized>
+                </AuthorizeView>
+                <a class="btn" href="contact">Request a demo</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="content" class="site-main" tabindex="-1">
+        @Body
+    </main>
+
+    <footer class="site-foot">
+        <div class="wrap">
+            <div>
+                <img class="fly" src="assets/site/logo-192.png" alt="" width="36" height="36" />
+                <p>Gadfly Exams is a spoken examination platform for universities and training providers, made by MindAttic.</p>
+                <p>&copy; @DateTime.UtcNow.Year MindAttic</p>
+            </div>
+            <nav aria-labelledby="foot-product">
+                <h2 id="foot-product">Product</h2>
+                <ul>
+                    <li><a href="how-it-works">How it works</a></li>
+                    <li><a href="science">The science</a></li>
+                    <li><a href="pricing">Pricing and plans</a></li>
+                    <li><a href="contact">Request a demo</a></li>
+                    <li><a href="login">Sign in</a></li>
+                </ul>
+            </nav>
+            <nav aria-labelledby="foot-legal">
+                <h2 id="foot-legal">Policies</h2>
+                <ul>
+                    <li><a href="terms">Terms of service</a></li>
+                    <li><a href="privacy">Privacy notice</a></li>
+                    <li><a href="accessibility">Accessibility</a></li>
+                    <li><a href="security">Security</a></li>
+                </ul>
+            </nav>
+        </div>
+    </footer>
+</div>
+<script src="site.js" defer></script>

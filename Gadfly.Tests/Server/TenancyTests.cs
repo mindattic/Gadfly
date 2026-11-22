@@ -17,6 +17,8 @@ public class TenancyTests : ServerTest
         // Not ITenantOwned (its organization is nullable) but it has its own organization filter, checked by
         // AuditEvents_OfOrgB_AreNotVisibleToOrgA (GAD-T109).
         typeof(AuditEvent),
+        // Public site contact requests (GAD-T308): platform data from signed-out visitors, read only by the SuperAdmin.
+        typeof(ContactRequest),
     ];
 
     [Test]

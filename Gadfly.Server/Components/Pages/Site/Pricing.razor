@@ -1,0 +1,77 @@
+@page "/pricing"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout PublicLayout
+@using Gadfly.Server.Site
+@* Plans and pricing (GAD-T308). The plan data lives in Site/SitePlans.cs so plan enforcement (GAD-T309) can match it. *@
+
+<SiteMeta Title="Pricing and plans" Path="/pricing"
+          Description="Gadfly Exams plans by staff seats, student seats and exams a month: Trial, Standard, Institution and Custom. Every plan includes blind human grading, approval before release and privacy controls." />
+
+<header class="page-head">
+    <div class="wrap">
+        <h1>Pricing and plans</h1>
+        <p>Plans are set by seats and exams a month. We agree a price with each institution after a short call.</p>
+    </div>
+</header>
+
+<div class="wrap prose">
+    <div class="plans">
+        @foreach (var plan in SitePlans.All)
+        {
+            <section class="plan @(plan.Name == SitePlans.Featured ? "featured" : null)" aria-labelledby="plan-@plan.Name">
+                <h2 id="plan-@plan.Name">@plan.Name</h2>
+                <p class="for">@plan.For</p>
+                <dl>
+                    <dt>Staff seats</dt><dd>@plan.StaffSeats</dd>
+                    <dt>Student seats</dt><dd>@plan.StudentSeats</dd>
+                    <dt>Exams</dt><dd>@plan.Exams</dd>
+                </dl>
+                <ul>
+                    @foreach (var extra in plan.Extras)
+                    {
+                        <li>@extra</li>
+                    }
+                </ul>
+                <p class="price">Contact us for pricing</p>
+                <a class="btn @(plan.Name == SitePlans.Featured ? null : "quiet")" href="contact?plan=@plan.Name">Ask about @plan.Name</a>
+            </section>
+        }
+    </div>
+
+    <h2 id="included">Included in every plan</h2>
+    <ul class="included">
+        <li>Spoken exams with a talking examiner, captions and a live transcript</li>
+        <li>Questions written from each student's previous answer</li>
+        <li>Concept maps and rubrics drafted from your own material, with citations</li>
+        <li>A panel of AI models scoring each objective, marked preliminary</li>
+        <li>Blind human grading, reconciliation and approval before release</li>
+        <li>Appeals, amendments and an append-only audit trail</li>
+        <li>Markdown and CSV reports, and course analytics</li>
+        <li>Two-step verification for staff, and organization roles</li>
+        <li>Retention settings, per-student export and erasure</li>
+        <li>API keys, signed launch links and signed webhooks</li>
+        <li>An organization usage page with exams and AI cost this month</li>
+        <li>Video that never leaves the student's device</li>
+    </ul>
+
+    <h2 id="questions">Questions</h2>
+    <dl class="faq">
+        <dt>Why don't you list prices?</dt>
+        <dd>The cost of running an exam depends on its length and on the AI providers it uses, and institutions buy in very
+            different ways. We'd rather quote a price that fits your term dates and volume than publish one that doesn't.</dd>
+        <dt>What counts as an exam?</dt>
+        <dd>One student's attempt at an assigned exam.</dd>
+        <dt>What is a staff seat?</dt>
+        <dd>An account with any staff role: owner, admin, instructor, examiner or second reviewer. Students are counted separately.</dd>
+        <dt>Can we try it before we commit?</dt>
+        <dd>Yes. A trial gives one course team its own organization for 30 days, and we help you set up the first exam on your material.</dd>
+        <dt>Do students need to install anything?</dt>
+        <dd>No. Exams run in a current web browser with a camera and a microphone.</dd>
+    </dl>
+
+    <div class="actions">
+        <a class="btn" href="contact">Request a demo</a>
+        <a href="security">Read about security</a>
+    </div>
+</div>

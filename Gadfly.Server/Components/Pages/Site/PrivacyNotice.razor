@@ -1,0 +1,104 @@
+@* DRAFT: have counsel review before relying on this. Written for GAD-T308 from docs/PRIVACY.md (itself a draft for
+   review). Open items for counsel: the controller's legal name and address, a privacy contact address, the lawful
+   bases, the international-transfer mechanism, and the published sub-processor list. Keep the data table in step with
+   docs/PRIVACY.md whenever either changes. *@
+@page "/privacy"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout PublicLayout
+
+<SiteMeta Title="Privacy notice" Path="/privacy"
+          Description="What Gadfly Exams collects, why, how long it is kept, and what never leaves the student's device." />
+
+<header class="page-head">
+    <div class="wrap">
+        <h1>Privacy notice</h1>
+        <p>What Gadfly Exams collects, why, how long it is kept, and what never leaves your device.</p>
+    </div>
+</header>
+
+<div class="wrap prose">
+    <p class="updated">Last updated 21 November 2026.</p>
+    <ul class="toc" aria-label="On this page">
+        <li><a href="privacy#roles">Who is responsible</a></li>
+        <li><a href="privacy#exams">Exam data</a></li>
+        <li><a href="privacy#camera">Camera</a></li>
+        <li><a href="privacy#voice">Voice</a></li>
+        <li><a href="privacy#site">This website</a></li>
+        <li><a href="privacy#sharing">Who else sees it</a></li>
+        <li><a href="privacy#rights">Your rights</a></li>
+    </ul>
+
+    <h2 id="roles">Who is responsible for your data</h2>
+    <p>When you take or run an exam, your institution decides why and how your data is used: it is the controller, and
+        MindAttic processes the data on its behalf. Questions about your exam data, or requests to see or delete it, go to
+        your institution first; we help them answer. For this website and its contact form, MindAttic is the controller.</p>
+
+    <h2 id="exams">What is collected for an exam, and for how long</h2>
+    <div class="table-scroll">
+        <table>
+            <thead><tr><th scope="col">Data</th><th scope="col">Why</th><th scope="col">Kept</th></tr></thead>
+            <tbody>
+                <tr><td>Account: user name, email, password hash, two-step verification secret</td><td>Signing in</td><td>While the account exists</td></tr>
+                <tr><td>Organization membership and role</td><td>Deciding what you can see and do</td><td>While you are a member</td></tr>
+                <tr><td>Your answers (the transcript), word timings and speech measurements</td><td>Judging the answer, and the instructor's review</td><td>Your institution's retention period (90 days unless it sets another), then the words are removed</td></tr>
+                <tr><td>Answer audio</td><td>Instructor review</td><td>The same retention period, then deleted</td></tr>
+                <tr><td>Judgments, report and grade</td><td>Your result</td><td>With the exam record, until your institution or you ask for it to be deleted</td></tr>
+                <tr><td>Integrity notes, derived only (face count, where you were looking, leaving the exam tab, a second voice)</td><td>Context for a human reviewer</td><td>With the exam record; detail removed with the transcript</td></tr>
+                <tr><td>Video frames</td><td>None</td><td>Never leave your device and are never stored</td></tr>
+                <tr><td>Consent record: the time, and a fingerprint of the exact notice you saw</td><td>Proof of what you agreed to</td><td>With the exam record</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p>When the retention period ends, the outcome is kept and what you said is removed. Before every exam you see a
+        plain notice of what is recorded, and you choose whether to go ahead.</p>
+
+    <h2 id="camera">The camera</h2>
+    <p>Camera checks run inside your browser. They work out, in memory, things like whether a face is in view, whether there
+        is a second face, and roughly where you are looking. Only a short description of each event is sent: its type, when
+        it started and ended, a confidence and one sentence. No frame, image, facial landmarks or face signature is sent or
+        kept. These notes are low-confidence context for a reviewer, never a penalty, and they never decide your grade.
+        Nothing in the camera checks infers emotion or deception.</p>
+
+    <h2 id="voice">Your voice</h2>
+    <p>Your spoken answers go to a speech-to-text service so the examiner can understand them, and the audio is kept for
+        your institution's review for the retention period above.</p>
+    <p>Where your institution allows it, your browser also measures a few summary numbers about your voice in each answer
+        (pitch, loudness and similar). These are compared only with your own first answers in the same exam. Reviewers see
+        the raw differences with a reminder that nerves, effort or a hard question change anyone's voice. The comparison
+        names no emotion, is never part of your grade and is hidden from graders marking blind. It may make the examiner
+        ask a further question.</p>
+    <p><strong>In the EU and EEA these measurements are off by default</strong>, for organizations there and for students
+        who live there, and an administrator can turn them off for everyone. Each change is recorded.</p>
+
+    <h2 id="site">This website</h2>
+    <ul>
+        <li><strong>No analytics, advertising or tracking.</strong> The public pages load nothing from other sites.</li>
+        <li><strong>Cookies.</strong> Only the ones the service needs to work: your sign-in session, protection against forged
+            form posts, and which organization you are working in. None is used to follow you across sites.</li>
+        <li><strong>The contact form.</strong> We store what you type (name, work email, institution, role, what you asked for
+            and your message) to reply to you. We don't store your network address with it. We keep it while we are in
+            touch and delete it when you ask.</li>
+        <li><strong>Server logs.</strong> Our hosting keeps technical logs to run and secure the service. They carry record
+            identifiers, never your answers or passwords.</li>
+    </ul>
+
+    <h2 id="sharing">Who else sees your data</h2>
+    <p>People in your institution with the right role: your instructors, examiners and reviewers. And these service providers, which process data for us:</p>
+    <ul>
+        <li><strong>AI model providers</strong> used by the examiner and scoring panel (such as Anthropic, OpenAI, Google and
+            DeepSeek, as configured). They receive your answers for judging; never video or account details.</li>
+        <li><strong>ElevenLabs</strong>, for the examiner's voice and for speech recognition.</li>
+        <li><strong>Microsoft Azure</strong>, for hosting and the database.</li>
+    </ul>
+
+    <h2 id="rights">Your rights</h2>
+    <p>Depending on where you live, you may have the right to see the data held about you, have it corrected or deleted,
+        object to some uses, or complain to a data protection authority. Your institution can export everything held about
+        you in its organization, and can erase your exam records. Ask your institution first; if you can't reach them, use
+        our <a href="contact">contact form</a> and we will pass your request on.</p>
+
+    <h2 id="changes">Changes</h2>
+    <p>If we change how data is used, we will update this notice and the date at the top. The notice shown before each exam
+        is fingerprinted, so a change to its wording is visible in the record.</p>
+</div>

@@ -1,0 +1,79 @@
+@* DRAFT: have counsel review before relying on this. Written for GAD-T308 from docs/SECURITY_REVIEW.md, README.md and
+   docs/PRIVACY.md. It describes controls that exist in the code today and names the review as internal; do not add
+   certifications or audits here until they have happened. *@
+@page "/security"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout PublicLayout
+
+<SiteMeta Title="Security" Path="/security"
+          Description="How Gadfly Exams keeps each institution's data separate, protects accounts and exam records, and how to report a vulnerability." />
+
+<header class="page-head">
+    <div class="wrap">
+        <h1>Security</h1>
+        <p>How we keep each institution's data separate, protect accounts and exam records, and what we haven't done yet.</p>
+    </div>
+</header>
+
+<div class="wrap prose">
+    <p class="updated">Last updated 21 November 2026.</p>
+
+    <h2 id="isolation">Each institution's data stays its own</h2>
+    <ul>
+        <li>Every institution is a separate organization. Every database query is filtered to the signed-in person's
+            organization, and the database refuses writes outside it.</li>
+        <li>Everything requires a sign-in unless it is deliberately public (these pages, sign-in and health checks), and every
+            staff page checks the person's role.</li>
+        <li>Instructors can be limited to the courses and exams they created.</li>
+    </ul>
+
+    <h2 id="accounts">Accounts and sign-in</h2>
+    <ul>
+        <li>Passwords are hashed with Argon2id, with lockout and back-off after repeated failed sign-ins.</li>
+        <li>Staff must use two-step verification with an authenticator app.</li>
+        <li>Removing a member or changing their role takes effect within about a minute, not at their next sign-in.</li>
+        <li>New members join by email invitation, with single-use links that expire.</li>
+    </ul>
+
+    <h2 id="records">Exam records you can trust</h2>
+    <ul>
+        <li>A student's original answer can't be rewritten. Corrections are stored beside it.</li>
+        <li>The audit log is append-only: grade decisions, approvals, admin changes and denied access are recorded and can't be edited or deleted.</li>
+        <li>AI grades are preliminary. A person grades, and an authorized person approves before a student sees anything.</li>
+    </ul>
+
+    <h2 id="data">Protecting data</h2>
+    <ul>
+        <li>Hosted on Microsoft Azure. Traffic is encrypted with HTTPS, and browsers are told to use it every time.</li>
+        <li>Secrets and provider keys are kept in the hosting settings and Azure Key Vault, not in the code. The keys that protect sign-in cookies are stored encrypted by a Key Vault key.</li>
+        <li>Video never leaves the student's device. Only short descriptions of camera events are sent.</li>
+        <li>Logs carry record identifiers only, never answers, keys, tokens or passwords.</li>
+        <li>Institutions set their own retention period, and can export or erase a student's records.</li>
+    </ul>
+
+    <h2 id="integrations">Integrations</h2>
+    <ul>
+        <li>API keys are long random secrets; only a hash is stored, and they can be revoked at any time.</li>
+        <li>Webhooks are signed, and deliveries only go to public HTTPS addresses, checked again at every delivery.</li>
+        <li>The API, the exam connection and sign-in are rate limited.</li>
+        <li>Uploads are limited by type, size and page count, and checked to be what their name says.</li>
+    </ul>
+
+    <h2 id="ai">AI-specific risks</h2>
+    <p>Students' answers are passed to the AI panel as data to be judged, with instructions to ignore anything in them
+        that tries to give orders. That reduces the risk of a student talking the panel into a better grade; it does not
+        remove it. The controls that hold regardless are the human grade, the approval step, and a flag that sends answers
+        addressed to the grader for review.</p>
+
+    <h2 id="review">How we check</h2>
+    <p>The platform was reviewed against the OWASP Application Security Verification Standard (version 4.0, level 2) in
+        November 2026. That review was internal, not an independent audit. Every high and medium issue it found has been fixed. We have no third-party certification yet. We will publish one here when we have it, and we're happy to
+        answer an institution's security questionnaire.</p>
+
+    <h2 id="report">Report a vulnerability</h2>
+    <p>If you think you have found a security problem, tell us through the <a href="contact">contact form</a> (choose
+        "Something else" and start your message with "Security"). Please give us a reasonable time to fix it before telling
+        anyone else, and don't access other people's data or disrupt the service while testing. We won't take action
+        against anyone who reports a problem in good faith this way.</p>
+</div>

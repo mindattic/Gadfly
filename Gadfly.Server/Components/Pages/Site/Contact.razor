@@ -1,0 +1,202 @@
+@page "/contact"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout PublicLayout
+@using System.ComponentModel.DataAnnotations
+@using Gadfly.Server.Site
+@inject ContactSpamGuard Guard
+@inject ContactRequestService Requests
+@inject ILogger<Contact> Log
+@* Request a demo / contact form (GAD-T308). A static form post (antiforgery checked); spam is held off by a honeypot
+   field, a signed render time and a rate limit (ContactSpamGuard), with no third-party captcha. Requests are stored
+   for the platform admin (/platform/requests); an email goes out only if SMTP and a notify address are configured. *@
+
+<SiteMeta Title="Request a demo" Path="/contact"
+          Description="Ask for a demonstration of Gadfly Exams on your own course material, a price for your institution, or a trial." />
+
+<header class="page-head">
+    <div class="wrap">
+        <h1>Request a demo</h1>
+        <p>Tell us a little about your institution and we'll reply by email.</p>
+    </div>
+</header>
+
+<div class="wrap prose">
+    <div class="form-grid">
+        <div>
+            @if (outcome == Outcome.Sent)
+            {
+                <div class="status" role="status">
+                    <h2>Thanks, your request was sent</h2>
+                    <p>We'll reply to the email address you gave. If our reply doesn't arrive, check your spam folder.</p>
+                    <p><a href="how-it-works">Read how an exam works</a> while you wait.</p>
+                </div>
+            }
+            else
+            {
+                @if (outcome is Outcome.Expired or Outcome.TooMany or Outcome.Failed)
+                {
+                    <div class="status error" role="alert">
+                        @switch (outcome)
+                        {
+                            case Outcome.Expired: <p>This form was open for more than a day, so it was not sent. Check your details and send it again.</p> break;
+                            case Outcome.TooMany: <p>We've had several requests from your network in the last hour. Wait a while and send it again.</p> break;
+                            default: <p>Your request could not be saved because of a problem on our side. Send it again in a few minutes.</p> break;
+                        }
+                    </div>
+                }
+                <EditForm Model="Form" FormName="contact" OnValidSubmit="SubmitAsync" class="contact" Enhance>
+                    <DataAnnotationsValidator />
+                    <div class="row">
+                        <label>Your name
+                            <InputText @bind-Value="Form.Name" autocomplete="name" />
+                            <ValidationMessage For="() => Form.Name" />
+                        </label>
+                        <label>Work email
+                            <InputText @bind-Value="Form.Email" type="email" autocomplete="email" />
+                            <ValidationMessage For="() => Form.Email" />
+                        </label>
+                    </div>
+                    <div class="row">
+                        <label>Institution
+                            <InputText @bind-Value="Form.Institution" autocomplete="organization" />
+                            <ValidationMessage For="() => Form.Institution" />
+                        </label>
+                        <label>Your role <small>(optional)</small>
+                            <InputText @bind-Value="Form.Role" autocomplete="organization-title" />
+                            <ValidationMessage For="() => Form.Role" />
+                        </label>
+                    </div>
+                    <div class="row">
+                        <label>What would you like?
+                            <InputSelect @bind-Value="Form.Topic">
+                                <option value="Demo">A demonstration</option>
+                                <option value="Pricing">A price for my institution</option>
+                                <option value="Trial">A trial</option>
+                                <option value="Other">Something else</option>
+                            </InputSelect>
+                        </label>
+                        <label>Students taking exams <small>(optional)</small>
+                            <InputSelect @bind-Value="Form.Students">
+                                <option value="">Not sure</option>
+                                @foreach (var band in ContactRequestService.StudentBands)
+                                {
+                                    <option value="@band">@band</option>
+                                }
+                            </InputSelect>
+                        </label>
+                    </div>
+                    <label>Anything we should know? <small>(optional)</small>
+                        <InputTextArea @bind-Value="Form.Message" rows="6" />
+                        <ValidationMessage For="() => Form.Message" />
+                    </label>
+                    @* Spam protection: people never see or fill the first field; the second is the signed render time. *@
+                    <div class="trap" aria-hidden="true">
+                        <label>Leave this field empty <InputText @bind-Value="Form.Website" tabindex="-1" autocomplete="off" /></label>
+                    </div>
+                    <InputText type="hidden" @bind-Value="Form.Stamp" />
+                    <InputText type="hidden" @bind-Value="Form.Plan" />
+                    <p class="fine">We use these details only to reply to you. See the <a href="privacy">privacy notice</a>.</p>
+                    <button type="submit" class="btn">Send request</button>
+                </EditForm>
+            }
+        </div>
+        <aside class="aside" aria-labelledby="next">
+            <h2 id="next">What happens next</h2>
+            <ol>
+                <li>We reply to arrange a short call about your courses and how you assess them today.</li>
+                <li>We set up a demonstration on a topic you teach, with your own material if you'd like.</li>
+                <li>If it suits you, we open a trial organization for your course team.</li>
+            </ol>
+            <p>Reporting a security problem? Choose "Something else" and say so in your message; see the <a href="security">security page</a>.</p>
+        </aside>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter] private HttpContext? Http { get; set; }
+    [SupplyParameterFromQuery(Name = "plan")] private string? PlanFromQuery { get; set; }
+    [SupplyParameterFromForm(FormName = "contact")] private ContactForm Form { get; set; } = default!;
+
+    private enum Outcome { None, Sent, Expired, TooMany, Failed }
+    private Outcome outcome;
+
+    protected override void OnInitialized()
+    {
+        if (Form is null)
+        {
+            Form = new ContactForm
+            {
+                Stamp = Guard.Stamp(),
+                Plan = SitePlans.All.Any(p => p.Name == PlanFromQuery) ? PlanFromQuery : null,
+                Topic = PlanFromQuery is null ? "Demo" : "Pricing",
+            };
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        var address = Http?.Connection.RemoteIpAddress?.ToString();
+        switch (Guard.Check(Form.Website, Form.Stamp, address))
+        {
+            case ContactSpamGuard.Verdict.LooksAutomated:
+                // Answer exactly as for a real request, so an automated sender learns nothing; nothing is stored.
+                outcome = Outcome.Sent;
+                return;
+            case ContactSpamGuard.Verdict.Expired:
+                outcome = Outcome.Expired;
+                Form.Stamp = Guard.Stamp();
+                return;
+            case ContactSpamGuard.Verdict.TooMany:
+                outcome = Outcome.TooMany;
+                Form.Stamp = Guard.Stamp();
+                return;
+        }
+        try
+        {
+            await Requests.SubmitAsync(new Gadfly.Server.Data.ContactRequest
+            {
+                Name = Form.Name, Email = Form.Email, Institution = Form.Institution, Role = NullIfBlank(Form.Role),
+                Topic = Form.Topic, Plan = NullIfBlank(Form.Plan), Students = NullIfBlank(Form.Students), Message = NullIfBlank(Form.Message),
+            });
+            outcome = Outcome.Sent;
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "A contact request could not be saved.");
+            outcome = Outcome.Failed;
+            Form.Stamp = Guard.Stamp();
+        }
+    }
+
+    private static string? NullIfBlank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
+
+    private sealed class ContactForm
+    {
+        [Required(ErrorMessage = "Enter your name.")]
+        [StringLength(200, ErrorMessage = "Keep your name under 200 characters.")]
+        public string Name { get; set; } = "";
+
+        [Required(ErrorMessage = "Enter your work email so we can reply.")]
+        [EmailAddress(ErrorMessage = "Enter an email address like name@university.edu.")]
+        [StringLength(320, ErrorMessage = "That email address is too long.")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Enter your institution's name.")]
+        [StringLength(200, ErrorMessage = "Keep the institution's name under 200 characters.")]
+        public string Institution { get; set; } = "";
+
+        [StringLength(120, ErrorMessage = "Keep your role under 120 characters.")]
+        public string? Role { get; set; }
+
+        public string Topic { get; set; } = "Demo";
+        public string? Students { get; set; }
+
+        [StringLength(4000, ErrorMessage = "Keep your message under 4,000 characters.")]
+        public string? Message { get; set; }
+
+        public string? Plan { get; set; }
+        public string? Website { get; set; }
+        public string? Stamp { get; set; }
+    }
+}

@@ -82,6 +82,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     public DbSet<WebhookDelivery> WebhookDeliveries => Set<WebhookDelivery>();
     public DbSet<UsageEntry> UsageEntries => Set<UsageEntry>();
     public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<ContactRequest> ContactRequests => Set<ContactRequest>();   // public site contact form (GAD-T308)
 
     // Master-plan assessment model (docs/MASTER-PLAN.md Part 17.4).
     public DbSet<Course> Courses => Set<Course>();
@@ -290,6 +291,20 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.Property(x => x.Purpose).HasMaxLength(60);
             e.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
             e.HasIndex(x => x.SessionId);
+        });
+        // Public site contact form (GAD-T308): platform data, not tenant-owned; read by the SuperAdmin only.
+        b.Entity<ContactRequest>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Email).HasMaxLength(320);
+            e.Property(x => x.Institution).HasMaxLength(200);
+            e.Property(x => x.Role).HasMaxLength(120);
+            e.Property(x => x.Topic).HasMaxLength(20);
+            e.Property(x => x.Plan).HasMaxLength(40);
+            e.Property(x => x.Students).HasMaxLength(40);
+            e.Property(x => x.Message).HasMaxLength(4000);
+            e.Property(x => x.Note).HasMaxLength(1000);
+            e.HasIndex(x => new { x.HandledAt, x.ReceivedAt });
         });
         b.Entity<Job>(e =>
         {
