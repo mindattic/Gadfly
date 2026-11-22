@@ -49,7 +49,8 @@ public partial class ExamRoom
     /// <summary>Hands in the typed answer (mode "text": reviewers see it as typed) and adds it to the on-screen transcript.</summary>
     private async Task SubmitTypedAsync()
     {
-        if (!typedAnswers || busy || string.IsNullOrWhiteSpace(typedAnswer)) return;
+        // While staff hold the exam the typed answer stays in the box until they resume (GAD-T474, matching the spoken path).
+        if (!typedAnswers || busy || staffHeld || string.IsNullOrWhiteSpace(typedAnswer)) return;
         var text = typedAnswer.Trim();
         voiceRoom?.NoteTypedAnswer(text);
         await SendAsync(text);

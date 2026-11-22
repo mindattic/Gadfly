@@ -186,7 +186,7 @@
                     </label>
                     <p id="answer-hint" class="hint">You have a typed-answer accommodation: type your answer, then press Submit answer (or Ctrl+Enter).</p>
                     <div class="actions">
-                        <button type="button" @onclick="SubmitTypedAsync" disabled="@(busy || string.IsNullOrWhiteSpace(typedAnswer))">Submit answer</button>
+                        <button type="button" @onclick="SubmitTypedAsync" disabled="@(busy || staffHeld || string.IsNullOrWhiteSpace(typedAnswer))" title="@(staffHeld ? "Your instructor paused the exam; your answer is kept until they resume." : null)">Submit answer</button>
                         <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@(!CanSayDontKnow)" title="@DontKnowTitle">I don't know</button>
                     </div>
                 }
