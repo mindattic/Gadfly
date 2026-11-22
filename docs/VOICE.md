@@ -85,10 +85,41 @@ starts and ends.
 is on screen, for any exam whose integrity level isn't Off. It uses its own camera stream, analysed on the device only by
 MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, image or landmark leaves the browser.
 
-- **Calibration.** When it starts (and on **Set up eye contact again**), the examiner's stage is outlined and the student is
-  asked to look at the examiner's face; that direction becomes "looking at the examiner". The allowed region is sized from the
-  avatar's on-screen size.
-- **Live indicator.** "Looking at the examiner", "Looking away from the examiner", reading, no face, or more than one face.
+- **Where the student looks (GAD-T305).** Two methods, the better one whenever it can be trusted:
+  - *Calibrated:* a gaze vector from the iris position in each eye plus the head pose (MediaPipe's facial transformation
+    matrix), followed to the camera's plane (`gaze-quality.js` `gazePoint`), then mapped onto the page by a five-dot
+    calibration (the examiner's face, or the page centre, plus the four corners). A straight line per axis absorbs where the
+    camera is, the screen's size and zoom, and the student's own eye gain. Accuracy is measured honestly: each dot is left
+    out and predicted from the other four. Worse than `calibPoorDeg` (6°) gets one retry, then the calibration is not used.
+    The examiner's region is her stage as it is on screen right now plus a margin of `marginDeg` (3°) and shares of the
+    measured accuracy and noise, capped at `maxMarginDeg` (9°). Leaning, sitting back or turning the head while still looking
+    at her is not a look-away (the head point and the eye turn move in opposite directions). A look-away also needs the old
+    head-and-eye direction to have strayed `agreeShare` (half) of its limits, so neither estimate's error alone makes one.
+    While the examiner speaks, a steady offset of more than `driftMinDeg` within `driftWindowDeg` of her face is corrected
+    by half, quietly (drift).
+  - *Head direction (the old behaviour):* head-and-eye direction against a baseline learned while the student looks at the
+    examiner's face, with the region sized from the avatar's on-screen size. It is used when there is no calibration, it was
+    poor or skipped, the room's first look at the examiner disagrees with it by more than `anchorMaxDeg` (7°), or the stage
+    is scrolled mostly out of view.
+- **Setup.** The get-ready page offers the five dots (about 10 seconds; see below) and keeps the fit, four numbers and its
+  accuracy, in that browser tab's `sessionStorage` for up to `modelMaxAgeMs` (2 h) at the same zoom. In the room, the student
+  is asked to look at the examiner's face (the stage is outlined): that learns the head-direction baseline and checks the
+  stored fit against her face, taking her face as the reference from then on. **Set up eye contact again** runs the five
+  dots in the room, then that look. Esc or Skip stops the dots and keeps what was in use. Under the eye-contact accommodation
+  there are no dots and no prompt.
+- **Get-ready check.** Once the camera shows a picture, `system-check.js` starts `gaze-quality.js` in the page's eye-tracking
+  panel. It watches about 4 seconds of frames and gives plain advice, never a failure: face in view, lighting (dark, or a
+  bright light behind the student, from a 32x24 brightness thumbnail read and dropped), camera angle, distance and centring,
+  how steadily the eyes can be followed (glare on glasses is the usual cause), and device speed. It never blocks Begin exam.
+- **Slow devices.** Timings follow the measured frame rate (the baseline is `baselineMs` long, a sample is stale after three
+  frame times). Under `slowFps` (12 frames a second) the module asks its own copy of the camera for `slowDeviceFps` (10), so
+  the face model runs less often; the self-view keeps its own rate. The Strict exam's separate camera check asks for
+  640x480 at 15 frames a second. (Running the face model in a worker needs MindAttic.Webcam: ET-T18.)
+- **Lost camera, no face.** No camera frame for `cameraLostMs` (3 s): the indicator says eye contact isn't being checked and
+  nothing counts as a look-away. With no face for `calibrationGiveUpMs` (15 s) the prompt stops and comes back when a face
+  does.
+- **Live indicator.** "Looking at the examiner", "Looking away from the examiner", reading, no face, more than one face, the
+  camera picture stopped, or "can't follow your eyes right now".
 - **While answering** (the avatar is listening): after `fadeStartMs` (2 s) of continuous look-away the whole exam screen starts
   fading toward a heavy dim and blur over `fadeRampMs` (3 s) with "Please look at the examiner", and restores smoothly
   (`fadeRestoreMs`) when the gaze returns. After `remarkAfterMs` (5 s), or at once for a reading pattern, no face or a second
@@ -96,8 +127,17 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
   are fixed server-side (`WebcamIntegrityRecorder.ExaminerRemarks`) and offered to the avatar hub like any question.
 - **Recorded for review.** Each episode is a webcam integrity event with start and end: `examiner-look-away`,
   `examiner-reading`, `examiner-face-absent`, `examiner-second-face`, and `examiner-fade` (with its peak). Summaries are
-  written by the server (the browser sends only "remarked" or "peak:NN"); confidence at most 0.4, severity at most Low, never
-  a penalty (`WebcamIntegrityRecorder.RecordExaminerGazeAsync`).
+  written by the server (the browser sends only codes: "remarked" or "peak:NN", then the quality below); confidence at most
+  0.4, severity at most Low, never a penalty (`WebcamIntegrityRecorder.RecordExaminerGazeAsync`).
+- **Quality score (GAD-T305).** Every episode carries the session's tracking quality so far, 0..100, worked out on the device
+  (`quality()` in `examiner-gaze.js`, weights in `GAZE.qWeights`): calibration accuracy (the worse of the leave-one-out figure
+  and the room's first look), steadiness, the share of answering time with a usable gaze sample, time without a lighting or
+  framing warning, and frame rate, minus a little per drift correction. Head direction only scores at most `qHeadMax` (50).
+  The browser sends `q:NN;m:cal|head;a:N.N`; the server (`GazeQuality`) bounds it, appends "Eye-tracking quality this session:
+  good / fair / poor (NN/100; set up to the student's screen, about N° accuracy | head and eye direction only)" to the summary
+  the reviewer reads, and keeps the numbers in the event's `DataJson`. A poor score (under 40) keeps a look-away or reading
+  note at Info. The confidence sent for look-away, reading and fade runs from 0.15 to 0.4 with the score. It says how far to
+  trust the note, nothing more.
 - All thresholds are in one place: the `GAZE` object at the top of `examiner-gaze.js`.
 
 ## How an answer flows

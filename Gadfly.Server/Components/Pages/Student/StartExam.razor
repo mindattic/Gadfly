@@ -78,6 +78,11 @@ else
                 {
                     <p class="error" role="status">Begin exam stays off until every check above is ✓: fix the items marked ✗ (or finish the ones marked …), then press "Check again" if needed.</p>
                 }
+                @* Eye-tracking setup advice and calibration (GAD-T305): filled by js/gaze-quality.js once the camera shows a picture; never blocks Begin exam. *@
+                @if (assignment.Integrity != IntegrityLevel.Off)
+                {
+                    <div class="gaze-quality" data-gaze-quality></div>
+                }
             }
         </section>
 
