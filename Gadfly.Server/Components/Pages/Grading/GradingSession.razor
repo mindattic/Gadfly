@@ -500,6 +500,9 @@ else
 
     @* ------------------------------------------------------------ transcript *@
     <h2 class="gr-section" data-tour="grading-transcript">Transcript and verified responses</h2>
+    @* GAD-T548: the original words are graded; a labelled machine translation is there on demand. *@
+    <Gadfly.Server.Components.Pages.Review.MachineTranslationBar Language="@w.Session.Language" SessionId="w.Session.Id"
+        Texts="TranslatableTexts" @bind-Batch="translation" />
     @if (w.Responses.Count == 0)
     {
         <p class="notice">No response records yet (they are built when AI grading starts).</p>
@@ -508,8 +511,10 @@ else
     {
         <div class="gr-response @(r.NeedsHuman ? "needs-human" : "")" id="response-@r.Response.Sequence">
             <div><strong>#@r.Response.Sequence</strong> <span class="hint">Q@(r.TurnIndex + 1) · @r.ConceptKey · @(r.Response.Modality == "text" ? "typed" : r.Response.Modality) · @r.Response.Kind · @r.Response.VerificationState@(r.Response.Assisted ? " · assisted" : "")</span></div>
-            <p class="q">@r.Question</p>
-            <blockquote>@r.Response.VerifiedText</blockquote>
+            <p class="q" lang="@Lang">@r.Question</p>
+            <Gadfly.Server.Components.Pages.Review.MachineTranslated Batch="translation" Original="@r.Question" />
+            <blockquote lang="@Lang">@r.Response.VerifiedText</blockquote>
+            <Gadfly.Server.Components.Pages.Review.MachineTranslated Batch="translation" Original="@r.Response.VerifiedText" />
             @if (r.TextChanged)
             {
                 <blockquote class="original">Original (preserved): @r.Response.OriginalText</blockquote>
@@ -599,6 +604,14 @@ else
     }
 
     private GradingWorkspace? w;
+    private Gadfly.Server.Translation.TranslationBatch? translation;
+
+    /// <summary>The attempt's language, for the lang attribute of the transcript (GAD-T548).</summary>
+    private string Lang => Gadfly.Engine.ExamLanguage.Normalize(w?.Session.Language);
+
+    /// <summary>What the machine translation covers: each response's question and verified answer (GAD-T548).</summary>
+    private IEnumerable<string?> TranslatableTexts() =>
+        w is null ? [] : w.Responses.SelectMany(r => new[] { r.Question, r.Response.VerifiedText });
     private IReadOnlyDictionary<string, ObjectivePath> paths = new Dictionary<string, ObjectivePath>();
     private IReadOnlyDictionary<Guid, SpeechMark> speech = new Dictionary<Guid, SpeechMark>();
     private bool loading = true, busy, ok, secondMarker;

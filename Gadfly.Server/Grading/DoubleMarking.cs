@@ -26,7 +26,11 @@ public sealed record SecondMarkObjective(Guid ObjectiveId, string Title, string?
 /// same verified answers the panel was shown. Never the AI's grade, the first examiner's grade, integrity notes or the
 /// examiner's in-exam stance notes.
 /// </summary>
-public sealed record SecondMarkSheet(Guid SessionId, Guid ExamId, string ExamTitle, string Code, IReadOnlyList<SecondMarkObjective> Objectives);
+public sealed record SecondMarkSheet(Guid SessionId, Guid ExamId, string ExamTitle, string Code, IReadOnlyList<SecondMarkObjective> Objectives)
+{
+    /// <summary>The attempt's language (GAD-T548): the answers are shown as given, with a machine translation on demand.</summary>
+    public string Language { get; init; } = Gadfly.Engine.ExamLanguage.English;
+}
 
 public sealed record SecondMarkInput(Guid ObjectiveId, int Level, string? Comment);
 
@@ -132,7 +136,7 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
             mine.TryGetValue(o.Id, out var m);
             list.Add(new SecondMarkObjective(o.Id, o.Title, o.Description, criteria, evidence, m?.Level, m?.Comment));
         }
-        return (new SecondMarkSheet(session.Id, exam.Id, exam.Title, AnonymousMarking.Code(session.Id), list), null);
+        return (new SecondMarkSheet(session.Id, exam.Id, exam.Title, AnonymousMarking.Code(session.Id), list) { Language = session.Language }, null);
     }
 
     /// <summary>

@@ -20,6 +20,8 @@ else
     {
         <p role="status" class="@(ok ? "ok" : "error")">@message</p>
     }
+    @* GAD-T548: grade the original; a labelled machine translation on demand. *@
+    <Gadfly.Server.Components.Pages.Review.MachineTranslationBar Language="@sheet.Language" SessionId="sheet.SessionId" Texts="TranslatableTexts" @bind-Batch="translation" />
     @foreach (var o in sheet.Objectives)
     {
         <section class="gr-objective">
@@ -40,8 +42,10 @@ else
             @foreach (var e in o.Evidence)
             {
                 <div class="gr-response">
-                    <p class="q">@e.Sequence. @e.Question</p>
-                    <blockquote>@e.Answer</blockquote>
+                    <p class="q" lang="@Lang">@e.Sequence. @e.Question</p>
+                    <Gadfly.Server.Components.Pages.Review.MachineTranslated Batch="translation" Original="@e.Question" />
+                    <blockquote lang="@Lang">@e.Answer</blockquote>
+                    <Gadfly.Server.Components.Pages.Review.MachineTranslated Batch="translation" Original="@e.Answer" />
                 </div>
             }
             <div class="gr-form-row">
@@ -68,6 +72,11 @@ else
 }
 
 @code {
+    private Gadfly.Server.Translation.TranslationBatch? translation;
+    private string Lang => Gadfly.Engine.ExamLanguage.Normalize(sheet?.Language);
+    private IEnumerable<string?> TranslatableTexts() =>
+        sheet is null ? [] : sheet.Objectives.SelectMany(o => o.Evidence).SelectMany(e => new[] { e.Question, e.Answer });
+
     [Parameter] public Guid SessionId { get; set; }
     private SecondMarkSheet? sheet;
     private string? refusal, message;

@@ -37,7 +37,7 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         var q = db.ExamSessions.AsNoTracking().Where(s => s.OrganizationId == organizationId);
         if (filter.ExamId is { } examId) q = q.Where(s => s.ExamId == examId);
         var sessions = await q.OrderByDescending(s => s.EndedAt ?? s.StartedAt ?? s.CreatedAt).Take(take)
-            .Select(s => new { s.Id, s.ExamId, s.StudentUserId, s.Attempt, s.State, s.EndedAt }).ToListAsync(ct);
+            .Select(s => new { s.Id, s.ExamId, s.StudentUserId, s.Attempt, s.State, s.EndedAt, s.Language }).ToListAsync(ct);
         if (sessions.Count == 0) return [];
 
         var ids = sessions.Select(s => s.Id).ToList();
@@ -75,6 +75,7 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                 grades.GetValueOrDefault(s.Id))
             {
                 FlagsHidden = blind.Contains(s.Id),
+                Language = s.Language,   // GAD-T548
                 // GAD-T425: the per-objective levels are what the list reports, never the running estimate.
                 AiLevels = !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r3) ? ReportedLevels.FromReportJson(r3.ReportJson) : [],
             })
@@ -298,6 +299,9 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
     {
         var sb = new StringBuilder();
         sb.AppendLine($"<!-- Gadfly session {v.Session.Id}: {v.StudentName}, {v.ExamTitle}, attempt {v.Session.Attempt} -->");
+        // GAD-T548: an attempt in another language is exported as it was given; machine translations are never part of the record.
+        if (!Gadfly.Engine.ExamLanguage.IsEnglish(v.Session.Language))
+            sb.AppendLine($"<!-- Exam language: {Gadfly.Engine.ExamLanguage.EnglishName(v.Session.Language)} ({Gadfly.Engine.ExamLanguage.Normalize(v.Session.Language)}). Questions and answers are in the original language. -->");
         if (v.Report is { Markdown.Length: > 0 } r) sb.AppendLine(r.Markdown.TrimEnd());
         else if (v.Blinded) sb.AppendLine("# Socratic session report").AppendLine().AppendLine("The AI report is hidden until the human evaluation is submitted (blind grading).");
         else sb.AppendLine("# Socratic session report").AppendLine().AppendLine("No AI report yet: the session hasn't ended.");

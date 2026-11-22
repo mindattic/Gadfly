@@ -36,6 +36,10 @@ public sealed class TranslationService(GadflyDbContext db, ITenantContext tenant
         CancellationToken ct = default)
     {
         if (tenant.OrganizationId is not { } org) return TranslationBatch.Empty with { Error = "No active organization." };
+        // Staff only: graders (who read transcripts) and those who set up exams. A student never gets the translation service.
+        if (!Gadfly.Assessment.PermissionMatrix.Has(tenant.Role, Gadfly.Assessment.Permission.ViewTranscripts)
+            && !Gadfly.Assessment.PermissionMatrix.Has(tenant.Role, Gadfly.Assessment.Permission.ManageAssessments))
+            return TranslationBatch.Empty with { Error = "Your role in this organization does not include machine translation." };
         var distinct = texts.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t!).Distinct(StringComparer.Ordinal).Take(MaxTexts).ToList();
         var result = new Dictionary<string, MachineTranslation>(StringComparer.Ordinal);
         string? error = null;

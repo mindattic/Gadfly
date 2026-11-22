@@ -13,4 +13,11 @@ internal static class LanguageOps
         await using var scope = scopes.CreateAsyncScopeFor(TenantSnapshot.Of(tenant));
         return await work(ActivatorUtilities.GetServiceOrCreateInstance<ExamLanguageService>(scope.ServiceProvider));
     }
+
+    /// <summary>Runs a machine translation for the circuit's organization (GAD-T548), metered to it.</summary>
+    public static async Task<T> TranslateAsync<T>(IServiceScopeFactory scopes, ITenantContext tenant, Func<TranslationService, Task<T>> work)
+    {
+        await using var scope = scopes.CreateAsyncScopeFor(TenantSnapshot.Of(tenant));
+        return await work(ActivatorUtilities.GetServiceOrCreateInstance<TranslationService>(scope.ServiceProvider));
+    }
 }

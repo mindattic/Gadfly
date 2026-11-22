@@ -29,6 +29,8 @@ public sealed record ReviewListRow(
     /// <see cref="AiScore"/> (the examiner's running estimate, which only steers questioning), is what the list shows.
     /// </summary>
     public IReadOnlyList<ObjectiveLevel> AiLevels { get; init; } = [];
+    /// <summary>The attempt's language (GAD-T548), a BCP-47 tag; "en" for every attempt before localization.</summary>
+    public string Language { get; init; } = Gadfly.Engine.ExamLanguage.English;
     public bool IsGraded => LatestGrade is not null;
     public bool NeedsGrade => State == SessionState.Ended && LatestGrade is null;
 }

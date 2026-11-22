@@ -1,0 +1,16 @@
+@using Gadfly.Server.Translation
+
+@* GAD-T548: one machine translation under its original, always labelled as machine translation. Renders nothing until a
+   translation was asked for, or when the original had none (blank, or the same language). *@
+@if (Batch?.Of(Original) is { } t && t.From != t.To)
+{
+    <div class="mt-block" lang="@t.To">
+        <span class="mt-label">@MachineTranslator.Label(t.From, t.To, t.Mock)</span>
+        <span class="mt-text">@t.Text</span>
+    </div>
+}
+
+@code {
+    [Parameter] public TranslationBatch? Batch { get; set; }
+    [Parameter] public string? Original { get; set; }
+}

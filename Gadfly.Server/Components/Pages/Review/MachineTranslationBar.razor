@@ -1,0 +1,63 @@
+@using Gadfly.Engine
+@using Gadfly.Server.Translation
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+@* GAD-T548: an attempt taken in a language other than English shows its original words, which are the record, and offers graders
+   a machine translation on demand. The translation is never stored with the record and is labelled wherever it appears. The
+   student's primary language is deliberately not shown to graders: it is not evidence of understanding and could prime the grade
+   (docs/research/esl-and-korean.md); the fairness views use it in aggregate only (GAD-T549). *@
+@if (!ExamLanguage.IsEnglish(Language))
+{
+    <link rel="stylesheet" href="languages.css" />
+    <div class="mt-bar" role="region" aria-label="Exam language">
+        <span>This exam was taken in <strong>@ExamLanguage.EnglishName(Language)</strong> <span lang="@ExamLanguage.Normalize(Language)">(@ExamLanguage.NativeName(Language))</span>.
+            The student's own words, as shown, are the record.</span>
+        @if (Batch is null)
+        {
+            <button type="button" disabled="@busy" @onclick="TranslateAsync">@(busy ? "Translating…" : $"Show a machine translation into {ExamLanguage.EnglishName(To)}")</button>
+        }
+        else
+        {
+            <button type="button" class="link" @onclick="HideAsync">Hide the machine translation</button>
+            <span class="hint">@(Batch.Mock ? "Mock mode: no model was called; each translation is the original behind a marker." : "Machine translations can be wrong: grade the original, and check a translation that matters with someone who reads the language.")</span>
+        }
+        @if (error is not null) { <span class="error" role="alert">@error</span> }
+    </div>
+}
+
+@code {
+    /// <summary>The attempt's language (ExamSession.Language).</summary>
+    [Parameter, EditorRequired] public string Language { get; set; } = ExamLanguage.English;
+    [Parameter] public Guid? SessionId { get; set; }
+    /// <summary>The language to translate into (English, the staff pages' language).</summary>
+    [Parameter] public string To { get; set; } = ExamLanguage.English;
+    /// <summary>Every text on the page that has a translation slot (questions, answers...).</summary>
+    [Parameter, EditorRequired] public Func<IEnumerable<string?>> Texts { get; set; } = () => [];
+    [Parameter] public TranslationBatch? Batch { get; set; }
+    [Parameter] public EventCallback<TranslationBatch?> BatchChanged { get; set; }
+
+    private bool busy;
+    private string? error;
+
+    private async Task TranslateAsync()
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        try
+        {
+            var texts = Texts().ToList();
+            var batch = await LanguageOps.TranslateAsync(Scopes, Tenant, s => s.TranslateAsync(texts, Language, To, "grader-translation", SessionId));
+            error = batch.Error;
+            await BatchChanged.InvokeAsync(batch);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            error = "The machine translation is not available right now; the originals are shown.";
+        }
+        finally { busy = false; }
+    }
+
+    private Task HideAsync() => BatchChanged.InvokeAsync(null);
+}

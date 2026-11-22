@@ -55,7 +55,7 @@ else
             {
                 <tr>
                     <td><a href="review/@r.SessionId">@r.StudentName</a></td>
-                    <td>@r.ExamTitle</td>
+                    <td>@r.ExamTitle@if (!Gadfly.Engine.ExamLanguage.IsEnglish(r.Language)) { <span class="tag" title="Taken in @Gadfly.Engine.ExamLanguage.EnglishName(r.Language): the review page shows the original with a machine translation on demand"> @Gadfly.Engine.ExamLanguage.EnglishName(r.Language)</span> }</td>
                     <td>@r.Attempt</td>
                     <td>@r.State</td>
                     <td>@(r.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "—")</td>
