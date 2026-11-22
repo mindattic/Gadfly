@@ -1,0 +1,45 @@
+@using Gadfly.Server.Localization
+@implements IDisposable
+@inject UiText T
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+@* The student's UI language switch (GAD-T543): English or 한국어. Remembers the choice in the culture cookie and reloads the page
+   in it, so every part of the page (top bar, page, help links) changes together. Each option names itself in its own language,
+   with its own lang attribute (WCAG 3.1.2). A page that switches language live (get-ready, GAD-T546) updates this too. *@
+<label class="language-switch">
+    <span class="visually-hidden">@T["language.switchLabel"]</span>
+    <select @onchange="OnChangeAsync" aria-label="@T["language.switchLabel"]">
+        @foreach (var lang in UiCatalog.Languages)
+        {
+            <option value="@lang" lang="@lang" selected="@(lang == T.Language)">@UiCatalog.NativeName(lang)</option>
+        }
+    </select>
+</label>
+
+@code {
+    protected override void OnInitialized() => T.Changed += OnLanguageChanged;
+
+    private void OnLanguageChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task OnChangeAsync(ChangeEventArgs e)
+    {
+        var lang = UiCatalog.Normalize(e.Value as string);
+        if (lang == T.Language) return;
+        await RememberAsync(JS, lang);
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+    }
+
+    /// <summary>Writes the culture cookie and the document's lang attribute; best effort (a dropped circuit just keeps the old cookie).</summary>
+    public static async Task RememberAsync(IJSRuntime js, string language)
+    {
+        try
+        {
+            await using var module = await js.InvokeAsync<IJSObjectReference>("import", "./js/ui-language.js");
+            await module.InvokeVoidAsync("remember", LocalizationSetup.CookieName, LocalizationSetup.CookieValue(language), language);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
+    }
+
+    public void Dispose() => T.Changed -= OnLanguageChanged;
+}

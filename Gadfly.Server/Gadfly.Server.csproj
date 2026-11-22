@@ -58,6 +58,13 @@
     <EmbeddedResource Include="..\docs\guides\**\*" LogicalName="Gadfly.Help/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" Visible="false" />
   </ItemGroup>
 
+  <!-- UI strings per language (GAD-T543, docs/LOCALIZATION.md): Localization/Strings/<lang>.json, embedded as "Gadfly.Ui/<lang>.json"
+       and read once at startup by UiCatalog. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Localization\Strings\*.json" LogicalName="Gadfly.Ui/%(Filename)%(Extension)" WithCulture="false" />
+    <Content Remove="Localization\Strings\*.json" />
+  </ItemGroup>
+
   <!-- The default examiner avatar (mpfb.glb, CC0, 36.8 MB) is not committed: it is copied from the MindAttic.Avatar checkout next to
        this repo when present (a dev box). Without it (CI) the exam room shows the 2D portrait; in production host the model on
        blob storage or a CDN and set Gadfly:Voice:AvatarModelUrl. See tools/sync-voice-assets.ps1 (GAD-T53). -->

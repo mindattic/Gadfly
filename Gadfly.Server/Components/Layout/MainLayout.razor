@@ -3,11 +3,13 @@
 @inject IServiceScopeFactory Scopes
 @inject IConfiguration Config
 @inject NavigationManager Nav
+@inject Gadfly.Server.Localization.UiText T
+@implements IDisposable
 
 <div class="shell">
     @* Keyboard reach (GAD-T365): the first focusable thing in the app, so Tab from the address bar reaches the page
        content without walking through the whole top bar and admin sub-nav first. Mirrors the public site's (GAD-T308). *@
-    <a class="skip" href="#content">Skip to content</a>
+    <a class="skip" href="#content">@T["layout.skip"]</a>
     <Gadfly.Server.Components.Shared.MockBanner />
     <header class="topbar">
         <a class="brand" href="/">Gadfly <span>Exams</span></a>
@@ -31,7 +33,7 @@
                     }
                     @if (Tenant.Role == OrgRoles.Student)
                     {
-                        <NavLink href="my-exams">My exams</NavLink>
+                        <NavLink href="my-exams">@T["layout.myExams"]</NavLink>
                     }
                     @if (Tenant.IsSuperAdmin)
                     {
@@ -58,13 +60,18 @@
                     <span class="user">@context.User.Identity?.Name</span>
                     <form method="post" action="/_ma-auth/logout" data-enhance="false">
                         <AntiforgeryToken />
-                        <button type="submit" class="link">Sign out</button>
+                        <button type="submit" class="link">@T["layout.signOut"]</button>
                     </form>
                 </div>
             </Authorized>
         </AuthorizeView>
         @* Help is open to everyone, signed in or not (GAD-T292). *@
-        <a class="nav-help" href="help">Help</a>
+        @if (Tenant.Role == OrgRoles.Student && !InExamRoom)
+        {
+            @* Students choose their UI language (GAD-T543); in the exam room the attempt's own language rules, so it isn't offered there. *@
+            <LanguageSwitch />
+        }
+        <a class="nav-help" href="help">@T["layout.help"]</a>
     </header>
     <main id="content" tabindex="-1">
         @if (OrgAdmin && InAdminArea)
@@ -77,6 +84,13 @@
 
 @code {
     private List<(Guid Id, string Name, string Role)> orgNames = [];
+
+    private bool InExamRoom => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("exam/", StringComparison.OrdinalIgnoreCase);
+
+    // A page that switches the UI language live (get-ready, GAD-T546) re-renders the top bar with it.
+    protected override void OnInitialized() => T.Changed += OnLanguageChanged;
+    private void OnLanguageChanged() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => T.Changed -= OnLanguageChanged;
 
     private bool OrgAdmin => Gadfly.Server.Admin.AdminArea.IsOrgAdmin(Tenant.Role);
     private bool InAdminArea => Gadfly.Server.Admin.AdminArea.Contains(Nav.ToBaseRelativePath(Nav.Uri));

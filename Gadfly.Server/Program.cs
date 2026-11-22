@@ -184,6 +184,8 @@ Gadfly.Server.Help.HelpEndpoints.AddHelpCenter(builder.Services);
 
 // The Gadfly Exams web app (GAD-T48): Blazor Server.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+// UI languages (GAD-T543): English and Korean interface text, the language cookie, dates and numbers per language.
+Gadfly.Server.Localization.LocalizationSetup.AddGadflyLocalization(builder.Services);
 // Brotli (preferred) then gzip for every compressible response, including over HTTPS: admin pages, the public
 // site and the per-feature stylesheets are all plain text that shrinks well, and none of it is per-request secret
 // content reflected back to an attacker, so the BREACH-style risk response compression otherwise carries does not
@@ -238,12 +240,14 @@ app.UseStaticFiles(VoiceServices.StaticFiles());   // adds .glb (the examiner av
 // Fingerprinted, precompressed, long-cached URLs for assets referenced via @Assets[...] (GAD-T317). These are endpoints, so
 // the default-deny fallback policy would send every stylesheet and image to the login page without AllowAnonymous (GAD-T492).
 app.MapStaticAssets().AllowAnonymous();
+Gadfly.Server.Localization.LocalizationSetup.UseGadflyLocalization(app);   // the request's UI language from the language cookie (GAD-T543)
 app.UseMindAtticAuthentication();   // authn + authz + forced steps (change password, enroll MFA) + CSP
 app.UseGadflySecurityHeaders();   // CSP and the rest of the security headers for every other page (GAD-T385)
 app.UseRateLimiter();
 app.UseAntiforgery();
 
 GadflyEndpoints.Map(app);
+Gadfly.Server.Localization.LocalizationSetup.MapUiStrings(app);   // UI strings for scripts (GAD-T543)
 app.MapVoiceExam();
 app.MapGrading();
 app.MapGradingActions();   // HTTP grading workflow for integrators and the demo tour (GAD-T105)

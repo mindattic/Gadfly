@@ -102,6 +102,9 @@ button.link { background: none; color: var(--accent); padding: 0; text-decoratio
 .help-link-mark { display: inline-grid; place-items: center; width: var(--target-min); height: var(--target-min); border: 1.5px solid currentColor; border-radius: 50%; font-size: .8rem; line-height: 1; }
 .help-link:hover .help-link-mark, .help-link:focus-visible .help-link-mark { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .help-link-label { font-weight: 500; }
+/* The student's UI language switch (GAD-T543), next to Help in the top bar. */
+.language-switch select { min-height: var(--target-min); padding: .25rem .5rem; border-radius: 6px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* A lost connection (GAD-T306): Blazor's own reconnect element (id fixed by the framework), toggled through these
    classes as the connection drops, retries and comes back, so a dropped connection never looks like a frozen or
@@ -114,6 +117,10 @@ button.link { background: none; color: var(--accent); padding: 0; text-decoratio
 .reconnect-message::before { content: "Reconnecting\2026"; }
 #components-reconnect-modal.components-reconnect-failed .reconnect-message::before { content: "That's taking too long. Check your internet connection, then try again."; }
 #components-reconnect-modal.components-reconnect-rejected .reconnect-message::before { content: "This page needs to reload to continue."; }
+/* The same states in Korean when the page is (GAD-T544). */
+html[lang="ko"] .reconnect-message::before { content: "다시 연결하는 중\2026"; }
+html[lang="ko"] #components-reconnect-modal.components-reconnect-failed .reconnect-message::before { content: "연결이 오래 걸리고 있어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요."; }
+html[lang="ko"] #components-reconnect-modal.components-reconnect-rejected .reconnect-message::before { content: "계속하려면 페이지를 새로 고쳐야 해요."; }
 .reconnect-retry { margin-top: .75rem; }
 #components-reconnect-modal.components-reconnect-show .reconnect-retry { display: none; }
 @media (max-width: 640px) { .who { margin-left: 0; width: 100%; } }

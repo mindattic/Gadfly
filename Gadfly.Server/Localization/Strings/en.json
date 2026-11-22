@@ -1,0 +1,13 @@
+{
+  "_about": "English UI strings: the source and the fallback for every language (GAD-T543, docs/LOCALIZATION.md). Stable dotted keys; never reuse a key for a different meaning. Keys starting with _ are comments.",
+
+  "common.tryAgain": "Try again",
+  "common.loading": "Loading…",
+
+  "language.switchLabel": "Language",
+
+  "layout.skip": "Skip to content",
+  "layout.myExams": "My exams",
+  "layout.signOut": "Sign out",
+  "layout.help": "Help"
+}

@@ -1,0 +1,13 @@
+{
+  "_about": "한국어 UI 문자열 (GAD-T543, GAD-T544). 시험에 맞는 정중한 존댓말(-요/-습니다)을 쓰고, 용어는 docs/LOCALIZATION.md의 용어집을 따릅니다. 번역이 없는 키는 영어로 표시됩니다.",
+
+  "common.tryAgain": "다시 시도",
+  "common.loading": "불러오는 중…",
+
+  "language.switchLabel": "언어",
+
+  "layout.skip": "본문으로 건너뛰기",
+  "layout.myExams": "내 시험",
+  "layout.signOut": "로그아웃",
+  "layout.help": "도움말"
+}

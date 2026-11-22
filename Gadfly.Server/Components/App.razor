@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Components.Endpoints
+@inject Gadfly.Server.Localization.UiText T
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@HtmlLang">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -28,7 +29,7 @@
     <div id="components-reconnect-modal" class="components-reconnect-hide">
         <div class="reconnect-box" role="alert">
             <p class="reconnect-message"></p>
-            <button type="button" class="reconnect-retry">Try again</button>
+            <button type="button" class="reconnect-retry">@T["common.tryAgain"]</button>
         </div>
     </div>
     <script nonce="@CspNonce">(function(){var m=document.getElementById("components-reconnect-modal");if(!m)return;var b=m.querySelector(".reconnect-retry");if(b)b.addEventListener("click",function(){if(window.Blazor&&typeof window.Blazor.reconnect==="function")window.Blazor.reconnect().then(function(ok){if(!ok)location.reload();});else location.reload();});new MutationObserver(function(){if(m.classList.contains("components-reconnect-rejected"))setTimeout(function(){location.reload();},1500);}).observe(m,{attributes:true,attributeFilter:["class"]});})();</script>
@@ -41,6 +42,8 @@
     // Interactive Server everywhere EXCEPT pages marked [ExcludeFromInteractiveRouting] (the sign-in
     // pages), which render static SSR so the library's antiforgery form POSTs validate.
     [CascadingParameter] private HttpContext HttpContext { get; set; } = default!;
+    // The page's language for screen readers (GAD-T543, WCAG 3.1.1): this request's UI language; the language switch keeps it in step.
+    private static string HtmlLang => Gadfly.Server.Localization.UiCatalog.Normalize(System.Globalization.CultureInfo.CurrentUICulture.Name);
     private string? CspNonce => HttpContext.Items[MindAttic.Authentication.Web.MindAtticAuthAppExtensions.CspNonceItem] as string;
 
     private IComponentRenderMode? PageRenderMode =>
