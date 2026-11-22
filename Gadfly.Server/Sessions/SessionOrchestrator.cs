@@ -69,6 +69,7 @@ public sealed class SessionOrchestrator(
     TimeProvider clock,
     ILogger<SessionOrchestrator> log,
     Platform.UsageMeter meter,
+    Platform.PlanEnforcement plans,
     Evidence.EvidenceSyncQueue evidenceQueue)
 {
     private sealed class Live(SourceExamEngine engine, Guid organizationId, Guid studentUserId, AssessmentMode mode)
@@ -129,6 +130,8 @@ public sealed class SessionOrchestrator(
         var (spent, quota) = await meter.MonthAsync(db, organizationId, ct);
         if (quota is { } q && spent >= q)
             throw new SessionRefusedException("Your organization has reached its monthly usage limit. Please contact your instructor.");
+        var (planOk, planMessage) = await plans.CheckExamAllowanceAsync(db, organizationId, ct);
+        if (!planOk) throw new SessionRefusedException(planMessage!);
 
         var collection = await db.SourceCollections.AsNoTracking()
             .FirstAsync(c => c.Id == exam.CollectionId && c.OrganizationId == organizationId, ct);

@@ -22,6 +22,22 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
 
     public bool Can(Permission p) => tenant.OrganizationId is not null && Actor.Has(p);
 
+    /// <summary>
+    /// Stages a notification email to the session's own student (GAD-T310: result released, appeal received/decided).
+    /// Never throws and never blocks grading: a lookup miss or a disabled organization just means nothing is staged.
+    /// </summary>
+    private async Task NotifyStudentAsync(Guid sessionId, string kind, Func<string?, string, string, Notifications.EmailData> build, CancellationToken ct)
+    {
+        var info = await (from s in db.ExamSessions.AsNoTracking()
+                           join e in db.Exams.AsNoTracking() on s.ExamId equals e.Id
+                           where s.Id == sessionId && s.OrganizationId == Org
+                           select new { s.StudentUserId, e.Title }).FirstOrDefaultAsync(ct);
+        if (info is null) return;
+        var orgName = await db.Organizations.AsNoTracking().Where(o => o.Id == Org).Select(o => o.Name).FirstOrDefaultAsync(ct) ?? "your organization";
+        var studentName = await db.AuthUsers.AsNoTracking().Where(u => u.Id == info.StudentUserId).Select(u => u.DisplayName ?? u.UserName).FirstOrDefaultAsync(ct) ?? "there";
+        await Notifications.EmailOutbox.StageAsync(db, Org, kind, info.StudentUserId, build(info.Title, orgName, studentName), Now, ct, relatedId: sessionId);
+    }
+
     /// <summary>Checks a permission; a refusal is audited and saved at once.</summary>
     private async Task<bool> RequireAsync(Permission p, string attempted, Guid? sessionId, CancellationToken ct)
     {
@@ -645,6 +661,8 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (refused is not null) return refused;
         AddApproval(sessionId, ApprovalAction.Publish, note);
         GradingAudit.Add(db, Org, Actor, "grade.published", "FinalGrade", sessionId.ToString(), sessionId, Now, after: new { finalPercent = grade.FinalPercent });
+        await NotifyStudentAsync(sessionId, Notifications.EmailKinds.ResultReleased, (title, orgName, name) =>
+            new(orgName, name, ExamTitle: title, Score: grade.LetterOrLabel ?? (grade.FinalPercent is { } p ? $"{p:0.##}%" : null), ActionUrl: "/my-results", ActionLabel: "View my result"), ct);
         return await SaveAsync(ct) ?? GradingResult.Done("Published: the student can now see the result and the report.");
     }
 
@@ -670,6 +688,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         db.GradeAppeals.Add(appeal);
         AddApproval(sessionId, ApprovalAction.AppealOpened, null);
         GradingAudit.Add(db, Org, Actor, "grade.appeal.opened", "GradeAppeal", appeal.Id.ToString(), sessionId, Now, reason: appeal.Reason);
+        await NotifyStudentAsync(sessionId, Notifications.EmailKinds.AppealReceived, (title, orgName, name) => new(orgName, name, ExamTitle: title), ct);
         return await SaveAsync(ct) ?? GradingResult.Done("Your appeal was submitted. Your instructor will review it; your published result stays visible meanwhile.");
     }
 
@@ -692,6 +711,8 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         AddApproval(sessionId, ApprovalAction.AppealResolved, resolution);
         GradingAudit.Add(db, Org, Actor, "grade.appeal.resolved", "GradeAppeal", appeal.Id.ToString(), sessionId, Now,
             after: new { outcome = outcome.ToString() }, reason: appeal.Resolution);
+        await NotifyStudentAsync(sessionId, Notifications.EmailKinds.AppealDecided, (title, orgName, name) =>
+            new(orgName, name, ExamTitle: title, AppealOutcome: outcome.ToString(), AppealResolution: appeal.Resolution, ActionUrl: "/my-results", ActionLabel: "View my result"), ct);
         return await SaveAsync(ct) ?? GradingResult.Done("Appeal resolved; the published grade stands.");
     }
 
@@ -761,6 +782,8 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             appeal.ResolvedAt = Now;
             AddApproval(sessionId, ApprovalAction.AppealResolved, reason);
             GradingAudit.Add(db, Org, Actor, "grade.appeal.resolved", "GradeAppeal", appeal.Id.ToString(), sessionId, Now, after: new { outcome = "Amended" }, reason: reason);
+            await NotifyStudentAsync(sessionId, Notifications.EmailKinds.AppealDecided, (title, orgName, name) =>
+                new(orgName, name, ExamTitle: title, AppealOutcome: "Amended", AppealResolution: appeal.Resolution, ActionUrl: "/my-results", ActionLabel: "View my result"), ct);
         }
         GradingAudit.Add(db, Org, Actor, "grade.amended", "FinalGrade", sessionId.ToString(), sessionId, Now,
             new { finalPercent = before }, new { finalPercent = grade.FinalPercent }, reason);

@@ -522,6 +522,9 @@ public sealed class DeskService(IServiceProvider sp)
         var ids = await db.ExamSessions.Where(s => s.OrganizationId == org && s.AssignmentId == assignmentId).Select(s => s.Id).ToListAsync(ct);
         if (await HasLiveAttemptAsync(db, org, assignmentId, ct))
             return new(false, "An attempt is in progress (running or paused). Let it end, then reset.");
+        var examTitle = await db.Exams.AsNoTracking().Where(e => e.Id == a.ExamId && e.OrganizationId == org).Select(e => e.Title).FirstOrDefaultAsync(ct);
+        var orgName = await db.Organizations.AsNoTracking().Where(o => o.Id == org).Select(o => o.Name).FirstOrDefaultAsync(ct) ?? "your organization";
+        var studentName = await db.AuthUsers.AsNoTracking().Where(u => u.Id == a.StudentUserId).Select(u => u.DisplayName ?? u.UserName).FirstOrDefaultAsync(ct) ?? "there";
         await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
             db.ChangeTracker.Clear();   // a retried attempt starts clean, so it adds one audit row, not two
@@ -549,6 +552,12 @@ public sealed class DeskService(IServiceProvider sp)
                 .ExecuteUpdateAsync(u => u.SetProperty(x => x.ResultsReleasedAt, (DateTimeOffset?)null), ct);
             Audit("desk.assignment-reset", "ExamAssignment", assignmentId.ToString(), new { Sessions = ids },
                 reason: "Reset from the admin desk: every attempt, its transcript, scores and grades removed; the student starts fresh.");
+            if (ids.Count > 0)
+            {
+                // Attempt reset (GAD-T310): only when there was something to reset, not an empty assignment.
+                var data = new Notifications.EmailData(orgName, studentName, ExamTitle: examTitle, ActionUrl: "/my-exams", ActionLabel: "Open my exams");
+                await Notifications.EmailOutbox.StageAsync(db, org, Notifications.EmailKinds.AttemptReset, a.StudentUserId, data, Clock.GetUtcNow(), ct, relatedId: assignmentId);
+            }
             await db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
         });

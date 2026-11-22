@@ -46,7 +46,58 @@ public sealed class OrganizationSettings
     /// audited as grade.separation-of-duties.waived. Turning it on or off is audited too.
     /// </summary>
     public bool AllowSingleGrader { get; set; }
+    // ---- plans, seats and licences (GAD-T309). Numbers mirror Platform/PlanCatalog.cs, which also lists them for the
+    // pricing page (GAD-T308); a platform admin may override any of them for one organization (e.g. a Custom plan). ----
+    /// <summary>Trial, Standard, Institution or Custom; see <see cref="Gadfly.Server.Platform.PlanCatalog"/>.</summary>
+    public string Plan { get; set; } = "Trial";
+    /// <summary>Owner/Admin/Instructor/Examiner/SecondReviewer accounts this organization may have active at once.</summary>
+    public int StaffSeatLimit { get; set; } = 3;
+    /// <summary>Student accounts this organization may have active at once.</summary>
+    public int StudentSeatLimit { get; set; } = 25;
+    /// <summary>
+    /// Exam sessions allowed in the current period: a calendar month for a paid plan, or the Trial's one-off 30 days
+    /// (<see cref="TrialStartedAt"/>). Null means no cap (a Custom plan by agreement).
+    /// </summary>
+    public int? MonthlyExamAllowance { get; set; } = 50;
+    /// <summary>When the Trial period started; null once a platform admin moves the organization to a paid plan.</summary>
+    public DateTimeOffset? TrialStartedAt { get; set; }
+    /// <summary>Trial: when the 30-day trial ends. Paid plans: the renewal date a platform admin set, shown to the owner.</summary>
+    public DateTimeOffset? PlanRenewsAt { get; set; }
+    /// <summary>A platform admin's freeform note on a Custom plan's agreement (seats, exams, price).</summary>
+    public string? PlanNote { get; set; }
+    /// <summary>Whether Gadfly's own notification emails (exam assigned, reminders, results, appeals...) send for this organization (GAD-T310). Invitation emails are unaffected.</summary>
+    public bool EmailNotificationsEnabled { get; set; } = true;
     public DateTimeOffset UpdatedAt { get; set; }
+}
+
+/// <summary>A student's own notification choice (GAD-T310): opting out of exam-due reminders. Never affects released results, which stay operationally important.</summary>
+public sealed class StudentNotificationPreference : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid OrganizationId { get; set; }
+    public Guid UserId { get; set; }
+    public bool RemindersOptedOut { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+/// <summary>One notification email Gadfly queued or sent (GAD-T310): every send is recorded, whether delivered or not.</summary>
+public enum EmailLogStatus { Queued, Sent, Failed, Skipped }
+
+public sealed class EmailLog : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid OrganizationId { get; set; }
+    /// <summary>One of Notifications/EmailKinds.cs (exam-assigned, reminder, result-released, appeal-received, appeal-decided, attempt-reset, test).</summary>
+    public string Kind { get; set; } = "";
+    public Guid? ToUserId { get; set; }
+    public string? ToEmail { get; set; }
+    /// <summary>The assignment, session or appeal this email is about, for idempotency and the admin preview's log.</summary>
+    public Guid? RelatedId { get; set; }
+    public string? Subject { get; set; }
+    public EmailLogStatus Status { get; set; }
+    public string? Error { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? SentAt { get; set; }
 }
 
 /// <summary>

@@ -52,7 +52,7 @@ public interface IOrganizationDirectory
 }
 
 public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdminService users, IOrganizationService orgs,
-    IInvitationService invitations, TimeProvider clock) : IOrganizationDirectory
+    IInvitationService invitations, TimeProvider clock, Gadfly.Server.Platform.PlanEnforcement plans) : IOrganizationDirectory
 {
     /// <summary>Role every Gadfly account holds in MindAttic.Authentication; organization roles live in memberships.</summary>
     public const string AccountRole = "User";
@@ -96,7 +96,12 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
             if (created) await db.AuthUsers.Where(u => u.Id == owner.UserId).ExecuteDeleteAsync(ct);   // never leave an orphan account behind
             return new(false, "The organization was not created: " + org.Message);
         }
-        db.OrganizationSettings.Add(new OrganizationSettings { OrganizationId = org.Id.Value, UpdatedAt = clock.GetUtcNow() });
+        // New organizations start on the Trial plan (GAD-T309): a 30-day window, seat/exam limits default in the entity.
+        var createdAt = clock.GetUtcNow();
+        db.OrganizationSettings.Add(new OrganizationSettings
+        {
+            OrganizationId = org.Id.Value, UpdatedAt = createdAt, TrialStartedAt = createdAt, PlanRenewsAt = createdAt.AddDays(30),
+        });
         await db.SaveChangesAsync(ct);
         return new(true, $"Created {name}. The owner signs in as '{ownerUserName}' with the temporary password, then must change it and set up MFA.", org.Id);
     }
@@ -134,6 +139,15 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
         }
         else userId = account.Id;
 
+        // Plans, seats and licences (GAD-T309): only a genuinely new membership spends a seat, not a role change
+        // for someone already here; platform staff and system callers (actingRole null) can always fix a seat problem.
+        var alreadyMember = await db.OrganizationMembers.AsNoTracking().AnyAsync(m => m.OrganizationId == organizationId && m.UserId == userId && m.IsActive, ct);
+        if (actingRole is not null && !alreadyMember)
+        {
+            var (seatOk, seatMessage) = await plans.CheckSeatAsync(db, organizationId, role, ct);
+            if (!seatOk) return new(false, seatMessage!);
+        }
+
         // The library owns the invariants (owner protection, MFA flag for staff roles, sign-out on a role change, audit).
         var r = await orgs.AddMemberAsync(organizationId, userId, role, actingRole, actorUserId, ct);
         if (!r.Ok) return new(false, r.Message);
@@ -156,6 +170,13 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
         if (!OrgRoles.All.Contains(role, StringComparer.Ordinal)) return new(false, $"'{role}' is not a role.");
         email = email?.Trim() ?? "";
         if (!IsValidEmail(email)) return new(false, $"The email must be an email address of at most {MaxAccountTextLength} characters.");
+        if (actingRole is not null)
+        {
+            // Plans, seats and licences (GAD-T309): a best-effort check at invite time (the real seat is spent only once
+            // the invitation is accepted, which MindAttic.Authentication's own flow does not call back into Gadfly for).
+            var (seatOk, seatMessage) = await plans.CheckSeatAsync(db, organizationId, role, ct);
+            if (!seatOk) return new(false, seatMessage!);
+        }
         var r = await invitations.InviteAsync(organizationId, email, role, actorUserId, actingRole, ct);
         return new(r.Ok, r.Message, r.InvitationId);
     }

@@ -270,9 +270,10 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
             .Select(a => a.StudentUserId).ToListAsync(ct)).ToHashSet();
         var now = clock.GetUtcNow();
         var added = 0;
+        var newlyAssigned = new List<(Guid AssignmentId, Guid StudentUserId)>();
         foreach (var student in wanted.Where(s => !already.Contains(s)))
         {
-            db.ExamAssignments.Add(new ExamAssignment
+            var row = new ExamAssignment
             {
                 OrganizationId = org,
                 ExamId = examId,
@@ -283,13 +284,25 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
                 TimeMultiplier = timeMultiplier,
                 AssignedByUserId = User,
                 AssignedAt = now,
-            });
+            };
+            db.ExamAssignments.Add(row);
+            newlyAssigned.Add((row.Id, student));
             added++;
         }
         if (added > 0)
         {
             Guard.Audit("assessment.assigned", "Exam", examId.ToString(),
                 after: new { Students = wanted.Where(s => !already.Contains(s)).ToList(), opensAt, closesAt, attemptsAllowed, timeMultiplier });
+            // Exam assigned (GAD-T310): one email per newly-assigned student, staged in the same save.
+            var orgName = await db.Organizations.AsNoTracking().Where(o => o.Id == org).Select(o => o.Name).FirstOrDefaultAsync(ct) ?? "your organization";
+            var names = await db.AuthUsers.AsNoTracking().Where(u => newlyAssigned.Select(a => a.StudentUserId).Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.DisplayName ?? u.UserName, ct);
+            foreach (var (assignmentId, studentUserId) in newlyAssigned)
+            {
+                var data = new Notifications.EmailData(orgName, names.GetValueOrDefault(studentUserId, "there"), ExamTitle: exam.Title,
+                    DueAtUtc: closesAt, AttemptsAllowed: attemptsAllowed, ActionUrl: "/my-exams", ActionLabel: "Open my exams");
+                await Notifications.EmailOutbox.StageAsync(db, org, Notifications.EmailKinds.ExamAssigned, studentUserId, data, now, ct, relatedId: assignmentId);
+            }
             await db.SaveChangesAsync(ct);
         }
         db.ChangeTracker.Clear();

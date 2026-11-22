@@ -137,6 +137,81 @@ namespace Gadfly.Server.Data.Migrations
                     b.ToTable("ApiCallTimings", "gadfly");
                 });
 
+            modelBuilder.Entity("Gadfly.Server.Data.EmailLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("RelatedId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Subject")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ToEmail")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("ToUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "RelatedId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.ToTable("EmailLogs", "gadfly");
+                });
+
+            modelBuilder.Entity("Gadfly.Server.Data.StudentNotificationPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("RemindersOptedOut")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("StudentNotificationPreferences", "gadfly");
+                });
+
             modelBuilder.Entity("Gadfly.Server.Data.ApiKey", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1518,6 +1593,9 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<string>("DefaultVoiceId")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("EmailNotificationsEnabled")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("InEuropeanUnion")
                         .HasColumnType("bit");
 
@@ -1528,8 +1606,31 @@ namespace Gadfly.Server.Data.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("decimal(18,6)");
 
+                    b.Property<int?>("MonthlyExamAllowance")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Plan")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("PlanNote")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("PlanRenewsAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<int>("RetentionDays")
                         .HasColumnType("int");
+
+                    b.Property<int>("StaffSeatLimit")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StudentSeatLimit")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("TrialStartedAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
