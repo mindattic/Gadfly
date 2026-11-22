@@ -1,0 +1,36 @@
+@using Gadfly.Server.Grading
+@* GAD-T435: the path one objective took, beside its level, for reviewers only: the questions and their kinds, the rubric
+   criteria the score covers and those it leaves out, and every excluded answer by reason. While blind grading hides the AI's
+   view, only the questions are shown. *@
+@if (Path is not null)
+{
+    <div class="objective-path">
+        <p class="hint"><strong>Path:</strong> @Path.MovesLine()</p>
+        @if (Path.Questions == 0)
+        {
+        }
+        else if (Path.Criteria is null && Path.Exclusions is null)
+        {
+            <p class="hint">Criteria reached and excluded answers appear once the AI evaluation is visible to you.</p>
+        }
+        else
+        {
+            @if (Path.CriteriaLine() is { } criteria)
+            {
+                <p class="hint"><strong>Coverage:</strong> @criteria</p>
+            }
+            else
+            {
+                <p class="hint"><strong>Coverage:</strong> not known yet (no AI evaluation of this objective).</p>
+            }
+            @if (Path.ExclusionsLine() is { } excluded)
+            {
+                <p class="hint"><strong>Exclusions:</strong> @excluded</p>
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public ObjectivePath? Path { get; set; }
+}

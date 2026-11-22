@@ -1,0 +1,40 @@
+@using Gadfly.Server.Grading
+@using Gadfly.Server.Components.Pages.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+@* GAD-T435: on the review page, the path each learning objective took (questions and their kinds, criteria reached, excluded
+   answers by reason), read through the grading workspace so blind grading hides the same things it hides there. *@
+@if (paths is { Count: > 0 } && objectives is not null)
+{
+    <section aria-labelledby="paths-heading">
+        <h2 class="section" id="paths-heading">Path per objective</h2>
+        <p class="hint">
+            Each student gets different follow-up questions, so read every level with the path that produced it: how many questions,
+            of which kinds, which rubric criteria the evidence reached (criteria it never reached are left out of the score, not
+            scored as zero) and which answers were not counted, and why.
+        </p>
+        @foreach (var (key, title) in objectives)
+        {
+            if (paths.GetValueOrDefault(key) is { } path)
+            {
+                <h3>@title</h3>
+                <ObjectivePathNote Path="path" />
+            }
+        }
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public Guid SessionId { get; set; }
+    private IReadOnlyDictionary<string, ObjectivePath>? paths;
+    private IReadOnlyList<(string Key, string Title)>? objectives;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var w = await GradingDb.RunAsync(Scopes, Tenant, g => g.WorkspaceAsync(SessionId));
+        if (w is null) { paths = null; objectives = null; return; }
+        objectives = w.Objectives.Select(o => (o.Objective.Key, o.Objective.Title)).ToList();
+        paths = ObjectivePath.ForSession(w.Session, w.Objectives, w.AiVisible, w.Policy.AllowAssistedEvidence);
+    }
+}

@@ -59,6 +59,11 @@ public sealed record AssessmentReport
     /// long thread is seen rather than silently shaping a score. Empty for students and when the transcript is gone.
     /// </summary>
     public IReadOnlyDictionary<string, int> FollowUps { get; init; } = new Dictionary<string, int>();
+    /// <summary>
+    /// Reviewers only: the path each objective took, by objective key (GAD-T435): its questions and their kinds, the criteria
+    /// the score covers, and the answers excluded by reason (the last two only once the AI's view is visible). Empty for students.
+    /// </summary>
+    public IReadOnlyDictionary<string, ObjectivePath> Paths { get; init; } = new Dictionary<string, ObjectivePath>();
 
     /// <summary>An objective scoring below this share of its maximum is reported as a knowledge gap.</summary>
     public const decimal GapBelowPercent = 60m;
@@ -119,6 +124,7 @@ public sealed record AssessmentReport
                                             (a.Appeal.Resolution is { } r ? $": {r}" : "")).ToList(),
             IsMock = w.AiVisible && w.AnyMock, ForStudent = forStudent, IsApproved = w.HasFinalizeApproval,
             ScoreUse = scoreUse, ScoreUseReason = scoreUseReason, FollowUps = forStudent ? new Dictionary<string, int>() : followUps,
+            Paths = forStudent ? new Dictionary<string, ObjectivePath>() : ObjectivePath.ForSession(w.Session, w.Objectives, w.AiVisible, w.Policy.AllowAssistedEvidence),
         };
     }
 
@@ -208,6 +214,12 @@ public sealed record AssessmentReport
             if (o.AiLevel is not null) sb.AppendLine($"- AI (preliminary{(o.AiIsMock ? ", MOCK" : "")}): {o.AiLevel}, confidence {o.AiConfidence}{(o.AiExplanation is { Length: > 0 } x ? $". {x}" : "")}");
             if (o.Reconciliation is not null) sb.AppendLine($"- Reconciliation: {o.Reconciliation}");
             if (ChangeLine(o) is { } change) sb.AppendLine($"- {change}");
+            if (!ForStudent && Paths.GetValueOrDefault(o.Key) is { } path)
+            {
+                sb.AppendLine($"- Path: {path.MovesLine()}");
+                if (path.CriteriaLine() is { } coverage) sb.AppendLine($"- Coverage: {coverage}");
+                if (path.ExclusionsLine() is { } excluded && path.Questions > 0) sb.AppendLine($"- Exclusions: {excluded}");
+            }
             if (o.WhatWasMissing.Count > 0)
             {
                 sb.AppendLine("- What was missing:");

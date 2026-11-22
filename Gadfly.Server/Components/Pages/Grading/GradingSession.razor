@@ -101,6 +101,7 @@ else
                     var f = Form(o.Objective.Id);
                     <div class="gr-objective">
                         <h3>@o.Objective.Title <span class="hint">· max @o.Objective.MaxScore.ToString("0.##") · weight @o.Objective.Weight.ToString("0.##")</span></h3>
+                        <ObjectivePathNote Path="@paths.GetValueOrDefault(o.Objective.Key)" />
                         <div class="gr-form-row">
                             <label>Level
                                 <select @bind="f.Level">
@@ -589,6 +590,7 @@ else
     }
 
     private GradingWorkspace? w;
+    private IReadOnlyDictionary<string, ObjectivePath> paths = new Dictionary<string, ObjectivePath>();
     private IReadOnlyDictionary<Guid, SpeechMark> speech = new Dictionary<Guid, SpeechMark>();
     private bool loading = true, busy, ok;
     private string? message, approveLabel, approveNote;
@@ -607,6 +609,9 @@ else
     private async Task LoadAsync()
     {
         w = await GradingDb.RunAsync(Scopes, Tenant, g => g.WorkspaceAsync(SessionId));
+        // GAD-T435: each objective's path; criteria and exclusions only once the AI's view is visible to this viewer.
+        paths = w is null ? new Dictionary<string, ObjectivePath>()
+            : ObjectivePath.ForSession(w.Session, w.Objectives, w.AiVisible, w.Policy.AllowAssistedEvidence);
         // What speech recognition was unsure of, and what the student corrected (GAD-T265); loaded only after the
         // workspace passed its permission check.
         var loaded = w;

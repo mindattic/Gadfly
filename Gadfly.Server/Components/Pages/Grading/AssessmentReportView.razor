@@ -52,6 +52,7 @@
             @if (o.AiLevel is not null) { <p><strong>AI (preliminary):</strong> @o.AiLevel, confidence @o.AiConfidence. @o.AiExplanation</p> }
             @if (o.Reconciliation is not null) { <p><strong>Reconciliation:</strong> @o.Reconciliation</p> }
             @if (Report.ChangeLine(o) is { } change) { <p class="hint">@change</p> }
+            @if (!Report.ForStudent && Report.Paths.GetValueOrDefault(o.Key) is { } path) { <ObjectivePathNote Path="path" /> }
             @if (o.WhatWasMissing.Count > 0)
             {
                 <p><strong>What was missing</strong></p>

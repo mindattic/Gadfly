@@ -50,6 +50,15 @@ Fill in **every** objective, then press **Submit evaluation for all objectives**
 > voice measurements) until you submit. Grade the answers on their own merits first. Once you submit, everything
 > appears. Only your first submission counts as blind.
 
+**The path each objective took.** No two students get the same follow-up questions, so under each objective's
+heading the page shows its **Path**: how many questions were asked and of which kinds (opening question, probe the
+reasoning, counterexample, apply to a new situation, and so on). Once the AI's evaluation is visible to you it also
+shows **Coverage**, which rubric criteria the evidence reached and what share of the objective's weight they carry
+(a criterion with no evidence is left out of the score and the others reweighted, so a short path is scored on fewer
+criteria), and **Exclusions**, every answer the level does not rest on and why: read as recited, came after a
+question that gave the answer away, given after a hint, or left without a usable verdict for a person to grade. The
+same lines appear on the review page and, for reviewers, in the assessment report. Students don't see them.
+
 **Anonymous marking.** When the assessment's grading policy has **Anonymous marking** on, the grading queue, this
 page, the assessment report and the review pages show a session code (for example *Session 5A7D-9C2E*) instead of
 the student's name, and a banner says so. The name appears once the human score is submitted, in time for
