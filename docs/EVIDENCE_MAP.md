@@ -299,6 +299,13 @@ reconciling single answers), GAD-T265 (word error rate by group, and low-confide
   the endpoints alike. An organization with one grader can turn on "Allow a single grader" (off by default, the
   change audited); every act it lets through is audited as `grade.separation-of-duties.waived`.
 
+**Done.** GAD-T430 (approved by the owner; found by GAD-T421, ElenchusAtScale Sections 3.8 and 5.4.2, M1, M12): the
+grading panel is kept apart from the examiner's exam-time judgments. The stance recorded on each answer during the exam
+(supports, contradicts, misconception, uncertain) and its note no longer reach the grading prompt; they only raise the
+"contradicting evidence" flag for the human reviewer. The answers are listed to the panel in a fresh random order on
+every call, as the rubric criteria and levels already were, but each keeps a stable number, so a citation always
+resolves to the same answer.
+
 ## 8. Learning Mode hints
 
 **What Gadfly does.** In Learning Mode only, Hint and GuidedExplanation moves teach, and everything after them is tagged

@@ -27,7 +27,8 @@ namespace Gadfly.Sources.Grading;
 /// The result is preliminary: it is stored for human review and never published on its own.
 /// Bias controls (GAD-T269, docs/research/05): the prompt says length, repetition and restatement earn
 /// nothing and fluency is never penalized, asks for the quote and evidence before each level, and the order
-/// of the rubric criteria and of their levels is shuffled on every call (position bias). <see cref="PanelBiasCheck"/>
+/// of the rubric criteria, of their levels and of the evidence is shuffled on every call (position bias; evidence keeps
+/// stable numbers so citations resolve, GAD-T430). The exam-time stance notes never reach the panel. <see cref="PanelBiasCheck"/>
 /// probes a panel with padded and less fluent versions of the same answers.
 /// </summary>
 public sealed class AiObjectiveGrader(ISocraticVotingClient panel, Random? shuffle = null)
@@ -118,9 +119,12 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel, Random? shuff
     // ------------------------------------------------------------------ prompt
 
     /// <summary>
-    /// The grading prompt. With <paramref name="shuffle"/>, the criteria and each criterion's levels are listed in
-    /// a random order (levels keep their numbers), so no criterion or level gains from its position; without it the
-    /// order is the rubric's own. Evidence stays in exam order and numbering, which citations depend on.
+    /// The grading prompt. With <paramref name="shuffle"/>, the criteria, each criterion's levels and the evidence are
+    /// listed in a random order, so nothing gains from its position; without it the order is the rubric's and the
+    /// exam's own. Evidence keeps a stable label (its number in <paramref name="usable"/>) wherever it is listed, so a
+    /// citation always resolves to the same response (GAD-T430, ElenchusAtScale Section 5.4.2).
+    /// The exam-time stance on each response (<see cref="EvidenceItem.Stance"/>, <see cref="EvidenceItem.Note"/>) is
+    /// never shown: that online judgment belongs to the examiner, and the grade answers only to the evidence (M1, M12).
     /// </summary>
     internal static string BuildPrompt(GradingObjective o, IReadOnlyList<GradingCriterion> criteria, IReadOnlyList<EvidenceItem> usable, IReadOnlyList<EvidenceItem> excluded,
         Random? shuffle = null)
@@ -147,12 +151,13 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel, Random? shuff
                 sb.AppendLine($"    {(int)level} {MasteryLevels.Label(level)}: {(c.Levels.TryGetValue(level, out var d) && !string.IsNullOrWhiteSpace(d) ? d : MasteryLevels.DefaultDescriptor(level))}");
         }
         sb.AppendLine();
-        sb.AppendLine("Evidence (the only verified responses you may use, numbered):");
-        for (var i = 0; i < usable.Count; i++)
+        sb.AppendLine(shuffle is null
+            ? "Evidence (the only verified responses you may use, numbered):"
+            : "Evidence (the only verified responses you may use, numbered; listed in random order, which means nothing: cite them by their numbers):");
+        foreach (var i in Ordered(Enumerable.Range(0, usable.Count), shuffle))
         {
             var e = usable[i];
             sb.AppendLine($"[{i + 1}] Question: {e.Question}");
-            if (e.Stance is { } stance) sb.AppendLine($"    Reviewer note: {stance}{(string.IsNullOrWhiteSpace(e.Note) ? "" : " - " + e.Note)}");
             sb.AppendLine($"    Answer: {ExamPrompts.Student(e.VerifiedText)}");
             if (e.TranscriptCorrected)
                 sb.AppendLine("    Transcript: the student corrected what the speech recognizer wrote (a recording fix, not a new answer).");

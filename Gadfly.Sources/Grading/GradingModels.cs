@@ -22,7 +22,10 @@ public sealed record EvidenceItem(Guid ResponseId, int Sequence, string Question
     bool Assisted = false, bool Contaminated = false, string? Note = null, EvidenceStanceHint? Stance = null,
     IReadOnlyList<string>? UncertainWords = null, bool TranscriptCorrected = false);
 
-/// <summary>A reviewer-recorded stance on a piece of evidence (AssessmentEvidence), passed through as a hint.</summary>
+/// <summary>
+/// A stance recorded on a piece of evidence (AssessmentEvidence) during the exam. It is part of the examiner, not the
+/// grader (GAD-T430, ElenchusAtScale Section 3.8): it raises a flag for the human reviewer but is never shown to the panel.
+/// </summary>
 public enum EvidenceStanceHint { Supports, Contradicts, Misconception, Uncertain }
 
 /// <summary>Everything needed to grade one objective.</summary>
