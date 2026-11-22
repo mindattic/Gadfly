@@ -121,6 +121,37 @@ public class VoiceTests
         Assert.That(VoiceAnswerBuilder.Build(nan, DateTimeOffset.UtcNow)!.Answer.Words, Has.Count.EqualTo(9), "a word with a non-finite time is dropped");
     }
 
+    [Test]
+    public void Vocabulary_and_language_are_only_allowed_once_armed_and_set()
+    {
+        var clock = new FakeClock(DateTimeOffset.Parse("2026-11-20T10:00:00Z"));
+        var grants = new VoiceGrants(clock);
+        Guid student = Guid.NewGuid(), org = Guid.NewGuid(), session = Guid.NewGuid();
+
+        // Not armed yet: nothing is allowed, and setting the vocabulary before arming does nothing.
+        grants.SetVocabulary(student, session, "en", ["mitosis"]);
+        Assert.That(grants.AllowedLanguage(student), Is.Null);
+        Assert.That(grants.IsVocabularyAllowed(student, ["mitosis"]), Is.False);
+
+        grants.Arm(student, org, session);
+        Assert.That(grants.IsVocabularyAllowed(student, ["mitosis"]), Is.False, "armed, but no vocabulary computed yet: nothing is allowed");
+        Assert.That(grants.IsVocabularyAllowed(student, []), Is.True, "asking for nothing is always safe, even before the vocabulary is set");
+        grants.SetVocabulary(student, session, "en", ["mitosis", "meiosis"]);
+
+        Assert.That(grants.AllowedLanguage(student), Is.EqualTo("en"));
+        Assert.That(grants.IsVocabularyAllowed(student, ["mitosis"]), Is.True, "a subset of the exam's own vocabulary");
+        Assert.That(grants.IsVocabularyAllowed(student, ["mitosis", "meiosis"]), Is.True);
+        Assert.That(grants.IsVocabularyAllowed(student, []), Is.True, "no hints asked for is always safe");
+        Assert.That(grants.IsVocabularyAllowed(student, null), Is.True);
+        Assert.That(grants.IsVocabularyAllowed(student, ["mitosis", "something the browser made up"]), Is.False,
+            "a client-supplied term outside the exam's own vocabulary is refused");
+
+        // Another student's grant can't see this one's vocabulary or language.
+        var other = Guid.NewGuid();
+        Assert.That(grants.AllowedLanguage(other), Is.Null);
+        Assert.That(grants.IsVocabularyAllowed(other, ["mitosis"]), Is.False);
+    }
+
     private sealed class FakeClock(DateTimeOffset now) : TimeProvider
     {
         private DateTimeOffset _now = now;
