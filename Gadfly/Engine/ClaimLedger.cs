@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Gadfly.Socrates;
+using MindAttic.Legion;
 
 namespace Gadfly.Engine;
 
@@ -105,7 +106,11 @@ public sealed class ClaimAnalyzer(ISocraticVotingClient panel, PromptSet prompts
         ArgumentNullException.ThrowIfNull(ledger);
         if (turn.Answer is null || string.IsNullOrWhiteSpace(turn.Answer.Text)) return [];
         var earlier = ledger.Claims.Where(c => c.ConceptId == turn.ConceptId && c.TurnIndex < turn.Index).ToList();
-        var found = new List<ClaimContradiction>();
+        // Each candidate pair's CONTRADICT/CONSISTENT check reads only that pair, independent of every other pair's check
+        // (whether a new claim disagrees with one earlier claim never depends on its verdict against another), so a turn
+        // whose claims accumulate several candidates (later in a longer exam, as the ledger fills up) no longer pays one
+        // sequential panel round trip per pair: they all run together instead (GAD-T404).
+        var checks = new List<(StudentClaim Claim, StudentClaim Prior, Task<DecisionResult> Vote)>();
         foreach (var (quote, text) in extracted)
         {
             var claim = ledger.Add(turn.Index, turn.ConceptId, quote, text);
@@ -123,13 +128,20 @@ public sealed class ClaimAnalyzer(ISocraticVotingClient panel, PromptSet prompts
                     ["second_turn"] = (claim.TurnIndex + 1).ToString(),
                     ["second_claim"] = ExamPrompts.Student(claim.Text),
                 });
-                var d = await panel.DecideAsync(question, [Contradict, Consistent], "", ct);
-                if (string.Equals(d.Choice, Contradict, StringComparison.OrdinalIgnoreCase))
-                {
-                    var c = new ClaimContradiction(prior.Id, claim.Id, turn.ConceptId, d.Confidence);
-                    ledger.AddContradiction(c);
-                    found.Add(c);
-                }
+                checks.Add((claim, prior, panel.DecideAsync(question, [Contradict, Consistent], "", ct)));
+            }
+        }
+        if (checks.Count == 0) return [];
+        await Task.WhenAll(checks.Select(c => c.Vote));
+        var found = new List<ClaimContradiction>();
+        foreach (var (claim, prior, vote) in checks)
+        {
+            var d = await vote;
+            if (string.Equals(d.Choice, Contradict, StringComparison.OrdinalIgnoreCase))
+            {
+                var c = new ClaimContradiction(prior.Id, claim.Id, turn.ConceptId, d.Confidence);
+                ledger.AddContradiction(c);
+                found.Add(c);
             }
         }
         return found;

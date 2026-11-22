@@ -28,6 +28,11 @@ public static class GadflyConfiguration
             AllowedProviderIds = LegionTierResolver.IntersectWithTrustedSet(providerOverride),
             JudgeProviderId = "claude",
             ModelOverrides = LegionTierResolver.BuildTierModelOverrides(tier),
+            // Legion's own default (2 minutes) lets one stalled provider hold up a whole panel call on a live exam, where
+            // every question waits on it (GAD-T404): the panel is already built to tolerate a timed-out voter (a failed
+            // provider in AllowedProviderIds is refilled from the surviving ones, so quorum doesn't shrink), so cutting
+            // this well below that default makes a stuck call fall through to the others sooner without weakening the vote.
+            ProviderTimeout = TimeSpan.FromSeconds(25),
         };
 
         var legionConfig = LegionConfig.LoadFromDirectory(projectDir ?? Environment.CurrentDirectory);
