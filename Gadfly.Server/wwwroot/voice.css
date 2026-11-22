@@ -31,6 +31,13 @@
     position: relative; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: #10151d;
     border: 2px solid rgba(232, 237, 243, .75); box-shadow: 0 4px 14px rgba(0, 0, 0, .45);
 }
+/* No self-view during the exam (GAD-T510): the stream stays in the page, drawn 1 px and invisible, until the student opens the small
+   preview (data-preview="on"), which closes itself. */
+.voice-self[data-preview="off"] { position: fixed; left: 0; top: 0; right: auto; bottom: auto; z-index: -1; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+.voice-camera { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .5rem; margin: 0; font-size: .88rem; color: var(--muted); }
+.voice-camera-dot { flex: none; width: .6rem; height: .6rem; border-radius: 50%; background: var(--muted); }
+.voice-camera[data-self-state="on"] .voice-camera-dot { background: var(--ok, #2e9e5b); }
+.voice-camera[data-self-state="starting"] .voice-camera-dot { background: var(--accent); }
 /* A mirror: the student sees themselves the way they expect to. */
 .voice-self-frame video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .voice-self:not([data-self-state="on"]) .voice-self-frame video { visibility: hidden; }

@@ -45,7 +45,7 @@
             {
                 <p class="error" role="alert"><strong>@(needsClick ? "One click to go." : "The exam is paused.")</strong> @notice</p>
                 <button type="button" data-voice-action="start">@(needsClick ? "Continue to the examiner" : "Try again")</button>
-                <p class="hint">@(TypedAnswers ? "Your camera must stay on for the whole exam: you type your answers, and your camera shows you during the exam." : "Your microphone and camera must stay on for the whole exam: you answer the examiner out loud, and your camera shows you during the exam.") Once the first question has been asked, the clock stops while the exam is paused, for up to 10 minutes in all.</p>
+                <p class="hint">@(TypedAnswers ? "Your camera must stay on for the whole exam: you type your answers, and your camera stays on during the exam (you won't see yourself unless you open the small preview)." : "Your microphone and camera must stay on for the whole exam: you answer the examiner out loud, and your camera stays on (you won't see yourself unless you open the small preview).") Once the first question has been asked, the clock stops while the exam is paused, for up to 10 minutes in all.</p>
                 @if (!needsClick)
                 {
                     @* The exam is paused here (the clock is stopped), so a help link opening in a new tab pulls no one away mid-answer. *@
@@ -73,13 +73,13 @@
                     <div class="voice-stage" data-voice-stage></div>
                     <figcaption>Examiner</figcaption>
                 </figure>
-                <figure class="voice-party voice-self" data-self-state="@selfState">
+                @* No self-view during the exam (GAD-T510, docs/research/attention-and-gaze.md 4.3): watching yourself while answering under
+                   evaluation costs attention and raises appearance anxiety. The camera stream stays in this element (the eye-contact
+                   check and her gaze toward the student read it), drawn 1 px and invisible until the student opens the small preview,
+                   which closes itself after a few seconds. *@
+                <figure class="voice-party voice-self" data-self-state="@selfState" data-preview="@(previewOpen ? "on" : "off")" aria-hidden="@(previewOpen ? "false" : "true")">
                     <div class="voice-self-frame">
-                        <video data-voice-self muted playsinline autoplay aria-label="Your camera (only you see this)"></video>
-                        @if (SelfNote is { } selfNote)
-                        {
-                            <p class="voice-self-note">@selfNote</p>
-                        }
+                        <video data-voice-self muted playsinline autoplay aria-label="@ExamRoomText.CameraPreviewLabel"></video>
                     </div>
                     <figcaption>You</figcaption>
                 </figure>
@@ -122,6 +122,15 @@
                 }
             </section>
             <div class="voice-body">
+                @* The camera-on indicator and the on-demand preview (GAD-T510). *@
+                <div class="voice-camera" data-self-state="@selfState">
+                    <span class="voice-camera-dot" aria-hidden="true"></span>
+                    <span class="voice-camera-label">@(SelfNote ?? (selfState == "on" ? ExamRoomText.CameraOn : ExamRoomText.CameraStarting))</span>
+                    @if (selfState == "on")
+                    {
+                        <button type="button" class="link" aria-pressed="@(previewOpen ? "true" : "false")" @onclick="TogglePreview">@(previewOpen ? ExamRoomText.CameraHide : ExamRoomText.CameraShow)</button>
+                    }
+                </div>
                 <p class="voice-status" role="status" aria-live="polite" data-voice-status>Connecting you to the examiner…</p>
                 <p class="voice-delay" data-voice-delay data-state="idle" aria-live="off"></p>
                 @if (!TypedAnswers)
@@ -252,6 +261,24 @@
 
     /// <summary>The longest response delay worth showing; anything longer is a clock problem, not a pause.</summary>
     private const double MaxDelaySeconds = 6 * 60 * 60;
+
+    /// <summary>The student opened the small camera preview (GAD-T510); it closes itself after <see cref="PreviewFor"/>.</summary>
+    private bool previewOpen;
+    private CancellationTokenSource? previewTimer;
+    private static readonly TimeSpan PreviewFor = TimeSpan.FromSeconds(10);
+
+    private void TogglePreview()
+    {
+        previewOpen = !previewOpen;
+        previewTimer?.Cancel();
+        if (!previewOpen) return;
+        var cts = previewTimer = new CancellationTokenSource();
+        _ = Task.Delay(PreviewFor, cts.Token).ContinueWith(t =>
+        {
+            if (t.IsCanceled || stop.IsCancellationRequested) return;
+            _ = InvokeAsync(() => { previewOpen = false; StateHasChanged(); });
+        }, TaskScheduler.Default);
+    }
 
     private string? SelfNote => selfState switch
     {
