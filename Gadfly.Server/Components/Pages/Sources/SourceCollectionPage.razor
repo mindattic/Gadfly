@@ -31,6 +31,7 @@ else if (collection is not null)
     {
         <p role="status" class="notice @(ok ? "ok" : "error")">@message</p>
     }
+    <RubricApprovalNotice CollectionId="collection.Id" Version="collection.ConceptMapVersion" />
 
     <div class="src-columns">
         <section class="panel">

@@ -755,6 +755,11 @@ else
                     <p>@view.Policy.Describe()</p>
                 </div>
 
+                @if (Id is { } approvalExamId)
+                {
+                    <RubricApprovalPanel ExamId="approvalExamId" Changed="ReloadAsync" />
+                }
+
                 @if (view.IsDraft)
                 {
                     @if (problems.Count > 0)

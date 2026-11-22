@@ -275,7 +275,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
     public static ExamCopy CopyOf(Exam source, IReadOnlyList<LearningObjective> objectives, GradingPolicy? grading, string title, Guid createdBy,
         DateTimeOffset now, int seed)
     {
-        var policy = ExamService.ReadPolicy(source.PolicyJson) with { Seed = seed };
+        var policy = ExamService.ReadPolicy(source.PolicyJson) with { Seed = seed, RubricApproval = null };   // a copy is approved on its own (GAD-T437)
         var exam = new Exam
         {
             OrganizationId = source.OrganizationId,

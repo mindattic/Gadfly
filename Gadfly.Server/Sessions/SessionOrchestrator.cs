@@ -137,6 +137,9 @@ public sealed class SessionOrchestrator(
             .FirstAsync(c => c.Id == exam.CollectionId && c.OrganizationId == organizationId, ct);
         // The session records the policy it runs under: objectives, mode and this student's extra time (GAD-T120).
         var policy = await SessionObjectives.ForSessionAsync(db, ReadPolicy(exam.PolicyJson), exam, assignment.TimeMultiplier, ct);
+        // A summative exam's approved concept map or rubric changed since approval: no new attempt until it is approved again (GAD-T437).
+        if (Assessments.RubricApprovalService.AttemptRefusal(exam.AssessmentMode, policy, collection.ConceptMapVersion) is { } unapproved)
+            throw new SessionRefusedException(unapproved);
         var session = new ExamSession
         {
             OrganizationId = organizationId,

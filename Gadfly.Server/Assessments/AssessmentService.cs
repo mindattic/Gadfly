@@ -642,6 +642,11 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
         var collectionReady = await db.SourceCollections.AnyAsync(c => c.Id == exam.CollectionId && c.OrganizationId == org
                                                                        && c.Status == ProcessingStatus.Ready && c.ConceptMapVersion > 0, ct);
         if (!collectionReady) problems.Add("Details: the source collection's concept map is not ready.");
+        // A summative examination runs only on a concept map and rubric an instructor has read and approved (GAD-T437).
+        else if (RubricApprovalService.PublishProblem(exam.AssessmentMode, ExamService.ReadPolicy(exam.PolicyJson),
+                     await db.SourceCollections.Where(c => c.Id == exam.CollectionId && c.OrganizationId == org).Select(c => c.ConceptMapVersion).FirstAsync(ct))
+                 is { } approvalProblem)
+            problems.Add(approvalProblem);
 
         var objectives = await LoadObjectivesAsync(examId, ct);
         if (objectives.Count == 0) problems.Add("Objectives: add at least one learning objective.");

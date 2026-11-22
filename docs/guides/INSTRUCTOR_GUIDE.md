@@ -93,7 +93,9 @@ misconceptions and source citations; click a citation number to read the passage
 | **Edit rubric** | Change the understanding points and their weights (0.1 to 100), the acceptable variants and the misconceptions. A rubric needs at least one understanding point. Saving writes a new rubric version. |
 | **Archive** / **Restore** | Takes the concept out of new assessments, or brings it back. Nothing is deleted. |
 
-Earlier rubric versions are kept, so sessions judged with them still show what they were judged against. An edited
+Earlier rubric versions are kept, so sessions judged with them still show what they were judged against. Every edit
+makes a new concept map version, and a published examination approved on an earlier version starts no new attempts
+until the new version is approved (see [Review & publish](#5-review--publish)). An edited
 concept or rubric is marked **edited** and processing leaves it alone from then on; an archived concept is never
 brought back by re-processing. Concepts you haven't edited are the panel's to manage.
 
@@ -149,6 +151,7 @@ Critical Reasoning.
 | Additional review at | 10 points | A gap between AI and human of this many percentage points (of the objective's maximum) is flagged for a second look. |
 | Mandatory reconciliation at | 20 points | A gap this large holds the grade until it is reconciled. |
 | Blind human grading | on | The examiner doesn't see the AI's evaluation, or integrity notes, until their own scores are in. |
+| Anonymous marking | off | Graders see a session code instead of the student's name until the human score is submitted. See the [Grading guide](grading-guide.md). |
 | When the evidence is inconclusive | human review | Or: the student is offered an additional examination. |
 | Allow assisted evidence | off | Whether Learning-mode answers may count as evidence. |
 
@@ -158,8 +161,17 @@ A summary of everything. If something is missing you see **Fix these before publ
 **Ready to publish**. **Publish** locks the details, objectives and rubric, **and the grading policy**. After that, a
 policy change must be requested (**Request a policy change**, with the reason) and approved by an admin or owner;
 once any student has completed the assessment, someone other than the requester must approve it. **Archive** stops
-| Anonymous marking | off | Graders see a session code instead of the student's name until the human score is submitted. See the [Grading guide](grading-guide.md). |
 new attempts; a student part-way through can still finish, and results are kept.
+
+**Concept map and rubric.** The judge scores every answer against the source material's concept map and the rubric
+written for each concept, and the AI panel drafted them. So before an **Examination** (summative) assessment can be
+published, you read them (the panel links to the collection and names its version) and tick **I have read the concept
+map and the rubrics**, then **Approve version N**. The approved version, who approved it and when are recorded on the
+assessment and in the audit log (`assessment.rubric.approved`). If a concept or rubric is edited later, the collection
+moves to a new version: a published examination then starts no new attempts until someone approves the new version on
+this step (attempts in progress finish normally), and the panel says so. Learning-mode assessments are formative and
+don't need approval, though you can record it. Assessments published before this rule existed keep running and show a
+note asking you to approve. Duplicating an assessment does not copy its approval.
 
 > **Note.** Integrity monitoring defaults to **Standard** for assessments (browser notes and the examiner's
 > eye-contact check). Older exams built with the earlier concept-only builder are listed under **Exams**, where their

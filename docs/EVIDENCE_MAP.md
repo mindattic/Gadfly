@@ -104,6 +104,12 @@ minimum from (docs/PILOT.md).
   so it cannot show transfer or lift an objective to Level 5. Word overlap only, no model call, so it adds no wait; the
   question is not redrafted for it, since a redraft is another panel round trip. A paraphrased reuse in other words can
   pass the check.
+- Concept map and rubric approved before summative use (GAD-T437; 4.2, correction 35, 6.8). The panel drafts the concept
+  map and the per-concept rubrics the judge scores against. An Examination-mode assessment is not published until an
+  instructor has read and approved the collection's current version; the approved version, approver and time are kept
+  on the exam and in the audit log. A later edit makes a new version, and a published examination then starts no new
+  attempt until the new version is approved. Learning Mode is formative and not blocked; exams published before the rule
+  keep running, flagged on their review step.
 
 ## 2. Probing on hesitation
 

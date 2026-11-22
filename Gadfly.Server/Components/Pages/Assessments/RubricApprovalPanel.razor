@@ -1,0 +1,102 @@
+@using Gadfly.Server.Assessments
+@using Gadfly.Server.Tenancy
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+@* Concept map and rubric approval before summative use (GAD-T437). *@
+
+@if (status is { } s)
+{
+    <div class="panel as-wide" role="region" aria-labelledby="rubric-approval-h">
+        <h3 id="rubric-approval-h">Concept map and rubric</h3>
+        <p class="hint">
+            The judge scores every answer against the source material's concept map and the rubric written for each concept.
+            They were drafted by the AI panel, so read them before students are examined on them:
+            <a href="sources/@s.CollectionId" target="_blank" rel="noopener">open @s.CollectionTitle</a>
+            (version @s.CurrentVersion: @s.Concepts concept@(s.Concepts == 1 ? "" : "s"), @s.RubricPoints rubric point@(s.RubricPoints == 1 ? "" : "s")).
+            Editing a concept or a rubric there makes a new version.
+        </p>
+
+        @if (s.Current)
+        {
+            <p class="ok">Version @s.CurrentVersion approved by @s.ApprovedByName on @AssessmentOps.When(s.Approval!.ApprovedAt).</p>
+        }
+        else if (s.Stale)
+        {
+            <p class="error">
+                Version @s.Approval!.ConceptMapVersion was approved by @s.ApprovedByName on @AssessmentOps.When(s.Approval.ApprovedAt), but the
+                source material is now at version @s.CurrentVersion.
+                @(s.Required && s.Published ? "No new attempt can start until you read the changes and approve again; attempts in progress finish normally." : "Read the changes and approve again.")
+            </p>
+        }
+        else if (s.Required)
+        {
+            <p class="@(s.Published ? "notice" : "error")">
+                @(s.Published
+                    ? "This examination was published before approval was required. Read and approve the version in use so its standard of truth has been checked by a person."
+                    : "Not approved yet. An examination (summative) cannot be published until you approve the version it runs on.")
+            </p>
+        }
+        else
+        {
+            <p class="hint">Learning mode is formative, so approval is not required, but you can still record that you read them.</p>
+        }
+
+        @if (!s.Current)
+        {
+            <label class="eb-check">
+                <input type="checkbox" @bind="readIt" />
+                <span>I have read the concept map and the rubrics (version @s.CurrentVersion) and they are a fair standard for marking this exam.</span>
+            </label>
+            <div class="eb-actions">
+                <button type="button" disabled="@(busy || !readIt)" @onclick="() => ApproveAsync(s.CurrentVersion)">Approve version @s.CurrentVersion</button>
+            </div>
+        }
+        @if (message is not null)
+        {
+            <p class="@(ok ? "ok" : "error")" role="status">@message</p>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public Guid ExamId { get; set; }
+    /// <summary>Raised after an approval, so the page re-checks what blocks publishing.</summary>
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private RubricApprovalStatus? status;
+    private bool busy, ok, readIt;
+    private string? message;
+    private Guid loadedFor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedFor == ExamId && status is not null) return;
+        loadedFor = ExamId;
+        await LoadAsync();
+    }
+
+    private async Task<T> Run<T>(Func<RubricApprovalService, Task<T>> work)
+    {
+        await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+        return await work(ActivatorUtilities.GetServiceOrCreateInstance<RubricApprovalService>(scope.ServiceProvider));
+    }
+
+    private async Task LoadAsync() => status = await Run(s => s.StatusAsync(ExamId));
+
+    private async Task ApproveAsync(int version)
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await Run(s => s.ApproveAsync(ExamId, version));
+            ok = r.Ok;
+            message = r.Message;
+            readIt = false;
+            await LoadAsync();
+            if (r.Ok) await Changed.InvokeAsync();
+        }
+        finally { busy = false; }
+    }
+}

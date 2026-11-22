@@ -1,0 +1,43 @@
+@using Gadfly.Server.Assessments
+@using Gadfly.Server.Data
+@using Gadfly.Server.Tenancy
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+@* GAD-T437: which published examinations rely on an approval of this concept map and rubric version. *@
+
+@if (approved.Count > 0)
+{
+    <p class="notice">
+        Approved for summative use by @Join(approved) on this version. Editing a concept or a rubric makes a new version, and
+        @(approved.Count == 1 ? "that examination" : "those examinations") will start no new attempts until an instructor approves it
+        again on the assessment's Review &amp; publish step.
+    </p>
+}
+@if (awaiting.Count > 0)
+{
+    <p class="notice error">
+        Waiting for re-approval after a change: @Join(awaiting). No new attempts start until an instructor approves version @Version
+        on the assessment's Review &amp; publish step.
+    </p>
+}
+
+@code {
+    [Parameter, EditorRequired] public Guid CollectionId { get; set; }
+    [Parameter] public int Version { get; set; }
+
+    private IReadOnlyList<string> approved = [], awaiting = [];
+    private (Guid, int)? loadedFor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedFor == (CollectionId, Version) || Tenant.OrganizationId is not { } org) return;
+        loadedFor = (CollectionId, Version);
+        await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+        (approved, awaiting) = await RubricApprovalService.ExamsOnCollectionAsync(db, org, CollectionId, Version);
+    }
+
+    private static string Join(IReadOnlyList<string> titles) =>
+        string.Join(", ", titles.Take(5).Select(t => $"“{t}”")) + (titles.Count > 5 ? $" and {titles.Count - 5} more" : "");
+}

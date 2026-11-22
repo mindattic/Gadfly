@@ -98,6 +98,14 @@ public sealed record SessionPolicy
     /// </summary>
     public IReadOnlyDictionary<string, string> OpeningQuestions { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
 
+    /// <summary>
+    /// The instructor's approval of the concept map and rubric version this exam runs on (GAD-T437; ElenchusAtScale 4.2,
+    /// correction 35, 6.8): the panel-built map and per-concept rubric are the judge's standard of truth, so a summative
+    /// examination is not published, and no new attempt starts, until a person has read and approved the version in use.
+    /// Null when none was given (Learning Mode, or an exam published before approval was required). Set by the host.
+    /// </summary>
+    public RubricApproval? RubricApproval { get; init; }
+
     /// <summary>Longest fixed opening question accepted (GAD-T436).</summary>
     public const int MaxOpeningQuestionLength = 500;
 
@@ -134,3 +142,9 @@ public sealed record SessionPolicy
         if (Difficulty is < 1 or > 5) throw new ArgumentException("Difficulty must be 1 to 5.");
     }
 }
+
+/// <summary>
+/// An instructor's approval of one concept map and rubric version (GAD-T437): <see cref="ConceptMapVersion"/> is the source
+/// collection's version that was read and approved, by <see cref="ApprovedByUserId"/> at <see cref="ApprovedAt"/>.
+/// </summary>
+public sealed record RubricApproval(int ConceptMapVersion, Guid ApprovedByUserId, DateTimeOffset ApprovedAt);
