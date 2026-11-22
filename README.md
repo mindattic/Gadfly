@@ -104,6 +104,13 @@ Gadfly Exams, the web platform (`Gadfly.Server`):
 - **Privacy.** Retention, student data export and erasure.
 - **Platform API.** Organization API keys, signed launch links and signed webhooks, with an OpenAPI
   document at `/openapi/v1.json`.
+- **Public site.** Signed-out visitors at `/` see the product site (`Components/Pages/Site/`): how it works, the
+  science, pricing (Trial, Standard, Institution, Custom; plan numbers in `Site/SitePlans.cs`), a request-a-demo form,
+  terms, privacy notice, accessibility statement, security page, a branded 404 and an offline page, with `robots.txt`
+  and `sitemap.xml`. These pages render as static HTML with no Blazor circuit and load nothing from other sites.
+  Requests from the form are stored for the platform admin at `/platform/requests` (spam held off by a honeypot, a
+  signed render time and a rate limit). Set `Gadfly:Site:ContactNotifyEmail` to have each one emailed too; that only
+  happens when the sign-in library's SMTP sender is configured. Signed-in users still land on their dashboard.
 
 ## Quick start
 
