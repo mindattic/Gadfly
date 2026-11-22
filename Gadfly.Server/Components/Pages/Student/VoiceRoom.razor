@@ -282,14 +282,19 @@
             return;
         }
         if (!armed) return;
+        // The import and the first call into it are bounded (GAD-T306), the same house style as the get-ready page's
+        // own checks (StartExam.razor, GAD-T288): a stalled connection or a slow server shows a plain "taking too
+        // long" message instead of a page that silently never finishes loading the examiner.
+        using var startupBound = CancellationTokenSource.CreateLinkedTokenSource(stop.Token);
+        startupBound.CancelAfter(TimeSpan.FromSeconds(20));
         try
         {
             var (cueFloorMs, cueCeilingMs) = Settings.EndCue(await TimeMultiplierAsync());
             var (language, vocabulary) = await VocabularyAsync();
             Grants.SetVocabulary(user, SessionId, language, vocabulary);
-            module = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/voice-room.js");
+            module = await JS.InvokeAsync<IJSObjectReference>("import", startupBound.Token, "./js/voice-room.js");
             self = DotNetObjectReference.Create(this);
-            var caps = await module.InvokeAsync<Capabilities>("init", stop.Token, self, new
+            var caps = await module.InvokeAsync<Capabilities>("init", startupBound.Token, self, new
             {
                 // The end-of-answer silence (GAD-T264): starts at the floor and adapts to the student's own pauses, up to the
                 // ceiling; both are lengthened by the extra-time accommodation.
@@ -316,7 +321,17 @@
                 return;
             }
             // Begin exam goes straight into the talking examiner (GAD-T239): no separate click to start voice.
-            await module.InvokeVoidAsync("autoStart", stop.Token);
+            await module.InvokeVoidAsync("autoStart", startupBound.Token);
+        }
+        catch (OperationCanceledException) when (!stop.IsCancellationRequested)
+        {
+            // The bound above tripped, not the room closing (GAD-T306): the module may never have loaded, so there is
+            // nothing in place left to retry — a reload is the honest recovery, the same one every page here falls
+            // back to, and it always re-syncs from the server's current state.
+            supported = false;
+            Log.LogWarning("The examiner took too long to start for session {SessionId}.", SessionId);
+            notice = "That's taking too long. Check your internet connection, then reload this page to try again.";
+            StateHasChanged();
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
         {

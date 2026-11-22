@@ -32,10 +32,23 @@ const LIB = "/lib/voice";
 const SPEECH_HUB = "/hubs/speech";
 const AVATAR_HUB = "/hubs/avatar";
 
+/** Longest a hub connect or its first call may take (GAD-T306) before this room gives up on it rather than sitting on
+ * "Connecting you to the examiner…" forever: there is no error and no close event to react to while it's simply slow. */
+const CONNECT_TIMEOUT_MS = 15000;
+
 let S = null;
 
 const q = (name) => document.querySelector(`[data-voice-${name}]`);
 const text = (name, value) => { const el = q(name); if (el) el.textContent = value; };
+
+/** Resolves or rejects with <paramref name="promise"/>, or rejects on its own after <paramref name="ms"/> if it
+ * hasn't settled by then (GAD-T306): bounds a connect or an invoke call that might otherwise hang indefinitely. */
+function withTimeout(promise, ms) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error("Timed out after " + ms + "ms.")), ms);
+        promise.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+    });
+}
 
 function hasWebGl() {
     try {
@@ -219,8 +232,10 @@ async function start() {
             catch { problem("hub", "The connection to speech recognition was lost.", true); }
         });
         s.speechConn.onclose(() => { if (s.running) problem("hub", "The connection to speech recognition was lost.", true); });
-        await s.speechConn.start();
-        await s.speechConn.invoke("StartSession", startSessionArgs(s));
+        // Bounded (GAD-T306): a connect or an initial invoke that never resolves (no error, no close event to react
+        // to) must not leave the room stuck on "Connecting you to the examiner…" forever.
+        await withTimeout(s.speechConn.start(), CONNECT_TIMEOUT_MS);
+        await withTimeout(s.speechConn.invoke("StartSession", startSessionArgs(s)), CONNECT_TIMEOUT_MS);
         }
     } catch (err) {
         if (S !== s || !s.running) return;
@@ -264,7 +279,8 @@ async function start() {
         // camera (GAD-T306): without this, a lost connection here just left the examiner silent and unresponsive.
         s.avatarConn.onreconnecting(() => status("Reconnecting…"));
         s.avatarConn.onclose(() => { if (s.running) problem("hub", "The connection to the examiner was lost.", true); });
-        await s.avatarConn.start();
+        // Bounded (GAD-T306), like the hub above: a connect that never resolves must not hold up the fallback below.
+        await withTimeout(s.avatarConn.start(), CONNECT_TIMEOUT_MS);
         await Promise.race([el.ready, new Promise((r) => setTimeout(r, 90000))]);
         if (S !== s || !s.running) return;
         s.avatarOk = true;
