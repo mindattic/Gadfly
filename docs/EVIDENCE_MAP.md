@@ -17,9 +17,9 @@ to the entries in them. Nothing here changes code.
 | 4 | Gaze fade and "look at me" | `wwwroot/js/examiner-gaze.js` (GAD-T240) | Legal, weak as evidence; owner decision (c) | GAD-T261 |
 | 5 | Voice strain | `Gadfly.Server/Voice/VoiceStrain.cs` | Not supported; legal risk; owner decision (b) | GAD-T258, GAD-T259 |
 | 6 | Time limits and the end-of-answer cue | `SessionPolicy.cs`, `voice-room.js`, `StudentExams.cs` | Time budget supported; two choices questioned | GAD-T263, GAD-T264 |
-| 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273 |
+| 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273, GAD-T285 (done) |
 | 8 | Learning Mode hints | `HintLadders`, `QuestionGenerator`, `MoveKind.Hint` | Supported only as a fixed ladder, kept apart | GAD-T271 |
-| 9 | Text-style estimate | `Gadfly.Sources/TextStyleAssessor.cs` (GAD-T59) | Not supported (a detector in all but name); kept as unvalidated reviewer-only context | GAD-T284 (done), GAD-T285 |
+| 9 | Text-style estimate | `Gadfly.Sources/TextStyleAssessor.cs` (GAD-T59) | Not supported (a detector in all but name); kept as unvalidated reviewer-only context | GAD-T284 (done), GAD-T285 (done) |
 | - | Owner decisions (a) to (d) | see below | Recorded, not overridden | GAD-T260, GAD-T261, GAD-T258/T259, GAD-T262 |
 
 ## 1. Follow-up moves
@@ -244,6 +244,20 @@ thresholds per exam: QWK at least .70, within .10 of human-human agreement, |SMD
 reconciling single answers), GAD-T265 (word error rate by group, and low-confidence segments marked for graders), GAD-T273
 (feedback per objective on released results).
 
+**Done.** GAD-T285 (approved by the owner; found by GAD-T282), two gaps in the oversight above:
+- **Integrity context waits for the blind score.** The blind grader used to see gaze episodes, recitation flags and
+  the text-style event while grading, although the research notes say to show integrity context only after the
+  content-based score (06) and a flag primes a judgment of the student rather than of the answer (05: Zheng2023).
+  While a session's grading is blind, the review page, its CSV and Markdown exports and the review list now give a
+  grader no integrity event of any kind (gaze and camera, browser, recitation, text style); the list shows "hidden"
+  in place of a flag count. They appear once the human score is submitted. Owners and Admins, who do not score,
+  keep the full view. A policy that turns blind grading off shows them from the start, as it does the AI's grade.
+- **Separation of duties.** One person could score, reconcile and approve the same grade, which leaves the human
+  oversight Article 14 asks for to a single judgment. `GradingService` now refuses reconciliation and approval by
+  anyone who entered a human score on that grade (audited as `grade.separation-of-duties.refused`), on the page and
+  the endpoints alike. An organization with one grader can turn on "Allow a single grader" (off by default, the
+  change audited); every act it lets through is audited as `grade.separation-of-duties.waived`.
+
 ## 8. Learning Mode hints
 
 **What Gadfly does.** In Learning Mode only, Hint and GuidedExplanation moves teach, and everything after them is tagged
@@ -384,7 +398,8 @@ All were filed by GAD-T257 as proposed and unapproved. None changes code until t
 | GAD-T271 | 8 | Fixed, instructor-written hint ladder in Learning Mode | No |
 | GAD-T272 | 3 | Measure false flags from the read-out pattern; suppress it under an accommodation | No |
 | GAD-T273 | 7 | Feedback per objective on released results | No |
-| GAD-T284 | 9 | Text-style estimate kept only as unvalidated, reviewer-only context, with a measured false-flag rate (approved and done) | No |
+| GAD-T284 | 9 | Text-style estimate kept only as unvalidated, reviewer-only context, with a command that measures its false-flag rate (filed by GAD-T282; approved and done) | No |
+| GAD-T285 | 7, 9 | Integrity flags hidden from the blind grader until their score is in; a different person reconciles and approves (filed by GAD-T282; approved and done) | No |
 
 ## What the evidence does not let Gadfly claim
 
