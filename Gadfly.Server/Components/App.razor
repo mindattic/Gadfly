@@ -7,6 +7,9 @@
     <base href="/" />
     <title>Gadfly Exams · @AppVersion.Label</title>
     <link rel="stylesheet" href="app.css" />
+    @* The mock-mode banner's styles (GAD-T507): linked here, not from the banner's own HeadContent, because Blazor keeps only
+       one HeadContent per page and a page's stylesheet link replaced the banner's, leaving it unstyled in the app shell. *@
+    <link rel="stylesheet" href="demo.css" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     @* Import map for the voice exam room's talking head (three.js, TalkingHead, MindAttic.Avatar), GAD-T53. Always present because
        Blazor navigates between pages without reloading the head. Carries the CSP nonce on the sign-in pages that send one. *@
@@ -29,6 +32,7 @@
         </div>
     </div>
     <script nonce="@CspNonce">(function(){var m=document.getElementById("components-reconnect-modal");if(!m)return;var b=m.querySelector(".reconnect-retry");if(b)b.addEventListener("click",function(){if(window.Blazor&&typeof window.Blazor.reconnect==="function")window.Blazor.reconnect().then(function(ok){if(!ok)location.reload();});else location.reload();});new MutationObserver(function(){if(m.classList.contains("components-reconnect-rejected"))setTimeout(function(){location.reload();},1500);}).observe(m,{attributes:true,attributeFilter:["class"]});})();</script>
+    <script src="js/scroll-regions.js" nonce="@CspNonce" defer></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 </html>

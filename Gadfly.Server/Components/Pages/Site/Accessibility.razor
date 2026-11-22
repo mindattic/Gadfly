@@ -47,6 +47,12 @@
             wide, rather than needing a separate mobile design. Wide data tables across the staff and admin pages — the
             audit log, the grading queue, the assignments grid and others — now scroll sideways on a tablet-width screen
             instead of squeezing illegibly or breaking the page layout.</li>
+        <li><strong>An automated WCAG 2.2 check.</strong> We scanned the public site, the help center, sign-in, the student
+            pages and the staff pages with the axe-core checker in light and dark mode, on a desktop and a 320-pixel-wide
+            phone screen, and fixed everything it found: a highlight colour in help search results, table columns without a
+            name for screen readers, wide tables that couldn't be scrolled from the keyboard, and three settings and report
+            pages that were wider than a phone. Buttons and links meet the 24-pixel minimum target size, and a sticky banner
+            no longer covers what has keyboard focus.</li>
         <li><strong>Consistent loading, empty and error states.</strong> Pages that show "Loading…" while they fetch data
             now say so to a screen reader too, consistently, across the admin, grading, review, assessments, analytics,
             sources and student pages, not just some of them.</li>

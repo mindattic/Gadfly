@@ -42,7 +42,7 @@ a.people-button { display: inline-block; padding: .45rem .85rem; border-radius: 
 .pager { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin: .5rem 0 1.5rem; font-size: .92rem; }
 .pager label { display: flex; gap: .4rem; align-items: center; margin-left: auto; color: var(--muted); }
 
-.people-columns { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+.people-columns { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); align-items: start; }
 .people-columns .panel { max-width: none; margin-bottom: 0; }
 .people-facts { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem; margin: 0; }
 .people-facts dt { color: var(--muted); }

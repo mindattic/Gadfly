@@ -2,10 +2,10 @@
 .panel.wide { max-width: 760px; }
 .panel h3 { font-size: 1rem; margin: .25rem 0 0; }
 .panel p { margin: 0; }
-a.button { display: inline-block; padding: .5rem .9rem; border-radius: 6px; background: var(--accent); color: var(--accent-ink); text-decoration: none; }
+a.button { display: inline-block; padding: .5rem .9rem; min-height: var(--target-min); border-radius: 6px; background: var(--accent); color: var(--accent-ink); text-decoration: none; }
 button.secondary, a.button.secondary { background: none; color: var(--accent); border: 1px solid var(--accent); }
-.actions { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
-.exam-list { display: grid; gap: 1rem; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+.exam-list { display: grid; gap: var(--space-4); }
 .exam-item { max-width: 760px; margin: 0; }
 .exam-item-head { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: baseline; justify-content: space-between; }
 /* .badge itself is app.css's shared one (GAD-T393); only these status variants are specific to the student pages. */
@@ -28,7 +28,7 @@ button.secondary, a.button.secondary { background: none; color: var(--accent); b
 .syscheck-level { --level: 0; flex: 1 1 160px; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
 .syscheck-level i { display: block; height: 100%; width: calc(var(--level) * 100%); background: var(--accent); transition: width 80ms linear; }
 @media (prefers-reduced-motion: reduce) { .syscheck-level i { transition: none; } }
-.practice { border: 1px dashed var(--line); border-radius: var(--radius); padding: .75rem 1rem; display: grid; gap: .5rem; }
+.practice { border: 1px dashed var(--line); border-radius: var(--radius); padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-2); }
 .question { font-size: 1.05rem; font-weight: 600; }
 label.inline { display: flex; gap: .5rem; align-items: flex-start; font-size: .95rem; }
 label.inline input { margin-top: .3rem; }
@@ -58,7 +58,7 @@ textarea { width: 100%; resize: vertical; }
 .finish .notice { display: grid; gap: .6rem; }
 .integrity-notice { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: space-between; margin: -.25rem 0 1rem; padding: .5rem .85rem; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: .88rem; }
 .integrity-notice p { margin: 0; flex: 1 1 22rem; }
-.integrity-notice button.small { padding: .25rem .7rem; font-size: .85rem; }
+.integrity-notice button.small { padding: .25rem .7rem; font-size: .85rem; min-height: var(--target-min); }
 
 /* The title row also carries the camera, eye-contact and integrity lines (GAD-T416): short chips, each opening over the page
    (never pushing it down) when the student asks for the details. */

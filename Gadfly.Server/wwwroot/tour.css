@@ -14,7 +14,7 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, .25); transition: top .2s ease, left .2s ease; }
 .tour-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .35rem; }
 .tour-count { color: var(--muted); font-size: .8rem; }
-.tour-skip { background: none; color: var(--muted); padding: .15rem .25rem; font-size: .82rem; text-decoration: underline; }
+.tour-skip { background: none; color: var(--muted); padding: .15rem .25rem; min-height: var(--target-min); font-size: .82rem; text-decoration: underline; }
 .tour-skip:hover { color: var(--accent); }
 .tour-title { font-size: 1.05rem; margin: 0 0 .35rem; }
 .tour-title:focus { outline: none; }

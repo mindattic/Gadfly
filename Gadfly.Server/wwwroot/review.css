@@ -7,7 +7,7 @@ label.check { display: flex; gap: .4rem; align-items: center; }
 .tag.warn, .tag.rec-not-demonstrated { border-color: var(--error); color: var(--error); }
 .tag.rec-mastered { border-color: var(--ok); color: var(--ok); }
 .notice.warn { border-left-color: var(--error); }
-.review-summary { display: grid; gap: .5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .75rem 1rem; margin-bottom: 1rem; }
+.review-summary { display: grid; gap: .5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .75rem 1rem; margin-bottom: 1rem; }
 .review-summary .hint { display: block; font-size: .8rem; }
 h2.section { font-size: 1.15rem; margin: 1.75rem 0 .75rem; }
 .timeline { list-style: none; padding: 0; margin: 0; display: grid; gap: .75rem; }

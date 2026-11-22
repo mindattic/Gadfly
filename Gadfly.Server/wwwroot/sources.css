@@ -1,6 +1,6 @@
 /* Instructor source library (GAD-T49). Builds on app.css's tokens. */
 .crumbs { margin: 0 0 .5rem; font-size: .9rem; }
-.src-columns { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; margin-bottom: 1rem; }
+.src-columns { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); align-items: start; margin-bottom: 1rem; }
 .src-columns .panel { max-width: none; margin: 0; }
 .src-line { margin: 0; font-size: .9rem; }
 .src-check { display: flex; gap: .5rem; align-items: center; }

@@ -4,7 +4,7 @@
 
 @if (Panel.IsMock)
 {
-    <HeadContent><link rel="stylesheet" href="demo.css" /></HeadContent>
+    @* demo.css is linked from App.razor's head (GAD-T507): a HeadContent here lost to the page's own. *@
     <div class="mock-banner" role="status" aria-live="polite">
         <strong class="mock-tag">MOCK MODE</strong>
         <span>No AI provider is in use. Questions, scores, grades and reports on this site are simulated by fixed rules

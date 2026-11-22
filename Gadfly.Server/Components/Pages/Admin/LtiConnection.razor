@@ -193,7 +193,7 @@ else if (regs.Count == 0)
 else
 {
     <table class="grid">
-        <thead><tr><th>Name</th><th>Issuer</th><th>Client ID</th><th>Deployment ID</th><th class="num">Placements</th><th class="num">People</th><th>Rosters</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Name</th><th>Issuer</th><th>Client ID</th><th>Deployment ID</th><th class="num">Placements</th><th class="num">People</th><th>Rosters</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
         <tbody>
             @foreach (var r in regs)
             {
@@ -255,7 +255,7 @@ else if (placements.Count == 0)
 else
 {
     <table class="grid">
-        <thead><tr><th>Exam</th><th>Course</th><th>Connection</th><th>Gradebook</th><th class="num">Students</th><th class="num">Grades sent</th><th>Roster</th><th></th></tr></thead>
+        <thead><tr><th>Exam</th><th>Course</th><th>Connection</th><th>Gradebook</th><th class="num">Students</th><th class="num">Grades sent</th><th>Roster</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
         <tbody>
             @foreach (var p in placements)
             {
@@ -303,7 +303,7 @@ else
         connection's addresses, or the gradebook services in the LMS), then press Retry. A grade that changes is sent afresh.
     </p>
     <table class="grid">
-        <thead><tr><th>Student</th><th>Exam</th><th>Course</th><th class="num">Grade</th><th class="num">Tries</th><th>Last problem</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Student</th><th>Exam</th><th>Course</th><th class="num">Grade</th><th class="num">Tries</th><th>Last problem</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
         <tbody>
             @foreach (var f in problems)
             {
@@ -344,7 +344,7 @@ else if (linkRequests.Count == 0)
 else
 {
     <table class="grid">
-        <thead><tr><th>From the LMS</th><th>Existing Gadfly account</th><th>Connection</th><th>Seen</th><th></th></tr></thead>
+        <thead><tr><th>From the LMS</th><th>Existing Gadfly account</th><th>Connection</th><th>Seen</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
         <tbody>
             @foreach (var q in linkRequests)
             {

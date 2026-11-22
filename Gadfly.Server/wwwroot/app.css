@@ -6,6 +6,15 @@
        them (inputs, selects, textareas): --line alone is too faint (WCAG 1.4.11). Decorative dividers keep --line. */
     --line-strong: #817c6e;
     color-scheme: light;
+    /* Spacing scale (GAD-T507): every gap, padding and margin between sections, panels and controls picks one of these
+       rather than an ad-hoc value, so sections never touch each other or the screen edge. 4px steps at the small end. */
+    --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
+    --space-5: 1.5rem; --space-6: 2rem; --space-7: 3rem; --space-8: 4rem;
+    /* The page gutter: 16px on a phone, growing with the viewport to 40px; and the widest a page's content runs. */
+    --gutter: clamp(1rem, 4vw, 2.5rem);
+    --content-max: 1100px;
+    /* WCAG 2.5.8: the smallest pointer target (24 CSS px) for an icon-sized control. */
+    --target-min: 1.5rem;
 }
 @media (prefers-color-scheme: dark) {
     :root {
@@ -20,11 +29,14 @@
 @media (prefers-reduced-motion: reduce) {
     *, ::before, ::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
+/* A sticky bar (the mock-mode banner, the assignments console's bulk bar) must never cover the control that has focus
+   (WCAG 2.4.11): scrolling a focused element into view leaves this much room at the top. */
+html { scroll-padding-top: var(--space-8); }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
 a { color: var(--accent); }
 h1 { font-size: 1.6rem; margin: 0 0 1rem; }
 h1 span, .brand span { font-weight: 400; color: var(--muted); }
-.topbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; padding: .75rem 1.25rem; background: var(--panel); border-bottom: 1px solid var(--line); }
+.topbar { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); align-items: center; padding: var(--space-3) var(--gutter); background: var(--panel); border-bottom: 1px solid var(--line); }
 .brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--ink); }
 .app-version { margin-left: -.6rem; font-size: .8rem; color: var(--muted); white-space: nowrap; } /* "V<N>" next to the brand (GAD-T291) */
 .nav { display: flex; flex-wrap: wrap; gap: .25rem; }
@@ -35,32 +47,50 @@ h1 span, .brand span { font-weight: 400; color: var(--muted); }
 .nav-more summary { padding: .35rem .65rem; border-radius: 6px; cursor: pointer; color: var(--muted); list-style: none; }
 .nav-more summary::-webkit-details-marker { display: none; }
 .nav-more[open] > div { position: absolute; z-index: 10; top: 100%; left: 0; display: grid; gap: .15rem; min-width: 12rem; padding: .35rem; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
-.who { margin-left: auto; display: flex; gap: .75rem; align-items: center; color: var(--muted); font-size: .9rem; }
+.who { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; color: var(--muted); font-size: .9rem; }
 .who form { margin: 0; }
-main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
-main.bare { display: grid; place-items: center; min-height: 100vh; padding: 1rem; }
-.auth-card { width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.75rem; }
+main { max-width: var(--content-max); margin: 0 auto; padding: var(--space-5) var(--gutter) var(--space-7); }
+main.bare { display: grid; place-items: center; min-height: 100vh; padding: var(--space-5) var(--gutter); }
+.auth-card { width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: clamp(var(--space-5), 5vw, var(--space-6)); }
 .auth-card input { width: 100%; }
+/* The sign-in library's forms (MindAttic.Authentication's .ma-auth) have no stylesheet of their own: one field per row
+   with a clear gap, so a label never sits flush against the box above it. */
+.auth-card form { display: grid; gap: var(--space-4); margin: var(--space-4) 0; }
+.auth-card form > p { margin: 0; }
+.auth-card form label:has(> input[type=checkbox]) { display: flex; gap: var(--space-2); align-items: center; }
 .subtitle, .hint { color: var(--muted); font-size: .9rem; }
-.cards { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
-.card { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.1rem; text-decoration: none; color: var(--ink); }
+.cards { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
+.card { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4); text-decoration: none; color: var(--ink); }
 .card:hover { border-color: var(--accent); }
 .card h2 { font-size: 1.05rem; margin: 0 0 .35rem; }
 .card p { margin: 0; color: var(--muted); font-size: .92rem; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: grid; gap: .6rem; max-width: 560px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-5)); margin-bottom: var(--space-5); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); max-width: 560px; }
+/* Blocks that sit one after another in a page get the same breathing room below them, unless they end their container. */
+:is(.cards, .grid, .table-scroll, .stat-tiles):not(:last-child) { margin-bottom: var(--space-5); }
 .panel h2 { font-size: 1.05rem; margin: 0; }
-label { display: grid; gap: .2rem; font-size: .9rem; }
-input, select, textarea { font: inherit; padding: .45rem .55rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); }
+label { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); font-size: .9rem; }
+/* A control stays inside its column on a 320px screen (WCAG 1.4.10, GAD-T507): a dropdown sizes itself to its longest
+   option, which pushed whole forms (Settings) wider than a phone. max-width here, and minmax(0, 1fr) on the label's and
+   the panel's single column, let it shrink instead. */
+input, select, textarea { font: inherit; max-width: 100%; padding: .45rem .55rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); }
+/* Placeholder text at the muted ink's contrast (WCAG 1.4.3) instead of the browser's lighter default. */
+::placeholder { color: var(--muted); opacity: 1; }
+input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 button { font: inherit; padding: .5rem .9rem; border: 0; border-radius: 6px; background: var(--accent); color: var(--accent-ink); cursor: pointer; justify-self: start; }
 button:disabled { opacity: .6; cursor: default; }
 button.link { background: none; color: var(--accent); padding: 0; text-decoration: underline; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A heading or <main> that only receives focus from script (Blazor's focus-on-navigate, the skip link) isn't a control;
+   no ring around the whole page or title. Real controls keep theirs. */
+:is(h1, main)[tabindex="-1"]:focus { outline: none; }
+/* A table that scrolls sideways is reachable by keyboard (js/scroll-regions.js gives it tabindex), so its ring shows. */
+[data-scroll-region]:focus-visible { outline-offset: -2px; }
 /* Skip-to-content (GAD-T365), same pattern as the public site's (site.css .skip). */
-.skip { position: absolute; left: -999px; top: .5rem; z-index: 1200; padding: .5rem .9rem; background: var(--ink); color: var(--bg); border-radius: 4px; }
+.skip { position: absolute; left: -999px; top: .5rem; z-index: 1200; padding: var(--space-2) var(--space-4); background: var(--ink); color: var(--bg); border-radius: 4px; }
 .skip:focus { left: .5rem; }
 /* Screen-reader-only text: visible to assistive tech, removed from the visual layout (GAD-T366). */
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.grid { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.grid { position: relative; width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .grid th, .grid td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid var(--line); font-size: .92rem; }
 .grid th { color: var(--muted); font-weight: 600; }
 .ok { color: var(--ok); } .error { color: var(--error); }
@@ -69,7 +99,7 @@ button.link { background: none; color: var(--accent); padding: 0; text-decoratio
 .nav-help { padding: .35rem .65rem; border-radius: 6px; text-decoration: none; color: var(--ink); }
 .nav-help:hover, .nav-help:focus-visible { color: var(--accent); }
 .help-link { display: inline-flex; align-items: center; gap: .35rem; vertical-align: middle; margin-left: .35rem; font-size: .85rem; font-weight: 600; text-decoration: none; color: var(--accent); }
-.help-link-mark { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border: 1.5px solid currentColor; border-radius: 50%; font-size: .8rem; line-height: 1; }
+.help-link-mark { display: inline-grid; place-items: center; width: var(--target-min); height: var(--target-min); border: 1.5px solid currentColor; border-radius: 50%; font-size: .8rem; line-height: 1; }
 .help-link:hover .help-link-mark, .help-link:focus-visible .help-link-mark { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .help-link-label { font-weight: 500; }
 
@@ -106,16 +136,16 @@ h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
 /* A dialog (GAD-T318): a focused decision or confirmation over the page, dismissed by its own buttons or Escape.
    Markup: a backdrop with class dialog-backdrop containing one .dialog-box (role="dialog" aria-modal="true" on the box). */
 .dialog-backdrop { position: fixed; inset: 0; z-index: 1500; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .45); }
-.dialog-box { width: min(32rem, 100%); max-height: calc(100vh - 2rem); overflow: auto; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem 1.5rem; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+.dialog-box { width: min(32rem, 100%); max-height: calc(100vh - 2rem); overflow: auto; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-5) clamp(var(--space-4), 4vw, var(--space-5)); box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
 .dialog-box h2 { margin-top: 0; }
-.dialog-actions { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+.dialog-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; margin-top: var(--space-4); }
 
 /* A toast (GAD-T318): a brief, dismissable confirmation or warning that doesn't block the page. Markup: an element with
    class toast (plus a variant) inside a fixed-position container the page supplies once near its root. */
 .toast { display: flex; gap: .6rem; align-items: start; max-width: 26rem; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; padding: .75rem 1rem; box-shadow: 0 6px 20px rgba(0, 0, 0, .18); }
 .toast-ok { border-left-color: var(--ok); }
 .toast-error { border-left-color: var(--error); }
-.toast-close { margin-left: auto; background: none; padding: 0; color: var(--muted); }
+.toast-close { margin-left: auto; background: none; padding: 0; min-width: var(--target-min); min-height: var(--target-min); color: var(--muted); }
 
 /* An empty state (GAD-T318): nothing to show yet, with what to do about it. Most list pages already say this plainly in
    a sentence or two (kept as-is where that already reads well); this is for a page that wants the quieter, centred look. */

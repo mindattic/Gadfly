@@ -30,6 +30,11 @@
     font-size: .78rem; font-weight: 700; letter-spacing: .05em; vertical-align: middle;
 }
 
+/* On a phone the banner wraps to several lines: pinned, it would cover a fifth of the screen and whatever has focus
+   under it (WCAG 2.4.11, 1.4.10), so there it scrolls away with the page (GAD-T507). */
+@media (max-width: 640px), (max-height: 500px) {
+    .mock-banner { position: static; padding: var(--space-2, .5rem) var(--gutter, 1rem); }
+}
 @media print {
     .mock-banner { position: static; }
 }

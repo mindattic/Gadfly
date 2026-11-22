@@ -14,7 +14,7 @@
 .gr-banner { padding: .75rem 1rem; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); margin: 0 0 1rem; }
 .gr-banner.warn { border-color: var(--error); }
 .gr-banner.mock { border-color: var(--mock-tag-bg, #8a5a00); }
-.gr-summary { display: grid; gap: .5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); margin-bottom: 1rem; }
+.gr-summary { display: grid; gap: .5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); margin-bottom: 1rem; }
 .gr-summary .hint { display: block; }
 .gr-section { margin-top: 2rem; }
 .gr-response { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: .75rem 1rem; margin-bottom: .75rem; }
@@ -24,7 +24,7 @@
 .gr-response blockquote.original { border-left-color: var(--line); color: var(--muted); }
 .gr-objective { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 1rem; margin-bottom: 1rem; }
 .gr-objective h3 { margin: 0 0 .25rem; }
-.gr-two { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.gr-two { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
 .gr-two > div { min-width: 0; }
 .gr-form-row { display: grid; gap: .5rem 1rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; }
 .gr-form-row label { margin: 0; }

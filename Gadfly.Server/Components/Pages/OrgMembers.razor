@@ -88,7 +88,7 @@
 @if (invitations.Count > 0)
 {
     <table class="grid">
-        <thead><tr><th>Invited</th><th>Role</th><th>Status</th><th>Expires</th><th></th></tr></thead>
+        <thead><tr><th>Invited</th><th>Role</th><th>Status</th><th>Expires</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
         <tbody>
             @foreach (var i in invitations)
             {
@@ -134,7 +134,7 @@
 </EditForm>
 
 <table class="grid">
-    <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
     <tbody>
         @foreach (var m in members)
         {
