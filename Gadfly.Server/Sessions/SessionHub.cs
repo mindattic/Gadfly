@@ -43,12 +43,20 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
     }
 
     /// <summary>Starts (or resumes) the attempt for an assignment; returns the session id. Consent must be recorded first.</summary>
-    public async Task<Guid> Start(Guid assignmentId, string consentTextSha256)
+    public Task<Guid> Start(Guid assignmentId, string consentTextSha256) => StartIn(assignmentId, consentTextSha256, null);
+
+    /// <summary>
+    /// <see cref="Start"/> in an exam language chosen on the get-ready screen (GAD-T534, GAD-T546): one the exam offers, English
+    /// when null. An attempt already in progress keeps its language.
+    /// </summary>
+    public async Task<Guid> StartIn(Guid assignmentId, string consentTextSha256, string? language)
     {
         var (org, user) = Caller();
+        if (language is { Length: > 16 }) throw new HubException("Choose a language.");
         try
         {
-            var id = await orchestrator.CreateOrResumeAsync(org, assignmentId, user, Context.GetHttpContext()?.Request.Headers.UserAgent.ToString(), Context.ConnectionAborted);
+            var id = await orchestrator.CreateOrResumeAsync(org, assignmentId, user, Context.GetHttpContext()?.Request.Headers.UserAgent.ToString(),
+                language, Context.ConnectionAborted);
             if (string.IsNullOrWhiteSpace(consentTextSha256) || consentTextSha256.Length != 64)
                 throw new SessionRefusedException("Consent is required before the exam starts.");
             await orchestrator.RecordConsentAsync(org, id, user, consentTextSha256, Context.ConnectionAborted);
@@ -243,10 +251,31 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
         lock (Joined()) Joined().Add(sessionId);
     }
 
-    private static async Task<SessionStep> Guard(Func<Task<SessionStep>> step)
+    private static async Task<T> Guard<T>(Func<Task<T>> step)
     {
         try { return await step(); }
         catch (SessionRefusedException ex) { throw new HubException(ex.Message); }
+    }
+
+    /// <summary>
+    /// "Say it another way" (GAD-T555): the open question reworded through the leak guard, in <see cref="SessionStep.Rephrased"/>,
+    /// for the examiner to say. Free and outside scoring; it never changes the question on record.
+    /// </summary>
+    public Task<SessionStep> RephraseQuestion(Guid sessionId)
+    {
+        var (org, user) = Caller();
+        return Guard(() => orchestrator.RephraseQuestionAsync(org, sessionId, user, Context.ConnectionAborted));
+    }
+
+    /// <summary>
+    /// Chooses the exam language before the first question (GAD-T534, GAD-T546); refused once the exam has begun or when the exam
+    /// does not offer the language. Returns the language set.
+    /// </summary>
+    public Task<string> ChooseLanguage(Guid sessionId, string language)
+    {
+        var (org, user) = Caller();
+        if (string.IsNullOrWhiteSpace(language) || language.Length > 16) throw new HubException("Choose a language.");
+        return Guard(() => orchestrator.ChooseLanguageAsync(org, sessionId, user, language, Context.ConnectionAborted));
     }
 }
 

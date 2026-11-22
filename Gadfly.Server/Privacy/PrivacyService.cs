@@ -281,6 +281,8 @@ public sealed class PrivacyService(GadflyDbContext db, ITenantContext tenant, Ti
             var assignmentIds = db.ExamAssignments.Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId).Select(a => a.Id);
             await db.StudyArmMembers.Where(m => m.OrganizationId == organizationId && assignmentIds.Contains(m.AssignmentId)).ExecuteDeleteAsync(ct);
             await db.ResearchConsents.Where(c => c.OrganizationId == organizationId && c.StudentUserId == studentUserId).ExecuteDeleteAsync(ct);
+            // The student's language profile and voice calibration (GAD-T534, GAD-T594): it can reveal national or ethnic origin.
+            await db.StudentLanguageProfiles.Where(p => p.OrganizationId == organizationId && p.UserId == studentUserId).ExecuteDeleteAsync(ct);
             // GAD-T479: an LTI-launched assignment has a grade-passback row pointing at it (a restricting foreign key), which made the
             // assignment delete below fail and roll the whole erasure back; and a waiting LMS link request holds the LMS name and email
             // offered for this student's account. Both go first.

@@ -229,7 +229,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         // Only a guard verdict is reported as one: with no draft to check (or no rubric), no guard ran.
         LastGuard = !guarded ? LeakGuardResult.Skipped : undecided ? LeakGuardResult.UndecidedReplaced : LeakGuardResult.LeakedReplaced;
         LastAuthor = QuestionAuthorship.Fixed(QuestionAuthorship.FallbackText);
-        return Fallback(r.Decision.Move, r.ConceptTitle, r.RelatedConceptTitle);
+        return Fallback(r.Decision.Move, r.ConceptTitle, r.RelatedConceptTitle, Language.Exam);
     }
 
     /// <summary>
@@ -312,6 +312,68 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     /// </summary>
     public ILiveTurnModel? LiveModel { get; set; }
 
+    /// <summary>
+    /// The attempt's languages (GAD-T535): the fallback questions and the rephrasing follow the exam language. The prompts themselves
+    /// come in the language's prompt set (<see cref="ExamPromptLanguages"/>). English by default.
+    /// </summary>
+    public AttemptLanguage Language { get; set; } = AttemptLanguage.Default;
+
+    /// <summary>
+    /// "Say it another way" (GAD-T555; research note esl-and-korean R4.1): the examiner's question reworded. Not a prompt-set prompt:
+    /// it is no part of how a student is examined or judged (it adds nothing, and is free and outside scoring), so it never changes
+    /// the recorded prompt-set hash of any exam.
+    /// </summary>
+    public const string RephrasePrompt = """
+        You are the examiner in a spoken oral exam. The student asked you to say your last question another way.
+        Reword the question below so it is easier to understand: shorter sentences, common everyday words, the same technical terms,
+        the same meaning and the same kind of answer wanted. Add no information, example, hint or answer point that the original
+        question does not already contain, and do not make it easier to answer: only easier to understand.
+        Write it in {language}.{plain}
+
+        Conversation so far:
+        {dialogue}
+
+        The question to reword:
+        {question}
+
+        Reply with only the reworded question, as you would say it aloud.
+        """;
+
+    /// <summary>
+    /// The question said another way (GAD-T555), through the same fail-closed leak guard as any question. Null when no rewording
+    /// passed the guard (the caller repeats the question word for word instead). The live model words it when one is set, the
+    /// panel otherwise.
+    /// </summary>
+    public async Task<string?> RephraseAsync(string question, string rubric, SocraticSession session, CancellationToken ct = default)
+    {
+        var dialogue = Dialogue(session);
+        var prompt = ExamPrompts.Fill(RephrasePrompt, new Dictionary<string, string?>
+        {
+            ["language"] = ExamLanguage.EnglishName(Language.Exam) + (Language.IsKorean ? " (polite 해요체)" : ""),
+            ["plain"] = Language.IsNonNative ? " Use at most about 20 words, no idioms, phrasal verbs or negative questions." : "",
+            ["dialogue"] = dialogue.Length == 0 ? "(none)" : dialogue,
+            ["question"] = question,
+        });
+        string draft;
+        bool viaLive;
+        if (LiveModel is { } live && await LiveDraftAsync(live, prompt, ct) is { Failed: false } drafted)
+        {
+            draft = Clean(drafted.Text);
+            viaLive = true;
+        }
+        else
+        {
+            var result = await panel.AskAsync(prompt, "", Quorum.Plurality, ct);
+            draft = Clean(PanelText(result));
+            viaLive = false;
+        }
+        draft = Usable(draft);
+        if (draft.Length == 0 || string.Equals(draft, question, StringComparison.Ordinal)) return null;
+        if (string.IsNullOrWhiteSpace(rubric)) return draft;
+        var verdict = viaLive ? await CheckLeakLiveAsync(draft, rubric, dialogue, ct) : await CheckLeakAsync(draft, rubric, dialogue, ct);
+        return verdict == false ? draft : null;
+    }
+
     /// <summary>The live model's system prompt: one spoken question, nothing around it.</summary>
     public const string LiveSystemPrompt =
         "You are the examiner in a spoken Socratic exam. Follow the instructions in the message and reply with only the one question to ask next, as you would say it aloud: no label, no quotes, no commentary.";
@@ -377,7 +439,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         {
             if (stopReason is not null || building.Count == 0) return;
             var text = string.Join(" ", building);
-            var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+            var words = LanguageText.WordCount(text);   // Korean words in English-word units (GAD-T537); English unchanged
             if (formed.Count == 0 && words < FirstPartMinWords && !final) return;   // too short to start on: wait for the next sentence
             building.Clear();
             if (PartProblem(text, formed.Count == 0) is { } problem)
@@ -476,7 +538,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
                 guardOn ? LeakGuardResult.Safe : LeakGuardResult.Skipped);
         }
         // Something was said already: what failed is never said, and the plain question for the move follows what was.
-        var fallback = Fallback(move, r.ConceptTitle, r.RelatedConceptTitle);
+        var fallback = Fallback(move, r.ConceptTitle, r.RelatedConceptTitle, Language.Exam);
         speech.Say(fallback, move);
         var question = string.Join(" ", spoken.Append(fallback));
         speech.Finish(question);
@@ -489,7 +551,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     internal static string? PartProblem(string part, bool first)
     {
         if (string.IsNullOrWhiteSpace(part)) return "empty draft";
-        if (first && part.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length < FirstPartMinWords) return "empty draft (too short)";
+        if (first && LanguageText.WordCount(part) < FirstPartMinWords) return "empty draft (too short)";
         if (first && Enum.TryParse<MoveKind>(part.Trim('.', '?', ' '), ignoreCase: true, out _)) return "empty draft (a move name)";
         if (part.Contains("the student", StringComparison.OrdinalIgnoreCase)) return "draft talked about the student instead of to them";
         if (IsIntrospective(part)) return "draft asked about the student's own thought process";
@@ -538,7 +600,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         private string Start(string head)
         {
             _started = true;
-            foreach (var label in new[] { "Question:", "Examiner:", "Q:" })
+            foreach (var label in Labels)
                 if (head.StartsWith(label, StringComparison.OrdinalIgnoreCase)) head = head[label.Length..].TrimStart();
             var unwrapped = head.TrimStart('"', '“', '*');
             _wrapped = unwrapped.Length < head.Length && head[0] != '*';
@@ -629,12 +691,15 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             ? new[] { $"Examiner: {t.Question}" }
             : new[] { $"Examiner: {t.Question}", $"Student: {ExamPrompts.Student(t.Answer.Text)}" }));
 
+    /// <summary>Labels a model may put before the question ("질문:" and "시험관:" in a Korean exam, GAD-T535).</summary>
+    private static readonly string[] Labels = ["Question:", "Examiner:", "Q:", "질문:", "시험관:"];
+
     /// <summary>Strips quotes, labels and extra lines a model may wrap the question in.</summary>
     internal static string Clean(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return "";
         var line = raw.Trim().Split('\n').Select(l => l.Trim()).FirstOrDefault(l => l.Length > 0) ?? "";
-        foreach (var label in new[] { "Question:", "Examiner:", "Q:" })
+        foreach (var label in Labels)
             if (line.StartsWith(label, StringComparison.OrdinalIgnoreCase)) line = line[label.Length..].Trim();
         return line.Trim('"', '“', '”', '*', ' ');
     }
@@ -674,8 +739,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     /// </summary>
     internal static string Usable(string draft)
     {
-        var words = draft.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-        if (words.Length < 4) return "";
+        if (LanguageText.WordCount(draft) < 4) return "";   // Korean words in English-word units (GAD-T537); English unchanged
         if (Enum.TryParse<MoveKind>(draft.Trim('.', '?', ' '), ignoreCase: true, out _)) return "";
         if (IsPanelFailureText(draft)) return "";
         // A draft that talks about the student instead of to them ("...and ask the student to explain") is an instruction, not a question.
@@ -705,7 +769,8 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex Introspection();
 
-    internal static string Fallback(MoveKind move, string concept, string? related) => move switch
+    internal static string Fallback(MoveKind move, string concept, string? related, string? language = null) =>
+        ExamLanguage.IsKorean(language) ? KoreanFallback(move, concept, related) : move switch
     {
         MoveKind.Clarify => $"Could you say more precisely what you mean, in your own words, when you talk about {concept}?",
         MoveKind.Probe => "Why do you think that is true? Walk me through your reasoning.",
@@ -720,5 +785,23 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         MoveKind.Hint => $"Here is a hint: think about what {concept} needs in order to happen. With that in mind, how would you explain it now?",
         MoveKind.GuidedExplanation => $"Let's look at {concept} step by step, starting from what you already said. Which step do you think comes first, and why?",
         _ => $"In your own words, what is {concept}?",
+    };
+
+    /// <summary>The plain fallback questions in Korean (GAD-T535), polite 해요체, worded so any concept title (English or Korean) fits.</summary>
+    internal static string KoreanFallback(MoveKind move, string concept, string? related) => move switch
+    {
+        MoveKind.Clarify => $"{concept}에 대해 말씀하실 때 정확히 어떤 뜻인지 자신의 말로 조금 더 설명해 주시겠어요?",
+        MoveKind.Probe => "왜 그것이 맞다고 생각하세요? 이유를 차근차근 설명해 주세요.",
+        MoveKind.Counterexample => $"{concept}에 대한 설명이 맞지 않는 경우를 생각해 볼 수 있을까요? 그때는 어떻게 될까요?",
+        MoveKind.Contradiction => "앞에서 하신 말씀과 방금 하신 말씀이 서로 맞지 않는 것 같아요. 두 가지가 어떻게 함께 성립할 수 있을까요?",
+        MoveKind.Apply => $"{concept}이(가) 중요한, 처음 보는 상황을 하나 떠올려 보세요. 어떤 일이 일어날 것 같고, 왜 그렇게 생각하세요?",
+        MoveKind.Synthesize => $"{concept}은(는) {related ?? "지금까지 이야기한 다른 개념들"}과(와) 어떻게 연결되나요?",
+        MoveKind.CausalReasoning => "그런 일이 일어나는 원인은 무엇이라고 생각하세요? 원인과 결과의 흐름을 설명해 주세요.",
+        MoveKind.ScenarioVariation => "그 상황에서 다른 조건은 그대로 두고 한 가지 조건만 바뀐다고 해 볼게요. 무엇이 달라지고, 왜 그럴까요?",
+        MoveKind.AssumptionTesting => "그 설명이 맞으려면 무엇이 사실이어야 하나요? 그 가정 중 어떤 것이 틀릴 수 있을까요?",
+        MoveKind.IndependentExplanation => $"교과서 정의를 쓰지 않고, {concept}에 대해 자신의 생각으로 어떻게 설명하시겠어요?",
+        MoveKind.Hint => $"힌트를 드릴게요. {concept}에 무엇이 필요한지 생각해 보세요. 그렇다면 이제 어떻게 설명하시겠어요?",
+        MoveKind.GuidedExplanation => $"이미 말씀하신 내용에서 시작해서 {concept}에 대해 한 단계씩 살펴볼게요. 어떤 단계가 먼저 온다고 생각하세요? 왜 그런가요?",
+        _ => $"{concept}에 대해 자신의 말로 설명해 주시겠어요?",
     };
 }

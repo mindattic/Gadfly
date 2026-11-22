@@ -36,6 +36,22 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
     /// <summary>Agreement below which the answer needs a human look.</summary>
     public double ReviewBelowAgreement { get; init; } = 0.6;
 
+    /// <summary>
+    /// GAD-T555 (research note esl-and-korean R5.2): the judges read the answer's content view, with fillers, immediate repetitions and
+    /// false starts removed by a fixed rule (<see cref="LanguageText.ContentView"/>); the verbatim answer stays the record. On for a
+    /// student whose primary language differs from the exam language; the judges are never told why.
+    /// </summary>
+    public bool ContentView { get; init; }
+
+    /// <summary>
+    /// GAD-T536 (research note esl-and-korean R6.5): every judgment needs a human's approval, because cross-lingual judging (a Korean
+    /// answer against the English rubric) is not yet calibrated against bilingual human graders. On for every non-English exam.
+    /// </summary>
+    public bool CrossLingualReview { get; init; }
+
+    /// <summary>The note a cross-lingual judgment's summary starts with.</summary>
+    public const string CrossLingualNote = "Answer in another language than the rubric: a human approves this score until bilingual calibration shows the panel agrees with human graders. ";
+
     public async Task<AnswerJudgment> JudgeAsync(JudgeInput input, int rubricVersion, CancellationToken ct = default)
     {
         var prompt = Prompt(input);
@@ -85,7 +101,7 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
             ["claims"] = string.IsNullOrWhiteSpace(input.EarlierClaims) ? "(none yet)" : ExamPrompts.Student(input.EarlierClaims),
             ["passages"] = PanelJson.Number(input.Passages),
             ["question"] = turn.Question,
-            ["answer"] = ExamPrompts.Student(turn.Answer.Text),
+            ["answer"] = ExamPrompts.Student(ContentView ? LanguageText.ContentView(turn.Answer.Text) : turn.Answer.Text),
         });
     }
 
@@ -163,11 +179,11 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
             OverallScore = Math.Round(mean, 3),
             Votes = votes.Zip(overalls).Select(x => new JudgeVote(x.First.Provider, x.First.Model, Math.Round(x.Second, 3), x.First.Verdict)).ToList(),
             Agreement = Math.Round(agreement, 3),
-            NeedsHumanReview = agreement < ReviewBelowAgreement || addressesGrader,
+            NeedsHumanReview = agreement < ReviewBelowAgreement || addressesGrader || CrossLingualReview,
             RubricVersion = rubricVersion,
-            Summary = addressesGrader
+            Summary = (CrossLingualReview ? CrossLingualNote : "") + (addressesGrader
                 ? "This answer contains text addressed to the examiner or judges; check it by hand. " + representative.Verdict
-                : representative.Verdict,
+                : representative.Verdict),
         };
     }
 

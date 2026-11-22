@@ -114,7 +114,16 @@ internal static partial class MockPromptReader
 
     /// <summary>The student said they don't know (in a few common wordings).</summary>
     public static bool IsAporia(string answer) =>
-        answer.Trim().Length == 0 || AporiaWords().IsMatch(answer) && answer.Length <= 200;
+        answer.Trim().Length == 0 || (AporiaWords().IsMatch(answer) || Gadfly.Engine.LanguageText.SaysDontKnowKorean(answer)) && answer.Length <= 200;
+
+    /// <summary>The prompt's exam language (the tag after "Exam language:", GAD-T535); English when the prompt has none.</summary>
+    public static string ExamLanguage(string prompt)
+    {
+        var line = Line(prompt, Gadfly.Engine.ExamPromptLanguages.LanguageLine);
+        return line.Length == 0 ? Gadfly.Engine.ExamLanguage.English : Gadfly.Engine.ExamLanguage.Normalize(line.Split(' ')[0]);
+    }
+
+    public static bool IsKorean(string prompt) => ExamLanguage(prompt) == Gadfly.Engine.ExamLanguage.Korean;
 
     /// <summary>Words that signal explaining why or how, not only what.</summary>
     public static int ReasoningMarkers(string answer) => Reasoning().Matches(answer).Count;

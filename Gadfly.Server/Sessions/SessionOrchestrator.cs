@@ -39,6 +39,13 @@ public sealed record SessionStep
     public LastAnswer? LastAnswer { get; init; }
     /// <summary>A one-line confirmation of what the student's last action did, e.g. "Your correction was saved."</summary>
     public string? Notice { get; init; }
+    /// <summary>
+    /// The open question said another way, after the student asked for it (GAD-T555); the examiner says this, while
+    /// <see cref="Question"/> stays the question as first asked. Null on every other step.
+    /// </summary>
+    public string? Rephrased { get; init; }
+    /// <summary>The attempt's exam language, a BCP-47 tag (GAD-T534).</summary>
+    public string Language { get; init; } = ExamLanguage.English;
     /// <summary>False while the exam clock waits for the examiner to begin the first question (GAD-T239); the student's time isn't counting yet.</summary>
     public bool ClockStarted { get; init; } = true;
     /// <summary>
@@ -79,6 +86,8 @@ public sealed partial class SessionOrchestrator(
         public AssessmentMode Mode { get; } = mode;
         /// <summary>Set by a step for the view it returns (cleared on every step).</summary>
         public string? Notice { get; set; }
+        /// <summary>The rewording a "say it another way" step produced (cleared on every step, GAD-T555).</summary>
+        public string? Rephrased { get; set; }
         public SourceExamEngine Engine { get; set; } = engine;
         public Guid OrganizationId { get; } = organizationId;
         /// <summary>The session's owner: a cached engine is only handed to them (GAD-T74).</summary>
@@ -95,6 +104,10 @@ public sealed partial class SessionOrchestrator(
 
     private readonly ConcurrentDictionary<Guid, Live> _live = new();
     private readonly ResponseVerifier _verifier = new(panel);
+
+    /// <summary>The verifier on the attempt's prompt set (GAD-T535): the shared English one for an English attempt.</summary>
+    private ResponseVerifier VerifierFor(Live live) =>
+        live.Engine.Subject.Language.IsDefault ? _verifier : new ResponseVerifier(panel, live.Engine.Subject.PromptSet);
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _loadGates = new();
     private readonly ConcurrentDictionary<(Guid Collection, int Version), SourceMaterialSubject> _subjects = new();
 
@@ -107,7 +120,16 @@ public sealed partial class SessionOrchestrator(
     /// Starts the student's next attempt at an assignment, or returns the attempt already in
     /// progress (one active session per assignment).
     /// </summary>
-    public async Task<Guid> CreateOrResumeAsync(Guid organizationId, Guid assignmentId, Guid studentUserId, string? clientInfo, CancellationToken ct = default)
+    public async Task<Guid> CreateOrResumeAsync(Guid organizationId, Guid assignmentId, Guid studentUserId, string? clientInfo, CancellationToken ct = default) =>
+        await CreateOrResumeAsync(organizationId, assignmentId, studentUserId, clientInfo, null, ct);
+
+    /// <summary>
+    /// Starts the student's next attempt in <paramref name="language"/> (GAD-T534; one of the exam's offered languages, English when
+    /// null), or returns the attempt already in progress, whose language stays as chosen. The attempt keeps a copy of the student's
+    /// primary language from their language profile.
+    /// </summary>
+    public async Task<Guid> CreateOrResumeAsync(Guid organizationId, Guid assignmentId, Guid studentUserId, string? clientInfo, string? language,
+        CancellationToken ct = default)
     {
         using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(organizationId));
         var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
@@ -146,6 +168,8 @@ public sealed partial class SessionOrchestrator(
         // A summative exam's approved concept map or rubric changed since approval: no new attempt until it is approved again (GAD-T437).
         if (Assessments.RubricApprovalService.AttemptRefusal(exam.AssessmentMode, policy, collection.ConceptMapVersion) is { } unapproved)
             throw new SessionRefusedException(unapproved);
+        var examLanguage = OfferedLanguage(exam, language);
+        var primary = await PrimaryLanguageAsync(db, organizationId, studentUserId, ct);
         var session = new ExamSession
         {
             OrganizationId = organizationId,
@@ -156,10 +180,13 @@ public sealed partial class SessionOrchestrator(
             State = SessionState.Created,
             CreatedAt = now,
             PolicyJson = JsonSerializer.Serialize(policy, Json),
-            PromptSetSha256 = ExamPrompts.Set.Sha256,
+            PromptSetSha256 = ExamPromptLanguages.For(ExamPrompts.Set, new AttemptLanguage(examLanguage, primary)).Sha256,
+            Language = examLanguage,
+            PrimaryLanguage = primary,
             ConceptMapVersion = collection.ConceptMapVersion,
             ClientInfo = clientInfo is { Length: > 500 } ci ? ci[..500] : clientInfo,
         };
+        FlagCrossLingual(session, now);
         db.ExamSessions.Add(session);
         try { await db.SaveChangesAsync(ct); }
         catch (DbUpdateException)
@@ -175,6 +202,85 @@ public sealed partial class SessionOrchestrator(
         }
         return session.Id;
     }
+
+    /// <summary>The language an attempt runs in: <paramref name="requested"/> when the exam offers it, English when none was asked for.</summary>
+    internal static string OfferedLanguage(Exam exam, string? requested)
+    {
+        if (string.IsNullOrWhiteSpace(requested)) return ExamLanguage.English;
+        var tag = ExamLanguage.Normalize(requested);
+        var offered = ExamLanguage.ParseList(exam.Languages);
+        return offered.Contains(tag) || tag == ExamLanguage.English && !offered.Any()
+            ? tag
+            : throw new SessionRefusedException("This exam is not offered in that language.");
+    }
+
+    /// <summary>The student's self-declared primary language in this organization (GAD-T552), or null when they gave none.</summary>
+    private static async Task<string?> PrimaryLanguageAsync(GadflyDbContext db, Guid organizationId, Guid studentUserId, CancellationToken ct)
+    {
+        var primary = await db.StudentLanguageProfiles.AsNoTracking()
+            .Where(p => p.OrganizationId == organizationId && p.UserId == studentUserId).Select(p => p.PrimaryLanguage).FirstOrDefaultAsync(ct);
+        return string.IsNullOrWhiteSpace(primary) ? null : ExamLanguage.Normalize(primary);
+    }
+
+    /// <summary>Why a non-English attempt needs a person (GAD-T536; research note esl-and-korean R6.5).</summary>
+    public const string CrossLingualReviewReason =
+        "Exam taken in another language than its rubric: a human approves every score until bilingual calibration shows the AI panel agrees with human graders.";
+
+    /// <summary>A non-English attempt is marked for instructor review (its results are kept; nothing is decided automatically).</summary>
+    private static void FlagCrossLingual(ExamSession session, DateTimeOffset now)
+    {
+        if (ExamLanguage.IsEnglish(session.Language))
+        {
+            if (session.ReviewReason == CrossLingualReviewReason)
+            {
+                session.NeedsInstructorReview = false;
+                session.ReviewReason = null;
+                session.ReviewFlaggedAt = null;
+            }
+            return;
+        }
+        if (session.NeedsInstructorReview) return;   // already flagged for another reason, which stays
+        session.NeedsInstructorReview = true;
+        session.ReviewReason = CrossLingualReviewReason;
+        session.ReviewFlaggedAt = now;
+    }
+
+    /// <summary>
+    /// Chooses the attempt's exam language on the get-ready screen (GAD-T534, GAD-T546): allowed until the first question is asked,
+    /// then fixed for the attempt. Returns the language now set.
+    /// </summary>
+    public async Task<string> ChooseLanguageAsync(Guid organizationId, Guid sessionId, Guid studentUserId, string language, CancellationToken ct = default)
+    {
+        using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(organizationId));
+        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+        var row = await Owned(db, organizationId, sessionId, studentUserId, ct);
+        var exam = await db.Exams.AsNoTracking().FirstAsync(e => e.Id == row.ExamId && e.OrganizationId == organizationId, ct);
+        var tag = OfferedLanguage(exam, language);
+        if (tag == row.Language) return tag;
+        if (row.TranscriptJson is { Length: > 0 } || row.State is not (SessionState.Created or SessionState.ConsentGiven) || _live.ContainsKey(sessionId))
+            throw new SessionRefusedException("The exam has begun; its language can't be changed now.");
+        row.Language = tag;
+        row.PromptSetSha256 = ExamPromptLanguages.For(ExamPrompts.Set, new AttemptLanguage(tag, row.PrimaryLanguage)).Sha256;
+        FlagCrossLingual(row, clock.GetUtcNow());
+        await db.SaveChangesAsync(ct);
+        log.LogInformation("Exam session {SessionId} will be conducted in {Language}.", sessionId, tag);
+        return tag;
+    }
+
+    /// <summary>
+    /// "Say it another way" (GAD-T555; research note esl-and-korean R4.1): the open question reworded, through the same fail-closed
+    /// leak guard as any question, for the examiner to say. Free and outside scoring: it is no hint, no pressure cue and no time
+    /// penalty, and the question as first asked stays the record. When no rewording passes the guard, the question itself comes back.
+    /// </summary>
+    public Task<SessionStep> RephraseQuestionAsync(Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct = default) =>
+        StepAsync(organizationId, sessionId, studentUserId, async live =>
+        {
+            var s = live.Engine.Session;
+            if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            if (s.OpenTurn is null) throw new SessionRefusedException("There is no question to say another way right now.");
+            live.Rephrased = await live.Engine.RephraseAsync(ct);
+            return s.OpenTurn;
+        }, ct);
 
     /// <summary>Records the student's consent (hash of the exact text shown). Required before the first question.</summary>
     public async Task RecordConsentAsync(Guid organizationId, Guid sessionId, Guid studentUserId, string consentTextSha256, CancellationToken ct = default)
@@ -606,7 +712,7 @@ public sealed partial class SessionOrchestrator(
         var input = new VerificationInput
         {
             Question = open.Question, AnswerText = text, Modality = response.Modality, SpeechConfidence = response.SpeechRecognitionConfidence,
-            Words = answer.Words, ConceptTitle = concept.Title,
+            Words = answer.Words, ConceptTitle = concept.Title, Language = live.Engine.Subject.Language.Exam,
         };
         var hints = ResponseVerifier.Hints(input);
 
@@ -627,7 +733,8 @@ public sealed partial class SessionOrchestrator(
         // Part 4.5: no interruption when there is no time for it; an unclear answer then goes to a human.
         var shortOnTime = s.Remaining(clock.GetUtcNow()) < MinTimeForClarification;
         var budgetSpent = await ledger.MeaningClarificationsAsync(s.Id, ct) >= MaxMeaningClarificationsPerSession;
-        var decision = await _verifier.DecideAsync(input with { Grounding = (await live.Engine.Subject.GetGroundingAsync(concept.Key, text, ct)).Text }, ct);
+        var verifier = VerifierFor(live);
+        var decision = await verifier.DecideAsync(input with { Grounding = (await live.Engine.Subject.GetGroundingAsync(concept.Key, text, ct)).Text }, ct);
         ledger.Audit(live.OrganizationId, null, "response.verification.checked", response, s.Id, null,
             JsonSerializer.Serialize(new
             {
@@ -643,7 +750,7 @@ public sealed partial class SessionOrchestrator(
         }
         ledger.MovePath(response, $"{ResponseVerifier.TriggerName(decision.Trigger)}: {decision.Reason}", null, "System",
             VerificationState.VerificationRequired, VerificationState.AwaitingStudentConfirmation);
-        var question = await _verifier.WordAsync(input, decision, live.Engine.Subject.Rubric(concept.Key).Describe(), Dialogue(s, open, text), ct);
+        var question = await verifier.WordAsync(input, decision, live.Engine.Subject.Rubric(concept.Key).Describe(), Dialogue(s, open, text), ct);
         ledger.Ask(response, ClarificationType.Meaning, question.Text, question.NonLeadingChecked, $"{question.Outcome}; {decision.Reason}");
         await CheckClarificationLeakAsync(live, open, question, ct);
         return true;
@@ -750,6 +857,7 @@ public sealed partial class SessionOrchestrator(
         {
             Turn? question;
             live.Notice = null;
+            live.Rephrased = null;
             using var usage = Gadfly.Socrates.PanelUsage.Track(out var calls);
             try
             {
@@ -828,6 +936,8 @@ public sealed partial class SessionOrchestrator(
             Verification = pending,
             LastAnswer = last,
             Notice = live.Notice,
+            Rephrased = live.Rephrased,
+            Language = live.Engine.Subject.Language.Exam,
             ClockStarted = !s.ClockHeld,
             ClockPaused = s.IsPaused && !s.IsEnded,
             PauseAllowanceLeft = s.PauseAllowanceLeft(clock.GetUtcNow()),
@@ -865,6 +975,8 @@ public sealed partial class SessionOrchestrator(
                     .ExecuteUpdateAsync(u => u.SetProperty(x => x.SubjectSnapshotJson, JsonSerializer.Serialize(new SubjectSnapshot(subject.Map, rubrics), Json)), ct);
             }
 
+            // The attempt's languages (GAD-T534): an English attempt by an English-primary student gets the English subject itself.
+            subject = subject.ForLanguage(new AttemptLanguage(row.Language, row.PrimaryLanguage));
             SourceExamEngine engine;
             if (row.TranscriptJson is { Length: > 0 } transcript)
             {

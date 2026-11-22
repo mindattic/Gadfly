@@ -51,8 +51,13 @@ public sealed class SourceExamEngine
         Session = session;
         Ledger = ledger;
         _planner = new QuestionPlanner(concepts);
-        _generator = new QuestionGenerator(panel, _prompts);
-        _judge = new PanelAnswerJudge(panel, _prompts);
+        _generator = new QuestionGenerator(panel, _prompts) { Language = subject.Language };
+        // The exam language (GAD-T535, GAD-T536, GAD-T555): an English attempt by an English-primary student judges exactly as before.
+        _judge = new PanelAnswerJudge(panel, _prompts)
+        {
+            ContentView = subject.Language.IsNonNative,
+            CrossLingualReview = subject.Language.Exam != ExamLanguage.English,
+        };
         _claims = new ClaimAnalyzer(panel, _prompts);
         _style = new TextStyleAssessor(panel, _prompts);
         _analyzer = new ResponseAnalyzer(panel, _prompts);
@@ -174,6 +179,20 @@ public sealed class SourceExamEngine
         if (verdict == true) FlagLeak(turnIndex, LeakSource.Clarification, $"The clarification \"{Clip(clarification, 200)}\" revealed expected points.");
         else if (verdict is null) FlagLeak(turnIndex, LeakSource.GuardFailedOpen, "The leak guard could not decide on a clarification already shown to the student.");
         return verdict;
+    }
+
+    /// <summary>
+    /// "Say it another way" (GAD-T555): the open question reworded through the leak guard and recorded on the turn. When no rewording
+    /// passes the guard the question itself is returned, to be said again word for word. Null when no question is open.
+    /// </summary>
+    public async Task<string?> RephraseAsync(CancellationToken ct = default)
+    {
+        if (Session.OpenTurn is not { } open) return null;
+        var rubric = _subject.Rubric(open.ConceptId).Describe();
+        var latest = open.Rephrasings.Count > 0 ? open.Rephrasings[^1] : open.Question;
+        var text = await _generator.RephraseAsync(latest, rubric, Session, ct) ?? open.Question;
+        Session.RecordRephrasing(text);
+        return text;
     }
 
     /// <summary>The objective a turn examines.</summary>

@@ -130,4 +130,9 @@ public sealed record Turn
     public ApplyNoveltyCheck? Novelty { get; init; }
     /// <summary>Who wrote the question (GAD-T431): the drafting provider(s) and model(s), or a fixed source. Null in older transcripts.</summary>
     public QuestionAuthorship? QuestionAuthor { get; init; }
+    /// <summary>
+    /// The question said another way at the student's request (GAD-T555), in order. Free and outside scoring: never a hint, a cue
+    /// or a time penalty; kept so reviewers see what the student heard and fairness views can count requests per question.
+    /// </summary>
+    public IReadOnlyList<string> Rephrasings { get; init; } = [];
 }

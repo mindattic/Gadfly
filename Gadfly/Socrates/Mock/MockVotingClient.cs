@@ -103,6 +103,13 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         if (prompt.Contains("You are one analyst on a panel examining", StringComparison.Ordinal)) return (Analysis(prompt), "keyword evidence analysis");
         if (prompt.Contains("Extract the factual or conceptual claims", StringComparison.Ordinal)) return (Claims(prompt), "one claim per asserted sentence");
         if (prompt.Contains("You write one neutral clarification question", StringComparison.Ordinal)) return (Clarification(prompt), "neutral clarification template");
+        if (prompt.Contains("The student asked you to say your last question another way", StringComparison.Ordinal))
+        {
+            // "Say it another way" (GAD-T555): the same question behind a plain lead-in; it adds nothing, so it cannot leak.
+            var question = Section(prompt, "The question to reword:", "Reply with only").Trim();
+            return (prompt.Contains("Write it in Korean", StringComparison.Ordinal) ? $"다시 말씀드리면, {question}" : $"Put another way: {question}",
+                "the question behind a plain lead-in");
+        }
         return ($"{Marker} The mock panel has no reply for this request.", "unrecognized prompt");
     }
 
@@ -156,6 +163,7 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
 
     private static string Question(string prompt)
     {
+        if (IsKorean(prompt)) return KoreanQuestion(prompt);
         var move = Line(prompt, "Write the next question for this move:");
         var concept = Line(prompt, "Concept:");
         if (concept.Length == 0) concept = "this idea";
@@ -232,6 +240,78 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         return $"{candidates[0].TrimEnd('?')}, thinking about it a different way this time (question {asked.Count + 1})?";
     }
 
+    /// <summary>
+    /// The template questions of a Korean exam (GAD-T535), in the polite 해요체 register, built like the English ones from the concept
+    /// title and the student's own words, and never repeating a question already asked.
+    /// </summary>
+    private static string KoreanQuestion(string prompt)
+    {
+        var move = Line(prompt, "Write the next question for this move:");
+        var concept = Line(prompt, "Concept:");
+        if (concept.Length == 0) concept = "이 개념";
+        var related = Line(prompt, "Second concept (Synthesize only):");
+        var dialogue = Section(prompt, "Conversation so far:");
+        var asked = Regex.Matches(dialogue, @"(?m)^\s*Examiner:\s*(.+)$").Select(m => m.Groups[1].Value.Trim()).ToHashSet(StringComparer.Ordinal);
+        var lastAnswer = StudentTexts(dialogue).LastOrDefault() ?? "";
+        var phrase = KeyPhrase(lastAnswer);
+        string[] candidates = move switch
+        {
+            "Clarify" when phrase.Length > 0 =>
+            [
+                $"“{phrase}”라고 하셨는데, 정확히 어떤 뜻인가요?",
+                $"“{phrase}”라고 말씀하실 때 무엇을 가리키는지 자신의 말로 설명해 주시겠어요?",
+            ],
+            "Clarify" => [$"{concept}에 대해 말씀하실 때 어떤 뜻인지 조금 더 정확하게 설명해 주시겠어요?"],
+            "Probe" =>
+            [
+                phrase.Length > 0 ? $"왜 “{phrase}”라고 생각하세요? 이유를 차근차근 설명해 주세요." : $"{concept}에 대해 왜 그것이 맞다고 생각하세요? 이유를 설명해 주세요.",
+                $"방금 {concept}에 대해 하신 말씀에서 무엇이 따라 나오나요? 그것을 어떻게 아세요?",
+                $"{concept}에 대한 설명이 맞다는 것을 친구에게 어떻게 설득하시겠어요?",
+            ],
+            "Counterexample" =>
+            [
+                $"{concept}에 대한 설명이 맞지 않는 경우를 생각해 볼 수 있을까요? 그때는 어떻게 될까요?",
+                $"{concept}이(가) 말씀하신 것과 다르게 작동하는 상황이 있을까요? 설명해 주세요.",
+            ],
+            "Contradiction" => ["앞에서 하신 말씀과 방금 하신 말씀이 서로 맞지 않는 것 같아요. 두 가지가 어떻게 함께 성립할 수 있을까요?"],
+            "Apply" =>
+            [
+                $"아직 이야기하지 않은 새로운 상황에서 {concept}이(가) 중요하다고 상상해 보세요. 어떤 일이 일어날 것 같고, 왜 그럴까요?",
+                $"일상의 문제를 {concept}(으)로 풀어야 한다고 해 볼게요. 어떤 문제이고, 어떻게 생각해 보시겠어요?",
+            ],
+            "Synthesize" => [$"{concept}은(는) {(related is { Length: > 0 } r && r != "(none)" ? r : "지금까지 이야기한 다른 개념들")}과(와) 어떻게 연결되나요?"],
+            "CausalReasoning" =>
+            [
+                "방금 말씀하신 결과의 원인은 무엇이고, 그 원인이 바뀌면 무엇이 달라질까요?",
+                $"{concept}을(를) 생각해 볼 때, 왜 다른 일이 아니라 그 일이 일어날까요?",
+            ],
+            "ScenarioVariation" =>
+            [
+                "예로 드신 상황에서 한 가지만 바꾸고 나머지는 그대로 둔다고 해 볼게요. 그러면 어떻게 되고, 왜 그럴까요?",
+                $"이야기한 상황의 조건 하나가 달랐다면 {concept}은(는) 어떻게 작동할까요?",
+            ],
+            "AssumptionTesting" =>
+            [
+                $"{concept}에 대한 설명이 맞으려면 무엇이 사실이어야 하나요?",
+                "그 답변에서 무엇을 가정하고 계신가요? 그 가정이 틀리면 어떻게 될까요?",
+            ],
+            "IndependentExplanation" => [$"교과서 정의를 쓰지 않고, {concept}에 대해 자신의 생각으로 어떻게 설명하시겠어요?"],
+            _ =>
+            [
+                $"{concept}이(가) 무엇인지 자신의 말로 설명하고, 예를 하나 들어 주시겠어요?",
+                $"이제 {concept}에 대해 이야기해 볼게요. 자신의 말로 어떻게 설명하시겠어요?",
+                $"{concept}에 대해 가장 중요하게 이해해야 할 점은 무엇이고, 왜 그런가요?",
+            ],
+        };
+        var start = asked.Count % candidates.Length;
+        for (var i = 0; i < candidates.Length; i++)
+        {
+            var q = candidates[(start + i) % candidates.Length];
+            if (!asked.Contains(q)) return q;
+        }
+        return $"{candidates[0].TrimEnd('?')}, 이번에는 다른 방식으로 생각해 볼까요 (질문 {asked.Count + 1})?";
+    }
+
     /// <summary>A short run of the student's own words worth asking about: the content-richest clause, at most six words.</summary>
     private static string KeyPhrase(string answer)
     {
@@ -245,6 +325,9 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
     private static string Clarification(string prompt)
     {
         var phrase = StudentAfter(prompt, "The unclear phrase:");
+        if (IsKorean(prompt))
+            return phrase.Length > 0 ? $"“{Clip(phrase, 80)}”라고 하셨는데, 자신의 말로 어떤 뜻이었는지 설명해 주시겠어요?"
+                : "제가 제대로 이해했는지 확인하고 싶어요. 자신의 말로 다시 한번 말씀해 주시겠어요?";
         return phrase.Length > 0
             ? $"You said \"{Clip(phrase, 80)}\". What did you mean by that, in your own words?"
             : "Could you say that again in your own words, so I'm sure I understood what you meant?";
@@ -255,6 +338,10 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         var move = Line(prompt, "Move:");
         var concept = Line(prompt, "Concept:");
         if (concept.Length == 0) concept = "this idea";
+        if (IsKorean(prompt))
+            return move == "GuidedExplanation"
+                ? $"노트를 길잡이로 {concept}을(를) 함께 살펴볼게요. 잘 아는 작은 예를 하나 떠올려 보세요. 그 예로 {concept}을(를) 자신의 말로 어떻게 설명하시겠어요?"
+                : $"힌트를 드릴게요. 예의 각 부분이 무엇을 나타내는지 생각해 보세요. 그렇다면 이제 {concept}을(를) 어떻게 설명하시겠어요?";
         return move == "GuidedExplanation"
             ? $"Let's look at {concept} together, using the notes as our guide. Take one small example you know well. How would you use it to explain {concept} in your own words?"
             : $"Here is a hint: think about what each part of your example stands for. With that in mind, how would you explain {concept} now?";
@@ -343,6 +430,9 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         if (string.IsNullOrWhiteSpace(answer)) return true;
         if (!IsAporia(answer)) return false;
         var rest = DontKnowPhrase().Replace(answer, " ");
+        // Korean (GAD-T537): with the "I don't know" phrases gone, only a few words (a 저는, a 잘, a 죄송해요) may be left.
+        if (Gadfly.Engine.LanguageText.HasHangul(answer))
+            return Gadfly.Engine.LanguageText.WordCount(Gadfly.Engine.LanguageText.WithoutKoreanDontKnow(rest)) <= 4;
         return Keywords(rest).Count <= 3;
     }
 
@@ -388,6 +478,16 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         var wrong = misconceptions.Any(m => !HasNegation(answer) && Coverage(Keywords(m), answerWords) >= 0.6);
         var markers = ReasoningMarkers(answer);
         var wordCount = answer.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+        var korean = Gadfly.Engine.LanguageText.HasHangul(answer);
+        if (korean)
+        {
+            // A Korean answer against the English rubric (GAD-T536): no English keyword overlap to count, so the mock credits the
+            // English technical terms the student used plus how much they said and whether they gave a reason; still a simulation.
+            wordCount = Gadfly.Engine.LanguageText.WordCount(answer);
+            coverage = Math.Max(coverage, Math.Min(0.5, wordCount / 60.0));
+            hits = Math.Max(hits, (int)Math.Round(points.Count * Math.Min(1.0, wordCount / 40.0)));
+            markers += Gadfly.Engine.LanguageText.KoreanReasonOrExample(answer) ? 2 : 0;
+        }
 
         var accuracy = Math.Clamp((int)Math.Round(2 + 16 * coverage), 0, 10) - (wrong ? 4 : 0);
         var reasoning = coverage == 0 ? Math.Min(2, markers) : Math.Clamp(2 + 3 * markers, 0, 10);
@@ -401,7 +501,8 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         }
         accuracy = Math.Clamp(accuracy, 0, 10);
         var coveredText = string.Create(CultureInfo.InvariantCulture, $"{coverage:P0} of the rubric's key terms");
-        var verdict = $"{Marker} Simulated from keyword overlap, not an AI evaluation: the answer uses {coveredText}"
+        var verdict = (korean ? $"{Marker} Korean answer: scored from its length, its reasons and any English terms it uses. " : "")
+            + $"{Marker} Simulated from keyword overlap, not an AI evaluation: the answer uses {coveredText}"
             + (points.Count > 0 ? $" and touches {hits} of {points.Count} rubric points" : "")
             + (wrong ? "; it repeats a listed misconception." : ".");
         return JudgeJson(accuracy, reasoning, consistency, completeness, cite, coveredText, verdict);

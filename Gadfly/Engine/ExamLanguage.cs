@@ -63,3 +63,29 @@ public static class ExamLanguage
         var other => other,
     };
 }
+
+/// <summary>
+/// The languages of one attempt (GAD-T534): the exam language it is conducted in, and the student's self-declared primary language
+/// (null when they gave none, which counts as the exam language). <see cref="IsDefault"/> is today's exam: English, by a student
+/// whose primary language is English or unknown; it runs on the unchanged English prompts and heuristics. The primary language
+/// only switches adaptations on (plain questions, the judges' content view); it is never told to the judges (research note
+/// esl-and-korean R5.1) and never inferred from the voice.
+/// </summary>
+public sealed record AttemptLanguage(string Language, string? PrimaryLanguage = null)
+{
+    public static readonly AttemptLanguage Default = new(ExamLanguage.English);
+
+    /// <summary>The exam language, normalized.</summary>
+    public string Exam { get; } = ExamLanguage.Normalize(Language);
+
+    /// <summary>The primary language, normalized; null when not declared.</summary>
+    public string? Primary { get; } = string.IsNullOrWhiteSpace(PrimaryLanguage) ? null : ExamLanguage.Normalize(PrimaryLanguage);
+
+    /// <summary>The student declared a primary language other than the exam language.</summary>
+    public bool IsNonNative => Primary is not null && Primary != Exam;
+
+    /// <summary>An English exam by an English-primary (or undeclared) student: exactly the behavior before localization.</summary>
+    public bool IsDefault => Exam == ExamLanguage.English && !IsNonNative;
+
+    public bool IsKorean => Exam == ExamLanguage.Korean;
+}

@@ -417,6 +417,17 @@ public sealed class SocraticSession
         return true;
     }
 
+    /// <summary>
+    /// Records that the open question was said another way at the student's request (GAD-T555); only its rephrasings change.
+    /// Returns false when no question is open.
+    /// </summary>
+    public bool RecordRephrasing(string text)
+    {
+        if (OpenTurn is not { } open || string.IsNullOrWhiteSpace(text)) return false;
+        Replace(open with { Rephrasings = [.. open.Rephrasings, text] });
+        return true;
+    }
+
     /// <summary>Ends the session. An unanswered open turn is kept as asked.</summary>
     public void End(EndReason reason, DateTimeOffset endedAt)
     {
