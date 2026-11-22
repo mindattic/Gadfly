@@ -23,7 +23,11 @@ public sealed record ScoreGapGroup(string Group, int Students, int Pairs, int Co
     public bool TooFew => Students < GroupFairness.MinStudents;
 }
 
-public sealed record ScoreGapsReport(IReadOnlyList<ScoreGapGroup> Groups, int Pairs, int Unplaced, IReadOnlyList<string> Warnings);
+public sealed record ScoreGapsReport(IReadOnlyList<ScoreGapGroup> Groups, int Pairs, int Unplaced, IReadOnlyList<string> Warnings)
+{
+    /// <summary>The total of <see cref="Pairs"/> is not shown while any group is withheld (GAD-T486).</summary>
+    public bool TotalWithheld => GroupFairness.WithholdsTotal(Groups, g => g.TooFew);
+}
 
 public sealed class ScoreGaps(GadflyDbContext db, Guid organizationId)
 {

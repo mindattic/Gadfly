@@ -38,7 +38,11 @@ public sealed record PathDriverGroup(string Group, int Students, int Answers, do
     public bool TooFew => Students < GroupFairness.MinStudents;
 }
 
-public sealed record PathDriversReport(IReadOnlyList<PathDriverGroup> Groups, int Answers, IReadOnlyList<string> Warnings);
+public sealed record PathDriversReport(IReadOnlyList<PathDriverGroup> Groups, int Answers, IReadOnlyList<string> Warnings)
+{
+    /// <summary>The total of <see cref="Answers"/> is not shown while any group is withheld (GAD-T486).</summary>
+    public bool TotalWithheld => GroupFairness.WithholdsTotal(Groups, g => g.TooFew);
+}
 
 public sealed class PathDrivers(GadflyDbContext db, Guid organizationId)
 {

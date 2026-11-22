@@ -114,7 +114,9 @@ public static class FairnessCsv
         Row("group", "students", "students_compared", "faded_answers", "judged_score_faded_minus_other", "score_low", "score_high",
             "answer_seconds_faded_minus_other", "seconds_low", "seconds_high", "students_compared_after", "next_answer_minus_clean", "next_low", "next_high");
         foreach (var g in t.Fade.Groups.Prepend(t.Fade.Overall))
-            Row([g.Group, g.Students, g.Compared, .. g.TooFew ? Blank(11) : [g.FadedAnswers, I(g.ScoreDiff), Lo(g.ScoreDiff), Hi(g.ScoreDiff),
+            Row([g.Group, g.Students, g.Compared, .. g.TooFew ? Blank(11) : [
+                // GAD-T486: the all-students count of faded answers would give a withheld group's away.
+                ReferenceEquals(g, t.Fade.Overall) && t.Fade.OverallCountWithheld ? Withheld : (object)g.FadedAnswers, I(g.ScoreDiff), Lo(g.ScoreDiff), Hi(g.ScoreDiff),
                 I(g.SecondsDiff), Lo(g.SecondsDiff), Hi(g.SecondsDiff), g.ComparedAfter, I(g.AfterScoreDiff), Lo(g.AfterScoreDiff), Hi(g.AfterScoreDiff)]]);
         Warnings(t.Fade.Overall.FadedAnswers == 0 ? [] : t.Fade.Warnings);
         return sb.ToString();

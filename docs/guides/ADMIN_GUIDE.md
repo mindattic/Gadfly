@@ -532,7 +532,10 @@ fairness tables, after the usual sections (GAD-T463): `fairness_score_gaps`, `fa
 rate), `fairness_typed_vs_spoken` (and its by-objective rows), `fairness_camera_episodes` (the eye-contact rates, face
 episodes and tracking quality) and `fairness_fade_cost`. Each starts with its caveat and any warnings follow its rows. The
 export groups by the accommodations each assignment declared; a pasted grouping is never stored, so it is not in the file.
-A group under 5 students keeps its name and size and every other cell reads `withheld`. Instructors and other roles get
+A group under 5 students keeps its name and size and every other cell reads `withheld`. While any group is withheld, the
+totals beside the groups are withheld too (on the page, the counts of objectives, answers, sessions and spoken answers in
+each table's caption; in the export and on the page, the all-students count of faded answers), since the total minus the
+groups shown would give the withheld group's count away. Instructors and other roles get
 the export without these sections.
 
 The thresholds and their reasons are in docs/EVIDENCE_MAP.md (mechanics 2, 4 and 7).

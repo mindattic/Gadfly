@@ -14,7 +14,11 @@ namespace Gadfly.Server.Analytics;
 // comparison, used in memory and never stored. No student is named; groups too small to report are withheld.
 
 /// <summary>The audit: groups, answers looked at, students the pasted grouping could not place, and warnings.</summary>
-public sealed record SpeechAuditReport(IReadOnlyList<SpeechGroupStats> Groups, int Responses, int Unplaced, IReadOnlyList<string> Warnings);
+public sealed record SpeechAuditReport(IReadOnlyList<SpeechGroupStats> Groups, int Responses, int Unplaced, IReadOnlyList<string> Warnings)
+{
+    /// <summary>The total of <see cref="Responses"/> is not shown while any group is withheld (GAD-T486).</summary>
+    public bool TotalWithheld => GroupFairness.WithholdsTotal(Groups, g => !g.Reportable);
+}
 
 public sealed class SpeechRecognitionAudit(GadflyDbContext db, Guid organizationId)
 {

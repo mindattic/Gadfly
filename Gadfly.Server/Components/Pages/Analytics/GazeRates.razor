@@ -19,7 +19,8 @@
     else
     {
         <table class="grid">
-            <caption>@Caption · @report.Sessions answered session(s)</caption>
+            @* GAD-T486: the total would give a withheld group's count away, so it is withheld with it. *@
+            <caption>@Caption · @GroupFairness.Total(report.Sessions, report.TotalWithheld, "answered session(s)")</caption>
             <thead><tr><th>Group</th><th>Students</th><th>Sessions</th><th>Answering minutes</th><th>Look-aways / 10 min</th><th>Reading-like / 10 min</th><th>Fades / 10 min</th><th>Time faded</th><th>Sessions with a fade</th><th>Spoken requests / 10 min</th></tr></thead>
             <tbody>
                 @foreach (var g in report.Groups)
@@ -113,7 +114,7 @@
                                 }
                                 else
                                 {
-                                    <td>@g.FadedAnswers</td>
+                                    <td>@(ReferenceEquals(g, fade.Overall) && fade.OverallCountWithheld ? "withheld" : g.FadedAnswers.ToString())</td>
                                     <td>@Interval(g.ScoreDiff, "0.00")</td>
                                     <td>@Interval(g.SecondsDiff, "0", " s")</td>
                                     <td>@(g.AfterScoreDiff is null ? $"— ({g.ComparedAfter} compared)" : Interval(g.AfterScoreDiff, "0.00"))</td>

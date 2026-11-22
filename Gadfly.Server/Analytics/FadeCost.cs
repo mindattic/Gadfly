@@ -23,7 +23,14 @@ public sealed record FadeCostGroup(string Group, int Students, int Compared, int
     public bool TooFew => Compared < GroupFairness.MinStudents;
 }
 
-public sealed record FadeCostReport(FadeCostGroup Overall, IReadOnlyList<FadeCostGroup> Groups, int Answers, IReadOnlyList<string> Warnings);
+public sealed record FadeCostReport(FadeCostGroup Overall, IReadOnlyList<FadeCostGroup> Groups, int Answers, IReadOnlyList<string> Warnings)
+{
+    /// <summary>
+    /// The all-students row's count of faded answers is not shown while any group is withheld (GAD-T486): with the other groups
+    /// shown it would give that group's count away, as its figures would (GAD-T480).
+    /// </summary>
+    public bool OverallCountWithheld => GroupFairness.WithholdsTotal(Groups, g => g.TooFew);
+}
 
 public sealed class FadeCost(GadflyDbContext db, Guid organizationId)
 {

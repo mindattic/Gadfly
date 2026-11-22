@@ -55,7 +55,8 @@
             else
             {
                 <table class="grid">
-                    <caption>@data.Gaps.Pairs objective(s) graded by both</caption>
+                    @* GAD-T486: the total would give a withheld group's count away, so it is withheld with it. *@
+                    <caption>@GroupFairness.Total(data.Gaps.Pairs, data.Gaps.TotalWithheld, "objective(s) graded by both")</caption>
                     <thead><tr><th>Group</th><th>Students</th><th>Objectives</th><th>Mean panel level</th><th>Mean human level</th><th>Panel − human</th><th>Gap in standard deviations</th><th>Same level</th><th>Within one</th><th>Level 0 (panel / human)</th></tr></thead>
                     <tbody>
                         @foreach (var g in data.Gaps.Groups)
@@ -98,7 +99,7 @@
             else
             {
                 <table class="grid">
-                    <caption>@data.Paths.Answers answer(s); shares are of answers</caption>
+                    <caption>@GroupFairness.Total(data.Paths.Answers, data.Paths.TotalWithheld, "answer(s)"); shares are of answers</caption>
                     <thead><tr><th>Group</th><th>Students</th><th>Answers</th><th>Typed</th><th>Pressed harder</th><th>Pressed hard</th><th>Hedging</th><th>Vague wording</th><th>No reason or example</th><th>Not convincing</th><th>Evidence against</th><th>Unclear meaning</th><th>Recited</th><th>Cut off</th><th>Long pauses / spoken minute</th><th>Sessions with a device pause</th><th>Exam time paused</th></tr></thead>
                     <tbody>
                         @foreach (var g in data.Paths.Groups)

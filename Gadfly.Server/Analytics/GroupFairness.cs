@@ -111,6 +111,17 @@ public static class GroupFairness
         return new MeanInterval(m, m - half, m + half, v.Count);
     }
 
+    /// <summary>
+    /// A view's total of pairs, answers or sessions, as shown beside its groups (GAD-T486): withheld whenever any group is withheld,
+    /// since the total minus the groups shown would give that group's count away (exactly, with two groups or one student pasted
+    /// as a group of their own). The same rule as the fade cost's overall row (GAD-T480).
+    /// </summary>
+    public static string Total(int total, bool withheld, string noun) =>
+        withheld ? $"{noun}: total withheld (a group is too small to show)" : $"{total} {noun}";
+
+    /// <summary>True when a total shown beside these groups must be withheld (GAD-T486): any group is withheld.</summary>
+    public static bool WithholdsTotal<T>(IEnumerable<T> groups, Func<T, bool> withheld) => groups.Any(withheld);
+
     /// <summary>The order groups are listed in: "No accommodation" first, then by name.</summary>
     public static IOrderedEnumerable<T> Ordered<T>(IEnumerable<T> groups, Func<T, string> name) =>
         groups.OrderBy(g => name(g) == NoAccommodation ? 0 : 1).ThenBy(name, StringComparer.OrdinalIgnoreCase);

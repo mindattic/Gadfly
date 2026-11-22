@@ -36,7 +36,11 @@ public sealed record GazeRateGroup(string Group, int Students, int Sessions, dou
 }
 
 /// <summary>The comparison: groups, how many students the supplied grouping could not place, and any warning to show.</summary>
-public sealed record GazeRatesReport(IReadOnlyList<GazeRateGroup> Groups, int Sessions, int Unplaced, IReadOnlyList<string> Warnings);
+public sealed record GazeRatesReport(IReadOnlyList<GazeRateGroup> Groups, int Sessions, int Unplaced, IReadOnlyList<string> Warnings)
+{
+    /// <summary>The total of <see cref="Sessions"/> is not shown while any group is withheld (GAD-T486).</summary>
+    public bool TotalWithheld => GroupFairness.WithholdsTotal(Groups, g => g.TooFew);
+}
 
 public sealed class GazeFlagRates(GadflyDbContext db, Guid organizationId)
 {
