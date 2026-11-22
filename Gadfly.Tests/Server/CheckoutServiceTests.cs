@@ -108,12 +108,21 @@ public class CheckoutServiceTests
 
     // ------------------------------------------------------------------ the webhook
 
-    private static string Completed(Guid org, string plan = PlanCatalog.Standard, string type = "checkout.session.completed") =>
+    private static string Completed(Guid org, string plan = PlanCatalog.Standard, string type = "checkout.session.completed", string paymentStatus = "paid") =>
         System.Text.Json.JsonSerializer.Serialize(new
         {
             type,
-            data = new { @object = new { client_reference_id = org.ToString("D"), metadata = new { organizationId = org.ToString("D"), plan } } },
+            data = new { @object = new { client_reference_id = org.ToString("D"), payment_status = paymentStatus, metadata = new { organizationId = org.ToString("D"), plan } } },
         });
+
+    [Test]
+    public void A_completed_session_whose_payment_has_not_arrived_grants_nothing()
+    {
+        // GAD-T479: a delayed payment method completes the session "unpaid"; the plan must wait for the money.
+        var (service, _) = Service(Configured());
+        var unpaid = Completed(Guid.NewGuid(), paymentStatus: "unpaid");
+        Assert.That(service.VerifyAndParse(unpaid, Sign(unpaid)), Is.Null);
+    }
 
     private static string Sign(string payload, long? at = null, string secret = WebhookSecret)
     {

@@ -95,6 +95,10 @@ public sealed class CheckoutService(IHttpClientFactory httpClientFactory, Paymen
             var root = doc.RootElement;
             if (root.GetProperty("type").GetString() != "checkout.session.completed") return null;
             var dataObject = root.GetProperty("data").GetProperty("object");
+            // A session paid by a delayed method (bank debit) completes with payment_status "unpaid": the money hasn't arrived and
+            // may never, so no plan is granted for it (GAD-T479). Only "paid" (or a free plan's "no_payment_required") upgrades.
+            var paymentStatus = dataObject.TryGetProperty("payment_status", out var ps) && ps.ValueKind == JsonValueKind.String ? ps.GetString() : null;
+            if (paymentStatus is not ("paid" or "no_payment_required")) return null;
             var metadata = dataObject.TryGetProperty("metadata", out var m) ? m : default;
             var orgText = metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty("organizationId", out var o) ? o.GetString()
                 : dataObject.TryGetProperty("client_reference_id", out var cr) ? cr.GetString() : null;
