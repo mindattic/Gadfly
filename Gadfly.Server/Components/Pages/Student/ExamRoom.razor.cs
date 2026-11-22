@@ -60,26 +60,24 @@ public partial class ExamRoom
         }
     }
 
-    /// <summary>A request about the last answer was just resolved and the answer is being judged (set around that step only).</summary>
-    private bool judgingVerified;
-
     /// <summary>
-    /// The panel is judging a verified answer and writing the next question (GAD-T290): the examiner fills the wait with a short
-    /// neutral line if it lasts more than a moment.
+    /// The panel is judging an answer and writing the next question (GAD-T290): the examiner fills the wait with a short neutral line
+    /// if it lasts more than a moment. A spoken answer goes straight to judging (GAD-T405), so this is the wait after every answer.
     /// </summary>
-    private bool VoicePondering => judgingVerified && phase == Phase.Thinking;
-
-    /// <summary>A request about the last answer is spoken instead of the question.</summary>
-    private string? VoicePrompt => step?.Verification?.Prompt;
+    private bool VoicePondering => thinkingAbout == ThinkingAbout.Answer && phase == Phase.Thinking;
 
     /// <summary>
-    /// An answer may be given by voice when a question is waiting, or the pending request is one a spoken reply answers: saying the answer
-    /// again, or a meaning clarification. The read-back's Yes / correct buttons are clicked, and a typed correction opens its own box.
+    /// A meaning clarification is spoken instead of the question. A read-back request (only ever one left over from before GAD-T405)
+    /// is never spoken: the page takes that answer as heard (<c>TakeAsHeardAsync</c>).
+    /// </summary>
+    private string? VoicePrompt => step?.Verification is { Kind: ResponseLedger.MeaningKind } v ? v.Prompt : null;
+
+    /// <summary>
+    /// An answer may be given by voice when a question is waiting, or a meaning clarification left over from before GAD-T405 is (it
+    /// is answered out loud). A spoken answer is never read back, said again or corrected (GAD-T405).
     /// </summary>
     private bool VoiceCanAnswer => phase == Phase.Answering && !busy && step is { } s
-        && (s.Verification is null
-            || (s.Verification.Kind == ResponseLedger.TranscriptKind && verifyMode == VerifyMode.Repeat)
-            || (s.Verification.Kind == ResponseLedger.MeaningKind && verifyMode == VerifyMode.None));
+        && (s.Verification is null || s.Verification.Kind == ResponseLedger.MeaningKind);
 
     /// <summary>
     /// Takes only the server's clock state from <paramref name="next"/>: keep whatever this page shows now (a newer step may have
@@ -164,7 +162,7 @@ public partial class ExamRoom
         }
     }
 
-    /// <summary>A finished spoken answer from the browser: it joins the ledger as a voice response, then goes through the transcript read-back.</summary>
+    /// <summary>A finished spoken answer from the browser: it joins the ledger as a voice response and is judged as heard (GAD-T405).</summary>
     private async Task OnVoiceAnswerAsync(VoiceAnswerPayload payload)
     {
         if (busy || phase != Phase.Answering || step is null || !VoiceCanAnswer) return;
@@ -190,10 +188,6 @@ public partial class ExamRoom
                 pendingVoiceAnswer = answer;
                 answerStartedAt = answer.StartedAt;
                 await RunStepAsync(ThinkingAbout.Answer, () => Sessions.AnswerAsync(org, SessionId, user, answer));
-                break;
-            case { Kind: ResponseLedger.TranscriptKind }:
-                // "Repeat my answer", said out loud: the new recognition replaces the doubtful one (the original stays on record).
-                await VerifyStepAsync(ThinkingAbout.Answer, (o, u) => Sessions.CorrectAnswerAsync(o, SessionId, u, text, true));
                 break;
             case { Kind: ResponseLedger.MeaningKind } request:
                 await ClarifyAsync(request, text);

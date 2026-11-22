@@ -9,7 +9,8 @@ namespace Gadfly.Server.Voice;
 /// The styles differ only in head tilt and how far the brows lift, never in valence: every style keeps the same mild, friendly
 /// baseline, and none smiles more or frowns. Moves that tend to follow a weak answer (a counterexample, a contradiction) share
 /// the style of moves that follow any answer (a probe, a clarification), so her face can't tell the student how the last answer
-/// went. Requests about an answer (the read-back, a clarification of meaning), fillers and remarks are always <see cref="Neutral"/>.
+/// went. Requests about an answer (a clarification of meaning on a typed answer), fillers and remarks are always <see cref="Neutral"/>.
+/// A spoken answer is never read back (GAD-T405).
 /// </para>
 /// </summary>
 public static class ExaminerStyle

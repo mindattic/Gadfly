@@ -113,85 +113,55 @@
                     <p class="concept">@step.ConceptTitle</p>
                 }
                 <p class="exam-question" aria-live="polite">@step?.Question</p>
-                @if (step?.Verification is { } v)
+                @if (step?.Verification is { Kind: ResponseLedger.TranscriptKind })
                 {
-                    @* One request at a time about the answer just given, before it is judged (GAD-T88). *@
+                    @* A read-back request left over from before GAD-T405: there is nothing to confirm or correct any more. The page takes
+                       the answer as heard on its own (TakeAsHeardAsync), so only a moment's status shows here. *@
+                    <p class="hint" role="status">Thinking about your answer…</p>
+                }
+                else if (step?.Verification is { } v)
+                {
+                    @* One request at a time about the answer just given, before it is judged (GAD-T88). A spoken answer is taken as heard
+                       and never gets one (GAD-T405): this is a typed answer's meaning clarification, or one left over from before. *@
                     <div class="verify" role="region" aria-labelledby="verify-title">
                         <p class="verify-label">Your answer, as recorded</p>
                         <blockquote class="recorded-answer">@v.RecordedText</blockquote>
-                        @if (v.Kind == ResponseLedger.TranscriptKind)
+                        <h2 id="verify-title" class="verify-title">A quick clarification</h2>
+                        <p class="verify-prompt" aria-live="polite">@v.Prompt</p>
+                        <p class="hint">This only checks what you meant, so your answer is understood the way you intended. It doesn't mean your answer is right or wrong, and your answer stays exactly as recorded.</p>
+                        @if (typedAnswers && typoFix)
                         {
-                            <h2 id="verify-title" class="verify-title">Check the recording</h2>
-                            <p class="verify-prompt" aria-live="polite">@v.Prompt</p>
-                            <p class="hint">Confirming only says the recording matches what you said. It doesn't mean your answer is right or wrong.</p>
-                            @if (verifyMode == VerifyMode.Repeat)
-                            {
-                                @* Said again out loud, never typed (GAD-T239): the new recognition replaces the doubtful one. *@
-                                <p class="hint" role="status">Say your answer again now. Your original recording is kept, and repeating it never lowers your score.</p>
-                                <div class="actions">
-                                    <button type="button" class="secondary" @onclick="() => verifyMode = VerifyMode.None">Back</button>
-                                </div>
-                            }
-                            else if (verifyMode == VerifyMode.Correct)
-                            {
-                                <label>
-                                    Correct the recording
-                                    <textarea rows="5" @bind="extraText" @bind:event="oninput" aria-describedby="correct-hint"></textarea>
-                                </label>
-                                <p id="correct-hint" class="hint">Fix words the recording got wrong. Your original recording is kept. Correcting a recording error never lowers your score.</p>
-                                <div class="actions">
-                                    <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="() => CorrectPendingAsync(false)">Save</button>
-                                    <button type="button" class="secondary" @onclick="() => verifyMode = VerifyMode.None">Back</button>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="actions">
-                                    <button type="button" @onclick="() => ConfirmAsync(v)">Yes, this is what I said</button>
-                                    <button type="button" class="secondary" @onclick="() => StartVerify(VerifyMode.Correct, v.RecordedText)">No, I want to correct it</button>
-                                    <button type="button" class="secondary" @onclick="() => StartVerify(VerifyMode.Repeat, string.Empty)">Repeat my answer</button>
-                                </div>
-                            }
+                            <label>
+                                Fix a typo in your answer
+                                <textarea rows="6" @bind="extraText" @bind:event="oninput" aria-describedby="typo-hint"></textarea>
+                            </label>
+                            <p id="typo-hint" class="hint">Small spelling fixes only. Your original answer is kept on record, and a typo fix never lowers your score.</p>
+                            <div class="actions">
+                                <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="CorrectPendingAsync">Save typo fix</button>
+                                <button type="button" class="secondary" @onclick="() => typoFix = false">Back</button>
+                            </div>
+                        }
+                        else if (typedAnswers)
+                        {
+                            @* Typed-answer accommodation (GAD-T260): the clarification is typed too. *@
+                            <label>
+                                Your clarification
+                                <textarea id="clarify-box" rows="4" @bind="extraText" @bind:event="oninput" placeholder="In your own words…"></textarea>
+                            </label>
+                            <div class="actions">
+                                <button type="button" disabled="@(busy || string.IsNullOrWhiteSpace(extraText))" @onclick="() => ClarifyTypedAsync(v)">Send clarification</button>
+                                <button type="button" class="secondary" @onclick="() => ClarifyAsync(v, null)">I'd rather not add anything</button>
+                                <button type="button" class="link" @onclick="() => StartTypoFix(v.RecordedText)">Fix a typo in my answer instead</button>
+                            </div>
                         }
                         else
                         {
-                            <h2 id="verify-title" class="verify-title">A quick clarification</h2>
-                            <p class="verify-prompt" aria-live="polite">@v.Prompt</p>
-                            <p class="hint">This only checks what you meant, so your answer is understood the way you intended. It doesn't mean your answer is right or wrong, and your answer stays exactly as recorded.</p>
-                            @if (verifyMode == VerifyMode.Correct)
-                            {
-                                <label>
-                                    Fix a typo in your answer
-                                    <textarea rows="6" @bind="extraText" @bind:event="oninput" aria-describedby="typo-hint"></textarea>
-                                </label>
-                                <p id="typo-hint" class="hint">Small spelling fixes only. Your original answer is kept on record, and a typo fix never lowers your score.</p>
-                                <div class="actions">
-                                    <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="() => CorrectPendingAsync(false)">Save typo fix</button>
-                                    <button type="button" class="secondary" @onclick="() => verifyMode = VerifyMode.None">Back</button>
-                                </div>
-                            }
-                            else if (typedAnswers)
-                            {
-                                @* Typed-answer accommodation (GAD-T260): the clarification is typed too. *@
-                                <label>
-                                    Your clarification
-                                    <textarea id="clarify-box" rows="4" @bind="extraText" @bind:event="oninput" placeholder="In your own words…"></textarea>
-                                </label>
-                                <div class="actions">
-                                    <button type="button" disabled="@(busy || string.IsNullOrWhiteSpace(extraText))" @onclick="() => ClarifyTypedAsync(v)">Send clarification</button>
-                                    <button type="button" class="secondary" @onclick="() => ClarifyAsync(v, null)">I'd rather not add anything</button>
-                                    <button type="button" class="link" @onclick="() => StartVerify(VerifyMode.Correct, v.RecordedText)">Fix a typo in my answer instead</button>
-                                </div>
-                            }
-                            else
-                            {
-                                @* Clarified out loud, never typed (GAD-T239). *@
-                                <p class="hint" role="status">Answer the examiner out loud to clarify.</p>
-                                <div class="actions">
-                                    <button type="button" class="secondary" @onclick="() => ClarifyAsync(v, null)">I'd rather not add anything</button>
-                                    <button type="button" class="link" @onclick="() => StartVerify(VerifyMode.Correct, v.RecordedText)">Fix a typo in my answer instead</button>
-                                </div>
-                            }
+                            @* Left over from before GAD-T405 on a spoken answer: clarified out loud, never typed (GAD-T239), and a spoken
+                               answer has no typo fix. *@
+                            <p class="hint" role="status">Answer the examiner out loud to clarify.</p>
+                            <div class="actions">
+                                <button type="button" class="secondary" @onclick="() => ClarifyAsync(v, null)">I'd rather not add anything</button>
+                            </div>
                         }
                     </div>
                 }
@@ -230,7 +200,8 @@
                 }
             </section>
 
-            @* A changed answer would be typed, so it isn't offered (GAD-T239): only a small fix to how the last answer was recorded. *@
+            @* A spoken answer is kept as heard: no changed answer (GAD-T239) and no after-the-fact fix (GAD-T405), so the server only
+               offers this for a typed answer (GAD-T260): a small typo fix, never a new answer. *@
             @if (voiceOn && step?.Verification is null && step?.LastAnswer is { } last && last.CanCorrectTypo)
             {
                 <section class="panel wide last-answer" aria-labelledby="last-title">
@@ -242,7 +213,7 @@
                             Correct a typo in your last answer
                             <textarea rows="5" @bind="extraText" @bind:event="oninput" aria-describedby="last-typo-hint"></textarea>
                         </label>
-                        <p id="last-typo-hint" class="hint">Small fixes to words the recording got wrong only. Your original answer stays on record, and a fix never lowers your score.</p>
+                        <p id="last-typo-hint" class="hint">Small spelling fixes only. Your original answer stays on record, and a fix never lowers your score.</p>
                         <div class="actions">
                             <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="CorrectLastAsync">Save fix</button>
                             <button type="button" class="secondary" @onclick="CancelLast">Cancel</button>
@@ -251,7 +222,7 @@
                     else
                     {
                         <div class="actions">
-                            <button type="button" class="link" @onclick="() => StartLast(LastMode.Typo, last.Text)">Correct a word in how my last answer was recorded</button>
+                            <button type="button" class="link" @onclick="() => StartLast(LastMode.Typo, last.Text)">Fix a typo in my last answer</button>
                         </div>
                     }
                     @if (error is not null && lastMode != LastMode.None)
@@ -308,10 +279,10 @@
 
     private enum Phase { Loading, NotFound, Thinking, Answering, Ended, Error }
     private enum ThinkingAbout { Question, Answer, Finish, Saving }
-    private enum VerifyMode { None, Correct, Repeat }
     private enum LastMode { None, Typo }
 
-    private VerifyMode verifyMode;
+    /// <summary>The typo-fix box is open instead of a typed answer's clarification (GAD-T260; a spoken answer has none).</summary>
+    private bool typoFix;
     private LastMode lastMode;
     /// <summary>The text of whichever side box is open: a correction of how an answer was recorded.</summary>
     private string extraText = "";
@@ -515,6 +486,7 @@
         {
             busy = false;
         }
+        await TakeAsHeardAsync();
     }
 
     private void Apply(SessionStep next)
@@ -536,7 +508,7 @@
         // A new request or question, or a completed action, closes the side boxes.
         if (next.Verification?.ResponseId != shownRequest || next.TurnIndex != shownTurn || next.Notice is not null)
         {
-            verifyMode = VerifyMode.None;
+            typoFix = false;
             lastMode = LastMode.None;
             extraText = "";
             shownRequest = next.Verification?.ResponseId;
@@ -555,9 +527,9 @@
     private int? shownTurn;
     private Guid? shownRequest;
 
-    private void StartVerify(VerifyMode mode, string text)
+    private void StartTypoFix(string text)
     {
-        verifyMode = mode;
+        typoFix = true;
         extraText = text;
         error = null;
     }
@@ -580,21 +552,31 @@
     {
         if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
         pendingAnswer = null;
-        // Resolving a request about the answer (the read-back confirmed, a correction, a clarification) sends it to be judged: the
-        // examiner fills that wait out loud (GAD-T290).
-        judgingVerified = about == ThinkingAbout.Answer;
-        try { await RunStepAsync(about, () => run(org, user)); }
-        finally { judgingVerified = false; }
+        // Resolving a request about the answer (a clarification, a typo fix) sends it to be judged: the examiner fills that wait out
+        // loud (GAD-T290), as for any answer.
+        await RunStepAsync(about, () => run(org, user));
     }
 
     private Task ClarifyAsync(PendingVerification v, string? reply) =>
         VerifyStepAsync(ThinkingAbout.Answer, (org, user) => Sessions.ClarifyAsync(org, SessionId, user, v.ResponseId, reply?.Trim()));
 
-    private Task ConfirmAsync(PendingVerification v) =>
-        VerifyStepAsync(ThinkingAbout.Answer, (org, user) => Sessions.ConfirmTranscriptAsync(org, SessionId, user, v.ResponseId));
+    private Task CorrectPendingAsync() =>
+        VerifyStepAsync(ThinkingAbout.Answer, (org, user) => Sessions.CorrectAnswerAsync(org, SessionId, user, extraText.Trim()));
 
-    private Task CorrectPendingAsync(bool repeat) =>
-        VerifyStepAsync(ThinkingAbout.Answer, (org, user) => Sessions.CorrectAnswerAsync(org, SessionId, user, extraText.Trim(), repeat));
+    /// <summary>The read-back request already answered as heard, so it is never sent twice (a refusal must not loop).</summary>
+    private Guid? takenAsHeard;
+
+    /// <summary>
+    /// A spoken answer is taken as heard (GAD-T405). A read-back request created before that change can still be waiting on an exam in
+    /// progress: the page answers it at once as heard, through the same confirmation the old Yes button used, so the answer is judged
+    /// and the exam moves on without the student being asked anything. Runs after every step; nothing to do when there is no such request.
+    /// </summary>
+    private async Task TakeAsHeardAsync()
+    {
+        if (step?.Verification is not { Kind: ResponseLedger.TranscriptKind } v || takenAsHeard == v.ResponseId) return;
+        takenAsHeard = v.ResponseId;
+        await VerifyStepAsync(ThinkingAbout.Answer, (org, user) => Sessions.ConfirmTranscriptAsync(org, SessionId, user, v.ResponseId));
+    }
 
     private Task CorrectLastAsync() =>
         VerifyStepAsync(ThinkingAbout.Saving, (org, user) => Sessions.CorrectAnswerAsync(org, SessionId, user, extraText.Trim()));

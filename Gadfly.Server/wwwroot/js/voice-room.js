@@ -380,10 +380,10 @@ function interrupt(s) {
 const FILL = { timeoutMs: 6000, retryMs: 500, gapMs: 8000, lateMs: 10000 };
 
 /**
- * The panel is judging the confirmed answer and writing the next question (GAD-T290). If the wait outlasts firstAfterMs the
- * examiner says <first> (a short neutral line the server chose and offered), and on a long wait <again> at againAfterMs. Nothing is
- * said while the microphone is open, a question or remark is being spoken, or another line is still playing: the attempt waits
- * for that (the read-back may still be finishing) and is dropped once its moment has passed. The microphone gate stays closed
+ * The panel is judging the answer, taken as heard (GAD-T405), and writing the next question (GAD-T290). If the wait outlasts
+ * firstAfterMs the examiner says <first> (a short neutral line the server chose and offered), and on a long wait <again> at
+ * againAfterMs. Nothing is said while the microphone is open, a question or remark is being spoken, or another line is still
+ * playing: the attempt waits for that and is dropped once its moment has passed. The microphone gate stays closed
  * the whole time, so a line is never captured or transcribed into an answer, and the next question (speak()) cancels what is left.
  * A quiet page-turn loop (GAD-T409) runs alongside, under the filler line's own volume, so the wait never feels silent.
  */

@@ -20,8 +20,9 @@ public sealed record HubIntegrityEvent(string Source, string Type, DateTimeOffse
 /// Every call is the signed-in student acting on their own session; the orchestrator checks ownership,
 /// state and the server-side time limit. Server → client messages: <c>Step</c> (the new state and
 /// question, and any pending <see cref="SessionStep.Verification"/> request), <c>Thinking</c> (judging has
-/// started), <c>Refused</c> (a readable reason). A step with Verification set asks the student about the answer
-/// just given (Clarify / ConfirmTranscript / CorrectAnswer) before it is judged.
+/// started), <c>Refused</c> (a readable reason). A step with Verification set asks the student about a typed answer
+/// just given (Clarify, or CorrectAnswer for a typo) before it is judged. A spoken answer is taken as heard and judged
+/// at once (GAD-T405): it is never read back, corrected, said again or changed.
 /// </summary>
 [Authorize(Policy = GadflyPolicies.Student)]
 public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFactory scopes) : Hub
@@ -155,7 +156,10 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
         return SignalAndRun(sessionId, () => orchestrator.ClarifyAsync(org, sessionId, user, responseId, reply, Context.ConnectionAborted));
     }
 
-    /// <summary>"Yes, this is what I said" for a pending transcript confirmation (Kind "transcript"). Confirms wording only, not correctness.</summary>
+    /// <summary>
+    /// Takes a pending transcript request (Kind "transcript") as heard. None is created any more (GAD-T405); this only lets a client
+    /// resolve one left over from before that change, so an exam already in progress isn't stranded. Confirms wording only, not correctness.
+    /// </summary>
     public Task<SessionStep> ConfirmTranscript(Guid sessionId, Guid responseId)
     {
         var (org, user) = Caller();
@@ -163,18 +167,23 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
     }
 
     /// <summary>
-    /// A transcription correction: resolves a pending request with corrected text ("Correct it"), or with
-    /// <paramref name="repeat"/> the newly recognized transcript of a spoken answer said again ("Repeat");
-    /// with nothing pending, fixes a typo in the last judged answer. Small edits only; the original is kept.
+    /// A typo fix to a typed answer (GAD-T260): resolves a pending meaning clarification with the fixed text instead, or with nothing
+    /// pending fixes a typo in the last judged answer. Small edits only; the original is kept. A spoken answer is kept as heard
+    /// (GAD-T405): it can't be corrected, and <paramref name="repeat"/> (saying it again) is refused; the parameter stays only so an
+    /// older client's call still binds.
     /// </summary>
     public Task<SessionStep> CorrectAnswer(Guid sessionId, string text, bool repeat = false)
     {
         var (org, user) = Caller();
+        if (repeat) throw new HubException("A spoken answer is kept as it was heard; it can't be said again.");
         if (text is null || text.Length > 20_000) throw new HubException("The corrected answer needs text.");
-        return SignalAndRun(sessionId, () => orchestrator.CorrectAnswerAsync(org, sessionId, user, text, repeat, Context.ConnectionAborted));
+        return SignalAndRun(sessionId, () => orchestrator.CorrectAnswerAsync(org, sessionId, user, text, Context.ConnectionAborted));
     }
 
-    /// <summary>"I want to change my answer": a substantive revision of the last judged answer, recorded as a new response event.</summary>
+    /// <summary>
+    /// "I want to change my answer": a substantive revision of the last judged typed answer, recorded as a new response event. A
+    /// spoken answer has no do-over (GAD-T407): the orchestrator refuses it.
+    /// </summary>
     public async Task<SessionStep> ReviseAnswer(Guid sessionId, string text)
     {
         var (org, user) = Caller();

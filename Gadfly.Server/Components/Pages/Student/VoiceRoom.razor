@@ -142,7 +142,10 @@
     [Parameter] public string? Question { get; set; }
     /// <summary>The kind of question (the planner's move): picks her speaking style from a fixed map that never hints at the grade (GAD-T303).</summary>
     [Parameter] public string? Move { get; set; }
-    /// <summary>A pending request about the last answer (transcript read-back or clarification); spoken instead of the question.</summary>
+    /// <summary>
+    /// A pending meaning clarification about the last answer, spoken instead of the question. A spoken answer is never read back
+    /// (GAD-T405): the exam room doesn't pass a transcript request here.
+    /// </summary>
     [Parameter] public string? Prompt { get; set; }
     /// <summary>Stable identity of the pending request, so a changed prompt is spoken once.</summary>
     [Parameter] public Guid? PromptId { get; set; }
@@ -160,7 +163,7 @@
     /// </summary>
     [Parameter] public bool TypedAnswers { get; set; }
     /// <summary>
-    /// True while the panel judges a confirmed answer and the next question is written (GAD-T290): the examiner fills the wait with a
+    /// True while the panel judges an answer and the next question is written (GAD-T290): the examiner fills the wait with a
     /// short neutral line (<see cref="ExaminerFiller"/>) unless the next question is ready first.
     /// </summary>
     [Parameter] public bool Pondering { get; set; }
@@ -228,21 +231,15 @@
 
     private bool CanRepeat => state == VoiceState.On && !string.IsNullOrWhiteSpace(SpokenText);
 
-    /// <summary>The prompt for a request, else the question. A long recorded answer is not read back in full (it is shown on screen).</summary>
-    private string? SpokenText => Prompt is { Length: > 0 } p
-        ? (p.Length <= 700 ? p : LongReadBack)
-        : Question;
-
-    /// <summary>Said instead of reading a long recorded answer back in full (it is on the screen).</summary>
-    private const string LongReadBack = "I've put your recorded answer on the screen. Is this what you said?";
+    /// <summary>The prompt for a request, else the question.</summary>
+    private string? SpokenText => Prompt is { Length: > 0 } p ? p : Question;
 
     /// <summary>
     /// The examiner's fixed lines, prepared once per server in the avatar's phrase cache so the first one a student hears starts at
-    /// once (GAD-T303): the eye-contact remarks, the short read-back and the wait fillers.
+    /// once (GAD-T303): the eye-contact remarks and the wait fillers.
     /// </summary>
     private static IEnumerable<string> FixedLines() =>
         Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks.Values
-            .Append(LongReadBack)
             .Concat(ExaminerFiller.First)
             .Concat(ExaminerFiller.Again);
 
@@ -356,7 +353,7 @@
             {
                 spokenKey = key;
                 spoke = true;
-                // Into the transcript once, in full (a long read-back is spoken shortened); turning voice off and on doesn't repeat it.
+                // Into the transcript once; turning voice off and on doesn't repeat it.
                 if (key != loggedKey)
                 {
                     loggedKey = key;

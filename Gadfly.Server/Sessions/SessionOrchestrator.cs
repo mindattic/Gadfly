@@ -29,12 +29,13 @@ public sealed record SessionStep
     public int ConceptsTotal { get; init; }
     public int ConceptsClosed { get; init; }
     /// <summary>
-    /// A request about the answer just given, waiting for the student before it is judged (GAD-T87/T88):
-    /// transcript confirmation for voice answers, or a neutral meaning clarification. One at a time;
-    /// while it is set, <see cref="Question"/> is still the question that answer belongs to.
+    /// A request about the answer just given, waiting for the student before it is judged (GAD-T87/T88): a neutral
+    /// meaning clarification of a typed answer. A spoken answer is taken as heard and never gets one (GAD-T405); a
+    /// transcript confirmation can only be one left over from before that. One at a time; while it is set,
+    /// <see cref="Question"/> is still the question that answer belongs to.
     /// </summary>
     public PendingVerification? Verification { get; init; }
-    /// <summary>The last judged answer, for "correct a typo" and "change my answer" (null before the first one).</summary>
+    /// <summary>The last judged answer, for "correct a typo" and "change my answer" on a typed answer (null before the first one).</summary>
     public LastAnswer? LastAnswer { get; init; }
     /// <summary>A one-line confirmation of what the student's last action did, e.g. "Your correction was saved."</summary>
     public string? Notice { get; init; }
@@ -340,7 +341,11 @@ public sealed class SessionOrchestrator(
             return Task.FromResult(Compose(p.Response.VerifiedText, p.Request!.Question, text));
         }, ct);
 
-    /// <summary>"Yes, this is what I said" (Part 4.3 Type A). Confirms the wording only, never that the answer is correct.</summary>
+    /// <summary>
+    /// "Yes, this is what I said" (Part 4.3 Type A). Confirms the wording only, never that the answer is correct. No read-back request
+    /// is created any more (GAD-T405, spoken answers are taken as heard); this only resolves one left over from before that change,
+    /// which the exam room does on its own, so an exam already in progress is never stranded.
+    /// </summary>
     public Task<SessionStep> ConfirmTranscriptAsync(Guid organizationId, Guid sessionId, Guid studentUserId, Guid responseId, CancellationToken ct = default) =>
         ResolveAsync(organizationId, sessionId, studentUserId, responseId, ClarificationType.Transcription, (live, ledger, p) =>
         {
@@ -351,13 +356,12 @@ public sealed class SessionOrchestrator(
         }, ct);
 
     /// <summary>
-    /// A transcription correction (Part 4.7): while a request is pending (correct the transcript, or fix a
-    /// typo instead of clarifying), or afterwards on the last judged answer ("correct a typo in my last
-    /// answer"). Adds a transcript version and updates the verified text; the original is kept and the
-    /// score is never reduced for it. <paramref name="repeat"/>: a voice answer said again (re-recognized),
-    /// which has no word limit because it replaces a mishearing, not a typo.
+    /// A typo fix to a typed answer (Part 4.7, GAD-T260): while a meaning clarification is pending (fix a typo
+    /// instead of clarifying), or afterwards on the last judged answer ("fix a typo in my last answer"). Adds a
+    /// transcript version and updates the verified text; the original is kept and the score is never reduced
+    /// for it. A spoken answer is kept as it was heard (GAD-T405): it is never corrected or said again.
     /// </summary>
-    public Task<SessionStep> CorrectAnswerAsync(Guid organizationId, Guid sessionId, Guid studentUserId, string corrected, bool repeat = false,
+    public Task<SessionStep> CorrectAnswerAsync(Guid organizationId, Guid sessionId, Guid studentUserId, string corrected,
         CancellationToken ct = default) =>
         StepAsync(organizationId, sessionId, studentUserId, async live =>
         {
@@ -376,19 +380,19 @@ public sealed class SessionOrchestrator(
             if (s.OpenTurn is { } open && await TurnIdAsync(db, s.Id, open.Index, ct) is { } openId
                 && await ledger.PendingAsync(s.Id, openId, ct) is { } p)
             {
-                var voice = p.Response.Modality == "voice";
-                if (repeat && !voice) throw new SessionRefusedException("Only a spoken answer can be repeated.");
-                if (!repeat && CorrectionRules.Check(p.Response.VerifiedText, text, voice) is { Allowed: false } refused)
+                // A request left over from before GAD-T405 on a spoken answer: it is taken as heard, never corrected.
+                if (p.Response.Modality == "voice")
+                    throw new SessionRefusedException("A spoken answer is kept as it was heard; it can't be corrected.");
+                if (CorrectionRules.Check(p.Response.VerifiedText, text, voice: false) is { Allowed: false } refused)
                     throw new SessionRefusedException(refused.Reason);
                 if (TooLate(live)) return await ExpireAsync(live, db, ledger, p, open, ct);
                 if (p.Request is { } request)
                     ledger.Answer(request, p.Response, request.Type == ClarificationType.Transcription ? text : null, studentUserId,
                         request.Type == ClarificationType.Transcription
-                            ? (repeat ? "The student repeated their answer." : "The student corrected the transcript.")
+                            ? "The student corrected the transcript."
                             : "The student fixed a typo instead of clarifying.");
-                ledger.AddVersion(p.Response, text, CorrectionKind.Transcription, repeat ? "speech-recognition" : "student", studentUserId);
-                ledger.Move(p.Response, VerificationState.Corrected,
-                    repeat ? "The student repeated a misrecognized answer." : "Transcription correction by the student.", studentUserId, OrgRoles.Student);
+                ledger.AddVersion(p.Response, text, CorrectionKind.Transcription, "student", studentUserId);
+                ledger.Move(p.Response, VerificationState.Corrected, "Transcription correction by the student.", studentUserId, OrgRoles.Student);
                 await db.SaveChangesAsync(ct);
                 live.Notice = "Your correction was saved. Your original answer is kept on record too.";
                 await JudgePendingAsync(live, ledger, p.Response, Compose(p.Response.VerifiedText, null, null), ct);
@@ -436,6 +440,10 @@ public sealed class SessionOrchestrator(
             if (s.OpenTurn is { } open && await TurnIdAsync(db, s.Id, open.Index, ct) is { } openId && await ledger.PendingAsync(s.Id, openId, ct) is not null)
                 throw new SessionRefusedException("Please answer the request about your last answer first.");
             var (original, turnId) = await LastJudgedAsync(live, db, ledger, ct);
+            // No do-over for a spoken answer (GAD-T407, owner decision 2026-11-22): it was taken as heard, and a second, considered pass
+            // would change the Socratic exchange. A typed answer (GAD-T260) can still be changed.
+            if (original.Modality == "voice")
+                throw new SessionRefusedException("A spoken answer is kept as it was heard; it can't be changed afterwards.");
             var revisions = await db.StudentResponses.Where(r => r.TurnId == turnId && r.Kind == ResponseKind.SubstantiveRevision)
                 .OrderBy(r => r.Sequence).ToListAsync(ct);
             if (revisions.Count >= ResponseLedger.MaxRevisionsPerTurn)
@@ -737,7 +745,9 @@ public sealed class SessionOrchestrator(
                 last = new LastAnswer(original.Id, judged.Index, judged.Question, revisions.LastOrDefault() ?? original.VerifiedText,
                     // A spoken answer is taken as heard (GAD-T405): no after-the-fact transcript fix is offered for it.
                     original.Versions.Count, original.VerificationState == VerificationState.Captured && pending is null && original.Modality != "voice",
-                    pending is null && revisions.Count < ResponseLedger.MaxRevisionsPerTurn, revisions.Count, ResponseLedger.RevisionRule(live.Mode));
+                    // Nor a changed answer (GAD-T407): no do-over for what was said.
+                    pending is null && revisions.Count < ResponseLedger.MaxRevisionsPerTurn && original.Modality != "voice", revisions.Count,
+                    ResponseLedger.RevisionRule(live.Mode));
             }
         }
         return new SessionStep

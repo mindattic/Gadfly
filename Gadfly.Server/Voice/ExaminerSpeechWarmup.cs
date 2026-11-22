@@ -3,8 +3,8 @@ using MindAttic.Avatar.AspNetCore;
 namespace Gadfly.Server.Voice;
 
 /// <summary>
-/// Prepares the examiner's fixed lines before they are needed (GAD-T303): the eye-contact remarks, the short read-back for a long
-/// answer and the like are synthesized once per server into the avatar library's fixed-phrase cache, so the first time a student
+/// Prepares the examiner's fixed lines before they are needed (GAD-T303): the eye-contact remarks, the wait fillers and the like
+/// are synthesized once per server into the avatar library's fixed-phrase cache, so the first time a student
 /// hears one it starts at once instead of waiting for the speech provider. Questions are not warmed (they are written for each
 /// student and spoken the moment they exist); they are cached after their first playing, so "Repeat the question" and a reload
 /// replay them instantly.
