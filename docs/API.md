@@ -507,6 +507,13 @@ whitespace, UTF-8); the code is its first 80 bits in Crockford base 32. Nothing 
 inside `transcript`, so the same record always gives the same code. Anyone can check a code or the JSON file at
 `/transcripts/verify` (no sign-in, rate-limited); it says only whether the copy matches the record.
 
+The same page also recognizes a completion certificate's code (GAD-T311/GAD-T379: `/certificates/{sessionId}/pdf`),
+built the same way (a canonical, deterministic JSON record of the certificate's content, hashed and coded exactly
+like a transcript) and checked against a freshly-rebuilt certificate, so a later amendment to the grade shows as "the
+record has changed since" rather than silently matching. There is no separate `/certificates/verify` page: a typed
+code is checked against transcripts first, then certificates. A certificate has no JSON download, so only its code
+can be checked, never an uploaded file.
+
 ### Webhook registration
 
 `POST /api/v1/webhooks`
@@ -828,8 +835,23 @@ reviewer names, voters or audit detail:
 ```
 
 Other members without a reviewer permission get `403` (audited). The per-objective assessment report downloads at
-`/grading/{sessionId}/report.md` and `/grading/{sessionId}/report.csv` (reviewers) and
-`/my-results/{sessionId}/report.md` (the student, once published).
+`/grading/{sessionId}/report.md`, `/grading/{sessionId}/report.csv` and `/grading/{sessionId}/report.pdf` (reviewers)
+and `/my-results/{sessionId}/report.md` and `/my-results/{sessionId}/report.pdf` (the student, once published). The
+PDF (GAD-T311/GAD-T377) says the same thing in the same order as the Markdown (per objective: the AI and examiner
+levels, what was missing, the next level's descriptor), laid out with the same hand-written PDF engine the transcript
+downloads use (GAD-T295) rather than a new PDF dependency.
+
+`GET /grading/exam/{examId}/class-summary.pdf` (reviewers, ViewTranscripts; GAD-T311/GAD-T378): a class summary PDF
+for instructors, aggregated over every student assigned to that exam — score distribution (mean, median, a 10-point
+histogram), each learning objective's class average and who hasn't completed the exam yet. Only released results
+(published to the student) feed the distribution and averages; an attempt that has ended but is still awaiting
+grading or release is counted separately and never named, and a student with no ended attempt is listed by name so
+the instructor can follow up.
+
+`GET /certificates/{sessionId}/pdf` (GAD-T311/GAD-T379): a student's completion certificate once their result is
+released (`409` with a plain-English reason before then; the same entitlement check as the transcript download, so a
+session id from elsewhere looks like `404` either way). Carries its own verification code and SHA-256, checked at the
+transcript's own verify page (next section) rather than a separate one.
 
 ### Reconciliation triggers
 

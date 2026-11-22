@@ -259,8 +259,9 @@ document, a page to print, plain text, captions (VTT or SRT) or JSON.
 Your copy leaves out the notes meant only for reviewers (camera, sound and browser observations, voice measurements
 and the AI's exam-time scores). Every copy carries a **verification code** such as `7K3M-9QXA-B2CD-EFGH`: anyone
 you give it to (a school, an employer) can type the code at `/transcripts/verify`, or upload the JSON file there, to
-check it is genuine and unchanged. That page never shows what your transcript says. A file you download is yours
-to keep; your organization's retention rules do not reach copies you have saved.
+check it is genuine and unchanged. That page never shows what your transcript says, and it checks a certificate's
+code the same way. A file you download is yours to keep; your organization's retention rules do not reach copies you
+have saved.
 
 ## Your data
 

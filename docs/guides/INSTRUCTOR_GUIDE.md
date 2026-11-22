@@ -179,7 +179,10 @@ admin invites them). Students are **not** emailed when you assign; they find it 
 
 The **Assignments** table shows each student's window, attempts used, extra time, eye contact, EU/EEA residence, the
 latest session's state (opened, consented, in progress, paused, ended, failed) and results ("Grade and publish in
-Grading" links to the grading queue).
+Grading" links to the grading queue). Above the table, **Download class summary (PDF)** saves a one-exam overview:
+the score distribution (mean, median, a histogram), each learning objective's class average and a plain list of
+students with no ended attempt yet. Only released results feed the distribution and averages; an ended attempt still
+awaiting grading or release is counted but never named.
 
 ## 5. Accommodations
 
@@ -247,7 +250,8 @@ the students: **speech recognition accuracy by group** and **eye-contact flag ra
 |---|---|---|
 | turns (CSV) | Session review summary | One row per question: session, student, exam, attempt, turn, concept, move, question, answer, times (UTC), latency, overall score, agreement, whether judges disagreed, judge summary, criterion scores, each judge's score, text-style score, mastery after, integrity events. Opens correctly in Excel. |
 | report (Markdown) | Session review summary | The AI report plus any earlier instructor decision. |
-| grading report (Markdown, CSV) | Grading page | The assessment report with AI, human and combined scores. |
+| grading report (Markdown, CSV, PDF) | Grading page | The assessment report with AI, human and combined scores. |
+| class summary (PDF) | Assignments tab | Score distribution, per-objective average and who hasn't completed, for one exam's released results. |
 
 Blind-grading rules apply to the exports too.
 
@@ -278,7 +282,8 @@ Anyone holding a copy (a registrar, an appeals panel, an employer) can type the 
 upload the JSON file there, to see whether it is genuine and unchanged; the page never shows what the transcript
 says. If the record changes later (a correction, words removed after the retention period), a new download gets a
 new code and the old one shows as "genuine, but the record has changed since". Every download is recorded in the
-audit log.
+audit log. The same page checks a student's **completion certificate** code too (their result page offers the
+certificate once it is published); there is no separate certificate-verify page.
 
 The PDF uses the standard PDF fonts, which cover Western European languages; for other alphabets use the Word,
 web page or JSON copy, which keep every character.

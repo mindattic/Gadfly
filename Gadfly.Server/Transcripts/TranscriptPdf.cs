@@ -41,7 +41,18 @@ public static class TranscriptPdf
     private sealed record Piece(string Text, Font Font, bool Mark);
     private sealed record Line(List<Piece> Pieces, double Size, double Gray, double X, bool Shade);
 
-    public static byte[] Render(TranscriptDocument d, TranscriptStamp stamp)
+    public static byte[] Render(TranscriptDocument d, TranscriptStamp stamp) => RenderBlocks(TranscriptLayout.Blocks(d, stamp),
+        (page, total) => $"Gadfly transcript · {TranscriptLayout.CopyLabel(d.Audience)} · verification code {stamp.Code} · page {page} of {total}",
+        $"Transcript: {d.ExamTitle}", $"{d.StudentName}, attempt {d.Attempt} ({TranscriptLayout.CopyLabel(d.Audience)}). Verification code {stamp.Code}.",
+        stamp.GeneratedAt);
+
+    /// <summary>
+    /// The hand-written PDF writer's layout engine, generalized beyond transcripts (GAD-T311): any <see cref="Block"/>
+    /// sequence (A4 pages, Helvetica/Courier, wrapped to the page, with a page break that never splits a heading from
+    /// what follows it) becomes a PDF with a footer naming each page and the document's title/subject in its properties.
+    /// <paramref name="footer"/> is called once per page with its 1-based page number and the page count.
+    /// </summary>
+    public static byte[] RenderBlocks(IReadOnlyList<Block> blocks, Func<int, int, string> footer, string title, string subject, DateTimeOffset created)
     {
         var pages = new List<List<string>>();   // content-stream operators per page
         var current = new List<string>();
@@ -55,7 +66,7 @@ public static class TranscriptPdf
             y = PageHeight - Margin;
         }
 
-        foreach (var block in TranscriptLayout.Blocks(d, stamp))
+        foreach (var block in blocks)
         {
             var style = StyleOf(block.Kind);
             var indent = block.Indent * 18.0;
@@ -104,17 +115,16 @@ public static class TranscriptPdf
             }
         }
 
-        // Footer on every page: copy, code and page n of m.
+        // Footer on every page: the caller's text and page n of m.
         for (var p = 0; p < pages.Count; p++)
         {
-            var footer = $"Gadfly transcript · {TranscriptLayout.CopyLabel(d.Audience)} · verification code {stamp.Code} · page {p + 1} of {pages.Count}";
-            var w = Measure(footer, Font.Regular, 7.5);
+            var footerText = footer(p + 1, pages.Count);
+            var w = Measure(footerText, Font.Regular, 7.5);
             pages[p].Add($"0.75 0.73 0.68 RG 0.5 w {N(Margin)} {N(FooterY + 12)} m {N(PageWidth - Margin)} {N(FooterY + 12)} l S");
-            pages[p].Add($"BT 0.4 g /F1 7.5 Tf {N((PageWidth - w) / 2)} {N(FooterY)} Td {Str(footer)} Tj ET");
+            pages[p].Add($"BT 0.4 g /F1 7.5 Tf {N((PageWidth - w) / 2)} {N(FooterY)} Td {Str(footerText)} Tj ET");
         }
 
-        return Write(pages, $"Transcript: {d.ExamTitle}", $"{d.StudentName}, attempt {d.Attempt} ({TranscriptLayout.CopyLabel(d.Audience)}). Verification code {stamp.Code}.",
-            stamp.GeneratedAt);
+        return Write(pages, title, subject, created);
     }
 
     private static void DrawLine(List<string> ops, Line line, double x, double y, Style style)

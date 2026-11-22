@@ -99,8 +99,12 @@ public static class TranscriptRegistry
         Unreadable,
     }
 
-    /// <summary>The outcome shown to whoever checks a copy: never any transcript content.</summary>
-    public sealed record Outcome(Verdict Verdict, string? Code = null, string? Audience = null, DateTimeOffset? FirstIssuedAt = null);
+    /// <summary>
+    /// The outcome shown to whoever checks a copy: never any transcript content. <paramref name="Kind"/> names what was
+    /// matched ("transcript" or, from <see cref="Reports.CertificateRegistry"/>, "certificate"; GAD-T311), so the shared
+    /// verify page at <see cref="TranscriptEndpoints.VerifyPath"/> can say the right noun without a second verify page.
+    /// </summary>
+    public sealed record Outcome(Verdict Verdict, string? Code = null, string? Audience = null, DateTimeOffset? FirstIssuedAt = null, string Kind = "transcript");
 
     /// <summary>Checks a typed code. <paramref name="db"/> must be a system-scope context (the visitor may be signed out).</summary>
     public static async Task<Outcome> VerifyCodeAsync(GadflyDbContext db, string? typed, CancellationToken ct)

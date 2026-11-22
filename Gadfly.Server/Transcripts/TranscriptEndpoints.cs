@@ -46,7 +46,7 @@ public static class TranscriptEndpoints
             {
                 if (string.IsNullOrWhiteSpace(code)) return Page(null, null);
                 await using var scope = scopes.CreateAsyncScopeFor(TenantSnapshot.System);
-                var outcome = await TranscriptRegistry.VerifyCodeAsync(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), code, ct);
+                var outcome = await VerifyCodeEitherAsync(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), code, ct);
                 return Page(outcome, code);
             })
             .AllowAnonymous().RequireRateLimiting(RateLimits.Anonymous).ExcludeFromDescription();
@@ -65,10 +65,21 @@ public static class TranscriptEndpoints
                     return Page(await TranscriptRegistry.VerifyFileAsync(db, stream, ct), null, uploaded: file.FileName);
                 }
                 var typed = form["code"].ToString();
-                if (string.IsNullOrWhiteSpace(typed)) return Page(null, null, "Type the verification code printed on the transcript, or choose its JSON file.");
-                return Page(await TranscriptRegistry.VerifyCodeAsync(db, typed, ct), typed);
+                if (string.IsNullOrWhiteSpace(typed)) return Page(null, null, "Type the verification code printed on the transcript or certificate, or choose the transcript's JSON file.");
+                return Page(await VerifyCodeEitherAsync(db, typed, ct), typed);
             })
             .AllowAnonymous().DisableAntiforgery().RequireRateLimiting(RateLimits.Anonymous).ExcludeFromDescription();
+    }
+
+    /// <summary>
+    /// A typed code may name a transcript or a certificate (GAD-T311): tries the transcript registry first (by far the
+    /// more common download), and only asks <see cref="Reports.CertificateRegistry"/> when that comes back not-found, so
+    /// one shared verify page needs no separate <c>/certificates/verify</c>.
+    /// </summary>
+    private static async Task<TranscriptRegistry.Outcome> VerifyCodeEitherAsync(GadflyDbContext db, string? typed, CancellationToken ct)
+    {
+        var outcome = await TranscriptRegistry.VerifyCodeAsync(db, typed, ct);
+        return outcome.Verdict == TranscriptRegistry.Verdict.NotFound ? await Reports.CertificateRegistry.VerifyCodeAsync(db, typed, ct) : outcome;
     }
 
     /// <summary>The platform API's transcript call, on the <c>/api/v1</c> group (API key, rate limits and tenant already applied).</summary>
@@ -123,11 +134,11 @@ public static class TranscriptEndpoints
         var e = TranscriptHtml.E;
         var sb = new StringBuilder();
         sb.Append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\" /><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />")
-          .Append("<meta name=\"robots\" content=\"noindex\" /><title>Check a transcript · Gadfly Exams</title><style>").Append(VerifyCss).Append("</style></head><body><main>")
-          .Append("<h1>Check a Gadfly transcript</h1>")
-          .Append("<p>Every transcript Gadfly issues carries a verification code (for example <code>7K3M-9QXA-B2CD-EFGH</code>) and a SHA-256 hash. ")
-          .Append("Type the code, or choose the transcript's JSON download, to see whether it matches Gadfly's record. ")
-          .Append("This page never shows what a transcript says: only whether the copy you hold is genuine and unchanged.</p>");
+          .Append("<meta name=\"robots\" content=\"noindex\" /><title>Check a transcript or certificate · Gadfly Exams</title><style>").Append(VerifyCss).Append("</style></head><body><main>")
+          .Append("<h1>Check a Gadfly transcript or certificate</h1>")
+          .Append("<p>Every transcript and completion certificate Gadfly issues carries a verification code (for example <code>7K3M-9QXA-B2CD-EFGH</code>) and a SHA-256 hash. ")
+          .Append("Type the code, or choose a transcript's JSON download, to see whether it matches Gadfly's record. ")
+          .Append("This page never shows what a transcript says or a certificate's exam: only whether the copy you hold is genuine and unchanged.</p>");
 
         if (problem is not null) sb.Append("<p class=\"result bad\" role=\"alert\">").Append(e(problem)).Append("</p>");
         if (outcome is not null) sb.Append(Result(outcome, uploaded));
@@ -148,23 +159,24 @@ public static class TranscriptEndpoints
     private static string Result(TranscriptRegistry.Outcome o, string? uploaded)
     {
         var e = TranscriptHtml.E;
+        var noun = o.Kind;   // "transcript" or "certificate" (GAD-T311)
         var issued = o.FirstIssuedAt is { } at ? $" It was first issued on {TranscriptLayout.Stamp(at)}" : "";
         var copy = o.Audience is { } a ? $" as the {TranscriptLayout.CopyLabel(a).ToLowerInvariant()}" : "";
         var what = uploaded is { Length: > 0 } ? $"The file {e(Path.GetFileName(uploaded))}" : o.Code is { } c ? $"The code {e(c)}" : "That";
         return o.Verdict switch
         {
             TranscriptRegistry.Verdict.Matches =>
-                $"<p class=\"result ok\" role=\"status\"><strong>Genuine and unchanged.</strong> {what} matches a transcript Gadfly issued{e(copy)}, and Gadfly's record still says exactly the same.{e(issued)}.</p>",
+                $"<p class=\"result ok\" role=\"status\"><strong>Genuine and unchanged.</strong> {what} matches a {noun} Gadfly issued{e(copy)}, and Gadfly's record still says exactly the same.{e(issued)}.</p>",
             TranscriptRegistry.Verdict.RecordChangedSince =>
-                $"<p class=\"result warn\" role=\"status\"><strong>Genuine, but the record has changed since.</strong> {what} matches a transcript Gadfly issued{e(copy)}.{e(issued)}. "
+                $"<p class=\"result warn\" role=\"status\"><strong>Genuine, but the record has changed since.</strong> {what} matches a {noun} Gadfly issued{e(copy)}.{e(issued)}. "
                 + "The record has been updated since then (for example a later correction, or words removed under the organization's retention rules), so a new download would differ.</p>",
             TranscriptRegistry.Verdict.NoLongerHeld =>
-                $"<p class=\"result warn\" role=\"status\"><strong>Issued, but no longer held.</strong> {what} matches a transcript Gadfly issued{e(copy)}.{e(issued)}. "
+                $"<p class=\"result warn\" role=\"status\"><strong>Issued, but no longer held.</strong> {what} matches a {noun} Gadfly issued{e(copy)}.{e(issued)}. "
                 + "The exam session has since been deleted, so it can no longer be compared with the record.</p>",
             TranscriptRegistry.Verdict.FileAltered =>
                 $"<p class=\"result bad\" role=\"alert\"><strong>Changed after it was issued.</strong> {what} names a code Gadfly issued{e(copy)}, but its content is not what was issued: something in it was edited.</p>",
             TranscriptRegistry.Verdict.NotFound =>
-                $"<p class=\"result bad\" role=\"alert\"><strong>Not on record.</strong> Gadfly has not issued a transcript with {(uploaded is { Length: > 0 } ? "this content" : "this code")}. Check the code was typed correctly.</p>",
+                $"<p class=\"result bad\" role=\"alert\"><strong>Not on record.</strong> Gadfly has not issued a transcript or certificate with {(uploaded is { Length: > 0 } ? "this content" : "this code")}. Check the code was typed correctly.</p>",
             _ => "<p class=\"result bad\" role=\"alert\"><strong>Not readable.</strong> That is not a Gadfly verification code (16 letters and digits) or a transcript JSON download.</p>",
         };
     }
