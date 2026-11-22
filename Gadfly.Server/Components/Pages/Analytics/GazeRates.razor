@@ -5,7 +5,9 @@
 
 @* Eye-contact flag rates by group (GAD-T261, docs/EVIDENCE_MAP.md mechanic 4): how often the voice room's look-away episodes,
    screen fades and spoken requests for eye contact happen per 10 answering minutes, by the eye-contact accommodation or by a
-   grouping pasted in for the comparison (used in memory, never stored). No student is named; small groups are withheld. *@
+   grouping pasted in for the comparison (used in memory, never stored). No student is named; small groups are withheld.
+   Owners and Admins also see absent, second and changed-face episodes and the tracking quality score by group, can group the
+   rates by tracking quality (GAD-T447), and see what the fade costs in judged answer quality and time (GAD-T448). *@
 
 <section class="analytics-section" aria-labelledby="h-gaze-rates">
     <h2 id="h-gaze-rates">Eye-contact flag rates by group</h2>
@@ -17,7 +19,7 @@
     else
     {
         <table class="grid">
-            <caption>@(grouped ? "By the grouping you supplied" : "By eye-contact accommodation") · @report.Sessions answered session(s)</caption>
+            <caption>@Caption · @report.Sessions answered session(s)</caption>
             <thead><tr><th>Group</th><th>Students</th><th>Sessions</th><th>Answering minutes</th><th>Look-aways / 10 min</th><th>Reading-like / 10 min</th><th>Fades / 10 min</th><th>Time faded</th><th>Sessions with a fade</th><th>Spoken requests / 10 min</th></tr></thead>
             <tbody>
                 @foreach (var g in report.Groups)
@@ -44,6 +46,38 @@
                 }
             </tbody>
         </table>
+        @if (fullView)
+        {
+            <h3 id="h-camera-episodes">Camera episodes and tracking quality by group</h3>
+            <p class="hint">@GazeFlagRates.FaceCaveat</p>
+            <table class="grid">
+                <caption>@Caption</caption>
+                <thead><tr><th>Group</th><th>Students</th><th>No face / 10 min</th><th>Second face / 10 min</th><th>Changed face / 10 min</th><th>Sessions with a quality score</th><th>Median quality</th><th>Poor quality</th><th>Calibrated to the screen</th></tr></thead>
+                <tbody>
+                    @foreach (var g in report.Groups)
+                    {
+                        <tr>
+                            <td>@g.Group</td>
+                            <td>@g.Students</td>
+                            @if (g.TooFew)
+                            {
+                                <td colspan="7" class="hint">Withheld: fewer than @GazeFlagRates.MinStudents students.</td>
+                            }
+                            else
+                            {
+                                <td>@Rate(g.AbsentFacesPer10Min)</td>
+                                <td>@Rate(g.SecondFacesPer10Min)</td>
+                                <td>@Rate(g.ChangedFacesPer10Min)</td>
+                                <td>@g.QualitySessions</td>
+                                <td>@(g.MedianQuality is { } mq ? mq.ToString("0") : "—")</td>
+                                <td>@AnalyticsService.Pct(g.PoorQualityShare)</td>
+                                <td>@AnalyticsService.Pct(g.CalibratedShare)</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
         @foreach (var w in report.Warnings)
         {
             <p class="notice" role="status">@w</p>
@@ -52,6 +86,48 @@
         {
             <p class="hint">@report.Unplaced student(s) with answered sessions had no group; @unmatched line(s) matched no member of this organization.</p>
         }
+
+        @if (fullView && fade is not null)
+        {
+            <h3 id="h-fade-cost">What the screen fade costs</h3>
+            <p class="hint">@FadeCost.Caveat</p>
+            @if (fade.Overall.FadedAnswers == 0)
+            {
+                <p class="hint">No answer in this scope was given while the screen faded.</p>
+            }
+            else
+            {
+                <table class="grid">
+                    <caption>Faded answers against the same students' other answers@(byQuality ? " (grouped by eye-contact accommodation)" : "")</caption>
+                    <thead><tr><th>Group</th><th>Students</th><th>Students compared</th><th>Faded answers</th><th>Judged score, faded − other</th><th>Answer length, faded − other</th><th>Next answer − clean answers</th></tr></thead>
+                    <tbody>
+                        @foreach (var g in fade.Groups.Prepend(fade.Overall))
+                        {
+                            <tr>
+                                <td>@g.Group</td>
+                                <td>@g.Students</td>
+                                <td>@g.Compared</td>
+                                @if (g.TooFew)
+                                {
+                                    <td colspan="4" class="hint">Withheld: fewer than @GroupFairness.MinStudents students with both a faded and an unfaded judged answer.</td>
+                                }
+                                else
+                                {
+                                    <td>@g.FadedAnswers</td>
+                                    <td>@Interval(g.ScoreDiff, "0.00")</td>
+                                    <td>@Interval(g.SecondsDiff, "0", " s")</td>
+                                    <td>@(g.AfterScoreDiff is null ? $"— ({g.ComparedAfter} compared)" : Interval(g.AfterScoreDiff, "0.00"))</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @foreach (var w in fade.Warnings)
+                {
+                    <p class="notice" role="status">@w</p>
+                }
+            }
+        }
     }
     <details>
         <summary>Compare other groups</summary>
@@ -59,7 +135,11 @@
             group from a voluntary survey your institution runs). It is used only for this comparison and is never stored.</p>
         <label>Grouping <textarea rows="6" @bind="groupingText" placeholder="student@example.edu, Group A"></textarea></label>
         <button type="button" disabled="@busy" @onclick="CompareAsync">Compare</button>
-        @if (grouped)
+        @if (fullView && !byQuality)
+        {
+            <button type="button" class="link" disabled="@busy" @onclick="ByQualityAsync">Group by tracking quality</button>
+        }
+        @if (grouped || byQuality)
         {
             <button type="button" class="link" disabled="@busy" @onclick="ClearAsync">Back to accommodation groups</button>
         }
@@ -71,50 +151,81 @@
 
     private AnalyticsScope? loaded;
     private GazeRatesReport? report;
+    private FadeCostReport? fade;
     private string? groupingText;
-    private bool grouped, busy;
+    private bool grouped, byQuality, busy;
     private int unmatched;
+
+    /// <summary>Owners and Admins (never blind graders) also see face episodes, tracking quality and the fade's cost.</summary>
+    private bool fullView => GroupFairness.ViewerAllowed(Tenant.Role);
+
+    private string Caption => byQuality ? "By the session's eye-tracking quality" : grouped ? "By the grouping you supplied" : "By eye-contact accommodation";
 
     protected override async Task OnParametersSetAsync()
     {
         if (loaded == Scope) return;
         loaded = Scope;
-        await LoadAsync(grouped ? groupingText : null);
+        await LoadAsync(grouped ? groupingText : null, byQuality);
     }
 
     private async Task CompareAsync()
     {
         if (string.IsNullOrWhiteSpace(groupingText)) return;
-        await LoadAsync(groupingText);
+        await LoadAsync(groupingText, false);
     }
+
+    private async Task ByQualityAsync() => await LoadAsync(null, true);
 
     private async Task ClearAsync()
     {
         groupingText = null;
-        await LoadAsync(null);
+        await LoadAsync(null, false);
     }
 
-    private async Task LoadAsync(string? grouping)
+    private async Task LoadAsync(string? grouping, bool quality)
     {
         if (busy || Tenant.OrganizationId is not { } org) return;
+        quality &= fullView;
         busy = true;
         try
         {
             var scope = Scope;
-            (report, unmatched) = await AdminDb.RunAsync(Scopes, Tenant, async (sp, db) =>
+            var full = fullView;
+            (report, fade, unmatched) = await AdminDb.RunAsync(Scopes, Tenant, async (sp, db) =>
             {
                 var rates = new GazeFlagRates(db, org);
                 var exams = await rates.ExamIdsAsync(scope);
-                if (grouping is null) return (await rates.BuildAsync(exams), 0);
-                var members = (await sp.GetRequiredService<IOrganizationDirectory>().MembersAsync(org))
-                    .Select(m => (m.Member.UserId, m.UserName, m.Email));
-                var (map, miss) = GazeFlagRates.ParseGrouping(grouping, members);
-                return (await rates.BuildAsync(exams, id => map.GetValueOrDefault(id)), miss);
+                Dictionary<Guid, string>? map = null;
+                var miss = 0;
+                if (grouping is not null)
+                {
+                    var members = (await sp.GetRequiredService<IOrganizationDirectory>().MembersAsync(org))
+                        .Select(m => (m.Member.UserId, m.UserName, m.Email));
+                    (map, miss) = GazeFlagRates.ParseGrouping(grouping, members);
+                }
+                var built = await rates.BuildAsync(exams, map is null ? null : id => map.GetValueOrDefault(id), quality);
+                FadeCostReport? cost = null;
+                if (full)
+                {
+                    // The fade's cost is grouped as the rates are, except by quality (a per-session band), where the accommodation is used.
+                    var sessions = await GroupFairness.SessionsAsync(db, org, exams);
+                    Func<FairSession, string?> groupOf = map is not null
+                        ? s => GroupFairness.Clean(map.GetValueOrDefault(s.StudentUserId))
+                        : s => s.GazeAccommodation ? GazeFlagRates.Accommodated : GazeFlagRates.NotAccommodated;
+                    cost = await new FadeCost(db, org).BuildAsync(sessions, groupOf);
+                }
+                return (built, cost, miss);
             });
             grouped = grouping is not null;
+            byQuality = quality;
         }
         finally { busy = false; }
     }
 
     private static string Rate(double? v) => v is { } x ? x.ToString("0.0") : "—";
+
+    private static string Interval(MeanInterval? i, string format, string unit = "") => i is null ? "—"
+        : $"{Signed(i.Mean, format)}{unit} ({Signed(i.Low, format)} to {Signed(i.High, format)})";
+
+    private static string Signed(double v, string format) => (v > 0 ? "+" : "") + v.ToString(format);
 }
