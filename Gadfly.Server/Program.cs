@@ -225,10 +225,8 @@ if (args.Contains(Gadfly.Server.Demo.ClassroomSeeder.SeedArgument) || app.Config
     app.Lifetime.ApplicationStarted.Register(() => _ = Task.Run(SeedClassroomAsync));
 }
 
-var forwarded = new ForwardedHeadersOptions { ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto };
-forwarded.KnownIPNetworks.Clear();
-forwarded.KnownProxies.Clear();
-app.UseForwardedHeaders(forwarded);
+// X-Forwarded-For only from the App Service front end, never from the internet, so per-address rate limits hold (GAD-T476)
+app.UseForwardedHeaders(Gadfly.Server.Platform.ForwardedHeadersSetup.Create(app.Configuration));
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/error", createScopeForErrors: true);
