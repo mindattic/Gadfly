@@ -1,0 +1,30 @@
+/* Admin live sessions monitor (GAD-T299) */
+.live-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.live-summary { margin: 0 0 1rem; }
+.live-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+.live-card { margin: 0; border-left: 4px solid var(--ok); display: grid; gap: .5rem; }
+.live-card.is-paused { border-left-color: var(--accent); }
+.live-card.is-quiet { border-left-color: var(--line); }
+.live-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.live-top h2 { font-size: 1.05rem; margin: 0; overflow-wrap: anywhere; }
+.live-top h2 .hint { font-weight: 400; font-size: .9rem; }
+.live-time { font-size: 1.4rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.live-time.low { color: var(--error); }
+.live-time.still { color: var(--muted); }
+.live-facts { display: flex; flex-wrap: wrap; gap: .35rem 1.25rem; margin: 0; padding: 0; list-style: none; font-size: .92rem; }
+.live-facts li { overflow-wrap: anywhere; }
+.live-pill { display: inline-block; padding: 0 .5rem; border-radius: 999px; border: 1px solid var(--line); font-size: .82rem; }
+.live-pill.ok { border-color: var(--ok); color: var(--ok); }
+.live-pill.warn { border-color: var(--accent); color: var(--accent); }
+.live-pill.off { color: var(--muted); }
+.live-notes { margin: 0; padding: 0; list-style: none; display: grid; gap: .25rem; font-size: .88rem; }
+.live-notes li { overflow-wrap: anywhere; }
+.live-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.live-form { display: grid; gap: .5rem; max-width: 560px; padding: .75rem; border: 1px solid var(--line); border-radius: 8px; }
+.live-form label { display: grid; gap: .2rem; font-size: .92rem; }
+.live-form textarea { min-height: 3.5rem; }
+.live-form input[type="number"] { max-width: 7rem; }
+.live-result { margin: 0; }
+@media (max-width: 600px) {
+    .live-time { font-size: 1.15rem; }
+}

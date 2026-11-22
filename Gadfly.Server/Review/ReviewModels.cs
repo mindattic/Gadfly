@@ -138,8 +138,15 @@ public sealed record IntegrityView(
     bool Ongoing = false,
     bool SessionOver = false);
 
-/// <summary>One entry of the review timeline: a turn, or an integrity event that happened between turns.</summary>
-public sealed record TimelineItem(DateTimeOffset At, TurnView? Turn, IntegrityView? Event, IReadOnlyList<IntegrityView> DuringTurn);
+/// <summary>One entry of the review timeline: a turn, an integrity event that happened between turns, or a staff action.</summary>
+public sealed record TimelineItem(DateTimeOffset At, TurnView? Turn, IntegrityView? Event, IReadOnlyList<IntegrityView> DuringTurn,
+    StaffActionView? Action = null);
+
+/// <summary>
+/// Something staff did to the exam while it ran, from the live monitor (GAD-T299): extra time, a pause, a resume, an early end or a
+/// notice to the student. Read from the audit log; shown to every reviewer, because it explains the timing of what follows.
+/// </summary>
+public sealed record StaffActionView(DateTimeOffset At, string Label, string? Detail, string? Reason, string By);
 
 /// <summary>Mastery of one concept at the end of the session.</summary>
 public sealed record MasteryView(string ConceptKey, string ConceptTitle, double Estimate, int Turns, string Status);

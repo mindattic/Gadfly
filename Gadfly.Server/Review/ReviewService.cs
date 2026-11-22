@@ -165,11 +165,17 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
 
         var grades = await db.GradeDecisions.AsNoTracking().Where(g => g.SessionId == sessionId && g.OrganizationId == organizationId)
             .OrderByDescending(g => g.DecidedAt).ToListAsync(ct);
-        var names = await UserNamesAsync([session.StudentUserId, .. grades.Select(g => g.DecidedByUserId)], ct);
+        // Staff actions from the live monitor (GAD-T299): extra time, pauses, an early end, notices. From the audit log.
+        var staffRows = await db.AuditEvents.AsNoTracking()
+            .Where(a => a.OrganizationId == organizationId && a.SessionId == sessionId && a.Action.StartsWith(Admin.LiveSessionService.AuditPrefix))
+            .OrderBy(a => a.At).Take(200).ToListAsync(ct);
+        var names = await UserNamesAsync([session.StudentUserId, .. grades.Select(g => g.DecidedByUserId),
+            .. staffRows.Where(a => a.ActorUserId is not null).Select(a => a.ActorUserId!.Value)], ct);
+        var staff = staffRows.Select(a => Admin.LiveSessionService.ToTimeline(a, a.ActorUserId is { } by ? names.GetValueOrDefault(by) : null)).ToList();
 
         return new SessionReviewView(session, exam?.Title ?? "(deleted exam)", exam?.CollectionId ?? Guid.Empty,
             names.GetValueOrDefault(session.StudentUserId) ?? "(unknown student)", assignment,
-            turnViews, integrity, BuildTimeline(turnViews, integrity), mastery, report,
+            turnViews, integrity, BuildTimeline(turnViews, integrity, staff), mastery, report,
             grades.Select(g => (g, names.GetValueOrDefault(g.DecidedByUserId) ?? "(unknown)")).ToList()) { Blinded = blinded };
     }
 
@@ -298,7 +304,8 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
     /// Turns in order, with each integrity event attached to its turn (by TurnId, else by falling inside
     /// the turn's question-to-answer window) or placed on its own between turns by time.
     /// </summary>
-    internal static IReadOnlyList<TimelineItem> BuildTimeline(IReadOnlyList<TurnView> turns, IReadOnlyList<IntegrityView> events)
+    internal static IReadOnlyList<TimelineItem> BuildTimeline(IReadOnlyList<TurnView> turns, IReadOnlyList<IntegrityView> events,
+        IReadOnlyList<StaffActionView>? staff = null)
     {
         var during = turns.ToDictionary(t => t.TurnId, _ => new List<IntegrityView>());
         var loose = new List<IntegrityView>();
@@ -311,6 +318,7 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         }
         var items = turns.Select(t => new TimelineItem(t.AskedAt, t, null, during[t.TurnId]))
             .Concat(loose.Select(e => new TimelineItem(e.StartedAt, null, e, [])))
+            .Concat((staff ?? []).Select(a => new TimelineItem(a.At, null, null, [], a)))
             .OrderBy(i => i.At).ThenBy(i => i.Turn is null ? 1 : 0).ToList();
         return items;
     }

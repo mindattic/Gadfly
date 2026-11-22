@@ -227,6 +227,19 @@ else
             {
                 <li class="event"><IntegrityNote Event="ev" /></li>
             }
+            else if (item.Action is { } act)
+            {
+                @* GAD-T299: what staff did from the live monitor, so the timing of what follows makes sense. *@
+                <li class="event staff-action">
+                    <div class="turn-head">
+                        <span class="tag">staff</span>
+                        <strong>@act.Label</strong>
+                        <span class="hint">@act.At.UtcDateTime.ToString("HH:mm:ss") · by @act.By</span>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(act.Detail)) { <p>@act.Detail</p> }
+                    @if (!string.IsNullOrWhiteSpace(act.Reason)) { <p class="hint">Reason: @act.Reason</p> }
+                </li>
+            }
         }
     </ol>
 

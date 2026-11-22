@@ -1,10 +1,368 @@
 @page "/admin/live"
 @attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Admin
+@using Gadfly.Server.Data
+@implements IDisposable
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+@inject ILogger<LiveSessions> Log
 
-@* Placeholder (GAD-T300) so the admin navigation never leads nowhere. GAD-T299 replaces this file with the real page. *@
+@* The live sessions monitor (GAD-T299): the exams in progress right now, updated as they happen, with staff actions on each. *@
 <PageTitle>Live sessions · Gadfly Exams</PageTitle>
-<h1>Live sessions</h1>
-<div class="panel admin-soon">
-    <p><strong>Coming in this release.</strong> The interviews happening right now.</p>
-    <p class="hint">Until then, the <a href="admin/desk">admin desk</a> and the <a href="admin">dashboard</a> cover the everyday work.</p>
+<HeadContent><link rel="stylesheet" href="admin-live.css" /></HeadContent>
+
+<div class="live-head">
+    <h1>Live sessions</h1>
+    <div class="row-actions">
+        @if (data is not null)
+        {
+            <span class="hint" role="status">Updated @data.GeneratedAt.UtcDateTime.ToString("HH:mm:ss") UTC · updates on its own</span>
+        }
+        <button type="button" class="link" @onclick="() => LoadAsync()" disabled="@loading">Refresh</button>
+    </div>
 </div>
+
+@if (error is not null)
+{
+    <div class="notice" role="alert">
+        <p><strong>The live sessions could not load.</strong> @error</p>
+        <button type="button" @onclick="() => LoadAsync()" disabled="@loading">Try again</button>
+    </div>
+}
+else if (data is null)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else if (data.Sessions.Count == 0)
+{
+    <div class="panel">
+        <p><strong>No one is sitting an exam right now.</strong></p>
+        <p class="hint">Exams appear here the moment a student opens one, and leave when they end. To try it, add yourself a test student on
+            <a href="admin/students">Students</a>, sign in as them and take the practice interview from My exams.</p>
+    </div>
+}
+else
+{
+    <p class="live-summary hint">
+        @data.Sessions.Count exam@(data.Sessions.Count == 1 ? "" : "s") open, @data.Running under way@(data.Paused > 0 ? $", {data.Paused} paused" : "").
+        Only what the exam reports is shown here: no audio or video is ever shown or stored.
+    </p>
+    <ul class="live-list">
+        @foreach (var s in data.Sessions)
+        {
+            var left = TimeLeft(s);
+            <li class="panel live-card @(s.HeldByStaff || s.DevicePaused ? "is-paused" : s.Connection == LiveConnection.Quiet ? "is-quiet" : null)">
+                <div class="live-top">
+                    <h2>@s.StudentName <span class="hint">· @s.ExamTitle@(s.Attempt > 1 ? $" · attempt {s.Attempt}" : "")</span></h2>
+                    @if (left is { } l)
+                    {
+                        <span class="live-time @(Still(s) ? "still" : l <= TimeSpan.FromMinutes(2) ? "low" : null)" title="Time left@(Still(s) ? " (the clock is stopped)" : "")">
+                            @LiveSessionService.Clock(l)
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="hint">clock not started</span>
+                    }
+                </div>
+                <ul class="live-facts">
+                    <li><span class="live-pill @(s.HeldByStaff || s.DevicePaused ? "warn" : s.ClockStarted ? "ok" : null)">@s.Status</span></li>
+                    <li>
+                        @if (s.QuestionNumber is { } q)
+                        {
+                            <text>Question @q</text>
+                            @if (!string.IsNullOrWhiteSpace(s.Move)) { <span class="hint"> · @MoveWords(s.Move)</span> }
+                            @if (!string.IsNullOrWhiteSpace(s.ConceptTitle)) { <span class="hint"> · @s.ConceptTitle</span> }
+                        }
+                        else
+                        {
+                            <span class="hint">No question yet</span>
+                        }
+                    </li>
+                    @if (s.ObjectivesTotal > 0)
+                    {
+                        <li>@s.ObjectivesClosed of @s.ObjectivesTotal objectives covered</li>
+                    }
+                    <li>
+                        <span class="live-pill @(s.Connection == LiveConnection.Connected ? "ok" : s.Connection == LiveConnection.Quiet ? "off" : null)">@ConnectionWords(s)</span>
+                    </li>
+                    <li>
+                        Microphone and camera:
+                        @if (!s.ClockStarted) { <span class="hint">being set up</span> }
+                        else if (s.DevicePaused) { <strong>lost</strong> <span class="hint">(the clock is stopped for it)</span> }
+                        else { <span>working</span> }
+                    </li>
+                    @if (s.StartedAt is { } started)
+                    {
+                        <li class="hint">Started @started.UtcDateTime.ToString("HH:mm") UTC</li>
+                    }
+                </ul>
+
+                @if (s.IntegrityCount > 0)
+                {
+                    <details>
+                        <summary>@s.IntegrityCount integrity note@(s.IntegrityCount == 1 ? "" : "s") <span class="hint">· low-confidence notes for the reviewer, never a verdict</span></summary>
+                        <ul class="live-notes">
+                            @foreach (var n in s.RecentNotes)
+                            {
+                                <li><span class="hint">@n.At.UtcDateTime.ToString("HH:mm:ss")</span> <strong>@n.Label</strong> @n.Summary</li>
+                            }
+                        </ul>
+                        <a href="review/@s.SessionId">Open the session's review</a>
+                    </details>
+                }
+
+                <div class="live-actions">
+                    @if (s.CanAct)
+                    {
+                        <button type="button" class="secondary" @onclick="() => Open(s.SessionId, LiveAction.Extend)">Add time</button>
+                        @if (s.HeldByStaff)
+                        {
+                            <button type="button" class="secondary" @onclick="() => Open(s.SessionId, LiveAction.Resume)">Resume</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="secondary" @onclick="() => Open(s.SessionId, LiveAction.Pause)">Pause</button>
+                        }
+                        <button type="button" class="secondary" @onclick="() => Open(s.SessionId, LiveAction.End)">End exam</button>
+                    }
+                    <button type="button" class="secondary" @onclick="() => Open(s.SessionId, LiveAction.Notice)">Send a notice</button>
+                    <a class="link" href="review/@s.SessionId">Review so far</a>
+                </div>
+
+                @if (form is { } f && f.SessionId == s.SessionId)
+                {
+                    <EditForm Model="f" OnValidSubmit="() => SubmitAsync(s)" class="live-form">
+                        <strong>@FormTitle(f.Action, s)</strong>
+                        @if (f.Action == LiveAction.Extend)
+                        {
+                            <label>Minutes to add (1 to @LiveSessionService.MaxExtendMinutesPerAction)
+                                <InputNumber @bind-Value="f.Minutes" min="1" max="@LiveSessionService.MaxExtendMinutesPerAction" />
+                            </label>
+                        }
+                        @if (f.Action == LiveAction.Notice)
+                        {
+                            <label>Notice (up to @LiveSessionService.MaxNoticeLength characters; shown on the student's screen, never spoken)
+                                <InputTextArea @bind-Value="f.Text" maxlength="@LiveSessionService.MaxNoticeLength" />
+                            </label>
+                        }
+                        else
+                        {
+                            <label>Why (required; it goes in the audit log and on the session's review)
+                                <InputTextArea @bind-Value="f.Reason" maxlength="@AdminPeople.MaxReasonLength" />
+                            </label>
+                        }
+                        @if (f.Action == LiveAction.End)
+                        {
+                            <label class="check"><InputCheckbox @bind-Value="f.Confirmed" /> End @s.StudentName's exam now. Their answers so far are submitted and graded as usual.</label>
+                        }
+                        <div class="row-actions">
+                            <button type="submit" disabled="@(busy || (f.Action == LiveAction.End && !f.Confirmed))">@SubmitLabel(f.Action)</button>
+                            <button type="button" class="link" @onclick="Close" disabled="@busy">Cancel</button>
+                        </div>
+                    </EditForm>
+                }
+                @if (results.TryGetValue(s.SessionId, out var r))
+                {
+                    <p class="live-result @(r.Ok ? "notice" : "notice warn")" role="status">@r.Message</p>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    public enum LiveAction { Extend, Pause, Resume, End, Notice }
+
+    private sealed class ActionForm
+    {
+        public Guid SessionId { get; set; }
+        public LiveAction Action { get; set; }
+        public int Minutes { get; set; } = 5;
+        public string? Reason { get; set; }
+        public string? Text { get; set; }
+        public bool Confirmed { get; set; }
+    }
+
+    /// <summary>The page reloads from the database at least this often, for changes another server instance made.</summary>
+    private static readonly TimeSpan FallbackRefresh = TimeSpan.FromSeconds(5);
+
+    private LiveSessionsView? data;
+    private string? error;
+    private bool loading, busy, reloadQueued;
+    private ActionForm? form;
+    private readonly Dictionary<Guid, LiveActionResult> results = [];
+    private IDisposable? subscription;
+    private PeriodicTimer? ticker;
+    private readonly CancellationTokenSource stop = new();
+    private DateTimeOffset lastLoad;
+    private Guid? org;
+
+    protected override async Task OnInitializedAsync()
+    {
+        org = Tenant.OrganizationId;
+        await LoadAsync();
+        // Pushed changes: the feed calls in on the exam's thread, so this only schedules a reload on the page's own.
+        subscription = LiveSessionFeed.Shared.Subscribe(e =>
+        {
+            if (e.OrganizationId != org || reloadQueued) return;
+            reloadQueued = true;
+            _ = InvokeAsync(async () =>
+            {
+                // A short wait gathers a burst (an answer and its integrity notes) into one reload.
+                try { await Task.Delay(750, stop.Token); } catch (OperationCanceledException) { return; }
+                reloadQueued = false;
+                await LoadAsync(quiet: true);
+            });
+        });
+        _ = TickAsync();
+    }
+
+    /// <summary>Counts the clocks down every second without touching the database, and reloads as a fallback every few seconds.</summary>
+    private async Task TickAsync()
+    {
+        ticker = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        try
+        {
+            while (await ticker.WaitForNextTickAsync(stop.Token))
+            {
+                await InvokeAsync(async () =>
+                {
+                    if (Clock.GetUtcNow() - lastLoad >= FallbackRefresh && form is null) await LoadAsync(quiet: true);
+                    else StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (ObjectDisposedException) { }
+    }
+
+    private async Task LoadAsync(bool quiet = false)
+    {
+        if (loading) return;
+        loading = true;
+        if (!quiet) error = null;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+            data = await ActivatorUtilities.CreateInstance<LiveSessionService>(scope.ServiceProvider).LoadAsync(stop.Token);
+            error = null;
+        }
+        catch (OperationCanceledException) { }
+        catch (UnauthorizedAccessException)
+        {
+            error = "Live sessions are for the organization's owners and admins.";
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "The live sessions monitor failed to load for organization {Org}", Tenant.OrganizationId);
+            // A background refresh keeps the last good view rather than replacing it with an error.
+            if (!quiet || data is null) error = "Something went wrong reading the exams in progress. Try again in a moment; if it keeps happening, check System status.";
+        }
+        finally
+        {
+            lastLoad = Clock.GetUtcNow();
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Open(Guid sessionId, LiveAction action)
+    {
+        form = new ActionForm { SessionId = sessionId, Action = action };
+        results.Remove(sessionId);
+    }
+
+    private void Close() => form = null;
+
+    private async Task SubmitAsync(LiveSessionRow s)
+    {
+        if (form is not { } f || busy) return;
+        busy = true;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+            var svc = ActivatorUtilities.CreateInstance<LiveSessionService>(scope.ServiceProvider);
+            var result = f.Action switch
+            {
+                LiveAction.Extend => await svc.ExtendAsync(s.SessionId, f.Minutes, f.Reason),
+                LiveAction.Pause => await svc.PauseAsync(s.SessionId, f.Reason),
+                LiveAction.Resume => await svc.ResumeAsync(s.SessionId, f.Reason),
+                LiveAction.End => await svc.EndAsync(s.SessionId, f.Reason),
+                _ => await svc.SendNoticeAsync(s.SessionId, f.Text),
+            };
+            results[s.SessionId] = result;
+            if (result.Ok) form = null;
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Live session action {Action} failed for session {SessionId}", f.Action, s.SessionId);
+            results[s.SessionId] = new(false, "That did not go through. Nothing was changed; try again in a moment.");
+        }
+        finally { busy = false; }
+        await LoadAsync(quiet: true);
+    }
+
+    /// <summary>Time left now, counting down locally between reloads; null before the clock starts.</summary>
+    private TimeSpan? TimeLeft(LiveSessionRow s)
+    {
+        if (s.Remaining is not { } r || data is null) return null;
+        if (Still(s)) return r;
+        var left = r - (Clock.GetUtcNow() - data.GeneratedAt);
+        return left < TimeSpan.Zero ? TimeSpan.Zero : left;
+    }
+
+    private static bool Still(LiveSessionRow s) => s.HeldByStaff || s.DevicePaused || !s.ClockStarted;
+
+    private string ConnectionWords(LiveSessionRow s) => s.Connection switch
+    {
+        LiveConnection.Connected => "Exam room open",
+        LiveConnection.Recent => s.LastActivity is { } at ? $"Active {AdminDashboardService.Ago(Clock.GetUtcNow() - at)} ago" : "Active recently",
+        _ => s.LastActivity is { } at2 ? $"Nothing heard for {AdminDashboardService.Ago(Clock.GetUtcNow() - at2)}" : "Nothing heard yet",
+    };
+
+    private static string MoveWords(string move) => move switch
+    {
+        "Elicit" => "opening a topic",
+        "Clarify" => "asking what they mean",
+        "Probe" => "asking why",
+        "Counterexample" => "offering a counterexample",
+        "Contradiction" => "pointing out a contradiction",
+        "Apply" => "asking them to apply it",
+        "Synthesize" => "connecting two topics",
+        "Close" => "closing a topic",
+        "CausalReasoning" => "asking about causes",
+        "ScenarioVariation" => "changing the scenario",
+        "AssumptionTesting" => "testing assumptions",
+        "IndependentExplanation" => "asking for their own explanation",
+        "Hint" => "giving a hint",
+        _ => move,
+    };
+
+    private static string FormTitle(LiveAction a, LiveSessionRow s) => a switch
+    {
+        LiveAction.Extend => $"Add time for {s.StudentName}",
+        LiveAction.Pause => $"Pause {s.StudentName}'s exam: the clock stops and answers wait until you resume it",
+        LiveAction.Resume => $"Resume {s.StudentName}'s exam: the paused time is added back",
+        LiveAction.End => $"End {s.StudentName}'s exam early",
+        _ => $"Send {s.StudentName} a notice",
+    };
+
+    private static string SubmitLabel(LiveAction a) => a switch
+    {
+        LiveAction.Extend => "Add time",
+        LiveAction.Pause => "Pause",
+        LiveAction.Resume => "Resume",
+        LiveAction.End => "End exam",
+        _ => "Send",
+    };
+
+    public void Dispose()
+    {
+        subscription?.Dispose();
+        stop.Cancel();
+        ticker?.Dispose();
+        stop.Dispose();
+    }
+}
