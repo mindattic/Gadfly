@@ -116,6 +116,18 @@ else
             has confirmed it is lawful for you.
         </p>
 
+        <h2>Email notifications</h2>
+        <label class="check">
+            <InputCheckbox @bind-Value="form.EmailNotificationsEnabled" />
+            Send Gadfly's own notification emails
+        </label>
+        <p class="hint">
+            On (the default): students get emailed when an exam is assigned, before it's due, when a result is released,
+            and about their own appeals; staff accommodations like an attempt reset are emailed too. Off: none of these
+            send for this organization. A student can separately opt out of reminders only, from their own account;
+            result-released emails never stop, since they're operationally important.
+        </p>
+
         <button type="submit" disabled="@busy">Save settings</button>
         @if (message is not null)
         {
@@ -152,6 +164,8 @@ else
         public bool AllowSingleGrader { get; set; }
 
         public ApproverSeparationSetting ApproverSeparation { get; set; } = ApproverSeparationSetting.Automatic;
+
+        public bool EmailNotificationsEnabled { get; set; } = true;
     }
 
     private Form? form;
@@ -175,6 +189,7 @@ else
             VoiceMeasures = row?.VoiceMeasures ?? VoiceMeasuresSetting.RegionDefault,
             AllowSingleGrader = row?.AllowSingleGrader ?? false,
             ApproverSeparation = row?.ApproverSeparation ?? ApproverSeparationSetting.Automatic,
+            EmailNotificationsEnabled = row?.EmailNotificationsEnabled ?? true,
         };
         updatedAt = row is null || row.UpdatedAt == default ? null : row.UpdatedAt;
     }
@@ -248,6 +263,18 @@ else
                         Reason = "GAD-T444: whether the person who reconciled a grade may also approve it.", At = now,
                     });
                     row.ApproverSeparation = separation;
+                }
+                if (row.EmailNotificationsEnabled != form.EmailNotificationsEnabled)
+                {
+                    db.AuditEvents.Add(new AuditEvent
+                    {
+                        OrganizationId = org, ActorUserId = Tenant.UserId, ActorRole = Tenant.Role, Action = "settings.email-notifications.changed",
+                        EntityType = "OrganizationSettings", EntityId = org.ToString(),
+                        BeforeJson = $"{{\"emailNotificationsEnabled\":{(row.EmailNotificationsEnabled ? "true" : "false")}}}",
+                        AfterJson = $"{{\"emailNotificationsEnabled\":{(form.EmailNotificationsEnabled ? "true" : "false")}}}",
+                        Reason = "GAD-T310: whether Gadfly's own notification emails send for this organization.", At = now,
+                    });
+                    row.EmailNotificationsEnabled = form.EmailNotificationsEnabled;
                 }
                 var saved = await db.SaveChangesAsync();
                 OwnershipPolicy.Invalidate(org);
