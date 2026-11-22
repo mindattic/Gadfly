@@ -100,9 +100,27 @@ async function openMicrophone(m) {
             m.loud = dbfs > HEARD_DBFS ? m.loud + 1 : 0;
             if (m.loud >= HEARD_FRAMES && m.microphone === "listening") report(m, "microphone", "ok");
         }, 100);
+        void startMicCheck(m, stream);
     } catch {
         report(m, "microphone", "error");
     }
+}
+
+/**
+ * The get-ready microphone test (GAD-T359), in the page's [data-mic-check] panel when it has one: noise floor, clipping
+ * and an echo hint. Advice only, like startGaze below: it never blocks Begin exam, and a failure to load just leaves the
+ * panel empty.
+ */
+async function startMicCheck(m, stream) {
+    const panel = document.querySelector("[data-mic-check]");
+    if (!panel || m.micCheck) return;
+    m.micCheck = true;
+    try {
+        const mc = await import("./mic-check.js");
+        if (M !== m) return;
+        m.micCheck = mc;
+        mc.start(stream, panel);
+    } catch { /* optional: the exam carries on without it */ }
 }
 
 async function openCamera(m) {
@@ -159,6 +177,7 @@ export function stopMedia() {
     M = null;
     if (!m) return;
     try { if (m.gaze && m.gaze.stop) m.gaze.stop(); } catch { }
+    try { if (m.micCheck && m.micCheck.stop) m.micCheck.stop(); } catch { }
     if (m.timer) clearInterval(m.timer);
     if (m.onGesture) {
         document.removeEventListener("pointerdown", m.onGesture);

@@ -58,6 +58,12 @@ else
                     <video @ref="preview" class="syscheck-camera" muted playsinline autoplay aria-label="Your camera"></video>
                     <div class="syscheck-level" @ref="meter" aria-hidden="true"><i></i></div>
                 </div>
+                @* Microphone test (GAD-T359): noise floor, clipping and an echo hint, filled by js/mic-check.js once the
+                   microphone is open. Advice only, like the eye-tracking panel below; never blocks Begin exam. *@
+                @if (!TypedAnswers)
+                {
+                    <p class="hint mic-check" data-mic-check></p>
+                }
                 <ul class="syschecks">
                     @foreach (var c in AllChecks)
                     {
