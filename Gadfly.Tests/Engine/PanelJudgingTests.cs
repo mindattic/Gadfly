@@ -21,13 +21,22 @@ public class PanelJsonTests
         Assert.That(doc!.RootElement.ValueKind, Is.EqualTo(JsonValueKind.Object));
     }
 
+    [Test]
+    public void ParseObject_TwoObjects_TakesTheFirst()
+    {
+        // The parser takes the first balanced object (so prose with a brace after a valid reply no longer discards it).
+        using var doc = PanelJson.ParseObject("{\"a\": 1} and then {\"b\": 2}");
+        Assert.That(doc, Is.Not.Null);
+        Assert.That(doc!.RootElement.TryGetProperty("a", out _), Is.True);
+        Assert.That(doc.RootElement.TryGetProperty("b", out _), Is.False);
+    }
+
     [TestCase(null)]
     [TestCase("")]
     [TestCase("   ")]
     [TestCase("no braces at all")]
     [TestCase("{ not: valid json }")]
     [TestCase("} backwards {")]
-    [TestCase("{\"a\": 1} and then {\"b\": 2}")]
     [TestCase("{\"unterminated\": \"x")]
     public void ParseObject_MalformedIsNull(string? raw) => Assert.That(PanelJson.ParseObject(raw), Is.Null);
 
