@@ -39,6 +39,14 @@ public sealed class VoiceAnswerPayload
     public double? ResponseDelayMs { get; set; }
     /// <summary>The browser's measurements of the student's voice during this answer (GAD-T232), or null; see <see cref="VoiceAcousticKeys"/>.</summary>
     public VoiceAcoustics? Acoustics { get; set; }
+    /// <summary>
+    /// Recognizer latency (GAD-T361): how long each committed utterance of this answer took, from the browser's
+    /// <c>Commit</c> call to the recognizer's final transcript arriving back, timed in the browser since the hub pushes
+    /// the final segment rather than returning it from a call the server could time itself. Diagnostics only (the
+    /// in-memory status-page counters, <see cref="Gadfly.Server.Diagnostics.VoiceRecognitionTimingRecorder"/>): never
+    /// shown to the student, never stored with the answer, never part of a grade.
+    /// </summary>
+    public List<double>? RecognizerLatenciesMs { get; set; }
 }
 
 /// <summary>The answer the orchestrator takes, plus what the speech library advised about the transcript.</summary>

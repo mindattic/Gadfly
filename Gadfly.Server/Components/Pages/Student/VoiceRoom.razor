@@ -1,5 +1,6 @@
 @implements IAsyncDisposable
 @using Gadfly.Server.Voice
+@using Gadfly.Server.Exams
 @using Microsoft.EntityFrameworkCore
 @inject IJSRuntime JS
 @inject VoiceSettings Settings
@@ -9,6 +10,7 @@
 @inject IServiceScopeFactory Scopes
 @inject TimeProvider Clock
 @inject ExaminerSpeechWarmup Warmup
+@inject Gadfly.Server.Diagnostics.VoiceRecognitionTimingRecorder RecognitionTimings
 
 @* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
@@ -126,6 +128,9 @@
                 {
                     <div class="voice-answer">
                         <p class="verify-label">What I heard</p>
+                        @* A reload or a crash mid-answer keeps what was said as a draft (GAD-T306): filled in by voice-room.js,
+                           never on its own a reason to submit anything. *@
+                        <p class="hint voice-recovered" data-voice-recovered aria-live="polite"></p>
                         <p class="voice-draft" data-voice-draft aria-live="polite"></p>
                         <p class="voice-live" data-voice-live aria-live="off"></p>
                         <div class="voice-cue" data-voice-cue data-active="false" aria-hidden="true"><i></i></div>
@@ -280,6 +285,8 @@
         try
         {
             var (cueFloorMs, cueCeilingMs) = Settings.EndCue(await TimeMultiplierAsync());
+            var (language, vocabulary) = await VocabularyAsync();
+            Grants.SetVocabulary(user, SessionId, language, vocabulary);
             module = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/voice-room.js");
             self = DotNetObjectReference.Create(this);
             var caps = await module.InvokeAsync<Capabilities>("init", stop.Token, self, new
@@ -294,6 +301,12 @@
                 portraitMouth = Settings.PortraitMouth,
                 // Typed answers (GAD-T260): the examiner and the camera without a microphone.
                 typed = TypedAnswers,
+                // Per-exam language and vocabulary hints (GAD-T357, GAD-T358): computed here, on the server, from the exam
+                // itself; VoiceHubFilter refuses a StartSession call that asks for anything else.
+                language,
+                keyterms = vocabulary,
+                // Keys the words-already-spoken draft kept across a reload or a crash (GAD-T306); never sent anywhere else.
+                sessionId = SessionId.ToString("N"),
             });
             if (!caps.Microphone || !caps.AudioContext)
             {
@@ -334,6 +347,36 @@
         {
             Log.LogDebug(ex, "The extra-time accommodation could not be read for session {SessionId}.", SessionId);
             return 1;
+        }
+    }
+
+    /// <summary>
+    /// The exam's own spoken language and vocabulary (GAD-T357, GAD-T358), computed from the exam this session belongs to.
+    /// Falls back to no language preference and no vocabulary hints when it can't be read: the recognizer then just
+    /// detects the language and uses no keyterm hints, same as before this ticket.
+    /// </summary>
+    private async Task<(string? Language, IReadOnlyList<string> Vocabulary)> VocabularyAsync()
+    {
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
+            var db = scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>();
+            var examId = await db.ExamSessions.AsNoTracking()
+                .Where(s => s.Id == SessionId && s.OrganizationId == org).Select(s => (Guid?)s.ExamId).FirstOrDefaultAsync(stop.Token);
+            string? language = null;
+            if (examId is { } id)
+            {
+                var policyJson = await db.Exams.AsNoTracking().Where(e => e.Id == id && e.OrganizationId == org)
+                    .Select(e => e.PolicyJson).FirstOrDefaultAsync(stop.Token);
+                language = ExamService.ReadPolicy(policyJson).Language;
+            }
+            var vocabulary = await VoiceVocabulary.ForSessionAsync(db, org, SessionId, stop.Token);
+            return (language, vocabulary);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.LogDebug(ex, "The exam's language and vocabulary could not be read for session {SessionId}.", SessionId);
+            return (null, []);
         }
     }
 
@@ -411,7 +454,8 @@
         // The hub speaks only what the server offered for this student's own session.
         if (!Grants.Offer(user, SessionId, text)) return;
         // Cached by the avatar hub after its first playing, so "Repeat the question" and a reload replay at once (GAD-T303).
-        await module!.InvokeVoidAsync("speak", stop.Token, text, true, SpeakingStyle);
+        // The turn index keys the words-already-spoken draft (GAD-T306): a new question starts a fresh one.
+        await module!.InvokeVoidAsync("speak", stop.Token, text, true, SpeakingStyle, TurnIndex);
     }
 
     private async Task RepeatAsync()
@@ -519,10 +563,34 @@
         // The words as heard, joined the way VoiceAnswerBuilder joins them; the delay is the one the student watched (display only).
         var said = string.Join(' ', (payload?.Segments ?? []).Select(s => (s.Text ?? "").Trim()).Where(t => t.Length > 0));
         var delay = payload?.ResponseDelayMs is { } ms && double.IsFinite(ms) && ms >= 0 && ms / 1000 <= MaxDelaySeconds ? ms / 1000 : (double?)null;
-        AddLine(false, said, delay, await VoiceLineAsync(payload));
+        // Numbers and punctuation normalized for this on-screen line only (GAD-T360): the answer built from payload below
+        // (VoiceAnswerBuilder.Build, in OnAnswer's handler) still uses the words exactly as the recognizer gave them.
+        AddLine(false, TranscriptDisplay.ForDisplay(said), delay, await VoiceLineAsync(payload));
+        RecordRecognitionDiagnostics(payload);
         StateHasChanged();
         await OnAnswer.InvokeAsync(payload);
     });
+
+    /// <summary>
+    /// Recognizer latency and this answer's unsure-word share, into the in-memory status-page counters (GAD-T361).
+    /// Rebuilds the answer once more with the library's own calculators (the same pure function <c>SessionOrchestrator</c>
+    /// calls next): cheap, and keeps this diagnostic from depending on what the orchestrator decides to do with the answer.
+    /// Best effort: a bad payload here never blocks the real answer from going through <see cref="OnAnswer"/>.
+    /// </summary>
+    private void RecordRecognitionDiagnostics(VoiceAnswerPayload? payload)
+    {
+        try
+        {
+            var built = VoiceAnswerBuilder.Build(payload, Clock.GetUtcNow());
+            var wordCount = built?.Metrics.WordCount ?? 0;
+            double? unsureShare = built is not null && wordCount > 0 ? (double)built.Verification.LowConfidenceWords.Count / wordCount : null;
+            RecognitionTimings.Record(payload?.RecognizerLatenciesMs, unsureShare, wordCount);
+        }
+        catch (Exception ex)
+        {
+            Log.LogDebug(ex, "Recognizer diagnostics could not be recorded for session {SessionId}.", SessionId);
+        }
+    }
 
     /// <summary>A typed answer was handed in (GAD-T260): it joins the on-screen transcript like a spoken one.</summary>
     public void NoteTypedAnswer(string text)
