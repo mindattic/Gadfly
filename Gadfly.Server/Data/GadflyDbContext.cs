@@ -97,6 +97,12 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     public DbSet<LtiUserMapping> LtiUserMappings => Set<LtiUserMapping>();
     public DbSet<LtiAssignmentLink> LtiAssignmentLinks => Set<LtiAssignmentLink>();
 
+    // Research use of exam records (GAD-T451/T452): settings, study arms and research consent. Configured in ResearchEntities.cs.
+    public DbSet<ResearchSettings> ResearchSettings => Set<ResearchSettings>();
+    public DbSet<StudyArm> StudyArms => Set<StudyArm>();
+    public DbSet<StudyArmMember> StudyArmMembers => Set<StudyArmMember>();
+    public DbSet<ResearchConsent> ResearchConsents => Set<ResearchConsent>();
+
     // Master-plan assessment model (docs/MASTER-PLAN.md Part 17.4).
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<LearningObjective> LearningObjectives => Set<LearningObjective>();
@@ -521,6 +527,8 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.Property(x => x.Reason).HasMaxLength(4000);
             e.HasIndex(x => x.SessionId);
         });
+
+        ResearchModel.Configure(b);   // GAD-T451/T452
 
         // Never cascade in Gadfly's schema: deletions are explicit, audited jobs (retention, data-subject
         // deletion). The library's own auth-schema relationships keep the behavior it configured.
