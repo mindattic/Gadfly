@@ -1,0 +1,134 @@
+@page "/help/{Slug}"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@using Gadfly.Server.Help
+@inject ITenantContext Tenant
+@inject HelpLibrary Library
+
+@* One help topic (GAD-T292): the guide's Markdown from docs/guides, rendered with a table of contents. Static, so a signed-out
+   student can read the public topics. A topic for another role says who it is for instead of "not found". *@
+<HeadContent><link rel="stylesheet" href="help.css" /></HeadContent>
+<PageTitle>@(loaded?.Topic.Title ?? "Help") · Gadfly Exams</PageTitle>
+
+<div class="help">
+    <nav class="help-crumbs" aria-label="Breadcrumb">
+        <a href="help">Help</a>
+        @if (loaded is not null)
+        {
+            <span aria-hidden="true">›</span>
+            <span>@SectionTitle(loaded.Topic.Section)</span>
+        }
+    </nav>
+
+    @if (loaded is null)
+    {
+        @if (forbidden && !viewer.SignedIn)
+        {
+            <h1>Sign in to read this topic</h1>
+            <p class="notice">This topic is written for people with an account in an organization. <a href="@SignInHref">Sign in</a>, and you
+                come straight back here.</p>
+        }
+        else if (forbidden)
+        {
+            <h1>This topic is for another role</h1>
+            <p class="notice">@HelpCatalog.Find(Slug)?.Title is written @AudienceWords(HelpCatalog.Find(Slug)!.Audience), and your role in this
+                organization doesn't include it. If you think you need it, ask your organization's administrator.</p>
+        }
+        else
+        {
+            <h1>Topic not found</h1>
+            <p class="notice">There is no help topic at this address. It may have been renamed. Try searching:</p>
+        }
+        <HelpSearchBox />
+        <p><a href="help">See every help topic</a></p>
+    }
+    else
+    {
+        var topic = loaded.Topic;
+        var doc = loaded.Document;
+        var toc = doc?.Headings.Where(h => h.Level <= 3).ToList() ?? [];
+        <div class="help-topic@(toc.Count >= 3 ? " has-toc" : "")">
+            @if (toc.Count >= 3)
+            {
+                <aside class="help-toc" aria-labelledby="help-toc-title">
+                    <details open>
+                        <summary id="help-toc-title">On this page</summary>
+                        <ol>
+                            @foreach (var h in toc)
+                            {
+                                <li class="help-toc-l@(h.Level)"><a href="@HelpPaths.Topic(topic.Slug, h.Anchor)">@h.Text</a></li>
+                            }
+                        </ol>
+                    </details>
+                    <HelpSearchBox />
+                </aside>
+            }
+            <article class="help-article">
+                <header>
+                    <h1>@(string.IsNullOrWhiteSpace(doc?.Title) ? topic.Title : doc!.Title)</h1>
+                    <p class="help-meta">
+                        <span class="help-badge help-badge-quiet">@HelpCatalog.AudienceLabel(topic.Audience)</span>
+                        @if (topic.IsStub)
+                        {
+                            <span class="help-badge">Coming soon</span>
+                        }
+                    </p>
+                </header>
+                @if (doc is null)
+                {
+                    <p class="notice">This topic's text isn't included in this version of Gadfly. Please tell your administrator; in the meantime,
+                        <a href="help">the other help topics</a> may answer your question.</p>
+                }
+                else
+                {
+                    <div class="help-body">@((MarkupString)doc.Html)</div>
+                }
+                @if (related.Count > 0)
+                {
+                    <footer class="help-related">
+                        <h2>Related topics</h2>
+                        <ul>
+                            @foreach (var r in related)
+                            {
+                                <li><a href="@HelpPaths.Topic(r.Slug)">@r.Title</a> <span class="hint">@r.Summary</span></li>
+                            }
+                        </ul>
+                    </footer>
+                }
+            </article>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Slug { get; set; } = "";
+    [CascadingParameter] private HttpContext? Http { get; set; }
+
+    private HelpViewer viewer = HelpViewer.Anonymous;
+    private LoadedHelpTopic? loaded;
+    private bool forbidden;
+    private List<HelpTopic> related = [];
+
+    private string SignInHref => "login?ReturnUrl=" + Uri.EscapeDataString("/" + HelpPaths.Topic(Slug));
+
+    protected override void OnParametersSet()
+    {
+        viewer = HelpViewer.For(Tenant);
+        loaded = Library.GetFor(Slug, viewer, out forbidden);
+        if (loaded is null && Http is not null && !Http.Response.HasStarted)
+            Http.Response.StatusCode = forbidden ? (viewer.SignedIn ? StatusCodes.Status403Forbidden : StatusCodes.Status401Unauthorized) : StatusCodes.Status404NotFound;
+        related = loaded is null ? [] : HelpCatalog.VisibleTo(viewer)
+            .Where(t => t.Section == loaded.Topic.Section && t.Slug != loaded.Topic.Slug && !t.IsStub).Take(5).ToList();
+    }
+
+    private static string SectionTitle(HelpSectionId id) => HelpCatalog.Sections.First(s => s.Id == id).Title;
+
+    private static string AudienceWords(HelpAudience a) => a switch
+    {
+        HelpAudience.Student => "for students",
+        HelpAudience.Grader => "for examiners, reviewers and instructors",
+        HelpAudience.Instructor => "for instructors",
+        HelpAudience.Admin => "for organization admins and owners",
+        _ => "for everyone",
+    };
+}

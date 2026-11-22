@@ -1,0 +1,99 @@
+/* The in-app help center (GAD-T292): the guides from docs/guides, rendered for reading. Uses the app's colour tokens
+   (app.css), so light and dark follow the system setting like every other page. */
+.help { max-width: 1040px; margin: 0 auto; }
+.help h1 { margin-bottom: .35rem; }
+.help-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Home */
+.help-hero { margin-bottom: 1.25rem; }
+.help-hero .subtitle { margin: 0 0 .9rem; font-size: 1rem; }
+.help-search { display: flex; gap: .5rem; max-width: 640px; margin: .5rem 0 1rem; }
+.help-search input { flex: 1; min-width: 0; padding: .55rem .7rem; }
+.help-toc .help-search { flex-direction: column; margin: 1rem 0 0; }
+.help-toc .help-search button { justify-self: stretch; }
+.help-start { margin-bottom: 1.75rem; border-left: 4px solid var(--accent); }
+.help-start h2 { font-size: 1.2rem; }
+.help-kicker { display: block; font-size: .75rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); margin-bottom: .2rem; }
+.help-section { margin: 0 0 1.75rem; }
+.help-section > h2 { font-size: 1.15rem; margin: 0; }
+.help-section > .hint { margin: .15rem 0 .75rem; }
+.help-card { position: relative; }
+.help-card h3 { font-size: 1rem; margin: 0 0 .35rem; }
+.help-card-stub { border-style: dashed; }
+.help-badge { display: inline-block; font-size: .72rem; font-weight: 600; padding: .1rem .45rem; border-radius: 999px; background: var(--accent); color: var(--accent-ink); vertical-align: middle; }
+.help-card .help-badge { margin-top: .55rem; }
+.help-badge-quiet { background: transparent; color: var(--muted); border: 1px solid var(--line); font-weight: 500; }
+.help-foot { margin-top: 2rem; }
+
+/* Breadcrumb */
+.help-crumbs { display: flex; gap: .4rem; align-items: center; font-size: .88rem; color: var(--muted); margin-bottom: .6rem; }
+
+/* Topic page: contents on the left on wide screens, above the text on narrow ones */
+.help-topic.has-toc { display: grid; grid-template-columns: 15rem minmax(0, 1fr); gap: 2rem; align-items: start; }
+.help-toc { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto; font-size: .9rem; padding-right: .25rem; }
+.help-toc summary { font-weight: 600; cursor: pointer; margin-bottom: .4rem; }
+.help-toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: .15rem; }
+.help-toc a { display: block; padding: .2rem .45rem; border-radius: 6px; text-decoration: none; color: var(--ink); }
+.help-toc a:hover { background: var(--panel); color: var(--accent); }
+.help-toc-l3 a { padding-left: 1.2rem; color: var(--muted); font-size: .86rem; }
+.help-meta { margin: 0 0 1.25rem; display: flex; gap: .4rem; flex-wrap: wrap; }
+
+/* The rendered guide */
+.help-article { min-width: 0; }
+.help-body { line-height: 1.65; max-width: 46rem; }
+.help-body h2 { font-size: 1.3rem; margin: 2.2rem 0 .6rem; padding-top: .4rem; border-top: 1px solid var(--line); }
+.help-body h3 { font-size: 1.08rem; margin: 1.6rem 0 .45rem; }
+.help-body h4, .help-body h5, .help-body h6 { font-size: 1rem; margin: 1.2rem 0 .35rem; }
+.help-body h2:first-child { margin-top: .5rem; border-top: 0; }
+.help-body :is(h2, h3, h4, h5, h6) { scroll-margin-top: 1rem; }
+.help-anchor { opacity: 0; margin-left: .3rem; font-weight: 400; text-decoration: none; color: var(--muted); }
+.help-body :is(h2, h3, h4):hover .help-anchor, .help-anchor:focus-visible { opacity: 1; }
+.help-body p { margin: 0 0 .9rem; }
+.help-body ul, .help-body ol { margin: 0 0 1rem; padding-left: 1.4rem; }
+.help-body li { margin: .25rem 0; }
+.help-body li > ul, .help-body li > ol { margin: .25rem 0 .4rem; }
+.help-body code { font: .88em ui-monospace, "Cascadia Mono", Consolas, monospace; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: .05rem .3rem; }
+.help-body pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; overflow-x: auto; }
+.help-body pre code { border: 0; padding: 0; background: none; }
+.help-body kbd { font: .85em ui-monospace, Consolas, monospace; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: .05rem .35rem; background: var(--panel); }
+.help-body img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+.help-body hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
+.help-body blockquote { margin: 0 0 1rem; padding: .7rem 1rem; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: 6px; }
+.help-body blockquote > :last-child { margin-bottom: 0; }
+.help-body .help-tip, .help-body .help-note { border-left-color: var(--ok); }
+.help-body .help-important, .help-body .help-warning { border-left-color: var(--error); }
+.help-body .help-coming { border-left-color: var(--accent); border-style: dashed; border-left-style: solid; }
+.help-table { overflow-x: auto; margin: 0 0 1.1rem; }
+.help-body .grid { min-width: 28rem; }
+.help-body .grid td, .help-body .grid th { vertical-align: top; line-height: 1.5; }
+.help-body .grid thead th { background: var(--bg); }
+.help-center { text-align: center !important; } .help-right { text-align: right !important; }
+.help-checklist { list-style: none; padding-left: .2rem !important; }
+.help-task { margin: .35rem 0 !important; }
+.help-check { display: flex; gap: .55rem; align-items: baseline; font-size: 1rem; cursor: pointer; }
+.help-check input, .help-task > input { width: 1.05rem; height: 1.05rem; flex: none; accent-color: var(--accent); }
+.help-missing-image { font-style: italic; color: var(--muted); }
+.help-related { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--line); max-width: 46rem; }
+.help-related h2 { font-size: 1.05rem; margin: 0 0 .5rem; }
+.help-related ul { margin: 0; padding-left: 1.2rem; }
+.help-related li { margin: .3rem 0; }
+.help-related .hint { display: block; }
+
+/* Search results */
+.help-results { list-style: none; padding: 0; margin: 0; display: grid; gap: .6rem; max-width: 46rem; }
+.help-results li { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .75rem 1rem; }
+.help-result-title { font-weight: 600; }
+.help-excerpt { margin: .3rem 0 0; color: var(--muted); font-size: .92rem; }
+.help-excerpt mark, .help-body mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; border-radius: 2px; padding: 0 .1rem; }
+
+@media (max-width: 820px) {
+    .help-topic.has-toc { display: block; }
+    .help-toc { position: static; max-height: none; margin-bottom: 1rem; padding: .6rem .8rem; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); }
+    .help-toc .help-search { display: none; }
+    .help-search { flex-wrap: wrap; }
+}
+@media print {
+    .topbar, .help-toc, .help-search, .help-crumbs, .help-anchor, .mock-banner { display: none !important; }
+    .help-topic.has-toc { display: block; }
+    .help-body { max-width: none; }
+}

@@ -139,6 +139,8 @@ builder.Services.AddVerification();   // backfills original-response records for
 builder.Services.AddScoped<Gadfly.Server.Exams.ExamService>();
 // The admin desk at /admin (GAD-T246): its Admin-role policy, behind Gadfly:AdminDesk:Enabled.
 builder.Services.AddAdminDesk();
+// The in-app help center at /help (GAD-T292): the guides in docs/guides, embedded at build time and indexed at startup.
+Gadfly.Server.Help.HelpEndpoints.AddHelpCenter(builder.Services);
 
 // The Gadfly Exams web app (GAD-T48): Blazor Server.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();

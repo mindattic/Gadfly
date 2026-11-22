@@ -1,0 +1,66 @@
+@page "/help/search"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@using Gadfly.Server.Help
+@inject ITenantContext Tenant
+@inject HelpLibrary Library
+
+@* Help search results (GAD-T292): only topics this reader may open are searched. *@
+<HeadContent><link rel="stylesheet" href="help.css" /></HeadContent>
+<PageTitle>@(string.IsNullOrWhiteSpace(Q) ? "Search help" : $"{Q.Trim()} · Help search") · Gadfly Exams</PageTitle>
+
+<div class="help">
+    <nav class="help-crumbs" aria-label="Breadcrumb"><a href="help">Help</a> <span aria-hidden="true">›</span> <span>Search</span></nav>
+    <h1>Search help</h1>
+    <HelpSearchBox Query="@Q" />
+
+    @if (string.IsNullOrWhiteSpace(Q))
+    {
+        <p class="hint">Type a word or two, for example <a href="@HelpPaths.Search("microphone")">microphone</a>,
+            <a href="@HelpPaths.Search("screen fade")">screen fade</a> or <a href="@HelpPaths.Search("results")">results</a>.</p>
+    }
+    else if (results.Count == 0)
+    {
+        <p class="notice" role="status">Nothing matched "@Q.Trim()". Try fewer or simpler words, or <a href="help">browse every topic</a>.
+            @if (!viewer.SignedIn)
+            {
+                <span> You're not signed in, so only the topics open to everyone were searched; <a href="@SignInHref">sign in</a> to search the help for your role.</span>
+            }
+        </p>
+    }
+    else
+    {
+        <p class="hint" role="status">@results.Count @(results.Count == 1 ? "result" : "results") for "@Q.Trim()"@(viewer.SignedIn ? "" : " in the topics open to everyone").</p>
+        <ol class="help-results">
+            @foreach (var r in results)
+            {
+                <li>
+                    <a href="@HelpPaths.Topic(r.Topic.Slug, r.SectionAnchor)">
+                        <span class="help-result-title">@r.Topic.Title@(r.SectionHeading is null ? "" : $" › {r.SectionHeading}")</span>
+                    </a>
+                    @if (r.Topic.IsStub)
+                    {
+                        <span class="help-badge">Coming soon</span>
+                    }
+                    <p class="help-excerpt">@((MarkupString)r.ExcerptHtml)</p>
+                </li>
+            }
+        </ol>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? Q { get; set; }
+
+    private HelpViewer viewer = HelpViewer.Anonymous;
+    private IReadOnlyList<HelpSearchResult> results = [];
+
+    private string SignInHref => "login?ReturnUrl=" + Uri.EscapeDataString("/" + HelpPaths.Search(Q));
+
+    protected override void OnParametersSet()
+    {
+        viewer = HelpViewer.For(Tenant);
+        var q = Q is { Length: > 200 } ? Q[..200] : Q;
+        results = Library.Search(q, viewer);
+    }
+}

@@ -1,0 +1,21 @@
+@* A small "?" that opens a help topic (GAD-T292): <HelpLink Topic="grading-guide" />. It opens in a new tab by default so a
+   half-filled form or a running check on the page is not lost. An unknown topic renders nothing (a test checks every use). *@
+@using Gadfly.Server.Help
+
+@if (HelpCatalog.Find(Topic) is { } topic)
+{
+    var label = $"Help: {topic.Title}{(NewTab ? " (opens in a new tab)" : "")}";
+    <a class="help-link@(Label is null ? "" : " help-link-text")" href="@HelpPaths.Topic(topic.Slug, Anchor)" title="@label" aria-label="@label"
+       target="@(NewTab ? "_blank" : null)" rel="@(NewTab ? "noopener" : null)" data-enhance-nav="false"><span class="help-link-mark" aria-hidden="true">?</span>@if (Label is not null)
+        {<span class="help-link-label">@Label</span>}</a>
+}
+
+@code {
+    /// <summary>The topic's slug, one of <see cref="HelpTopics"/>.</summary>
+    [Parameter, EditorRequired] public string Topic { get; set; } = "";
+    /// <summary>A heading anchor inside the topic, to open it at the right section.</summary>
+    [Parameter] public string? Anchor { get; set; }
+    /// <summary>Words shown next to the "?" (for example "Help with your microphone"); without it only the "?" shows.</summary>
+    [Parameter] public string? Label { get; set; }
+    [Parameter] public bool NewTab { get; set; } = true;
+}

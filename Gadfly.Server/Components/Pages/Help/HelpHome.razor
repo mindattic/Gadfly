@@ -1,0 +1,80 @@
+@page "/help"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@using Gadfly.Server.Help
+@inject ITenantContext Tenant
+@inject HelpLibrary Library
+
+@* The help center's home (GAD-T292). Static and readable signed out: a student whose microphone won't work may never get
+   past the sign-in page, so the public topics (how the exam works, troubleshooting, privacy) need no account. *@
+<HeadContent><link rel="stylesheet" href="help.css" /></HeadContent>
+<PageTitle>Help · Gadfly Exams</PageTitle>
+
+<div class="help">
+    <header class="help-hero">
+        <h1>Help</h1>
+        <p class="subtitle">@Intro</p>
+        <HelpSearchBox />
+    </header>
+
+    @if (!viewer.SignedIn)
+    {
+        <p class="notice">You're not signed in, so you see the topics that are open to everyone: how the exam works, fixing microphone,
+            camera and browser problems, and privacy. <a href="login?ReturnUrl=%2Fhelp">Sign in</a> to see the help written for your role.</p>
+    }
+
+    <a class="help-start card" href="@HelpPaths.Topic(start.Slug)">
+        <span class="help-kicker">Start here</span>
+        <h2>@start.Title</h2>
+        <p>@start.Summary</p>
+    </a>
+
+    @foreach (var (id, title, blurb) in HelpCatalog.Sections)
+    {
+        var topics = visible.Where(t => t.Section == id && t.Slug != start.Slug).ToList();
+        if (topics.Count == 0) continue;
+        <section class="help-section" aria-labelledby="help-@id">
+            <h2 id="help-@id">@title</h2>
+            <p class="hint">@blurb</p>
+            <div class="cards">
+                @foreach (var t in topics)
+                {
+                    <a class="card help-card@(t.IsStub ? " help-card-stub" : "")" href="@HelpPaths.Topic(t.Slug)">
+                        <h3>@t.Title</h3>
+                        <p>@t.Summary</p>
+                        @if (t.IsStub)
+                        {
+                            <span class="help-badge">Coming soon</span>
+                        }
+                        else if (viewer.IsStaff && t.Audience != HelpAudience.Public)
+                        {
+                            <span class="help-badge help-badge-quiet">@HelpCatalog.AudienceLabel(t.Audience)</span>
+                        }
+                    </a>
+                }
+            </div>
+        </section>
+    }
+
+    <p class="hint help-foot">Can't find what you need? Students: ask your instructor or your organization's administrator.
+        Staff: ask your organization's administrator, or your MindAttic contact.</p>
+</div>
+
+@code {
+    private HelpViewer viewer = HelpViewer.Anonymous;
+    private List<HelpTopic> visible = [];
+    private HelpTopic start = null!;
+
+    private string Intro => !viewer.SignedIn
+        ? "How Gadfly exams work, and how to fix the usual problems before and during one."
+        : viewer.IsStaff
+            ? "Guides for your role, and the student topics you can point a student to."
+            : "How your spoken exam works, how to get ready, and what to do if something goes wrong.";
+
+    protected override void OnInitialized()
+    {
+        viewer = HelpViewer.For(Tenant);
+        visible = HelpCatalog.VisibleTo(viewer).ToList();
+        start = HelpCatalog.StartFor(viewer);
+    }
+}

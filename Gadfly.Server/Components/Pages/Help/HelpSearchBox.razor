@@ -1,0 +1,11 @@
+@* The help search form (GAD-T292): a plain GET form, so it works on the static help pages and with scripts off. *@
+<form class="help-search" method="get" action="help/search" role="search" data-enhance="false">
+    <label for="help-q" class="help-visually-hidden">Search help</label>
+    <input id="help-q" name="q" type="search" value="@Query" placeholder="Search help, for example &quot;microphone&quot; or &quot;appeal&quot;"
+           maxlength="200" autocomplete="off" />
+    <button type="submit">Search</button>
+</form>
+
+@code {
+    [Parameter] public string? Query { get; set; }
+}

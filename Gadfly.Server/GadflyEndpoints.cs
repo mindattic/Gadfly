@@ -20,7 +20,8 @@ public static class GadflyEndpoints
 
     /// <summary>Every route a signed-out visitor may reach.</summary>
     public static readonly IReadOnlyList<string> AnonymousRoutes =
-        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "launch", "error", "openapi/{documentName}.json", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p)];
+        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "launch", "error", "openapi/{documentName}.json", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p),
+         .. Help.HelpEndpoints.AnonymousRoutes];   // the help center: a student with a broken microphone may never get past sign-in (GAD-T292)
 
     /// <summary>The path <c>UseExceptionHandler</c> re-executes in production (Program.cs).</summary>
     public const string ErrorPath = "/error";
@@ -77,6 +78,7 @@ public static class GadflyEndpoints
         Review.ReviewExportEndpoints.Map(app);
         app.MapAnalytics();
         app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
+        Help.HelpEndpoints.Map(app);   // images the help guides show (GAD-T292)
 
         // Switch the active organization: only to one the caller is a member of (checked against the
         // sign-in claims by HttpTenantContext on every request, so a forged cookie just falls back).
