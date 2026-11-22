@@ -84,6 +84,8 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     public DbSet<Job> Jobs => Set<Job>();
     public DbSet<ContactRequest> ContactRequests => Set<ContactRequest>();   // public site contact form (GAD-T308)
     public DbSet<ApiCallTiming> ApiCallTimings => Set<ApiCallTiming>();   // outside-call durations on live exams (GAD-T413)
+    public DbSet<StudentNotificationPreference> StudentNotificationPreferences => Set<StudentNotificationPreference>();   // reminder opt-out (GAD-T310)
+    public DbSet<EmailLog> EmailLogs => Set<EmailLog>();   // every notification email queued or sent (GAD-T310)
 
     // Master-plan assessment model (docs/MASTER-PLAN.md Part 17.4).
     public DbSet<Course> Courses => Set<Course>();
@@ -111,6 +113,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
         c.Properties<ProcessingStatus>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<RubricPointKind>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<ExamStatus>().HaveConversion<string>().HaveMaxLength(32);
+        c.Properties<EmailLogStatus>().HaveConversion<string>().HaveMaxLength(32);   // GAD-T310
         c.Properties<ExamMode>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<IntegrityLevel>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<VoiceMeasuresSetting>().HaveConversion<string>().HaveMaxLength(32);
@@ -212,6 +215,11 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.HasOne<Exam>().WithMany().HasForeignKey(x => x.ExamId);
             e.HasIndex(x => new { x.AssignmentId, x.Attempt }).IsUnique();
             e.HasIndex(x => new { x.OrganizationId, x.State });
+            // The student profile, directory, live monitor and grading pages all look up one student's sessions (GAD-T389).
+            e.HasIndex(x => new { x.OrganizationId, x.StudentUserId });
+            // The admin dashboard's 7/30-day windows (GAD-T300) filter ended sessions by a date floor on EndedAt and take a
+            // bounded, ordered sample; without this the date bound and order were a sort over every ended session (GAD-T389).
+            e.HasIndex(x => new { x.OrganizationId, x.State, x.EndedAt });
             e.HasMany(x => x.Turns).WithOne(x => x.Session).HasForeignKey(x => x.SessionId);
         });
         b.Entity<SessionTurn>(e =>
@@ -321,6 +329,10 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.Property(x => x.LockedBy).HasMaxLength(120);
             e.Property(x => x.ProgressMessage).HasMaxLength(400);
             e.HasIndex(x => new { x.State, x.RunAfter });
+            // The dashboard's failed-jobs widget and the grading queue's per-session AI-job status (GAD-T389): this table has
+            // no tenant query filter, so both name the organization explicitly on top of state/kind and a recency order.
+            e.HasIndex(x => new { x.OrganizationId, x.State, x.CompletedAt });
+            e.HasIndex(x => new { x.OrganizationId, x.Kind, x.CreatedAt });
         });
 
         // ---- master-plan assessment model
@@ -375,6 +387,9 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.HasIndex(x => new { x.OrganizationId, x.ActorUserId, x.At });
             e.HasIndex(x => new { x.OrganizationId, x.Action, x.At });
             e.HasIndex(x => new { x.OrganizationId, x.EntityId });
+            // Transcript verification (/transcripts/verify, GAD-T295) looks up a transcript.issued row by its code alone,
+            // before it knows the organization (GAD-T389).
+            e.HasIndex(x => new { x.Action, x.EntityType, x.EntityId });
         });
         b.Entity<StudentResponse>(e =>
         {

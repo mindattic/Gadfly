@@ -339,6 +339,8 @@ namespace Gadfly.Server.Data.Migrations
 
                     b.HasIndex("OrganizationId", "ActorUserId", "At");
 
+                    b.HasIndex("Action", "EntityType", "EntityId");
+
                     b.ToTable("AuditEvents", "gadfly");
                 });
 
@@ -874,6 +876,10 @@ namespace Gadfly.Server.Data.Migrations
 
                     b.HasIndex("OrganizationId", "State");
 
+                    b.HasIndex("OrganizationId", "StudentUserId");
+
+                    b.HasIndex("OrganizationId", "State", "EndedAt");
+
                     b.ToTable("ExamSessions", "gadfly");
                 });
 
@@ -1355,6 +1361,10 @@ namespace Gadfly.Server.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("State", "RunAfter");
+
+                    b.HasIndex("OrganizationId", "State", "CompletedAt");
+
+                    b.HasIndex("OrganizationId", "Kind", "CreatedAt");
 
                     b.ToTable("Jobs", "gadfly");
                 });
