@@ -26,6 +26,7 @@
 // typed answers the same way.
 
 import { VoiceAcoustics } from "./voice-acoustics.js";
+import * as VoiceDraft from "./voice-draft.js";
 
 const LIB = "/lib/voice";
 const SPEECH_HUB = "/hubs/speech";
@@ -77,6 +78,10 @@ export function init(dotnet, cfg) {
         fill: null, fillPlaying: null,       // filling the wait while an answer is judged (GAD-T290): pending lines, the one being said
         fillAmbience: null,                  // the quiet page-turn loop under the wait (GAD-T409)
         acoustics: new VoiceAcoustics(),   // voice strain indicators (GAD-T232): summary numbers only, never audio
+        hubUp: true, replayQueue: [],   // reconnect buffering (GAD-T360): audio and commits sent while the hub is down are replayed, in order
+        commitSentAt: [], latenciesMs: [],   // recognizer latency (GAD-T361): commit-to-final time, kept for the next answer's diagnostics
+        displayPartial: "", displayShrinkTimer: null,   // the stabilized partial shown to the student (GAD-T360): never flickers down and up
+        sessionId: cfg.sessionId || null, turn: null, draftChecked: false, recovered: false,   // draft kept across a reload mid-answer (GAD-T306)
     };
     S.onRemark = (e) => remarkHold(S, !!(e.detail && e.detail.active));
     document.addEventListener("gadfly-examiner-remark", S.onRemark);
@@ -135,7 +140,7 @@ async function start() {
             onChunk: (c) => {
                 if (s.gate || !s.speechConn) return;
                 try { s.acoustics.push(c.pcm); } catch { }
-                s.speechConn.send("SendAudio", s.pcm16ToBase64(c.pcm), c.captureStartMs).catch(() => { });
+                sendAudio(s, s.pcm16ToBase64(c.pcm), c.captureStartMs);
             },
             onSpeechStart: () => {
                 s.inSpeech = true;
@@ -154,7 +159,7 @@ async function start() {
                 talking(s, false);
                 if (s.gate || !s.speechConn) return;
                 s.lastSpeechEndAt = performance.now();
-                s.speechConn.send("Commit").catch(() => { });
+                sendCommit(s);
                 // A final that landed mid-speech did not arm the cue (onFinal); the speech has ended now, so arm it for what is held.
                 if (s.segments.length > 0 && !s.cueTimer) armCue(s);
             },
@@ -190,7 +195,9 @@ async function start() {
         if (!s.cfg.typed) {
         s.speechConn =new signalR.HubConnectionBuilder().withUrl(SPEECH_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
         s.speechConn.on("partial", (t) => {
-            s.partial = t || "";
+            // Stable partials (GAD-T360): the shown text only shrinks after a short hold, so a momentary correction that
+            // immediately regrows never flickers the line the student is watching.
+            stablePartial(s, t || "");
             // Words still arriving mean the answer is not over (GAD-T286): a final that armed the end-of-answer cue must not submit
             // while the recognizer is still hearing more, e.g. a provider-side commit in the middle of one unbroken stretch of speech.
             if (s.partial.trim() && !s.gate && s.cueTimer) { clearCue(); status("Hearing you…"); }
@@ -198,13 +205,22 @@ async function start() {
         });
         s.speechConn.on("final", onFinal);
         s.speechConn.on("problem", (kind, message, fatal) => { if (fatal) problem("recognizer", message, true); });
+        // A dropped connection retries a few times on its own (GAD-T306) before this room gives up and asks the
+        // student to press Try again: a clear status either way, never a silent stall. Audio and commits captured while it
+        // is down are queued, not lost (GAD-T360, below): the mic keeps running and nothing the student says is dropped.
+        s.speechConn.onreconnecting(() => { s.hubUp = false; status("Reconnecting…"); });
         s.speechConn.onreconnected(async () => {
-            try { await s.speechConn.invoke("StartSession", { language: "en", diarize: true }); }
+            try {
+                await s.speechConn.invoke("StartSession", startSessionArgs(s));
+                s.hubUp = true;
+                await replayQueueAsync(s);
+                status(listenText(s));
+            }
             catch { problem("hub", "The connection to speech recognition was lost.", true); }
         });
         s.speechConn.onclose(() => { if (s.running) problem("hub", "The connection to speech recognition was lost.", true); });
         await s.speechConn.start();
-        await s.speechConn.invoke("StartSession", { language: "en", diarize: true });
+        await s.speechConn.invoke("StartSession", startSessionArgs(s));
         }
     } catch (err) {
         if (S !== s || !s.running) return;
@@ -239,10 +255,15 @@ async function start() {
         s.avatar = el;
         s.presenter = (await import("./examiner-voice.js")).createPresenter(el, stage, q("caption"), { portraitMouth: s.cfg.portraitMouth },
             (reason) => s.dotnet.invokeMethodAsync("OnAvatarMode", "portrait", reason).catch(() => { }));
-        s.avatarConn = new signalR.HubConnectionBuilder().withUrl(AVATAR_HUB).build();
+        s.avatarConn = new signalR.HubConnectionBuilder().withUrl(AVATAR_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
         s.speech = pkg.attachSpeechHub(el, s.avatarConn);
         s.avatarConn.on("speechStart", (m) => { s.utterId = m && m.id; });
         s.avatarConn.on("speechChunk", (m) => { if (m && m.id === s.utterId && s.ours) s.presenter && s.presenter.words(m.words); });
+        // A dropped connection to the examiner's own hub (previously not even noticed) retries a few times on its own
+        // before this room gives up and asks the student to press Try again, the same as a dropped microphone or
+        // camera (GAD-T306): without this, a lost connection here just left the examiner silent and unresponsive.
+        s.avatarConn.onreconnecting(() => status("Reconnecting…"));
+        s.avatarConn.onclose(() => { if (s.running) problem("hub", "The connection to the examiner was lost.", true); });
         await s.avatarConn.start();
         await Promise.race([el.ready, new Promise((r) => setTimeout(r, 90000))]);
         if (S !== s || !s.running) return;
@@ -258,6 +279,7 @@ async function start() {
         s.dotnet.invokeMethodAsync("OnAvatarMode", "none", "The examiner's picture could not start; questions are read out by your browser and shown as text.").catch(() => { });
     }
 
+    if (!s.cfg.typed) watchVisibility(s);   // a closed laptop lid (GAD-T306) is caught here, not only by a track's own "ended" event
     s.gate = true;
     status("The examiner is ready.");
     await s.dotnet.invokeMethodAsync("OnVoiceStarted", s.mic ? (s.mic.vadKind || "energy") : "typed");
@@ -268,11 +290,42 @@ function fail(kind, message, s) {
     stop();
 }
 
+/** How long the tab must stay hidden before this counts as a possible sleep or a closed lid, not a quick tab switch. */
+const LID_GAP_MS = 20000;
+
+/**
+ * A closed laptop lid, or the OS suspending the machine, often doesn't end a media track the clean way unplugging it
+ * does (GAD-T306): the tab is simply hidden for a long stretch, then visible again with streams that may or may not
+ * still be delivering anything. Caught here and treated exactly like a lost microphone or camera: the exam pauses
+ * (the same path a lost track already takes, so the clock credit in GAD-T263 applies the same way) and "Try again"
+ * re-requests both devices from scratch, rather than assuming whatever is left over from before the lid closed still
+ * works.
+ */
+function watchVisibility(s) {
+    s.hiddenSince = null;
+    s.onVisibility = () => {
+        if (S !== s || !s.running) return;
+        if (document.hidden) { s.hiddenSince = performance.now(); return; }
+        const since = s.hiddenSince;
+        s.hiddenSince = null;
+        if (since === null || performance.now() - since < LID_GAP_MS) return;
+        const micDead = s.mic && s.mic.stream && !s.mic.stream.getAudioTracks().some((t) => t.readyState === "live");
+        const cameraDead = s.selfStream && !s.selfStream.getVideoTracks().some((t) => t.readyState === "live");
+        if (micDead) fail("mic-lost", "The microphone stopped working.", s);
+        else if (cameraDead) fail("camera-lost", "The camera stopped working.", s);
+    };
+    document.addEventListener("visibilitychange", s.onVisibility);
+}
+
+function unwatchVisibility(s) {
+    if (s && s.onVisibility) document.removeEventListener("visibilitychange", s.onVisibility);
+}
+
 /**
  * The examiner says <paramref name="what"/> (the server only allows texts it offered for this student), in the speaking style the
  * server picked for this kind of question (GAD-T303: neutral, open or probe; never a hint of the grade).
  */
-export function speak(what, cacheable, style) {
+export function speak(what, cacheable, style, turn) {
     const s = S;
     if (!s || !s.running) return;
     cancelFill(s);   // the next question is here: no more filler for this wait (GAD-T290)
@@ -284,6 +337,11 @@ export function speak(what, cacheable, style) {
     s.startedAtUnixMs = null;
     s.acoustics.reset();
     resetDelay(s);
+    // A fresh set of segments for this turn: any draft kept from a reload mid-answer (GAD-T306) no longer applies.
+    s.turn = turn ?? s.turn;
+    s.recovered = false;
+    text("recovered", "");
+    VoiceDraft.clear(s.sessionId);
     drawTranscript();
     status("The examiner is speaking…");
     const token = s.speakToken = {};
@@ -530,6 +588,7 @@ export function stop() {
     if (!s) return;
     s.running = false;
     s.gate = true;
+    unwatchVisibility(s);
     cancelFill(s);
     s.fillPlaying = null;
     s.speakToken = null;
@@ -541,6 +600,12 @@ export function stop() {
     s.presenter = null;
     resetDelay(s);
     stopSelfView(s, null);
+    s.hubUp = true;
+    s.replayQueue = [];
+    s.commitSentAt = [];
+    s.latenciesMs = [];
+    s.displayPartial = "";
+    if (s.displayShrinkTimer) { clearTimeout(s.displayShrinkTimer); s.displayShrinkTimer = null; }
     try { s.mic && s.mic.stop(); } catch { }
     // Hold the connection in a local: the fields are nulled below, before this promise settles, so reading s.speechConn in the
     // callback threw and the speech hub connection was never closed (GAD-T200).
@@ -572,6 +637,24 @@ function openMic() {
     s.speechConn.send("MarkListening", s.listeningStartMs).catch(() => { });
     if (s.avatar) s.avatar.state = "listening";
     status(listenText(s));
+    if (!s.draftChecked) { s.draftChecked = true; tryRestoreDraft(s); }
+}
+
+/**
+ * The page reloaded, or the browser crashed and relaunched, mid-answer (GAD-T306): the words already spoken for
+ * this exact question are still in sessionStorage, so they reappear here, clearly marked as recovered. Tried once
+ * per page load, and only onto an empty answer: it can never overwrite words the student has already said since
+ * the reload. It only fills the box — the cue that auto-submits on silence is not armed by it, so nothing is sent
+ * until the student presses "Done answering" (or starts over with "Clear and answer again") themselves.
+ */
+function tryRestoreDraft(s) {
+    if (s.segments.length > 0 || s.turn === null) return;
+    const restored = VoiceDraft.load(s.sessionId, s.turn);
+    if (!restored || restored.length === 0) return;
+    s.segments = restored.map((seg) => ({ text: seg && seg.text || "", words: (seg && seg.words) || [] }));
+    s.recovered = true;
+    drawTranscript();
+    text("recovered", "Recovered what you'd already said before the page reloaded. Keep talking to add more, or press “Clear and answer again” to start over.");
 }
 
 /**
@@ -623,10 +706,18 @@ function listenText(s) {
 function onFinal(seg) {
     const s = S;
     if (!s) return;
+    // Recognizer latency (GAD-T361): how long this final took from the Commit that asked for it. Oldest pending commit
+    // first, since finals arrive in the order they were committed; a remark's own commit (not a student answer) is
+    // popped too, which is fine, since both measure the same thing (the recognizer's turnaround on a stretch of speech).
+    if (s.commitSentAt.length > 0) {
+        const ms = performance.now() - s.commitSentAt.shift();
+        if (Number.isFinite(ms) && ms >= 0) { s.latenciesMs.push(ms); if (s.latenciesMs.length > 20) s.latenciesMs.shift(); }
+    }
     const remarkFinal = s.remarkCommitPending;   // the next final answers the remark's commit, whatever the gate says
     s.remarkCommitPending = false;
     if ((s.gate && !remarkFinal) || !seg || !seg.text || !seg.text.trim()) return;
     s.partial = "";
+    s.displayPartial = "";
     // The same final delivered twice (a recognizer fallback or a commit racing the provider's own) is one segment (GAD-T286).
     const norm = seg.text.trim().replace(/\s+/g, " ").toLowerCase();
     const now = performance.now();
@@ -638,6 +729,8 @@ function onFinal(seg) {
             text: w.text, startMs: w.startMs, endMs: w.endMs, confidence: w.confidence ?? null, speakerId: w.speakerId ?? null, isAudioEvent: !!w.isAudioEvent,
         })),
     });
+    // Kept as a draft in case the page reloads or the browser crashes before this answer is sent (GAD-T306).
+    VoiceDraft.save(s.sessionId, s.turn, s.segments);
     drawTranscript();
     if (s.gate) return;   // the remark is still on: its end arms the cue for these words
     // The end-of-answer cue: a stretch of silence after what was said. Speaking again cancels it; "Done answering" skips it.
@@ -687,12 +780,125 @@ function clearCue() {
     if (cue) cue.dataset.active = "false";
 }
 
+// ------------------------------------------------------------------------------------------------ reconnect buffering
+// GAD-T360: a dropped speech hub connection (withAutomaticReconnect, above) would otherwise silently swallow every
+// SendAudio/Commit call made while it reconnects (HubConnection.send rejects when not connected): the microphone
+// keeps capturing, but the words said during the drop would never reach the recognizer at all. Instead, while the hub
+// is down, every call is queued here and replayed, in order, once StartSession has reopened a session on the far side.
+// The replayed session is a fresh one (the library has no way to resume the old one across a dropped connection: filed
+// as a gap in MindAttic.SpeechRecognition), so what's buffered is replayed into it rather than appended to nothing.
+
+/** The StartSession arguments for this room: the exam's own language and vocabulary hints (GAD-T357, GAD-T358), never the browser's choosing. */
+function startSessionArgs(s) {
+    return { language: (s.cfg && s.cfg.language) || "en", diarize: true, keyterms: (s.cfg && s.cfg.keyterms) || [] };
+}
+
+/** Longest the reconnect buffer may hold (about 30 s of 100 ms mic chunks): a very long outage drops the oldest audio rather than growing without bound. */
+const REPLAY_QUEUE_MAX = 300;
+
+function queueOrSend(s, invoke) {
+    if (s.hubUp && s.speechConn) { invoke().catch(() => { }); return; }
+    s.replayQueue.push(invoke);
+    while (s.replayQueue.length > REPLAY_QUEUE_MAX) s.replayQueue.shift();
+}
+
+function sendAudio(s, pcmBase64, captureStartMs) {
+    queueOrSend(s, () => s.speechConn.send("SendAudio", pcmBase64, captureStartMs));
+}
+
+function sendCommit(s) {
+    s.commitSentAt.push(performance.now());
+    queueOrSend(s, () => s.speechConn.send("Commit"));
+}
+
+/** Replays whatever queued while the hub was down, in order, into the session StartSession just reopened. Best effort: one failed call doesn't stop the rest. */
+async function replayQueueAsync(s) {
+    const queued = s.replayQueue;
+    s.replayQueue = [];
+    for (const invoke of queued) { try { await invoke(); } catch { } }
+}
+
+// ------------------------------------------------------------------------------------------------------ stable partials
+// GAD-T360: the recognizer sometimes revises a partial down (dropping a word it is no longer sure of) and then straight
+// back up a moment later. Shown immediately, that reads as a flicker. Growth is always shown at once (that's the
+// reassuring, "it's keeping up" case); a shrink is held for a short beat in case it's about to regrow, so a momentary
+// dip never reaches the screen.
+const PARTIAL_SHRINK_HOLD_MS = 250;
+
+function stablePartial(s, text) {
+    s.partial = text;
+    if (s.displayShrinkTimer) { clearTimeout(s.displayShrinkTimer); s.displayShrinkTimer = null; }
+    if (text.length >= s.displayPartial.length || !text) { s.displayPartial = text; return; }
+    const shrunk = text;
+    s.displayShrinkTimer = setTimeout(() => {
+        s.displayShrinkTimer = null;
+        if (S === s && s.partial === shrunk) { s.displayPartial = shrunk; drawTranscript(); }
+    }, PARTIAL_SHRINK_HOLD_MS);
+}
+
+// ------------------------------------------------------------------------------------------------- display normalization
+// GAD-T360: numbers and punctuation spoken as words, shaped for the screen only. What is stored and graded is built from
+// the recognizer's own words in VoiceAnswerBuilder (Gadfly.Server), never from this: a display tweak here can never
+// change what the student is judged on.
+const NUMBER_WORDS = {
+    zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10,
+    eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+    twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90,
+};
+const MAGNITUDE_WORDS = { hundred: 100, thousand: 1000, million: 1000000 };
+const PUNCTUATION_WORDS = { comma: ",", period: ".", "full stop": ".", "question mark": "?", "exclamation mark": "!", "exclamation point": "!", colon: ":", semicolon: ";" };
+
+function normalizeForDisplay(text) {
+    const trimmed = (text || "").trim();
+    if (!trimmed || trimmed.length > 20000) return trimmed;
+    const words = trimmed.split(/\s+/);
+    const out = [];
+    for (let i = 0; i < words.length; i++) {
+        const two = i + 1 < words.length ? (words[i] + " " + words[i + 1]).toLowerCase() : null;
+        if (two && PUNCTUATION_WORDS[two]) { attach(out, PUNCTUATION_WORDS[two]); i++; continue; }
+        const one = words[i].toLowerCase();
+        if (PUNCTUATION_WORDS[one]) { attach(out, PUNCTUATION_WORDS[one]); continue; }
+        const read = readNumber(words, i);
+        if (read.consumed > 0) { out.push(String(read.value)); i += read.consumed - 1; continue; }
+        out.push(words[i]);
+    }
+    let joined = out.join(" ").replace(/ ([,.?!:;])/g, "$1");
+    if (joined.length === 0) return joined;
+    if (!/[.?!]\s*$/.test(joined)) joined += ".";
+    return joined.charAt(0).toUpperCase() + joined.slice(1);
+}
+
+function attach(out, mark) {
+    if (out.length === 0) out.push(mark); else out[out.length - 1] += mark;
+}
+
+function readNumber(words, start) {
+    let i = start, total = 0, current = 0, any = false;
+    while (i < words.length) {
+        const w = words[i].toLowerCase();
+        if (w === "and" && any && i + 1 < words.length && isNumberWord(words[i + 1])) { i++; continue; }
+        if (Object.prototype.hasOwnProperty.call(NUMBER_WORDS, w)) { current += NUMBER_WORDS[w]; any = true; i++; }
+        else if (Object.prototype.hasOwnProperty.call(MAGNITUDE_WORDS, w)) {
+            const mag = MAGNITUDE_WORDS[w];
+            current = (current === 0 ? 1 : current) * mag;
+            if (mag >= 1000) { total += current; current = 0; }
+            any = true; i++;
+        } else break;
+    }
+    return any ? { value: total + current, consumed: i - start } : { value: 0, consumed: 0 };
+}
+
+function isNumberWord(w) {
+    const lw = w.toLowerCase();
+    return Object.prototype.hasOwnProperty.call(NUMBER_WORDS, lw) || Object.prototype.hasOwnProperty.call(MAGNITUDE_WORDS, lw);
+}
+
 function drawTranscript() {
     const s = S;
     if (!s) return;
     const said = s.segments.map((x) => x.text).join(" ");
-    text("draft", said);
-    text("live", s.partial);
+    text("draft", normalizeForDisplay(said));
+    text("live", normalizeForDisplay(s.displayPartial));
     const has = s.segments.length > 0;
     document.querySelectorAll("[data-voice-needs-draft]").forEach((b) => { b.disabled = !has; });
 }
@@ -704,6 +910,10 @@ function discard() {
     S.partial = "";
     S.startedAtUnixMs = null;
     S.acoustics.reset();
+    S.latenciesMs = [];
+    S.recovered = false;
+    text("recovered", "");
+    VoiceDraft.clear(S.sessionId);
     drawTranscript();
     status("Cleared. Answer again whenever you're ready.");
 }
@@ -717,13 +927,21 @@ async function submit(immediate) {
     const payload = {
         segments: s.segments, listeningStartMs: s.listeningStartMs, startedAtUnixMs: s.startedAtUnixMs,
         responseDelayMs: s.delayMs == null ? null : Math.round(s.delayMs), acoustics,
+        // Recognizer latency (GAD-T361): commit-to-final, timed here since the hub pushes the final segment rather than
+        // returning it from a call the server could time itself. Diagnostics only: never shown to the student, never graded.
+        recognizerLatenciesMs: s.latenciesMs.slice(),
     };
     s.gate = true;
     talking(s, false);
     status("Sending your answer…");
     try {
         await s.dotnet.invokeMethodAsync("OnVoiceAnswer", payload);
-        if (S === s) { s.segments = []; s.partial = ""; s.startedAtUnixMs = null; s.acoustics.reset(); drawTranscript(); }
+        if (S === s) {
+            s.segments = []; s.partial = ""; s.startedAtUnixMs = null; s.acoustics.reset(); s.latenciesMs = [];
+            s.recovered = false; text("recovered", "");
+            VoiceDraft.clear(s.sessionId);   // sent: the draft kept in case of a reload (GAD-T306) is no longer needed
+            drawTranscript();
+        }
     } catch {
         // The answer is still held here: let the student try again.
         if (S === s) { s.gate = false; status("That did not go through. Press Done answering to try again."); }
