@@ -49,7 +49,7 @@ public static class TranscriptEndpoints
                 var outcome = await VerifyCodeEitherAsync(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), code, ct);
                 return Page(outcome, code);
             })
-            .AllowAnonymous().RequireRateLimiting(RateLimits.Anonymous).ExcludeFromDescription();
+            .AllowAnonymous().RequireRateLimiting(RateLimits.Verify).ExcludeFromDescription();
 
         app.MapPost(VerifyPath, async (HttpRequest request, IServiceScopeFactory scopes, CancellationToken ct) =>
             {
@@ -68,7 +68,7 @@ public static class TranscriptEndpoints
                 if (string.IsNullOrWhiteSpace(typed)) return Page(null, null, "Type the verification code printed on the transcript or certificate, or choose the transcript's JSON file.");
                 return Page(await VerifyCodeEitherAsync(db, typed, ct), typed);
             })
-            .AllowAnonymous().DisableAntiforgery().RequireRateLimiting(RateLimits.Anonymous).ExcludeFromDescription();
+            .AllowAnonymous().DisableAntiforgery().RequireRateLimiting(RateLimits.Verify).ExcludeFromDescription();
     }
 
     /// <summary>

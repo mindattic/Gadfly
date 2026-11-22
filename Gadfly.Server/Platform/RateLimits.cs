@@ -16,6 +16,7 @@ public static class RateLimits
     public const string Api = "gadfly:api";
     public const string Hub = "gadfly:hub";
     public const string Anonymous = "gadfly:anonymous";
+    public const string Verify = "gadfly:verify";
 
     public static void Configure(RateLimiterOptions o)
     {
@@ -43,6 +44,15 @@ public static class RateLimits
         o.AddPolicy(Anonymous, http => RateLimitPartition.GetFixedWindowLimiter("ip:" + Ip(http), _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 30, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true,
+        }));
+
+        // /transcripts/verify (GAD-T295, GAD-T313): its own, stricter limit, separate from the general anonymous
+        // one above. It used to share that 30/min, which is far too generous for guessing a 16-character code or
+        // probing with altered JSON files; this partitions by IP under its own key so it never borrows room from,
+        // or eats into, sign-in/MFA/reset's budget.
+        o.AddPolicy(Verify, http => RateLimitPartition.GetFixedWindowLimiter("verify-ip:" + Ip(http), _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true,
         }));
     }
 
