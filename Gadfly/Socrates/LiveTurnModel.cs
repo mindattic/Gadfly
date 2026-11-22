@@ -294,10 +294,16 @@ public sealed class MockLiveTurnModel : ILiveTurnModel
     }
 }
 
-/// <summary>The live-turn model the host injects: the mock's in mock mode, the configured provider's otherwise (decided once, like the panel).</summary>
-public sealed class SelectedLiveTurnModel(SelectedPanel panel, ILiveTurnModel live, ILiveTurnModel mock) : ILiveTurnModel
+/// <summary>
+/// The live-turn model the host injects: the mock's in mock mode, the configured provider's otherwise (decided once, like the
+/// panel). It follows whatever <see cref="IPanelInfo"/> the host registered (the <see cref="SelectedPanel"/> in the server, a
+/// fixed mock in tests), and the live model is built only when first used in live mode, so a mock host never constructs the
+/// live LLM client (GAD-T517).
+/// </summary>
+public sealed class SelectedLiveTurnModel(IPanelInfo panel, Func<ILiveTurnModel> live, ILiveTurnModel mock) : ILiveTurnModel
 {
-    private ILiveTurnModel Current => panel.IsMock ? mock : live;
+    private readonly Lazy<ILiveTurnModel> _live = new(live);
+    private ILiveTurnModel Current => panel.IsMock ? mock : _live.Value;
     public string ProviderId => Current.ProviderId;
     public string Model => Current.Model;
 

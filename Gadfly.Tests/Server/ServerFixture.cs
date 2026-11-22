@@ -142,6 +142,9 @@ public sealed class GadflyFactory(string connectionString) : WebApplicationFacto
             services.RemoveAll<LegionVotingClient>();
             services.AddSingleton<LegionVotingClient>(_ => throw new InvalidOperationException("Tests never construct the live LLM client."));
             services.RemoveAll<Gadfly.Socrates.Mock.SelectedPanel>();
+            // Nor the live turn's fast model (GAD-T494): with none registered the orchestrator asks and judges through the
+            // scripted panel, the path these tests script (GAD-T517). The live-turn path has its own engine tests.
+            services.RemoveAll<ILiveTurnModel>();
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(Clock);
         });

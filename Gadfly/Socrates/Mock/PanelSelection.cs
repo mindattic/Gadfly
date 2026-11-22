@@ -124,8 +124,10 @@ public static class PanelServiceCollectionExtensions
         // On Claude the reply streams (GAD-T495), so the examiner can start speaking the question while it is written;
         // Gadfly:LiveTurn:Stream=false keeps the one-shot Legion call.
         var stream = liveProvider == LiveTurnSettings.DefaultProvider && !string.Equals(configuration[LiveTurnSettings.StreamSetting], "false", StringComparison.OrdinalIgnoreCase);
-        services.AddSingleton<ILiveTurnModel>(sp => new SelectedLiveTurnModel(sp.GetRequiredService<SelectedPanel>(),
-            stream ? new ClaudeStreamingLiveTurnModel(sp.GetRequiredService<LegionVotingClient>(), liveModel)
+        // Follows the registered IPanelInfo (a host may replace the SelectedPanel, as the tests do) and builds the live
+        // client only when a live turn first needs it (GAD-T517).
+        services.AddSingleton<ILiveTurnModel>(sp => new SelectedLiveTurnModel(sp.GetRequiredService<IPanelInfo>(),
+            () => stream ? new ClaudeStreamingLiveTurnModel(sp.GetRequiredService<LegionVotingClient>(), liveModel)
                 : new LegionLiveTurnModel(sp.GetRequiredService<LegionVotingClient>(), liveProvider, liveModel), new MockLiveTurnModel()));
         return services;
     }
