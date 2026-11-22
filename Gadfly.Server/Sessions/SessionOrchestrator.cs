@@ -251,6 +251,22 @@ public sealed class SessionOrchestrator(
             return Task.FromResult(s.IsEnded ? null : s.OpenTurn);
         }, ct);
 
+    /// <summary>
+    /// The exam room saw the student go on speaking right after the end-of-answer silence closed turn <paramref name="turnIndex"/>'s
+    /// answer (GAD-T462): the answer's speech metrics record a possible cut-off. Waits for any step in progress (the answer's own
+    /// judging) so it never changes what is judged or how hard the examiner probes; skipped once the exam has ended. The caller has
+    /// checked that voice measurements are on (an answer whose voice was not measured carries no watch to mark anyway).
+    /// </summary>
+    public Task<SessionStep> NoteAnswerCutOffAsync(Guid organizationId, Guid sessionId, Guid studentUserId, int turnIndex, double resumeSeconds,
+        CancellationToken ct = default) =>
+        StepAsync(organizationId, sessionId, studentUserId, live =>
+        {
+            var s = live.Engine.Session;
+            if (!s.IsEnded && AnswerCutOff.InRange(resumeSeconds) && s.AwaitingJudgment?.Index != turnIndex)
+                s.NoteAnswerCutOff(turnIndex, resumeSeconds);
+            return Task.FromResult(s.IsEnded ? null : s.OpenTurn);
+        }, ct);
+
     /// <summary>The student did something only a working exam room can do: an open pause ends now, by the server's clock (GAD-T263).</summary>
     private void ResumeOnActivity(Live live)
     {

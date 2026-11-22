@@ -157,6 +157,7 @@ async function start() {
             },
             onSpeechStart: () => {
                 s.inSpeech = true;
+                noteCutOff(s);   // speaking again right after the silence sent the answer (GAD-T462)
                 if (s.gate) return;
                 if (s.lastSpeechEndAt !== null && s.startedAtUnixMs !== null) notePause(s, performance.now() - s.lastSpeechEndAt);
                 s.lastSpeechEndAt = null;
@@ -457,6 +458,7 @@ export function speak(what, cacheable, style, turn) {
     if (!s || !s.running) return;
     cancelFill(s);   // the next question is here: no more filler for this wait (GAD-T290)
     clearCue();
+    s.cutWatch = null;   // the next question: speech from here on is not a cut-off of the last answer (GAD-T462)
     s.gate = true;
     s.remarkCommitPending = false;   // a remark's late final belongs to the last answer, not to this question's
     s.segments = [];
@@ -905,6 +907,23 @@ function notePause(s, ms) {
     if (s.pauses.length > PAUSE.keep) s.pauses.shift();
 }
 
+/**
+ * Answer cut-offs (GAD-T462). When the end-of-answer silence (not "Done answering") sent the answer, the next few seconds are
+ * watched: if the student starts speaking again within CUT_OFF_MS, the answer may have been cut short. Only the delay is sent,
+ * once per answer, never audio; the server range-checks it and keeps it with the answer's speech metrics as a neutral note for
+ * reviewers and a fairness rate. It never changes this answer, the next question or the grade. Speech while the examiner is
+ * talking (a wait filler or the next question) is not counted, since the microphone may be hearing her.
+ */
+const CUT_OFF_MS = 3000;
+
+function noteCutOff(s) {
+    if (!s || s.cutWatch == null) return;
+    const ms = performance.now() - s.cutWatch;
+    s.cutWatch = null;
+    if (!Number.isFinite(ms) || ms < 0 || ms > CUT_OFF_MS || s.speaking || s.fillPlaying) return;
+    s.dotnet.invokeMethodAsync("OnAnswerCutOff", Math.round(ms)).catch(() => { });
+}
+
 function clearCue() {
     if (!S) return;
     if (S.cueTimer) { clearTimeout(S.cueTimer); S.cueTimer = null; }
@@ -1066,6 +1085,8 @@ async function submit(immediate) {
     s.gate = true;
     talking(s, false);
     status("Sending your answer…");
+    // Sent by the silence, not by "Done answering": watch the next few seconds for the student going on (GAD-T462).
+    s.cutWatch = immediate ? null : performance.now();
     try {
         await s.dotnet.invokeMethodAsync("OnVoiceAnswer", payload);
         if (S === s) {
@@ -1076,7 +1097,7 @@ async function submit(immediate) {
         }
     } catch {
         // The answer is still held here: let the student try again.
-        if (S === s) { s.gate = false; status("That did not go through. Press Done answering to try again."); }
+        if (S === s) { s.cutWatch = null; s.gate = false; status("That did not go through. Press Done answering to try again."); }
     }
 }
 

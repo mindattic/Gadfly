@@ -157,8 +157,9 @@ exactly as the examiner computed it and reports, per answer and by accommodation
 grouping such as first language: how often the pressure was raised and raised hard, how often each cue fired (the
 no-reason cue per answer whose question asked for one), long pauses per spoken minute, and the share of sessions and exam
 time paused for a lost device. A cue firing more than a quarter more often for one group is warned, with the reminder that
-the hedging, vague-phrase and reason lists are English. Whether the adaptive end-of-answer silence cut an answer off
-(Section 5.3.4) is not recorded by the exam room, so it is not measured yet.
+the hedging, vague-phrase and reason lists are English. GAD-T462 adds the cut-off rate (Section 5.3.4): the share of
+watched spoken answers after which the student went on speaking within 3 seconds of the end-of-answer silence closing
+them (mechanic 6), warned when it differs by more than a quarter between groups with 20 or more watched answers.
 
 ## 3. Recitation check
 
@@ -330,6 +331,12 @@ begins the first question (GAD-T239), not while the room connects.
   own pauses: it starts at `EndOfAnswerSeconds` (4 seconds by default) and, once three or more pauses within answers have
   been seen, becomes 1.5 times the student's 80th-percentile pause, never below that floor and never above
   `EndOfAnswerMaxSeconds` (12 by default). It only ever lengthens; both bounds lengthen with the extra-time accommodation.
+- **Cut-offs (GAD-T462).** When that silence (not "Done answering") hands an answer in and the student starts speaking
+  again within 3 seconds, the exam room sends the delay (never audio). The server range-checks it and keeps it with the
+  answer's speech metrics (`cutoff.count`, `cutoff.resumeSeconds`). Every reviewer sees the neutral note "the student may
+  have been cut off", and Analytics reports the cut-off rate by group (mechanic 2). It never steers probing (GAD-T258) and
+  never enters a grade. It is recorded only where voice measurements run, so not by default in the EU (GAD-T259,
+  GAD-T283). Speech while the examiner is talking is not counted, and the last answer of an exam is not marked.
 - **The judging wait (GAD-T290, GAD-T409).** After every answer, while the panel judges it and writes the next question,
   the examiner says one short neutral line if the question is not ready within 2 seconds ("Let me think about that"), and
   one more after 20 seconds, over a quiet page-turn sound. The lines are fixed, picked at random and never about the
@@ -354,6 +361,7 @@ begins the first question (GAD-T239), not while the room connects.
 **Done.** GAD-T263 (the clock stops while the exam is paused, with a cap on total pause time) and GAD-T264 (the
 end-of-answer silence adapts to the student's own pauses, with a floor and a ceiling, and lengthens under an
 accommodation). GAD-T290 and GAD-T409 fill the judging wait with neutral speech and sound; they do not stop the clock.
+GAD-T462 measures whether the silence still cuts answers off, and for whom (the cut-off rate by group).
 
 ## 7. Grading panel, blind human, reconciliation and release
 
@@ -642,7 +650,8 @@ mechanic 4), GAD-T290 and GAD-T409 (the judging wait, mechanic 6), GAD-T405 (no 
 GAD-T412 (text-style estimate switched off, mechanic 9). Measurements filed by the blueprint audit GAD-T421, none changing
 a decision: GAD-T426 (human-reference transcripts, mechanic 7), GAD-T433 (score gaps by group, mechanic 7), GAD-T434
 (path-driver rates by group, mechanic 2), GAD-T438 (typed against spoken, decision (a)), GAD-T447 (camera episodes and
-tracking quality by group, mechanic 4), GAD-T448 (what the fade costs, mechanic 4 and decision (c)).
+tracking quality by group, mechanic 4), GAD-T448 (what the fade costs, mechanic 4 and decision (c)), GAD-T462 (answer
+cut-offs by the end-of-answer silence, mechanics 2 and 6).
 
 ## What the evidence does not let Gadfly claim
 

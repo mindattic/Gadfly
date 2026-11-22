@@ -209,6 +209,19 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
    within answers have been seen, it becomes 1.5 times the student's longer pauses (80th percentile of the last 20), never
    below that floor and never above `Gadfly:Voice:EndOfAnswerMaxSeconds` (default 12). An extra-time accommodation
    multiplies both the floor and the ceiling (capped at 45 s), so a student with 1.5x time waits 6 s at least.
+   **Cut-offs (GAD-T462).** When the silence (not **Done answering**) hands the answer in, the next 3 seconds are watched
+   (`CUT_OFF_MS` in `voice-room.js`): if the student starts speaking again, the browser calls `OnAnswerCutOff` with the
+   delay in milliseconds, once per answer, and nothing else (no audio, no words). Speech while the examiner is talking (a
+   wait filler or the next question) is not counted. `VoiceRoom` ties it to the answer just sent and
+   `AnswerCutOffRecorder` range-checks it (0 to 3 s), drops it when voice measurements are off for the session
+   (`VoiceStrain.EnabledForSessionAsync`, GAD-T259/T283), and records it through `SessionOrchestrator.NoteAnswerCutOffAsync`,
+   which waits for the answer's own judging and changes only the answer's speech metrics: `VoiceAnswerBuilder` stores
+   `cutoff.count = 0` on every spoken answer (watched), the marker sets it to 1 with `cutoff.resumeSeconds`
+   (`Gadfly.Engine.AnswerCutOff`). With voice measurements off, `VoiceStrain.TurnOff` removes the watch, so such an answer
+   is never marked and does not count in the rate. Reviewers see "The student may have been cut off" on the turn (a blind
+   grader too: it is a note about the transcript, not about the person); Analytics shows the cut-off rate by group in
+   "What made the examiner press harder". It never steers probing (`AnswerDelivery` reads no `cutoff.*` key, GAD-T258) and
+   never enters a grade. The last answer of an exam is not marked (the session has ended).
 4. `VoiceAnswerBuilder` rebuilds the segments server-side, recomputes `SpeechMetricsCalculator` and
    `TranscriptVerification.Assess` from the words (the browser's numbers are not trusted), and hands `ExamRoom` an
    `Answer { Mode = "voice" }` with word timings, flattened metrics (`SpeechMetricKeys`) and confidence.

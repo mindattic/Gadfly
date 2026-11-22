@@ -99,7 +99,7 @@
             {
                 <table class="grid">
                     <caption>@data.Paths.Answers answer(s); shares are of answers</caption>
-                    <thead><tr><th>Group</th><th>Students</th><th>Answers</th><th>Typed</th><th>Pressed harder</th><th>Pressed hard</th><th>Hedging</th><th>Vague wording</th><th>No reason or example</th><th>Not convincing</th><th>Evidence against</th><th>Unclear meaning</th><th>Recited</th><th>Long pauses / spoken minute</th><th>Sessions with a device pause</th><th>Exam time paused</th></tr></thead>
+                    <thead><tr><th>Group</th><th>Students</th><th>Answers</th><th>Typed</th><th>Pressed harder</th><th>Pressed hard</th><th>Hedging</th><th>Vague wording</th><th>No reason or example</th><th>Not convincing</th><th>Evidence against</th><th>Unclear meaning</th><th>Recited</th><th>Cut off</th><th>Long pauses / spoken minute</th><th>Sessions with a device pause</th><th>Exam time paused</th></tr></thead>
                     <tbody>
                         @foreach (var g in data.Paths.Groups)
                         {
@@ -108,7 +108,7 @@
                                 <td>@g.Students</td>
                                 @if (g.TooFew)
                                 {
-                                    <td colspan="14" class="hint">Withheld: fewer than @GroupFairness.MinStudents students.</td>
+                                    <td colspan="15" class="hint">Withheld: fewer than @GroupFairness.MinStudents students.</td>
                                 }
                                 else
                                 {
@@ -123,6 +123,7 @@
                                     <td>@AnalyticsService.Pct(g.EvidenceAgainst)</td>
                                     <td>@AnalyticsService.Pct(g.Unclear)</td>
                                     <td>@AnalyticsService.Pct(g.Recited)</td>
+                                    <td title="@(g.CutOffMeasured) spoken answer(s) watched for a cut-off">@AnalyticsService.Pct(g.CutOff)</td>
                                     <td>@Num(g.LongPausesPerMinute)</td>
                                     <td>@AnalyticsService.Pct(g.SessionsWithDevicePause)</td>
                                     <td>@AnalyticsService.Pct(g.DevicePausedShare)</td>
@@ -132,7 +133,9 @@
                     </tbody>
                 </table>
                 <p class="hint">"Pressed harder" is any cue (one cue presses a little, two or more press hard, a recited answer is asked
-                    again differently). "No reason or example" counts only answers whose question asked for one.</p>
+                    again differently). "No reason or example" counts only answers whose question asked for one. "Cut off" counts only
+                    spoken answers watched for it: the student went on speaking within a few seconds of the end-of-answer silence closing
+                    the answer.</p>
                 @foreach (var w in data.Paths.Warnings)
                 {
                     <p class="notice" role="status">@w</p>

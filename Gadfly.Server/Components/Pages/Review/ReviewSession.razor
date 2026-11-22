@@ -140,6 +140,11 @@ else
                             @if (t.HasAudio) { <text> · audio recorded (playback arrives with media storage)</text> }
                             @foreach (var m in t.SpeechMetrics.Take(6)) { <text> · @m.Key @m.Value.ToString("0.##")</text> }
                         </p>
+                        @if (t.MayHaveBeenCutOff)
+                        {
+                            @* GAD-T462: neutral; the student may only have added an afterthought. Never part of the grade. *@
+                            <p class="hint cut-off" role="note" title="The end-of-answer silence closed this answer and the student began speaking again straight after. What they said then is not in the answer. This is not part of any grade.">@Gadfly.Engine.AnswerCutOff.ReviewerNote: they began speaking again @(t.CutOffResumeSeconds is { } rs ? $"{rs:0.#} s" : "seconds") after the silence closed this answer.</p>
+                        }
                         @if (t.Strain is { } strain)
                         {
                             <p class="hint voice-strain" title="Voice measurements (descriptive only, GAD-T259): pitch, pitch variability, jitter, loudness, speech rate and pausing, compared with this student's first spoken answers. They name no state and say nothing about emotion or honesty.">@(strain.IsBaseline ? "Voice: " : "")@strain.Summary</p>

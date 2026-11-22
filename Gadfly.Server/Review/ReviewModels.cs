@@ -142,6 +142,15 @@ public sealed record TurnView(
     /// <summary>The recitation check's finding when this answer read as possibly recited (GAD-T248); null otherwise.</summary>
     public RecitationView? Recitation { get; init; }
 
+    /// <summary>
+    /// The end-of-answer silence closed this spoken answer and the student went on speaking at once (GAD-T462): a neutral note that
+    /// the answer may be incomplete, shown to every reviewer (it is not an integrity signal and never part of a grade).
+    /// </summary>
+    public bool MayHaveBeenCutOff { get; init; }
+
+    /// <summary>Seconds from the silence closing the answer to the student speaking again, when <see cref="MayHaveBeenCutOff"/>.</summary>
+    public double? CutOffResumeSeconds { get; init; }
+
     /// <summary>Earlier claims the student withdrew in this answer (GAD-T441); empty when none, or for a blinded grader.</summary>
     public IReadOnlyList<RetractionView> Retractions { get; init; } = [];
 }

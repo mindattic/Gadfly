@@ -323,6 +323,21 @@ public sealed class SocraticSession
         return true;
     }
 
+    /// <summary>
+    /// Records that turn <paramref name="turnIndex"/>'s spoken answer may have been cut off by the end-of-answer silence (GAD-T462):
+    /// the student spoke again <paramref name="resumeSeconds"/> after it closed. Only the answer's speech metrics change, never its
+    /// text, judgment or mastery; a turn not watched for cut-offs (<see cref="AnswerCutOff.Mark"/>) or already marked is left as it
+    /// is. Returns true when the mark was added.
+    /// </summary>
+    public bool NoteAnswerCutOff(int turnIndex, double resumeSeconds)
+    {
+        if (turnIndex < 0 || turnIndex >= _turns.Count) return false;
+        var turn = _turns[turnIndex];
+        if (turn.Answer is not { Mode: "voice" } answer || AnswerCutOff.Mark(answer.SpeechMetrics, resumeSeconds) is not { } marked) return false;
+        Replace(turn with { Answer = answer with { SpeechMetrics = marked } });
+        return true;
+    }
+
     /// <summary>Ends the session. An unanswered open turn is kept as asked.</summary>
     public void End(EndReason reason, DateTimeOffset endedAt)
     {

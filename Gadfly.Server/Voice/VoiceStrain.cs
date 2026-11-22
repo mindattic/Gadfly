@@ -207,7 +207,9 @@ public static class VoiceStrain
     /// <summary>GAD-T259: the metrics without the browser's voice measurements or any comparison, marked <see cref="OffKey"/>.</summary>
     public static IReadOnlyDictionary<string, double> TurnOff(IReadOnlyDictionary<string, double> metrics)
     {
-        var d = metrics.Where(kv => !kv.Key.StartsWith("strain.", StringComparison.Ordinal) && !kv.Key.StartsWith("voice.", StringComparison.Ordinal))
+        // The cut-off watch (GAD-T462) is off with them: an answer without it is never marked as cut off.
+        var d = metrics.Where(kv => !kv.Key.StartsWith("strain.", StringComparison.Ordinal) && !kv.Key.StartsWith("voice.", StringComparison.Ordinal)
+                && !kv.Key.StartsWith(AnswerCutOff.Prefix, StringComparison.Ordinal))
             .ToDictionary(kv => kv.Key, kv => kv.Value);
         d[OffKey] = 1;
         return d;

@@ -161,6 +161,9 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                 Strain = blinded || t.AnswerMode != "voice" ? null : Gadfly.Server.Voice.VoiceStrain.Describe(metrics),
                 Recitation = recitations.GetValueOrDefault(t.Id),
                 Retractions = retractions,
+                // GAD-T462: a neutral completeness note, not a voice measurement of the person, so a blind grader sees it too.
+                MayHaveBeenCutOff = t.AnswerMode == "voice" && Gadfly.Engine.AnswerCutOff.Read(metrics) == true,
+                CutOffResumeSeconds = t.AnswerMode == "voice" ? Gadfly.Engine.AnswerCutOff.ResumeSeconds(metrics) : null,
             };
         }).ToList();
 

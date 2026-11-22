@@ -97,7 +97,8 @@ public static class VoiceAnswerBuilder
         var answer = new Answer
         {
             Text = text, Mode = "voice", Words = timed, StartedAt = startedAt, CompletedAt = now,
-            SpeechMetrics = VoiceAcousticKeys.Add(SpeechMetricKeys.Flatten(metrics, verification), payload.Acoustics),
+            // Watched for a cut-off by the end-of-answer silence (GAD-T462): 0 now, set to 1 if the student goes on speaking at once.
+            SpeechMetrics = AnswerCutOff.Watched(VoiceAcousticKeys.Add(SpeechMetricKeys.Flatten(metrics, verification), payload.Acoustics)),
         };
         return new VoiceAnswerResult(answer, verification, metrics);
     }

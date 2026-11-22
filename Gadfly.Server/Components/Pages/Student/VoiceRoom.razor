@@ -11,6 +11,7 @@
 @inject TimeProvider Clock
 @inject ExaminerSpeechWarmup Warmup
 @inject Gadfly.Server.Diagnostics.VoiceRecognitionTimingRecorder RecognitionTimings
+@inject Gadfly.Server.Sessions.SessionOrchestrator Sessions
 
 @* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
@@ -597,6 +598,7 @@
     {
         // The question it answers, as shown when it arrived: the awaits below can let the exam move on first (GAD-T321).
         if (payload is not null) payload.Turn = TurnIndex;
+        cutOffTurn = TurnIndex;   // the answer a cut-off marker that follows belongs to (GAD-T462)
         // The words as heard, joined the way VoiceAnswerBuilder joins them; the delay is the one the student watched (display only).
         var said = string.Join(' ', (payload?.Segments ?? []).Select(s => (s.Text ?? "").Trim()).Where(t => t.Length > 0));
         var delay = payload?.ResponseDelayMs is { } ms && double.IsFinite(ms) && ms >= 0 && ms / 1000 <= MaxDelaySeconds ? ms / 1000 : (double?)null;
@@ -607,6 +609,27 @@
         StateHasChanged();
         await OnAnswer.InvokeAsync(payload);
     });
+
+    /// <summary>The turn whose spoken answer was sent last and not yet marked as cut off (GAD-T462); null once marked.</summary>
+    private int? cutOffTurn;
+
+    /// <summary>
+    /// The end-of-answer silence closed the last answer and the student went on speaking <paramref name="delayMs"/> later
+    /// (GAD-T462). Stored with that answer's speech metrics as a possible cut-off, once per answer; never audio, never part of a
+    /// grade or of how the examiner probes. Best effort: a failure here never disturbs the exam.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnAnswerCutOff(double delayMs)
+    {
+        if (cutOffTurn is not { } turn || org == Guid.Empty || user == Guid.Empty) return;
+        cutOffTurn = null;
+        try { await AnswerCutOffRecorder.RecordAsync(Scopes, Sessions, org, user, SessionId, turn, delayMs, stop.Token); }
+        catch (OperationCanceledException) { }   // the room closed
+        catch (Exception ex)
+        {
+            Log.LogDebug(ex, "A possible answer cut-off could not be recorded for session {SessionId}.", SessionId);
+        }
+    }
 
     /// <summary>
     /// Recognizer latency and this answer's unsure-word share, into the in-memory status-page counters (GAD-T361).
