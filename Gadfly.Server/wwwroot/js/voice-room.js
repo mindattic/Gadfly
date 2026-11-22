@@ -75,6 +75,7 @@ export function init(dotnet, cfg) {
         selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null, face: null,
         pauses: [], lastSpeechEndAt: null,   // the student's own mid-answer pauses, which the end-of-answer cue adapts to (GAD-T264)
         fill: null, fillPlaying: null,       // filling the wait while an answer is judged (GAD-T290): pending lines, the one being said
+        fillAmbience: null,                  // the quiet page-turn loop under the wait (GAD-T409)
         acoustics: new VoiceAcoustics(),   // voice strain indicators (GAD-T232): summary numbers only, never audio
     };
     S.onRemark = (e) => remarkHold(S, !!(e.detail && e.detail.active));
@@ -384,12 +385,14 @@ const FILL = { timeoutMs: 6000, retryMs: 500, gapMs: 8000, lateMs: 10000 };
  * said while the microphone is open, a question or remark is being spoken, or another line is still playing: the attempt waits
  * for that (the read-back may still be finishing) and is dropped once its moment has passed. The microphone gate stays closed
  * the whole time, so a line is never captured or transcribed into an answer, and the next question (speak()) cancels what is left.
+ * A quiet page-turn loop (GAD-T409) runs alongside, under the filler line's own volume, so the wait never feels silent.
  */
 export function fillWait(first, again, firstAfterMs, againAfterMs) {
     const s = S;
     if (!s || !s.running) return;
     cancelFill(s);
     const f = s.fill = { timers: [], startedAt: performance.now(), saidAt: null };
+    startFillAmbience(s);
     const attempt = (what, until) => {
         if (S !== s || s.fill !== f) return;
         const now = performance.now();
@@ -411,9 +414,51 @@ export function endWait() {
 }
 
 function cancelFill(s) {
-    if (!s || !s.fill) return;
+    if (!s) return;
+    stopFillAmbience(s);   // every exit from the wait (next question, wait ends, mic reopens, stop()) ends the loop here too
+    if (!s.fill) return;
     s.fill.timers.forEach(clearTimeout);
     s.fill = null;
+}
+
+/** Page-turn/book-rustle ambience under the wait (GAD-T409), a CC0 clip (GAD-T408) alternated so a whole exam never repeats
+ * the same one twice running. A plain looping <audio>, well under the filler line's own volume, faded in and out so it is
+ * never an abrupt start or cut and is always gone before the examiner's next question can be heard. */
+const FILL_AMBIENCE = {
+    sources: ["/sounds/page-turn-1.mp3", "/sounds/page-turn-2.mp3"],
+    gain: 0.12, fadeInMs: 200, fadeOutMs: 300,
+};
+let fillAmbienceNext = 0;
+
+function startFillAmbience(s) {
+    try {
+        const src = FILL_AMBIENCE.sources[fillAmbienceNext % FILL_AMBIENCE.sources.length];
+        fillAmbienceNext++;
+        const audio = new Audio(src);
+        audio.loop = true;
+        audio.volume = 0;
+        s.fillAmbience = audio;
+        audio.play().then(() => fadeVolume(audio, FILL_AMBIENCE.gain, FILL_AMBIENCE.fadeInMs)).catch(() => { });
+    } catch { }
+}
+
+function stopFillAmbience(s) {
+    const audio = s.fillAmbience;
+    if (!audio) return;
+    s.fillAmbience = null;
+    fadeVolume(audio, 0, FILL_AMBIENCE.fadeOutMs, () => { try { audio.pause(); } catch { } });
+}
+
+/** Ramps an <audio> element's volume toward target over ms, then calls done (shared by the wait ambience's fade in/out). */
+function fadeVolume(audio, target, ms, done) {
+    const from = audio.volume, startedAt = performance.now();
+    const step = () => {
+        const t = Math.min(1, (performance.now() - startedAt) / ms);
+        try { audio.volume = from + (target - from) * t; } catch { return; }
+        if (t < 1) requestAnimationFrame(step);
+        else if (done) done();
+    };
+    requestAnimationFrame(step);
 }
 
 /** Only while quietly waiting on the panel: the gate shut, nothing being asked or answered, the examiner free to talk. */
