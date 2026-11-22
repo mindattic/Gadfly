@@ -47,7 +47,7 @@ public enum LeakGuardResult
 /// objective's fixed, instructor-written hint ladder (GAD-T271), and skip the guard because they teach on purpose;
 /// everything after them is assisted evidence (GAD-T93).
 /// </summary>
-public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? prompts = null)
+public sealed partial class QuestionGenerator(ISocraticVotingClient panel, PromptSet? prompts = null)
 {
     private readonly PromptSet _prompts = prompts ?? ExamPromptsV3.Set;
 
@@ -100,23 +100,31 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
         var undecided = false;
         var guarded = false;
         bool? previous = false; // the guard's verdict on the previous draft: true leaked, null undecided, false none (or empty)
+        var introspective = false; // the previous draft asked about the student's own thought process (GAD-T445)
         for (var attempt = 0; attempt < 2; attempt++)
         {
             var ask = previous switch
             {
                 true => prompt + "\n\nYour previous draft revealed expected answer points. Ask without stating or hinting at any of them.",
                 null => prompt + "\n\nYour previous draft could not be confirmed free of expected answer points. Ask without stating or hinting at any of them.",
+                _ when introspective => prompt + "\n\nYour previous draft asked about the student's own thought process. Ask for the reasons behind their claim instead.",
                 _ => prompt,
             };
             previous = false;
+            introspective = false;
             var result = await panel.AskAsync(ask, "", Quorum.Plurality, ct);
-            var question = Usable(Clean(PanelText(result)));
+            var fused = Clean(PanelText(result));
+            var question = Usable(fused);
             if (question.Length == 0)
                 question = await PickDraftAsync(result, r.Decision.Move, dialogue, ct);
             if (question.Length == 0)
             {
+                // A draft asking how the student arrived at their answer is dropped before any guard call: introspective reports
+                // are unreliable evidence (GAD-T445; Nisbett and Wilson 1977), so it is redrafted, never asked.
+                introspective = IsIntrospective(fused) || result.IndividualVotes.Any(v => !v.IsError && IsIntrospective(Clean(v.Decision)));
                 var errors = result.IndividualVotes.Where(v => v.IsError).Select(v => $"; {v.ProviderId}: {v.ErrorMessage}");
-                reasons.Add($"empty draft ({(result.QuorumReached ? "quorum reached" : "no quorum")}{string.Concat(errors)})");
+                reasons.Add(introspective ? "draft asked about the student's own thought process"
+                    : $"empty draft ({(result.QuorumReached ? "quorum reached" : "no quorum")}{string.Concat(errors)})");
                 continue;
             }
             if (string.IsNullOrWhiteSpace(r.RubricForGuard))
@@ -259,8 +267,30 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
         if (IsPanelFailureText(draft)) return "";
         // A draft that talks about the student instead of to them ("...and ask the student to explain") is an instruction, not a question.
         if (draft.Contains("the student", StringComparison.OrdinalIgnoreCase)) return "";
+        // A question about the student's own mental process asks for a report people cannot reliably give (GAD-T445).
+        if (IsIntrospective(draft)) return "";
         return draft;
     }
+
+    /// <summary>
+    /// True when a question asks the student to report their own mental process ("how did you arrive at that?", "what were you
+    /// thinking?", "what went through your mind?") rather than the reasons for a claim. Such reports are unreliable (Nisbett and
+    /// Wilson 1977; Ericsson and Simon 1980), so the examiner never asks them (GAD-T445). "Why is that so?" and "how do you know?"
+    /// ask for a justification and stay allowed.
+    /// </summary>
+    public static bool IsIntrospective(string? question) => !string.IsNullOrWhiteSpace(question) && Introspection().IsMatch(question);
+
+    [System.Text.RegularExpressions.GeneratedRegex(
+        @"\bhow\s+did\s+you\s+(come\s+up\s+with|arrive\s+at|get\s+to|end\s+up\s+with|figure|work\s+(that|this|it)\s+out|work\s+out|reach|decide|land\s+on|think\s+of|go\s+about)\b"
+        + @"|\bwhat\s+(made|led|prompted|caused)\s+you\s+to\s+(think|say|decide|conclude|choose|answer|believe)\b"
+        + @"|\bwhat\s+(made|led)\s+you\s+(think|say|decide|conclude|choose|believe)\b"
+        + @"|\bwhat\s+(were|are)\s+you\s+thinking\b"
+        + @"|\bwhat\s+(went|was\s+going|goes)\s+through\s+your\s+(mind|head)\b"
+        + @"|\b(your|the)\s+thought\s+process\b|\byour\s+thinking\s+process\b"
+        + @"|\bhow\s+were\s+you\s+thinking\b|\bwhat\s+was\s+in\s+your\s+(mind|head)\b"
+        + @"|\bwalk\s+me\s+through\s+(how\s+you\s+(thought|got|arrived|figured)|your\s+(thinking|thoughts))\b",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex Introspection();
 
     internal static string Fallback(MoveKind move, string concept, string? related) => move switch
     {

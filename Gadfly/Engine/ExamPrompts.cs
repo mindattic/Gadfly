@@ -25,8 +25,12 @@ public static partial class ExamPrompts
     /// knowledge-transfer only for an Apply question (GAD-T268).
     /// 8: probing pressure comes from what the answers said and how the judges read them (hedging, vague wording, no reason
     /// or example, a score not yet convincing, evidence against, unclear meaning, recitation), never from the voice, the wait
-    /// before answering or hesitations, which no longer reach the prompt (GAD-T258).</summary>
-    public const int Version = 8;
+    /// before answering or hesitations, which no longer reach the prompt (GAD-T258).
+    /// 9: no introspection questions: the question prompt forbids asking about the student's own mental process ("how did you
+    /// arrive at that?"), the leak guard rejects such a question, and the judge and the analysis score whether a justification
+    /// is correct and connected, never whether it reports how the student thought (GAD-T445; Nisbett and Wilson 1977,
+    /// Ericsson and Simon 1980).</summary>
+    public const int Version = 9;
 
     /// <summary>Delimits text the student wrote or said; <see cref="Student"/> strips forged copies of these tags from the text it wraps.</summary>
     public const string StudentOpen = "<student_text>", StudentClose = "</student_text>";
@@ -92,6 +96,10 @@ public static partial class ExamPrompts
         - Never let the form of the question presuppose an answer the student has not given: "what makes X
           happen?" presupposes an outside cause, "why does X raise Y?" presupposes that it does. Ask about
           what the student said ("what happens to Y when X changes, and why?") instead.
+        - Ask about the subject, never about the student's own mental process: no "how did you arrive at
+          that?", "what were you thinking?", "how did you figure that out?" or "what went through your
+          mind?". People cannot reliably report how they reached an answer; ask for the reasons that
+          support their claim instead ("why does that hold?", "what shows that it is so?").
         - Adapt to what the recent answers said (listed below): where understanding looks shaky, probe
           harder within the move (ask for a concrete example, challenge an assumption, ask why again, or pose
           a counterfactual) until it is clear whether the concept is understood. These cues are only a reason
@@ -195,7 +203,9 @@ public static partial class ExamPrompts
         "uncertain" that their meaning cannot be determined. Use "knowledge-transfer" only when the question
         move is Apply (a situation new to the student). Reasoning about a changed condition in a situation
         already discussed (ScenarioVariation) is extrapolation: use "application"; relating two concepts
-        (Synthesize) is "conceptual-understanding" or "logical-reasoning".
+        (Synthesize) is "conceptual-understanding" or "logical-reasoning". A student's account of how they
+        thought or arrived at an answer is not evidence of reasoning: record the reasons they give for a
+        claim, judged on whether they are correct and connected to it.
         """;
 
     public const string QuestionGuard = $$"""
@@ -206,7 +216,10 @@ public static partial class ExamPrompts
         question that takes an answer point for granted hints at it as surely as one that states it.
         "What makes X happen?" presupposes an outside cause; "why does X raise Y?" presupposes that X
         raises Y; "how does X cause Y?" presupposes a causal link. A presupposition the student already
-        stated themselves is not a leak. SAFE means none of these.
+        stated themselves is not a leak. LEAKS also means the question asks the student to report their
+        own mental process (how they arrived at, figured out or came up with something, what they were
+        thinking, what went through their mind) instead of the reasons for a claim: such a question is
+        never asked either. SAFE means none of these.
 
         {{StudentTextRule}}
 
@@ -239,7 +252,10 @@ public static partial class ExamPrompts
 
         Criteria:
         - accuracy: agreement with the source passages.
-        - reasoning: the answer explains why or how, not only what.
+        - reasoning: the answer explains why or how, not only what. Score a justification on whether it
+          is correct and connected to the claim it supports. An account of how the student thought, felt
+          or arrived at the answer is not a justification: it earns no credit by itself, and its absence
+          costs nothing.
         - consistency: no conflict with the student's earlier claims (listed below), unless they
           explicitly corrected themselves, which is a strength.
         - completeness: covers the rubric points this question called for.

@@ -46,6 +46,8 @@ the person who reviews your exam instead.
 - It never tells you your score, or whether an answer was right, during the exam.
 - It doesn't teach or give hints in an examination. (Some instructors set up a separate *learning* assessment,
   where explanations and hints are given; the instructions on **My exams** say which kind it is.)
+- It never asks how you arrived at an answer or what you were thinking. It asks for your *reasons* ("why does that
+  hold?"), and your reasons are what count, not a description of how you thought.
 - It never decides your grade. People do; see [How grading and results work](grading-and-results.md).
 
 ## Tips that make a real difference
