@@ -190,7 +190,7 @@ public sealed class JobWorker(
 
 public static class JobServiceCollectionExtensions
 {
-    /// <summary>Adds the job queue and its background worker.</summary>
+    /// <summary>Adds the job queue and its background worker, and the lighter in-memory evidence sync queue beside it (GAD-T404).</summary>
     public static IServiceCollection AddGadflyJobs(this IServiceCollection services, Action<JobWorkerOptions>? configure = null)
     {
         var options = new JobWorkerOptions();
@@ -199,6 +199,9 @@ public static class JobServiceCollectionExtensions
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<JobQueue>();
         services.AddHostedService<JobWorker>();
+        // Per-objective evidence bookkeeping queued off the session-step critical path (GAD-T404): not the SQL-table job
+        // queue above (that's for heavier, poll-scheduled work), just the same bounded-channel background-writer shape.
+        Gadfly.Server.Evidence.EvidenceSyncServices.AddEvidenceSyncQueue(services);
         return services;
     }
 
