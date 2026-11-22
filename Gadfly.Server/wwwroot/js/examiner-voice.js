@@ -18,7 +18,13 @@
 //   - Speech fallback: when the voice provider fails, the browser's own speech reads the question (captions and the mouth follow
 //     its word boundaries); with no browser speech the question stays on screen as text.
 //
+//   - The exam language (GAD-T531): in a Korean exam her 3D head lip-syncs Korean (lipsync-ko.js, registered on the head once it
+//     has loaded), the portrait mouth opens once per Hangul syllable, and the browser-speech fallback reads with a Korean voice.
+//     An English exam is unchanged.
+//
 // Gaps in the library that this works around are filed as MindAttic.Avatar tickets (see docs/VOICE.md).
+
+import { registerKorean } from "./lipsync-ko.js";
 
 const STYLE_FADE_MS = 450;
 const TIER_KEY = "gadfly.examiner.tier";
@@ -47,6 +53,7 @@ const safe = (fn) => { try { return fn(); } catch { return undefined; } };
  */
 export function createPresenter(avatar, stage, caption, cfg, onPortrait) {
     const p = {
+        language: String((cfg && cfg.language) || "en").toLowerCase().split(/[-_]/)[0],
         avatar, stage, caption, cfg: cfg || {}, onPortrait: onPortrait || (() => { }),
         tokens: [], spans: [], words: [], lit: -1,
         clock: { running: false, startedAt: 0, pausedAt: 0, pausedTotal: 0, paused: false },
@@ -236,12 +243,16 @@ function mouthOpen(w, t) {
 }
 
 function syllables(word) {
-    const m = String(word || "").toLowerCase().match(/[aeiouy]+/g);
-    return Math.max(1, m ? m.length : 1);
+    const w = String(word || "").toLowerCase();
+    const m = w.match(/[aeiouy]+/g);
+    const hangul = w.match(/[\uac00-\ud7a3]/g);   // one Hangul block is one syllable (GAD-T531)
+    return Math.max(1, (m ? m.length : 0) + (hangul ? hangul.length : 0));
 }
 
 function estimateMs(text) {
-    return Math.max(1500, String(text || "").length * 65);
+    const t = String(text || "");
+    const hangul = (t.match(/[\uac00-\ud7a3]/g) || []).length;
+    return Math.max(1500, (t.length - hangul) * 65 + hangul * 170);
 }
 
 // ------------------------------------------------------------------------------------------------------- pause / resume
@@ -347,6 +358,7 @@ function afterReady(p) {
     if (!el || p.disposed) return;
     p.mouthGeo = null;
     if (el.mode !== "3d" || !el.head) return;
+    useLanguage(p, el);
     applyTier(p, p.tier);
     // A lost WebGL context (driver reset, GPU memory pressure, too many tabs): the portrait shows at once and her voice goes on.
     const canvas = el.shadowRoot && el.shadowRoot.querySelector("canvas");
@@ -355,6 +367,16 @@ function afterReady(p) {
         canvas.addEventListener("webglcontextlost", (e) => { safe(() => e.preventDefault()); toPortrait(p, "graphics-lost"); });
     }
     startFps(p);
+}
+
+/**
+ * Her lip-sync language (GAD-T531). TalkingHead has no Korean module of its own: Gadfly's is registered on the loaded head, and only
+ * then is the element's lang set (ma-avatar reads it for every utterance, and does not reload on it), so TalkingHead never tries to
+ * fetch a Korean module it doesn't have. English needs nothing: the head loads with English.
+ */
+function useLanguage(p, el) {
+    if (p.language !== "ko") return;
+    if (safe(() => registerKorean(el.head))) safe(() => el.setAttribute("lang", "ko"));
 }
 
 function applyTier(p, t) {
@@ -428,9 +450,11 @@ function completePortrait(p) {
 
 // -------------------------------------------------------------------------------------------------------- browser speech
 
-function englishVoice() {
+/** A browser voice for `language` ("en", "ko"), a local one first. */
+function browserVoice(language) {
     const voices = safe(() => window.speechSynthesis.getVoices()) || [];
-    return voices.find((v) => /^en(-|_)/i.test(v.lang) && v.localService) || voices.find((v) => /^en/i.test(v.lang)) || null;
+    const exact = new RegExp("^" + language + "(-|_)", "i"), loose = new RegExp("^" + language, "i");
+    return voices.find((v) => exact.test(v.lang) && v.localService) || voices.find((v) => loose.test(v.lang)) || null;
 }
 
 /**
@@ -446,8 +470,8 @@ function speakWithBrowser(p, text) {
     p.fallbackActive = true;
     return new Promise((resolve) => {
         const u = new SpeechSynthesisUtterance(text);
-        u.lang = "en-US";
-        const v = englishVoice();
+        u.lang = p.language === "ko" ? "ko-KR" : "en-US";
+        const v = browserVoice(p.language === "ko" ? "ko" : "en");
         if (v) u.voice = v;
         u.rate = 1;
         // Character offsets of each caption word, to map boundary events onto words.
