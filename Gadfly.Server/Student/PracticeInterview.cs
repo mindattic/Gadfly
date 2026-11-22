@@ -120,6 +120,86 @@ public sealed class PracticeInterview
     /// <summary>Said before the eye-contact step when the student answered the question anyway.</summary>
     public const string AnsweredThanks = "Thank you. Whatever you knew, remember that I don't know is always an allowed answer.";
 
+    // ------------------------------------------------------------------------------------------ the practice in Korean (GAD-T544)
+    // The same steps and lines, said the way a warm Korean examiner would (해요체, with 합쇼체 for her greeting), following the
+    // glossary in docs/LOCALIZATION.md. Change both languages together.
+
+    public static readonly IReadOnlyList<PracticeStep> KoreanSteps =
+    [
+        new(Welcome, "말로 답하기",
+        [
+            "자신의 말로 소리 내어 답해 주세요. 말하는 동안 \"들은 내용\" 아래에 답이 표시돼요.",
+            "말을 멈추면 짧은 카운트다운이 나타나고, 끝나면 답이 제출돼요. 다시 말하면 카운트다운이 취소되니, 생각하느라 잠시 멈춰도 괜찮아요.",
+            "\"답변 완료\"를 누르면 바로 제출돼요. \"질문 다시 듣기\"를 누르면 시험관이 질문을 다시 말해 줘요.",
+        ], true),
+        new(AsHeard, "답은 들은 그대로 처리돼요",
+        [
+            "시험관은 답을 다시 읽어 주지 않아요. 제출된 답은 들은 그대로 처리되고, 사람과 대화하듯 시험이 이어져요.",
+            "제출한 뒤에는 답을 바꿀 수 없으니, 카운트다운이 끝나기 전에 하고 싶은 말을 해 주세요. 그 전까지는 계속 말하거나 \"지우고 다시 답하기\"를 눌러 처음부터 다시 할 수 있어요.",
+            "단어를 잘못 알아들어도 따로 할 일은 없어요. 채점자는 음성 인식이 확신하지 못한 단어가 무엇인지 볼 수 있어요.",
+            "해 보세요: 답을 시작했다가 \"지우고 다시 답하기\"를 누르고, 다시 답해 보세요.",
+        ], true),
+        new(DontKnow, "\"잘 모르겠어요\"라고 말하기",
+        [
+            "답을 하면 시험관은 잠시 생각해요. \"잠시만요\" 같은 짧은 말과 조용한 소리가 들릴 수 있지만, 답이 어땠는지와는 아무 관계가 없어요.",
+            "\"잘 모르겠어요\"도 솔직하고 엄연한 답이에요. 그것만으로 불합격이 되지 않으며, 시험관은 다른 방향으로 묻거나 다음으로 넘어가요.",
+            "해 보세요: 이 질문의 답을 모르면 \"잘 모르겠어요\"라고 말하면 돼요.",
+        ], true),
+        new(EyeContact, "시선 맞추기와 화면 흐려짐",
+        [
+            "답하는 동안에는 사람과 이야기하듯 시험관을 봐 주세요. 카메라는 이 기기 안에서만 확인하며, 영상은 기록되거나 전송되지 않아요.",
+            "답하는 중에 한동안 다른 곳을 보면 화면이 천천히 흐려지며 \"시험관을 봐 주세요\"라고 나와요. 다시 보면 바로 원래대로 돌아와요. 계속 다른 곳을 보면 시험관이 소리 내어 자신을 봐 달라고 해요.",
+            "생각하느라 잠깐 시선을 돌리는 것은 괜찮고, 답을 시작할 때는 시간을 더 줘요.",
+            "해 보세요: 답을 시작한 뒤 몇 초 동안 화면에서 눈을 떼고 화면이 어떻게 되는지 보세요.",
+        ], true),
+        new(Pause, "마이크나 카메라가 멈추면",
+        [
+            "마이크나 카메라가 멈추거나 연결이 끊기면, 시험 화면에 \"시험이 일시 정지되었어요\"와 함께 무엇이 문제이고 어떻게 고치는지 나와요.",
+            "문제를 해결하고 \"다시 시도\"를 누르면 시험관이 질문을 다시 해요.",
+            "첫 질문을 한 뒤에는 일시 정지된 동안 시간이 멈춰요(모두 합해 최대 10분). 직접 해 본다면 위의 연습 시계를 지켜보세요.",
+            "원하면 해 보세요: 마이크를 뽑거나 카메라를 끈 뒤 다시 연결하고 \"다시 시도\"를 누르세요. 다 되면 \"준비됐어요\"라고 말해 주세요.",
+        ], true),
+        new(Ready, "준비가 끝났어요",
+        [
+            "실제 시험에서는 수업 내용에 대해 질문하며, 각 질문은 바로 앞의 답에서 이어져요.",
+            "마이크와 카메라는 시험 내내 켜져 있어야 해요. 입력 답변이나 시선 맞추기 편의 지원은 담당 교수자만 허락할 수 있어요.",
+            "이 연습은 내 시험에서 언제든 다시 할 수 있어요.",
+        ], false),
+    ];
+
+    private static readonly IReadOnlyDictionary<string, string> KoreanLines = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        [Welcome] = "안녕하세요, 저는 앞으로 시험을 함께할 시험관입니다. 지금은 연습이에요. 여기서 하는 말은 저장되지도, 채점되지도, 응시 횟수에 들어가지도 않아요. "
+            + "제가 질문을 소리 내어 하면, 자신의 말로 소리 내어 답해 주세요. 한번 해 볼까요? "
+            + "요즘 무엇을 공부하고 있는지 한두 문장으로 말해 주세요. 말을 멈추면 짧은 카운트다운이 지나고 답이 제출돼요.",
+        [AsHeard] = "고마워요. 제가 답을 다시 읽어 드리지 않았죠? 시험에서는 답이 제출되면 제가 들은 그대로 처리되고, "
+            + "사람과 대화하듯 다음으로 넘어가요. 제출한 뒤에는 바꿀 수 없으니, 카운트다운이 끝나기 전에 하고 싶은 말을 해 주세요. "
+            + "그 전까지는 계속 말하거나, 지우고 다시 답하기를 눌러 처음부터 다시 할 수 있어요. 한번 해 봐요. "
+            + "즐겨 하는 일에 대해 이야기하다가, 중간에 지우고 다시 답하기를 누르고 다시 시작해 보세요.",
+        [DontKnow] = "고마워요. 방금 제가 생각하는 동안 짧은 말과 조용한 소리가 들렸을 수도 있어요. "
+            + "그건 제가 잠시 생각하는 것일 뿐, 답이 어땠는지와는 아무 관계가 없어요. "
+            + "다음은 모를 때예요. 가끔은 답할 수 없는 질문을 할 수도 있어요. 잘 모르겠다고 말하는 건 솔직한 답이고, 괜찮아요. "
+            + "지금 해 볼까요? 부르키나파소의 수도는 어디일까요? 잘 모르겠으면 그냥 잘 모르겠어요라고 말해 주세요.",
+        [EyeContact] = "이제 시선 맞추기예요. 답하는 동안에는 사람과 이야기하듯 저를 봐 주세요. "
+            + "카메라는 이 기기 안에서만 확인하고, 영상은 기록되거나 전송되지 않아요. "
+            + "답하는 중에 한동안 다른 곳을 보면 화면이 천천히 흐려지면서 다시 봐 달라고 하고, 다시 보면 바로 원래대로 돌아와요. "
+            + "생각하느라 잠깐 시선을 돌리는 건 괜찮아요. 해 볼까요? 지금 있는 방을 설명하다가, 중간에 몇 초 동안 화면에서 눈을 떼 보세요.",
+        [Pause] = "화면이 흐려졌다면, 다시 보자마자 원래대로 돌아오는 걸 보셨을 거예요. 여기서는 그 기록도 남지 않아요. "
+            + "마지막이에요. 마이크나 카메라가 멈추거나 연결이 끊기면 시험이 일시 정지돼요. "
+            + "화면에 무엇이 문제인지 나와요. 문제를 해결하고 다시 시도를 누르면 제가 질문을 다시 할게요. "
+            + "일시 정지된 동안에는 시간이 멈추고, 모두 합해 최대 10분까지예요. "
+            + "원하면 지금 해 보세요. 마이크를 뽑거나 카메라를 껐다가 다시 연결하고 다시 시도를 누르면 돼요. "
+            + "마칠 준비가 되면 준비됐어요라고 말해 주세요.",
+        [Ready] = "이게 전부예요. 실제 시험에서는 수업 내용에 대해 질문하고, 각 질문은 바로 앞의 답에서 이어져요. "
+            + "천천히, 자신의 말로 답하고, 모를 때는 잘 모르겠어요라고 말해 주세요. 이제 준비됐어요. 시험 잘 보세요.",
+    };
+
+    /// <summary>The Korean of <see cref="AporiaThanks"/>.</summary>
+    public const string KoreanAporiaThanks = "솔직한 답이었고, 그렇게 말하는 게 바로 맞아요. 저라면 다른 방향으로 다시 묻거나 다음으로 넘어갈 거예요.";
+
+    /// <summary>The Korean of <see cref="AnsweredThanks"/>.</summary>
+    public const string KoreanAnsweredThanks = "고마워요. 알고 있었든 아니든, 잘 모르겠어요는 언제나 허용되는 답이라는 걸 기억해 주세요.";
+
     /// <summary>A throwaway id for this practice. It names no exam session or any other row; it only arms the voice hubs.</summary>
     public Guid Id { get; } = Guid.NewGuid();
 
@@ -138,7 +218,10 @@ public sealed class PracticeInterview
     /// <summary>How many answers the student gave (counted in memory for the page, never stored).</summary>
     public int AnswersGiven { get; private set; }
 
-    public PracticeStep Current => Steps[StepIndex];
+    public PracticeStep Current => StepsFor(Language)[StepIndex];
+
+    /// <summary>The steps in <paramref name="language"/> (GAD-T544): Korean when the practice runs in Korean, else English. Same keys and order.</summary>
+    public static IReadOnlyList<PracticeStep> StepsFor(string? language) => Gadfly.Engine.ExamLanguage.IsKorean(language) ? KoreanSteps : Steps;
 
     public bool IsFinished => StepIndex == Steps.Count - 1;
 
@@ -146,15 +229,26 @@ public sealed class PracticeInterview
     public bool WantsAnswer => Current.WantsAnswer;
 
     /// <summary>What the examiner says for the current step.</summary>
-    public string Line => LineFor(Current.Key, SaidIDontKnow);
+    public string Line => LineFor(Current.Key, SaidIDontKnow, Language);
 
     /// <summary>The examiner's words for a step; the eye-contact step starts with her reaction to the "I don't know" step.</summary>
-    public static string LineFor(string key, bool saidIDontKnow) =>
-        key == EyeContact ? (saidIDontKnow ? AporiaThanks : AnsweredThanks) + " " + Lines[key] : Lines[key];
+    public static string LineFor(string key, bool saidIDontKnow) => LineFor(key, saidIDontKnow, null);
 
-    /// <summary>Every line the examiner could say in a practice (the step lines with both reactions).</summary>
+    /// <summary>The examiner's words for a step in <paramref name="language"/> (GAD-T544): Korean, else English.</summary>
+    public static string LineFor(string key, bool saidIDontKnow, string? language)
+    {
+        var korean = Gadfly.Engine.ExamLanguage.IsKorean(language);
+        var lines = korean ? KoreanLines : Lines;
+        if (key != EyeContact) return lines[key];
+        var reaction = saidIDontKnow ? (korean ? KoreanAporiaThanks : AporiaThanks) : (korean ? KoreanAnsweredThanks : AnsweredThanks);
+        return reaction + " " + lines[key];
+    }
+
+    /// <summary>Every line the examiner could say in a practice (the step lines with both reactions), in English and Korean.</summary>
     public static IEnumerable<string> AllLines() =>
-        Steps.SelectMany(s => s.Key == EyeContact ? new[] { LineFor(s.Key, true), LineFor(s.Key, false) } : new[] { LineFor(s.Key, false) });
+        new string?[] { null, Gadfly.Engine.ExamLanguage.Korean }.SelectMany(lang => Steps.SelectMany(s => s.Key == EyeContact
+            ? new[] { LineFor(s.Key, true, lang), LineFor(s.Key, false, lang) }
+            : new[] { LineFor(s.Key, false, lang) }));
 
     /// <summary>
     /// The student answered <paramref name="turn"/> with <paramref name="heard"/>. An answer to an earlier turn (it arrived after
@@ -233,7 +327,9 @@ public sealed class PracticeInterview
         if (string.IsNullOrWhiteSpace(heard)) return false;
         if (ResponseVerifier.IsAporiaWord(heard)) return true;
         var t = heard.ToLowerInvariant().Replace('’', '\'');
-        string[] phrases = ["don't know", "dont know", "do not know", "no idea", "not sure", "no clue", "can't remember", "cannot remember", "don't remember"];
+        string[] phrases = ["don't know", "dont know", "do not know", "no idea", "not sure", "no clue", "can't remember", "cannot remember", "don't remember",
+            // Korean (GAD-T544): 모르겠어요, 몰라요, 모릅니다, 잘 모르, 기억이 안 나요
+            "모르겠", "몰라", "모릅니다", "잘 모르", "기억이 안", "기억 안"];
         return phrases.Any(t.Contains);
     }
 }

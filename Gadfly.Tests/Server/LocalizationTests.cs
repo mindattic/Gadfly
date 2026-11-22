@@ -100,7 +100,7 @@ public class LocalizationTests
     {
         var server = RepoFiles.ServerFolder();
         if (server is null) { Assert.Ignore("Gadfly.Server sources not found"); return; }
-        var use = new Regex(@"\bT\[""([a-zA-Z0-9_.]+)""");
+        var use = new Regex(@"\b(?:T|UiLanguage)\[""([a-zA-Z0-9_.]+)""");
         var missing = Directory.EnumerateFiles(server, "*.*", SearchOption.AllDirectories)
             .Where(f => (f.EndsWith(".razor") || f.EndsWith(".cs")) && !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
                         && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
@@ -126,6 +126,21 @@ public class LocalizationTests
             }
         Assert.That(Gadfly.Server.Student.ConsentNotice.For("Org", "Exam", 90, Gadfly.Server.Data.ExamMode.Text, language: "en").Sha256,
             Is.EqualTo(Gadfly.Server.Student.ConsentNotice.For("Org", "Exam", 90, Gadfly.Server.Data.ExamMode.Text).Sha256), "English is unchanged");
+    }
+
+    /// <summary>GAD-T544: the practice in Korean has the same steps in the same order, and hears a Korean "I don't know".</summary>
+    [Test]
+    public void KoreanPractice_MirrorsTheEnglishSteps()
+    {
+        var en = Gadfly.Server.Student.PracticeInterview.Steps;
+        var ko = Gadfly.Server.Student.PracticeInterview.StepsFor("ko");
+        Assert.That(ko.Select(s => (s.Key, s.WantsAnswer)), Is.EqualTo(en.Select(s => (s.Key, s.WantsAnswer))));
+        Assert.That(ko.Zip(en).All(p => p.First.Points.Count == p.Second.Points.Count), Is.True);
+        Assert.That(Gadfly.Server.Student.PracticeInterview.LineFor(Gadfly.Server.Student.PracticeInterview.EyeContact, true, "ko"),
+            Does.StartWith(Gadfly.Server.Student.PracticeInterview.KoreanAporiaThanks));
+        Assert.That(new Gadfly.Server.Student.PracticeInterview().Line, Is.EqualTo(Gadfly.Server.Student.PracticeInterview.LineFor("welcome", false)), "English by default");
+        Assert.That(Gadfly.Server.Student.PracticeInterview.SoundsLikeIDontKnow("음... 잘 모르겠어요"), Is.True);
+        Assert.That(Gadfly.Server.Student.PracticeInterview.SoundsLikeIDontKnow("서울입니다"), Is.False);
     }
 
     [Test]

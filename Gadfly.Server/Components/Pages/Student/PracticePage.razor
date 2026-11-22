@@ -18,33 +18,33 @@
     <link rel="stylesheet" href="student.css" />
     <link rel="stylesheet" href="practice.css" />
 </HeadContent>
-<PageTitle>Meet your examiner (practice) · Gadfly Exams</PageTitle>
+<PageTitle>@UiLanguage["practice.pageTitle"]</PageTitle>
 
 <div class="exam-room practice-room @(started ? "exam-live" : null)">
     <header class="exam-head">
-        <h1>Meet your examiner <span class="practice-tag">Practice</span></h1>
+        <h1>@UiLanguage["practice.heading"] <span class="practice-tag">@UiLanguage["practice.tag"]</span></h1>
         @if (started)
         {
             <div class="exam-bar">
                 <PracticeGaze Practice="practice" />
             </div>
             <div class="exam-status">
-                <span class="timer" role="timer" aria-live="off" title="Practice clock: it stops while the practice is paused">@Format(practice.Clock.Remaining(Clock.GetUtcNow()))</span>
+                <span class="timer" role="timer" aria-live="off" title="@UiLanguage["practice.clockTitle"]">@Format(practice.Clock.Remaining(Clock.GetUtcNow()))</span>
                 @if (practice.Clock.GivenBack(Clock.GetUtcNow()) is { } back && back >= TimeSpan.FromSeconds(1))
                 {
-                    <span class="hint practice-credit">Paused time given back: @Format(back)</span>
+                    <span class="hint practice-credit">@UiLanguage["practice.givenBack", Format(back)]</span>
                 }
                 <span class="progress-line">
-                    Step @(practice.StepIndex + 1) of @PracticeInterview.Steps.Count
+                    @UiLanguage["practice.stepOf", practice.StepIndex + 1, PracticeInterview.Steps.Count]
                     <progress max="@PracticeInterview.Steps.Count" value="@(practice.StepIndex + 1)" aria-hidden="true"></progress>
                 </span>
                 <span class="row-actions">
                     @if (!practice.IsFinished)
                     {
-                        <button type="button" class="link" @onclick="Skip" disabled="@pondering">Skip this step</button>
+                        <button type="button" class="link" @onclick="Skip" disabled="@pondering">@UiLanguage["practice.skip"]</button>
                     }
-                    <button type="button" class="link" @onclick="Restart">Start again</button>
-                    <a href="my-exams">Leave the practice</a>
+                    <button type="button" class="link" @onclick="Restart">@UiLanguage["practice.restart"]</button>
+                    <a href="my-exams">@UiLanguage["practice.leave"]</a>
                 </span>
             </div>
         }
@@ -52,31 +52,29 @@
 
     @if (!Settings.Available)
     {
-        <p class="error" role="alert">The talking examiner isn't turned on on this server, so the practice can't run (and spoken exams can't either). Please tell your instructor.</p>
-        <p><a href="my-exams">Back to my exams</a></p>
+        <p class="error" role="alert">@UiLanguage["practice.voiceOff"]</p>
+        <p><a href="my-exams">@UiLanguage["getReady.backToMyExams"]</a></p>
     }
     else if (!started)
     {
         <section class="panel wide practice-intro">
-            <p>A short, friendly run-through with the examiner who will give your exams. She explains each part of a real exam and has you try it:</p>
+            <p>@UiLanguage["practice.intro"]</p>
             <ol class="practice-steps">
-                @foreach (var s in PracticeInterview.Steps)
+                @foreach (var s in PracticeInterview.StepsFor(UiLanguage.Language))
                 {
                     <li>@s.Title</li>
                 }
             </ol>
-            <p><strong>Nothing from this practice is kept.</strong> It isn't graded, reported or counted as an attempt, and none of your exams are affected.
-                It takes about five minutes, and you can leave, skip a step or start again at any time.</p>
-            <p class="hint">You need a working microphone and camera, and your sound on (a headset works best). Your browser will ask to use the microphone and camera: allow both.
-                As in an exam, your camera picture stays on your device; no video or sound is recorded.</p>
+            <p><strong>@UiLanguage["practice.nothingKept"]</strong> @UiLanguage["practice.nothingKeptMore"]</p>
+            <p class="hint">@UiLanguage["practice.needs"]</p>
             @if (Settings.Mode == VoiceMode.Mock)
             {
-                <p class="notice" role="note">Practice voice: speech recognition is simulated on this server, so your words will appear as the placeholder "speech".</p>
+                <p class="notice" role="note">@UiLanguage["practice.mock"]</p>
             }
             <div class="actions">
-                <button type="button" @onclick="Start">Start the practice</button>
-                <a href="my-exams">Back to my exams</a>
-                <HelpLink Topic="practice-interview" Label="About this practice" />
+                <button type="button" @onclick="Start">@UiLanguage["myExams.practice.start"]</button>
+                <a href="my-exams">@UiLanguage["getReady.backToMyExams"]</a>
+                <HelpLink Topic="practice-interview" Label="@UiLanguage["practice.about"]" />
             </div>
         </section>
     }
@@ -88,17 +86,15 @@
         <section class="panel wide exam-card practice-card" aria-labelledby="practice-step-title">
             @if (!voiceOn && !practice.IsFinished)
             {
-                <p class="notice" role="status">@(practice.Clock.IsStarted
-                    ? "The practice is paused until your microphone and camera are working again. Follow the steps above. The clock is stopped while you do, just as in an exam."
-                    : "The examiner will start as soon as your microphone and camera are working.")</p>
+                <p class="notice" role="status">@(practice.Clock.IsStarted ? UiLanguage["practice.paused"] : UiLanguage["practice.waiting"])</p>
             }
-            <p class="concept" id="practice-step-title">Step @(practice.StepIndex + 1): @practice.Current.Title</p>
+            <p class="concept" id="practice-step-title">@UiLanguage["practice.stepTitle", practice.StepIndex + 1, practice.Current.Title]</p>
             @if (pondering)
             {
                 <div class="thinking" role="status">
                     <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
-                    Thinking about your answer…
-                    <span class="hint">In an exam this is when the examiner judges your answer and writes the next question.</span>
+                    @UiLanguage["practice.thinking"]
+                    <span class="hint">@UiLanguage["practice.thinkingWhy"]</span>
                 </div>
             }
             else
@@ -113,11 +109,11 @@
             @if (practice.IsFinished)
             {
                 <div class="practice-done" role="status">
-                    <p><strong>You're ready.</strong> Nothing from this practice was kept, graded or counted.</p>
+                    <p><strong>@UiLanguage["practice.ready"]</strong> @UiLanguage["practice.readyMore"]</p>
                     <div class="actions">
-                        <a class="button" href="my-exams">Go to My exams</a>
-                        <button type="button" class="secondary" @onclick="Restart">Practice again</button>
-                        <HelpLink Topic="student-guide" Label="Student guide" />
+                        <a class="button" href="my-exams">@UiLanguage["practice.goMyExams"]</a>
+                        <button type="button" class="secondary" @onclick="Restart">@UiLanguage["practice.again"]</button>
+                        <HelpLink Topic="student-guide" Label="@UiLanguage["practice.studentGuide"]" />
                     </div>
                 </div>
             }
