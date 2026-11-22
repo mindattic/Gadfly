@@ -57,6 +57,12 @@ else
 
     <ObjectivePaths SessionId="s.Id" />
 
+    @if (view.SecondMarkerBlind)
+    {
+        @* GAD-T485: a second marker stays blind here as on the grading page (GAD-T468). *@
+        <p class="notice">You are this session's blind second marker, so the panel's judgments, the AI report and integrity notes stay hidden from you here, whatever the session's own blind grading says.</p>
+    }
+
     @if (view.JudgesDisagreed > 0)
     {
         <p class="notice warn">The judging panel disagreed on @view.JudgesDisagreed answer@(view.JudgesDisagreed == 1 ? "" : "s"). Those answers are marked below; please read them before grading.</p>
@@ -350,7 +356,7 @@ else
     private bool loading = true;
     private IReadOnlyList<ObjectiveLevel> levels = [];
 
-    private ReviewService Service => new(Db, Tenant.OrganizationId!.Value, viewerRole: Tenant.Role);
+    private ReviewService Service => new(Db, Tenant.OrganizationId!.Value, viewerRole: Tenant.Role, viewerUserId: Tenant.UserId);
 
     protected override async Task OnParametersSetAsync()
     {

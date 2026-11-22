@@ -34,6 +34,9 @@ public static class TranscriptEndpoints
                 // Not entitled and not found look the same, so a session id from elsewhere reveals nothing.
                 if (entitled is null) return Results.NotFound();
                 var audience = TranscriptAudiences.AtMost(entitled.Value, TranscriptAudiences.Parse(copy));
+                // GAD-T485: a second marker gets the blind grader copy; anyone else taking the full copy of a double-marked session is
+                // recorded as having seen its grades, so they can no longer second-mark it blind.
+                audience = await TranscriptAccess.SecondMarkingAsync(db, tenant, sessionId, audience, now, ct);
                 // GAD-T480: a grader's copy names the session code while anonymous marking hides the student's name.
                 var anonymous = await TranscriptAccess.HidesStudentAsync(db, tenant, sessionId, audience, now, ct);
                 var document = await new TranscriptBuilder(db).BuildAsync(org, sessionId, audience, ct, anonymous);

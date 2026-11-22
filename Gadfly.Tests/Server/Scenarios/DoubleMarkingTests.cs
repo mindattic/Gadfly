@@ -276,10 +276,10 @@ public class DoubleMarkingTests : ServerTest
 
         var (sheet, refusal) = await Marking(w.Org, OrgRoles.Examiner, looker, m => m.SheetAsync(w.SessionId));
         Assert.That(sheet, Is.Null);
-        Assert.That(refusal, Does.Contain("already opened this session's grading page"));
+        Assert.That(refusal, Does.Contain("already seen this session's grades"));
         var submit = await SecondMark(w, looker);
         Assert.That(submit.Ok, Is.False);
-        Assert.That(submit.Message, Does.Contain("already opened this session's grading page"));
+        Assert.That(submit.Message, Does.Contain("already seen this session's grades"));
         Assert.That(await Audits(w.Org, DoubleMarkingService.MarkAction, looker), Is.Zero);
 
         // Someone who never looked can still mark it blind.
@@ -313,5 +313,109 @@ public class DoubleMarkingTests : ServerTest
         Assert.That(page, Is.Not.Null);
         if (page!.AiVisible) Assert.Ignore("This exam's policy shows the AI grade before the human grade, so the page does show a grade.");
         Assert.That(await Audits(w.Org, SecondMarkerBlindness.SawGradesAction, looker), Is.Zero);
+    }
+
+    // ------------------------------------------------------------------ the full transcript and the review page (GAD-T485)
+
+    private static async Task<Gadfly.Server.Transcripts.TranscriptAudience> DownloadCopy(World w, string role, Guid user,
+        Gadfly.Server.Transcripts.TranscriptAudience asked = Gadfly.Server.Transcripts.TranscriptAudience.Reviewer)
+    {
+        var tenant = Member(w.Org, user, role);
+        await using var db = Db(tenant);
+        return await Gadfly.Server.Transcripts.TranscriptAccess.SecondMarkingAsync(db, new FixedTenant(tenant), w.SessionId, asked, DateTimeOffset.UtcNow, default);
+    }
+
+    [Test]
+    public void ASecondMarker_GetsAtMostTheBlindGraderCopy()
+    {
+        Assert.That(Gadfly.Server.Transcripts.TranscriptAccess.ForSecondMarker(Gadfly.Server.Transcripts.TranscriptAudience.Reviewer, true),
+            Is.EqualTo(Gadfly.Server.Transcripts.TranscriptAudience.BlindGrader));
+        Assert.That(Gadfly.Server.Transcripts.TranscriptAccess.ForSecondMarker(Gadfly.Server.Transcripts.TranscriptAudience.Student, true),
+            Is.EqualTo(Gadfly.Server.Transcripts.TranscriptAudience.Student));
+        Assert.That(Gadfly.Server.Transcripts.TranscriptAccess.ForSecondMarker(Gadfly.Server.Transcripts.TranscriptAudience.Reviewer, false),
+            Is.EqualTo(Gadfly.Server.Transcripts.TranscriptAudience.Reviewer));
+    }
+
+    [Test]
+    public async Task DownloadingTheFullTranscript_KeepsTheFullCopy_ButThenRefusesSecondMarking()
+    {
+        var w = await Graded();
+        var reader = Guid.NewGuid();
+        Assert.That(await DownloadCopy(w, OrgRoles.Examiner, reader), Is.EqualTo(Gadfly.Server.Transcripts.TranscriptAudience.Reviewer), "a normal reviewer is not blocked");
+        Assert.That(await DownloadCopy(w, OrgRoles.Examiner, reader), Is.EqualTo(Gadfly.Server.Transcripts.TranscriptAudience.Reviewer));
+        Assert.That(await Audits(w.Org, SecondMarkerBlindness.SawGradesAction, reader, w.SessionId), Is.EqualTo(1), "recorded once per person and session");
+        var submit = await SecondMark(w, reader);
+        Assert.That(submit.Ok, Is.False);
+        Assert.That(submit.Message, Does.Contain("already seen this session's grades"));
+    }
+
+    [Test]
+    public async Task DownloadingTheBlindGraderCopy_RecordsNothing()
+    {
+        var w = await Graded();
+        var reader = Guid.NewGuid();
+        Assert.That(await DownloadCopy(w, OrgRoles.Examiner, reader, Gadfly.Server.Transcripts.TranscriptAudience.BlindGrader),
+            Is.EqualTo(Gadfly.Server.Transcripts.TranscriptAudience.BlindGrader));
+        Assert.That(await Audits(w.Org, SecondMarkerBlindness.SawGradesAction, reader), Is.Zero);
+        Assert.That((await SecondMark(w, reader)).Ok, Is.True);
+    }
+
+    [Test]
+    public async Task ASecondMarker_DownloadingTheTranscript_GetsTheBlindGraderCopy_AndKeepsTheirMark()
+    {
+        var w = await Graded();
+        var marker = Guid.NewGuid();
+        Assert.That((await SecondMark(w, marker)).Ok, Is.True);
+        Assert.That(await DownloadCopy(w, OrgRoles.Examiner, marker), Is.EqualTo(Gadfly.Server.Transcripts.TranscriptAudience.BlindGrader));
+        Assert.That(await Audits(w.Org, SecondMarkerBlindness.SawGradesAction, marker), Is.Zero);
+    }
+
+    [Test]
+    public async Task OnAnExamWithoutDoubleMarking_DownloadingTheFullTranscriptRecordsNothing()
+    {
+        var w = await Graded(doubleMarking: false);
+        var reader = Guid.NewGuid();
+        Assert.That(await DownloadCopy(w, OrgRoles.Examiner, reader), Is.EqualTo(Gadfly.Server.Transcripts.TranscriptAudience.Reviewer));
+        Assert.That(await Audits(w.Org, SecondMarkerBlindness.SawGradesAction, reader), Is.Zero);
+    }
+
+    [Test]
+    public async Task TheReviewPage_IsBlindForTheSecondMarker()
+    {
+        var w = await Graded();
+        var marker = Guid.NewGuid();
+        Assert.That((await SecondMark(w, marker)).Ok, Is.True);
+        await using var db = Db(Member(w.Org, marker, OrgRoles.Examiner));
+        var view = await new Gadfly.Server.Review.ReviewService(db, w.Org, viewerRole: OrgRoles.Examiner, viewerUserId: marker).GetAsync(w.SessionId);
+        Assert.That(view, Is.Not.Null);
+        Assert.That(view!.Blinded, Is.True);
+        Assert.That(view.SecondMarkerBlind, Is.True);
+        Assert.That(view.Report, Is.Null);
+        Assert.That(view.Turns.All(t => t.Judgment is null), Is.True);
+        Assert.That(await Audits(w.Org, SecondMarkerBlindness.SawGradesAction, marker), Is.Zero);
+    }
+
+    [Test]
+    public async Task TheReviewPage_WithJudgmentsShowing_ThenRefusesSecondMarking()
+    {
+        var w = await Graded();
+        var looker = Guid.NewGuid();
+        SessionReviewViewOrIgnore(await ReviewAs(w, looker));
+        Assert.That(await Audits(w.Org, SecondMarkerBlindness.SawGradesAction, looker, w.SessionId), Is.EqualTo(1));
+        Assert.That((await SecondMark(w, looker)).Ok, Is.False);
+    }
+
+    private static async Task<Gadfly.Server.Review.SessionReviewView?> ReviewAs(World w, Guid user)
+    {
+        await using var db = Db(Member(w.Org, user, OrgRoles.Examiner));
+        return await new Gadfly.Server.Review.ReviewService(db, w.Org, viewerRole: OrgRoles.Examiner, viewerUserId: user).GetAsync(w.SessionId);
+    }
+
+    private static void SessionReviewViewOrIgnore(Gadfly.Server.Review.SessionReviewView? view)
+    {
+        Assert.That(view, Is.Not.Null);
+        if (view!.Blinded) Assert.Ignore("This exam's policy still hides the panel's judgments from this viewer, so nothing is showing.");
+        if (view.Report is null && view.Turns.All(t => t.Judgment is null) && view.Integrity.Count == 0 && view.Mastery.Count == 0)
+            Assert.Ignore("The seeded session has no judgments, report or integrity notes to show.");
     }
 }

@@ -287,7 +287,10 @@ and separation of duties.
   session code, the rubric and the answers the AI saw, never the AI's grade, the first examiner's grade, the student's
   name or integrity notes. Whoever graded a session as its examiner cannot second-mark it. A second marker cannot open
   that session's normal grading page either, and anyone who has opened it while its grades were showing can no longer
-  second-mark it, so the second mark stays blind (both are recorded in the audit log). Second marks never change a
+  second-mark it, so the second mark stays blind (both are recorded in the audit log). The same goes for the session's
+  review page (and its CSV and Markdown downloads) and its full transcript, which carry the panel's judgments and
+  integrity notes: a second marker sees them blind and gets the blind grader copy of the transcript, and anyone else who
+  opens or downloads them can still read everything but can no longer second-mark that session. Second marks never change a
   student's grade: they measure how well markers agree.
 - **Read the results.** Once answers have the AI's level, the first examiner's original blind level and a second mark,
   the page shows how well the two examiners agree with each other (QWK) and how well the AI agrees with each of them,

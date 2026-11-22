@@ -115,8 +115,9 @@ the student. On the grading page:
 On an exam flagged for double marking, a second examiner grades its sessions from **Second marking** (linked from
 **Grading > Panel calibration**). The sheet shows a session code, the rubric and the answers, never the AI's grade, the
 first examiner's grade, the student's name or integrity notes. Whoever graded a session as its examiner can't
-second-mark it; a second marker is refused that session's normal grading page, and anyone who has seen its grades there
-can no longer second-mark it. Second marks never change a grade: they measure how well markers agree, for the panel's
+second-mark it; a second marker is refused that session's normal grading page, sees its review page blind and gets the
+blind grader copy of its transcript, and anyone who has seen its grades on the grading page, the review page (or its
+downloads) or the full transcript can no longer second-mark it. Second marks never change a grade: they measure how well markers agree, for the panel's
 calibration. The [Instructor guide](INSTRUCTOR_GUIDE.md#how-far-to-trust-the-ai-panel-on-an-exam) covers calibration,
 bias probes and the self-preference check.
 

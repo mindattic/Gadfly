@@ -39,6 +39,30 @@ public static class TranscriptAccess
     }
 
     /// <summary>
+    /// The copy a session's second marker may have (GAD-T485): at most the blind grader copy, which leaves out the panel's
+    /// judgments and integrity notes, as the grading page is closed to them (GAD-T468). Anyone else keeps <paramref name="audience"/>.
+    /// </summary>
+    public static TranscriptAudience ForSecondMarker(TranscriptAudience audience, bool isSecondMarker) =>
+        isSecondMarker && audience == TranscriptAudience.Reviewer ? TranscriptAudience.BlindGrader : audience;
+
+    /// <summary>
+    /// Keeps second marking blind for a transcript download (GAD-T485): returns the copy to issue, giving a session's second marker
+    /// the blind grader copy, and records anyone else who takes the full (reviewer) copy of a double-marked session as having seen
+    /// its grades, so they can no longer second-mark it (<see cref="SecondMarkerBlindness.NoteSeenAsync"/>). Normal reviewers keep
+    /// the full copy.
+    /// </summary>
+    public static async Task<TranscriptAudience> SecondMarkingAsync(GadflyDbContext db, ITenantContext tenant, Guid sessionId, TranscriptAudience audience,
+        DateTimeOffset now, CancellationToken ct)
+    {
+        if (audience != TranscriptAudience.Reviewer || tenant.OrganizationId is not { } org || tenant.UserId is not { } me) return audience;
+        if (await SecondMarkerBlindness.IsSecondMarkerAsync(db, org, sessionId, me, ct)) return ForSecondMarker(audience, true);
+        var examId = await db.ExamSessions.AsNoTracking().Where(s => s.Id == sessionId && s.OrganizationId == org).Select(s => (Guid?)s.ExamId).FirstOrDefaultAsync(ct);
+        if (examId is { } exam)
+            await SecondMarkerBlindness.NoteSeenAsync(db, org, new GradingActor(me, tenant.Role), sessionId, exam, SecondMarkerBlindness.SeenOn.FullTranscript, now, ct);
+        return audience;
+    }
+
+    /// <summary>
     /// True when this caller's copy must name the session code instead of the student (GAD-T480): a grader (a role that enters
     /// human scores, as <see cref="BlindGrading.AppliesToRole"/>) while the exam's anonymous marking hides the name
     /// (<see cref="AnonymousMarking.HiddenSessionsAsync"/>), exactly as the grading queue and page do. The student copy is the

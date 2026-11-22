@@ -38,7 +38,7 @@ public static class ReviewExportEndpoints
     }
 
     private static async Task<SessionReviewView?> LoadAsync(GadflyDbContext db, ITenantContext tenant, Guid sessionId, CancellationToken ct) =>
-        tenant.OrganizationId is { } org ? await new ReviewService(db, org, viewerRole: tenant.Role).GetAsync(sessionId, ct) : null;
+        tenant.OrganizationId is { } org ? await new ReviewService(db, org, viewerRole: tenant.Role, viewerUserId: tenant.UserId).GetAsync(sessionId, ct) : null;
 
     // Excel reads UTF-8 CSV correctly only with a byte-order mark.
     private static byte[] Utf8Bom(string text) => [.. Encoding.UTF8.GetPreamble(), .. Encoding.UTF8.GetBytes(text)];

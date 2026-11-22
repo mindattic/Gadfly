@@ -201,6 +201,8 @@ public sealed record SessionReviewView(
 {
     /// <summary>True when blind grading hid the AI report and the exam-time judge's per-answer data from this viewer (D25).</summary>
     public bool Blinded { get; init; }
+    /// <summary>True when the viewer second-marked this session, so it stays blind to them (GAD-T485).</summary>
+    public bool SecondMarkerBlind { get; init; }
     public GradeDecision? LatestGrade => Grades.Count == 0 ? null : Grades[0].Decision;
     public int JudgesDisagreed => Turns.Count(t => t.Judgment?.NeedsHumanReview == true);
 }

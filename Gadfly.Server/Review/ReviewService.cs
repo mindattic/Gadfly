@@ -16,8 +16,10 @@ namespace Gadfly.Server.Review;
 /// decisions. Every query names the organization explicitly on top of GadflyDbContext's tenant filter.
 /// <paramref name="viewerRole"/> is the caller's role: while a session's grading is blind, a viewer who can enter human
 /// scores gets no AI or exam-time judge data (<see cref="BlindGrading"/>, decision D25); null means no redaction.
+/// <paramref name="viewerUserId"/> (GAD-T485): a session the viewer second-marked is shown to them blind, and a viewer who sees a
+/// double-marked session's judgments here is recorded as having seen its grades (<see cref="SecondMarkerBlindness"/>).
 /// </summary>
-public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeProvider? clock = null, string? viewerRole = null)
+public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeProvider? clock = null, string? viewerRole = null, Guid? viewerUserId = null)
 {
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly TimeProvider _clock = clock ?? TimeProvider.System;
@@ -194,10 +196,19 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
             .. staffRows.Where(a => a.ActorUserId is not null).Select(a => a.ActorUserId!.Value)], ct);
         var staff = staffRows.Select(a => Admin.LiveSessionService.ToTimeline(a, a.ActorUserId is { } by ? names.GetValueOrDefault(by) : null)).ToList();
 
+        // GAD-T485: the panel's judgments, the AI report and integrity notes are grades a blind second marker must not see first.
+        if (!blinded && viewerUserId is { } viewer && (report is not null || judgments.Count > 0 || integrityRows.Count > 0 || mastery.Count > 0))
+            await SecondMarkerBlindness.NoteSeenAsync(db, organizationId, new GradingActor(viewer, viewerRole), sessionId, session.ExamId,
+                SecondMarkerBlindness.SeenOn.ReviewPage, _clock.GetUtcNow(), ct);
+
         return new SessionReviewView(session, exam?.Title ?? "(deleted exam)", exam?.CollectionId ?? Guid.Empty,
             Grading.AnonymousMarking.NameOrCode((await AnonymousAsync([sessionId], ct)).Contains(sessionId), sessionId, names.GetValueOrDefault(session.StudentUserId)), assignment,
             turnViews, integrity, BuildTimeline(turnViews, integrity, staff), mastery, report,
-            grades.Select(g => (g, names.GetValueOrDefault(g.DecidedByUserId) ?? "(unknown)")).ToList()) { Blinded = blinded };
+            grades.Select(g => (g, names.GetValueOrDefault(g.DecidedByUserId) ?? "(unknown)")).ToList())
+        {
+            Blinded = blinded,
+            SecondMarkerBlind = viewerUserId is { } v2 && (await SecondMarkerBlindness.SecondMarkedAsync(db, organizationId, [sessionId], v2, ct)).Count > 0,
+        };
     }
 
     /// <summary>The sessions among <paramref name="ids"/> whose AI and exam-time judgments are hidden from this viewer (D25).</summary>
@@ -205,8 +216,13 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
     private async Task<HashSet<Guid>> AnonymousAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
         BlindGrading.AppliesToRole(viewerRole) ? await Grading.AnonymousMarking.HiddenSessionsAsync(db, organizationId, ids, _clock.GetUtcNow(), ct) : [];
 
-    private async Task<HashSet<Guid>> BlindAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
-        BlindGrading.AppliesToRole(viewerRole) ? await BlindGrading.BlindSessionsAsync(db, organizationId, ids, _clock.GetUtcNow(), ct) : [];
+    private async Task<HashSet<Guid>> BlindAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var blind = BlindGrading.AppliesToRole(viewerRole) ? await BlindGrading.BlindSessionsAsync(db, organizationId, ids, _clock.GetUtcNow(), ct) : [];
+        // GAD-T485: a second marker stays blind to the sessions they second-marked, as their grading page is closed to them (GAD-T468).
+        if (viewerUserId is { } me) blind.UnionWith(await SecondMarkerBlindness.SecondMarkedAsync(db, organizationId, ids, me, ct));
+        return blind;
+    }
 
     /// <summary>
     /// Records a grade decision. Earlier decisions are kept (history); the latest one is the grade.
