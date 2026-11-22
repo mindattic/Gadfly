@@ -8,7 +8,7 @@
 
 @* The audit log viewer (GAD-T301): owners and admins see their organization's log; MindAttic platform staff may choose any
    organization, or the platform-level events. Filtering, search and paging run in SQL (AuditQueryService). *@
-<PageTitle>Audit log Â· Gadfly Exams</PageTitle>
+<PageTitle>Audit log · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="admin-audit.css" /></HeadContent>
 
 <div class="al-head">
@@ -151,12 +151,12 @@ else
                                 <div class="al-detail">
                                     <dl>
                                         <dt>Event</dt><dd>#@d.Row.Id at @d.Row.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
-                                        <dt>Who</dt><dd>@d.Row.ActorName@(d.Row.ActorRole is null ? "" : $" ({d.Row.ActorRole})")@(d.Row.ActorUserId is { } u ? $" Â· {u}" : "")</dd>
+                                        <dt>Who</dt><dd>@d.Row.ActorName@(d.Row.ActorRole is null ? "" : $" ({d.Row.ActorRole})")@(d.Row.ActorUserId is { } u ? $" · {u}" : "")</dd>
                                         <dt>Action</dt><dd><code>@d.Row.Action</code></dd>
                                         <dt>Record</dt><dd>@d.Row.EntityType @d.Row.EntityId</dd>
                                         @if (d.Row.SessionId is { } sid)
                                         {
-                                            <dt>Attempt</dt><dd>@sid Â· <a href="review/@sid">review</a> Â· <button type="button" class="link" @onclick="() => FilterSessionAsync(sid)">all its events</button></dd>
+                                            <dt>Attempt</dt><dd>@sid · <a href="review/@sid">review</a> · <button type="button" class="link" @onclick="() => FilterSessionAsync(sid)">all its events</button></dd>
                                         }
                                         @if (!string.IsNullOrWhiteSpace(d.Row.Reason))
                                         {
@@ -364,7 +364,7 @@ else
     /// <summary>The action families present ("grade", "assessment"...), offered as "all of them" choices.</summary>
     private IEnumerable<string> Families() => (choices?.Actions ?? []).Where(a => a.Contains('.')).Select(a => a[..a.IndexOf('.')]).Distinct().Order();
 
-    private static string Short(string id) => id.Length > 13 && Guid.TryParse(id, out _) ? id[..8] + "â€¦" : id;
+    private static string Short(string id) => id.Length > 13 && Guid.TryParse(id, out _) ? id[..8] + "…" : id;
 
-    private static string? Clip(string? s, int max) => s is null ? null : s.Length <= max ? s : s[..max] + "â€¦";
+    private static string? Clip(string? s, int max) => s is null ? null : s.Length <= max ? s : s[..max] + "…";
 }
