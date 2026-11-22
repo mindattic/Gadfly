@@ -8,23 +8,28 @@
 .examiner-gaze:is([data-state="calibrating"], [data-state="calibrating-simple"], [data-state="setup"]) { color: var(--ink); }
 .examiner-gaze[data-state="accommodated"] { color: var(--ink); }
 .examiner-gaze[data-state="accommodated"] .examiner-gaze-dot { background: var(--ok); }
-.examiner-gaze:is([data-state="away"], [data-state="reading"], [data-state="no-face"], [data-state="two-faces"]) { color: var(--error); border-color: var(--error); }
-.examiner-gaze:is([data-state="away"], [data-state="reading"], [data-state="no-face"], [data-state="two-faces"]) .examiner-gaze-dot { background: var(--error); }
+.examiner-gaze:is([data-state="no-face"], [data-state="two-faces"]) { color: var(--error); border-color: var(--error); }
+.examiner-gaze:is([data-state="no-face"], [data-state="two-faces"]) .examiner-gaze-dot { background: var(--error); }
 .examiner-gaze button[hidden] { display: none; }
 /* Calibration: the examiner's face is the spot to look at. */
 .voice-stage[data-gaze-calibrating] { outline: 3px solid var(--accent); outline-offset: 2px; }
 
-/* The fade: the whole exam screen dims and blurs while the student looks away from the examiner while answering. Its opacity is
-   driven by examiner-gaze.js (0 = clear, 1 = the heaviest); it never takes clicks. */
+/* The soften (GAD-T561, step 2 of the reminder ladder): everything except the examiner's stage dims and blurs a little while the
+   student keeps looking off the screen as they answer. examiner-gaze.js cuts her stage out of it (clip-path), drives its opacity (0 =
+   clear, 1 = the most: 35% dim, 4 px blur) and restores it quickly; it never takes clicks and never brightens or whitens. */
 .examiner-fade {
-    position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; pointer-events: none; opacity: 0;
-    background: rgba(10, 12, 16, var(--fade-dim, .85));
-    backdrop-filter: blur(var(--fade-blur, 12px)); -webkit-backdrop-filter: blur(var(--fade-blur, 12px));
+    position: fixed; inset: 0; z-index: 1000; pointer-events: none; opacity: 0;
+    background: rgba(10, 12, 16, var(--fade-dim, .35));
+    backdrop-filter: blur(var(--fade-blur, 4px)); -webkit-backdrop-filter: blur(var(--fade-blur, 4px));
     transition: opacity var(--fade-ms, 100ms) linear;
 }
-.examiner-fade[data-active="false"] { visibility: hidden; transition: opacity var(--fade-ms, 600ms) ease-out, visibility 0s linear var(--fade-ms, 600ms); }
-.examiner-fade-warning { margin: 0; padding: .9rem 1.3rem; border-radius: var(--radius); background: rgba(16, 21, 29, .9); color: #f3f4f6; font-size: 1.35rem; font-weight: 600; text-align: center; }
+.examiner-fade[data-active="false"] { visibility: hidden; transition: opacity var(--fade-ms, 350ms) ease-out, visibility 0s linear var(--fade-ms, 350ms); }
 @media (prefers-reduced-motion: reduce) { .examiner-fade { transition: none; } }
+
+/* Step 1 on the 2D portrait (GAD-T561): the smallest slow tilt toward the student, then back. The 3D examiner moves her own head. */
+.voice-stage[data-gaze-nudge] ma-avatar { animation: gaze-nudge 2s ease-in-out 1; transform-origin: 50% 70%; }
+@keyframes gaze-nudge { 0%, 100% { transform: none; } 35%, 65% { transform: rotate(1.2deg) scale(1.012); } }
+@media (prefers-reduced-motion: reduce) { .voice-stage[data-gaze-nudge] ma-avatar { animation: none; } }
 
 /* The explanation, folded to one link (GAD-T416) and opened over the page so the exam room never grows. */
 .examiner-gaze { position: relative; }

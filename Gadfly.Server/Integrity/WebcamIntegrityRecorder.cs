@@ -68,11 +68,37 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         "examiner-look-away", "examiner-reading", "examiner-face-absent", "examiner-second-face", "examiner-fade",
     };
 
-    /// <summary>What the examiner says out loud when an eye-contact episode starts while the student answers (GAD-T240).</summary>
+    /// <summary>
+    /// The examiner's spoken reminder (GAD-T561, step 3 of the ladder, docs/research/attention-and-gaze.md 4.2): one short, warm line
+    /// at a pause in the student's speech after a long off-screen look, never a command to look at her, never the same twice in a
+    /// session (<see cref="NextReminder"/>). At most once per question and three times per exam (examiner-gaze.js).
+    /// </summary>
+    public static readonly IReadOnlyList<string> GentleReminders =
+    [
+        "Take your time; I'm right here.",
+        "Whenever you're ready, tell me more.",
+        "I'm listening. Go on when you're ready.",
+        "No rush. Tell me what you're thinking.",
+        "I'm still with you. Carry on whenever you like.",
+    ];
+
+    /// <summary>The next reminder not said yet in this session (recorded in <paramref name="said"/>), or null once all have been.</summary>
+    public static string? NextReminder(ISet<string> said)
+    {
+        var next = GentleReminders.FirstOrDefault(l => !said.Contains(l));
+        if (next is not null) said.Add(next);
+        return next;
+    }
+
+    /// <summary>
+    /// What the examiner says out loud when an episode starts while the student answers (GAD-T240). "look-away" and "reading" are
+    /// the first gentle reminders (GAD-T561: the browser asks for "look-away" only at step 3 of the ladder, and never for "reading");
+    /// a session takes its reminders from <see cref="NextReminder"/> so none repeats.
+    /// </summary>
     public static readonly IReadOnlyDictionary<string, string> ExaminerRemarks = new Dictionary<string, string>(StringComparer.Ordinal)
     {
-        ["look-away"] = "Please look at me while you answer.",
-        ["reading"] = "Please look at me while you answer, rather than reading.",
+        ["look-away"] = GentleReminders[0],
+        ["reading"] = GentleReminders[1],
         ["face-absent"] = "I can't see your face. Please come back into view while you answer.",
         ["second-face"] = "I can see someone else on camera. Please make sure you are answering on your own.",
     };
@@ -413,17 +439,26 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
     /// Plain words for an eye-contact episode in the voice interview room (GAD-T240), written by the server from the type, how
     /// long it lasted and whether the examiner spoke up (the browser sends only the code "remarked"). Never a verdict.
     /// </summary>
-    public static string ExaminerSummary(string type, TimeSpan span, bool remarked, int? fadePeakPercent = null)
+    /// <remarks>GAD-T557/T561: a look-away is now an off-screen look (anywhere in the window counts as on screen); "ph:t" marks one
+    /// that stayed in the thinking gap before the first word, where looking away is normal, and "step:N" the reminder step it reached.</remarks>
+    public static string ExaminerSummary(string type, TimeSpan span, bool remarked, int? fadePeakPercent = null, bool thinkingGap = false, int reminderStep = 0)
     {
         var so = span.TotalMinutes >= 1 ? $"{(int)span.TotalMinutes} min {span.Seconds} s" : $"{Math.Max(0, (int)Math.Round(span.TotalSeconds))} s";
-        var said = remarked ? " The examiner asked out loud for eye contact." : "";
+        var said = type == "examiner-look-away"
+            ? (remarked ? " The examiner gave a short, gentle spoken reminder at a pause." : "")
+            : (remarked ? " The examiner asked out loud for eye contact." : "");
+        var step = type == "examiner-look-away" && reminderStep is 1 or 2 && !remarked
+            ? reminderStep == 1 ? " The examiner gave a small non-verbal cue." : " The examiner gave a small non-verbal cue and the screen around her dimmed a little."
+            : "";
         return type switch
         {
-            "examiner-look-away" => $"Looked away from the examiner for {so} while answering.{said} {ManyCauses}",
+            "examiner-look-away" when thinkingGap =>
+                $"Looked off the screen for {so} before starting to answer (thinking time, when looking away is normal and helps; no reminder is given then). {ManyCauses}",
+            "examiner-look-away" => $"Looked off the screen for {so} while answering.{step}{said} {ManyCauses}",
             "examiner-reading" => $"Eye movement like reading, away from the examiner, for {so} while answering.{said} Webcam eye tracking cannot reliably tell reading from other eye movement, and it can have other explanations (re-reading the question on screen); check it against the answer.",
             "examiner-face-absent" => $"No face in view for {so} while answering.{said} Often harmless (leaning out of frame, the camera moved); check whether the answer continued.",
             "examiner-second-face" => $"More than one face in view for {so} while answering.{said} It may be a person, a photo or a reflection.",
-            "examiner-fade" => $"The exam screen dimmed for {so} (at most {fadePeakPercent ?? 0}% faded) because the student looked away from the examiner while answering, with a warning to look back; it cleared when they did.",
+            "examiner-fade" => $"The screen around the examiner dimmed a little for {so} (at most {fadePeakPercent ?? 0}% faded toward a light dim; her face stayed clear) because the student kept looking off the screen while answering; it cleared when they looked back. No message was shown.",
             _ => $"Camera event \"{type}\" for {so}.",
         };
     }
@@ -481,7 +516,9 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
             string? data = null;
             if (ExaminerTypes.Contains(type))
             {
-                summary = ExaminerSummary(type, span, GazeQuality.Has(e.Summary, "remarked"), FadePeakOf(e.Summary));
+                summary = ExaminerSummary(type, span, GazeQuality.Has(e.Summary, "remarked"), FadePeakOf(e.Summary),
+                    GazeQuality.Value(e.Summary, "ph") == "t",
+                    int.TryParse(GazeQuality.Value(e.Summary, "step"), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var st) ? Math.Clamp(st, 0, 3) : 0);
                 // The session's eye-tracking quality (GAD-T305): a sentence beside the note, the numbers in DataJson. With poor
                 // tracking a look-away or reading note is kept at Info: it says too little to list for review.
                 if (GazeQuality.Parse(e.Summary) is { } q)
@@ -490,6 +527,8 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
                     data = q.Json();
                     if (q.Poor && type is "examiner-look-away" or "examiner-reading") severity = IntegritySeverity.Info;
                 }
+                // Looking away in the thinking gap is normal (GAD-T557): context only, never listed for review.
+                if (type == "examiner-look-away" && GazeQuality.Value(e.Summary, "ph") == "t") severity = IntegritySeverity.Info;
             }
             if (summary.Length == 0) summary = IntegrityExplanationsFallback(type);
             var key = PartialTypes.Contains(type) ? KeyOf(type, sentStart, e.EpisodeId) : null;

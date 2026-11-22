@@ -177,12 +177,14 @@ async function start() {
                 freezeDelay(s);
                 clearCue();
                 talking(s, true);
+                studentSpeech(true);
                 status("Hearing you…");
             },
             onSpeechEnd: () => {
                 s.inSpeech = false;
                 try { s.acoustics.endSegment(); } catch { }
                 talking(s, false);
+                if (!s.gate) studentSpeech(false);
                 if (s.gate || !s.speechConn) return;
                 s.lastSpeechEndAt = performance.now();
                 sendCommit(s);
@@ -322,6 +324,14 @@ async function start() {
     status("The examiner is ready.");
     // start() runs detached (void start()): a circuit that went away must not surface as an unhandled rejection (GAD-T316).
     await s.dotnet.invokeMethodAsync("OnVoiceStarted", s.mic ? (s.mic.vadKind || "energy") : "typed").catch(() => { });
+}
+
+/**
+ * Tells the eye-contact check (examiner-gaze.js) the student's voice started or stopped while an answer is open (GAD-T557): the
+ * first word ends the thinking gap, when no reminder ever fires, and a pause is when a gentle spoken reminder may come (GAD-T561).
+ */
+function studentSpeech(speaking) {
+    try { document.dispatchEvent(new CustomEvent("gadfly-student-speech", { detail: { speaking } })); } catch { }
 }
 
 function fail(kind, message, s) {

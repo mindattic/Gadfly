@@ -190,19 +190,29 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
 - **Lost camera, no face.** No camera frame for `cameraLostMs` (3 s): the indicator says eye contact isn't being checked and
   nothing counts as a look-away. With no face for `calibrationGiveUpMs` (15 s) the prompt stops and comes back when a face
   does.
-- **Live indicator.** "Looking at the examiner", "Looking away from the examiner", reading, no face, more than one face, the
-  camera picture stopped, or "can't follow your eyes right now".
-- **While answering** (the avatar is listening): after `fadeStartMs` (2 s) of continuous look-away the whole exam screen starts
-  fading toward a heavy dim and blur over `fadeRampMs` (3 s) with "Please look at the examiner", and restores smoothly
-  (`fadeRestoreMs`) when the gaze returns. After `remarkAfterMs` (5 s), or at once for a reading pattern, no face or a second
-  face, the examiner says so out loud ("Please look at me while you answer"), at most once per `remarkGapMs` (15 s). The words
-  are fixed server-side (`WebcamIntegrityRecorder.ExaminerRemarks`) and offered to the avatar hub like any question.
+- **Live indicator.** Whether the check is on, no face, more than one face, the camera picture stopped, or "can't follow your
+  eyes right now". It never says "looking away" (GAD-T561): a running red warning is a standing threat cue.
+- **While answering, by phase** (GAD-T557, `docs/research/attention-and-gaze.md` 4.1; the avatar is listening). The *thinking
+  gap*, from her last word to the student's first word (`thinkingGapMaxMs`, 20 s, at most), never triggers anything: looking
+  away while working out an answer is normal and helps. While *speaking*, gaze is classed as her face, elsewhere on the screen
+  (the transcript, the clock: never "away") or off the screen. Only off-screen gaze counts: continuous for `offScreenMs` (8 s)
+  **and** over `offScreenShare` (50%) of the last `offScreenWindowMs` (30 s) of the answer's speaking time; tracking quality
+  under fair (40) makes every threshold half as long again. Then the **reminder ladder** (GAD-T561, 4.2): (1) her small, slow
+  head tilt and raised brows (the portrait: a tiny CSS tilt; none under reduced motion); (2) `softenAfterMs` (4 s) later, if
+  still off-screen, everything but her stage dims to at most 35% and blurs to at most 4 px over 2 s (`examiner-fade`, her stage
+  cut out with a clip path), restored in 350 ms when the gaze returns and not again for 5 s; (3) `spokenAfterMs` (6 s) later,
+  only at a pause of 700 ms or more in the student's speech, one warm line from `WebcamIntegrityRecorder.GentleReminders`
+  ("Take your time; I'm right here."), never the same twice in a session, once per question, three times per exam at most.
+  Nothing on the screen ever tells the student to look at her; there is no white-out. No face or a second face is still said
+  out loud (fixed lines in `ExaminerRemarks`), at most once per `remarkGapMs` (15 s), never in the thinking gap. Under the
+  eye-contact accommodation the ladder is off.
   One voice at a time (GAD-T472): **Repeat the question** pressed while she is saying a remark waits for the remark to finish
   (bounded at 13 s, a little past the remark's own 12 s cut-off) and then asks the question; once a question is on its way no
   remark can start, since she is no longer listening.
 - **Recorded for review.** Each episode is a webcam integrity event with start and end: `examiner-look-away`,
   `examiner-reading`, `examiner-face-absent`, `examiner-second-face`, and `examiner-fade` (with its peak). Summaries are
-  written by the server (the browser sends only codes: "remarked" or "peak:NN", then the quality below); confidence at most
+  written by the server (the browser sends only codes: "remarked", "peak:NN", "ph:t" for a look-away that stayed in the thinking
+  gap (kept at Info), "step:N" for the ladder step reached, then the quality below); confidence at most
   0.4, severity at most Low, never a penalty (`WebcamIntegrityRecorder.RecordExaminerGazeAsync`).
 - **Quality score (GAD-T305).** Every episode carries the session's tracking quality so far, 0..100, worked out on the device
   (`quality()` in `examiner-gaze.js`, weights in `GAZE.qWeights`): calibration accuracy (the worse of the leave-one-out figure

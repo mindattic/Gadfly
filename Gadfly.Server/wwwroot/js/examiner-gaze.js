@@ -13,16 +13,19 @@
 //     alone never makes one.
 //   - head direction (the old behaviour, and the fallback when there is no calibration, it was poor, skipped, or the stage is
 //     scrolled out of view): head-and-eye direction against a baseline learned while the student looks at the examiner's face.
-// While the student is answering (the examiner's avatar is listening):
-//   - looking away for GAZE.fadeStartMs starts fading the exam screen toward a heavy dim and blur over GAZE.fadeRampMs, with a
-//     warning to look back at the examiner; it restores smoothly as soon as the gaze returns. A look away that begins in the
-//     first GAZE.thinkingGraceMs of an answer gets GAZE.thinkingFadeStartMs instead: a precaution for a student gathering an
-//     answer, not a finding that a look away is thinking (GAD-T261, GAD-T446, docs/EVIDENCE_MAP.md mechanic 4);
-//   - a longer look away (GAZE.remarkAfterMs past the fade start), a reading pattern, no face or a second face makes the
-//     examiner say so out loud ("Please look at me while you answer"), at most once every GAZE.remarkGapMs;
-//   - with an eye-contact accommodation on the assignment (options.accommodation, GAD-T261), there are no calibration dots, the
-//     screen never fades and the examiner never asks for eye contact or remarks on reading-like eyes; face presence is still
-//     checked and spoken about;
+// While the student is answering (the examiner's avatar is listening), by phase (GAD-T557, docs/research/attention-and-gaze.md 4.1):
+//   - the thinking gap, from her last word to the student's first (GAZE.thinkingGapMaxMs at most): nothing ever fires. Looking
+//     away while working out a hard answer is normal and helps (Glenberg et al. 1998; Doherty-Sneddon et al. 2012);
+//   - speaking: gaze is face (her stage plus the margin), on-screen (anywhere else in the window: the transcript, the clock,
+//     the captions) or off-screen. Only off-screen gaze counts, and only once it has lasted GAZE.offScreenMs continuously AND
+//     the off-screen share of the last GAZE.offScreenWindowMs is over GAZE.offScreenShare; poor tracking quality lengthens it;
+//   - then the reminder ladder (GAD-T561, 4.2), the examiner first: (1) a small slow head tilt and raised brows; (2) if the gaze
+//     stays off-screen, a light dim and blur of everything but her stage (at most 35% and 4 px, her face kept sharp), restored
+//     quickly when it returns, with a cool-down so it never cycles; (3) one short, warm, varied line at a pause in the student's
+//     speech, never over them and never "look at me", once per question and GAZE.spokenPerExam times per exam at most;
+//   - no face or a second face (presence, not gaze) is still said out loud, but never in the thinking gap;
+//   - with an eye-contact accommodation on the assignment (options.accommodation, GAD-T261), there are no calibration dots and no
+//     ladder; face presence is still checked and spoken about;
 //   - each episode (look-away, reading, face absent, second face, and each fade with its peak) is sent to the server with its
 //     start and end and this session's tracking quality so far (a 0..100 score, the method, the measured accuracy), for review.
 //     Only those notes leave the device: never a frame, an image, a landmark or a face signature.
@@ -49,22 +52,41 @@ export const GAZE = Object.freeze({
     minHalfHeightDeg: 6, maxHalfHeightDeg: 12,
     /** A look away must hold this long before the region changes (blinks and jitter don't count). */
     switchMs: 200,
-    /** The screen starts to fade after this much continuous look-away while answering (also when a look-away episode starts)... */
-    fadeStartMs: 2000,
-    /** ...but a look away that begins within this long of the answer starting gets more time, while the student gathers an answer (GAD-T261, GAD-T446)... */
-    thinkingGraceMs: 10000,
-    /** ...and starts to fade only after this much. */
-    thinkingFadeStartMs: 6000,
-    /** ...and reaches its heaviest dim and blur this much later. */
-    fadeRampMs: 3000,
-    /** The heaviest fade: how dark (0..1) and how blurred (px). */
-    fadeMaxDim: 0.85,
-    fadeMaxBlurPx: 12,
-    /** How long the screen takes to restore once the gaze is back. */
-    fadeRestoreMs: 600,
-    /** A look away this long makes the examiner say "Please look at me while you answer" (the thinking grace moves it later by as much). */
-    remarkAfterMs: 5000,
-    /** The examiner speaks up at most once in this long. */
+    // ---- the phase-aware policy (GAD-T557, docs/research/attention-and-gaze.md 4.1); every figure is a design choice to tune ----
+    /**
+     * The thinking gap: from the examiner's last word (the microphone opens) to the student's first word, or this long at most.
+     * Looking away then is how people manage a hard question (62-92% of the gap; Doherty-Sneddon et al. 2012): nothing ever fires.
+     */
+    thinkingGapMaxMs: 20000,
+    /** While speaking, a reminder needs continuous off-screen gaze (not on her, not anywhere in the window) this long... */
+    offScreenMs: 8000,
+    /** ...and an off-screen share over this window (of this answer's speaking time so far) above this share. */
+    offScreenWindowMs: 30000,
+    offScreenShare: 0.5,
+    /** Tracking quality under GazeQuality.FairFrom (40) raises both time thresholds by this factor (a 4-degree tracker can't afford tight ones). */
+    poorQualityScore: 40,
+    poorQualityFactor: 1.5,
+    /** An off-screen look-away is recorded for review (never acted on) once it has lasted this long, in any answering phase. */
+    episodeMs: 8000,
+
+    // ---- the reminder ladder (GAD-T561, 4.2): the examiner first, the screen second, words last; never a white-out ----
+    /** Step 2, the peripheral soften, starts this long after step 1 (her small gesture) if the gaze is still off-screen... */
+    softenAfterMs: 4000,
+    /** ...dims everything but her stage to at most this (0..1) and blurs it to at most this (px), over this long... */
+    softenMaxDim: 0.35,
+    softenMaxBlurPx: 4,
+    softenRampMs: 2000,
+    /** ...restores this quickly when the gaze returns, and once restored never starts again within this long (no cycling). */
+    softenRestoreMs: 350,
+    softenCooldownMs: 5000,
+    /** Step 3, one short warm line, this long after step 2, only at a pause in the student's speech at least this long... */
+    spokenAfterMs: 6000,
+    spokenPauseMs: 700,
+    /** ...at most once per question and at most this many times per exam. */
+    spokenPerExam: 3,
+    /** Her gesture (step 1): how long the small head tilt and raised brows take. */
+    gestureMs: 2000,
+    /** The examiner speaks up (a reminder, or about no face or a second face) at most once in this long. */
     remarkGapMs: 15000,
     /** The longest a spoken remark may hold things up if synthesis stalls. */
     remarkTimeoutMs: 12000,
@@ -218,9 +240,8 @@ const TEXT = {
     calibrating: "Look at the examiner's face for a moment, so the camera learns where it is.",
     "calibrating-simple": "Eye tracking couldn't be set up precisely, so a simpler check of where your head and eyes point is used. That's fine. Now look at the examiner's face for a moment.",
     setup: "Follow the dot with your eyes and keep your head still. It takes about 10 seconds.",
-    on: "Looking at the examiner",
-    away: "Looking away from the examiner. Please look at the examiner.",
-    reading: "Your eyes are moving as if reading. Please look at the examiner.",
+    // No "away" state is shown (GAD-T561): a running red "looking away" line is a standing threat cue, and looking away to think is fine.
+    on: "Eye contact check on. Looking away to think is fine.",
     "no-face": "Your face isn't in view of the camera.",
     "two-faces": "More than one face is in view of the camera.",
     lost: "The camera picture has stopped, so eye contact isn't being checked right now. The exam carries on.",
@@ -238,19 +259,36 @@ export function start(dotnet, options) {
         dotnet, options: options || {}, stopped: false, running: false, starting: false, failed: false,
         lib: null, core: null, presence: null, headpose: null, reading: null, offs: [],
         avatar: null, faces: 1, warnings: [], calibrating: false, calibTimer: null, giveUpTimer: null,
-        awayPerf: null, lastSamplePerf: 0, lastFramePerf: 0, cond: { reading: null, "face-absent": null, "second-face": null },
+        lastSamplePerf: 0, lastFramePerf: 0, cond: { reading: null, "face-absent": null, "second-face": null },
         answering: false, answeringSince: 0, episodes: {}, fade: null, level: 0,
         lastRemark: 0, remarking: false, hub: null, speech: null, hubAvatar: null, shown: null,
         // GAD-T305: "calibrated" or "head"; the page fit and its measured accuracy; the calibrated verdict; drift samples.
         mode: "head", fit: null, calib: null, cal: null, anchor: null, setup: null, setupOutcome: null, needsCalibration: false,
         fx: null, fy: null, rect: null, drift: [], fps: 0, fpsCount: 0, fpsSince: 0, startedPerf: 0, slow: false,
         stats: { ticks: 0, warnTicks: 0, answerTicks: 0, freshTicks: 0, drifts: 0 },
+        // GAD-T557: where the gaze is ("face", "screen", "off", or null unknown), since when it has been off-screen, this answer's
+        // timeline (start, first word, the student's voice) and the off-screen samples of its speaking phase.
+        where: null, offPerf: null, answerStartPerf: 0, firstWordPerf: null, studentSpeaking: false, lastSpeechEndPerf: null,
+        samples: [], winLimits: null,
+        // GAD-T561: the reminder ladder for this answer (step 0..3), the spoken lines this exam, the soften's cool-down.
+        ladder: { step: 0, at: 0, spoke: false }, spokenCount: 0, softenCooldownUntil: 0,
     };
     G = g;
     g.onClick = (e) => {
         const el = e.target.closest && e.target.closest("[data-examiner-gaze-action]");
         if (el && G === g && el.dataset.examinerGazeAction === "calibrate") void setupDots(g);
     };
+    // The student's voice (voice-room.js), or typing under the typed-answer accommodation: the first word ends the thinking gap,
+    // and a pause in it is when a spoken reminder may come (GAD-T557, GAD-T561).
+    g.onSpeech = (e) => studentVoice(g, !!(e.detail && e.detail.speaking));
+    g.onInput = (e) => {
+        if (!e.target || !e.target.closest || !e.target.closest("#answer-box")) return;
+        studentVoice(g, true);
+        clearTimeout(g.typingTimer);
+        g.typingTimer = setTimeout(() => studentVoice(g, false), GAZE.spokenPauseMs);
+    };
+    document.addEventListener("gadfly-student-speech", g.onSpeech);
+    document.addEventListener("input", g.onInput, true);
     document.addEventListener("click", g.onClick);
     g.watch = setInterval(() => watch(g), GAZE.watchMs);
     g.tick = setInterval(() => tick(g), GAZE.tickMs);
@@ -267,6 +305,9 @@ export function stop() {
     clearInterval(g.watch);
     clearInterval(g.tick);
     document.removeEventListener("click", g.onClick);
+    document.removeEventListener("gadfly-student-speech", g.onSpeech);
+    document.removeEventListener("input", g.onInput, true);
+    clearTimeout(g.typingTimer);
     if (g.onHide) window.removeEventListener("pagehide", g.onHide);
     pause(g);
     try { g.speech && g.speech.dispose(); } catch { }
@@ -304,6 +345,7 @@ async function resume(g, avatar) {
         if (!live()) return;
         g.lib = lib;
         const limits = examinerLimits(lib);
+        g.winLimits = windowLimits(lib);
         core = g.core = new lib.WebcamCore({
             numFaces: 2, width: 640, height: 480,
             // Twice a second, a 16x9 thumbnail averaged to one brightness number: lets presence warn about a dark picture (quality score).
@@ -328,7 +370,7 @@ async function resume(g, avatar) {
         g.presence.on("status", (st) => {
             g.faces = st.faces;
             g.warnings = st.warnings || [];
-            if (st.faces !== 1) g.awayPerf = null;
+            if (st.faces !== 1) g.offPerf = null;
             // A calibration that gave up for want of a face runs again as soon as one is back.
             if (st.faces === 1 && g.needsCalibration && g.running && !g.calibrating && !g.setup) calibrate(g);
         });
@@ -399,11 +441,14 @@ function pause(g) {
     for (const kind of Object.keys(g.episodes)) closeEpisode(g, kind);
     closeFade(g);
     applyFade(g, 0);
+    g.where = null;
+    g.samples = [];
+    g.ladder = { step: 0, at: 0, spoke: false };
     if (g.setup) { g.setup.cancel = true; g.setup = null; }
     setCalibrating(g, false);
     releaseCore(g);
     g.running = false;
-    g.awayPerf = null;
+    g.offPerf = null;
     g.anchor = null;
     g.cal = null;
     g.mode = "head";
@@ -431,6 +476,20 @@ function examinerLimits(lib) {
         halfWidthDeg: clamp(l.halfWidthDeg, GAZE.minHalfWidthDeg, GAZE.maxHalfWidthDeg),
         halfHeightDeg: clamp(l.halfHeightDeg, GAZE.minHalfHeightDeg, GAZE.maxHalfHeightDeg),
     };
+}
+
+/**
+ * The whole window's region for the head-direction check (GAD-T557): the window's size seen from GAZE.viewingDistanceCm, plus
+ * slack. Beyond it the head points off the screen; between her region and it, at something else on the screen.
+ */
+function windowLimits(lib) {
+    const cm = (px) => (px / 96) * 2.54;
+    try {
+        const l = lib.regionLimitsFor(cm(window.innerWidth || 1280), cm(window.innerHeight || 720), GAZE.viewingDistanceCm, GAZE.slackDeg);
+        return { halfWidthDeg: Math.max(l.halfWidthDeg, GAZE.maxHalfWidthDeg), halfHeightDeg: Math.max(l.halfHeightDeg, GAZE.maxHalfHeightDeg) };
+    } catch {
+        return { halfWidthDeg: 30, halfHeightDeg: 20 };
+    }
 }
 
 function stageRect() {
@@ -614,7 +673,7 @@ function calibrate(g) {
         if (!g.running || !g.headpose) return;
         if (g.lib) Object.assign(g.headpose.options, examinerLimits(g.lib), { baselineFrames: baselineFrames(g) });
         g.headpose.recalibrate();
-        g.awayPerf = null;
+        g.offPerf = null;
         g.anchor = { pts: [] };
         g.calibArmed = true;
     }, GAZE.calibrationDelayMs);
@@ -661,7 +720,7 @@ function finishAnchor(g) {
     g.fit.ax += face.x - p.x;
     g.fit.ay += face.y - p.y;
     g.mode = "calibrated";
-    g.cal = { region: "on", since: performance.now(), candidate: null, candidateSince: 0, lastT: 0, usable: false };
+    g.cal = { region: "on", since: performance.now(), candidate: null, candidateSince: 0, lastT: 0, usable: false, offScreen: false };
     g.fx.reset();
     g.fy.reset();
     g.drift = [];
@@ -674,7 +733,7 @@ async function setupDots(g) {
     g.setup = control;
     setCalibrating(g, true);
     g.anchor = null;
-    g.awayPerf = null;
+    g.offPerf = null;
     show(g, "setup");
     try { const st = document.querySelector("[data-voice-stage]"); st && st.scrollIntoView({ block: "nearest" }); } catch { }
     let r = null;
@@ -743,6 +802,12 @@ function classify(g, p, t) {
         if (c.candidate !== want) { c.candidate = want; c.candidateSince = t; }
         if (t - c.candidateSince >= GAZE.switchMs) { c.region = want; c.since = c.candidateSince; c.candidate = null; }
     } else c.candidate = null;
+    // Off the screen altogether (GAD-T557): beyond the window's edges by more than the margin. Anything inside the window (the
+    // transcript, the clock, the captions) is on-screen and never fires a reminder. The same hysteresis as for her stage.
+    const wdx = Math.max(-pt.x, 0, pt.x - window.innerWidth);
+    const wdy = Math.max(-pt.y, 0, pt.y - window.innerHeight);
+    const wdeg = pxToDeg(fit, wdx, wdy, p.dist);
+    c.offScreen = wdeg > (c.offScreen ? margin * GAZE.returnShare : margin);
 
     // Drift: while the examiner speaks, people look at her. A steady small offset from her face then is the fit's, not theirs.
     const a = g.avatar;
@@ -804,20 +869,73 @@ function onSample(g, s) {
         if (s.ready && g.calibArmed && !g.setup && g.headpose && g.headpose.baselineReady) finishAnchor(g);
         return;
     }
-    let away = false;
-    let from = s.t;
-    const headAway = s.ready && s.region !== "on-screen";
+    // Where the gaze is (GAD-T557): on her face (her stage plus the margin), elsewhere on the screen, or off the screen. Only
+    // off-screen gaze is integrity context: reading the transcript or glancing at the clock is on-screen and never "away".
+    let where = null;
     if (verdict != null) {
-        if (verdict === "away" && s.ready && headShare(g, s) >= GAZE.agreeShare) {
-            away = true;
-            from = Math.max(g.cal.since, headAway ? s.t - s.dwellMs : s.t);
-        }
-    } else if (headAway) {
-        away = true;
-        from = s.t - s.dwellMs;
+        // A calibrated off-screen look also needs the old head-and-eye direction to have strayed (neither estimate alone decides).
+        where = verdict === "on" ? "face" : g.cal.offScreen && s.ready && headShare(g, s) >= GAZE.agreeShare ? "off" : "screen";
+    } else if (s.ready) {
+        const w = g.winLimits || { halfWidthDeg: 30, halfHeightDeg: 20 };
+        const beyond = Math.max(Math.abs(s.yawDeg) / w.halfWidthDeg, Math.abs(s.pitchDeg) / w.halfHeightDeg) > 1;
+        where = s.region === "on-screen" ? "face" : beyond ? "off" : "screen";
     }
-    if (away && g.faces === 1) { if (g.awayPerf == null) g.awayPerf = from; }
-    else g.awayPerf = null;
+    if (g.faces !== 1) where = null;   // none, or a second face that could be the one measured: presence's business
+    g.where = where;
+    if (where === "off") {
+        g.notOffSince = null;
+        if (g.offPerf == null) g.offPerf = s.t;
+    } else if (where == null) {
+        g.offPerf = null;
+        g.notOffSince = null;
+    } else if (g.offPerf != null) {
+        // Back on the screen for GAZE.switchMs ends the off-screen stretch (one stray frame doesn't).
+        if (g.notOffSince == null) g.notOffSince = s.t;
+        else if (s.t - g.notOffSince >= GAZE.switchMs) { g.offPerf = null; g.notOffSince = null; }
+    }
+}
+
+/**
+ * The student's voice (or typing) started or stopped (GAD-T557): the first word of an answer ends the thinking gap, and the end of
+ * speech starts the pause a spoken reminder waits for (GAD-T561).
+ */
+function studentVoice(g, speaking) {
+    if (G !== g || g.stopped) return;
+    const now = performance.now();
+    if (speaking) {
+        if (!g.answering && !g.calibrating && isAnswering(g)) beginAnswer(g, now);
+        if (g.answering && g.firstWordPerf == null) g.firstWordPerf = now;
+        g.studentSpeaking = true;
+    } else {
+        if (g.studentSpeaking) g.lastSpeechEndPerf = now;
+        g.studentSpeaking = false;
+    }
+}
+
+/** A new answer: its own thinking gap, its own 30-second window, its own ladder (thresholds are per answer). */
+function beginAnswer(g, now) {
+    g.answering = true;
+    g.answeringSince = Date.now();
+    g.answerStartPerf = now;
+    g.firstWordPerf = null;
+    g.samples = [];
+    g.ladder = { step: 0, at: 0, softenAt: 0, spoke: false };
+}
+
+/**
+ * The answer's phase (GAD-T557, research 4.1): "thinking" from the examiner's last word to the student's first (or
+ * GAZE.thinkingGapMaxMs), "speaking" after it; anything else (listening to her, her own wait) is "other". Nothing ever fires
+ * outside "speaking".
+ */
+function phaseOf(g, now) {
+    if (!g.answering) return "other";
+    if (g.firstWordPerf == null && now - g.answerStartPerf < GAZE.thinkingGapMaxMs) return "thinking";
+    return "speaking";
+}
+
+/** When this answer's speaking phase began (perf time). */
+function speakingFrom(g) {
+    return g.firstWordPerf != null ? g.firstWordPerf : g.answerStartPerf + GAZE.thinkingGapMaxMs;
 }
 
 /** A slow device: ask for fewer frames on this module's own copy of the camera (the self-view keeps its own rate). */
@@ -842,14 +960,17 @@ function tick(g) {
     const now = performance.now();
     g.rect = stageRect();
     const lost = now - g.lastFramePerf > GAZE.cameraLostMs;
-    if (lost) g.awayPerf = null;
-    if (g.awayPerf != null && now - g.lastSamplePerf > staleMs(g)) g.awayPerf = null;
+    if (lost) g.offPerf = null;
+    if (g.offPerf != null && now - g.lastSamplePerf > staleMs(g)) g.offPerf = null;
     const answering = !g.calibrating && isAnswering(g);
-    if (answering && !g.answering) g.answeringSince = Date.now();
-    g.answering = answering;
-    const awayMs = g.awayPerf == null ? 0 : now - g.awayPerf;
-    const fadeStart = fadeStartFor(g, now);
+    if (answering && !g.answering) beginAnswer(g, now);
+    else if (!answering && g.answering) { g.answering = false; restoreLadder(g, now); g.samples = []; }
     const accommodated = !!g.options.accommodation;
+    const phase = phaseOf(g, now);
+    // A 4-degree tracker can't afford tight thresholds: below "fair" quality every time threshold is half as long again.
+    const slack = quality(g).score < GAZE.poorQualityScore ? GAZE.poorQualityFactor : 1;
+    const off = g.offPerf != null;
+    const offMs = off ? now - g.offPerf : 0;
 
     // What the quality score counts: setup warnings over time, and answering time with a usable gaze sample.
     g.stats.ticks++;
@@ -859,9 +980,18 @@ function tick(g) {
         if (now - g.lastSamplePerf <= staleMs(g)) g.stats.freshTicks++;
     }
 
-    // Episodes, only while answering.
+    // The speaking phase's off-screen share over the last GAZE.offScreenWindowMs (only this answer's speaking time counts).
+    if (phase === "speaking" && !lost && g.where != null) {
+        g.samples.push({ t: now, off });
+        while (g.samples.length && now - g.samples[0].t > GAZE.offScreenWindowMs) g.samples.shift();
+    }
+    const share = g.samples.length ? g.samples.reduce((n, x) => n + (x.off ? 1 : 0), 0) / g.samples.length : 0;
+    const offSpeakingMs = phase === "speaking" && off ? now - Math.max(g.offPerf, speakingFrom(g)) : 0;
+
+    // Episodes, recorded only while answering and never acted on: a long off-screen look (in either phase, marked with it), a
+    // reading pattern, no face, a second face.
     const active = {
-        "look-away": awayMs >= fadeStart ? epochOf(g.awayPerf) : null,
+        "look-away": offMs >= GAZE.episodeMs * slack ? epochOf(g.offPerf) : null,
         reading: g.cond.reading,
         "face-absent": g.cond["face-absent"],
         "second-face": g.cond["second-face"],
@@ -869,43 +999,96 @@ function tick(g) {
     for (const kind of KINDS) {
         const since = answering ? active[kind] : null;
         const ep = g.episodes[kind];
-        if (since != null && !ep) g.episodes[kind] = { start: Math.max(since, g.answeringSince), remarked: false };
+        if (since != null && !ep) g.episodes[kind] = { start: Math.max(since, g.answeringSince), remarked: false, phase, step: 0 };
         else if (since == null && ep) closeEpisode(g, kind);
+        else if (ep && phase === "speaking") ep.phase = "speaking";
     }
-    if (answering) {
-        for (const kind of KINDS) {
+    // Presence (no face, a second face) is said out loud as before, but never in the thinking gap: leaning out of frame to think is
+    // thinking too. Where the student looks is never remarked on directly; the ladder below handles off-screen gaze.
+    if (phase === "speaking") {
+        for (const kind of ["face-absent", "second-face"]) {
             const ep = g.episodes[kind];
             if (!ep || ep.remarked) continue;
-            // The accommodation: no spoken request about where the student looks (face presence still counts).
-            if (accommodated && (kind === "look-away" || kind === "reading")) continue;
-            if (kind === "look-away" && awayMs < GAZE.remarkAfterMs + (fadeStart - GAZE.fadeStartMs)) continue;
             if (remark(g, kind)) ep.remarked = true;
             break;
         }
     }
 
-    // The fade: from the fade start of continuous look-away, to the heaviest over GAZE.fadeRampMs; never under the accommodation.
-    const level = answering && !accommodated && awayMs >= fadeStart ? clamp((awayMs - fadeStart) / GAZE.fadeRampMs, 0, 1) : 0;
+    // The reminder ladder (GAD-T561): only while speaking, only on sustained off-screen gaze, never under the accommodation.
+    const L = g.ladder;
+    const ladderOn = answering && !accommodated && phase === "speaking";
+    if (!ladderOn || !off) {
+        if (L.step > 0) restoreLadder(g, now);
+    } else if (L.step === 0) {
+        if (offSpeakingMs >= GAZE.offScreenMs * slack && share > GAZE.offScreenShare) {
+            L.step = 1;
+            L.at = now;
+            gesture(g);   // 1: her small, slow movement toward the student; nothing changes on the screen
+        }
+    } else if (L.step === 1) {
+        if (now - L.at >= GAZE.softenAfterMs * slack && now >= g.softenCooldownUntil) {
+            L.step = 2;   // 2: everything but her dims and softens a little; her face stays bright and sharp
+            L.at = L.softenAt = now;
+        }
+    } else if (L.step === 2) {
+        const pause = !g.studentSpeaking && (g.lastSpeechEndPerf == null || now - g.lastSpeechEndPerf >= GAZE.spokenPauseMs);
+        if (now - L.at >= GAZE.spokenAfterMs * slack && !L.spoke && g.spokenCount < GAZE.spokenPerExam && pause && remark(g, "look-away")) {
+            L.step = 3;   // 3: one short warm line at a pause, never over the student and never "look at me"
+            L.spoke = true;
+            g.spokenCount++;
+            if (g.episodes["look-away"]) g.episodes["look-away"].remarked = true;
+        }
+    }
+    if (g.episodes["look-away"]) g.episodes["look-away"].step = Math.max(g.episodes["look-away"].step, L.step);
+
+    // The soften: up over GAZE.softenRampMs from step 2, never a brightening; restored quickly when the gaze returns.
+    const level = L.step >= 2 ? clamp((now - L.softenAt) / GAZE.softenRampMs, 0, 1) : 0;
     if (level > 0) {
-        if (!g.fade) g.fade = { start: epochOf(g.awayPerf + fadeStart), peak: 0 };
+        if (!g.fade) g.fade = { start: epochOf(L.softenAt), peak: 0 };
         g.fade.peak = Math.max(g.fade.peak, level);
     } else closeFade(g);
     applyFade(g, level);
 
-    show(g, indicatorState(g, awayMs, lost));
+    show(g, indicatorState(g, lost));
+}
+
+/** The gaze is back on the screen (or the answer ended): the ladder starts again from nothing; a soften that showed cools down. */
+function restoreLadder(g, now) {
+    const L = g.ladder;
+    if (L.step >= 2) g.softenCooldownUntil = now + GAZE.softenRestoreMs + GAZE.softenCooldownMs;
+    L.step = 0;
+    L.at = 0;
+    L.softenAt = 0;
 }
 
 /**
- * How much continuous look-away starts the fade (and a look-away episode): longer when the look away began in the first
- * GAZE.thinkingGraceMs of the answer, as a precaution while the student gathers an answer (GAD-T261; not a claim that it is thinking, GAD-T446).
+ * Step 1 of the ladder (GAD-T561): the examiner herself re-orients the student, the best-supported cue (Bartram et al. 2003; Oh et
+ * al. 2018): a slight, slow head tilt and raised brows, her eyes on the camera. No sound and no screen change. The 3D examiner moves
+ * through the avatar's own animation queue; the portrait gets a very small CSS tilt (none when reduced motion is asked for).
  */
-function fadeStartFor(g, now) {
-    if (g.awayPerf == null || !g.answering) return GAZE.fadeStartMs;
-    const answerStartPerf = now - (Date.now() - g.answeringSince);
-    return Math.max(g.awayPerf, answerStartPerf) - answerStartPerf < GAZE.thinkingGraceMs ? GAZE.thinkingFadeStartMs : GAZE.fadeStartMs;
+function gesture(g) {
+    const a = shownAvatar();
+    if (!a) return;
+    if (a.mode === "3d" && typeof a.animate === "function") {
+        try { typeof a.holdGaze === "function" && a.holdGaze(); } catch { }
+        try {
+            a.animate("gadfly-reminder", [700, 900, 700], {
+                headRotateZ: [0.05, 0.05, 0], headRotateX: [-0.02, -0.02, 0],
+                browInnerUp: [0.35, 0.35, 0], browOuterUpLeft: [0.25, 0.25, 0], browOuterUpRight: [0.25, 0.25, 0],
+            });
+        } catch { /* the model isn't ready: the next steps still follow */ }
+        return;
+    }
+    try { if (matchMedia("(prefers-reduced-motion: reduce)").matches) return; } catch { }
+    const stage = document.querySelector("[data-voice-stage]");
+    if (!stage) return;
+    stage.setAttribute("data-gaze-nudge", "");
+    clearTimeout(g.nudgeTimer);
+    g.nudgeTimer = setTimeout(() => stage.removeAttribute("data-gaze-nudge"), GAZE.gestureMs);
 }
 
-function indicatorState(g, awayMs, lost) {
+/** The indicator never says "looking away" (GAD-T561): only setup, presence and whether the check is running. */
+function indicatorState(g, lost) {
     if (g.setup) return "setup";
     if (g.calibrating) return g.setupOutcome === "poor" ? "calibrating-simple" : "calibrating";
     if (lost) return "lost";
@@ -913,12 +1096,10 @@ function indicatorState(g, awayMs, lost) {
     if (g.faces > 1) return "two-faces";
     if (g.options.accommodation) return "accommodated";
     if (!g.headpose || !g.headpose.baselineReady) return "unknown";
-    if (g.cond.reading != null) return "reading";
-    if (awayMs > 0) return "away";
     return "on";
 }
 
-// ----------------------------------------------------------------------------------------------------------- quality
+/ ----------------------------------------------------------------------------------------------------------- quality
 
 /**
  * This session's tracking quality so far (GAD-T305), 0..100, from the parts weighted in GAZE.qWeights. Head direction only (no
@@ -949,7 +1130,11 @@ function closeEpisode(g, kind) {
     const ep = g.episodes[kind];
     delete g.episodes[kind];
     if (!ep) return;
-    send(g, { type: "examiner-" + kind, start: ep.start, end: Date.now(), summary: ep.remarked ? "remarked" : "" });
+    // Codes only (GAD-T557, GAD-T561): "remarked" when she said something, "ph:t" for a look that stayed in the thinking gap (looking
+    // away then is normal), "step:N" for the reminder step it reached.
+    const codes = [ep.remarked ? "remarked" : "", kind === "look-away" && ep.phase === "thinking" ? "ph:t" : "",
+        kind === "look-away" && ep.step > 0 ? "step:" + ep.step : ""];
+    send(g, { type: "examiner-" + kind, start: ep.start, end: Date.now(), summary: codes.filter(Boolean).join(";") });
 }
 
 function closeFade(g) {
@@ -978,7 +1163,11 @@ function send(g, e) {
 
 // ------------------------------------------------------------------------------------------------------------- remarks
 
-/** The examiner asks out loud for eye contact. The server decides the words and offers them to the avatar hub. */
+/**
+ * The examiner says one short line: a warm, varied reminder at a pause (GAD-T561: "Take your time; I'm right here.", never "look at
+ * me"), or a word about no face or a second face. The server decides the words (never the same reminder twice in a session) and
+ * offers them to the avatar hub.
+ */
 function remark(g, kind) {
     if (g.remarking || Date.now() - g.lastRemark < GAZE.remarkGapMs) return false;
     const avatar = g.avatar;
@@ -993,8 +1182,9 @@ function remark(g, kind) {
             const speech = await avatarSpeech(g, avatar);
             if (!speech) return;
             // Still answering after those round trips (GAD-T316): an answer handed in meanwhile (the silence or Done answering)
-            // must not get "Please look at me while you answer" spoken over the judging wait or the next question.
+            // must not get a remark spoken over the judging wait or the next question, and a reminder never talks over the student.
             if (G !== g || !avatar.isConnected || avatar.dataset.state !== "listening") return;
+            if (kind === "look-away" && g.studentSpeaking) return;
             // The voice room stops capturing the microphone while the examiner speaks, so the remark isn't transcribed into the answer.
             held = true;
             holdMic(true);
@@ -1048,17 +1238,27 @@ function show(g, state) {
     const label = el.querySelector("[data-examiner-gaze-label]");
     if (label) label.textContent = TEXT[state] ?? "";
     const again = el.querySelector("[data-examiner-gaze-action]");
-    if (again) again.hidden = !(state === "on" || state === "away" || state === "reading" || state === "unknown");
+    if (again) again.hidden = !(state === "on" || state === "unknown");
 }
 
+/**
+ * The peripheral soften (GAD-T561, step 2): a light dim and blur over everything except the examiner's stage, cut out of the overlay
+ * with an even-odd clip path, so her face stays at full brightness and sharpness while the surroundings recede (Hata et al. 2016).
+ * At most GAZE.softenMaxDim and GAZE.softenMaxBlurPx; never a brightening or a white-out.
+ */
 function applyFade(g, level) {
     const el = document.querySelector("[data-examiner-fade]");
     if (!el) return;
     const rising = level >= g.level;
     g.level = level;
-    el.style.setProperty("--fade-ms", (rising ? GAZE.tickMs : GAZE.fadeRestoreMs) + "ms");
-    el.style.setProperty("--fade-dim", String(GAZE.fadeMaxDim));
-    el.style.setProperty("--fade-blur", GAZE.fadeMaxBlurPx + "px");
+    el.style.setProperty("--fade-ms", (rising ? GAZE.tickMs : GAZE.softenRestoreMs) + "ms");
+    el.style.setProperty("--fade-dim", String(GAZE.softenMaxDim));
+    el.style.setProperty("--fade-blur", GAZE.softenMaxBlurPx + "px");
+    const r = level > 0 ? g.rect : null;
+    if (r) {
+        const box = `${r.left}px ${r.top}px, ${r.right}px ${r.top}px, ${r.right}px ${r.bottom}px, ${r.left}px ${r.bottom}px, ${r.left}px ${r.top}px`;
+        el.style.setProperty("clip-path", `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${box})`);
+    }
     el.style.opacity = String(level);
     el.dataset.active = level > 0 ? "true" : "false";
 }

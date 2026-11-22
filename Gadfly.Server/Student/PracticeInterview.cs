@@ -205,8 +205,20 @@ public sealed class PracticeInterview
     public string? Remark(VoiceGrants grants, Guid user, string? kind)
     {
         if (kind is null || !WebcamIntegrityRecorder.ExaminerRemarks.TryGetValue(kind, out var text)) return null;
+        // A reminder (GAD-T561) is a warm line, never the same twice in one practice; once all are said she starts over.
+        if (kind is "look-away" or "reading")
+        {
+            if (WebcamIntegrityRecorder.NextReminder(remindersSaid) is not { } line)
+            {
+                remindersSaid.Clear();
+                line = WebcamIntegrityRecorder.NextReminder(remindersSaid)!;
+            }
+            text = line;
+        }
         return grants.Offer(user, Id, text) ? text : null;
     }
+
+    private readonly HashSet<string> remindersSaid = new(StringComparer.Ordinal);
 
     /// <summary>
     /// Whether a spoken answer sounds like "I don't know": the exam's own aporia word, or the usual ways of saying it. Only used to

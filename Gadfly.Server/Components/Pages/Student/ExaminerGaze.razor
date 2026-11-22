@@ -1,11 +1,11 @@
 @* Eye contact with the examiner in the voice interview room (GAD-T240). Runs wwwroot/js/examiner-gaze.js while the talking
    examiner is on screen: the camera is analysed on the student's device only (MindAttic.Webcam), calibrated on the avatar's
-   on-screen position, and a live indicator says whether the student is looking at the examiner. While they answer, a long look
-   away fades the exam screen with a warning to look back (restored when they do), and a longer one, a reading pattern, no face
-   or a second face makes the examiner ask out loud for eye contact. Each episode is stored as a webcam integrity event with its
+   on-screen position, and a live indicator says whether the student is looking at the examiner. While they answer, only a long look off
+   the screen while speaking starts the reminder ladder (GAD-T557, GAD-T561): her small gesture, then a light dim around her, then
+   one warm line at a pause; no face or a second face makes the examiner say so. Each episode is stored as a webcam integrity event with its
    start and end (WebcamIntegrityRecorder.RecordExaminerGazeAsync), for a person to review; never a frame, never a verdict.
-   Renders nothing for an exam whose integrity level is Off. The fade waits longer at the start of each answer, when a student is
-   gathering an answer (a precaution, not a finding that a look away is thinking; GAD-T446), and an eye-contact accommodation on the assignment turns off the fade and the spoken request (GAD-T261).
+   Renders nothing for an exam whose integrity level is Off. Nothing fires in the thinking gap before the first word (looking away then is normal and
+   helps; docs/research/attention-and-gaze.md), and an eye-contact accommodation on the assignment turns the ladder off (GAD-T261).
    GAD-T305: where the student looks comes from a gaze vector (iris plus head pose) mapped onto the page by a five-dot
    calibration (the get-ready page's, reused, or one run here), with the head-direction check as the fallback; every episode
    carries the session's tracking quality, which the server turns into a sentence for the reviewer (GazeQuality). *@
@@ -32,17 +32,16 @@
         <summary>How this works</summary>
         @if (accommodated)
         {
-            <p class="examiner-gaze-note">You have an eye-contact accommodation: you don't need to look at the examiner, the screen won't fade and she won't ask you to look at her. Your camera still checks, on your device only, that your face is in view and that you are on your own; if not, the examiner will say so. A short note of when it happened is kept for a person to review.</p>
+            <p class="examiner-gaze-note">You have an eye-contact accommodation: you don't need to look at the examiner, and the examiner won't remind you to. Your camera still checks, on your device only, that your face is in view and that you are on your own; if not, the examiner will say so. A short note of when it happened is kept for a person to review.</p>
         }
         else
         {
-            <p class="examiner-gaze-note">Your camera checks, on your device only, that you are looking at the examiner while you answer. Leaning or turning your head a little while still looking at her is fine. "Set up eye contact again" has you follow a dot for about 10 seconds so the camera learns your screen, which makes the check fairer. Looking away to think is fine: at the start of an answer you have several seconds, later a couple of seconds, before the screen starts to fade, and it clears as soon as you look back. If you keep looking away, your eyes move as if reading, your face is out of view or a second face appears, the examiner will say so out loud (for example, "Please look at me while you answer"). Her remark is not recorded as part of your answer. A short note of when it happened is kept for a person to review. If you can't keep eye contact (for example for a disability), ask your instructor for the eye-contact accommodation.</p>
+            <p class="examiner-gaze-note">Your camera checks, on your device only, where you look while you answer. Looking away to think is normal and fine: nothing happens while you work out your answer before you start speaking, and glancing at anything on the screen (the transcript, the clock) never counts. Only a long look off the screen while you speak does: then the examiner gives a small nod of the head, the screen around her may dim a little (it clears as soon as you look back), and at a pause she may say a short, friendly line. "Set up eye contact again" has you follow a dot for about 10 seconds so the camera learns your screen, which makes the check fairer. A short note of a long look away is kept for a person to review; it is never a grade and never decides anything. If you can't keep eye contact (for example for a disability), ask your instructor for the eye-contact accommodation.</p>
         }
         </details>
     </div>
-    <div class="examiner-fade" data-examiner-fade data-active="false" aria-hidden="true">
-        <p class="examiner-fade-warning">Please look at the examiner.</p>
-    </div>
+    @* The soften (GAD-T561): no words on it, ever; the examiner is the reminder. *@
+    <div class="examiner-fade" data-examiner-fade data-active="false" aria-hidden="true"></div>
 }
 
 @code {
@@ -111,8 +110,17 @@
         if (!enabled || kind is null || !WebcamIntegrityRecorder.ExaminerRemarks.TryGetValue(kind, out var text)) return Task.FromResult<string?>(null);
         // Under the eye-contact accommodation the examiner never asks for eye contact, whatever the browser asks for (GAD-T261).
         if (accommodated && WebcamIntegrityRecorder.AccommodatedTypes.Contains("examiner-" + kind)) return Task.FromResult<string?>(null);
+        // A reminder (GAD-T561) is a warm line never said twice in this session; none left, she says nothing.
+        if (kind is "look-away" or "reading")
+        {
+            if (WebcamIntegrityRecorder.NextReminder(remindersSaid) is not { } line) return Task.FromResult<string?>(null);
+            text = line;
+        }
         return Task.FromResult(Grants.Offer(user, SessionId, text) ? text : null);
     }
+
+    /// <summary>The gentle reminders already said in this exam room (GAD-T561).</summary>
+    private readonly HashSet<string> remindersSaid = new(StringComparer.Ordinal);
 
     public async ValueTask DisposeAsync()
     {

@@ -19,12 +19,10 @@
     <button type="button" class="link" data-examiner-gaze-action="calibrate" hidden>Set up eye contact again</button>
     <details class="examiner-gaze-more">
         <summary>How this works</summary>
-        <p class="examiner-gaze-note">Your camera checks, on your device only, that you are looking at the examiner while you answer, exactly as in an exam. Looking away to think is fine: at the start of an answer you have several seconds, later a couple of seconds, before the screen starts to fade, and it clears as soon as you look back. "Set up eye contact again" has you follow a dot for about 10 seconds so the camera learns your screen. In an exam a short note of when it happened is kept for a person to review; in this practice nothing is kept.</p>
+        <p class="examiner-gaze-note">Your camera checks, on your device only, where you look while you answer, exactly as in an exam. Looking away to think is normal and fine: nothing happens while you work out your answer, and glancing at anything on the screen never counts. Only a long look off the screen while you speak does: the examiner gives a small nod, the screen around her may dim a little (it clears as soon as you look back), and at a pause she may say a short, friendly line. "Set up eye contact again" has you follow a dot for about 10 seconds so the camera learns your screen. In an exam a short note of a long look away is kept for a person to review; in this practice nothing is kept.</p>
     </details>
 </div>
-<div class="examiner-fade" data-examiner-fade data-active="false" aria-hidden="true">
-    <p class="examiner-fade-warning">Please look at the examiner.</p>
-</div>
+<div class="examiner-fade" data-examiner-fade data-active="false" aria-hidden="true"></div>
 
 @code {
     [Parameter, EditorRequired] public PracticeInterview Practice { get; set; } = default!;
