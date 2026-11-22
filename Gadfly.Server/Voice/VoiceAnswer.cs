@@ -25,7 +25,11 @@ public sealed class VoiceSegment
 public sealed class VoiceAnswerPayload
 {
     public List<VoiceSegment> Segments { get; set; } = [];
-    /// <summary>The question this answers, as shown when the browser captured it (GAD-T321): set by VoiceRoom, not sent by the browser.</summary>
+    /// <summary>
+    /// The question this answers (GAD-T321): the turn the browser heard asked, so an answer it kept and sent again later (GAD-T473)
+    /// still names its own question; VoiceRoom fills in the turn shown when it arrived if the browser gave none. Used only to turn an
+    /// answer away from a question it wasn't meant for, never to choose which question it answers.
+    /// </summary>
     public int? Turn { get; set; }
     /// <summary>The capture-clock time the examiner stopped speaking (the microphone opened), for time to first word.</summary>
     public double? ListeningStartMs { get; set; }

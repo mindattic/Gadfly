@@ -194,18 +194,34 @@ public partial class ExamRoom
         }
     }
 
-    /// <summary>A finished spoken answer from the browser: it joins the ledger as a voice response and is judged as heard (GAD-T405).</summary>
-    private async Task OnVoiceAnswerAsync(VoiceAnswerPayload payload)
+    /// <summary>
+    /// A finished spoken answer from the browser: it joins the ledger as a voice response and is judged as heard (GAD-T405). Returns
+    /// whether the answer was taken (GAD-T473). Not taken (false) means it arrived while something else was going on (another step
+    /// running, the reconnect re-load, a staff pause, a refusal) or for a question no longer being asked: the browser keeps the words
+    /// and its reload draft, and sends them again once this question can be answered, or drops them with a plain note if the exam has
+    /// moved to another question. A spoken answer is never cleared in the browser without having been taken here.
+    /// </summary>
+    private async Task<bool> OnVoiceAnswerAsync(VoiceAnswerPayload payload)
     {
-        if (busy || phase != Phase.Answering || step is null || !VoiceCanAnswer) return;
-        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        try { return await TakeVoiceAnswerAsync(payload); }
+        // Not an EventCallback (it returns whether the answer was taken), so the page renders the step's result itself.
+        finally { StateHasChanged(); }
+    }
+
+    private async Task<bool> TakeVoiceAnswerAsync(VoiceAnswerPayload payload)
+    {
+        if (busy || phase != Phase.Answering || step is null || !VoiceCanAnswer) return false;
+        // Meant for another question (GAD-T321): never the answer to this one.
+        if (payload.Turn is { } turn && turn != step.TurnIndex) return false;
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return false;
         var built = VoiceAnswerBuilder.Build(payload, Clock.GetUtcNow());
         if (built is null)
         {
             error = "I didn't catch an answer to record. Please say it again.";
-            // The browser shut the microphone when it sent this: open it again for the same question (GAD-T316).
+            // The browser shut the microphone when it sent this: open it again for the same question (GAD-T316). Taken, in that
+            // nothing in it can be used: keeping it would only send the same unusable answer again.
             if (voiceRoom is not null) await voiceRoom.ListenAgainAsync();
-            return;
+            return true;
         }
         var text = built.Answer.Text;
         error = null;
@@ -221,11 +237,14 @@ public partial class ExamRoom
                 pendingAnswer = text;
                 pendingVoiceAnswer = answer;
                 answerStartedAt = answer.StartedAt;
-                await RunStepAsync(ThinkingAbout.Answer, () => Sessions.AnswerAsync(org, SessionId, user, answer, expectedTurn: payload.Turn));
-                break;
+                // Refused by the server (a staff pause that landed meanwhile, say): the page shows why, and the browser keeps the words.
+                // A step that failed outright is still taken: the page's Try again resends this answer (pendingVoiceAnswer).
+                return await RunStepAsync(ThinkingAbout.Answer, () => Sessions.AnswerAsync(org, SessionId, user, answer, expectedTurn: payload.Turn));
             case { Kind: ResponseLedger.MeaningKind } request:
                 await ClarifyAsync(request, text);
-                break;
+                return true;
+            default:
+                return false;
         }
     }
 }

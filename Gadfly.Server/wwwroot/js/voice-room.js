@@ -476,19 +476,28 @@ export function speak(what, cacheable, style, turn) {
     s.cutWatch = null;   // the next question: speech from here on is not a cut-off of the last answer (GAD-T462)
     s.gate = true;
     s.remarkCommitPending = false;   // a remark's late final belongs to the last answer, not to this question's
-    s.segments = [];
+    // An answer the page could not take yet (GAD-T473) is kept through the same question asked again (Repeat the question, or Try
+    // again after a lost device) and sent once she has finished. A different question means the exam moved on without it: it is
+    // dropped, never sent as this question's answer, and the student is told so plainly.
+    const nextTurn = turn ?? s.turn;
+    const keep = !!s.kept && s.segments.length > 0 && s.kept.turn === nextTurn;
+    const dropped = !!s.kept && !keep && s.segments.length > 0;
+    if (!keep) {
+        s.kept = null;
+        s.segments = [];
+        s.startedAtUnixMs = null;
+        s.acoustics.reset();
+        resetDelay(s);
+    }
     s.partial = "";
-    s.startedAtUnixMs = null;
-    s.acoustics.reset();
-    resetDelay(s);
     // A fresh set of segments for this turn: any draft kept from a reload mid-answer (GAD-T306) no longer applies. Except the
     // first time after a reload: the page asks the same question again, and clearing here wiped the draft before the microphone
     // opened to restore it, so recovery never happened (GAD-T316). Until that restore is tried, a draft for another turn is
     // simply not loaded (VoiceDraft.load matches the turn) and the next save replaces it.
-    s.turn = turn ?? s.turn;
+    s.turn = nextTurn;
     s.recovered = false;
-    text("recovered", "");
-    if (s.draftChecked) VoiceDraft.clear(s.sessionId);
+    text("recovered", dropped ? DROPPED_TEXT : "");
+    if (s.draftChecked && !keep) VoiceDraft.clear(s.sessionId);
     drawTranscript();
     status("The examiner is speaking…");
     const token = s.speakToken = {};
@@ -498,7 +507,7 @@ export function speak(what, cacheable, style, turn) {
         s.speakToken = null;
         s.speaking = false;
         s.ours = null;
-        if (s.allowed) openMic(); else status(s.held ? HELD_TEXT : "Waiting.");
+        if (s.allowed) { openMic(); resendKept(s); } else status(s.held ? HELD_TEXT : "Waiting.");
     };
     s.speaking = true;
     // No eye-contact remark may start from here on (examiner-gaze.js only speaks one to a listening examiner): Repeat the question
@@ -698,7 +707,7 @@ function sayFiller(s, what) {
             if (s.fillPlaying === playing) s.fillPlaying = null;
             // A question waiting on this line takes it from here (speak()); otherwise go back to what the room was doing.
             if (S !== s || !s.running || s.speakToken || s.speaking) return;
-            if (s.allowed) { if (s.gate) openMic(); }
+            if (s.allowed) { if (s.gate) openMic(); resendKept(s); }
             else { if (s.avatar) s.avatar.state = s.held ? "idle" : "thinking"; status(waitingText(s)); }
         });
     s.fillPlaying = playing;
@@ -725,16 +734,16 @@ export function setAllowed(allowed, held) {
     // A filler line still playing (GAD-T290) keeps the microphone shut until it ends; its end opens it if an answer is wanted.
     if (!s.running || s.speaking || s.fillPlaying) return;
     if (s.allowed && was && !s.gate) return;
-    if (s.allowed) openMic();
+    if (s.allowed) { openMic(); resendKept(s); }
     else closeGate(s);
 }
 
 /** What the status line says while staff hold the exam (GAD-T471). */
 const HELD_TEXT = "Your instructor paused the exam. Anything you've already said is kept; you can carry on once they resume it.";
 
-/** The status line while no answer is wanted: the judging wait, or a staff pause (GAD-T471). */
+/** The status line while no answer is wanted: a staff pause (GAD-T471), an answer kept to send again (GAD-T473), or the judging wait. */
 function waitingText(s) {
-    return s.held ? HELD_TEXT : "Thinking about your answer…";
+    return s.held ? HELD_TEXT : s.kept ? KEPT_TEXT : "Thinking about your answer…";
 }
 
 /**
@@ -1163,6 +1172,7 @@ function discard() {
     S.acoustics.reset();
     S.latenciesMs = [];
     S.recovered = false;
+    S.kept = null;   // an answer waiting to be sent again (GAD-T473) was cleared by the student
     text("recovered", "");
     VoiceDraft.clear(S.sessionId);
     drawTranscript();
@@ -1181,6 +1191,8 @@ async function submit(immediate) {
         // Recognizer latency (GAD-T361): commit-to-final, timed here since the hub pushes the final segment rather than
         // returning it from a call the server could time itself. Diagnostics only: never shown to the student, never graded.
         recognizerLatenciesMs: s.latenciesMs.slice(),
+        // The question it answers, as asked here (GAD-T321): an answer kept and sent again later (GAD-T473) can only ever be taken for it.
+        turn: s.turn,
     };
     s.gate = true;
     talking(s, false);
@@ -1190,9 +1202,17 @@ async function submit(immediate) {
     status("Sending your answer…");
     // Sent by the silence, not by "Done answering": watch the next few seconds for the student going on (GAD-T462).
     s.cutWatch = immediate ? null : performance.now();
+    s.sending = true;
     try {
-        await s.dotnet.invokeMethodAsync("OnVoiceAnswer", payload);
-        if (S === s) {
+        let taken;
+        try { taken = await s.dotnet.invokeMethodAsync("OnVoiceAnswer", payload); }
+        finally { s.sending = false; }
+        if (S !== s) return;
+        if (taken === false) { keepAnswer(s, payload); return; }
+        s.kept = null;
+        // Taken: the answer is the page's now, so the words, the draft and the "what I heard" box are cleared. A question asked
+        // meanwhile (the answer's step already moved on) cleared them itself, so only this answer's own words are touched.
+        if (s.turn === payload.turn && s.segments === payload.segments) {
             s.segments = []; s.partial = ""; s.startedAtUnixMs = null; s.acoustics.reset(); s.latenciesMs = [];
             s.recovered = false; text("recovered", "");
             VoiceDraft.clear(s.sessionId);   // sent: the draft kept in case of a reload (GAD-T306) is no longer needed
@@ -1211,6 +1231,59 @@ async function submit(immediate) {
             }
         }
     }
+}
+
+// ------------------------------------------------------------------------------------------------- an answer kept (GAD-T473)
+// The page can turn a spoken answer away without it being wrong: it arrived while another step was running (the page reloading
+// its state after a dropped connection, "I don't know" or Finish being handled), during a staff pause, or the server refused it
+// for the moment. Until GAD-T473 the browser cleared it anyway and the words were gone without a word to the student. Now the
+// words stay in "What I heard" and in the reload draft, and are sent again, for the same question only, as soon as an answer is
+// wanted again. If the exam moves to another question first, they are dropped with a plain note, never sent as its answer.
+
+/** How long after a turned-away answer the page is tried again when it already says an answer is wanted, and how many times. */
+const KEPT_RETRY_MS = 1500;
+const KEPT_MAX_TRIES = 3;
+
+const KEPT_TEXT = "Your answer is kept. It will be sent as soon as the examiner is ready.";
+const KEPT_GIVE_UP_TEXT = "Your answer couldn't be sent yet, but it's still here. Press Done answering to send it, or keep talking to add more.";
+const DROPPED_TEXT = "Your last answer came in after the exam had already moved on to this question, so it wasn't recorded. Answer this question whenever you're ready.";
+
+/** The page did not take the answer just sent: keep its words (and draft) for the same question and say so. */
+function keepAnswer(s, payload) {
+    s.cutWatch = null;   // nothing was recorded for a cut-off note to belong to
+    if (s.turn !== payload.turn) {
+        // Another question was asked while it was on its way: never its answer.
+        if (payload.segments.length > 0) text("recovered", DROPPED_TEXT);
+        return;
+    }
+    if (s.segments !== payload.segments && payload.segments.length > 0) {
+        // The same question was asked again while it was on its way (Repeat the question), which cleared the box: put them back,
+        // ahead of anything said since.
+        s.segments = payload.segments.concat(s.segments);
+        VoiceDraft.save(s.sessionId, s.turn, s.segments);
+    }
+    const tries = (s.kept && s.kept.turn === s.turn ? s.kept.tries : 0) + 1;
+    s.kept = { turn: s.turn, tries };
+    drawTranscript();
+    status(s.held ? HELD_TEXT : KEPT_TEXT);
+    // The page's "not now" and its next "go ahead" (setAllowed) can arrive in either order: if it already wants an answer, try again
+    // shortly; otherwise its next "go ahead" sends it.
+    if (s.allowed) setTimeout(() => { if (S === s && s.allowed) resendKept(s); }, KEPT_RETRY_MS);
+}
+
+/** Sends a kept answer again, once an answer for its own question is wanted and nothing else is going on. */
+function resendKept(s) {
+    const kept = s.kept;
+    if (!kept || S !== s || !s.running || s.sending || !s.allowed || s.speaking || s.speakToken || s.fillPlaying || s.remarkHold) return;
+    if (kept.turn !== s.turn || s.segments.length === 0) { s.kept = null; return; }
+    if (s.gate) openMic();
+    if (kept.tries >= KEPT_MAX_TRIES) {
+        // Turned away a few times running: stop sending it on our own and let the student send it (or add to it) themselves.
+        s.kept = null;
+        if (!s.gate) status(KEPT_GIVE_UP_TEXT);
+        return;
+    }
+    void submit(true);
 }
 
 function toggleMode(button) {

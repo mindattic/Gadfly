@@ -168,19 +168,22 @@
     /// A spoken answer, taken as heard as in an exam (GAD-T405): the examiner "thinks" for a moment (her filler line and the
     /// page-turn sound, GAD-T290/GAD-T409), then moves to the next step. The words are only checked for "I don't know", then dropped.
     /// </summary>
-    private async Task OnAnswerAsync(VoiceAnswerPayload payload)
+    /// <remarks>Returns whether the answer was taken (GAD-T473): not taken, the browser keeps the words and sends them again once
+    /// an answer is wanted, or drops them when the practice has moved to another step.</remarks>
+    private async Task<bool> OnAnswerAsync(VoiceAnswerPayload payload)
     {
-        if (pondering || !practice.WantsAnswer) return;
+        if (pondering || !practice.WantsAnswer) return false;
         var turn = practice.Turn;
-        if (payload?.Turn is { } t && t != turn) return;   // an answer to a step the practice already left
+        if (payload?.Turn is { } t && t != turn) return false;   // an answer to a step the practice already left
         var said = string.Join(' ', (payload?.Segments ?? []).Select(s => (s.Text ?? "").Trim()).Where(x => x.Length > 0));
         pondering = true;
         StateHasChanged();
         try { await Task.Delay(PracticeInterview.ThinkingPause, stop.Token); }
-        catch (OperationCanceledException) { return; }
+        catch (OperationCanceledException) { return true; }
         if (practice.Turn == turn) practice.Answer(turn, said);   // unless "Skip" or "Start again" moved on meanwhile
         pondering = false;
         StateHasChanged();
+        return true;
     }
 
     private static string Format(TimeSpan t) => $"{(int)t.TotalMinutes}:{t.Seconds:00}";

@@ -181,7 +181,11 @@
     /// <summary>True while voice mode is on and typing the main answer is off.</summary>
     [Parameter] public bool Active { get; set; }
     [Parameter] public EventCallback<bool> ActiveChanged { get; set; }
-    [Parameter] public EventCallback<VoiceAnswerPayload> OnAnswer { get; set; }
+    /// <summary>
+    /// A finished spoken answer; resolves to whether the exam room took it (GAD-T473). Not taken, the browser keeps the words and
+    /// sends them again once this question can be answered. The exam room renders the result itself (this is not an EventCallback).
+    /// </summary>
+    [Parameter] public Func<VoiceAnswerPayload, Task<bool>>? OnAnswer { get; set; }
     /// <summary>The examiner is beginning to speak a question or request (the exam room starts the held clock on the first, GAD-T239).</summary>
     [Parameter] public EventCallback OnExaminerSpeaks { get; set; }
     /// <summary>
@@ -230,10 +234,15 @@
 
     private static string FormatDelay(double seconds) => seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s";
 
-    private void AddLine(bool examiner, string text, double? delaySeconds, string? voice = null)
+    /// <summary>The next transcript line's key: lines can be taken out again (an answer not taken, GAD-T473), so never the count.</summary>
+    private int nextLineId;
+
+    private TranscriptLine? AddLine(bool examiner, string text, double? delaySeconds, string? voice = null)
     {
-        if (string.IsNullOrWhiteSpace(text)) return;
-        transcript.Add(new TranscriptLine(transcript.Count + 1, examiner, text.Trim(), delaySeconds, voice));
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var line = new TranscriptLine(++nextLineId, examiner, text.Trim(), delaySeconds, voice);
+        transcript.Add(line);
+        return line;
     }
 
     /// <summary>
@@ -600,22 +609,45 @@
         StateHasChanged();
     });
 
+    /// <summary>
+    /// A finished spoken answer from voice-room.js. Returns whether the exam room took it (GAD-T473): the browser clears the words and
+    /// their reload draft only when it did, and otherwise keeps them to send again once the question can be answered.
+    /// </summary>
     [JSInvokable]
-    public Task OnVoiceAnswer(VoiceAnswerPayload payload) => InvokeAsync(async () =>
+    public async Task<bool> OnVoiceAnswer(VoiceAnswerPayload payload)
     {
-        // The question it answers, as shown when it arrived: the awaits below can let the exam move on first (GAD-T321).
-        if (payload is not null) payload.Turn = TurnIndex;
-        cutOffTurn = TurnIndex;   // the answer a cut-off marker that follows belongs to (GAD-T462)
-        // The words as heard, joined the way VoiceAnswerBuilder joins them; the delay is the one the student watched (display only).
-        var said = string.Join(' ', (payload?.Segments ?? []).Select(s => (s.Text ?? "").Trim()).Where(t => t.Length > 0));
-        var delay = payload?.ResponseDelayMs is { } ms && double.IsFinite(ms) && ms >= 0 && ms / 1000 <= MaxDelaySeconds ? ms / 1000 : (double?)null;
-        // Numbers and punctuation normalized for this on-screen line only (GAD-T360): the answer built from payload below
-        // (VoiceAnswerBuilder.Build, in OnAnswer's handler) still uses the words exactly as the recognizer gave them.
-        AddLine(false, TranscriptDisplay.ForDisplay(said), delay, await VoiceLineAsync(payload));
-        RecordRecognitionDiagnostics(payload);
-        StateHasChanged();
-        await OnAnswer.InvokeAsync(payload);
-    });
+        var taken = false;
+        await InvokeAsync(async () =>
+        {
+            if (payload is null || OnAnswer is null) return;
+            // The question it answers (GAD-T321): the one the browser heard asked, else the one shown when it arrived (the awaits
+            // below can let the exam move on first). An answer kept and sent again (GAD-T473) still names its own question, so it can
+            // never become the answer to the next one.
+            payload.Turn ??= TurnIndex;
+            // The words as heard, joined the way VoiceAnswerBuilder joins them; the delay is the one the student watched (display only).
+            var said = string.Join(' ', payload.Segments.Select(s => (s.Text ?? "").Trim()).Where(t => t.Length > 0));
+            var delay = payload.ResponseDelayMs is { } ms && double.IsFinite(ms) && ms >= 0 && ms / 1000 <= MaxDelaySeconds ? ms / 1000 : (double?)null;
+            // Numbers and punctuation normalized for this on-screen line only (GAD-T360): the answer built from payload below
+            // (VoiceAnswerBuilder.Build, in OnAnswer's handler) still uses the words exactly as the recognizer gave them. Added before
+            // the answer is handed on, so it comes before the next question's line.
+            var line = AddLine(false, TranscriptDisplay.ForDisplay(said), delay, await VoiceLineAsync(payload));
+            StateHasChanged();
+            // The answer a cut-off marker that follows belongs to (GAD-T462): set now, since the marker can arrive while it is judged.
+            cutOffTurn = payload.Turn;
+            taken = await OnAnswer(payload);
+            if (taken)
+            {
+                RecordRecognitionDiagnostics(payload);
+            }
+            else
+            {
+                if (cutOffTurn == payload.Turn) cutOffTurn = null;   // nothing was recorded for a marker to belong to
+                if (line is not null) transcript.Remove(line);   // kept in the browser and sent again later: it joins the transcript then
+            }
+            StateHasChanged();
+        });
+        return taken;
+    }
 
     /// <summary>The turn whose spoken answer was sent last and not yet marked as cut off (GAD-T462); null once marked.</summary>
     private int? cutOffTurn;

@@ -484,10 +484,14 @@
             + (s.Level == IntegrityLevel.Strict ? " Your browser may ask to allow screen detection; you can decline." : "");
     }
 
-    /// <summary>Runs one orchestrator step with the thinking state shown, then shows its result.</summary>
-    private async Task RunStepAsync(ThinkingAbout about, Func<Task<SessionStep>> run)
+    /// <summary>
+    /// Runs one orchestrator step with the thinking state shown, then shows its result. False when it did not run (another step was
+    /// running) or the server refused it (the reason is shown), so a spoken answer can be kept in the browser (GAD-T473).
+    /// </summary>
+    private async Task<bool> RunStepAsync(ThinkingAbout about, Func<Task<SessionStep>> run)
     {
-        if (busy) return;
+        if (busy) return false;
+        var ran = true;
         busy = true;
         error = null;
         confirmFinish = false;
@@ -504,6 +508,7 @@
         {
             error = ex.Message;
             phase = previous == Phase.Answering ? Phase.Answering : Phase.Error;
+            ran = false;
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !stop.IsCancellationRequested)
         {
@@ -516,6 +521,7 @@
             busy = false;
         }
         await TakeAsHeardAsync();
+        return ran;
     }
 
     private void Apply(SessionStep next)

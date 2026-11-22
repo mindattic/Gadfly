@@ -69,6 +69,16 @@ their attempt or leave them staring at a frozen page.
   in progress is committed so its words land in "What I heard"; everything already said stays there and in the reload draft.
   On release the microphone opens again for the same question with those words still in place, the answer's listening start
   and response delay unchanged, and nothing is sent until the student carries on and pauses, or presses **Done answering**.
+- **An answer that arrives at a bad moment is kept, never dropped (GAD-T473).** `VoiceRoom.OnVoiceAnswer` returns whether the
+  exam room took the answer (`ExamRoom.OnVoiceAnswerAsync`). It is not taken while another step is running (the reconnect
+  re-load above, "I don't know", Finish), during a staff pause, when the server refuses it for the moment (the reason is shown),
+  or when it names another question. Then `voice-room.js` keeps the words in "What I heard" and in the reload draft, says
+  "Your answer is kept. It will be sent as soon as the examiner is ready.", and sends it again as soon as an answer is wanted for
+  the same question (and once more after 1.5 s if the page already wants one); after three refusals in a row it stops sending
+  on its own and leaves **Done answering** to the student. The answer carries the question the browser heard asked (`turn`,
+  GAD-T321), so a kept answer can never become the next question's answer: if the exam moves to another question first, the
+  words are dropped with a plain note ("Your last answer came in after the exam had already moved on…"). Its transcript line
+  is only kept once the answer is taken, so it never appears twice.
 - **Bounded waits, with a plain retry.** Every hub connect and its first call (`voice-room.js`, `CONNECT_TIMEOUT_MS`,
   15 s) and the exam room's own JS startup (`VoiceRoom.OnAfterRenderAsync`, 20 s) are bounded, the same house style as
   the get-ready page's checks (`StartExam.razor`, GAD-T288): past the bound, the student sees "That's taking too
