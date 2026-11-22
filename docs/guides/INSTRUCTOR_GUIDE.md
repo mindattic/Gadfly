@@ -1,296 +1,246 @@
 # Instructor guide
 
-Gadfly Exams checks understanding by questioning a student, one question at a time, the way Socrates did.
-Each follow-up is written from the student's own previous answer, and every answer is judged against
-*your* source material by a panel of AI models, with citations. The AI's grades are preliminary: a human
-examiner grades independently, a second reviewer reconciles large disagreements, and an authorized person
-approves before a student sees anything.
+Gadfly Exams checks understanding by questioning a student out loud, one question at a time, the way Socrates did.
+Each follow-up is written from the student's own previous answer, and every answer is judged against *your* source
+material by a panel of AI models, with citations. The AI's grades are preliminary: a human examiner grades
+independently, large disagreements are reconciled, and an authorized person approves before a student sees anything.
 
-This guide covers everything an instructor does: uploading material, checking the concepts and rubrics
-built from it, building and assigning exams, reviewing sessions, and grading and publishing results.
-Owners and admins of an organization can do all of it too.
+This guide covers everything an instructor does: uploading material, checking the concepts and rubrics built from
+it, building and assigning assessments, setting accommodations, reviewing sessions, grading and publishing results,
+transcripts and analytics. Owners and admins can do all of it too. Examiners and second reviewers, who only grade,
+can start with the [Grading guide](grading-guide.md).
 
-> **You see what you own.** By default (decision D18, GAD-T170) an instructor sees and manages only the courses,
-> source collections and assessments *they created*, plus the assignments, sessions, review pages, grading queue
-> and analytics under them. Another instructor's items are not listed, and opening one by its address shows
-> "not found" and records the attempt in the audit log as an access refusal. Owners and admins see the whole
-> organization, so ask one if you need to share or hand over an item. Your admin can switch this off in
-> **Settings** so every instructor sees everything. Examiners and second reviewers are not limited this way:
-> grading is not assigned to individual examiners, so they see the organization's grading queue.
-
-> **Text, voice and uploads.** Students type their answers by default; a Voice exam adds a talking examiner
-> and spoken answers, with typing always available (see [Voice](../VOICE.md)). Browser integrity signals (tab
-> switches, pastes and the like) are recorded, and Strict exams add on-device webcam signals. You can upload
-> `.txt`, Markdown, PDF, DOCX, EPUB and HTML.
+> **Note.** **You see what you own.** By default an instructor sees and manages only the courses, source
+> collections and assessments *they created*, plus the assignments, sessions, review pages, grading queue and
+> analytics under them. Another instructor's items are not listed, and opening one by its address shows "not found"
+> and records the attempt in the audit log. Owners and admins see the whole organization; ask one if you need to
+> share or hand over an item. Your admin can switch this off in **Settings > What instructors see**. Examiners and
+> second reviewers are not limited this way: they see the organization's grading queue.
 
 ## Signing in
 
 | Step | What happens |
 |---|---|
-| First sign-in | Your organization's admin gives you a user name and a temporary password. Sign in at `/login`; you are asked to choose a new password straight away. |
-| Forgot your password | Press **Forgot password?** on the sign-in page and enter your user name or email. If an account matches, you are emailed a link to choose a new password; then sign in again with it (your authenticator code is still asked for). |
-| Two-step verification (MFA) | Owners, admins and instructors must use an authenticator app (any TOTP app). At first sign-in you scan a QR code; after that every sign-in asks for the 6-digit code. Students don't need it. |
-| More than one organization | If you belong to several, a drop-down in the top bar switches between them. Everything you see is scoped to the organization selected there. |
+| First sign-in | Accept the invitation email and choose a password, or sign in with the user name and temporary password your admin gave you; you then choose a new password. |
+| Two-step verification | Every staff role (owner, admin, instructor, examiner, second reviewer) signs in with an authenticator app. At first sign-in you scan a QR code; after that every sign-in asks for the 6-digit code. |
+| Forgot your password | **Forgot password?** on the sign-in page emails a reset link if an account matches. |
+| More than one organization | A drop-down in the top bar switches between them. Everything you see is scoped to the organization selected there. |
 
-The top bar shows **Source material**, **Exams** and **Review**. Owners and admins also see **Members**.
+The top bar shows **Source material**, **Assessments**, **Review**, **Analytics** and **Grading** (owners and admins
+reach everything from **Admin**). **Help** is always there.
+
+## What the student experiences
+
+Knowing this makes everything else make sense. Every exam is **spoken and on camera**; there is no typed answer mode.
+
+1. **My exams** lists the exam with its window and attempts.
+2. **Start** opens a get-ready page: a system check (browser, cookies, connection, screen, the spoken examiner,
+   microphone and camera, which must hear and see the student before **Begin exam** turns on), a practice question,
+   and a plain-language notice they must accept: what is recorded, that no video or audio is kept, how long answers
+   are kept, and that people decide the grade. The exact wording they accept is fingerprinted and stored.
+3. In the exam room a talking examiner asks each question aloud (also shown as text). The student answers aloud;
+   each answer is read back for them to confirm or correct. They see the topic, a countdown and "Topics finished X
+   of Y", never scores. They can say or press **I don't know**.
+4. While answering, they keep eye contact with the examiner; looking away for a while fades the screen (see
+   [Eye contact and the screen fade](eye-contact-and-the-screen-fade.md)).
+5. If the microphone, camera or connection stops, the exam pauses and the clock stops, for up to 10 minutes in all.
+6. The exam ends when every objective is closed, the question limit is reached, time runs out, or they press
+   **Finish and leave the exam** (which uses up the attempt). Reloading returns them to the same question.
+
+The [Student guide](STUDENT_GUIDE.md) is written for students; point them to it, or to **Help**.
 
 ## 1. Upload source material
 
-Open **Source material** and create a **collection**: the material one exam is grounded in, such as a
-textbook chapter, lecture notes or a set of readings. Then open it and upload documents.
+Open **Source material** and create a **collection** (**New collection**, a **Title**, **Create**): the material an
+assessment is grounded in, such as a textbook chapter, lecture notes or a set of readings. Then open it and use
+**Upload documents**.
 
 | Rule | Detail |
 |---|---|
-| File types | Plain text and Markdown (`.txt`, `.text`, `.md`, `.markdown`), PDF, Word (`.docx`), EPUB and HTML (`.html`, `.htm`). PDF passages are cited by page; the others by chapter or heading. Scanned (image-only) PDFs are not read, and a damaged file is skipped with a message while the rest are processed. |
+| File types | Plain text and Markdown (`.txt`, `.text`, `.md`, `.markdown`), PDF, Word (`.docx`), EPUB and HTML (`.html`, `.htm`). PDF passages are cited by page; the others by chapter or heading. Scanned (image-only) PDFs can't be read, and a damaged file is skipped with a message while the rest are processed. |
 | Size | Up to 20 MB per file, up to 50 files per pick. |
 | Same name | Uploading a file with a name that's already there replaces it. The next processing run notices the change. |
 | File names | Unusual characters are replaced with `_`; the page tells you when a name was changed. |
 
-The **Documents** table shows each file and where it stands:
-
-| Status | Meaning |
-|---|---|
-| Waiting to be processed | Uploaded, not read yet. |
-| Processed *(date)* | Read into passages; the **Passages** column shows how many. |
-| Changed; process again | The file was replaced after it was processed. |
-| Processed (original not on this server) | The passages are in the database but the uploaded original isn't in this server's upload folder. |
-| An error message | That file couldn't be read. |
+The library shows each collection's status: **Not processed yet**, **Processing**, **Ready (map vN)**, **Processing
+failed** or **Empty**. Inside a collection, each document shows **Waiting to be processed**, **Processed** *(date)*,
+**Changed; process again**, **Processed (original not on this server)**, or an error message.
 
 ## 2. Process it
 
 Press **Process**. A background job:
 
-1. reads new and changed documents (unchanged files are skipped by their content hash) and splits them
-   into passages;
-2. has the AI panel find the **concepts** in the material (at most 40 per collection): a title, a
-   definition, key facts, common misconceptions, and the passages each comes from;
-3. writes a **rubric** for each concept: the points a real understanding covers (each with a weight),
-   acceptable other ways of saying it, and misconceptions to watch for, each point citing its passages.
+1. reads new and changed documents (unchanged files are skipped) and splits them into passages;
+2. has the AI panel find the **concepts** in the material (at most 40 per collection): a title, a definition, key
+   facts, common misconceptions, and the passages each comes from;
+3. writes a **rubric** for each concept: the points a real understanding covers (each with a weight), acceptable
+   other ways of saying it, and misconceptions to watch for, each point citing its passages.
 
-Progress shows on the page and in the library list. While a job runs, editing is paused. Concepts are
-only re-extracted when a document changed; tick **Re-run concept extraction even if no document
-changed** to force it. If processing fails, the message says why (for example "None of the uploaded
-files could be read", or "The panel found no concepts; check the LLM provider keys and the material").
-
-A collection shows **Ready (map vN)** once it has a concept map. Only ready collections can be used for
-exams.
+Progress shows on the page. While a job runs, editing is paused. Concepts are only re-extracted when a document
+changed; tick **Re-run concept extraction even if no document changed** to force it. If processing fails, the
+message says why. A collection shows **Ready (map vN)** once it has a concept map; only ready collections can be
+used for assessments.
 
 ## 3. Review and edit concepts and rubrics
 
-Read every concept before you build an exam on it. Each concept card shows its title, definition, key
-facts, misconceptions and source citations. Click a citation number to read the passage it came from.
+Read every concept before you build an assessment on it. Each concept card shows its title, definition, key facts,
+misconceptions and source citations; click a citation number to read the passage.
 
 | Action | What it does |
 |---|---|
 | **Edit concept** | Change the title, definition, key facts and misconceptions (one per line). |
-| **Edit rubric** | Change the understanding points and their weights (0.1 to 100), the acceptable variants and the misconceptions. A reworded point keeps its citations. A rubric needs at least one understanding point. |
-| **Archive** | Takes the concept out of new exams. It is never deleted. **Restore** brings it back. |
+| **Edit rubric** | Change the understanding points and their weights (0.1 to 100), the acceptable variants and the misconceptions. A rubric needs at least one understanding point. Saving writes a new rubric version. |
+| **Archive** / **Restore** | Takes the concept out of new assessments, or brings it back. Nothing is deleted. |
 
-Saving a rubric writes a **new rubric version**; earlier versions are kept, so sessions judged with them
-still show what they were judged against. Every edit also bumps the collection's **concept map version**.
-New exam sessions use the latest version, and each session records the version it started on.
+Earlier rubric versions are kept, so sessions judged with them still show what they were judged against. An edited
+concept or rubric is marked **edited** and processing leaves it alone from then on; an archived concept is never
+brought back by re-processing. Concepts you haven't edited are the panel's to manage.
 
-### What "edited" protects
+## 4. Build an assessment
 
-An edited concept or rubric is marked **edited**, and processing then leaves it alone:
+Open **Assessments**. First create a **course** (**New course**: a **Title**, a **Subject**, an optional
+**Description**, **Create course**), then press **New assessment** on it. The editor has six steps.
 
-- An edited concept is never overwritten by re-extraction, even if the panel words it differently.
-- An edited rubric is kept exactly as you saved it; the panel doesn't rewrite it.
-- An archived concept is never brought back by re-processing.
-- Restoring an archived concept also marks it as edited, so it stays as it is from then on.
+### 1. Details
 
-Concepts you haven't edited are the panel's to manage: if a later run no longer finds one, it is archived
-automatically, and its rubric is rewritten on each run (the version only goes up when the content changes).
-
-## 4. Build an exam
-
-Open **Exams**, then **New exam**.
-
-| Setting | What it means |
+| Field | What it means |
 |---|---|
-| Source collection | One of your ready collections. |
-| Concepts to examine | Tick the concepts to cover. The numbers show the order they're examined in: the order you ticked them. **Select all** and **Clear** help with long lists. |
-| Title | What students see. Up to 200 characters. |
-| Duration (minutes) | 1 to 240. The clock is kept on the server and runs from the first question; it doesn't pause if the student leaves the page. |
-| Difficulty | 1 gentle, 2 easy, 3 standard, 4 demanding, 5 rigorous: how hard the follow-ups push. |
-| Most follow-up questions per concept | 0 to 20, after the opening question. The examiner moves on sooner when a concept is clearly mastered or clearly not understood. The whole exam is capped at (concepts × (follow-ups + 1)) questions. |
-| Mode | **Text** or **Voice**. Students take every exam spoken, whichever you pick: Begin exam goes straight to a talking examiner that asks each question aloud, the student answers aloud with a live transcript, and their microphone and camera must stay on (the exam pauses if either stops). There is no typed answer mode. The exam clock starts when the examiner begins the first question. Exams run only where the deployment has voice turned on (`Gadfly:Voice:Mode`); otherwise the student's system check fails and the exam can't begin. |
-| Integrity monitoring | **Off**, **Standard** or **Strict**. **Standard** records browser signals: the exam tab hidden or the window losing focus (with how long), pastes into the answer box, copying the question, a second screen connected, and a guess that developer tools are open (information only). **Strict** also asks the browser for permission to detect extra screens (the student may decline) and offers an optional **Go full screen** button, noting when the student leaves full screen. **Strict** also turns on camera checks (the student must allow the camera; the notice they accept says exactly what is and isn't collected): a missing face, a second face, a possible change of person, a long look off-screen and reading-like eye movement are noted as low-confidence events for your review, short glances away while thinking are shown as normal, and nothing is stored but those short notes (never video). If the student declines the camera the exam goes on and a neutral note says so. Audio signals (a second voice, reading cadence) come with voice mode. **Off** records no browser signals. Students are told in the notice they accept what is noted. |
-| Examiner voice id / avatar id | Free text saved with the exam. Blank means the default; the deployment's voice and avatar settings decide what students actually hear and see ([Voice](../VOICE.md)). |
-| Instructions shown to students | Shown on the student's exam list. |
+| Course | The course it belongs to. |
+| Title | What students see (up to 200 characters). |
+| Subject, Topic | Shown with the assessment; the subject defaults to the course's. |
+| Source collection | One of your **ready** collections. |
+| Mode | **Examination**: evaluates understanding; the examiner does not teach or hint. **Learning**: develops understanding with explanations; its answers are *assisted* evidence, kept apart from examination evidence. |
+| Duration (minutes) | 1 to 240. The clock runs from the examiner's first question and is kept on the server. |
+| Question limit | 1 to 100 questions in all. |
+| Difficulty | 1 gentle to 5 rigorous: how hard the follow-ups push. |
+| Instructions shown to students | Shown on the student's **My exams** (up to 4,000 characters). |
 
-**Save draft** keeps your work. **Publish** checks the exam (at least one concept, valid settings, the
-collection is still ready, every chosen concept still exists) and then **freezes its settings**. Editing a
-published or archived exam saves your changes as a new draft copy; the original stays as it is.
+### 2. Objectives
 
-**Archive** stops new attempts. A student who is part-way through an attempt can still resume and finish
-it. Existing sessions and results are kept.
+The learning objectives are what the exam examines and what is graded. Under **Suggested from the source material**,
+**Add N as objectives** turns the collection's concepts into objectives in one go. Each objective has a **Title**, a
+**Description (what understanding looks like)**, the **Source concept** it is examined from (an objective without
+one isn't examinable yet), a **Weight**, a **Maximum score** and, for Learning mode, an optional **hint ladder** (one
+hint per line). **Move up** / **Move down** set the order they are examined in.
 
-## 5. Assign it
+### 3. Rubric
 
-A published exam shows **Assign to students** below its settings.
+Each objective has criteria. A criterion has a **Name**, a **Dimension** (factual knowledge, conceptual
+understanding, logical reasoning, application, knowledge transfer, misconception recognition, consistency,
+metacognition, or custom), a **Weight**, an optional **Description**, and **level descriptors** for levels 0 to 5:
+Insufficient Evidence, Recognition, Basic Explanation, Conceptual Understanding, Application, and Transfer and
+Critical Reasoning.
+
+### 4. Grading policy
+
+| Setting | Default | What it means |
+|---|---|---|
+| AI weight / Human weight (%) | 40 / 60 | How the AI and human scores combine. They must total 100%, and the human weight can't be 0. |
+| Additional review at | 10 points | A gap between AI and human of this many percentage points (of the objective's maximum) is flagged for a second look. |
+| Mandatory reconciliation at | 20 points | A gap this large holds the grade until it is reconciled. |
+| Blind human grading | on | The examiner doesn't see the AI's evaluation, or integrity notes, until their own scores are in. |
+| When the evidence is inconclusive | human review | Or: the student is offered an additional examination. |
+| Allow assisted evidence | off | Whether Learning-mode answers may count as evidence. |
+
+### 5. Review & publish
+
+A summary of everything. If something is missing you see **Fix these before publishing** and a list; otherwise
+**Ready to publish**. **Publish** locks the details, objectives and rubric, **and the grading policy**. After that, a
+policy change must be requested (**Request a policy change**, with the reason) and approved by an admin or owner;
+once any student has completed the assessment, someone other than the requester must approve it. **Archive** stops
+new attempts; a student part-way through can still finish, and results are kept.
+
+> **Note.** Integrity monitoring defaults to **Standard** for assessments (browser notes and the examiner's
+> eye-contact check). Older exams built with the earlier concept-only builder are listed under **Exams**, where their
+> integrity level (Off, Standard, Strict) can still be set. Strict adds camera checks for a missing or second face.
+
+### 6. Assign
+
+A published assessment's last step is **Assign to students**:
 
 | Field | Detail |
 |---|---|
 | All students / pick students | Everyone in the organization with the Student role, or the ones you tick. |
 | Opens / Closes | Optional, in your local time (the label shows your UTC offset). Students can't start before it opens or after it closes. |
 | Attempts allowed | 1 to 20. |
+| Extra time (accommodation) | None, 1.25×, 1.5× or 2×, for the students you assign in this batch. |
 
-Students who already have this exam are skipped. Students must already be members of the organization
-(an admin adds or invites them under **Members**). Students find the exam under **My exams** when they sign in.
+Students who already have this assessment are skipped. Students must already be members of the organization (an
+admin invites them). Students are **not** emailed when you assign; they find it under **My exams**.
 
-The **Assignments** table shows each student's window, attempts used, their latest session's state and
-whether a result was published. A finished attempt links to its grading page (see Grade and publish): results reach
-students only through the grading workflow.
+The **Assignments** table shows each student's window, attempts used, extra time, eye contact, EU/EEA residence, the
+latest session's state (opened, consented, in progress, paused, ended, failed) and results ("Grade and publish in
+Grading" links to the grading queue).
 
-## 6. What the student sees
+## 5. Accommodations
 
-1. **My exams** lists the exam with its window and attempts.
-2. **Start** opens a get-ready page: a browser and connection check, a short explanation of Socratic
-   questioning with a practice question, and a plain-language notice they must accept (what is
-   recorded, that no video is stored, how long answers are kept, that you decide the grade). The exact
-   wording they accept is fingerprinted (SHA-256) and stored with the session.
-3. In the exam room they see one question at a time, the concept it's about, a countdown and "topics
-   finished X of Y". They type an answer, or press **I don't know**. They never see scores.
-4. The exam ends when every concept is closed, the question limit is reached, time runs out, or they
-   press **Finish** (which uses up the attempt). Reloading the page returns them to the same question.
-
-The [Student guide](STUDENT_GUIDE.md) is written for students; you can share it.
-
-## 7. Review a session
-
-Open **Review**. Each row is one attempt: student, exam, attempt number, state, when it ended, the AI
-recommendation, how many answers the judges disagreed on, how many integrity flags there were, and any earlier
-instructor decision (the older single-grader record; current grading is in **Grading**). Filter by exam,
-**Needs a grade** (ended, not graded) or **Judges disagreed**.
-
-Open a session to read it.
-
-### The summary
-
-State and end reason, start and end times, the AI recommendation and overall mastery, any earlier instructor decision,
-and export links. The recommendation is one of:
-
-| Recommendation | When |
-|---|---|
-| mastered | Every examined concept reached 80% mastery. |
-| partial | Average mastery is at least 52.5% (halfway between the 80% mastery and 25% aporia thresholds). |
-| not-demonstrated | Anything lower. |
-
-### The timeline
-
-Every question in order, with:
-
-- the **move**: the kind of question it was (Elicit, Clarify, Probe, Counterexample, Contradiction,
-  Apply, Synthesize);
-- the student's **answer**, how long they took to start typing, and when they submitted;
-- a **contradiction** warning when an answer conflicts with something they said earlier;
-- the **judgment**: an overall score, the panel's agreement, a short summary, and a score per rubric
-  criterion with the reason;
-- **citations**: each criterion's sources open in place to show the passage from your material. If the
-  passage was removed since (its document was re-processed), the page says so;
-- **each judge's verdict**: every provider on the panel, its score and its reasoning. A judge whose score
-  is 25 points or more away from the panel's is marked **dissents**;
-- the **text style** estimate (how much the answer reads like written text compared with the student's
-  other answers). It is an unvalidated estimate: tools that guess whether text was machine-written misfire
-  often, especially on non-native speakers, and this one's false-flag rate has not been measured. It never
-  affects the score and is never a finding;
-- mastery of the concept after the answer;
-- integrity notes that happened during that answer.
-
-**Judges disagreed.** When the panel's agreement on an answer is below 60%, or no judge returned a usable
-verdict, the answer is marked "Judges disagreed — review this answer", the votes are opened for you, and
-a banner at the top counts them. Read those answers yourself before grading.
-
-### Integrity notes
-
-The **Integrity summary** lists each kind of signal, how often, for how long, during which questions, and
-what it means in plain words. Every signal also appears on the timeline next to the answer it happened
-during. Signals are evidence for you to weigh, never findings: nothing fails a student automatically, and
-the platform never tries to infer dishonesty or emotion.
-
-**Looking away is normal.** People look up or away from a screen while they recall or reason; research
-supports it as a sign of thinking, not lying, and "eye-accessing cues" lie detection has been tested and
-found to have no effect. Gaze events like this are listed as normal behavior and not counted as flags.
-The signals that can matter are a second face, a second voice, a sustained reading pattern at one
-off-screen spot, or the exam tab being hidden, and even those have innocent explanations.
-
-What is recorded today:
-
-| Signal | From | Notes |
+| Accommodation | Where | Effect |
 |---|---|---|
-| Exam tab hidden / window lost focus | the browser | With how long it lasted. Brief focus changes (a notification, an alert) are common. |
-| Pasted into the answer box | the browser | Text exams only, with how many characters. |
-| Copied the question | the browser | Some students copy the question to re-read it. |
-| Extra screen connected | the browser | On Strict, only if the student allowed screen detection. |
-| Left full screen | the browser | Strict, only after the student chose **Go full screen**. |
-| Developer tools may be open | the browser | A guess; information only, never counted as a flag. |
-| Text style estimate (unvalidated) | the server | Raised when the panel's estimate that an answer reads more like written text than the student's other answers is 70% or more. An unvalidated estimate with an unmeasured false-flag rate: context only, never a finding, never part of the score. |
+| **Extra time** | **Extra time (accommodation)** when assigning | Multiplies the time limit, and lengthens the pause before an answer is taken as finished. |
+| **Eye contact not expected** | **Declare accommodation** / **Withdraw** in the **Eye contact** column | The screen doesn't fade and the examiner doesn't ask the student to look at it (face presence is still noticed). Applies from their next answer. Use it for, for example, autism, low vision, nystagmus or a cultural norm. |
+| **Lives in the EU/EEA** | **Mark as EU/EEA** / **Unmark** in **Lives in EU/EEA** | Voice measurements are off for this student unless your organization turned them on for everyone. |
 
-Browser signals are sent every few seconds and survive a page reload; nothing is blocked, and no signal
-is ever rated High. The browser's clock is corrected against the server's, and repeated identical signals
-are merged.
+Each change is written to the audit log. Typed answers as an accommodation are not available yet; see
+[Accommodations](accommodations.md).
 
-### Mastery and the AI report
+## 6. Review a session
 
-**Mastery by concept** shows each concept's final estimate, the number of questions on it and how it
-closed (Mastered, Aporia, Exhausted, Open). The **AI report** below it is the panel's write-up: mastery
-per concept, quoted evidence with citations, and disputed answers.
+Open **Review**. Each row is one attempt: student, exam, attempt number, state, when it ended, the AI recommendation,
+how many answers the judges disagreed on, and how many integrity flags there were (shown as "hidden" while you still
+owe a blind grade). Filter by exam, **Needs a grade** or **Judges disagreed**. Open a session to read it.
 
-## 8. Grade and publish
+**The summary** shows the state and end reason, times, the AI recommendation (*mastered*: every examined concept
+reached 80% mastery; *partial*: average mastery at least 52.5%; *not-demonstrated*: lower) and export links.
 
-Grade an attempt once it has ended, from **Grading** in the navigation (the review page links to each session's
-grading workspace). Results reach students only through this workflow.
+**The timeline** lists every question in order, with:
 
-1. **AI preliminary grading.** When a session ends, the AI panel grades each learning objective (levels 0 to 5, with
-   rationale and cited evidence). **Retry AI grading** appears if it fails. If an answer's transcript still needs
-   the student, the grade waits in **Transcript verification pending**.
-2. **Human grading.** An examiner (or teacher) scores every objective independently and submits all of them
-   together. Under a blind policy, the AI's evaluation stays hidden until they submit (see below).
-3. **Score comparison.** The page shows AI and human scores side by side and the combined score under the exam's
-   locked grading policy (AI and human weights). Large differences are flagged by the policy's thresholds.
-4. **Reconciliation.** When the difference needs it, the grade is held at Reconciliation required: request a second
-   review, and the second reviewer records the cause, the resolution and a resolved score. The score is recalculated.
-   The person who entered the human score cannot reconcile it themselves.
-5. **Final approval.** An authorized person (Teacher, Admin or Owner, never the Examiner, and never the person who
-   entered this grade's human score) approves the final grade, or reopens human grading with a reason.
-6. **Publish.** Publishing releases the final grade and the assessment report to the student on **My exams**.
-   Republish after a change; nothing is shown to the student before this step.
-7. **Appeals and amendments.** A student can appeal a published result; the teacher resolves the appeal as upheld or
-   dismissed, and can amend the grade with a reason. The result stays visible during an appeal, and amended results are
-   marked.
+- the **move** (Elicit, Clarify, Probe, Counterexample, Contradiction, Apply, Synthesize);
+- the student's **answer** as confirmed, how long they took to start speaking, and how they spoke (pace, pauses,
+  hesitations, recognizer confidence), with any corrections;
+- a **contradiction** warning when an answer conflicts with something said earlier;
+- the **judgment**: an overall score, the panel's agreement, a summary, and a score per rubric criterion with the
+  reason and **citations** that open the passage from your material;
+- **each judge's verdict**; a judge 25 points or more from the panel is marked **dissents**;
+- the **text style** estimate (unvalidated; never affects the score);
+- mastery after the answer, and the integrity notes from during that answer.
 
-Every step is audited, and a refused attempt (for example an examiner trying to approve) is recorded as an access
-refusal. The AI never publishes anything.
+**Judges disagreed.** When the panel's agreement on an answer is below 60%, or no judge returned a usable verdict,
+the answer is marked "Judges disagreed — review this answer" and the votes are opened for you. Read those answers
+yourself before grading.
 
-**A different person reconciles and approves (separation of duties).** If you entered a grade's human score, the
-grading page tells you that someone else must reconcile and approve it, and the Approve button is off for you; you
-can still request a second review. A teacher who scores a session needs another teacher, an admin or the owner to
-approve it. An organization where one person does all the grading can ask its admin to turn on **Allow a single
-grader** in Organization settings; each reconciliation or approval it lets through is recorded in the audit log.
+**Integrity notes.** The **Integrity summary** lists each kind of signal, how often, for how long, during which
+questions, and what it means in plain words. They are evidence to weigh, never findings, and never part of a grade.
+See [Reading integrity notes](integrity-notes.md) for what each one means and how weak it is.
 
-### Grading as the blind examiner
+**Mastery and the AI report.** **Mastery by concept** shows each concept's final estimate and how it closed
+(Mastered, Aporia, Exhausted, Open). The **AI report** is the panel's write-up, with quoted evidence and citations.
 
-When the exam's grading policy is blind (the default), the examiner grades before seeing anything the AI
-concluded. Until you submit your own grades for a session, Gadfly hides the AI evaluation **and** the
-exam-time judge's per-answer evidence: the stance (supports, contradicts, misconception, uncertain), its
-dimension and its notes (the "Recorded evidence" line on the grading page), plus, on the session review page,
-the per-answer judging scores, summaries, votes, contradictions, mastery estimates and the AI report, in the
-page, the CSV and Markdown exports and the status endpoint. The **integrity notes are hidden too**: gaze and
-camera episodes, browser signals, the recitation check's finding, the text-style estimate and the flag count on
-the review list (shown as "hidden") appear only after your grades are in, so that a flag cannot colour your
-reading of the answers. You still see the student's original and verified
-answers, clarifications, corrections and the full transcript, which is the evidence you grade. Once you submit,
-everything shows as before. Owners and Admins, who do not enter scores, keep the full review view.
+## 7. Grade and publish
+
+Results reach students only through **Grading**. In short: the AI grades each objective; an examiner (or you)
+scores every objective independently and submits; the page compares and combines the scores; a large gap is
+reconciled; someone other than the scorer approves; you **Publish**. Students can appeal a published result, and you
+resolve it or amend the grade. The [Grading guide](grading-guide.md) covers each step and its buttons, blind grading
+and separation of duties.
+
+## 8. Analytics
+
+**Analytics** shows aggregates for all your assessments, one course or one assessment, with **Export CSV**:
+completion, mastery by learning objective (human or AI), the engine's mastery estimate by concept, class-wide
+knowledge gaps, recurring misconceptions, AI–human agreement ("agreement is not validity"), transcript corrections
+and clarifications, and reliability indicators. Two fairness views help you spot a problem with the tool rather than
+the students: **speech recognition accuracy by group** and **eye-contact flag rates by group** (groups smaller than
+5 students are withheld; a grouping you paste in is never stored).
 
 ## 9. Export
 
-From a session's summary:
+| Export | Where | Contents |
+|---|---|---|
+| turns (CSV) | Session review summary | One row per question: session, student, exam, attempt, turn, concept, move, question, answer, times (UTC), latency, overall score, agreement, whether judges disagreed, judge summary, criterion scores, each judge's score, text-style score, mastery after, integrity events. Opens correctly in Excel. |
+| report (Markdown) | Session review summary | The AI report plus any earlier instructor decision. |
+| grading report (Markdown, CSV) | Grading page | The assessment report with AI, human and combined scores. |
 
-| Export | Contents |
-|---|---|
-| turns (CSV) | One row per question: session, student, exam, attempt, turn, concept, move, question, answer, answer mode, times (UTC), latency, overall score, agreement, whether judges disagreed, judge summary, criterion scores, each judge's score, text-style score, mastery after, integrity events. Opens correctly in Excel. |
-| report (Markdown) | The AI report plus any earlier instructor decision: grade, score, who decided and when, whether it overrides the recommendation, and the comment. |
+Blind-grading rules apply to the exports too.
 
 ## Transcripts
 
@@ -325,7 +275,6 @@ web page or JSON copy, which keep every character.
 
 ## How long data is kept
 
-Answers and transcripts are kept for your organization's retention period (90 days by default). After
-that, what the student said is removed and replaced with "[redacted after the retention period]";
-questions, judgments, mastery, the report and your grade stay. Video is never stored. See
-[Privacy](../PRIVACY.md) for the full list.
+What the student said is kept for your organization's retention period (90 days by default); after that it is
+replaced with "[redacted after the retention period]". Questions, scores, mastery, the report and the grades stay.
+Video and audio are never stored. See [Privacy in plain words](privacy-in-plain-words.md).

@@ -1,0 +1,106 @@
+# Frequently asked questions
+
+## For students
+
+### Can I type my answers instead of speaking?
+
+No. Every exam is spoken, on camera, because explaining out loud and answering follow-ups is what the exam
+measures. If speaking isn't possible for you, talk to your instructor before the exam; see
+[Accommodations](accommodations.md).
+
+### Is my camera recording me?
+
+No. The picture stays on your screen. The eye-contact check runs on your device, and only short notes (for example
+"looked away for 12 seconds") are kept. See [Privacy in plain words](privacy-in-plain-words.md).
+
+### Is my voice recorded?
+
+The sound isn't kept. It is streamed to a speech-to-text service to make the transcript, and the transcript is
+what is kept, for your organization's retention period.
+
+### The screen went dark. Did I do something wrong?
+
+No. The screen fades when you look away from the examiner for a while during an answer; look back and it clears at
+once. It is a reminder, not a penalty, and never part of your grade. See
+[Eye contact and the screen fade](eye-contact-and-the-screen-fade.md).
+
+### Will looking away while I think count against me?
+
+No. Short glances away are normal and ignored, and you get extra time at the start of each answer. Longer
+look-aways are noted for a person to read in context, never scored.
+
+### What if the examiner mis-hears me?
+
+After every answer the examiner reads back what it heard. Press **No, I want to correct it** to fix a word, or
+**Repeat my answer** to say it again (your first recording is kept, and repeating never lowers your score).
+
+### Can I pause the exam?
+
+Not on purpose. The exam pauses by itself if your microphone, camera or connection stops, and the clock stops for
+up to 10 minutes in all while you fix it. You can always take a moment to think before you answer.
+
+### What happens if my internet drops or I close the page?
+
+Your answers so far are saved. Sign back in and press **Resume** on **My exams** to return to the same question.
+The clock keeps running while the page is closed, so come back quickly.
+
+### Can I go back to an earlier question?
+
+No. Each question follows from your last answer, so the conversation only goes forward. If you want to add to an
+earlier point, you can mention it in a later answer.
+
+### What does "I don't know" do?
+
+It tells the examiner honestly that you don't know, and it moves on or tries another angle. It is a better answer
+than a guess.
+
+### How many attempts do I get?
+
+Your instructor decides. **My exams** shows **Attempts used X of Y**. Leaving with **Finish and leave the exam**
+uses up the attempt.
+
+### When will I get my result?
+
+When people have graded it and it has been approved and published. It appears on **My exams**. See
+[How grading and results work](grading-and-results.md).
+
+### I think my grade is wrong.
+
+Open your result and use **Submit appeal**. See [Appeals](appeals.md).
+
+### The page says "MOCK MODE". What does that mean?
+
+The site is running without real AI, to test the workflow. Questions, scores and reports are simulated by fixed
+rules and must not be used to grade anyone. If you see it during a real exam, tell your instructor.
+
+## For staff
+
+### Can a student type answers?
+
+Not today: there is no typed answer mode. Typed answers as an instructor-granted accommodation are being built
+(see [Accommodations](accommodations.md)).
+
+### Do integrity notes affect the grade?
+
+Never. They are low-confidence notes for a person to read in context, hidden from a blind grader until their grade
+is in, and no grade calculation reads them. See [Reading integrity notes](integrity-notes.md).
+
+### Why can't I approve a grade I scored?
+
+Separation of duties: the person who entered the human score can't also reconcile or approve it. A one-person
+organization can ask its admin to turn on **Allow a single grader** in Organization settings. See the
+[Grading guide](grading-guide.md).
+
+### A student's exam can't continue. What do I do?
+
+An organization admin can reset the attempt from the admin desk's **Student exams** tab (it removes that student's
+attempts on that exam so they start fresh), or change the attempts allowed. See the [Admin guide](ADMIN_GUIDE.md).
+
+### Why can't an instructor see another instructor's exam?
+
+By default each instructor sees what they created. An admin can change that in **Settings > What instructors see**.
+
+### Where is the audit log?
+
+Today each session's audit trail is on its grading page (**Audit trail**). An organization-wide audit log page is
+being built; see [Audit log](admin-audit-log.md).

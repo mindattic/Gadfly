@@ -46,6 +46,13 @@
     <None Include="Demo\Material\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- The in-app help center (GAD-T292): every file under docs/guides is embedded in the app as "Gadfly.Help/<path>", so the
+       published app (tools/deploy-azure.ps1 publishes a git-archive export of the repository) always carries the guides of the
+       commit it was built from. HelpLibrary reads, renders and indexes them at startup. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\docs\guides\**\*" LogicalName="Gadfly.Help/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" Visible="false" />
+  </ItemGroup>
+
   <!-- The default examiner avatar (mpfb.glb, CC0, 36.8 MB) is not committed: it is copied from the MindAttic.Avatar checkout next to
        this repo when present (a dev box). Without it (CI) the exam room shows the 2D portrait; in production host the model on
        blob storage or a CDN and set Gadfly:Voice:AvatarModelUrl. See tools/sync-voice-assets.ps1 (GAD-T53). -->

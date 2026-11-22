@@ -161,11 +161,13 @@ public sealed partial class HelpLibrary
             if (!viewer.CanRead(e.Topic)) continue;
             double score = 0;
             var all = true;
+            // A section shares its topic's title and keywords, but a match there is the topic's: it counts for less on a section.
+            var topicWeight = e.Heading is null ? 1.0 : 0.5;
             foreach (var term in terms)
             {
                 double best = 0;
-                if (Has(e.TitleTerms, term, out var exactT)) best = Math.Max(best, exactT ? 12 : 8);
-                if (Has(e.KeywordTerms, term, out var exactK)) best = Math.Max(best, exactK ? 7 : 5);
+                if (Has(e.TitleTerms, term, out var exactT)) best = Math.Max(best, (exactT ? 12 : 8) * topicWeight);
+                if (Has(e.KeywordTerms, term, out var exactK)) best = Math.Max(best, (exactK ? 7 : 5) * topicWeight);
                 if (Has(e.HeadingTerms, term, out var exactH)) best = Math.Max(best, exactH ? 6 : 4);
                 var body = BodyCount(e.BodyTerms, term);
                 if (body > 0) best = Math.Max(best, 1 + Math.Log(1 + body));
@@ -173,7 +175,6 @@ public sealed partial class HelpLibrary
                 score += best;
             }
             if (!all) continue;
-            if (e.Heading is null) score *= 0.9;                 // prefer the exact section over the topic as a whole
             if (e.Topic.IsStub) score *= 0.5;                    // a "coming soon" page is rarely the answer
             hits.Add(new HelpSearchResult(e.Topic, e.Heading, e.Anchor, Excerpt(e.Text, terms), score));
         }
