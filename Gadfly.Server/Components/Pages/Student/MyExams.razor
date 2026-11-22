@@ -9,7 +9,7 @@
 
 <HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
 <PageTitle>My exams · Gadfly Exams</PageTitle>
-<h1>My exams</h1>
+<h1>My exams <HelpLink Topic="student-guide" Anchor="finding-your-exam-my-exams" /></h1>
 @if (Tenant.UserId is { } me)
 {
     <p class="hint"><a href="privacy/export/@me" download="gadfly-data-@(me.ToString("N")).json">Download my data</a> (everything this organization keeps about you, as a JSON file)</p>

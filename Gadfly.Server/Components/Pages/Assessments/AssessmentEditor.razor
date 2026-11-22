@@ -19,7 +19,7 @@
 <p class="eb-toolbar"><a href="assessments">← All assessments</a></p>
 <h1>
     @(view?.Details.Title is { Length: > 0 } title ? title : "New assessment")
-    @if (view is not null) { <span>· @view.Status</span> }
+    @if (view is not null) { <span>· @view.Status</span> } <HelpLink Topic="instructor-guide" Anchor="4-build-an-assessment" />
 </h1>
 
 @if (caps is null)
