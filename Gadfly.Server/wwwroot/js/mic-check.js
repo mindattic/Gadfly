@@ -2,6 +2,7 @@
 // noise-floor and clipping check and a plain-English echo hint, the same "advice only, never blocks Begin exam" spirit as
 // gaze-quality.js. Reuses the library's own level math (MindAttic.SpeechRecognition's rms/toDbfs) rather than re-deriving it.
 import { rms, toDbfs } from "/lib/voice/speech/index.js";
+import { t } from "./ui-text.js";
 
 const SAMPLE_MS = 4000;             // how long to listen before giving noise-floor/clipping advice
 const FRAME_MS = 100;
@@ -33,7 +34,7 @@ export function start(stream, panel) {
         const track = stream.getAudioTracks()[0];
         const settings = track && track.getSettings ? track.getSettings() : {};
         m.echoCancellation = settings.echoCancellation;
-        panel.textContent = "Listening for a few seconds to check your microphone…";
+        panel.textContent = t("getReady.js.mic.listening", "Listening for a few seconds to check your microphone…");
         try { m.ctx.resume().catch(() => { }); } catch { }
         m.timer = setInterval(() => {
             if (M !== m || m.done) return;
@@ -60,15 +61,16 @@ function render(m) {
     // page shouldn't make the room look noisy.
     const floor = sorted.length ? sorted[Math.floor(sorted.length * 0.2)] : -100;
     const lines = [];
-    if (floor <= QUIET_DBFS) lines.push("Background noise: quiet. Good.");
-    else if (floor < NOISY_DBFS) lines.push("Background noise: a little noticeable. A quieter room will help the recognizer hear you clearly.");
-    else lines.push("Background noise: noisy where you are. Close windows, turn off fans or move somewhere quieter if you can.");
+    // In the page's language (GAD-T544): js/ui-text.js reads the page's <UiTextData>, English when absent.
+    if (floor <= QUIET_DBFS) lines.push(t("getReady.js.mic.quiet", "Background noise: quiet. Good."));
+    else if (floor < NOISY_DBFS) lines.push(t("getReady.js.mic.someNoise", "Background noise: a little noticeable. A quieter room will help the recognizer hear you clearly."));
+    else lines.push(t("getReady.js.mic.noisy", "Background noise: noisy where you are. Close windows, turn off fans or move somewhere quieter if you can."));
     if (m.clipFrames >= CLIP_FRAMES_FOR_WARNING)
-        lines.push("Your microphone is picking up very loud peaks (clipping). Move it a little further away or turn its input volume down.");
+        lines.push(t("getReady.js.mic.clipping", "Your microphone is picking up very loud peaks (clipping). Move it a little further away or turn its input volume down."));
     if (m.echoCancellation === false)
-        lines.push("Echo cancellation isn't on for this microphone. If you hear the examiner echo back through your own audio, use headphones.");
+        lines.push(t("getReady.js.mic.noEchoCancel", "Echo cancellation isn't on for this microphone. If you hear the examiner echo back through your own audio, use headphones."));
     else
-        lines.push("If the examiner's voice echoes back through your microphone, headphones usually fix it.");
+        lines.push(t("getReady.js.mic.echo", "If the examiner's voice echoes back through your microphone, headphones usually fix it."));
     m.panel.textContent = lines.join(" ");
 }
 

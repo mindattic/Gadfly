@@ -20,6 +20,7 @@
 // This module and examiner-gaze.js import each other (GAZE lives there). Neither uses the other's exports at load time, only
 // inside functions, so either may be loaded first.
 
+import { t } from "./ui-text.js";
 import { GAZE } from "./examiner-gaze.js";
 
 const RAD = Math.PI / 180;
@@ -194,7 +195,7 @@ export async function runDots(lib, core, opts) {
     const layer = document.createElement("div");
     layer.className = "gaze-calib";
     layer.setAttribute("role", "dialog");
-    layer.setAttribute("aria-label", "Eye-tracking setup");
+    layer.setAttribute("aria-label", t("getReady.js.gaze.dialog", "Eye-tracking setup"));
     const dot = document.createElement("div");
     dot.className = "gaze-calib-dot";
     dot.setAttribute("aria-hidden", "true");
@@ -206,7 +207,7 @@ export async function runDots(lib, core, opts) {
     const skip = document.createElement("button");
     skip.type = "button";
     skip.className = "secondary";
-    skip.textContent = opts.skipLabel || "Skip";
+    skip.textContent = opts.skipLabel || t("getReady.js.gaze.skip", "Skip");
     bar.append(caption, skip);
     layer.append(dot, bar);
     document.body.appendChild(layer);
@@ -320,23 +321,24 @@ export function shareVideo(video) {
 
 // ---------------------------------------------------------------------------------------------------------- get-ready check
 
+// In the page's language (GAD-T544): each entry reads js/ui-text.js, English when the page has no translation.
 const TEXT = {
-    title: "Eye tracking",
-    intro: "During the exam your camera checks, on this device only, that you are looking at the examiner while you answer. This looks at your setup so that check works well for you. It never stops you starting.",
-    loading: "Starting the camera check… The first time can take a few seconds.",
-    measuring: "Look at your camera picture above for a few seconds.",
-    unavailable: "The eye-tracking check couldn't run on this device. That's fine: the exam carries on and uses a simpler check.",
-    setup: "Set up eye tracking (about 10 seconds)",
-    setupAgain: "Set it up again",
-    measureAgain: "Check my setup again",
-    setupHint: "Recommended: follow a dot with your eyes so the camera learns your screen. It makes the check fairer, with fewer false \"looking away\" moments.",
-    caption: "Follow the dot with your eyes and keep your head still. Esc or Skip stops.",
-    retry: "Not quite precise enough. Once more: sit still and look right at the centre of each dot.",
-    skipped: "Setup skipped. The exam will use a simpler check of where your head and eyes point; you can set it up here or in the exam.",
-    camera: "The camera stopped during the setup. Check that it is still connected, then try again.",
-    good: (deg) => `Set up: about ${deg}° accuracy. The exam room checks it once more when you start.`,
-    poor: (deg) => `Not precise enough this time (about ${deg}°), so the exam will use a simpler check of where your head and eyes point. That's fine. More light on your face, or sitting still, may help if you try again.`,
-    failed: "The camera couldn't follow your eyes well enough to set this up. The exam will use a simpler check of where your head and eyes point. That's fine. More light on your face may help if you try again.",
+    get title() { return t("getReady.js.gaze.title", "Eye tracking"); },
+    get intro() { return t("getReady.js.gaze.intro", "During the exam your camera checks, on this device only, that you are looking at the examiner while you answer. This looks at your setup so that check works well for you. It never stops you starting."); },
+    get loading() { return t("getReady.js.gaze.loading", "Starting the camera check… The first time can take a few seconds."); },
+    get measuring() { return t("getReady.js.gaze.measuring", "Look at your camera picture above for a few seconds."); },
+    get unavailable() { return t("getReady.js.gaze.unavailable", "The eye-tracking check couldn't run on this device. That's fine: the exam carries on and uses a simpler check."); },
+    get setup() { return t("getReady.js.gaze.setup", "Set up eye tracking (about 10 seconds)"); },
+    get setupAgain() { return t("getReady.js.gaze.setupAgain", "Set it up again"); },
+    get measureAgain() { return t("getReady.js.gaze.measureAgain", "Check my setup again"); },
+    get setupHint() { return t("getReady.js.gaze.setupHint", "Recommended: follow a dot with your eyes so the camera learns your screen. It makes the check fairer, with fewer false \"looking away\" moments."); },
+    get caption() { return t("getReady.js.gaze.caption", "Follow the dot with your eyes and keep your head still. Esc or Skip stops."); },
+    get retry() { return t("getReady.js.gaze.retry", "Not quite precise enough. Once more: sit still and look right at the centre of each dot."); },
+    get skipped() { return t("getReady.js.gaze.skipped", "Setup skipped. The exam will use a simpler check of where your head and eyes point; you can set it up here or in the exam."); },
+    get camera() { return t("getReady.js.gaze.camera", "The camera stopped during the setup. Check that it is still connected, then try again."); },
+    good: (deg) => t("getReady.js.gaze.good", "Set up: about {deg}° accuracy. The exam room checks it once more when you start.", { deg }),
+    poor: (deg) => t("getReady.js.gaze.poor", "Not precise enough this time (about {deg}°), so the exam will use a simpler check of where your head and eyes point. That's fine. More light on your face, or sitting still, may help if you try again.", { deg }),
+    get failed() { return t("getReady.js.gaze.failed", "The camera couldn't follow your eyes well enough to set this up. The exam will use a simpler check of where your head and eyes point. That's fine. More light on your face may help if you try again."); },
 };
 
 let Q = null;
@@ -484,44 +486,44 @@ function judge(a) {
     const seconds = a.lastT > a.firstT ? (a.lastT - a.firstT) / 1000 : 0;
     const fps = seconds > 0 ? a.frames / seconds : 0;
     if (a.one < Math.max(10, a.frames * 0.5) || a.pts.length < 10) {
-        items.push({ name: "Your face", ok: false, result: "not clearly in view most of the time", fix: "Sit facing the camera with your whole face in the picture." });
+        items.push({ name: t("getReady.js.gaze.item.face", "Your face"), ok: false, result: t("getReady.js.gaze.face.result.not-clearly-in-view-most-of-", "not clearly in view most of the time"), fix: t("getReady.js.gaze.face.fix.sit-facing-the-camera-with-y", "Sit facing the camera with your whole face in the picture.") });
     } else {
         items.push(a.many > a.frames * 0.2
-            ? { name: "Your face", ok: false, result: "more than one face in view", fix: "During the exam only you should be in the camera picture." }
-            : { name: "Your face", ok: true, result: "in view" });
+            ? { name: t("getReady.js.gaze.item.face", "Your face"), ok: false, result: t("getReady.js.gaze.face.result.more-than-one-face-in-view", "more than one face in view"), fix: t("getReady.js.gaze.face.fix.during-the-exam-only-you-sho", "During the exam only you should be in the camera picture.") }
+            : { name: t("getReady.js.gaze.item.face", "Your face"), ok: true, result: t("getReady.js.gaze.face.result.in-view", "in view") });
     }
     const luma = median(a.luma);
     const face = median(a.light.map((l) => l.face));
     const rest = median(a.light.map((l) => l.rest));
     if (Number.isFinite(luma) && luma < GAZE.minLuma) {
-        items.push({ name: "Lighting", ok: false, result: "dark", fix: "Turn on a lamp in front of you (behind your screen) so it lights your face." });
+        items.push({ name: t("getReady.js.gaze.item.lighting", "Lighting"), ok: false, result: t("getReady.js.gaze.lighting.result.dark", "dark"), fix: t("getReady.js.gaze.lighting.fix.turn-on-a-lamp-in-front-of-y", "Turn on a lamp in front of you (behind your screen) so it lights your face.") });
     } else if (Number.isFinite(face) && Number.isFinite(rest) && rest - face > GAZE.backlightDelta) {
-        items.push({ name: "Lighting", ok: false, result: "a bright light behind you", fix: "Turn so the light falls on your face, or close the blind behind you: the camera can't see your eyes against a bright background." });
+        items.push({ name: t("getReady.js.gaze.item.lighting", "Lighting"), ok: false, result: t("getReady.js.gaze.lighting.result.a-bright-light-behind-you", "a bright light behind you"), fix: t("getReady.js.gaze.lighting.fix.turn-so-the-light-falls-on-y", "Turn so the light falls on your face, or close the blind behind you: the camera can't see your eyes against a bright background.") });
     } else {
-        items.push({ name: "Lighting", ok: true, result: Number.isFinite(luma) || Number.isFinite(face) ? "good" : "not measured" });
+        items.push({ name: t("getReady.js.gaze.item.lighting", "Lighting"), ok: true, result: Number.isFinite(luma) || Number.isFinite(face) ? t("getReady.js.gaze.lighting.result.good", "good") : t("getReady.js.gaze.notMeasured", "not measured") });
     }
     if (a.pts.length >= 10) {
         const yaw = median(a.yaw), pitch = median(a.pitch);
         items.push(Math.abs(pitch) > GAZE.maxCameraPitchDeg || Math.abs(yaw) > GAZE.maxCameraYawDeg
-            ? { name: "Camera angle", ok: false, result: "steep", fix: "Put the camera at about eye level, centred at the top of your screen, and face the screen." }
-            : { name: "Camera angle", ok: true, result: "good" });
+            ? { name: t("getReady.js.gaze.item.angle", "Camera angle"), ok: false, result: t("getReady.js.gaze.angle.result.steep", "steep"), fix: t("getReady.js.gaze.angle.fix.put-the-camera-at-about-eye-", "Put the camera at about eye level, centred at the top of your screen, and face the screen.") }
+            : { name: t("getReady.js.gaze.item.angle", "Camera angle"), ok: true, result: t("getReady.js.gaze.angle.result.good", "good") });
         const scale = median(a.scale);
         const off = Math.max(Math.abs(median(a.px)), Math.abs(median(a.py)));
         items.push(scale < GAZE.minFaceScale
-            ? { name: "Distance", ok: false, result: "far from the camera", fix: "Move a little closer, to about an arm's length." }
+            ? { name: t("getReady.js.gaze.item.distance", "Distance"), ok: false, result: t("getReady.js.gaze.distance.result.far-from-the-camera", "far from the camera"), fix: t("getReady.js.gaze.distance.fix.move-a-little-closer-to-abou", "Move a little closer, to about an arm's length.") }
             : scale > GAZE.maxFaceScale
-                ? { name: "Distance", ok: false, result: "very close", fix: "Sit back a little, so your whole face fits in the picture." }
+                ? { name: t("getReady.js.gaze.item.distance", "Distance"), ok: false, result: t("getReady.js.gaze.distance.result.very-close", "very close"), fix: t("getReady.js.gaze.distance.fix.sit-back-a-little-so-your-wh", "Sit back a little, so your whole face fits in the picture.") }
                 : off > GAZE.maxOffCentre
-                    ? { name: "Distance", ok: false, result: "off to one side", fix: "Centre your face in the camera picture." }
-                    : { name: "Distance", ok: true, result: "good" });
+                    ? { name: t("getReady.js.gaze.item.distance", "Distance"), ok: false, result: t("getReady.js.gaze.distance.result.off-to-one-side", "off to one side"), fix: t("getReady.js.gaze.distance.fix.centre-your-face-in-the-came", "Centre your face in the camera picture.") }
+                    : { name: t("getReady.js.gaze.item.distance", "Distance"), ok: true, result: t("getReady.js.gaze.distance.result.good", "good") });
         const jitter = jitterDeg(a.pts);
         items.push(Number.isFinite(jitter) && jitter > GAZE.maxJitterDeg
-            ? { name: "Following your eyes", ok: false, result: "unsteady", fix: "If you wear glasses, reflections on the lenses are the usual cause: tilt the screen or the lamp until you see no bright spots on them. More light on your face also helps." }
-            : { name: "Following your eyes", ok: true, result: "steady" });
+            ? { name: t("getReady.js.gaze.item.eyes", "Following your eyes"), ok: false, result: t("getReady.js.gaze.eyes.result.unsteady", "unsteady"), fix: t("getReady.js.gaze.eyes.fix.if-you-wear-glasses-reflecti", "If you wear glasses, reflections on the lenses are the usual cause: tilt the screen or the lamp until you see no bright spots on them. More light on your face also helps.") }
+            : { name: t("getReady.js.gaze.item.eyes", "Following your eyes"), ok: true, result: t("getReady.js.gaze.eyes.result.steady", "steady") });
     }
     items.push(fps > 0 && fps < GAZE.slowFps
-        ? { name: "Device speed", ok: false, result: `slow (${Math.round(fps)} frames a second)`, fix: "Closing other apps and browser tabs helps. The exam carries on either way; the check simply looks less often." }
-        : { name: "Device speed", ok: true, result: fps > 0 ? "fine" : "not measured" });
+        ? { name: t("getReady.js.gaze.item.speed", "Device speed"), ok: false, result: t("getReady.js.gaze.speed.result.slow", "slow ({fps} frames a second)", { fps: Math.round(fps) }), fix: "Closing other apps and browser tabs helps. The exam carries on either way; the check simply looks less often." }
+        : { name: t("getReady.js.gaze.item.speed", "Device speed"), ok: true, result: fps > 0 ? t("getReady.js.gaze.speed.result.fine", "fine") : t("getReady.js.gaze.notMeasured", "not measured") });
     return { items, fps };
 }
 
@@ -573,9 +575,9 @@ function render(q) {
         li.append(body);
         list.append(li);
     };
-    if (q.phase === "loading") row("later", "Setup", TEXT.loading);
-    else if (q.phase === "measuring") row("later", "Setup", TEXT.measuring);
-    else if (q.phase === "unavailable") row("warn", "Setup", TEXT.unavailable);
+    if (q.phase === "loading") row("later", t("getReady.js.gaze.setupName", "Setup"), TEXT.loading);
+    else if (q.phase === "measuring") row("later", t("getReady.js.gaze.setupName", "Setup"), TEXT.measuring);
+    else if (q.phase === "unavailable") row("warn", t("getReady.js.gaze.setupName", "Setup"), TEXT.unavailable);
     else if (q.result) for (const i of q.result.items) row(i.ok ? "pass" : "warn", i.name, i.result, i.ok ? null : i.fix);
     p.append(list);
     if (q.phase === "done" && q.core) {
