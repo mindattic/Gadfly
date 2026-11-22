@@ -278,6 +278,7 @@ setting with consequences is written to the audit log.
 | **Default voice id**, **Default avatar id** | platform default | Saved for voice exams. The deployment's own voice and avatar settings decide what students hear and see today. |
 | **Instructors see and manage only what they created** | on | See **What instructors see**. |
 | **Allow a single grader (small organization)** | off | See **Separation of duties in grading**. |
+| **Separate reconciler and approver** | Automatic | Or **Always**, or **Off**. See **Separation of duties in grading**. |
 | **This organization is in the EU or EEA, or examines students there** | off | With **Voice measurements in voice exams**, decides whether the exam room measures students' voices (see below). |
 | **Voice measurements in voice exams** | Default: off in the EU/EEA, on elsewhere | Or **Off for everyone**, or **On for everyone, EU included**. |
 
@@ -315,6 +316,18 @@ the audit log (`grade.separation-of-duties.refused`).
 grading (a one-person organization, or while trying Gadfly out alone). While it is on, the person who scored a grade
 may reconcile and approve it, and each time they do the audit log records a waiver
 (`grade.separation-of-duties.waived`). Turning the switch on or off is audited too (`settings.single-grader.changed`).
+
+**Separate reconciler and approver** keeps the person who reconciled a grade's disagreement (or was named as the
+second reviewer on it) from also approving that grade, so a reviewer independent of the reconciliation signs it off.
+
+- **Automatic** (the default): refused while another active instructor, admin or owner who neither scored nor
+  reconciled the grade could approve it. In a two-person team, or with **Allow a single grader** on, the reconciler
+  may approve, and the audit log records a waiver (`grade.reconciler-approver.waived`).
+- **Always:** always refused, even when no one else can approve.
+- **Off:** the reconciler may approve; each time is still recorded as a waiver.
+
+A refused attempt is audited (`grade.reconciler-approver.refused`), and so is changing the setting
+(`settings.approver-separation.changed`).
 
 ## Data retention
 

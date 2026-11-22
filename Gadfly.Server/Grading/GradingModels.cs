@@ -84,6 +84,10 @@ public sealed record GradingWorkspace
     public bool SingleGraderAllowed { get; init; }
     /// <summary>True when separation of duties stops the viewer from reconciling or approving this grade.</summary>
     public bool SeparationBlocksViewer => ViewerScoredHuman && !SingleGraderAllowed;
+    /// <summary>GAD-T444: whether the viewer reconciled this grade, and if so whether that stops them approving it.</summary>
+    public ApproverSeparationDecision ReconcilerApproval { get; init; } = ApproverSeparationDecision.NotApplicable;
+    /// <summary>True when the viewer reconciled this grade and the organization requires someone else to approve it.</summary>
+    public bool ReconcilerBlocksViewerApproval => ReconcilerApproval.Refused;
 
     public GradeStatus? Status => Grade?.Status;
     public bool AnyMock => Objectives.Any(o => o.Ai?.Row.IsMock == true);

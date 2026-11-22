@@ -280,10 +280,18 @@ else
                 <label>Approval note <input @bind="approveNote" /></label>
             </div>
             <div class="gr-actions">
-                <button type="button" disabled="@(busy || w.SeparationBlocksViewer)" @onclick="() => RunAsync(g => g.ApproveAsync(SessionId, approveLabel, approveNote))">Approve final grade</button>
+                <button type="button" disabled="@(busy || w.SeparationBlocksViewer || w.ReconcilerBlocksViewerApproval)" @onclick="() => RunAsync(g => g.ApproveAsync(SessionId, approveLabel, approveNote))">Approve final grade</button>
                 @if (w.SeparationBlocksViewer)
                 {
                     <span class="hint">You entered this grade's human score, so another instructor or admin must approve it (separation of duties). A one-person organization can turn on "Allow a single grader" in Organization settings.</span>
+                }
+                else if (w.ReconcilerBlocksViewerApproval)
+                {
+                    <span class="hint">You reconciled this grade, so another instructor or admin must approve it (separation of duties). An admin can change this under "Separate reconciler and approver" in Organization settings.</span>
+                }
+                else if (w.ReconcilerApproval.Applies)
+                {
+                    <span class="hint">You reconciled this grade. @w.ReconcilerApproval.Waiver You may approve it, and the audit log records that.</span>
                 }
                 else if (w.ViewerScoredHuman)
                 {

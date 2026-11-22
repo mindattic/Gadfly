@@ -103,6 +103,61 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             + "(separation of duties). Ask another instructor, admin or second reviewer. The attempt was recorded.");
     }
 
+    /// <summary>
+    /// GAD-T444: whether <see cref="ApproverSeparation"/> stops <paramref name="approver"/> approving this grade because they
+    /// reconciled it (or were the second reviewer on its reconciliation). Reads only; the caller audits.
+    /// </summary>
+    private async Task<ApproverSeparationDecision> ApproverSeparationForAsync(Guid sessionId, Guid approver, CancellationToken ct)
+    {
+        var org = Org;
+        var reconcilers = await (from r in db.GradeReconciliations.AsNoTracking()
+                                 join d in db.GradeDisagreements.AsNoTracking() on r.DisagreementId equals d.Id
+                                 where r.OrganizationId == org && d.OrganizationId == org && d.SessionId == sessionId
+                                 select new { r.ReviewerUserId, r.SecondReviewerUserId }).ToListAsync(ct);
+        if (!reconcilers.Any(r => r.ReviewerUserId == approver || r.SecondReviewerUserId == approver)) return ApproverSeparationDecision.NotApplicable;
+        var settings = await db.OrganizationSettings.AsNoTracking().Where(s => s.OrganizationId == org)
+            .Select(s => new { s.ApproverSeparation, s.AllowSingleGrader }).FirstOrDefaultAsync(ct);
+        var setting = settings?.ApproverSeparation ?? ApproverSeparationSetting.Automatic;
+        var singleGrader = settings?.AllowSingleGrader ?? false;
+        var another = false;
+        if (setting == ApproverSeparationSetting.Automatic && !singleGrader)
+        {
+            var excluded = reconcilers.Select(r => r.ReviewerUserId).Concat(reconcilers.Select(r => r.SecondReviewerUserId).OfType<Guid>()).ToHashSet();
+            excluded.Add(approver);
+            foreach (var scorer in await db.HumanObjectiveGrades.AsNoTracking().Where(h => h.SessionId == sessionId && h.OrganizationId == org)
+                         .Select(h => h.ReviewerUserId).Distinct().ToListAsync(ct))
+                excluded.Add(scorer);
+            var members = await db.OrganizationMembers.AsNoTracking().Where(m => m.OrganizationId == org && m.IsActive)
+                .Select(m => new { m.UserId, m.Role }).ToListAsync(ct);
+            another = members.Any(m => !excluded.Contains(m.UserId) && PermissionMatrix.Has(m.Role, Permission.ApproveFinalGrade));
+        }
+        return ApproverSeparation.Decide(setting, true, singleGrader, another);
+    }
+
+    /// <summary>
+    /// GAD-T444: refuses (and audits) an approval by the person who reconciled the grade when the organization's setting
+    /// requires a separate approver; when it lets the approval through, the waiver is audited with it. Null means go ahead.
+    /// </summary>
+    private async Task<GradingResult?> ReconcilerApproverAsync(Guid sessionId, CancellationToken ct)
+    {
+        if (Actor.UserId is not { } me) return null;
+        var decision = await ApproverSeparationForAsync(sessionId, me, ct);
+        if (!decision.Applies) return null;
+        var org = Org;
+        if (!decision.Refused)
+        {
+            GradingAudit.Add(db, org, Actor, ApproverSeparation.WaivedAction, "FinalGrade", sessionId.ToString(), sessionId, Now,
+                after: new { acting = "Approving a final grade" }, reason: $"Approved by the person who reconciled this grade. {decision.Waiver}");
+            return null;
+        }
+        db.ChangeTracker.Clear();
+        GradingAudit.Add(db, org, Actor, ApproverSeparation.RefusedAction, "FinalGrade", sessionId.ToString(), sessionId, Now,
+            after: new { acting = "Approving a final grade" }, reason: "Approving a final grade needs someone other than the person who reconciled it.");
+        await db.SaveChangesAsync(ct);
+        return GradingResult.Fail("Refused: you reconciled this grade, so approving it must be done by someone else "
+            + "(separation of duties). Ask another instructor or admin. The attempt was recorded.");
+    }
+
     // ================================================================== queue
 
     /// <summary>Sessions with a grade record, plus ended sessions not yet started, newest first.</summary>
@@ -301,6 +356,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             PriorAttempts = prior,
             ViewerScoredHuman = Actor.UserId is { } viewer && humans.Any(h => h.ReviewerUserId == viewer),
             SingleGraderAllowed = await SingleGraderAllowedAsync(ct),
+            ReconcilerApproval = Actor.UserId is { } approver ? await ApproverSeparationForAsync(sessionId, approver, ct) : ApproverSeparationDecision.NotApplicable,
         };
     }
 
@@ -639,6 +695,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (result.FinalPercent is null) return GradingResult.Fail("Every objective needs both evaluations before approval.");
         if (label is { Length: > 40 }) return GradingResult.Fail("Keep the grade label under 40 characters.");
         if (await SeparationOfDutiesAsync(sessionId, "Approving a final grade", ct) is { } separated) return separated;
+        if (await ReconcilerApproverAsync(sessionId, ct) is { } reconciler) return reconciler;   // GAD-T444
         StoreResult(grade, result, excluded);
         grade.LetterOrLabel = Blank(label);
         var refused = await TryMoveAsync(grade, GradeStatus.Finalized, Blank(note) ?? "Final grade approved.", ct);

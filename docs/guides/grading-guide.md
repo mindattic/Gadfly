@@ -17,6 +17,11 @@ must. The page tells you so and the button is off for you (you can still request
 where one person does all the grading can turn on **Allow a single grader** in Organization settings; every
 reconciliation or approval it lets through is recorded in the audit log.
 
+**A separate approver.** Whoever reconciled a grade's disagreement (or was named as the second reviewer on it)
+cannot also approve that grade while another instructor, admin or owner who neither scored nor reconciled it could.
+In a two-person team, or with **Allow a single grader** on, they may, and the audit log records it. An admin can make
+this stricter or turn it off under **Separate reconciler and approver** in Organization settings.
+
 Examiners and second reviewers see the organization's whole grading queue. They don't have the **Review** pages;
 everything they need is on the grading page.
 
@@ -68,7 +73,8 @@ The banner reads **Pending Grade Reconciliation**. Someone who did not enter the
 
 ## 4. Final approval
 
-At **Awaiting Final Approval**, an instructor, admin or owner (never the scorer) adds an optional **Grade label** and
+At **Awaiting Final Approval**, an instructor, admin or owner (never the scorer, and not the reconciler while someone
+else can approve) adds an optional **Grade label** and
 an **Approval note** and presses **Approve final grade**. Or, under **Adjust the human grades instead**, give a
 **Reason** and **Reopen human grading**.
 

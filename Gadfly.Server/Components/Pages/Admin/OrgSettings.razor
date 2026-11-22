@@ -8,7 +8,7 @@
 @inject ITenantContext Tenant
 @inject TimeProvider Clock
 
-@* Organization settings (GAD-T55): retention (GAD-T61, decision D7), cost quota, voice/avatar defaults, EU voice measurements (GAD-T259), single grader (GAD-T285). *@
+@* Organization settings (GAD-T55): retention (GAD-T61, decision D7), cost quota, voice/avatar defaults, EU voice measurements (GAD-T259), single grader (GAD-T285), separate reconciler and approver (GAD-T444). *@
 
 <PageTitle>Settings · Gadfly Exams</PageTitle>
 <h1>Organization settings <HelpLink Topic="admin-guide" Anchor="organization-settings" /></h1>
@@ -79,6 +79,20 @@ else
             out alone. Every reconciliation or approval it lets through is recorded in the audit log as a waiver, and turning
             this setting on or off is recorded too.
         </p>
+        <label>Separate reconciler and approver
+            <InputSelect @bind-Value="form.ApproverSeparation">
+                <option value="@ApproverSeparationSetting.Automatic">@Gadfly.Server.Grading.ApproverSeparation.Describe(ApproverSeparationSetting.Automatic)</option>
+                <option value="@ApproverSeparationSetting.Always">@Gadfly.Server.Grading.ApproverSeparation.Describe(ApproverSeparationSetting.Always)</option>
+                <option value="@ApproverSeparationSetting.Off">@Gadfly.Server.Grading.ApproverSeparation.Describe(ApproverSeparationSetting.Off)</option>
+            </InputSelect>
+        </label>
+        <p class="hint">
+            A disagreement between the AI and the human score is reconciled by one person, and the grade is then approved. With
+            Automatic (the default), whoever reconciled the grade (or was the second reviewer on it) cannot approve it while
+            another active instructor or admin who neither scored nor reconciled it could; in a two-person team, or with "Allow a
+            single grader" on, they may, and the audit log records it. Always never allows it, even if no one else can approve.
+            Changing this setting is recorded in the audit log.
+        </p>
 
         <h2>Voice measurements and the EU</h2>
         <label class="check">
@@ -136,6 +150,8 @@ else
         public VoiceMeasuresSetting VoiceMeasures { get; set; } = VoiceMeasuresSetting.RegionDefault;
 
         public bool AllowSingleGrader { get; set; }
+
+        public ApproverSeparationSetting ApproverSeparation { get; set; } = ApproverSeparationSetting.Automatic;
     }
 
     private Form? form;
@@ -158,6 +174,7 @@ else
             InEuropeanUnion = row?.InEuropeanUnion ?? false,
             VoiceMeasures = row?.VoiceMeasures ?? VoiceMeasuresSetting.RegionDefault,
             AllowSingleGrader = row?.AllowSingleGrader ?? false,
+            ApproverSeparation = row?.ApproverSeparation ?? ApproverSeparationSetting.Automatic,
         };
         updatedAt = row is null || row.UpdatedAt == default ? null : row.UpdatedAt;
     }
@@ -217,6 +234,20 @@ else
                         Reason = "GAD-T285: whether the person who scored a grade may also reconcile and approve it (single-grader organization).", At = now,
                     });
                     row.AllowSingleGrader = form.AllowSingleGrader;
+                }
+                var separation = Enum.IsDefined(form.ApproverSeparation) ? form.ApproverSeparation : ApproverSeparationSetting.Automatic;
+                if (row.ApproverSeparation != separation)
+                {
+                    // GAD-T444: whether the reconciler of a grade may also approve it is recorded with who changed it.
+                    db.AuditEvents.Add(new AuditEvent
+                    {
+                        OrganizationId = org, ActorUserId = Tenant.UserId, ActorRole = Tenant.Role, Action = "settings.approver-separation.changed",
+                        EntityType = "OrganizationSettings", EntityId = org.ToString(),
+                        BeforeJson = $"{{\"approverSeparation\":\"{row.ApproverSeparation}\"}}",
+                        AfterJson = $"{{\"approverSeparation\":\"{separation}\"}}",
+                        Reason = "GAD-T444: whether the person who reconciled a grade may also approve it.", At = now,
+                    });
+                    row.ApproverSeparation = separation;
                 }
                 var saved = await db.SaveChangesAsync();
                 OwnershipPolicy.Invalidate(org);
