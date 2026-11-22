@@ -138,6 +138,8 @@ async function start() {
                 if (s.gate || !s.speechConn) return;
                 s.lastSpeechEndAt = performance.now();
                 s.speechConn.send("Commit").catch(() => { });
+                // A final that landed mid-speech did not arm the cue (onFinal); the speech has ended now, so arm it for what is held.
+                if (s.segments.length > 0 && !s.cueTimer) armCue(s);
             },
             onLevel: (l) => {
                 const meter = q("level");
@@ -168,7 +170,13 @@ async function start() {
         await loadScript(`${LIB}/signalr/signalr.min.js`);
         if (S !== s || !s.running) return;
         s.speechConn =new signalR.HubConnectionBuilder().withUrl(SPEECH_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
-        s.speechConn.on("partial", (t) => { s.partial = t || ""; drawTranscript(); });
+        s.speechConn.on("partial", (t) => {
+            s.partial = t || "";
+            // Words still arriving mean the answer is not over (GAD-T286): a final that armed the end-of-answer cue must not submit
+            // while the recognizer is still hearing more, e.g. a provider-side commit in the middle of one unbroken stretch of speech.
+            if (s.partial.trim() && !s.gate && s.cueTimer) { clearCue(); status("Hearing you…"); }
+            drawTranscript();
+        });
         s.speechConn.on("final", onFinal);
         s.speechConn.on("problem", (kind, message, fatal) => { if (fatal) problem("recognizer", message, true); });
         s.speechConn.onreconnected(async () => {
@@ -374,6 +382,11 @@ function onFinal(seg) {
     s.remarkCommitPending = false;
     if ((s.gate && !remarkFinal) || !seg || !seg.text || !seg.text.trim()) return;
     s.partial = "";
+    // The same final delivered twice (a recognizer fallback or a commit racing the provider's own) is one segment (GAD-T286).
+    const norm = seg.text.trim().replace(/\s+/g, " ").toLowerCase();
+    const now = performance.now();
+    if (s.lastFinalNorm === norm && now - (s.lastFinalAt || 0) < 5000) { s.lastFinalAt = now; return; }
+    s.lastFinalNorm = norm; s.lastFinalAt = now;
     s.segments.push({
         text: seg.text,
         words: (seg.words || []).map((w) => ({
@@ -383,6 +396,12 @@ function onFinal(seg) {
     drawTranscript();
     if (s.gate) return;   // the remark is still on: its end arms the cue for these words
     // The end-of-answer cue: a stretch of silence after what was said. Speaking again cancels it; "Done answering" skips it.
+    // While the student is still speaking (a provider commit mid-speech) it is not armed: onSpeechEnd arms it.
+    if (s.inSpeech) { clearCue(); return; }
+    armCue(s);
+}
+
+function armCue(s) {
     clearCue();
     const cue = q("cue");
     const ms = endCueMs(s);
