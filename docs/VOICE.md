@@ -21,19 +21,62 @@ confirmed, corrected, said again or changed (see step 5 under "How an answer flo
   (`SessionOrchestrator.StartClockAsync`) when the examiner begins the first question, so planning it and connecting the
   devices don't use the student's time. It starts once; until then `Remaining` still counts from session creation, so a
   clock that never starts can't give extra time. The question is not shown until the examiner asks it.
-- **Pause.** A refused, missing or lost microphone or camera (a track that ends mid-exam), or a lost hub, pauses the
+- **Pause.** A refused, missing or lost microphone or camera (a track that ends mid-exam), a lost hub (the speech
+  recognizer's or, since GAD-T306, the examiner's own avatar hub too), or a closed laptop lid (GAD-T306: the tab
+  hidden for a stretch long enough to be a sleep, not a quick tab switch, with its devices then found dead) pauses the
   exam: the question and answer controls are hidden and the student is told how to restore it, then presses **Try
-  again**; the examiner repeats the question. The clock stops while paused (GAD-T263): the exam room calls
+  again**; the examiner repeats the question, and pressing it re-requests the microphone and camera from scratch
+  rather than assuming whatever was open before still works. The clock stops while paused (GAD-T263): the exam room calls
   `SessionOrchestrator.PauseClockAsync` when the devices go and `ResumeClockAsync` when they are back, and the paused
   time is added back to `Remaining`. A pause is reported by the student's browser, so the time added back is capped per
   exam (`SocraticSession.PauseAllowance`: 10 minutes, or half the budget if shorter), it only counts after the clock
   started, and any answer ends an open pause by the server's clock. No 3D graphics (or reduced motion)
   shows the 2D portrait, whose mouth moves as she speaks. If the avatar fails entirely, questions are read out by the
-  browser's own speech and shown as text, and answers are still spoken (see "The examiner's delivery").
+  browser's own speech and shown as text, and answers are still spoken (see "The examiner's delivery"). See
+  "Resilience" below for what a dropped connection to the page itself (not just a device or a hub) does, and for the
+  words-already-spoken draft a reload or a crash no longer loses.
 - Nothing about a spoken answer is typed or redone (GAD-T405, GAD-T407; owner decision 2026-11-22): no transcript
   correction, no "Repeat my answer", no "I want to change my answer". What the recognizer heard is what is judged, and the
   exam moves on; a second, considered pass would change the Socratic exchange. Only a typed answer under the GAD-T260
   accommodation can still get a small typo fix or a meaning clarification.
+
+## Resilience (GAD-T306)
+
+A dropped connection, a reload mid-answer, a closed laptop lid or an abandoned session should never cost a student
+their attempt or leave them staring at a frozen page.
+
+- **A dropped connection to the page itself.** The Blazor circuit that runs the exam room is a different connection
+  from the two voice hubs above: losing it means nothing on the page can do anything server-side until it comes back
+  (there is no way to push a render while it's down). Blazor's own reconnection UI (`#components-reconnect-modal`,
+  styled in `app.css`) shows a clear "Reconnecting…" status instead of a blank or frozen page; "That's taking too
+  long" once its own retries are exhausted, with a "Try again" that retries once more or reloads. Once the circuit is
+  back, `CircuitReconnectSignal`/`ReconnectCircuitHandler` (`Gadfly.Server/Sessions/CircuitReconnectSignal.cs`) tell
+  the exam room to re-run its load path (`ExamRoom.OnReconnectedAsync`) and fetch the server's current step again,
+  rather than carrying on with whatever it last rendered, which may be stale (a staff pause or extension, or the exam
+  having ended, while the connection was down).
+- **Words already spoken, kept as a draft.** `voice-draft.js` keeps the final (committed) segments of the answer so
+  far in `sessionStorage`, keyed by session and turn, updated as each one arrives and cleared on submit or when the
+  question changes. If the page reloads, or the browser crashes and is relaunched, mid-answer, `voice-room.js`
+  restores them into "What I heard" the next time the microphone opens for that same question, clearly marked
+  ("Recovered what you'd already said…"). Restoring only ever fills the answer box: the end-of-answer cue is never
+  armed by it, so nothing is sent until the student presses **Done answering** (or starts over with **Clear and
+  answer again**) themselves. A different question, a different session, or a draft older than 30 minutes is never
+  restored.
+- **Bounded waits, with a plain retry.** Every hub connect and its first call (`voice-room.js`, `CONNECT_TIMEOUT_MS`,
+  15 s) and the exam room's own JS startup (`VoiceRoom.OnAfterRenderAsync`, 20 s) are bounded, the same house style as
+  the get-ready page's checks (`StartExam.razor`, GAD-T288): past the bound, the student sees "That's taking too
+  long" rather than a silently stuck "Connecting you to the examiner…". A provider call from the panel is bounded by
+  its own `ProviderTimeout` (`LegionVotingClient`), which already surfaces as the exam room's existing "Something went
+  wrong on our side… press Try again" on a step.
+- **Stale sessions.** A student who closes the tab and never comes back (no pause, no staff action, no reload) leaves
+  a session sitting `Running` or `Paused` with nothing to ever call `SessionOrchestrator.EndAsync` for it.
+  `StaleSessionSweep` (queued periodically by `StaleSessionScheduler` onto the job queue, `session.stale-sweep`)
+  finds sessions sitting this way well past their own deadline (time budget, any staff extra time and pause credit
+  already included) plus a 30-minute grace, and closes them through the ordinary end path — graded exactly as a real
+  time-up would be, counted fairly as a used attempt — with an audit note ("closed: abandoned past time limit") on the
+  session's review timeline. A session staff are actively holding (GAD-T299) is left alone: that is a deliberate,
+  visible action with its own generous allowance, not an abandonment, and the live monitor (`/admin/live`) already
+  shows and resolves it.
 
 ## The interview room (GAD-T231)
 
@@ -147,6 +190,16 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
 
 1. `voice-room.js` opens the microphone from the click (hands-free voice activity detection, or hold-to-talk), streams
    16 kHz PCM through `/hubs/speech` (MindAttic.SpeechRecognition relay) and shows partial and final transcript text.
+   The shown partial only shrinks after a short hold (`PARTIAL_SHRINK_HOLD_MS`), so a momentary provider revision that
+   regrows a moment later never flickers on screen (GAD-T360); what the student sees is also shaped for reading
+   (spelled-out numbers become digits, spoken punctuation words become marks, capitalized, a closing full stop added if
+   missing — `TranscriptDisplay.ForDisplay` server-side, a matching `normalizeForDisplay` in `voice-room.js` for the live
+   line): purely a display tweak, never changing what is stored or graded (`VoiceAnswerBuilder` still builds the answer
+   from the recognizer's own words, verbatim). If the speech hub's SignalR connection drops mid-answer, the microphone
+   keeps capturing: audio and `Commit` calls are queued in the browser and replayed, in order, into the fresh session
+   `StartSession` opens once reconnected (GAD-T360) — the library itself (`SpeechSessionManager`) has no way to resume
+   the dropped session, only to start a new one, so nothing is lost but the recognizer's own continuity resets (filed as
+   `SR-T13`).
 2. Audio is not sent while the examiner is speaking (no echo, no self-transcription).
 3. The end-of-answer cue: after a final segment, a stretch of silence submits the answer, with a visible countdown;
    speaking again cancels it; **Done answering** submits at once; **Clear** discards. The silence starts at
@@ -168,6 +221,56 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
    is answered as heard by the exam room on its own, so an exam already in progress carries on.
 6. Confidence is stored only when the provider gives it for every word. The Simulated recognizer gives none, so its answers
    carry no confidence rather than a made-up one.
+
+## Recognizer: provider, vocabulary and language (GAD-T357, GAD-T358)
+
+- **Fallback chain.** Live mode defaults `MindAttic:SpeechRecognition:Provider` to `Fallback` (the library's own
+  `FallbackSpeechRecognizer`: ElevenLabs Scribe, then OpenAI Whisper) rather than pinning to ElevenLabs alone, so a
+  provider outage or a quota error mid-session fails over automatically; the library replays the audio of any utterance
+  whose final transcript had not yet arrived, so an answer in progress isn't lost on the switch (timings stay on one
+  continuous timeline). Set the configuration key explicitly (`ElevenLabs` or `OpenAI`) to pin to one provider instead.
+- **Vocabulary hints.** `VoiceVocabulary.ForSessionAsync` builds the exam's own vocabulary — every learning objective's
+  title plus the title of each objective's linked concept (the source material's own term for it) — capped at
+  `VoiceVocabulary.MaxTerms` (60, comfortably under the library's own 100), computed from the database on the server, never
+  from anything the browser sends. The exam room (`VoiceRoom.razor`) computes it once when it arms the student
+  (`VoiceGrants.SetVocabulary`) and passes it to `voice-room.js` through the same already-trusted channel the end-of-answer
+  cue and avatar model URL already use (the component's `init()` call). The browser's `StartSession` call then asks the
+  recognizer to use it, but `VoiceHubFilter` refuses the call outright if the browser asks for any keyterm or language the
+  grant didn't itself record (`VoiceGrants.IsVocabularyAllowed`, `AllowedLanguage`): a tampered client call gains nothing,
+  since the only vocabulary that can ever reach the recognizer is what the server computed for that exam.
+- **Per-exam language.** `SessionPolicy.Language` (an exam's existing policy JSON, so no schema change) is set from the
+  exam settings page (`admin/exams`, "Spoken language") or the exam definition file's `Settings.Language`; null lets the
+  recognizer detect it, same as before this ticket. `VoiceHubFilter` enforces it the same way as the vocabulary: the
+  browser may only ask for the language the exam itself specifies.
+
+## Get-ready microphone test (GAD-T359)
+
+Once the get-ready page's microphone opens, `wwwroot/js/mic-check.js` (hooked in by `system-check.js`, `[data-mic-check]`
+in `StartExam.razor`) listens for about four seconds and writes plain advice into its own panel — a noise floor
+("quiet" / "a little noticeable" / "noisy"), a clipping warning if very loud peaks are seen, and an echo hint (reading
+the microphone's own `echoCancellation` setting where the browser reports one). It reuses the speech library's own level
+math (`rms`, `toDbfs` from `@mindattic/speechrecognition`) rather than re-deriving it. Advice only, the same spirit as the
+eye-tracking setup check next to it: it never blocks **Begin exam**, and a failure to load just leaves the panel empty.
+
+## Recognizer latency and unsure-word rate (GAD-T361)
+
+Two in-memory counters for the status page, the same spirit as `Diagnostics/ApiCallTimings.cs` (GAD-T413) but without a
+durable table (diagnostics, not an audit trail; nothing here is written to the database or survives a restart):
+
+- **Recognizer latency**: how long each committed utterance took from the browser's `Commit` call to the recognizer's
+  final transcript coming back. Timed in the browser (`voice-room.js`, `s.commitSentAt`/`s.latenciesMs`), since the hub
+  pushes the final segment rather than returning it from a call the server could time itself, and sent up with the answer
+  (`VoiceAnswerPayload.RecognizerLatenciesMs`, diagnostics only: never shown to the student, never stored with the answer).
+- **Unsure-word rate**: the share of an answer's words below the library's low-confidence threshold, computed from the
+  same `VoiceAnswerBuilder` every voice answer already goes through (no extra client work).
+
+`VoiceRoom.razor` records both on every voice answer (`VoiceRecognitionTimingRecorder`, registered in `Program.cs`), and
+`GET /healthz/voice-recognition` (staff-only, `GadflyEndpoints.cs`) reports counts, average and p50/p95 latency, and
+average/max unsure-word share, the same plain-text shape as `/healthz/call-timings`. The unsure words themselves were
+already marked for reviewers before this ticket (GAD-T265, GAD-T405: no read-back to hook a correction into any more, so
+the recognizer's low-confidence words and its advice to check are recorded for reviewers instead, see `SpeechMarks.cs`
+and the "Speech recognition was unsure of these words" note on the grading page) — this ticket only adds the two
+counters above.
 
 ## Security
 
@@ -216,7 +319,7 @@ pending that library change.
 | `Gadfly:Voice:WarmPhrases` | Prepare the fixed examiner lines in the phrase cache when the first exam room opens (default true). |
 | `Gadfly:Voice:EndOfAnswerSeconds` | Shortest silence that ends an answer (2 to 15, default 4). |
 | `Gadfly:Voice:EndOfAnswerMaxSeconds` | Longest the silence may adapt to for a student who pauses long (up to 30, default 12). Both are multiplied by the extra-time accommodation. |
-| `MindAttic:SpeechRecognition:Provider` | Live only: `ElevenLabs` (default in live), `OpenAI` or `Fallback`. |
+| `MindAttic:SpeechRecognition:Provider` | Live only: `Fallback` (default in live since GAD-T357: ElevenLabs Scribe, then OpenAI Whisper), or pin to `ElevenLabs` or `OpenAI` alone. |
 | `MindAttic:Avatar:ElevenLabs:VoiceId` | Live only, required (without it voice stays off). |
 
 **Mock mode** uses the library's Simulated recognizer (placeholder words, "speech", timed to the microphone) and an
