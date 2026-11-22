@@ -348,6 +348,7 @@ public sealed class ResearchService(GadflyDbContext db, TimeProvider clock)
             .ToListAsync(ct);
         var arms = await db.StudyArms.AsNoTracking().Where(a => a.OrganizationId == org && exams.Contains(a.ExamId))
             .Select(a => new ExportArm(a.Id, a.ExamId, a.Name)).ToListAsync(ct);
+        var wordErrors = await WordErrorsAsync(org, ids, ct);
 
         return new ResearchExportInput
         {
@@ -359,7 +360,8 @@ public sealed class ResearchService(GadflyDbContext db, TimeProvider clock)
             Consents = consents,
             Sessions = sessions,
             Turns = turns.Select(t => new ExportTurn(t.SessionId, t.Id, t.Index, t.ConceptKey, t.Move, t.AskedAt, t.AnswerStartedAt, t.AnswerCompletedAt,
-                t.AnswerMode, t.SpeechMetricsJson, t.MasteryAfter, t.J?.OverallScore, t.J?.Agreement, t.J?.NeedsHumanReview, t.J?.Votes ?? 0, t.J?.TextStyleScore)).ToList(),
+                t.AnswerMode, t.SpeechMetricsJson, t.MasteryAfter, t.J?.OverallScore, t.J?.Agreement, t.J?.NeedsHumanReview, t.J?.Votes ?? 0, t.J?.TextStyleScore,
+                wordErrors.GetValueOrDefault(t.Id))).ToList(),
             Objectives = objectives,
             PanelGrades = panel.Select(g => new ExportPanelGrade(g.SessionId, g.ObjectiveId, g.Level.ToString(), g.Score, g.MaxScore, g.Confidence)).ToList(),
             HumanGrades = human.Select(g => new ExportHumanGrade(g.SessionId, g.ObjectiveId, g.ReviewerUserId, g.ReviewerRole, g.Level.ToString(), g.Score, g.MaxScore,
@@ -369,6 +371,28 @@ public sealed class ResearchService(GadflyDbContext db, TimeProvider clock)
             IntegrityEvents = events,
             Arms = arms,
         };
+    }
+
+    /// <summary>
+    /// Per-turn word errors of the consenting students' spoken original answers against the human reference transcripts
+    /// (GAD-T426, audit events "response.reference-transcribed"), as counts only (GAD-T467). <paramref name="sessionIds"/> are the
+    /// consenting students' sessions; the recognized text and the reference are read here and never leave this method.
+    /// </summary>
+    private async Task<Dictionary<Guid, Gadfly.Sources.Verification.WordErrorCount>> WordErrorsAsync(Guid org, List<Guid> sessionIds, CancellationToken ct)
+    {
+        var result = new Dictionary<Guid, Gadfly.Sources.Verification.WordErrorCount>();
+        foreach (var chunk in sessionIds.Chunk(500))
+        {
+            var spoken = await db.StudentResponses.AsNoTracking()
+                .Where(r => r.OrganizationId == org && chunk.Contains(r.SessionId) && r.Modality == "voice" && r.Kind == ResponseKind.Original)
+                .Select(r => new { r.Id, r.TurnId, Recognized = r.SpeechRecognitionText ?? r.OriginalText }).ToListAsync(ct);
+            if (spoken.Count == 0) continue;
+            var references = await Gadfly.Server.Analytics.ReferenceTranscripts.LoadAsync(db, org, spoken.Select(r => r.Id).ToList(), ct);
+            foreach (var turn in spoken.Where(r => references.ContainsKey(r.Id)).GroupBy(r => r.TurnId))
+                if (ResearchExport.WordErrorsOf(turn.Select(r => ((string?)r.Recognized, (string?)references[r.Id].Text))) is { } e)
+                    result[turn.Key] = e;
+        }
+        return result;
     }
 
     // ------------------------------------------------------------------ helpers

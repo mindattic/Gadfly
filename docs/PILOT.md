@@ -172,7 +172,7 @@ a rarer accommodation within an exam is shown as `suppressed`. Each download is 
 | File | One row per | Columns |
 |---|---|---|
 | `sessions.csv` | attempt | `session, student, exam, arm, attempt, state, end_reason, started_week, days_since_first_attempt, duration_s, answer_channel, extra_time, eye_contact_accommodation, typed_answer_accommodation, voice_measures, result_published, feedback_released_before_attempt, final_status, final_percent, turns, cues_total, integrity_notes, integrity_notes_info_or_low, words_redacted_by_retention` |
-| `turns.csv` | question | `session, turn, concept, move, asked_at_s, answer_latency_s, answer_duration_s, answer_channel, word_count, recognizer_confidence, low_confidence_words, time_to_first_word_s, speech_rate_wpm, pause_ratio, long_pauses, disfluency_per_100_words, voice_vs_baseline, panel_score, panel_agreement, panel_needs_human_review, panel_votes, text_style_score, mastery_after, cue_count, cue_kinds, probe_pressure` |
+| `turns.csv` | question | `session, turn, concept, move, asked_at_s, answer_latency_s, answer_duration_s, answer_channel, word_count, recognizer_confidence, low_confidence_words, reference_words, wer_substitutions, wer_deletions, wer_insertions, word_error_rate, time_to_first_word_s, speech_rate_wpm, pause_ratio, long_pauses, disfluency_per_100_words, voice_vs_baseline, panel_score, panel_agreement, panel_needs_human_review, panel_votes, text_style_score, mastery_after, cue_count, cue_kinds, probe_pressure` |
 | `objectives.csv` | objective | `objective, exam, key, ordinal, weight, max_score` |
 | `panel_scores.csv` | AI panel grade per objective | `session, objective, level, score, max_score, confidence` (mock grades never) |
 | `human_scores.csv` | human mark | `session, objective, rater, rater_role, level, score, max_score, blind, superseded, hours_after_session` (double marks are two rows) |
@@ -184,7 +184,11 @@ What each measure of 7.3 comes from: QWK and SMD from `panel_scores` against `hu
 where an objective has two raters); the rate and causes of reconciliation from `reconciliations` (`cause` is the
 reconciler's coded cause); per-objective change between attempts with and without released feedback from
 `human_scores`/`panel_scores` by `attempt` and `feedback_released_before_attempt`; relay against honest from `arm`.
-Word error rate by speaker group needs a reference transcript and a speaker group, neither of which the export carries
-(answers are never exported): the study collects both itself, with its own consent, and matches them by study code.
+Word error rate per spoken answer (GAD-T467) is in `turns.csv` wherever a person typed a reference transcript of that
+answer for the speech-recognition accuracy check (GAD-T426): the substitutions, deletions and insertions against the
+reference and the rate, as counts only (neither transcript is exported), for consenting students under the same pseudonyms,
+and blank once retention has removed the words. By speaker group still needs a speaker group the export does not carry:
+the study collects it itself, with its own consent, and matches it by study code. The referenced answers are a sample
+drawn to cover answers with many fillers and repetitions, so compare groups with each other, not with benchmarks.
 Integrity notes are exported because 7.5 asks how they are treated; they are low-confidence notes, never a verdict and
 never part of a grade, and the analysis must treat them so.

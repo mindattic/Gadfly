@@ -6,6 +6,7 @@ using System.Text.Json;
 using Gadfly.Engine;
 using Gadfly.Server.Data;
 using Gadfly.Server.Voice;
+using Gadfly.Sources.Verification;
 
 namespace Gadfly.Server.Research;
 
@@ -26,7 +27,12 @@ public sealed record ExportSession(
 public sealed record ExportTurn(
     Guid SessionId, Guid TurnId, int Index, string ConceptKey, string Move, DateTimeOffset AskedAt,
     DateTimeOffset? AnswerStartedAt, DateTimeOffset? AnswerCompletedAt, string? AnswerMode, string? SpeechMetricsJson, double? MasteryAfter,
-    double? PanelScore, double? PanelAgreement, bool? NeedsHumanReview, int PanelVotes, double? TextStyleScore);
+    double? PanelScore, double? PanelAgreement, bool? NeedsHumanReview, int PanelVotes, double? TextStyleScore,
+    /// <summary>
+    /// The spoken answer's word errors against a person's reference transcript (GAD-T426/T467): counts only, worked out by the
+    /// loader, so neither the recognized words nor the reference ever reach the export. Null when the answer has no reference.
+    /// </summary>
+    WordErrorCount? WordErrors = null);
 
 public sealed record ExportObjective(Guid ObjectiveId, Guid ExamId, string Key, int Ordinal, decimal Weight, decimal MaxScore);
 
@@ -245,6 +251,7 @@ public static class ResearchExport
                     t.AnswerStartedAt is { } a1 && t.AnswerCompletedAt is { } a2 ? Num(Math.Round((a2 - a1).TotalSeconds, 1)) : "",
                     Channel(t.AnswerMode),
                     M(SpeechMetricKeys.WordCount), M(SpeechMetricKeys.VerificationConfidence), M(SpeechMetricKeys.LowConfidenceWords),
+                    .. WerCells(t),
                     M(SpeechMetricKeys.TimeToFirstWordSeconds), M(SpeechMetricKeys.SpeechRateWpm), M(SpeechMetricKeys.PauseRatio),
                     M(SpeechMetricKeys.LongPauseCount), M(SpeechMetricKeys.DisfluencyPer100), M(VoiceStrain.VsBaselineKey),
                     t.PanelScore is { } ps ? Num(ps) : "", t.PanelAgreement is { } pa ? Num(pa) : "",
@@ -316,6 +323,7 @@ public static class ResearchExport
             [
                 "session", "turn", "concept", "move", "asked_at_s", "answer_latency_s", "answer_duration_s", "answer_channel",
                 "word_count", "recognizer_confidence", "low_confidence_words",
+                "reference_words", "wer_substitutions", "wer_deletions", "wer_insertions", "word_error_rate",
                 "time_to_first_word_s", "speech_rate_wpm", "pause_ratio", "long_pauses", "disfluency_per_100_words", "voice_vs_baseline",
                 "panel_score", "panel_agreement", "panel_needs_human_review", "panel_votes", "text_style_score", "mastery_after",
                 "cue_count", "cue_kinds", "probe_pressure",
@@ -397,6 +405,12 @@ public static class ResearchExport
         Voice measurements (time to first word, speech rate, pauses, disfluency, the comparison with the student's first answers)
         are blank wherever voice measurements were off, and always for an organization or a student in the EU/EEA.
 
+        Word error rate (turns.csv: reference_words, wer_substitutions, wer_deletions, wer_insertions, word_error_rate) is filled
+        only for a spoken answer that a person transcribed by ear for the speech-recognition accuracy check, measured against
+        that reference after lowercasing and removing punctuation. Only the counts are exported, never either transcript. The
+        sample was drawn to cover answers with many fillers and repetitions, so compare groups with each other, not with
+        published benchmarks; blank means no reference (most answers), or the words were removed by retention.
+
         Small groups (k = {k}): an exam with fewer than {k} included students is held back entirely; within an exam, an
         accommodation shared by fewer than {k} students (or missing for fewer than {k}) is shown as "{Suppressed}".
 
@@ -446,6 +460,30 @@ public static class ResearchExport
         _ when cue.StartsWith("recited", StringComparison.Ordinal) => "recited",
         _ => "other",
     };
+
+    // ---- word error rate (GAD-T467)
+
+    /// <summary>
+    /// One turn's word errors against the human reference transcripts of its spoken original answer(s): the counts summed over
+    /// them (a turn normally has one). Null when none has a reference. The texts are used here and dropped; only counts leave.
+    /// </summary>
+    public static WordErrorCount? WordErrorsOf(IEnumerable<(string? Recognized, string? Reference)> answers)
+    {
+        WordErrorCount? total = null;
+        foreach (var (recognized, reference) in answers)
+        {
+            if (string.IsNullOrWhiteSpace(reference)) continue;
+            var e = SpeechAccuracy.WordErrors(reference, recognized);
+            total = total is null ? e : new WordErrorCount(total.Substitutions + e.Substitutions, total.Deletions + e.Deletions,
+                total.Insertions + e.Insertions, total.ReferenceWords + e.ReferenceWords);
+        }
+        return total;
+    }
+
+    /// <summary>reference_words, wer_substitutions, wer_deletions, wer_insertions, word_error_rate: blank without a reference.</summary>
+    private static IReadOnlyList<string> WerCells(ExportTurn t) => t.WordErrors is not { } w || t.AnswerMode != "voice"
+        ? ["", "", "", "", ""]
+        : [Num(w.ReferenceWords), Num(w.Substitutions), Num(w.Deletions), Num(w.Insertions), Num(Math.Round(w.Rate, 4))];
 
     // ---- formatting
 
