@@ -397,6 +397,8 @@ public sealed class SessionOrchestrator(
 
             // 2. The last judged answer: a typo fix after the fact (verified text for grading; the live judgment stays on version 1).
             var (response, _) = await LastJudgedAsync(live, db, ledger, ct);
+            if (response.Modality == "voice")
+                throw new SessionRefusedException("A spoken answer is kept as it was heard; it can't be corrected afterwards.");
             if (response.VerificationState != VerificationState.Captured)
                 throw new SessionRefusedException("That answer was already confirmed or clarified, so it can't be edited. Use \"I want to change my answer\" instead.");
             if (CorrectionRules.Check(response.VerifiedText, text, voice: response.Modality == "voice") is { Allowed: false } no)
@@ -543,17 +545,18 @@ public sealed class SessionOrchestrator(
         };
         var hints = ResponseVerifier.Hints(input);
 
-        // Part 4.3 Type A: a spoken answer is shown back to the student before it is judged.
+        // A spoken answer is taken as heard and judged at once (GAD-T405, owner decision 2026-11-22): no read-back, no confirm,
+        // correct or clarify round trip, since a second considered pass changes the Socratic exchange. The recognizer's doubts
+        // (low word confidence, its own advice to check) are recorded for reviewers; the uncertain words stay on the capture (GAD-T265).
         if (response.Modality == "voice")
         {
             var low = hints.FirstOrDefault(h => h.Trigger == ClarificationTrigger.LowSpeechConfidence);
-            // The speech library's own advice (TranscriptVerification.Assess, GAD-T53) is recorded with the request; it never skips the confirmation.
-            var advised = answer.SpeechMetrics.TryGetValue("verification.recommended", out var rec) && rec == 1 ? " The recognizer advised checking this transcript." : "";
-            ledger.MovePath(response, "transcript-confirmation: spoken answers are confirmed by the student" + (low is null ? "" : "; " + low.Reason) + advised,
-                null, "System", VerificationState.VerificationRequired, VerificationState.AwaitingStudentConfirmation);
-            ledger.Ask(response, ClarificationType.Transcription, $"I recorded your answer as: \"{text}\" Is this what you said?", true,
-                (low is null ? "Voice answer." : $"Voice answer; {low.Reason}") + advised);
-            return true;
+            var advised = answer.SpeechMetrics.TryGetValue("verification.recommended", out var rec) && rec == 1;
+            ledger.Audit(live.OrganizationId, null, "response.verification.checked", response, s.Id, null,
+                JsonSerializer.Serialize(new { takenAsHeard = true, lowSpeechConfidence = low is not null, recognizerAdvisedCheck = advised }),
+                "Spoken answer taken as heard; not read back to the student." + (low is null ? "" : " " + low.Reason)
+                    + (advised ? " The recognizer advised checking this transcript." : ""), "System");
+            return false;
         }
 
         // Part 4.5: no interruption when there is no time for it; an unclear answer then goes to a human.
@@ -732,7 +735,8 @@ public sealed class SessionOrchestrator(
                 var revisions = await db.StudentResponses.Where(r => r.TurnId == judgedId && r.Kind == ResponseKind.SubstantiveRevision)
                     .OrderBy(r => r.Sequence).Select(r => r.OriginalText).ToListAsync(ct);
                 last = new LastAnswer(original.Id, judged.Index, judged.Question, revisions.LastOrDefault() ?? original.VerifiedText,
-                    original.Versions.Count, original.VerificationState == VerificationState.Captured && pending is null,
+                    // A spoken answer is taken as heard (GAD-T405): no after-the-fact transcript fix is offered for it.
+                    original.Versions.Count, original.VerificationState == VerificationState.Captured && pending is null && original.Modality != "voice",
                     pending is null && revisions.Count < ResponseLedger.MaxRevisionsPerTurn, revisions.Count, ResponseLedger.RevisionRule(live.Mode));
             }
         }
