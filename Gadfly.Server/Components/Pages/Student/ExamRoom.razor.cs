@@ -46,6 +46,8 @@ public partial class ExamRoom
     /// <summary>The examiner has spoken at least once on this page (a later pause is a lost device, not a first connection).</summary>
     private bool examinerHasSpoken;
     private bool clockStarting;
+    /// <summary>The question or request just begun, for the page's one live region (GAD-T599).</summary>
+    private string? announced;
     /// <summary>The spoken answer to resend, with its word timings and metrics, if a step failed partway.</summary>
     private Answer? pendingVoiceAnswer;
 
@@ -62,6 +64,7 @@ public partial class ExamRoom
     private async Task OnExaminerSpeaksAsync()
     {
         examinerHasSpoken = true;
+        announced = VoicePrompt ?? step?.Question;   // read out once by screen readers (GAD-T599)
         if (step is not { ClockStarted: false } || clockStarting) return;
         if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
         clockStarting = true;

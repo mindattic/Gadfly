@@ -45,6 +45,8 @@ textarea { width: 100%; resize: vertical; }
 .progress-line progress { width: 110px; height: .5rem; accent-color: var(--accent); }
 .exam-card { gap: .75rem; }
 .concept { color: var(--accent); font-weight: 600; font-size: .9rem; text-transform: uppercase; letter-spacing: .04em; }
+/* The exam room's one live region for the question (GAD-T599): read by screen readers, not shown. */
+.exam-announce { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
 .exam-question { font-size: 1.35rem; line-height: 1.45; font-weight: 600; }
 .muted-question { color: var(--muted); font-size: 1.1rem; }
 .thinking { display: flex; gap: .65rem; align-items: center; font-weight: 600; }
@@ -78,7 +80,7 @@ textarea { width: 100%; resize: vertical; }
 @media (min-width: 960px) and (min-height: 560px) {
     .shell:has(.exam-live) { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
     /* Scrolls only if something really can't fit (a typed answer's box on a short screen), never the whole page. */
-    .shell:has(.exam-live) > main { flex: 1 1 auto; min-height: 0; overflow-y: auto; width: 100%; max-width: 1500px; box-sizing: border-box; padding: .6rem 1.25rem; display: flex; flex-direction: column; }
+    .shell:has(.exam-live) > main { flex: 1 1 auto; min-height: 0; overflow-y: auto; width: 100%; max-width: 1500px; box-sizing: border-box; padding: .6rem var(--gutter); display: flex; flex-direction: column; }
     .exam-live { flex: 1 1 auto; min-height: 0; width: 100%; max-width: none; display: flex; flex-direction: column; gap: .5rem; }
     .exam-live > * { flex: none; margin-top: 0; margin-bottom: 0; }
     .exam-live > .voice-room:has(> .voice-interview:not([hidden])) { flex: 1 1 auto; min-height: 17rem; }

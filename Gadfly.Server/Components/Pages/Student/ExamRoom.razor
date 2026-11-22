@@ -22,6 +22,9 @@
 @* While the examiner is on screen the room is one screen with no page scroll (GAD-T416, student.css .exam-live): the student keeps
    eye contact with her, so her stage takes the height left over and everything else stays short. *@
 <div class="exam-room @(phase is Phase.Answering or Phase.Thinking && voiceAvailable ? "exam-live" : null)">
+    @* Each question or request is announced to screen readers exactly once, when the examiner begins to say it (GAD-T599, WCAG 4.1.3):
+       one live region that stays on the page, since the question card is rebuilt between phases and her caption is aria-hidden. *@
+    <p class="exam-announce" role="status" aria-live="polite" aria-atomic="true">@announced</p>
     <header class="exam-head">
         <h1>@(examTitle ?? "Exam")</h1>
         @* The camera, eye-contact and integrity lines share the title's row (GAD-T416), each one short line until opened. *@
@@ -155,7 +158,7 @@
                 {
                     <p class="concept">@step.ConceptTitle</p>
                 }
-                <p class="exam-question" aria-live="polite">@step?.Question</p>
+                <p class="exam-question">@step?.Question</p>
                 @if (step?.Verification is { Kind: ResponseLedger.TranscriptKind })
                 {
                     @* A read-back request left over from before GAD-T405: there is nothing to confirm or correct any more. The page takes
@@ -170,7 +173,7 @@
                         <p class="verify-label">Your answer, as recorded</p>
                         <blockquote class="recorded-answer">@v.RecordedText</blockquote>
                         <h2 id="verify-title" class="verify-title">A quick clarification</h2>
-                        <p class="verify-prompt" aria-live="polite">@v.Prompt</p>
+                        <p class="verify-prompt">@v.Prompt</p>
                         <p class="hint">This only checks what you meant, so your answer is understood the way you intended. It doesn't mean your answer is right or wrong, and your answer stays exactly as recorded.</p>
                         @if (typedAnswers && typoFix)
                         {

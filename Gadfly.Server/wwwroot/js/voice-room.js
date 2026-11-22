@@ -104,6 +104,32 @@ export function init(dotnet, cfg) {
         partialTimer: null, partialDue: false, partialAt: 0, partialSent: "",   // the running answer for the prefetch (GAD-T497)
         sessionId: cfg.sessionId || null, turn: null, draftChecked: false, recovered: false,   // draft kept across a reload mid-answer (GAD-T306)
     };
+    loadPauseChoice(S);
+    // Hold to talk from the keyboard (GAD-T599, WCAG 2.1.1): Space or Enter held on the button is the same as holding the pointer.
+    S.onKeyDown = (e) => {
+        if ((e.key !== " " && e.key !== "Enter") || !e.target.closest?.('[data-voice-action="ptt"]')) return;
+        e.preventDefault();
+        if (e.repeat || !S?.mic || S.mode !== "push-to-talk") return;
+        S.keyHeld = true;
+        S.onDown(e);
+    };
+    S.onKeyUp = (e) => {
+        if ((e.key !== " " && e.key !== "Enter") || !S?.keyHeld) return;
+        e.preventDefault();
+        S.keyHeld = false;
+        S.onUp();
+    };
+    // Focus leaving the button while a key holds it (Tab, a click elsewhere) lets go, so the microphone never stays held.
+    S.onFocusOut = (e) => {
+        if (S?.keyHeld && e.target.closest?.('[data-voice-action="ptt"]')) { S.keyHeld = false; S.onUp(); }
+    };
+    S.onPause = (e) => {
+        const sel = e.target.closest?.("[data-voice-pause]");
+        if (!sel || !S) return;
+        S.pauseChoice = sel.value;
+        try { localStorage.setItem(PAUSE_KEY, sel.value); } catch { }
+        if (S.cueTimer && !S.gate) armCue(S);   // a countdown running now follows the new choice at once
+    };
     S.onRemark = (e) => remarkHold(S, !!(e.detail && e.detail.active));
     document.addEventListener("gadfly-examiner-remark", S.onRemark);
     S.onClick = (e) => {
@@ -124,6 +150,10 @@ export function init(dotnet, cfg) {
     document.addEventListener("click", S.onClick);
     document.addEventListener("pointerdown", S.onDown);
     document.addEventListener("pointerup", S.onUp);
+    document.addEventListener("keydown", S.onKeyDown);
+    document.addEventListener("keyup", S.onKeyUp);
+    document.addEventListener("focusout", S.onFocusOut);
+    document.addEventListener("change", S.onPause);
     return {
         microphone: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && window.isSecureContext !== false,
         webgl: hasWebGl(),
@@ -1019,6 +1049,10 @@ export function dispose() {
         document.removeEventListener("click", S.onClick);
         document.removeEventListener("pointerdown", S.onDown);
         document.removeEventListener("pointerup", S.onUp);
+        document.removeEventListener("keydown", S.onKeyDown);
+        document.removeEventListener("keyup", S.onKeyUp);
+        document.removeEventListener("focusout", S.onFocusOut);
+        document.removeEventListener("change", S.onPause);
     }
     S = null;
 }
@@ -1093,6 +1127,7 @@ function openMic() {
     }
     if (s.avatar) s.avatar.state = "listening";
     answering(true);
+    showPauseChoice(s);
     // After a staff pause (GAD-T471) or Repeat the question (GAD-T474) the words already said are still in "What I heard".
     status(resuming && s.segments.length > 0 && !s.recovered
         ? "You can carry on answering. What you'd already said is kept: keep talking, press Done answering, or Clear and answer again to start over."
@@ -1154,8 +1189,8 @@ function remarkHold(s, active) {
         s.gate = false;
         if (s.avatar) s.avatar.state = "listening";
         status(listenText(s));
-        if (s.segments.length && !s.inSpeech) {   // still talking: the next pause arms the cue as usual
-            const ms = endCueMs(s);
+        if (s.segments.length && !s.inSpeech && cueMs(s) != null) {   // still talking: the next pause arms the cue as usual
+            const ms = cueMs(s);
             const cue = q("cue");
             if (cue) { cue.style.setProperty("--cue-ms", ms + "ms"); cue.dataset.active = "true"; }
             s.cueTimer = setTimeout(() => void submit(false), ms);
@@ -1180,7 +1215,7 @@ function endRemarkWait(s) {
 /** What the status line says while an answer is open. */
 function listenText(s) {
     if (s.cfg.typed) return "Type your answer in the box below.";
-    return s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.";
+    return s.mode === "push-to-talk" ? "Hold the button (or Space) and speak." : "Listening. Answer out loud.";
 }
 
 /** The status line for whatever the room is doing right now (after a hub reconnect, which interrupted it). */
@@ -1256,7 +1291,9 @@ function onFinal(seg) {
 function armCue(s) {
     clearCue();
     const cue = q("cue");
-    const ms = endCueMs(s);
+    const ms = cueMs(s);
+    // The student chose to send only with Done answering (GAD-T599): nothing is sent on a silence.
+    if (ms == null) { status(DONE_ONLY_TEXT); return; }
     if (cue) { cue.style.setProperty("--cue-ms", ms + "ms"); cue.dataset.active = "true"; }
     status("Finishing your answer… keep talking to add more.");
     s.cueTimer = setTimeout(() => void submit(false), ms);
@@ -1307,6 +1344,32 @@ function cancelBackchannel(s, silence) {
  * Each answer that turned out to be cut off (the student went on within CUT_OFF_MS, GAD-T462) lengthens the short floor by
  * CUT_OFF_BACKOFF_MS for the rest of the exam, never past the full floor, so the shorter wait backs off for a student it cuts short.
  */
+/**
+ * The pause before a silence sends the answer, as the student set it (GAD-T599, WCAG 2.2.1): the adaptive cue below times their
+ * chosen factor ("Wait before sending my answer": standard, longer, much longer), or null when they send only with Done answering.
+ * Kept on this device only (localStorage gadfly.voice.pause).
+ */
+function cueMs(s) {
+    const f = s.pauseChoice || "1";
+    if (f === "done") return null;
+    const k = Number(f);
+    return Math.round(endCueMs(s) * (Number.isFinite(k) && k >= 1 && k <= 4 ? k : 1));
+}
+
+const DONE_ONLY_TEXT = "Press Done answering when you've finished. Nothing is sent until you do.";
+const PAUSE_KEY = "gadfly.voice.pause";
+
+function loadPauseChoice(s) {
+    try { s.pauseChoice = localStorage.getItem(PAUSE_KEY) || "1"; } catch { s.pauseChoice = "1"; }
+    showPauseChoice(s);
+}
+
+/** The select shows the stored choice (it is rendered once the room is on, after init). */
+function showPauseChoice(s) {
+    const sel = document.querySelector("[data-voice-pause]");
+    if (sel && [...sel.options].some((o) => o.value === s.pauseChoice)) sel.value = s.pauseChoice;
+}
+
 function endCueMs(s) {
     const full = s.cfg.endCueMs || 4000;
     const ceiling = Math.max(full, s.cfg.endCueMaxMs || full);

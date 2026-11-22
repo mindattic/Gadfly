@@ -41,7 +41,7 @@
 /* A mirror: the student sees themselves the way they expect to. */
 .voice-self-frame video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .voice-self:not([data-self-state="on"]) .voice-self-frame video { visibility: hidden; }
-.voice-self-note { position: absolute; inset: auto 0 0 0; margin: 0; padding: .3rem .45rem; color: #e8edf3; font-size: .72rem; line-height: 1.3; background: rgba(16, 21, 29, .85); }
+.voice-self-note { position: absolute; inset: auto 0 0 0; margin: 0; padding: .3rem .45rem; color: #e8edf3; font-size: .8rem; line-height: 1.3; background: rgba(16, 21, 29, .85); }
 .voice-delay { margin: 0; min-height: 1.2em; font-size: .92rem; font-variant-numeric: tabular-nums; color: var(--muted); }
 .voice-delay[data-state="final"] { color: var(--ink); font-weight: 600; }
 /* contain: size takes the transcript out of the row's height (it fills the height the stage gives the row and scrolls), so a
@@ -59,7 +59,7 @@
 .voice-transcript-quiet { display: none; }
 .voice-room[data-answering="true"] .voice-transcript-quiet { display: block; }
 .voice-room[data-answering="true"] .voice-log { visibility: hidden; }
-.voice-who { font-size: .74rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.voice-who { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .voice-said { white-space: pre-wrap; overflow-wrap: anywhere; }
 .voice-line-delay { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .voice-body { grid-area: side; display: flex; flex-direction: column; gap: .45rem; min-width: 0; min-height: 0; }
@@ -104,6 +104,11 @@
 .voice-cue[data-active="true"] i { width: 100%; transition: width var(--cue-ms, 4s) linear; }
 .voice-cue[data-active="false"] i { transition: none; width: 0; }
 .voice-actions button[hidden], .voice-self button[hidden] { display: none; }
+/* GAD-T599: the keyboard hint shows only with the hold-to-talk button; the pause choice is a plain labelled select. */
+.voice-actions:has([data-voice-action="ptt"][hidden]) + .voice-ptt-hint { display: none; }
+.voice-ptt-hint { margin: 0; }
+.voice-pause { display: grid; gap: .2rem; font-size: .88rem; color: var(--muted); }
+.voice-pause select { max-width: 100%; }
 @media (prefers-reduced-motion: reduce) { .voice-level i, .voice-cue[data-active="true"] i { transition: none; } }
 
 /* The examiner's delivery (GAD-T303, js/examiner-voice.js). Captions: the whole question dimmed, each word lit as she says it. */

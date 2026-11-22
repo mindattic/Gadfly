@@ -171,8 +171,19 @@
                         <button type="button" class="secondary" data-voice-action="clear" data-voice-needs-draft disabled>Clear and answer again</button>
                         <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
                         <button type="button" class="secondary" data-voice-action="mode">Switch to hold-to-talk</button>
-                        <button type="button" class="secondary" data-voice-action="ptt" hidden>Hold to talk</button>
+                        <button type="button" class="secondary" data-voice-action="ptt" hidden aria-describedby="voice-ptt-hint">Hold to talk</button>
                     </div>
+                    <p id="voice-ptt-hint" class="hint voice-ptt-hint">Hold to talk works with the mouse, a touch, or Space or Enter held down.</p>
+                    @* The student's own pause before a silence sends the answer (GAD-T599, WCAG 2.2.1); kept on this device by voice-room.js. *@
+                    <label class="voice-pause">
+                        @ExamRoomText.PauseLengthLabel
+                        <select data-voice-pause>
+                            <option value="1">@ExamRoomText.PauseStandard</option>
+                            <option value="1.75">@ExamRoomText.PauseLonger</option>
+                            <option value="2.5">@ExamRoomText.PauseLongest</option>
+                            <option value="done">@ExamRoomText.PauseDone</option>
+                        </select>
+                    </label>
                 }
             </div>
         }
