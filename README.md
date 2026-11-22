@@ -444,7 +444,7 @@ and `Gadfly.Server` are two hosts. The full plan is in [docs/SOCRATIC_PLATFORM.m
 | Instructors: material, concepts and rubrics, exams, review and grading | [Instructor guide](docs/guides/INSTRUCTOR_GUIDE.md) |
 | Students: how the exam works, what is recorded, results | [Student guide](docs/guides/STUDENT_GUIDE.md) |
 | The science behind Gadfly: the elenchus, why follow-ups reveal understanding, the limits, citations | [Science](docs/SCIENCE.md), [research notes](docs/research/README.md) |
-| The dissertation (in progress): *Elenchus at Scale: Socratic Oral Assessment by Synthetic Examiners* | [Elenchus at Scale](docs/elenchus-at-scale.md), sources in [dissertation/](dissertation/) |
+| The dissertation (in progress): *Elenchus at Scale: Socratic Oral Assessment by Synthetic Examiners* | [mindattic/Dissertation.ElenchusAtScale](https://github.com/mindattic/Dissertation.ElenchusAtScale), read at [mindattic.github.io/Dissertation.ElenchusAtScale](https://mindattic.github.io/Dissertation.ElenchusAtScale/) |
 | Owners and admins: organizations, members, MFA, retention, keys, webhooks | [Admin guide](docs/guides/ADMIN_GUIDE.md) |
 | Integrators: the platform API v1, launch links, webhook signatures | [API reference](docs/API.md) |
 | The owner's product plan, and what is built against it | [Master plan](docs/MASTER-PLAN.md), [status](docs/MASTER-PLAN-STATUS.md) |
