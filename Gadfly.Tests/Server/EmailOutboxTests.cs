@@ -134,6 +134,7 @@ public class EmailOutboxTests : ServerTest
         var now = DateTimeOffset.UtcNow;
         Clock.Now = now;
         var due = await Seed.ExamAsync(closes: now.AddHours(24));
+        await StudentMembershipAsync(due);
         await RunSweepAsync();
         await RunSweepAsync();
         await using var check = SystemDb();
@@ -175,6 +176,7 @@ public class EmailOutboxTests : ServerTest
         var now = DateTimeOffset.UtcNow;
         Clock.Now = now;
         var w = await Seed.ExamAsync(closes: now.AddHours(10));
+        await StudentMembershipAsync(w);
         await using (var db = OrgDb(w.Org))
         {
             db.Set<StudentNotificationPreference>().Add(new StudentNotificationPreference { OrganizationId = w.Org, UserId = w.StudentId, RemindersOptedOut = true, UpdatedAt = now });
@@ -187,6 +189,17 @@ public class EmailOutboxTests : ServerTest
         Assert.That(logs, Has.Count.EqualTo(1));
         Assert.That(logs[0].Status, Is.EqualTo(EmailLogStatus.Skipped));
         Assert.That(await check.Jobs.AnyAsync(j => j.OrganizationId == w.Org && j.Kind == EmailDeliveryJob.JobKind), Is.False);
+    }
+
+    /// <summary>
+    /// The seeded student as a current member of the organization: the sweep reminds only current members of published exams
+    /// (GAD-T479), and <see cref="Seed.ExamAsync"/> makes the student a bare account with no membership (GAD-T522).
+    /// </summary>
+    private static async Task StudentMembershipAsync(Seed.ExamWorld w)
+    {
+        await using var db = OrgDb(w.Org);
+        db.OrganizationMembers.Add(new MindAttic.Authentication.Entities.AuthMembership { OrganizationId = w.Org, UserId = w.StudentId, Role = OrgRoles.Student, CreatedUtc = DateTime.UtcNow });
+        await db.SaveChangesAsync();
     }
 
     private static async Task RunSweepAsync()
