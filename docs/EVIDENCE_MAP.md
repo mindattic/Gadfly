@@ -651,7 +651,8 @@ GAD-T412 (text-style estimate switched off, mechanic 9). Measurements filed by t
 a decision: GAD-T426 (human-reference transcripts, mechanic 7), GAD-T433 (score gaps by group, mechanic 7), GAD-T434
 (path-driver rates by group, mechanic 2), GAD-T438 (typed against spoken, decision (a)), GAD-T447 (camera episodes and
 tracking quality by group, mechanic 4), GAD-T448 (what the fade costs, mechanic 4 and decision (c)), GAD-T462 (answer
-cut-offs by the end-of-answer silence, mechanics 2 and 6).
+cut-offs by the end-of-answer silence, mechanics 2 and 6). GAD-T463 adds these fairness tables to the analytics CSV
+export (grouped by accommodation, small groups withheld the same way, for Owners and Admins only).
 
 ## What the evidence does not let Gadfly claim
 

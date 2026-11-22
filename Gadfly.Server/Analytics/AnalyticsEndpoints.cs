@@ -50,9 +50,14 @@ public static class AnalyticsEndpoints
             {
                 var access = http.RequestServices.GetService<AnalyticsAccess>() ?? ActivatorUtilities.CreateInstance<AnalyticsAccess>(http.RequestServices);
                 if (!await access.RequireAsync("Export analytics", ct)) return Results.Forbid();
-                var report = await new AnalyticsService(db, tenant.OrganizationId!.Value, clock, tenant.Role).BuildAsync(new AnalyticsScope(exam, course), ct);
+                var scope = new AnalyticsScope(exam, course);
+                var report = await new AnalyticsService(db, tenant.OrganizationId!.Value, clock, tenant.Role).BuildAsync(scope, ct);
+                var csv = ToCsv(report);
+                // GAD-T463: the fairness views, for Owners and Admins only (as on the page), grouped by accommodation.
+                if (GroupFairness.ViewerAllowed(tenant.Role))
+                    csv += FairnessCsv.ToCsv(await FairnessCsv.BuildAsync(db, tenant.OrganizationId!.Value, scope, ct));
                 var name = $"gadfly-analytics-{report.GeneratedAt.UtcDateTime:yyyyMMdd-HHmm}.csv";
-                return Results.File([.. Encoding.UTF8.GetPreamble(), .. Encoding.UTF8.GetBytes(ToCsv(report))], "text/csv; charset=utf-8", name);
+                return Results.File([.. Encoding.UTF8.GetPreamble(), .. Encoding.UTF8.GetBytes(csv)], "text/csv; charset=utf-8", name);
             })
             .RequireAuthorization(GadflyPolicies.Member);
         return app;
