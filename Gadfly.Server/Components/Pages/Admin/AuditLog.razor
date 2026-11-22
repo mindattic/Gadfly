@@ -1,10 +1,369 @@
-@page "/admin/audit"
-@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+﻿@page "/admin/audit"
+@attribute [Authorize]
+@using Gadfly.Server.Admin
+@using Gadfly.Server.Data
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject ILogger<AuditLog> Log
 
-@* Placeholder (GAD-T300) so the admin navigation never leads nowhere. GAD-T301 replaces this file with the real page. *@
-<PageTitle>Audit log · Gadfly Exams</PageTitle>
-<h1>Audit log</h1>
-<div class="panel admin-soon">
-    <p><strong>Coming in this release.</strong> Every admin change: who did what, and when.</p>
-    <p class="hint">Until then, the <a href="admin/desk">admin desk</a> and the <a href="admin">dashboard</a> cover the everyday work.</p>
+@* The audit log viewer (GAD-T301): owners and admins see their organization's log; MindAttic platform staff may choose any
+   organization, or the platform-level events. Filtering, search and paging run in SQL (AuditQueryService). *@
+<PageTitle>Audit log Â· Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="admin-audit.css" /></HeadContent>
+
+<div class="al-head">
+    <h1>Audit log</h1>
+    @if (allowed && results is not null)
+    {
+        <div class="row-actions">
+            <a href="@ExamAuditEndpoints.AuditExportPath(false, target.OrganizationId, target.IsPlatform, applied)" download>Export CSV</a>
+            <a href="@ExamAuditEndpoints.AuditExportPath(true, target.OrganizationId, target.IsPlatform, applied)" download>Export JSON</a>
+        </div>
+    }
 </div>
+
+@if (!allowed)
+{
+    <div class="notice" role="alert">
+        <p><strong>The audit log is for the organization's owners and admins.</strong> Ask one of them if you need to know who changed something.</p>
+    </div>
+}
+else
+{
+    <p class="hint">Every change made in this organization: who did it, when, and what it was before and after. Rows are never edited or deleted;
+        where a privacy job removed a student's words, the row stays and is marked <span class="al-redacted">Redacted</span>.</p>
+
+    <form class="al-filters" @onsubmit="ApplyAsync" @onsubmit:preventDefault>
+        @if (Tenant.IsSuperAdmin)
+        {
+            <label>Organization
+                <select @bind="orgChoice">
+                    @if (Tenant.OrganizationId is { } mine)
+                    {
+                        <option value="@mine">My organization</option>
+                    }
+                    <option value="platform">Platform events (no organization)</option>
+                    @foreach (var o in choices?.Organizations ?? [])
+                    {
+                        if (o.Id != Tenant.OrganizationId)
+                        {
+                            <option value="@o.Id">@o.Label</option>
+                        }
+                    }
+                </select>
+            </label>
+        }
+        <label class="al-search">Search <input type="search" @bind="search" placeholder="Words in the action, record, reason or detail; a person's name" maxlength="200" /></label>
+        <label>Who
+            <select @bind="actor">
+                <option value="">Anyone</option>
+                @foreach (var p in choices?.People ?? [])
+                {
+                    <option value="@p.Id">@p.Label</option>
+                }
+            </select>
+        </label>
+        <label>Action
+            <select @bind="action">
+                <option value="">Any action</option>
+                @foreach (var f in Families())
+                {
+                    <option value="@(f).">@f.* (all)</option>
+                }
+                @foreach (var a in choices?.Actions ?? [])
+                {
+                    <option value="@a">@a</option>
+                }
+            </select>
+        </label>
+        @if (!target.IsPlatform)
+        {
+            <label>Student
+                <select @bind="student">
+                    <option value="">Any student</option>
+                    @foreach (var s in choices?.Students ?? [])
+                    {
+                        <option value="@s.Id">@s.Label</option>
+                    }
+                </select>
+            </label>
+            <label>Exam
+                <select @bind="exam">
+                    <option value="">Any exam</option>
+                    @foreach (var e in choices?.Exams ?? [])
+                    {
+                        <option value="@e.Id">@e.Label</option>
+                    }
+                </select>
+            </label>
+            <label>Session id <input @bind="session" placeholder="Paste an attempt's id" maxlength="36" /></label>
+        }
+        <label>From (UTC) <input type="date" @bind="from" /></label>
+        <label>To (UTC, inclusive) <input type="date" @bind="to" /></label>
+        <div class="row-actions al-buttons">
+            <button type="submit" disabled="@loading">Apply</button>
+            <button type="button" class="link" @onclick="ClearAsync" disabled="@loading">Clear</button>
+        </div>
+    </form>
+    @if (filterError is not null)
+    {
+        <p class="error" role="alert">@filterError</p>
+    }
+
+    @if (error is not null)
+    {
+        <div class="notice" role="alert">
+            <p><strong>The audit log could not load.</strong> @error</p>
+            <button type="button" @onclick="LoadAsync" disabled="@loading">Try again</button>
+        </div>
+    }
+    else if (results is null)
+    {
+        <p class="hint" role="status">Loadingâ€¦</p>
+    }
+    else if (results.Total == 0)
+    {
+        <p class="notice">@(applied.IsEmpty ? "Nothing has been recorded here yet." : "No event matches these filters.")
+            @if (!applied.IsEmpty) { <button type="button" class="link" @onclick="ClearAsync">Clear the filters</button> }</p>
+    }
+    else
+    {
+        <p class="hint" role="status">@results.Total.ToString("N0") event@(results.Total == 1 ? "" : "s"), newest first. Page @results.Page of @results.Pages.</p>
+        <table class="grid al-table">
+            <thead>
+                <tr><th scope="col">When (UTC)</th><th scope="col">Who</th><th scope="col">Action</th><th scope="col">Record</th><th scope="col">Reason</th><th scope="col"><span class="sr-only">Detail</span></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in results.Rows)
+                {
+                    <tr class="@(detail?.Row.Id == r.Id ? "al-open" : null)">
+                        <td class="al-when">@r.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td>@r.ActorName @if (r.ActorRole is not null) { <span class="hint">@r.ActorRole</span> }</td>
+                        <td><code>@r.Action</code> @if (r.IsRedacted) { <span class="al-redacted">Redacted</span> }</td>
+                        <td>@r.EntityType @if (r.EntityId is not null) { <span class="hint al-id">@Short(r.EntityId)</span> }</td>
+                        <td class="al-reason">@Clip(r.Reason, 140)</td>
+                        <td><button type="button" class="link" @onclick="() => OpenAsync(r.Id)">Details</button></td>
+                    </tr>
+                    @if (detail is { } d && d.Row.Id == r.Id)
+                    {
+                        <tr class="al-detail-row">
+                            <td colspan="6">
+                                <div class="al-detail">
+                                    <dl>
+                                        <dt>Event</dt><dd>#@d.Row.Id at @d.Row.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+                                        <dt>Who</dt><dd>@d.Row.ActorName@(d.Row.ActorRole is null ? "" : $" ({d.Row.ActorRole})")@(d.Row.ActorUserId is { } u ? $" Â· {u}" : "")</dd>
+                                        <dt>Action</dt><dd><code>@d.Row.Action</code></dd>
+                                        <dt>Record</dt><dd>@d.Row.EntityType @d.Row.EntityId</dd>
+                                        @if (d.Row.SessionId is { } sid)
+                                        {
+                                            <dt>Attempt</dt><dd>@sid Â· <a href="review/@sid">review</a> Â· <button type="button" class="link" @onclick="() => FilterSessionAsync(sid)">all its events</button></dd>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(d.Row.Reason))
+                                        {
+                                            <dt>Reason</dt><dd class="al-pre">@d.Row.Reason</dd>
+                                        }
+                                    </dl>
+                                    @if (d.RedactionNote is not null)
+                                    {
+                                        <p class="notice al-redaction-note"><span class="al-redacted">Redacted</span> @d.RedactionNote</p>
+                                    }
+                                    @if (d.Before is not null)
+                                    {
+                                        <h3>Before</h3>
+                                        <pre class="al-json">@d.Before</pre>
+                                    }
+                                    @if (d.After is not null)
+                                    {
+                                        <h3>@(d.Before is null ? "Detail" : "After")</h3>
+                                        <pre class="al-json">@d.After</pre>
+                                    }
+                                    @if (d.Before is null && d.After is null && d.RedactionNote is null)
+                                    {
+                                        <p class="hint">This event carries no before/after detail.</p>
+                                    }
+                                    <button type="button" class="link" @onclick="() => detail = null">Close</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+        <nav class="row-actions al-pager" aria-label="Pages">
+            <button type="button" @onclick="() => GoAsync(1)" disabled="@(loading || results.Page <= 1)">Newest</button>
+            <button type="button" @onclick="() => GoAsync(results.Page - 1)" disabled="@(loading || results.Page <= 1)">Newer</button>
+            <span class="hint">Page @results.Page of @results.Pages</span>
+            <button type="button" @onclick="() => GoAsync(results.Page + 1)" disabled="@(loading || results.Page >= results.Pages)">Older</button>
+        </nav>
+        <p class="hint">Exports include every matching event (up to @AuditQueryService.MaxExportRows.ToString("N0"); export a date range at a time for more) and are themselves recorded in this log.</p>
+    }
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "exam")] public Guid? ExamQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "student")] public Guid? StudentQuery { get; set; }
+    [SupplyParameterFromQuery(Name = "session")] public Guid? SessionQuery { get; set; }
+
+    private bool allowed, loading;
+    private string? error, filterError;
+    private AuditTarget target = new(null);
+    private AuditChoices? choices;
+    private AuditPage? results;
+    private AuditDetail? detail;
+    private AuditFilter applied = new();
+
+    private string orgChoice = "", search = "", actor = "", action = "", student = "", exam = "", session = "";
+    private DateTime? from, to;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var me = TenantSnapshot.Of(Tenant);
+        orgChoice = Tenant.OrganizationId?.ToString() ?? "platform";
+        target = TargetFromChoice();
+        allowed = AuditQueryService.MayRead(me, target);
+        if (!allowed && Tenant.OrganizationId is not null && !Tenant.IsSuperAdmin)
+        {
+            // Recorded like every other refused admin action.
+            await using var scope = Scopes.CreateAsyncScopeFor(me);
+            await new Gadfly.Server.Assessments.AssessmentGuard(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), Tenant, TimeProvider.System)
+                .RequireAsync(Gadfly.Assessment.Permission.ViewAuditLog, "Opening the audit log", "AuditLog", Tenant.OrganizationId?.ToString());
+            return;
+        }
+        if (!allowed) return;
+        exam = ExamQuery?.ToString() ?? "";
+        student = StudentQuery?.ToString() ?? "";
+        session = SessionQuery?.ToString() ?? "";
+        applied = BuildFilter() ?? new();
+        await LoadChoicesAsync();
+        await LoadAsync();
+    }
+
+    private AuditTarget TargetFromChoice() => orgChoice == "platform" ? new AuditTarget(null)
+        : new AuditTarget(Guid.TryParse(orgChoice, out var o) ? o : Tenant.OrganizationId);
+
+    private async Task<T> WithServiceAsync<T>(Func<AuditQueryService, Task<T>> work)
+    {
+        var me = TenantSnapshot.Of(Tenant);
+        await using var scope = Scopes.CreateAsyncScopeFor(AuditQueryService.NeedsSystemScope(me, target) ? TenantSnapshot.System : me);
+        var svc = new AuditQueryService(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), me, scope.ServiceProvider.GetRequiredService<TimeProvider>());
+        return await work(svc);
+    }
+
+    private async Task LoadChoicesAsync()
+    {
+        try
+        {
+            choices = await WithServiceAsync(s => s.ChoicesAsync(target));
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "The audit log's filter choices failed to load");
+            choices = null;
+        }
+    }
+
+    private async Task LoadAsync() => await GoAsync(results?.Page ?? 1);
+
+    private async Task GoAsync(int number)
+    {
+        if (loading) return;
+        loading = true;
+        error = null;
+        try
+        {
+            var filter = applied;
+            results = await WithServiceAsync(s => s.PageAsync(target, filter, number));
+            if (detail is not null && results.Rows.All(r => r.Id != detail.Row.Id)) detail = null;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            error = "The audit log is for the organization's owners and admins.";
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "The audit log failed to load for organization {Org}", target.OrganizationId);
+            error = "Something went wrong reading the log. Try again in a moment; if it keeps happening, narrow the dates or check System status.";
+        }
+        finally { loading = false; }
+    }
+
+    private AuditFilter? BuildFilter()
+    {
+        filterError = null;
+        Guid? sid = null;
+        if (!string.IsNullOrWhiteSpace(session))
+        {
+            if (!Guid.TryParse(session.Trim(), out var s)) { filterError = "That session id isn't a valid id; copy it from the review page."; return null; }
+            sid = s;
+        }
+        if (from is { } f && to is { } t && t < f) { filterError = "The end date is before the start date."; return null; }
+        return new AuditFilter
+        {
+            ActorUserId = Guid.TryParse(actor, out var a) ? a : null,
+            Action = string.IsNullOrWhiteSpace(action) ? null : action,
+            StudentUserId = !target.IsPlatform && Guid.TryParse(student, out var st) ? st : null,
+            ExamId = !target.IsPlatform && Guid.TryParse(exam, out var e) ? e : null,
+            SessionId = target.IsPlatform ? null : sid,
+            From = from is { } fd ? new DateTimeOffset(DateTime.SpecifyKind(fd.Date, DateTimeKind.Utc)) : null,
+            To = to is { } td ? new DateTimeOffset(DateTime.SpecifyKind(td.Date.AddDays(1), DateTimeKind.Utc)) : null,
+            Search = string.IsNullOrWhiteSpace(search) ? null : search.Trim(),
+        };
+    }
+
+    private async Task ApplyAsync()
+    {
+        var newTarget = TargetFromChoice();
+        if (newTarget != target)
+        {
+            if (!AuditQueryService.MayRead(TenantSnapshot.Of(Tenant), newTarget)) { filterError = "You can't open that organization's log."; return; }
+            target = newTarget;
+            actor = student = exam = session = action = "";
+            await WithServiceAsync(async s => { await s.RecordPlatformViewAsync(target); return true; });
+            await LoadChoicesAsync();
+        }
+        if (BuildFilter() is not { } f) return;
+        applied = f;
+        detail = null;
+        results = null;
+        await GoAsync(1);
+    }
+
+    private async Task ClearAsync()
+    {
+        search = actor = action = student = exam = session = "";
+        from = to = null;
+        filterError = null;
+        applied = new();
+        detail = null;
+        results = null;
+        await GoAsync(1);
+    }
+
+    private async Task FilterSessionAsync(Guid sid)
+    {
+        session = sid.ToString();
+        await ApplyAsync();
+    }
+
+    private async Task OpenAsync(long id)
+    {
+        if (detail?.Row.Id == id) { detail = null; return; }
+        try
+        {
+            detail = await WithServiceAsync(s => s.DetailAsync(target, id));
+            if (detail is null) error = "That event is not in this log.";
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Opening audit event {Id} failed", id);
+            error = "That event could not be opened. Try again.";
+        }
+    }
+
+    /// <summary>The action families present ("grade", "assessment"...), offered as "all of them" choices.</summary>
+    private IEnumerable<string> Families() => (choices?.Actions ?? []).Where(a => a.Contains('.')).Select(a => a[..a.IndexOf('.')]).Distinct().Order();
+
+    private static string Short(string id) => id.Length > 13 && Guid.TryParse(id, out _) ? id[..8] + "â€¦" : id;
+
+    private static string? Clip(string? s, int max) => s is null ? null : s.Length <= max ? s : s[..max] + "â€¦";
+}

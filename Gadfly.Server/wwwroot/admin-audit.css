@@ -1,0 +1,27 @@
+/* Audit log viewer (GAD-T301) */
+.al-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.al-filters { display: grid; gap: .6rem .9rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); align-items: end;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: .85rem 1rem; margin: 0 0 1rem; }
+.al-filters select, .al-filters input { width: 100%; }
+.al-search { grid-column: span 2; }
+.al-buttons { align-self: end; }
+@media (max-width: 520px) { .al-search { grid-column: auto; } }
+.al-table td { vertical-align: top; }
+.al-when { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.al-table code { font-size: .85rem; overflow-wrap: anywhere; }
+.al-reason { max-width: 22rem; overflow-wrap: anywhere; }
+.al-id { display: block; font-family: ui-monospace, monospace; font-size: .8rem; }
+.al-open td { background: color-mix(in srgb, var(--accent) 7%, var(--panel)); }
+.al-redacted { display: inline-block; font-size: .75rem; font-weight: 600; padding: 0 .4rem; border-radius: 999px; border: 1px solid var(--muted); color: var(--muted); }
+.al-detail-row > td { background: var(--bg); }
+.al-detail { display: grid; gap: .5rem; }
+.al-detail dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem .9rem; margin: 0; font-size: .9rem; }
+.al-detail dt { color: var(--muted); }
+.al-detail dd { margin: 0; overflow-wrap: anywhere; }
+.al-detail h3 { font-size: .95rem; margin: .4rem 0 0; }
+.al-pre { white-space: pre-wrap; }
+.al-json { margin: 0; max-height: 28rem; overflow: auto; padding: .6rem .75rem; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    font: .82rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.al-redaction-note { margin: 0; }
+.al-pager { margin: .75rem 0; }
