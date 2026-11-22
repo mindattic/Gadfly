@@ -236,9 +236,9 @@ else
             </select>
             <span class="hint">What the student is expected to speak. Also used as the recognizer's vocabulary hint language (GAD-T357).</span>
         </label>
-        <label>Examiner voice id <input @bind="sv.Form.VoiceId" maxlength="100" placeholder="Organization default" /></label>
-        <label>Examiner avatar id <input @bind="sv.Form.AvatarId" maxlength="100" placeholder="Organization default" /></label>
-        <span class="hint">The voice and avatar are used where this deployment's voice service supports a choice per exam.</span>
+        <label>Examiner voice id <input @bind="sv.Form.VoiceId" maxlength="100" placeholder="Platform default" /></label>
+        <label>Examiner avatar id <input @bind="sv.Form.AvatarId" maxlength="100" placeholder="Platform default" /></label>
+        <span class="hint">Saved for a later release: today every exam uses the platform's examiner voice and avatar, whatever is set here (GAD-T475).</span>
         @if (sv.StartedAttempts > 0)
         {
             <label>Why (required: @sv.StartedAttempts attempt@(sv.StartedAttempts == 1 ? " has" : "s have") started)

@@ -214,7 +214,7 @@ else
                         <button type="button" class="people-ghost" @onclick="() => TypedAsync(false)" disabled="@busy">off</button>
                     }
                 </div>
-                <p class="hint">Accommodations are granted per student and exam, by staff only; a student can never switch them on. Extra time applies from the next attempt; the eye-contact @(TypedAvailable ? "and typed-answer accommodations take" : "accommodation takes") effect from the next answer. Every change is audited.</p>
+                <p class="hint">Accommodations are granted per student and exam, by staff only; a student can never switch them on. Extra time applies from the next attempt; the eye-contact accommodation from the next answer@(TypedAvailable ? "; typed answers the next time the student opens the exam" : ""). Every change is audited.</p>
                 break;
             case "remove":
                 <p>Only assignments with no attempt yet are removed; one with an attempt is kept, since its transcript and grades belong to it.</p>
