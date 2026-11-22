@@ -69,4 +69,19 @@ public class ExaminerDeliveryTests
         Assert.That(VoiceSettings.From(Config(), true, null).TtsModel, Is.EqualTo("eleven_flash_v2_5"));
         Assert.That(VoiceSettings.From(Config(("Gadfly:Voice:WarmPhrases", "false")), true, null).WarmPhrases, Is.False);
     }
+
+    [Test]
+    public void Fixed_lines_are_prepared_once_then_checked_again_only_after_a_while()
+    {
+        // GAD-T329: the wait fillers are among the fixed lines, and a line pushed out of the phrase cache by questions is put back.
+        var warmup = new ExaminerSpeechWarmup(null!, VoiceSettings.From(new ConfigurationBuilder().Build(), true, null),
+            TimeProvider.System, Microsoft.Extensions.Logging.Abstractions.NullLogger<ExaminerSpeechWarmup>.Instance);
+        var start = DateTimeOffset.UnixEpoch;
+        var lines = ExaminerFiller.First.Concat(ExaminerFiller.Again).Append(" Let me think. ").Append("").ToArray();
+
+        var first = warmup.Due(lines, start);
+        Assert.That(first, Is.EqualTo(ExaminerFiller.First.Concat(ExaminerFiller.Again)), "in order, trimmed, blanks and repeats dropped");
+        Assert.That(warmup.Due(lines, start + TimeSpan.FromMinutes(1)), Is.Empty, "just prepared: nothing to do");
+        Assert.That(warmup.Due(lines, start + ExaminerSpeechWarmup.RecheckAfter), Is.EqualTo(first), "checked again after a while");
+    }
 }

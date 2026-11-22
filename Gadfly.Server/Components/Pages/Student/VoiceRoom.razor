@@ -252,12 +252,12 @@
 
     /// <summary>
     /// The examiner's fixed lines, prepared once per server in the avatar's phrase cache so the first one a student hears starts at
-    /// once (GAD-T303): the eye-contact remarks and the wait fillers.
+    /// once (GAD-T303): the wait fillers first, since one follows every answer (GAD-T329), then the eye-contact remarks.
     /// </summary>
     private static IEnumerable<string> FixedLines() =>
-        Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks.Values
-            .Concat(ExaminerFiller.First)
-            .Concat(ExaminerFiller.Again);
+        ExaminerFiller.First
+            .Concat(ExaminerFiller.Again)
+            .Concat(Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks.Values);
 
     /// <summary>Her speaking style for what is being said: requests about an answer are always neutral, questions by their move.</summary>
     private string SpeakingStyle => Prompt is { Length: > 0 } ? ExaminerStyle.Neutral : ExaminerStyle.For(Move);
