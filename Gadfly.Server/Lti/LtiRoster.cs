@@ -30,7 +30,9 @@ public sealed partial class LtiRosterService(GadflyDbContext db, LtiTokenClient 
     /// <summary>Syncs one placement's course roster. The caller (the admin page) has already checked the caller may.</summary>
     public async Task<SyncResult> SyncAsync(Guid organizationId, Guid resourceLinkId, Guid? actorUserId, CancellationToken ct)
     {
-        var link = await db.LtiResourceLinks.FirstOrDefaultAsync(r => r.Id == resourceLinkId && r.OrganizationId == organizationId, ct);
+        // Read, not tracked: provisioning a member can clear this context's tracker after a race (two first launches of the same
+        // person), which would silently drop a change made to a tracked placement (GAD-T483). The sync time is written directly below.
+        var link = await db.LtiResourceLinks.AsNoTracking().FirstOrDefaultAsync(r => r.Id == resourceLinkId && r.OrganizationId == organizationId, ct);
         if (link is null) return new(false, "That placement no longer exists.");
         if (link.ContextMembershipsUrl is not { Length: > 0 } url)
             return new(false, "Gadfly doesn't know this course's roster address yet. It learns it from a launch: open the exam from the course once (as anyone), then sync. If it still doesn't appear, the LMS hasn't granted Gadfly the Names and Roles service.");
@@ -81,7 +83,10 @@ public sealed partial class LtiRosterService(GadflyDbContext db, LtiTokenClient 
             else if (result.LinkRequestId is not null) waiting++;
             else { skipped++; if (problems.Count < 3) problems.Add(result.Error!); }
         }
-        link.LastRosterSyncAt = clock.GetUtcNow();
+        // One statement of its own, so it lands whatever the member loop did to the tracker; the audit row is saved on its own too.
+        var syncedAt = clock.GetUtcNow();
+        await db.LtiResourceLinks.Where(l => l.Id == link.Id && l.OrganizationId == organizationId)
+            .ExecuteUpdateAsync(u => u.SetProperty(l => l.LastRosterSyncAt, syncedAt), ct);
         db.AuditEvents.Add(new AuditEvent
         {
             OrganizationId = organizationId, ActorUserId = actorUserId, ActorRole = actorUserId is null ? "LTI" : null, Action = "lti.roster-synced",
