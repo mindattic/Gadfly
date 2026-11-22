@@ -104,7 +104,9 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
     public async Task<DirectoryResult> AddMemberAsync(Guid organizationId, string userName, string? email, string role, string temporaryPassword,
         CancellationToken ct = default, string? actingRole = null, Guid? actorUserId = null)
     {
-        if (!OrgRoles.IsValid(role)) return new(false, $"'{role}' is not a role.");
+        // A person holds one of the person roles only: Api belongs to API-key principals, never to an account (GAD-T325).
+        if (role == OrgRoles.Api) return new(false, "'Api' is not a role a person can hold: it is only for organization API keys.");
+        if (!OrgRoles.All.Contains(role, StringComparer.Ordinal)) return new(false, $"'{role}' is not a role.");
         if (role == OrgRoles.Owner && !ActsAsOwner(actingRole)) return new(false, "Only an owner can add another owner.");
         if (!await db.Organizations.AnyAsync(o => o.Id == organizationId && o.IsActive, ct)) return new(false, "That organization does not exist.");
         userName = userName.Trim();

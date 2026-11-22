@@ -39,6 +39,19 @@ public class OrganizationDirectoryTests : ServerTest
         Assert.That(r.Message, Does.Contain("is not a role"));
     }
 
+    /// <summary>GAD-T325: the Api role is for API-key principals only, never a person, whoever adds them.</summary>
+    [TestCase(null)]
+    [TestCase(OrgRoles.Owner)]
+    public async Task TheApiRole_IsNeverGivenToAPerson(string? acting)
+    {
+        var org = await Seed.OrganizationAsync();
+        var r = await Add(org, Seed.UserName(), OrgRoles.Api, acting);
+        Assert.That(r.Ok, Is.False);
+        Assert.That(r.Message, Does.Contain("API keys"));
+        await using var db = SystemDb();
+        Assert.That(await db.OrganizationMembers.AnyAsync(m => m.OrganizationId == org && m.Role == OrgRoles.Api), Is.False);
+    }
+
     [Test]
     public async Task EveryPersonRole_CanBeAdded()
     {
