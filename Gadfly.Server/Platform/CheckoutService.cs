@@ -7,8 +7,8 @@ namespace Gadfly.Server.Platform;
 /// <summary>One outcome of starting a checkout: either a URL to send the owner to, or why not.</summary>
 public sealed record CheckoutStart(bool Ok, string? Url, string? Error);
 
-/// <summary>What a verified <c>checkout.session.completed</c> webhook said.</summary>
-public sealed record CheckoutCompleted(Guid OrganizationId, string Plan);
+/// <summary>What a verified <c>checkout.session.completed</c> webhook said; <paramref name="EventId"/> is Stripe's event id, the same on every redelivery (GAD-T482).</summary>
+public sealed record CheckoutCompleted(Guid OrganizationId, string Plan, string EventId = "");
 
 /// <summary>
 /// Card checkout for self-serve plan upgrades (GAD-T372), talking to Stripe's REST API directly over
@@ -94,6 +94,9 @@ public sealed class CheckoutService(IHttpClientFactory httpClientFactory, Paymen
             using var doc = JsonDocument.Parse(payload);
             var root = doc.RootElement;
             if (root.GetProperty("type").GetString() != "checkout.session.completed") return null;
+            // Every Stripe event carries its id; without one a redelivery couldn't be told apart, so it isn't applied (GAD-T482).
+            var eventId = root.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String ? id.GetString() : null;
+            if (string.IsNullOrWhiteSpace(eventId) || eventId.Length > Data.StripeEventModel.MaxEventIdLength) return null;
             var dataObject = root.GetProperty("data").GetProperty("object");
             // A session paid by a delayed method (bank debit) completes with payment_status "unpaid": the money hasn't arrived and
             // may never, so no plan is granted for it (GAD-T479). Only "paid" (or a free plan's "no_payment_required") upgrades.
@@ -104,7 +107,7 @@ public sealed class CheckoutService(IHttpClientFactory httpClientFactory, Paymen
                 : dataObject.TryGetProperty("client_reference_id", out var cr) ? cr.GetString() : null;
             var plan = metadata.ValueKind == JsonValueKind.Object && metadata.TryGetProperty("plan", out var p) ? p.GetString() : null;
             if (!Guid.TryParse(orgText, out var orgId) || string.IsNullOrWhiteSpace(plan) || !PlanCatalog.IsValid(plan)) return null;
-            return new CheckoutCompleted(orgId, plan);
+            return new CheckoutCompleted(orgId, plan, eventId);
         }
         catch (JsonException)
         {

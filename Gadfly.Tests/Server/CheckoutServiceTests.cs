@@ -108,9 +108,13 @@ public class CheckoutServiceTests
 
     // ------------------------------------------------------------------ the webhook
 
-    private static string Completed(Guid org, string plan = PlanCatalog.Standard, string type = "checkout.session.completed", string paymentStatus = "paid") =>
+    private const string EventId = "evt_test_1";
+
+    private static string Completed(Guid org, string plan = PlanCatalog.Standard, string type = "checkout.session.completed", string paymentStatus = "paid",
+        string? id = EventId) =>
         System.Text.Json.JsonSerializer.Serialize(new
         {
+            id,
             type,
             data = new { @object = new { client_reference_id = org.ToString("D"), payment_status = paymentStatus, metadata = new { organizationId = org.ToString("D"), plan } } },
         });
@@ -122,6 +126,15 @@ public class CheckoutServiceTests
         var (service, _) = Service(Configured());
         var unpaid = Completed(Guid.NewGuid(), paymentStatus: "unpaid");
         Assert.That(service.VerifyAndParse(unpaid, Sign(unpaid)), Is.Null);
+    }
+
+    [Test]
+    public void An_event_without_its_stripe_id_grants_nothing()
+    {
+        // GAD-T482: the event id is what makes a redelivery recognisable; without it the event can't be applied exactly once.
+        var (service, _) = Service(Configured());
+        var anonymous = Completed(Guid.NewGuid(), id: null);
+        Assert.That(service.VerifyAndParse(anonymous, Sign(anonymous)), Is.Null);
     }
 
     private static string Sign(string payload, long? at = null, string secret = WebhookSecret)
@@ -138,7 +151,7 @@ public class CheckoutServiceTests
         var payload = Completed(org);
         var (service, factory) = Service(Configured());
         var result = service.VerifyAndParse(payload, Sign(payload));
-        Assert.That(result, Is.EqualTo(new CheckoutCompleted(org, PlanCatalog.Standard)));
+        Assert.That(result, Is.EqualTo(new CheckoutCompleted(org, PlanCatalog.Standard, EventId)));
         Assert.That(factory.Requests, Is.Empty, "verifying a webhook calls nobody");
     }
 

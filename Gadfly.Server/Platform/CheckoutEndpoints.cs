@@ -31,28 +31,10 @@ public static class CheckoutEndpoints
                 var completed = checkout.VerifyAndParse(payload, request.Headers["Stripe-Signature"]);
                 if (completed is null) return Results.BadRequest();
 
-                var now = clock.GetUtcNow();
-                var row = await db.OrganizationSettings.FirstOrDefaultAsync(s => s.OrganizationId == completed.OrganizationId, ct);
-                if (row is null) db.OrganizationSettings.Add(row = new OrganizationSettings { OrganizationId = completed.OrganizationId });
-                var before = new { row.Plan, row.StaffSeatLimit, row.StudentSeatLimit, row.MonthlyExamAllowance };
-                var d = PlanCatalog.DefaultsFor(completed.Plan);
-                row.Plan = completed.Plan;
-                row.StaffSeatLimit = d.StaffSeats;
-                row.StudentSeatLimit = d.StudentSeats;
-                row.MonthlyExamAllowance = d.MonthlyExams;
-                row.TrialStartedAt = null;
-                row.PlanRenewsAt = now.AddMonths(1);
-                row.UpdatedAt = now;
-                db.AuditEvents.Add(new AuditEvent
-                {
-                    OrganizationId = completed.OrganizationId, ActorRole = "Checkout", Action = "org.plan.upgraded-via-checkout",
-                    EntityType = "OrganizationSettings", EntityId = completed.OrganizationId.ToString(),
-                    BeforeJson = System.Text.Json.JsonSerializer.Serialize(before),
-                    AfterJson = System.Text.Json.JsonSerializer.Serialize(new { row.Plan, row.StaffSeatLimit, row.StudentSeatLimit, row.MonthlyExamAllowance }),
-                    At = now,
-                });
-                await db.SaveChangesAsync(ct);
-                log.LogInformation("Organization {OrganizationId} upgraded to {Plan} via card checkout.", completed.OrganizationId, completed.Plan);
+                // Applied once per Stripe event (GAD-T482); a redelivery is acknowledged (200) so Stripe stops sending it.
+                var outcome = await CheckoutWebhook.ApplyAsync(db, completed, clock.GetUtcNow(), ct);
+                log.LogInformation("Stripe event {EventId} for organization {OrganizationId} ({Plan}): {Outcome}.",
+                    completed.EventId, completed.OrganizationId, completed.Plan, outcome);
                 return Results.Ok();
             })
             .AllowAnonymous();   // authenticated by its Stripe signature, not a Gadfly session (GAD-T372)

@@ -459,7 +459,9 @@ one attempt started (an attempt replaced by an update to the examiner doesn't co
   finish). Students are told to contact their instructor; the trial message asks the owner to choose a plan.
 
 **Upgrade** offers card payment for a self-serve plan change, but only when MindAttic has configured a payment
-provider for this deployment; otherwise ask MindAttic to change the plan. **Download usage CSV** gives every month's
+provider for this deployment; otherwise ask MindAttic to change the plan. Paying for a different plan gives you that
+plan's standard limits; paying again for the plan you already have only moves the renewal date on, and keeps any limits
+MindAttic set for you. Each payment is applied once, however many times the payment provider reports it. **Download usage CSV** gives every month's
 sessions and metered cost, for your own invoicing or records.
 
 The monthly **provider cost ceiling** on **Settings** is a separate limit on AI cost (see **Organization settings**).

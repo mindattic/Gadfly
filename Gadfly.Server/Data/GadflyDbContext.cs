@@ -98,6 +98,9 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     public DbSet<LtiAssignmentLink> LtiAssignmentLinks => Set<LtiAssignmentLink>();
     public DbSet<LtiLinkRequest> LtiLinkRequests => Set<LtiLinkRequest>();
 
+    // Stripe webhook events already applied (GAD-T482). Configured in StripeEventEntities.cs.
+    public DbSet<ProcessedStripeEvent> ProcessedStripeEvents => Set<ProcessedStripeEvent>();
+
     // Research use of exam records (GAD-T451/T452): settings, study arms and research consent. Configured in ResearchEntities.cs.
     public DbSet<ResearchSettings> ResearchSettings => Set<ResearchSettings>();
     public DbSet<StudyArm> StudyArms => Set<StudyArm>();
@@ -548,6 +551,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
         });
 
         ResearchModel.Configure(b);   // GAD-T451/T452
+        StripeEventModel.Configure(b);   // GAD-T482
 
         // Never cascade in Gadfly's schema: deletions are explicit, audited jobs (retention, data-subject
         // deletion). The library's own auth-schema relationships keep the behavior it configured.

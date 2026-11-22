@@ -2011,6 +2011,36 @@ namespace Gadfly.Server.Data.Migrations
                     b.ToTable("OrganizationSettings", "gadfly");
                 });
 
+            modelBuilder.Entity("Gadfly.Server.Data.ProcessedStripeEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId")
+                        .IsUnique();
+
+                    b.ToTable("ProcessedStripeEvents", "gadfly");
+                });
+
             modelBuilder.Entity("Gadfly.Server.Data.ResearchConsent", b =>
                 {
                     b.Property<Guid>("Id")
