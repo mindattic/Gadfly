@@ -155,5 +155,9 @@
   "getReady.devices.default": "브라우저 기본 장치",
   "getReady.devices.unnamedCamera": "카메라 {0}",
   "getReady.devices.unnamedMicrophone": "마이크 {0}",
-  "getReady.devices.hint": "사용할 카메라와 마이크를 골라 주세요. 위의 화면과 소리 막대가 고른 장치로 바뀌어요. 선택한 장치는 시험을 위해 이 기기에 기억돼요."
+  "getReady.devices.hint": "사용할 카메라와 마이크를 골라 주세요. 위의 화면과 소리 막대가 고른 장치로 바뀌어요. 선택한 장치는 시험을 위해 이 기기에 기억돼요.",
+  "getReady.examiner.choose": "시험관 고르기",
+  "getReady.examiner.choice.female": "여성 시험관",
+  "getReady.examiner.choice.male": "남성 시험관",
+  "getReady.examiner.comingSoon": "(준비 중)"
 }

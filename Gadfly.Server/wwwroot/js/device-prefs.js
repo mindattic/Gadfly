@@ -52,6 +52,24 @@ export async function open(kind, base) {
     }
 }
 
+// The examiner the student chose on the get-ready page (GAD-T595): { id, modelUrl, portraitUrl } from the server's examiner
+// catalog (Gadfly.Server/Student/ExaminerCatalog.cs), under localStorage "gadfly.examiner". The exam room shows that examiner when
+// it is set and still offered; otherwise its own default.
+export const EXAMINER_KEY = "gadfly.examiner";
+
+/** The chosen examiner ({ id, modelUrl, portraitUrl }) or null. */
+export function getExaminer() {
+    try { const v = localStorage.getItem(EXAMINER_KEY); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+
+/** Remembers the chosen examiner (null forgets it). */
+export function setExaminer(examiner) {
+    try {
+        if (examiner && examiner.id) localStorage.setItem(EXAMINER_KEY, JSON.stringify({ id: examiner.id, modelUrl: examiner.modelUrl || null, portraitUrl: examiner.portraitUrl || null }));
+        else localStorage.removeItem(EXAMINER_KEY);
+    } catch { /* storage blocked: the default examiner */ }
+}
+
 /** The cameras and microphones the browser lists: { kind: "camera"|"microphone", deviceId, label }. Labels appear once allowed. */
 export async function list() {
     try {

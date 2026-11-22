@@ -13,6 +13,7 @@
 @inject NavigationManager Nav
 @inject Gadfly.Server.Voice.VoiceSettings VoiceConfig
 @inject UiText T
+@inject IWebHostEnvironment Env
 
 @* The get-ready studio (GAD-T506): one screen with everything a student needs before the first question, in their language
    (GAD-T544): the camera, microphone and eye-tracking checks, a plain statement of what the camera is for, the eye-contact
@@ -161,8 +162,24 @@ else
 
         <section class="panel wide examiner-preview" data-tour="ready-examiner" aria-labelledby="ready-examiner-title">
             <h2 id="ready-examiner-title">@T["getReady.examiner.title"]</h2>
+            @* Choose the examiner (GAD-T595): from the examiner catalog, remembered on this device for the exam room. *@
+            <fieldset class="examiner-choices">
+                <legend class="visually-hidden">@T["getReady.examiner.choose"]</legend>
+                @foreach (var x in examiners)
+                {
+                    <label class="examiner-choice" aria-disabled="@(x.Available ? null : "true")">
+                        <input type="radio" name="examiner" value="@x.Id" checked="@(x.Id == examiner.Id)" disabled="@(!x.Available)"
+                               @onchange="() => ChooseExaminerAsync(x)" />
+                        @if (x.Available)
+                        {
+                            <img src="@x.PortraitUrl" alt="" />
+                        }
+                        <span>@T[x.NameKey]@(x.Available ? "" : " " + T["getReady.examiner.comingSoon"].Value)</span>
+                    </label>
+                }
+            </fieldset>
             <div class="examiner-preview-row">
-                <img class="examiner-preview-portrait" src="@VoiceConfig.PortraitUrl" alt="@T["getReady.examiner.portraitAlt"]" />
+                <img class="examiner-preview-portrait" src="@examiner.PortraitUrl" alt="@T["getReady.examiner.portraitAlt"]" />
                 <div class="examiner-preview-body">
                     <p>@T["getReady.examiner.intro"]</p>
                     <p class="examiner-preview-caption" @ref="previewCaption" aria-live="polite">@T["getReady.examiner.line"]</p>
@@ -366,9 +383,47 @@ else
 
     private bool previewPlayed;
 
+    /// <summary>The examiners on offer and the one chosen (GAD-T595); the remembered choice is read once the page is live.</summary>
+    private IReadOnlyList<ExaminerOption> examiners = [];
+    private ExaminerOption examiner = null!;
+    private IJSObjectReference? prefsModule;
+
+    private sealed record RememberedExaminer(string? Id, string? ModelUrl, string? PortraitUrl);
+
+    /// <summary>Shows the examiner the student chose last time on this device, if still offered.</summary>
+    private async Task LoadExaminerChoiceAsync()
+    {
+        try
+        {
+            prefsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/device-prefs.js");
+            var remembered = await prefsModule.InvokeAsync<RememberedExaminer?>("getExaminer");
+            var pick = ExaminerCatalog.Pick(examiners, remembered?.Id);
+            if (pick.Id != examiner.Id) { examiner = pick; StateHasChanged(); }
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
+    }
+
+    /// <summary>The student picked an examiner: shown at once, remembered for the exam room, and her preview stops mid-line.</summary>
+    private async Task ChooseExaminerAsync(ExaminerOption choice)
+    {
+        if (!choice.Available) return;
+        examiner = choice;
+        try
+        {
+            prefsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/device-prefs.js");
+            await prefsModule.InvokeVoidAsync("setExaminer", new { id = choice.Id, modelUrl = choice.ModelUrl, portraitUrl = choice.PortraitUrl });
+            if (previewModule is not null) await previewModule.InvokeVoidAsync("stop");
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
+        preloading = false;
+        _ = PreloadExaminerAsync();
+    }
+
     protected override async Task OnInitializedAsync()
     {
         T.Changed += OnLanguageChanged;
+        examiners = ExaminerCatalog.For(VoiceConfig, Env.WebRootPath);
+        examiner = ExaminerCatalog.Pick(examiners, null);
         if (Tenant.OrganizationId is { } org && Tenant.UserId is { } user)
         {
             assignment = await StudentExams.FindAsync(Scopes, org, user, AssignmentId, Clock.GetUtcNow());
@@ -401,6 +456,7 @@ else
     {
         if (firstRender && assignment is { CanStart: true, CanResumeDirectly: false })
         {
+            await LoadExaminerChoiceAsync();
             await RunChecksAsync();
             StateHasChanged();
             return;
@@ -569,7 +625,7 @@ else
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             await using var preload = await JS.InvokeAsync<IJSObjectReference>("import", cts.Token, "./js/voice-preload.js");
-            await preload.InvokeAsync<bool>("preload", cts.Token, new { modelUrl = VoiceConfig.AvatarModelUrl, portraitUrl = VoiceConfig.PortraitUrl });
+            await preload.InvokeAsync<bool>("preload", cts.Token, new { modelUrl = examiner.ModelUrl, portraitUrl = examiner.PortraitUrl });
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
         {
@@ -672,6 +728,11 @@ else
         if (previewModule is not null)
         {
             try { await previewModule.InvokeVoidAsync("stop"); await previewModule.DisposeAsync(); }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
+        }
+        if (prefsModule is not null)
+        {
+            try { await prefsModule.DisposeAsync(); }
             catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
         }
         self?.Dispose();
