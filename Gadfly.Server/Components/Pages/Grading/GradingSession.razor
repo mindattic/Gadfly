@@ -20,7 +20,15 @@
 else if (w is null)
 {
     <h1>Not available</h1>
-    <p class="notice">This session isn't in the current organization, or your role does not include viewing transcripts (the attempt was recorded).</p>
+    @if (secondMarker)
+    {
+        @* GAD-T468: blind second marking. *@
+        <p class="notice">@SecondMarkerBlindness.Refusal</p>
+    }
+    else
+    {
+        <p class="notice">This session isn't in the current organization, or your role does not include viewing transcripts (the attempt was recorded).</p>
+    }
 }
 else
 {
@@ -593,7 +601,7 @@ else
     private GradingWorkspace? w;
     private IReadOnlyDictionary<string, ObjectivePath> paths = new Dictionary<string, ObjectivePath>();
     private IReadOnlyDictionary<Guid, SpeechMark> speech = new Dictionary<Guid, SpeechMark>();
-    private bool loading = true, busy, ok;
+    private bool loading = true, busy, ok, secondMarker;
     private string? message, approveLabel, approveNote;
     private string proceedReason = "", reopenReason = "", appealResolution = "", amendReason = "";
     private readonly Dictionary<Guid, HumanForm> forms = [];
@@ -610,6 +618,7 @@ else
     private async Task LoadAsync()
     {
         w = await GradingDb.RunAsync(Scopes, Tenant, g => g.WorkspaceAsync(SessionId));
+        secondMarker = w is null && await GradingDb.RunAsync(Scopes, Tenant, g => g.IsSecondMarkerAsync(SessionId));
         // GAD-T435: each objective's path; criteria and exclusions only once the AI's view is visible to this viewer.
         paths = w is null ? new Dictionary<string, ObjectivePath>()
             : ObjectivePath.ForSession(w.Session, w.Objectives, w.AiVisible, w.Policy.AllowAssistedEvidence);

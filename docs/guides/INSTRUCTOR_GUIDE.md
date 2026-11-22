@@ -269,7 +269,9 @@ and separation of duties.
 
 - **Turn on double marking.** A second examiner then grades the exam's sessions from **Second marking**. They see a
   session code, the rubric and the answers the AI saw, never the AI's grade, the first examiner's grade, the student's
-  name or integrity notes. Whoever graded a session as its examiner cannot second-mark it. Second marks never change a
+  name or integrity notes. Whoever graded a session as its examiner cannot second-mark it. A second marker cannot open
+  that session's normal grading page either, and anyone who has opened it while its grades were showing can no longer
+  second-mark it, so the second mark stays blind (both are recorded in the audit log). Second marks never change a
   student's grade: they measure how well markers agree.
 - **Read the results.** Once answers have the AI's level, the first examiner's original blind level and a second mark,
   the page shows how well the two examiners agree with each other (QWK) and how well the AI agrees with each of them,

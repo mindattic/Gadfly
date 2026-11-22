@@ -294,9 +294,53 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
             return (null, null, "This session's answers are not ready for marking yet (its transcripts are still being checked or graded).");
         if (await db.HumanObjectiveGrades.AsNoTracking().AnyAsync(h => h.SessionId == sessionId && h.OrganizationId == org && h.ReviewerUserId == me, ct))
             return (null, null, "You graded this session as its examiner, so you cannot also be its second marker: the two marks must come from different people.");
+        if (await SecondMarkerBlindness.SawGradesAsync(db, org, sessionId, me, ct))
+            return (null, null, "You have already opened this session's grading page and seen its grades, so you cannot mark it blind. Ask another examiner to second-mark it.");
         var others = await db.AuditEvents.AsNoTracking()
             .AnyAsync(a => a.OrganizationId == org && a.Action == MarkAction && a.EntityType == MarkEntity && a.SessionId == sessionId && a.ActorUserId != me, ct);
         if (others) return (null, null, "Another examiner has already second-marked this session.");
         return (session, exam, null);
+    }
+}
+
+/// <summary>
+/// Keeps a second marker blind outside the second-marking sheet too (GAD-T468, following GAD-T428; ElenchusAtScale ch. 5):
+/// the normal grading page shows the panel's grade and the first examiner's grade, so it is refused to anyone who has
+/// second-marked the session, and anyone who opens it on a double-marked exam once grades are showing is recorded, which
+/// then stops them second-marking that session. Both are audited.
+/// </summary>
+public static class SecondMarkerBlindness
+{
+    /// <summary>Recorded once per person and session when they open a double-marked session's grading page with grades showing.</summary>
+    public const string SawGradesAction = "grade.second-mark.grades-seen";
+
+    /// <summary>What the grading page says to a second marker it refuses.</summary>
+    public const string Refusal = "You are this session's blind second marker, so its grading page, which shows the panel's and the first examiner's grades, is closed to you. "
+        + "Your second marks are on the second-marking sheet. The attempt was recorded.";
+
+    /// <summary>True when <paramref name="userId"/> has recorded second marks for the session.</summary>
+    public static Task<bool> IsSecondMarkerAsync(GadflyDbContext db, Guid org, Guid sessionId, Guid userId, CancellationToken ct) =>
+        db.AuditEvents.AsNoTracking().AnyAsync(a => a.OrganizationId == org && a.Action == DoubleMarkingService.MarkAction
+            && a.EntityType == DoubleMarkingService.MarkEntity && a.SessionId == sessionId && a.ActorUserId == userId, ct);
+
+    /// <summary>True when <paramref name="userId"/> has opened the session's grading page while its grades were showing.</summary>
+    public static Task<bool> SawGradesAsync(GadflyDbContext db, Guid org, Guid sessionId, Guid userId, CancellationToken ct) =>
+        db.AuditEvents.AsNoTracking().AnyAsync(a => a.OrganizationId == org && a.Action == SawGradesAction && a.SessionId == sessionId && a.ActorUserId == userId, ct);
+
+    /// <summary>
+    /// Records (once) that the viewer saw a grade on the session's grading page, when its exam is set for double marking and the
+    /// page showed the panel's grade or a human grade. The first examiner is not recorded: they can never second-mark it anyway.
+    /// </summary>
+    public static async Task NoteGradesSeenAsync(GadflyDbContext db, Guid org, GradingActor viewer, GradingWorkspace w, DateTimeOffset now, CancellationToken ct)
+    {
+        if (viewer.UserId is not { } me) return;
+        var gradesShowing = w.Objectives.Any(o => o.Human is not null) || (w.AiVisible && w.Objectives.Any(o => o.Ai is not null));
+        if (!gradesShowing) return;
+        if (w.Objectives.Any(o => o.HumanHistory.Any(h => h.ReviewerUserId == me))) return;
+        if (!(await PanelGovernanceService.LatestAsync(db, org, w.Session.ExamId, ct)).DoubleMarking) return;
+        if (await SawGradesAsync(db, org, w.Session.Id, me, ct)) return;
+        GradingAudit.Add(db, org, viewer, SawGradesAction, DoubleMarkingService.MarkEntity, w.Session.Id.ToString(), w.Session.Id, now,
+            reason: "Opened the grading page of a double-marked session with its grades showing, so this person cannot second-mark it blind.");
+        await db.SaveChangesAsync(ct);
     }
 }

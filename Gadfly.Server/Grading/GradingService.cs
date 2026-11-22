@@ -265,8 +265,20 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
     public async Task<GradingWorkspace?> WorkspaceAsync(Guid sessionId, CancellationToken ct = default)
     {
         if (!await RequireAsync(Permission.ViewTranscripts, "Opening a grading workspace", sessionId, ct)) return null;
-        return await LoadAsync(sessionId, ct);
+        // GAD-T468: a blind second marker never sees this session's panel or first-examiner grades here.
+        if (Actor.UserId is { } me && await SecondMarkerBlindness.IsSecondMarkerAsync(db, Org, sessionId, me, ct))
+        {
+            await GradingAudit.DeniedAsync(db, Org, Actor, Permission.ViewTranscripts, "Opening the grading page of a session the caller second-marked", sessionId, Now, ct);
+            return null;
+        }
+        var w = await LoadAsync(sessionId, ct);
+        if (w is not null) await SecondMarkerBlindness.NoteGradesSeenAsync(db, Org, Actor, w, Now, ct);
+        return w;
     }
+
+    /// <summary>True when the caller second-marked the session, so its grading page is closed to them (GAD-T468).</summary>
+    public async Task<bool> IsSecondMarkerAsync(Guid sessionId, CancellationToken ct = default) =>
+        tenant.OrganizationId is { } org && Actor.UserId is { } me && await SecondMarkerBlindness.IsSecondMarkerAsync(db, org, sessionId, me, ct);
 
     internal async Task<GradingWorkspace?> LoadAsync(Guid sessionId, CancellationToken ct)
     {
