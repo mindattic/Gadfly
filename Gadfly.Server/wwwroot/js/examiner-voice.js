@@ -277,7 +277,8 @@ function ensureMouth(p) {
     return m;
 }
 
-/** Where the mouth is on screen: the portrait is drawn with object-fit: cover, so the image is scaled and centred in the stage. */
+/** Where the mouth is on screen: the portrait is scaled and centred in the stage, with object-fit cover (the library's default) or
+ * contain (the 16:9 exam room shows the whole portrait, GAD-T501). */
 function mouthGeometry(p) {
     if (p.mouthGeo) return p.mouthGeo;
     const parts = String(p.cfg.portraitMouth || "").split(",").map(Number);
@@ -285,7 +286,8 @@ function mouthGeometry(p) {
     if (parts.length !== 3 || parts.some((x) => !Number.isFinite(x)) || !img || !img.naturalWidth || !p.stage) return null;
     const W = p.avatar.clientWidth, H = p.avatar.clientHeight, w = img.naturalWidth, h = img.naturalHeight;
     if (!W || !H) return null;
-    const sc = Math.max(W / w, H / h);
+    const contain = safe(() => getComputedStyle(img).objectFit) === "contain";
+    const sc = contain ? Math.min(W / w, H / h) : Math.max(W / w, H / h);
     const ox = (W - w * sc) / 2 + p.avatar.offsetLeft, oy = (H - h * sc) / 2 + p.avatar.offsetTop;
     const width = parts[2] * w * sc;
     p.mouthGeo = { x: ox + parts[0] * w * sc, y: oy + parts[1] * h * sc, w: width, h: width * 0.45 };

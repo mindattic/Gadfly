@@ -60,9 +60,10 @@
         </div>
     }
 
-    @* One screen, picture in picture (GAD-T416): the examiner's stage in the middle with the student's own camera as a small box in
-       its bottom-right corner (kept away from her face, where the eye-contact check calibrates), the transcript to her left and the
-       answer controls to her right, so the student never has to scroll or look away from her. Stacked on narrow screens. *@
+    @* One screen, like a video call (GAD-T416, GAD-T501): the examiner's large 16:9 stage in the middle with the student's own camera
+       as a small 16:9 inset in its bottom-right corner (kept away from her face, where the eye-contact check calibrates). The stage
+       is sized by its width and aspect ratio alone (voice.css): the transcript to her left and the answer controls to her right sit
+       outside it and scroll on their own, so nothing they hold can stretch her window. Below her on narrower screens. *@
     <div class="voice-interview" hidden="@(state is not (VoiceState.On or VoiceState.Starting))">
         <div class="voice-center">
             <div class="voice-pip">
