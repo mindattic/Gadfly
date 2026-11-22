@@ -149,6 +149,7 @@ A summary of everything. If something is missing you see **Fix these before publ
 **Ready to publish**. **Publish** locks the details, objectives and rubric, **and the grading policy**. After that, a
 policy change must be requested (**Request a policy change**, with the reason) and approved by an admin or owner;
 once any student has completed the assessment, someone other than the requester must approve it. **Archive** stops
+| Anonymous marking | off | Graders see a session code instead of the student's name until the human score is submitted. See the [Grading guide](grading-guide.md). |
 new attempts; a student part-way through can still finish, and results are kept.
 
 > **Note.** Integrity monitoring defaults to **Standard** for assessments (browser notes and the examiner's

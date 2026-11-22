@@ -77,6 +77,8 @@ public sealed class GradingPolicyDefinition
     /// <summary>"HumanReview" or "AdditionalExamination".</summary>
     public string? InconclusiveProcedure { get; set; }
     public bool? AllowAssistedEvidence { get; set; }
+    /// <summary>GAD-T439: graders see a session code instead of the student's name until the human score is submitted.</summary>
+    public bool? AnonymousMarking { get; set; }
 }
 
 public sealed class ObjectiveDefinition
@@ -188,6 +190,7 @@ public static class ExamDefinitionJson
                     BlindHumanGrading = g.BlindHumanGrading,
                     InconclusiveProcedure = g.InconclusiveProcedure.ToString(),
                     AllowAssistedEvidence = g.AllowAssistedEvidence,
+                    AnonymousMarking = g.AnonymousMarking,
                 },
                 Objectives = objectives.OrderBy(o => o.Ordinal).Select(o => new ObjectiveDefinition
                 {
@@ -384,7 +387,7 @@ public static class ExamDefinitionJson
         return new PolicySnapshot(g.AiWeight ?? d.AiWeight, g.HumanWeight ?? d.HumanWeight, g.AdditionalReviewAt ?? d.AdditionalReviewAt,
             g.MandatoryReconciliationAt ?? d.MandatoryReconciliationAt, g.BlindHumanGrading ?? d.BlindHumanGrading,
             Enum.TryParse<InconclusiveProcedure>(g.InconclusiveProcedure, true, out var proc) && Enum.IsDefined(proc) ? proc : d.InconclusiveProcedure,
-            g.AllowAssistedEvidence ?? d.AllowAssistedEvidence);
+            g.AllowAssistedEvidence ?? d.AllowAssistedEvidence, g.AnonymousMarking ?? d.AnonymousMarking);
     }
 
     /// <summary>An enum value by name, or <paramref name="fallback"/> when the text is blank.</summary>

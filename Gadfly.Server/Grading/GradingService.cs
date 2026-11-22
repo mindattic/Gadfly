@@ -191,11 +191,13 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var mock = (await db.AiObjectiveGrades.AsNoTracking().Where(a => a.OrganizationId == org && ids.Contains(a.SessionId) && a.IsMock)
             .Select(a => a.SessionId).Distinct().ToListAsync(ct)).ToHashSet();
         var jobs = await LatestJobsAsync(ids, ct);
+        // GAD-T439: under anonymous marking the queue shows a session code until the human score is submitted.
+        var anonymous = await AnonymousMarking.HiddenSessionsAsync(db, org, [.. ids, .. unstarted.Select(u => u.Id)], Now, ct);
 
-        var rows = graded.Select(g => new GradingQueueRow(g.SessionId, names.GetValueOrDefault(g.StudentUserId) ?? "(unknown student)",
+        var rows = graded.Select(g => new GradingQueueRow(g.SessionId, AnonymousMarking.NameOrCode(anonymous.Contains(g.SessionId), g.SessionId, names.GetValueOrDefault(g.StudentUserId)),
                 exams.GetValueOrDefault(g.ExamId) ?? "(deleted exam)", g.Attempt, g.EndedAt, g.Status, g.FinalPercent, open.GetValueOrDefault(g.SessionId),
                 appeals.Contains(g.SessionId), jobs.GetValueOrDefault(g.SessionId).State, jobs.GetValueOrDefault(g.SessionId).Error, mock.Contains(g.SessionId)))
-            .Concat(unstarted.Select(u => new GradingQueueRow(u.Id, names.GetValueOrDefault(u.StudentUserId) ?? "(unknown student)",
+            .Concat(unstarted.Select(u => new GradingQueueRow(u.Id, AnonymousMarking.NameOrCode(anonymous.Contains(u.Id), u.Id, names.GetValueOrDefault(u.StudentUserId)),
                 exams.GetValueOrDefault(u.ExamId) ?? "(deleted exam)", u.Attempt, u.EndedAt, null, null, 0, false, null, null, false)))
             .OrderByDescending(r => r.EndedAt).ToList();
         return rows;
@@ -277,6 +279,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var policy = GradingJson.Read<PolicySnapshot>(grade?.PolicyJson)
                      ?? PolicySnapshot.From(await db.GradingPolicies.AsNoTracking().FirstOrDefaultAsync(p => p.ExamId == session.ExamId && p.OrganizationId == org, ct), Now);
         var aiVisible = AiVisible(policy, grade?.Status);
+        var anonymous = AnonymousMarking.Hides(policy, grade?.Status);   // GAD-T439
 
         var turns = await db.SessionTurns.AsNoTracking().Where(t => t.SessionId == sessionId && t.OrganizationId == org)
             .Select(t => new { t.Id, t.Index, t.ConceptKey, t.Question }).ToDictionaryAsync(t => t.Id, ct);
@@ -341,13 +344,15 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             .. requested.Values], ct);
         var jobs = await LatestJobsAsync([sessionId], ct);
         var prior = await PriorAttemptsAsync(session, ct);
+        var studentName = AnonymousMarking.NameOrCode(anonymous, sessionId, names.GetValueOrDefault(session.StudentUserId));
+        if (anonymous) names.Remove(session.StudentUserId);   // no other line of the page may name the student either
 
         return new GradingWorkspace
         {
-            Session = session, ExamTitle = exam?.Title ?? "(deleted exam)", StudentName = names.GetValueOrDefault(session.StudentUserId) ?? "(unknown student)",
+            Session = session, ExamTitle = exam?.Title ?? "(deleted exam)", StudentName = studentName, StudentAnonymous = anonymous,
             Grade = grade, Policy = policy, AiVisible = aiVisible, Responses = responseViews, Objectives = objectiveViews, Combined = combined,
             Approvals = approvals.Select(a => (a, names.GetValueOrDefault(a.ActorUserId) ?? "(unknown)")).ToList(),
-            Appeals = appeals.Select(a => (a, names.GetValueOrDefault(a.StudentUserId) ?? "(unknown)")).ToList(),
+            Appeals = appeals.Select(a => (a, anonymous && a.StudentUserId == session.StudentUserId ? studentName : names.GetValueOrDefault(a.StudentUserId) ?? "(unknown)")).ToList(),
             // Blind grading: the AI-grade audit entries carry its scores, so they stay hidden with the grades.
             Audit = audit.Where(a => aiVisible || a.Action != "grade.ai.recorded")
                 .Select(a => (a, a.ActorUserId is { } u ? names.GetValueOrDefault(u) ?? "(unknown)" : "Gadfly")).ToList(),

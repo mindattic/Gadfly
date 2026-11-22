@@ -175,7 +175,7 @@ public static class GradingActionEndpoints
         var p = w.Policy.Rules;
         return new
         {
-            sessionId = w.Session.Id, examTitle = w.ExamTitle, student = w.StudentName, attempt = w.Session.Attempt,
+            sessionId = w.Session.Id, examTitle = w.ExamTitle, student = w.StudentName, studentAnonymous = w.StudentAnonymous, attempt = w.Session.Attempt,
             status = w.Status?.ToString(), statusLabel = w.Status is { } s ? GradeStatusMachine.Label(s) : "Not started",
             aiVisible = visible, isMock = visible && w.AnyMock,
             // GAD-T285: whether the caller entered this grade's human score, and so may not reconcile or approve it.

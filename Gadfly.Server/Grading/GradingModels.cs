@@ -58,7 +58,10 @@ public sealed record GradingWorkspace
 {
     public required ExamSession Session { get; init; }
     public required string ExamTitle { get; init; }
+    /// <summary>The student's name, or a session code while anonymous marking hides it (GAD-T439).</summary>
     public required string StudentName { get; init; }
+    /// <summary>GAD-T439: true while anonymous marking hides the student's name (StudentName is then a session code).</summary>
+    public bool StudentAnonymous { get; init; }
     public required FinalGrade? Grade { get; init; }
     public required PolicySnapshot Policy { get; init; }
     /// <summary>False while blind human grading hides the AI's evaluation (Part 8.3).</summary>

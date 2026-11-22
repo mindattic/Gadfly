@@ -690,6 +690,10 @@ else
             <input type="checkbox" @bind="p.BlindHumanGrading" />
             <span><strong>Blind human grading</strong>: examiners score before they can see the AI's score (recommended).</span>
         </label>
+        <label class="eb-check">
+            <input type="checkbox" @bind="p.AnonymousMarking" />
+            <span><strong>Anonymous marking</strong>: graders see a session code instead of the student's name until the human score is submitted, so the name can't sway the mark. The student's own words in the transcript are not changed.</span>
+        </label>
         <label>When the evidence is inconclusive
             <select @bind="p.InconclusiveProcedure">
                 <option value="@InconclusiveProcedure.HumanReview">A human reviews the transcript and decides</option>

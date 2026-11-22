@@ -50,6 +50,12 @@ Fill in **every** objective, then press **Submit evaluation for all objectives**
 > voice measurements) until you submit. Grade the answers on their own merits first. Once you submit, everything
 > appears. Only your first submission counts as blind.
 
+**Anonymous marking.** When the assessment's grading policy has **Anonymous marking** on, the grading queue, this
+page, the assessment report and the review pages show a session code (for example *Session 5A7D-9C2E*) instead of
+the student's name, and a banner says so. The name appears once the human score is submitted, in time for
+reconciliation, approval and publishing. It hides the name Gadfly shows; if a student says their name in an answer,
+the transcript still has it. Owners and admins, who don't enter human scores, still see names on the review pages.
+
 ## 2. Comparison
 
 After you submit, the page shows the AI and human scores side by side, and the combined score using the assessment's

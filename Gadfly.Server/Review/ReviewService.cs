@@ -62,9 +62,10 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
             .GroupBy(g => g.SessionId).ToDictionary(g => g.Key, g => g.OrderByDescending(d => d.DecidedAt).First());
 
         var blind = await BlindAsync(ids, ct);
+        var anonymous = await AnonymousAsync(ids, ct);   // GAD-T439
         var rows = sessions.Select(s => new ReviewListRow(
                 s.Id, s.ExamId, exams.GetValueOrDefault(s.ExamId) ?? "(deleted exam)",
-                s.StudentUserId, names.GetValueOrDefault(s.StudentUserId) ?? "(unknown student)",
+                s.StudentUserId, Grading.AnonymousMarking.NameOrCode(anonymous.Contains(s.Id), s.Id, names.GetValueOrDefault(s.StudentUserId)),
                 s.Attempt, s.State, s.EndedAt,
                 !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r) ? r.Recommendation : null,
                 !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r2) ? r2.OverallScore : null,
@@ -191,12 +192,16 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         var staff = staffRows.Select(a => Admin.LiveSessionService.ToTimeline(a, a.ActorUserId is { } by ? names.GetValueOrDefault(by) : null)).ToList();
 
         return new SessionReviewView(session, exam?.Title ?? "(deleted exam)", exam?.CollectionId ?? Guid.Empty,
-            names.GetValueOrDefault(session.StudentUserId) ?? "(unknown student)", assignment,
+            Grading.AnonymousMarking.NameOrCode((await AnonymousAsync([sessionId], ct)).Contains(sessionId), sessionId, names.GetValueOrDefault(session.StudentUserId)), assignment,
             turnViews, integrity, BuildTimeline(turnViews, integrity, staff), mastery, report,
             grades.Select(g => (g, names.GetValueOrDefault(g.DecidedByUserId) ?? "(unknown)")).ToList()) { Blinded = blinded };
     }
 
     /// <summary>The sessions among <paramref name="ids"/> whose AI and exam-time judgments are hidden from this viewer (D25).</summary>
+    /// <summary>GAD-T439: the sessions whose student name anonymous marking hides from this viewer (one who can enter human scores).</summary>
+    private async Task<HashSet<Guid>> AnonymousAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
+        BlindGrading.AppliesToRole(viewerRole) ? await Grading.AnonymousMarking.HiddenSessionsAsync(db, organizationId, ids, _clock.GetUtcNow(), ct) : [];
+
     private async Task<HashSet<Guid>> BlindAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct) =>
         BlindGrading.AppliesToRole(viewerRole) ? await BlindGrading.BlindSessionsAsync(db, organizationId, ids, _clock.GetUtcNow(), ct) : [];
 

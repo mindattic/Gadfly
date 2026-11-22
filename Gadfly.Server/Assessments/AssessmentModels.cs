@@ -93,11 +93,13 @@ public sealed class PolicyDraft
     public decimal AdditionalReviewAt { get; set; } = 10m;
     public decimal MandatoryReconciliationAt { get; set; } = 20m;
     public bool BlindHumanGrading { get; set; } = true;
+    /// <summary>GAD-T439: graders see a session code instead of the student's name until the human score is submitted.</summary>
+    public bool AnonymousMarking { get; set; }
     public InconclusiveProcedure InconclusiveProcedure { get; set; } = InconclusiveProcedure.HumanReview;
     public bool AllowAssistedEvidence { get; set; }
 
     public PolicySnapshot ToSnapshot() => new(Math.Round(AiWeightPercent / 100m, 4), Math.Round(HumanWeightPercent / 100m, 4),
-        AdditionalReviewAt, MandatoryReconciliationAt, BlindHumanGrading, InconclusiveProcedure, AllowAssistedEvidence);
+        AdditionalReviewAt, MandatoryReconciliationAt, BlindHumanGrading, InconclusiveProcedure, AllowAssistedEvidence, AnonymousMarking);
 
     public static PolicyDraft From(PolicySnapshot s) => new()
     {
@@ -106,6 +108,7 @@ public sealed class PolicyDraft
         AdditionalReviewAt = s.AdditionalReviewAt,
         MandatoryReconciliationAt = s.MandatoryReconciliationAt,
         BlindHumanGrading = s.BlindHumanGrading,
+        AnonymousMarking = s.AnonymousMarking,
         InconclusiveProcedure = s.InconclusiveProcedure,
         AllowAssistedEvidence = s.AllowAssistedEvidence,
     };
@@ -113,17 +116,17 @@ public sealed class PolicyDraft
 
 /// <summary>A grading policy's values (fractions for weights): what audit records and change requests store.</summary>
 public sealed record PolicySnapshot(decimal AiWeight, decimal HumanWeight, decimal AdditionalReviewAt, decimal MandatoryReconciliationAt,
-    bool BlindHumanGrading, InconclusiveProcedure InconclusiveProcedure, bool AllowAssistedEvidence)
+    bool BlindHumanGrading, InconclusiveProcedure InconclusiveProcedure, bool AllowAssistedEvidence, bool AnonymousMarking = false)
 {
     public static PolicySnapshot Default { get; } = Of(new GradingPolicy());
 
     public static PolicySnapshot Of(GradingPolicy p) => new(p.AiWeight, p.HumanWeight, p.AdditionalReviewAt, p.MandatoryReconciliationAt,
-        p.BlindHumanGrading, p.InconclusiveProcedure, p.AllowAssistedEvidence);
+        p.BlindHumanGrading, p.InconclusiveProcedure, p.AllowAssistedEvidence, p.AnonymousMarking);
 
     public GradingPolicyRules ToRules() => new()
     {
         AiWeight = AiWeight, HumanWeight = HumanWeight, AdditionalReviewAt = AdditionalReviewAt,
-        MandatoryReconciliationAt = MandatoryReconciliationAt, BlindHumanGrading = BlindHumanGrading,
+        MandatoryReconciliationAt = MandatoryReconciliationAt, BlindHumanGrading = BlindHumanGrading, AnonymousMarking = AnonymousMarking,
     };
 
     public void ApplyTo(GradingPolicy p)
@@ -133,13 +136,14 @@ public sealed record PolicySnapshot(decimal AiWeight, decimal HumanWeight, decim
         p.AdditionalReviewAt = AdditionalReviewAt;
         p.MandatoryReconciliationAt = MandatoryReconciliationAt;
         p.BlindHumanGrading = BlindHumanGrading;
+        p.AnonymousMarking = AnonymousMarking;
         p.InconclusiveProcedure = InconclusiveProcedure;
         p.AllowAssistedEvidence = AllowAssistedEvidence;
     }
 
     public string Describe() =>
         $"AI {AiWeight * 100m:0.##}% / human {HumanWeight * 100m:0.##}%, review at {AdditionalReviewAt:0.##} pts, reconcile at {MandatoryReconciliationAt:0.##} pts, " +
-        $"{(BlindHumanGrading ? "blind" : "non-blind")} human grading, inconclusive → {InconclusiveProcedure}, assisted evidence {(AllowAssistedEvidence ? "allowed" : "not allowed")}";
+        $"{(BlindHumanGrading ? "blind" : "non-blind")}{(AnonymousMarking ? ", anonymous" : "")} human grading, inconclusive → {InconclusiveProcedure}, assisted evidence {(AllowAssistedEvidence ? "allowed" : "not allowed")}";
 }
 
 public sealed record PolicyChangeView(Guid Id, PolicySnapshot Before, PolicySnapshot After, string Reason, Guid RequestedByUserId, string RequestedBy,
