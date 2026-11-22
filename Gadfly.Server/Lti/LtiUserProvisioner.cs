@@ -17,7 +17,16 @@ namespace Gadfly.Server.Lti;
 public sealed record LtiProvisionResult(Guid? UserId, string? Error, bool Created = false, string? Role = null)
 {
     public bool Ok => UserId is not null;
+    /// <summary>GAD-T458: the LMS identity looks like an existing member and waits to be linked (see <see cref="LtiAccountLinks"/>).</summary>
+    public Guid? LinkRequestId { get; init; }
+    /// <summary>The existing account's email is verified, so the person can confirm by email instead of waiting for an admin.</summary>
+    public bool CanConfirmByEmail { get; init; }
     public static LtiProvisionResult Fail(string error) => new(null, error);
+
+    public static LtiProvisionResult WaitingForLink(LtiLinkRequest request, bool canConfirmByEmail) =>
+        new(null, "This LMS sign-in uses the same email address as an existing Gadfly account in this organization. Gadfly links the two only once "
+            + "that is confirmed: by the organization's Gadfly admin on the LMS connection page" + (canConfirmByEmail ? ", or by you through a link emailed to that account" : "") + ".")
+        { LinkRequestId = request.Id, CanConfirmByEmail = canConfirmByEmail };
 }
 
 /// <summary>
@@ -28,8 +37,10 @@ public sealed record LtiProvisionResult(Guid? UserId, string? Error, bool Create
 /// <list type="bullet">
 /// <item>Learner becomes Student; Instructor, Teaching Assistant, Content Developer and course Administrator become
 /// Instructor (<see cref="LtiClaims.GadflyRoleOf"/>). Anything else is refused, never guessed.</item>
-/// <item>Never matches an existing, unrelated Gadfly account by email or name: that would hand an LMS identity
-/// someone else's account. An LTI identity only ever reaches the account created for it.</item>
+/// <item>Never links to an existing Gadfly account by a matching email alone: that would hand an LMS identity someone else's
+/// account. When the LMS email equals exactly one active member's, nothing is created and an <see cref="LtiLinkRequest"/>
+/// waits for an admin's confirmation or the person's own, through that account's verified email (GAD-T458,
+/// <see cref="LtiAccountLinks"/>). Otherwise an LTI identity only ever reaches the account created for it.</item>
 /// <item>A role only ever moves up from the LMS (a Student who becomes a TA becomes an Instructor); it is never moved
 /// down automatically, and Owner, Admin, Examiner and Second Reviewer are never touched, so a change an admin made in
 /// Gadfly sticks.</item>
@@ -37,9 +48,13 @@ public sealed record LtiProvisionResult(Guid? UserId, string? Error, bool Create
 /// <item>A new member spends a seat like any other (the plan's seat limit applies).</item>
 /// </list>
 /// </summary>
-public sealed class LtiUserProvisioner(GadflyDbContext db, IUserAdminService users, IOrganizationService orgs, PlanEnforcement plans, TimeProvider clock)
+public sealed class LtiUserProvisioner(GadflyDbContext db, IUserAdminService users, IOrganizationService orgs, PlanEnforcement plans, LtiAccountLinks links, TimeProvider clock)
 {
-    public async Task<LtiProvisionResult> ProvisionAsync(LtiRegistration reg, LtiLaunchClaims claims, CancellationToken ct)
+    public const string SourceLaunch = "launch";
+    public const string SourceRoster = "roster";
+
+    /// <param name="source"><see cref="SourceLaunch"/> or <see cref="SourceRoster"/>: how Gadfly first saw the person, for a link request.</param>
+    public async Task<LtiProvisionResult> ProvisionAsync(LtiRegistration reg, LtiLaunchClaims claims, CancellationToken ct, string source = SourceLaunch)
     {
         if (claims.GadflyRole is not { } role)
             return LtiProvisionResult.Fail("Your role in this course (" + (claims.Roles.Count == 0 ? "none given" : string.Join(", ", claims.Roles.Select(ShortRole))) + ") "
@@ -48,6 +63,14 @@ public sealed class LtiUserProvisioner(GadflyDbContext db, IUserAdminService use
         var mapping = await db.LtiUserMappings.AsNoTracking()
             .FirstOrDefaultAsync(m => m.RegistrationId == reg.Id && m.LtiSubject == claims.Subject && m.OrganizationId == reg.OrganizationId, ct);
         if (mapping is not null) return await ExistingAsync(reg, mapping.GadflyUserId, role, ct);
+
+        // GAD-T458: someone who already has an account here is not given a second one, nor linked silently.
+        var request = await db.LtiLinkRequests.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.RegistrationId == reg.Id && r.LtiSubject == claims.Subject && r.OrganizationId == reg.OrganizationId, ct);
+        if (request?.Status == LtiLinkRequest.Pending)
+            return LtiProvisionResult.WaitingForLink(request, await EmailVerifiedAsync(request.CandidateUserId, ct));
+        if (request is null && await links.CandidateAsync(reg, claims.Email, ct) is { } match)
+            return LtiProvisionResult.WaitingForLink(await links.RequestAsync(reg, claims, role, match, source, ct), match.EmailVerified);
 
         var (seatOk, seatMessage) = await plans.CheckSeatAsync(db, reg.OrganizationId, role, ct);
         if (!seatOk) return LtiProvisionResult.Fail(seatMessage!);
@@ -121,6 +144,9 @@ public sealed class LtiUserProvisioner(GadflyDbContext db, IUserAdminService use
         }
         return new(userId, null, Role: member.Role);
     }
+
+    private Task<bool> EmailVerifiedAsync(Guid userId, CancellationToken ct) =>
+        db.AuthUsers.AsNoTracking().AnyAsync(u => u.Id == userId && u.IsActive && u.EmailVerified && u.Email != null, ct);
 
     private static string ShortRole(string role) => LtiClaims.ContextRoleOf(role) ?? role[(role.LastIndexOfAny(['#', '/']) + 1)..];
 

@@ -123,14 +123,32 @@ external resource (a new window).
 - **A student opening it.** Gadfly checks the launch, finds or creates the student's account and membership, assigns
   them the exam, signs them in and opens the exam's get-ready page. If the LMS shows Gadfly inside its own page, the
   student gets an **Open the exam in a new window** button instead, because the exam needs the camera and microphone.
+  The button works once, for two minutes, on whichever Gadfly server answers (it is checked in the database).
+- **A browser that blocks cookies inside the LMS page.** Some browsers block every cookie for a site shown inside
+  another page, including the one Gadfly uses to check that a launch started in the same browser. Gadfly still checks
+  the launch, then shows **Open in a new window** instead of an error: it starts the same launch again in its own
+  window, where the cookie works. If that page keeps coming back in a normal window, the browser is blocking cookies
+  for Gadfly altogether.
 - **An instructor opening it.** They are told which exam the placement is linked to. Grading and editing happen in
   Gadfly itself, with the usual multi-factor sign-in: an LMS launch never counts as that.
 
 ## People, roles and seats
 
-- A person is matched by the LMS's own ID for them, per connection, never by email or name. The first time they
-  arrive (by opening an exam, or through a roster sync) Gadfly creates their account with the name and email the LMS
-  sent.
+- A person is matched by the LMS's own ID for them, per connection. The first time they arrive (by opening an exam,
+  or through a roster sync) Gadfly creates their account with the name and email the LMS sent.
+- **Someone who already has a Gadfly account.** When the LMS sends the email address of exactly one existing member of
+  your organization, Gadfly creates no second account, and does not link the two on the email alone either (an LMS can
+  send any address). Until it is confirmed, the person can't open the exam through the LMS. It is confirmed either way:
+  - **by the person**, when their Gadfly account's email address is verified: the launch page offers **Email me a link
+    to connect it**. The link goes to that account's address, works once within 24 hours, and only in the browser that
+    asked for it, so knowing someone's address is not enough;
+  - **by an admin**, under **Waiting to be linked** on the LMS connection page: **Link** when you know they are the same
+    person, or **Keep separate**, which gives the LMS person an account of their own the next time they open an exam
+    or the roster syncs.
+
+  Each step is in the audit log (`lti.link-requested`, `lti.link-email-sent`, `lti.identity-linked`,
+  `lti.identity-kept-separate`). An account that is already linked to another LMS person on the same connection is never
+  offered.
 - **Instructor**, **Teaching Assistant**, **Content Developer** and course **Administrator** become **Instructor**;
   **Learner** becomes **Student**. Anyone else (a mentor or observer, for example) is turned away with an explanation.
 - The LMS can move a student up to instructor. It never moves anyone down, never makes anyone an owner or admin, and
@@ -148,9 +166,18 @@ time.
 - **Sync roster** reads the course's member list from the LMS and gives each active member a Gadfly account in your
   organization with the role above. Use it when you want students visible (for accommodations, for example) before
   they open the exam.
+- **Scheduled roster refresh.** Each connection also refreshes its courses' rosters on its own, every 24 hours by
+  default. Change it with **Refresh course rosters every … hours** on the connection (1 to 720 hours), or set 0 to sync
+  only when you press the button. The refresh runs in the background job queue; a refresh the LMS refused shows in the
+  Roster column with its reason, and is tried again at the next interval.
 - **Grades** go back automatically within a few minutes of a result being released to the student in Gadfly: the
   final percentage of their latest attempt, out of 100. An amended grade is sent again. Integrity notes never are.
   If the LMS offered no gradebook service for the placement, the table says so and no grade is sent.
+- **A grade the LMS refuses** (or doesn't answer) is tried again two minutes later, then waiting twice as long each
+  time, up to 8 tries (about four hours). The placement shows how many are retrying; **Grades the LMS hasn't accepted**
+  lists each one with the last reason. After the last try it is marked **failed** (audited as `lti.grade-failed`) and
+  waits for you: fix the cause, then press **Retry now** (or **Retry grades** on the placement). A grade that changes
+  is sent afresh with new tries.
 
 ## Turning a connection off
 
@@ -164,13 +191,15 @@ back on to resume (grades owed in the meantime are then sent). A connection that
 | "This platform is not connected to Gadfly" | The issuer and client ID in Gadfly match the LMS's exactly, and the connection is on. |
 | "The launch's deployment id does not match" | Copy the deployment ID again from the LMS (each installation has its own). |
 | "signed with a key the platform's key set does not list" or "could not read the platform's key set" | The key-set (JWKS) URL. |
-| "This browser did not start this launch" | The browser blocked Gadfly's cookie inside the LMS page: set the link to open in a new window, or allow cookies for Gadfly. |
+| "This browser did not start this launch" | The cookie came back different: open the exam from the LMS again. |
+| "Open Gadfly in a new window" | The browser blocked Gadfly's cookie inside the LMS page: press the button, or set the link to open in a new window. |
+| "You may already have a Gadfly account" | The LMS sent an existing member's email: link or keep them separate under **Waiting to be linked**, or the person confirms by email. |
 | "This assignment isn't linked to a Gadfly exam yet" | Add the exam through the content picker (deep linking), not as a plain link. |
-| Grades don't arrive | The connection is on, the gradebook services were enabled in the LMS, and the result is released (published) in Gadfly. |
+| Grades don't arrive | The connection is on, the gradebook services were enabled in the LMS, and the result is released (published) in Gadfly. **Grades the LMS hasn't accepted** gives the LMS's reason. |
 
 ## What isn't covered yet
 
-- A roster is synced when an admin asks, not on a schedule.
 - One grade per placement (the final percentage), not one per learning objective; the full report stays in Gadfly.
 - An LMS sign-in is not listed under "sign out everywhere"; it ends at the usual idle and absolute time-outs.
-- LTI 1.1, and the LTI "platform storage" fallback for browsers that block every cookie inside a frame.
+- LTI 1.1, and the LTI "platform storage" API (browsers that block every cookie inside a frame get the new-window
+  button instead).

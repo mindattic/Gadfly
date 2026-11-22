@@ -12,8 +12,10 @@ namespace Gadfly.Server.Lti;
 /// personally clicks into Gadfly is still a recognized organization member, with the right role, once someone asks
 /// for a sync. Follows the platform's <c>Link: rel="next"</c> paging. Members whose status is Inactive or Deleted are
 /// skipped (never removed from Gadfly automatically: removal stays an admin's decision).
-/// <para><b>Stated simplification</b>: sync is on demand (a button per placement on the LMS connection page,
-/// GAD-T384), not a scheduled refresh; a student's own first launch provisions them immediately regardless.</para>
+/// <para>Runs on demand (a button per placement on the LMS connection page, GAD-T384) and on a schedule through the job queue,
+/// every <see cref="LtiRegistration.RosterRefreshHours"/> per connection (GAD-T458, <see cref="LtiRosterRefreshJob"/>); a
+/// student's own first launch provisions them immediately regardless. A member whose LMS email matches an existing account
+/// is left waiting for a link decision (<see cref="LtiAccountLinks"/>), not given a second account.</para>
 /// </summary>
 public sealed partial class LtiRosterService(GadflyDbContext db, LtiTokenClient tokens, IHttpClientFactory http, LtiUserProvisioner provisioner,
     TimeProvider clock, ILogger<LtiRosterService> logger)
@@ -23,7 +25,7 @@ public sealed partial class LtiRosterService(GadflyDbContext db, LtiTokenClient 
     private sealed record Member(string? user_id, string[]? roles, string? status, string? name, string? given_name, string? family_name, string? email);
     private sealed record MembershipContainer(Member[]? members);
 
-    public sealed record SyncResult(bool Ok, string Message, int Found = 0, int Provisioned = 0, int Skipped = 0);
+    public sealed record SyncResult(bool Ok, string Message, int Found = 0, int Provisioned = 0, int Skipped = 0, int WaitingForLink = 0);
 
     /// <summary>Syncs one placement's course roster. The caller (the admin page) has already checked the caller may.</summary>
     public async Task<SyncResult> SyncAsync(Guid organizationId, Guid resourceLinkId, Guid? actorUserId, CancellationToken ct)
@@ -67,15 +69,16 @@ public sealed partial class LtiRosterService(GadflyDbContext db, LtiTokenClient 
             }
         }
 
-        int provisioned = 0, skipped = 0;
+        int provisioned = 0, skipped = 0, waiting = 0;
         var problems = new HashSet<string>();
         foreach (var m in members)
         {
             if (m.user_id is not { Length: > 0 } subject || m.status is "Inactive" or "Deleted") { skipped++; continue; }
             var claims = new LtiLaunchClaims(subject, m.email, m.given_name, m.family_name, m.name, m.roles ?? [],
                 link.ContextId, null, null, link.ResourceLinkId, null, null, null, null, null, null);
-            var result = await provisioner.ProvisionAsync(reg, claims, ct);
+            var result = await provisioner.ProvisionAsync(reg, claims, ct, LtiUserProvisioner.SourceRoster);
             if (result.Ok) provisioned++;
+            else if (result.LinkRequestId is not null) waiting++;
             else { skipped++; if (problems.Count < 3) problems.Add(result.Error!); }
         }
         link.LastRosterSyncAt = clock.GetUtcNow();
@@ -83,15 +86,16 @@ public sealed partial class LtiRosterService(GadflyDbContext db, LtiTokenClient 
         {
             OrganizationId = organizationId, ActorUserId = actorUserId, ActorRole = actorUserId is null ? "LTI" : null, Action = "lti.roster-synced",
             EntityType = "LtiResourceLink", EntityId = link.Id.ToString(),
-            AfterJson = JsonSerializer.Serialize(new { found = members.Count, provisioned, skipped }), At = clock.GetUtcNow(),
+            AfterJson = JsonSerializer.Serialize(new { found = members.Count, provisioned, skipped, waitingForLink = waiting, scheduled = actorUserId is null }), At = clock.GetUtcNow(),
         });
         await db.SaveChangesAsync(ct);
 
         var message = $"Read {members.Count} roster member{(members.Count == 1 ? "" : "s")}: {provisioned} matched to Gadfly accounts in this organization"
-            + (skipped > 0 ? $", {skipped} skipped (inactive in the course, a role Gadfly doesn't use, or refused)" : "") + "."
+            + (skipped > 0 ? $", {skipped} skipped (inactive in the course, a role Gadfly doesn't use, or refused)" : "")
+            + (waiting > 0 ? $", {waiting} waiting to be linked to an existing account (see \"Waiting to be linked\" below)" : "") + "."
             + (problems.Count > 0 ? " " + string.Join(" ", problems) : "")
             + (next is not null ? $" The roster is longer than {MaxPages} pages; only the first {MaxPages} were read." : "");
-        return new SyncResult(true, message, members.Count, provisioned, skipped);
+        return new SyncResult(true, message, members.Count, provisioned, skipped, waiting);
     }
 
     /// <summary>The <c>rel="next"</c> URL of an RFC 8288 <c>Link</c> header, or null.</summary>

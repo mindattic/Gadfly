@@ -9,6 +9,9 @@ public static class EmailKinds
     public const string AppealReceived = "appeal-received";
     public const string AppealDecided = "appeal-decided";
     public const string AttemptReset = "attempt-reset";
+    /// <summary>GAD-T458: the single-use link that connects an LMS sign-in to the person's existing Gadfly account. Sent only when
+    /// they ask for it, so it isn't one of the notifications the organization's switch or a student's opt-out governs.</summary>
+    public const string LmsLink = "lms-link";
     /// <summary>A platform-admin or org-admin test send from the preview page; never gated by the org switch or opt-out.</summary>
     public const string Test = "test";
 
@@ -23,6 +26,7 @@ public static class EmailKinds
         AppealReceived => "Appeal received",
         AppealDecided => "Appeal decided",
         AttemptReset => "Attempt reset",
+        LmsLink => "Connect an LMS sign-in",
         Test => "Test send",
         _ => kind,
     };

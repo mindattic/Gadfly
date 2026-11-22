@@ -90,6 +90,15 @@ public static class EmailTemplates
                     "You can take it again from the start."),
                 ("Open my exams", d.ActionUrl)),
 
+            EmailKinds.LmsLink => (
+                "Connect your LMS sign-in to your Gadfly account",
+                $"{Esc(d.OrganizationName)}: confirm it's you.",
+                Paragraphs(
+                    "Someone opened a Gadfly exam from your school's learning system (LMS) with this email address, and asked to use the Gadfly account you already have instead of a new one.",
+                    "If that was you, open the link below <strong>in the same browser</strong> within 24 hours. After that, opening Gadfly from your course takes you to this account.",
+                    "If it wasn't you, ignore this email: nothing changes, and the link stops working on its own."),
+                ("Connect my LMS sign-in", d.ActionUrl)),
+
             EmailKinds.Test => (
                 "Gadfly test email",
                 "This is a test send.",

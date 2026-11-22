@@ -1,3 +1,4 @@
+using Gadfly.Server.Jobs;
 using Gadfly.Server.Platform;
 
 namespace Gadfly.Server.Lti;
@@ -31,7 +32,11 @@ public static class LtiSetup
         services.AddScoped<LtiRosterService>();
         services.AddScoped<LtiGradePassbackService>();
         services.AddScoped<LtiAdminService>();
+        services.AddScoped<LtiAccountLinks>();
         services.AddHostedService<LtiPassbackSweeper>();
+        // GAD-T458: scheduled roster refresh through the job queue.
+        services.AddJobHandler<LtiRosterRefreshJob>();
+        services.AddHostedService<LtiRosterRefreshScheduler>();
         return services;
     }
 
