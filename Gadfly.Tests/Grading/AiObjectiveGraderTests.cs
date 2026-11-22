@@ -29,6 +29,19 @@ public class AiObjectiveGraderTests
 {
     private static readonly Guid R1 = Guid.NewGuid(), R2 = Guid.NewGuid(), R3 = Guid.NewGuid();
 
+    [Test]
+    public void PromptChanges_ExpireACalibrationOnlyWhenTheGradingPromptVersionDiffers()
+    {
+        // GAD-T469: the same version, or a calibration recorded before versions were kept (taken as 1), still describes version 1.
+        Assert.That(AiObjectiveGrader.PromptChanges(1, 1), Is.Empty);
+        Assert.That(AiObjectiveGrader.PromptChanges(null, 1), Is.Empty);
+        Assert.That(AiObjectiveGrader.PromptChanges(AiObjectiveGrader.PromptVersion), Is.Empty);
+        var changed = AiObjectiveGrader.PromptChanges(1, 2);
+        Assert.That(changed, Has.Count.EqualTo(1));
+        Assert.That(changed[0], Does.Contain("grading prompts changed").And.Contain("version 1").And.Contain("version 2"));
+        Assert.That(AiObjectiveGrader.PromptChanges(null, 2), Has.Count.EqualTo(1));
+    }
+
     private static GradingObjective Objective(decimal max = 100m) =>
         new("calvin", "The Calvin cycle", null, max, AiObjectiveGrader.DefaultCriteria(), "Calvin cycle", "Carbon fixation in the stroma.");
 

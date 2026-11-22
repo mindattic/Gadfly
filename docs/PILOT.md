@@ -87,7 +87,8 @@ reconciliation thresholds from how far the two examiners themselves differ, a bo
 limit. They change nothing by themselves: adopt them with a grading-policy change request. Paste a "student email,
 group" list to see the SMD by group (an overall SMD can hide a gap one group carries); the list is never stored.
 
-A calibration records the model id of every panel member and **expires** when any of them changes (GAD-T429): grades
+A calibration records the model id of every panel member and the grading prompts' version, and **expires** when any of
+those changes (GAD-T429, GAD-T469): grades
 are provisional again and a gated exam goes back to human-only until it is re-run. After 180 days
 (`Gadfly:Grading:RecalibrateAfterDays`) the page asks for a re-run of the calibration and the bias probes; nothing
 re-runs by itself.

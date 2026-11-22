@@ -982,7 +982,7 @@ comparison counts. Levels are the rubric's mastery levels 0..5.
 ```
 
 `panel` is optional: it defaults to the configured members and their models. The model id of every member is stored
-with the evaluation (GAD-T429). A calibration of the mock panel is never accepted.
+with the evaluation (GAD-T429), and so is the grading prompt-set version (GAD-T469). A calibration of the mock panel is never accepted.
 
 Every evaluation, passing or failing, is recorded as an audit event (`panel.calibration.evaluated`), and the latest
 one is the exam's status: `GET /grading/calibration/{examId}` (ViewTranscripts) returns it, or `404` when none is
@@ -990,12 +990,14 @@ recorded:
 
 ```json
 { "examId": "…", "panel": "claude: claude-sonnet-5, openai: gpt-5", "accepted": true, "report": { … }, "at": "…",
-  "models": { "claude": "claude-sonnet-5", "openai": "gpt-5" }, "source": "double-marking",
+  "models": { "claude": "claude-sonnet-5", "openai": "gpt-5" }, "gradingPromptVersion": 1, "source": "double-marking",
   "expired": false, "expiryReasons": [], "recheckDue": false, "effective": true }
 ```
 
 `expired` is true when any panel member's model id now differs from those the calibration covered (a member swapped,
-added or removed, or a calibration recorded before model ids were kept); `expiryReasons` says which. `effective` is
+added or removed, or a calibration recorded before model ids were kept), or when the grading prompts' version differs
+from `gradingPromptVersion` (GAD-T469; a calibration recorded before versions were kept counts as version 1);
+`expiryReasons` says which. `effective` is
 `accepted && !expired`. `recheckDue` is true once the calibration is older than `Gadfly:Grading:RecalibrateAfterDays`
 (default 180): a prompt to re-run it and the bias probes; nothing re-runs by itself. `source` is `api` (posted here) or
 `double-marking` (built in the app from blind second marks, GAD-T428).

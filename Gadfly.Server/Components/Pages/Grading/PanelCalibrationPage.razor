@@ -39,6 +39,8 @@ else
                 <div><span class="hint">SMD</span>@Num(status.Report.Smd)</div>
                 <div><span class="hint">Models covered</span>@PanelModelSet.Describe(status.Models)</div>
                 <div><span class="hint">Models now</span>@PanelModelSet.Describe(currentModels)</div>
+                @* GAD-T469: a change of grading prompts expires the calibration too. *@
+                <div><span class="hint">Grading prompts</span>version @status.GradingPromptVersion when recorded, version @Gadfly.Sources.Grading.AiObjectiveGrader.PromptVersion now</div>
             </div>
             @if (status.Report.Failures.Count > 0)
             {

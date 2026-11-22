@@ -38,6 +38,26 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel, Random? shuff
 
     public const string SystemPrompt = PanelJson.JsonOnlySystem;
 
+    /// <summary>
+    /// The grading prompt-set version: bump it whenever the wording of <see cref="SystemPrompt"/> or <see cref="BuildPrompt"/>
+    /// changes. A panel calibration records it and expires when it differs (GAD-T469): agreement measured under one grading
+    /// prompt says nothing about the next, just as with a model change (GAD-T429).
+    /// 1: the prompt with the bias controls (GAD-T269), shuffled criteria, levels and evidence with stable numbers (GAD-T430)
+    /// and the unsure-speech rule (GAD-T265), the one in force when calibrations began recording model ids.
+    /// </summary>
+    public const int PromptVersion = 1;
+
+    /// <summary>
+    /// Why a calibration recorded under grading prompt version <paramref name="calibrated"/> no longer describes the grading
+    /// prompts in use (GAD-T469); empty when they match. A calibration recorded before versions were kept (null) was recorded
+    /// under version 1, the only one in force since calibrations recorded model ids.
+    /// </summary>
+    public static IReadOnlyList<string> PromptChanges(int? calibrated, int current = PromptVersion)
+    {
+        var before = calibrated ?? 1;
+        return before == current ? [] : [$"the grading prompts changed (version {before} then, version {current} now)"];
+    }
+
     /// <summary>Whether <paramref name="panel"/> is a mock (GAD-T100 marker, or a reply from a "mock" provider).</summary>
     public static bool IsMockPanel(ISocraticVotingClient panel, IEnumerable<PanelReply>? replies = null) =>
         panel is IPanelInfo { IsMock: true }

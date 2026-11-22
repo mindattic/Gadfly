@@ -2,6 +2,7 @@ using Gadfly.Assessment;
 using Gadfly.Server.Data;
 using Gadfly.Server.Tenancy;
 using Gadfly.Socrates;
+using Gadfly.Sources.Grading;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,12 +11,14 @@ namespace Gadfly.Server.Grading;
 /// <summary>
 /// The panel calibration recorded for one exam: the latest evaluated calibration set and whether the panel it
 /// describes was accepted (GAD-T270). It expires when any panel member's model id differs from the ids it covered
-/// (GAD-T429): grades are provisional again and a gated exam grades on the human alone until it is re-run.
+/// (GAD-T429), or when the grading prompt-set version differs from the one it was measured under (GAD-T469): grades are provisional again and a gated exam grades on the human alone until it is re-run.
 /// </summary>
 public sealed record PanelCalibrationStatus(Guid ExamId, string Panel, bool Accepted, CalibrationReport Report, DateTimeOffset At, Guid? ByUserId)
 {
     /// <summary>Provider → model id of every member the calibration covered; null for calibrations recorded before GAD-T429.</summary>
     public IReadOnlyDictionary<string, string>? Models { get; init; }
+    /// <summary>The grading prompt-set version it was measured under (<see cref="AiObjectiveGrader.PromptVersion"/>, GAD-T469).</summary>
+    public int GradingPromptVersion { get; init; } = 1;
     /// <summary>"api" (levels posted from outside) or "double-marking" (built in the app from blind second marks, GAD-T428).</summary>
     public string Source { get; init; } = PanelCalibrationService.SourceApi;
     /// <summary>The calibration no longer describes the panel: its models changed (or were never recorded).</summary>
@@ -29,7 +32,7 @@ public sealed record PanelCalibrationStatus(Guid ExamId, string Panel, bool Acce
     /// <summary>The short form frozen into a session's <see cref="PolicySnapshot"/> when AI grading starts.</summary>
     public PanelCalibrationNote ToNote() => new(Panel, Accepted, Report.Items, Report.PanelHumanQwk, Report.HumanHumanQwk, Report.Smd, At)
     {
-        Expired = Expired, ExpiryReasons = ExpiryReasons, Models = Models,
+        Expired = Expired, ExpiryReasons = ExpiryReasons, Models = Models, GradingPromptVersion = GradingPromptVersion,
     };
 }
 
@@ -40,6 +43,8 @@ public sealed record PanelCalibrationNote(string Panel, bool Accepted, int Items
     public bool Expired { get; init; }
     public IReadOnlyList<string> ExpiryReasons { get; init; } = [];
     public IReadOnlyDictionary<string, string>? Models { get; init; }
+    /// <summary>The grading prompt-set version the calibration was measured under (GAD-T469).</summary>
+    public int GradingPromptVersion { get; init; } = 1;
     public bool Effective => Accepted && !Expired;
 }
 
@@ -107,9 +112,12 @@ public sealed class PanelCalibrationService(GadflyDbContext db, ITenantContext t
         var reasons = currentModels is null ? []
             : stored.Models is null ? ["it was recorded before Gadfly kept the panel's model ids, so it cannot show it covers the models in use"]
             : PanelModelSet.Differences(stored.Models, currentModels).ToList();
+        // The grading prompts too (GAD-T469): a calibration measured under one grading prompt does not carry to the next.
+        if (currentModels is not null) reasons = [.. reasons, .. AiObjectiveGrader.PromptChanges(stored.GradingPromptVersion)];
         return new PanelCalibrationStatus(examId, stored.Panel, stored.Report.Accepted, stored.Report, row.At, row.ActorUserId)
         {
-            Models = stored.Models, Source = stored.Source ?? SourceApi, Expired = reasons.Count > 0, ExpiryReasons = reasons,
+            Models = stored.Models, GradingPromptVersion = stored.GradingPromptVersion ?? 1,
+            Source = stored.Source ?? SourceApi, Expired = reasons.Count > 0, ExpiryReasons = reasons,
             RecheckDue = now - row.At > TimeSpan.FromDays(recheckDays),
         };
     }
@@ -149,16 +157,17 @@ public sealed class PanelCalibrationService(GadflyDbContext db, ITenantContext t
             };
 
         GradingAudit.Add(db, org, Actor, EvaluatedAction, EntityType, examId.ToString(), null, now,
-            after: new StoredCalibration(panel, report, current, source),
+            after: new StoredCalibration(panel, report, current, source, AiObjectiveGrader.PromptVersion),
             reason: report.Accepted ? $"The panel meets the calibration thresholds for this exam ({PanelModelSet.Describe(current)})." : string.Join(" ", report.Failures));
         await db.SaveChangesAsync(ct);
         return (report.Accepted
             ? GradingResult.Done($"Panel accepted for this exam: QWK {report.PanelHumanQwk:0.00} (human-human {report.HumanHumanQwk:0.00}), SMD {report.Smd:0.00}, {report.Items} answers. " +
-                                 $"Recorded against {PanelModelSet.Describe(current)}; it expires if any of these models changes.")
+                                 $"Recorded against {PanelModelSet.Describe(current)} and grading prompts version {AiObjectiveGrader.PromptVersion}; it expires if any of these models or the grading prompts change.")
             : GradingResult.Fail("Panel not accepted for this exam. " + string.Join(" ", report.Failures)), report);
     }
 
-    private sealed record StoredCalibration(string Panel, CalibrationReport Report, IReadOnlyDictionary<string, string>? Models = null, string? Source = null);
+    private sealed record StoredCalibration(string Panel, CalibrationReport Report, IReadOnlyDictionary<string, string>? Models = null, string? Source = null,
+        int? GradingPromptVersion = null);
 }
 
 /// <summary>
@@ -183,7 +192,7 @@ public static class PanelCalibrationEndpoints
             await s.StatusAsync(examId, ct) is { } status
                 ? Results.Json(new
                 {
-                    examId, status.Panel, status.Accepted, status.Report, status.At, status.Models, status.Source,
+                    examId, status.Panel, status.Accepted, status.Report, status.At, status.Models, status.GradingPromptVersion, status.Source,
                     status.Expired, status.ExpiryReasons, status.RecheckDue, effective = status.Effective,
                 })
                 : Results.NotFound(new { ok = false, message = "No calibration is recorded for that exam (or it is not visible to you)." }));
