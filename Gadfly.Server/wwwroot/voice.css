@@ -69,6 +69,9 @@
 .voice-answer .verify-label { margin: 0; }
 .voice-draft { margin: 0; min-height: 1.5em; font-size: 1.05rem; }
 .voice-live { margin: 0; min-height: 1.2em; color: var(--muted); font-style: italic; }
+/* Words already spoken, kept as a draft across a reload mid-answer (GAD-T306); empty and invisible the rest of the time. */
+.voice-recovered { margin: 0; color: var(--accent); }
+.voice-recovered:empty { display: none; }
 .voice-cue { height: 4px; border-radius: 2px; background: transparent; overflow: hidden; }
 .voice-cue i { display: block; height: 100%; width: 0; background: var(--accent); }
 .voice-cue[data-active="true"] i { width: 100%; transition: width var(--cue-ms, 4s) linear; }
