@@ -15,7 +15,7 @@ namespace Gadfly.Tour;
 /// A stage whose feature hasn't landed yet throws <see cref="NotBuiltException"/> and prints SKIP with its ticket,
 /// detected by probing (a hub method, a route, a table with rows), so the tour grows as the product does.
 /// </summary>
-public sealed class DemoTour(TourOptions o, ServerProcess server)
+public sealed partial class DemoTour(TourOptions o, ServerProcess server)
 {
     private const string Org = "Gadfly Demo Academy";
     private const string MathExam = "Demo: Understanding multiplication";
@@ -51,6 +51,7 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
             await _list.RunAsync("Access control (anonymous, student, API key)", AccessControlAsync);
             if (seeded && signedIn) await _list.RunAsync("Teacher setup check (sources, exams, assessment setup)", TeacherSetupAsync);
             await _list.RunAsync("Source material processed through the API", ApiSourceProcessingAsync);
+            await RunPageStagesAsync(seeded, signedIn);   // DemoTour.Pages.cs (GAD-T398)
 
             if (!(seeded && signedIn && await _list.RunAsync("Student starts the exam over the SessionHub", StartExamAsync)))
             {
@@ -75,6 +76,7 @@ public sealed class DemoTour(TourOptions o, ServerProcess server)
             await _list.RunAsync("Review pages show the session", ReviewPagesAsync);
             await _list.RunAsync("Platform API reports the attempt and result", ApiResultAsync);
             await _list.RunAsync("Analytics endpoints (GAD-T102)", AnalyticsAsync);
+            await RunAfterGradingStagesAsync();   // DemoTour.Pages.cs (GAD-T398)
             await _list.RunAsync("Audit trail", AuditAsync);
         }
         finally

@@ -59,6 +59,25 @@ public sealed partial class BrowserUser : IDisposable
         throw new TourAssertException($"Too many redirects from {path}.");
     }
 
+    /// <summary>A file download with this user's cookies (no redirects followed): status, bytes, content type and response headers.</summary>
+    public async Task<(HttpStatusCode Status, byte[] Bytes, string ContentType, Dictionary<string, string> Headers)> DownloadAsync(string path)
+    {
+        using var response = await Http.GetAsync(path.TrimStart('/'));
+        if (_verbose) Console.WriteLine($"      [{UserName}] GET {path} -> {(int)response.StatusCode}");
+        var headers = response.Headers.Concat(response.Content.Headers)
+            .GroupBy(h => h.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => string.Join(",", g.SelectMany(h => h.Value)), StringComparer.OrdinalIgnoreCase);
+        return (response.StatusCode, await response.Content.ReadAsByteArrayAsync(), response.Content.Headers.ContentType?.MediaType ?? "", headers);
+    }
+
+    /// <summary>A plain form post (multipart) with this user's cookies, for the anonymous pages that take no antiforgery token.</summary>
+    public async Task<(HttpStatusCode Status, string Body)> PostFormAsync(string path, HttpContent content)
+    {
+        using var response = await Http.PostAsync(path.TrimStart('/'), content);
+        if (_verbose) Console.WriteLine($"      [{UserName}] POST {path} -> {(int)response.StatusCode}");
+        return (response.StatusCode, await response.Content.ReadAsStringAsync());
+    }
+
     private string? _antiforgeryToken;
 
     /// <summary>A JSON endpoint read with this user's cookies (no redirects followed). Body is default when not JSON.</summary>
