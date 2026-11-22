@@ -14,6 +14,12 @@ public sealed record GradingPolicyRules
     public decimal MandatoryReconciliationAt { get; init; } = 20m;
     public bool BlindHumanGrading { get; init; } = true;
     /// <summary>
+    /// Anonymous human marking (GAD-T439; ElenchusAtScale 2.9.3, Meadows &amp; Billington 2005: remove names before marking):
+    /// graders see a session code instead of the student's name until the human score is submitted. Off unless the
+    /// exam's policy turns it on.
+    /// </summary>
+    public bool AnonymousMarking { get; init; }
+    /// <summary>
     /// Single-answer trigger (GAD-T270): panel members whose rubric levels for one objective differ by more than
     /// this many levels send it to reconciliation, whatever the AI-human difference.
     /// </summary>

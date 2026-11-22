@@ -1191,6 +1191,9 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<bool>("AllowAssistedEvidence")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("AnonymousMarking")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("BlindHumanGrading")
                         .HasColumnType("bit");
 

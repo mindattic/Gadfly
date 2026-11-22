@@ -78,6 +78,8 @@ public sealed class GradingPolicy : ITenantOwned
     public decimal AdditionalReviewAt { get; set; } = 10m;
     public decimal MandatoryReconciliationAt { get; set; } = 20m;
     public bool BlindHumanGrading { get; set; } = true;
+    /// <summary>GAD-T439: graders see a session code, not the student's name, until the human score is submitted.</summary>
+    public bool AnonymousMarking { get; set; }
     public InconclusiveProcedure InconclusiveProcedure { get; set; }
     /// <summary>Whether answers given in Learning Mode may count as examination evidence (Part 3.2). Off by default.</summary>
     public bool AllowAssistedEvidence { get; set; }
@@ -88,7 +90,7 @@ public sealed class GradingPolicy : ITenantOwned
     public GradingPolicyRules ToRules() => new()
     {
         AiWeight = AiWeight, HumanWeight = HumanWeight, AdditionalReviewAt = AdditionalReviewAt,
-        MandatoryReconciliationAt = MandatoryReconciliationAt, BlindHumanGrading = BlindHumanGrading,
+        MandatoryReconciliationAt = MandatoryReconciliationAt, BlindHumanGrading = BlindHumanGrading, AnonymousMarking = AnonymousMarking,
     };
 }
 
