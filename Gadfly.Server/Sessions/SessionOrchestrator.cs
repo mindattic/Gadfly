@@ -441,6 +441,16 @@ public sealed class SessionOrchestrator(
                 if (await TurnIdAsync(db, live.Engine.Session.Id, open.Index, ct) is { } openId && await ledger.PendingAsync(live.Engine.Session.Id, openId, ct) is { } p)
                     await ExpireAsync(live, db, ledger, p, open, ct, ended: true);
             }
+            // An answer recorded but not judged (a step failed between the two) was given in time too: judge it before ending, as every
+            // other step recovers it, so it doesn't stay in the report unjudged. A panel still failing never stops the student finishing.
+            else if (!live.Engine.Session.IsEnded && live.Engine.Session.AwaitingJudgment is not null)
+            {
+                try { await live.Engine.SubmitAnswerAsync(null, ct); }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    log.LogWarning(ex, "The last answer could not be judged before the exam ended; it is kept for a human to grade.");
+                }
+            }
             live.Engine.End(reason);
             return null;
         }, ct);
@@ -939,7 +949,6 @@ public sealed class SessionOrchestrator(
                 Markdown = report.ToMarkdown(),
                 CreatedAt = now,
             });
-            _live.TryRemove(s.Id, out _);
             // Integrating apps hear about it (GAD-T46): the deliveries commit with the report (outbox, GAD-T71).
             await Platform.WebhookOutbox.StageAsync(db, org, Platform.WebhookService.SessionCompleted, new
             {
@@ -948,6 +957,9 @@ public sealed class SessionOrchestrator(
             }, now, ct);
         }
         await db.SaveChangesAsync(ct);
+        // An ended session leaves the cache only once its end is saved: dropped earlier, a reload in that window rebuilt the engine
+        // from the not-yet-ended row and could ask on. Every ended session leaves it, also one only reloaded to be viewed (GAD-T314).
+        if (s.IsEnded) _live.TryRemove(new KeyValuePair<Guid, Live>(s.Id, live));
         await PersistEvidenceAsync(live, row.ExamId, now, ct);
     }
 

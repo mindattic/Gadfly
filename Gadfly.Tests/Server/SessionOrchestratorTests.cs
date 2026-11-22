@@ -321,4 +321,47 @@ public class SessionOrchestratorTests : ServerTest
         Assert.That(row.TranscriptJson, Is.Not.Null);
         Assert.That(row.State, Is.Not.EqualTo(SessionState.Ended));
     }
+
+    /// <summary>GAD-T314: finishing right after a step failed between recording and judging an answer judges that answer first.</summary>
+    [Test]
+    public async Task Finish_JudgesAnAnswerThatWasRecordedButNotJudged()
+    {
+        var w = await Seed.ExamAsync();
+        var id = await StartedAsync(w);
+        await Orchestrator.CurrentAsync(w.Org, id, w.StudentId);
+        // A spoken answer waits for the transcript confirmation; the confirmation records it, then the panel fails while judging.
+        var pending = await Orchestrator.AnswerAsync(w.Org, id, w.StudentId,
+            new Answer { Text = "Plants make sugar from light energy.", Mode = "voice", CompletedAt = Clock.GetUtcNow() });
+        Assert.That(pending.Verification, Is.Not.Null);
+        Panel.Fail = true;
+        try { await Orchestrator.ConfirmTranscriptAsync(w.Org, id, w.StudentId, pending.Verification!.ResponseId); }
+        catch (Exception) { /* the failing panel surfaces; the recorded answer is the resume point */ }
+        Panel.Fail = false;
+
+        var end = await Orchestrator.EndAsync(w.Org, id, w.StudentId, EndReason.Abandoned);
+        Assert.That(end.State, Is.EqualTo(SessionState.Ended));
+        await using var db = SystemDb();
+        var turn = await db.SessionTurns.AsNoTracking().SingleAsync(t => t.SessionId == id && t.Index == 0);
+        Assert.That(turn.AnswerText, Is.Not.Null);
+        Assert.That(await db.Judgments.AnyAsync(j => j.TurnId == turn.Id), Is.True, "the answer given in time is judged before the exam ends");
+    }
+
+    /// <summary>GAD-T314: an ended session leaves the in-memory cache once its end is saved, also when only reloaded to be viewed.</summary>
+    [Test]
+    public async Task AnEndedSession_IsNotKeptInMemory()
+    {
+        var w = await Seed.ExamAsync();
+        var id = await StartedAsync(w);
+        var o = Fresh();
+        await o.CurrentAsync(w.Org, id, w.StudentId);
+        await o.EndAsync(w.Org, id, w.StudentId, EndReason.Abandoned);
+        Assert.That(Cached(o).Contains(id), Is.False);
+        var again = await o.CurrentAsync(w.Org, id, w.StudentId);
+        Assert.That(again.State, Is.EqualTo(SessionState.Ended));
+        Assert.That(Cached(o).Contains(id), Is.False);
+    }
+
+    private static System.Collections.IDictionary Cached(SessionOrchestrator o) =>
+        (System.Collections.IDictionary)typeof(SessionOrchestrator)
+            .GetField("_live", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(o)!;
 }
