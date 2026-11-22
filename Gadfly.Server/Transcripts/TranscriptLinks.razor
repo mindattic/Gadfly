@@ -1,0 +1,43 @@
+@* Download links for a session's official transcript (GAD-T295). The server decides which copy each person gets;
+   Copy asks for a lesser copy (e.g. staff downloading exactly what the student sees). *@
+
+<span class="transcript-links">
+    <span class="hint">@Label</span>
+    @foreach (var (f, i) in TranscriptFormats.All.Select((f, i) => (f, i)))
+    {
+        @if (i > 0) { <text> · </text> }
+        @if (f == TranscriptFormat.Html)
+        {
+            <a href="@TranscriptFormats.Path(SessionId, f, Copy).TrimStart('/')" target="_blank" rel="noopener" data-enhance-nav="false" title="@Title(f)">@Short(f)</a>
+        }
+        else
+        {
+            <a href="@TranscriptFormats.Path(SessionId, f, Copy).TrimStart('/')" download data-enhance-nav="false" title="@Title(f)">@Short(f)</a>
+        }
+    }
+    @if (ShowVerify)
+    {
+        <text> · </text><a href="transcripts/verify" target="_blank" rel="noopener" data-enhance-nav="false">check a copy</a>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public Guid SessionId { get; set; }
+    [Parameter] public TranscriptAudience? Copy { get; set; }
+    [Parameter] public string Label { get; set; } = "Transcript:";
+    [Parameter] public bool ShowVerify { get; set; }
+
+    private static string Short(TranscriptFormat f) => f switch
+    {
+        TranscriptFormat.Html => "print",
+        TranscriptFormat.Docx => "Word",
+        TranscriptFormat.Txt => "text",
+        TranscriptFormat.Vtt => "VTT",
+        TranscriptFormat.Srt => "SRT",
+        TranscriptFormat.Json => "JSON",
+        _ => "PDF",
+    };
+
+    private string Title(TranscriptFormat f) =>
+        $"{TranscriptFormats.Label(f)}{(Copy is { } c ? " · " + TranscriptAudiences.Label(c).ToLowerInvariant() : "")}, with its verification code";
+}

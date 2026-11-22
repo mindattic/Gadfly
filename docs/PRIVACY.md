@@ -23,6 +23,26 @@ Redaction (`privacy.retention`, daily) keeps the outcome and removes what the st
 one organization as JSON. Erasure (`POST /privacy/erase/{userId}`, org admin, typed confirmation)
 deletes every session record of that student in that organization and deactivates the membership.
 
+### Exported transcripts (GAD-T295)
+
+A transcript download (PDF, Word, web page, text, captions or JSON) contains the exam's title, the student's name,
+the attempt, every question with its times and the examiner's move, every answer as recorded, the read-back,
+clarifications, corrections (original and corrected text), the response delay and pause counts, and the words the
+speech recognizer was unsure of. It never contains audio or video. Three copies exist, chosen by the server for each
+download:
+
+- the **student copy** (the student, after their result is published) and the **grader copy** (anyone grading while
+  grading is blind) leave out integrity notes, voice measurements, the examiner's reasons and the AI panel's
+  exam-time scores;
+- the **reviewer copy** (Owners, Admins, and graders once grading is not blind; API keys) adds them, marked as
+  low-confidence observations for a person, never a verdict and never part of a grade.
+
+Each download is recorded in the audit log (`transcript.issued`: who, when, which copy and format, its verification
+code and SHA-256; no transcript text). Once downloaded, a file is outside Gadfly's retention and erasure: the
+organization is responsible for the copies it keeps. After redaction or erasure, the verify page
+(`/transcripts/verify`, open to anyone, rate-limited) reports an earlier copy as "the record has changed since" or
+"no longer held", and never shows any transcript content.
+
 ## Consent
 
 Shown before every attempt, in plain language: what is recorded, that video is processed on the device

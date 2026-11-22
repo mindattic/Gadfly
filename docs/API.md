@@ -45,6 +45,7 @@ Organization admins create and revoke keys at `/org/api-keys` in the admin conso
 | POST | `/api/v1/assignments/{id}/launch` | A signed launch link for the student |
 | GET | `/api/v1/assignments/{id}/sessions` | The student's attempts |
 | GET | `/api/v1/sessions/{id}/result` | One attempt's result and report |
+| GET | `/api/v1/sessions/{id}/transcript` | One attempt's official transcript (JSON, PDF, Word, web page, text, captions) |
 | POST | `/api/v1/webhooks` | Register a webhook |
 | GET | `/api/v1/webhooks` | List webhooks |
 | DELETE | `/api/v1/webhooks/{id}` | Deactivate a webhook |
@@ -435,6 +436,76 @@ Finish) or `Failed`, and `null` while running. An empty array when there are non
 
 This endpoint returns the result whether or not the grade has been published to the student. Show
 students only what your own release rules allow.
+
+### Transcript
+
+`GET /api/v1/sessions/{id}/transcript?format=json&audience=reviewer`
+
+The attempt's official transcript, built from the response ledger (GAD-T295): every question with its clock time,
+its offset from the start of the exam and the examiner's move; every answer exactly as recorded; the read-back and
+its outcome; meaning clarifications; every transcription correction as original and corrected text; the response
+delay and pauses; and the words the speech recognizer was unsure of.
+
+| Parameter | Values |
+|---|---|
+| `format` | `json` (default), `pdf`, `docx`, `html` (print-ready page), `txt`, `vtt` (WebVTT captions), `srt` |
+| `audience` | `reviewer` (default): everything, including integrity notes, voice measurements, the examiner's reason for each question and the AI panel's exam-time reading. `blind-grader`: none of those. `student`: none of those, and only once the result has been published to the student (`409` before). |
+
+Every response carries the copy's `X-Transcript-Code` (the verification code, e.g. `7K3M-9QXA-B2CD-EFGH`) and
+`X-Transcript-Sha256` headers, and every call is recorded in the audit log as `transcript.issued`. The JSON
+download is:
+
+```json
+{
+  "transcript": {
+    "schema": "gadfly.transcript/1",
+    "audience": "reviewer",
+    "sessionId": "5a7d9c2e-3f1b-4e6a-8c0d-b2e4f6a8c1d3",
+    "examTitle": "Cell biology oral",
+    "studentName": "ada01",
+    "attempt": 1,
+    "mode": "Spoken",
+    "turns": [
+      {
+        "number": 1,
+        "concept": "Osmosis",
+        "move": "Opening question",
+        "moveKind": "Elicit",
+        "askedAt": "2026-12-02T14:03:16+00:00",
+        "offsetSeconds": 5,
+        "question": "What is osmosis, in your own words?",
+        "responses": [
+          {
+            "kind": "Answer",
+            "modality": "Spoken",
+            "asRecorded": "Water moves a cross a membrane.",
+            "verified": "Water moves across a membrane.",
+            "recordStatus": "Corrected by the student",
+            "delaySeconds": 4,
+            "pauses": 2,
+            "readBack": { "prompt": "I recorded your answer as: ...", "outcome": "The student corrected the recording." },
+            "corrections": [{ "version": 2, "original": "Water moves a cross a membrane.", "corrected": "Water moves across a membrane.", "by": "the student" }],
+            "unsureWords": [{ "text": "a cross", "startSeconds": 1.1, "endSeconds": 1.6, "lowestConfidence": 0.4 }],
+            "words": [{ "text": "Water", "startSeconds": 0, "endSeconds": 0.5 }]
+          }
+        ]
+      }
+    ],
+    "leftOut": []
+  },
+  "verification": {
+    "sha256": "3f0c...",
+    "code": "7K3M-9QXA-B2CD-EFGH",
+    "generatedAt": "2026-12-03T09:00:00+00:00",
+    "verifyUrl": "https://exams.example.org/transcripts/verify?code=7K3M-9QXA-B2CD-EFGH"
+  }
+}
+```
+
+The hash is the SHA-256 of the canonical JSON of `transcript` (object keys in ordinal order, nulls left out, no
+whitespace, UTF-8); the code is its first 80 bits in Crockford base 32. Nothing that changes between downloads is
+inside `transcript`, so the same record always gives the same code. Anyone can check a code or the JSON file at
+`/transcripts/verify` (no sign-in, rate-limited); it says only whether the copy matches the record.
 
 ### Webhook registration
 

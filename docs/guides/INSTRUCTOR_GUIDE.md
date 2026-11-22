@@ -292,7 +292,36 @@ From a session's summary:
 | turns (CSV) | One row per question: session, student, exam, attempt, turn, concept, move, question, answer, answer mode, times (UTC), latency, overall score, agreement, whether judges disagreed, judge summary, criterion scores, each judge's score, text-style score, mastery after, integrity events. Opens correctly in Excel. |
 | report (Markdown) | The AI report plus any earlier instructor decision: grade, score, who decided and when, whether it overrides the recommendation, and the comment. |
 
-A PDF export is not built.
+## Transcripts
+
+Every session has an official transcript, built from the answer record: each question with its clock time, how
+long into the exam it came and the examiner's move (opening question, probe, counterexample...), each answer
+exactly as it was recorded, the read-back ("I recorded your answer as... Is this what you said?") and what the
+student replied, any question about what they meant and their reply, every correction shown as the original and
+the corrected text, how long the student waited before answering and their pauses, and the words the speech
+recognizer was unsure of, marked [like this?].
+
+Download it from the **Transcript** links on the session review page, the grading page or the admin desk, as a
+PDF, a Word document, a print-ready page, plain text, captions (WebVTT or SRT, timed from the recorded word timings
+where Gadfly has them) or JSON.
+
+Which copy you get depends on who you are, and Gadfly decides it, not the page:
+
+| Copy | Who gets it | What it leaves out |
+|---|---|---|
+| Reviewer copy | Owners and Admins; Instructors and second reviewers once grading is not blind | Nothing: it adds integrity notes, voice measurements, the examiner's reason for each question and the AI panel's exam-time reading |
+| Grader copy | Anyone who can grade while a session's grading is blind | Integrity notes, voice measurements and every AI score, so nothing can colour your reading |
+| Student copy | The student, once their result is published; staff can download it too (**student copy** link) to see exactly what the student sees | The same as the grader copy |
+
+Every copy carries a **verification code** (for example `7K3M-9QXA-B2CD-EFGH`) and a SHA-256 hash, on every page.
+Anyone holding a copy (a registrar, an appeals panel, an employer) can type the code at `/transcripts/verify`, or
+upload the JSON file there, to see whether it is genuine and unchanged; the page never shows what the transcript
+says. If the record changes later (a correction, words removed after the retention period), a new download gets a
+new code and the old one shows as "genuine, but the record has changed since". Every download is recorded in the
+audit log.
+
+The PDF uses the standard PDF fonts, which cover Western European languages; for other alphabets use the Word,
+web page or JSON copy, which keep every character.
 
 ## How long data is kept
 

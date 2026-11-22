@@ -309,6 +309,8 @@ public static class ApiEndpoints
             });
         });
 
+        Transcripts.TranscriptEndpoints.MapApi(api);   // GET /sessions/{id}/transcript (GAD-T295)
+
         api.MapGet("/assignments/{id:guid}/sessions", async (Guid id, GadflyDbContext db, CancellationToken ct) =>
             Results.Ok((await db.ExamSessions.AsNoTracking().Where(s => s.AssignmentId == id).OrderBy(s => s.Attempt)
                 .Select(s => new { s.Id, s.Attempt, s.State, s.StartedAt, s.EndedAt, s.EndReason }).ToListAsync(ct))

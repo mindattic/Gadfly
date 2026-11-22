@@ -20,7 +20,7 @@ public static class GadflyEndpoints
 
     /// <summary>Every route a signed-out visitor may reach.</summary>
     public static readonly IReadOnlyList<string> AnonymousRoutes =
-        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "launch", "error", "openapi/{documentName}.json", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p),
+        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "launch", "error", "openapi/{documentName}.json", "transcripts/verify", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p),
          .. Help.HelpEndpoints.AnonymousRoutes];   // the help center: a student with a broken microphone may never get past sign-in (GAD-T292)
 
     /// <summary>The path <c>UseExceptionHandler</c> re-executes in production (Program.cs).</summary>
@@ -76,6 +76,7 @@ public static class GadflyEndpoints
         app.MapHub<Sessions.SessionHub>(Sessions.SessionHub.Path).RequireRateLimiting(Platform.RateLimits.Hub);
         Platform.ApiEndpoints.Map(app);
         Review.ReviewExportEndpoints.Map(app);
+        Transcripts.TranscriptEndpoints.Map(app);   // downloads and the anonymous /transcripts/verify page (GAD-T295)
         app.MapAnalytics();
         app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
         Help.HelpEndpoints.Map(app);   // images the help guides show (GAD-T292)
