@@ -160,6 +160,7 @@ builder.Services.AddRateLimiter(RateLimits.Configure);   // GAD-T78: API by key,
 
 // Privacy (GAD-T61): daily retention redaction, per-student export and erasure.
 builder.Services.AddScoped<PrivacyService>();
+builder.Services.AddScoped<Gadfly.Server.Privacy.LogRetention>();   // logs kept at least six months, apart from transcripts (GAD-T466)
 builder.Services.AddJobHandler<RetentionJob>();
 builder.Services.AddHostedService<RetentionScheduler>();
 

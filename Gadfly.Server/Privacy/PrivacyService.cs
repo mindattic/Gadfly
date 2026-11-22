@@ -13,7 +13,7 @@ namespace Gadfly.Server.Privacy;
 /// Video is never stored anywhere in the platform. Every operation is explicit and logged; nothing
 /// relies on cascades.
 /// </summary>
-public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogger<PrivacyService> log)
+public sealed class PrivacyService(GadflyDbContext db, ITenantContext tenant, TimeProvider clock, ILogger<PrivacyService> log)
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
@@ -284,15 +284,50 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
             await db.ExamAssignments.Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId).ExecuteDeleteAsync(ct);
             await db.OrganizationMembers.Where(m => m.OrganizationId == organizationId && m.UserId == studentUserId)
                 .ExecuteUpdateAsync(u => u.SetProperty(m => m.IsActive, false), ct);
+            await EraseFromLogsAsync(organizationId, studentUserId, ids, ct);
             await tx.CommitAsync(ct);
         });
         log.LogWarning("Erased {Count} session(s) of user {UserId} in organization {OrganizationId}.", ids.Count, studentUserId, organizationId);
         return ids.Count;
     }
+
+    /// <summary>The audit action recorded for every erasure (GAD-T466).</summary>
+    public const string ErasedAction = "privacy.erased";
+
+    /// <summary>
+    /// The logs' part of an erasure (GAD-T466). The law asks for the logs to be kept (EU AI Act Arts. 19 and 26(6), at least six
+    /// months; GDPR Art. 5(2) to show the erasure happened), so no log row is deleted: each keeps who did what, to which
+    /// record, and when, while the detail that could carry the student's personal content goes. The session events already lost
+    /// theirs (<see cref="RedactResponseLedgerAsync"/>); here the student's other events in the organization (the ones they
+    /// acted in, and the ones about them) lose their before/after detail, the timings of the erased sessions lose their error
+    /// text (a provider's error can echo what was sent), and the erasure itself is recorded, holding no more than the number
+    /// of attempts erased. Whether keeping the pseudonymous ids is right is for counsel (docs/COMPLIANCE.md).
+    /// </summary>
+    private async Task EraseFromLogsAsync(Guid organizationId, Guid studentUserId, List<Guid> sessionIds, CancellationToken ct)
+    {
+        var key = studentUserId.ToString();
+        await db.AuditEvents.Where(a => a.OrganizationId == organizationId && (a.ActorUserId == studentUserId || a.EntityId == key))
+            .ExecuteUpdateAsync(u => u.SetProperty(a => a.BeforeJson, (string?)null).SetProperty(a => a.AfterJson, (string?)null), ct);
+        if (sessionIds.Count > 0)
+            await db.ApiCallTimings.Where(t => t.SessionId != null && sessionIds.Contains(t.SessionId.Value))
+                .ExecuteUpdateAsync(u => u.SetProperty(t => t.ErrorSummary, (string?)null), ct);
+        db.AuditEvents.Add(new AuditEvent
+        {
+            OrganizationId = organizationId,
+            ActorUserId = tenant.UserId,
+            ActorRole = tenant.Role,
+            Action = ErasedAction,
+            EntityType = "Student",
+            EntityId = key,
+            AfterJson = JsonSerializer.Serialize(new { attemptsErased = sessionIds.Count }),
+            At = clock.GetUtcNow(),
+        });
+        await db.SaveChangesAsync(ct);
+    }
 }
 
 /// <summary>The "privacy.retention" job: runs <see cref="PrivacyService.ApplyRetentionAsync"/>.</summary>
-public sealed class RetentionJob(PrivacyService privacy) : IJobHandler
+public sealed class RetentionJob(PrivacyService privacy, LogRetention logs) : IJobHandler
 {
     public const string JobKind = "privacy.retention";
     public string Kind => JobKind;
@@ -300,7 +335,9 @@ public sealed class RetentionJob(PrivacyService privacy) : IJobHandler
     public async Task RunAsync(Job job, IJobProgress progress, CancellationToken ct)
     {
         var n = await privacy.ApplyRetentionAsync(progress, ct);
-        await progress.ReportAsync(1, $"{n} session(s) redacted", ct);
+        // Logs follow their own period, at least six months, never the organization's transcript period (GAD-T466).
+        var pruned = await logs.PruneCallTimingsAsync(ct);
+        await progress.ReportAsync(1, $"{n} session(s) redacted" + (pruned > 0 ? $"; {pruned} old call timing row(s) removed" : ""), ct);
     }
 }
 
