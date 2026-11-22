@@ -93,6 +93,8 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
     {
         var turn = input.Turn;
         if (turn.Answer is null) throw new ArgumentException("The turn has no answer to judge.", nameof(input));
+        // A second-language speaker's words the recognizer was unsure of are named as possibly misheard (GAD-T598).
+        var unsure = ContentView ? UncertainWords.In(turn.Answer) : [];
         return ExamPrompts.Fill(_prompts[ExamPrompts.JudgeKey], new Dictionary<string, string?>
         {
             ["move"] = turn.Move.ToString(),
@@ -102,7 +104,7 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
             ["passages"] = PanelJson.Number(input.Passages),
             ["question"] = turn.Question,
             ["answer"] = ExamPrompts.Student(ContentView ? LanguageText.ContentView(turn.Answer.Text) : turn.Answer.Text),
-        });
+        }) + (unsure.Count > 0 ? UncertainWords.JudgeNote(unsure) : "");
     }
 
     /// <summary>Scores, agreement and the reviewer's summary from the judges' replies (each a JSON verdict; unusable ones are skipped).</summary>

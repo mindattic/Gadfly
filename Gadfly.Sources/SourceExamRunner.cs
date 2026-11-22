@@ -230,6 +230,18 @@ public sealed class SourceExamEngine
             return null;
         }
 
+        // A second-language speaker's word the recognizer was unsure of, in an answer not yet convincing (GAD-T598): the examiner
+        // asks about that one word before moving on, instead of the judges scoring a misheard word as wrong. Fixed text that only
+        // quotes the word as heard, so there is nothing to leak.
+        if (_subject.Language.IsNonNative && Session.Turns.LastOrDefault() is { } previous && UncertainWords.ToAsk(Session, previous) is { } word)
+        {
+            var check = UncertainWords.Question(word, _subject.Language.Exam);
+            var why = $"Word check (GAD-T598): speech recognition was unsure of \"{word}\" in the last answer, which was not yet convincing; the student is asked about the word instead of it being judged as misheard.";
+            Diagnostics?.Report($"[Clarify on {previous.ObjectiveKey ?? previous.ConceptId}: {why}]");
+            return Session.Ask(previous.ConceptId, MoveKind.Clarify, check, _clock.GetUtcNow(), reason: why, objectiveKey: previous.ObjectiveKey,
+                author: QuestionAuthorship.Fixed(UncertainWords.Source));
+        }
+
         var concept = _subject.Concept(decision.ConceptId!);
         var objective = Objectives.FirstOrDefault(o => o.Key == decision.ObjectiveKey);
         var rubric = _subject.Rubric(concept.Key);

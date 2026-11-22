@@ -204,6 +204,49 @@ public class KoreanExamTests
         Assert.That(engine.Session.OpenTurn.Rephrasings, Is.EqualTo(new[] { reworded }));
     }
 
+    // ------------------------------------------------------------------ uncertain words (GAD-T598)
+
+    private static Answer Spoken(string text, double unsureConfidence, params string[] unsure) => new()
+    {
+        Text = text, Mode = "voice", CompletedAt = EngineKit.T0.AddSeconds(30),
+        Words = text.Split(' ').Select((w, i) => new TimedWord(w, TimeSpan.FromSeconds(i), TimeSpan.FromSeconds(i + 0.5),
+            unsure.Contains(w) ? unsureConfidence : 0.95)).ToList(),
+    };
+
+    [Test]
+    public void UncertainWords_AreContentSizedWordsBelowTheConfidenceFloor()
+    {
+        var answer = Spoken("it uses the clorofil to um make sugar", 0.3, "clorofil", "um", "it");
+        Assert.That(UncertainWords.In(answer), Is.EqualTo(new[] { "clorofil" }));
+        Assert.That(UncertainWords.In(answer with { Mode = "text" }), Is.Empty);
+    }
+
+    [Test]
+    public async Task ASecondLanguageSpeaker_IsAskedAboutAnUnsureWord_InsteadOfItBeingMisjudged()
+    {
+        var engine = await StartAsync(EnglishByKoreanSpeaker);
+        await engine.NextQuestionAsync();
+        await engine.SubmitAnswerAsync(Spoken("it is the clorofil thing", 0.3, "clorofil"));
+        var check = await engine.NextQuestionAsync();
+        Assert.That(check!.Move, Is.EqualTo(MoveKind.Clarify));
+        Assert.That(check.QuestionAuthor!.How, Is.EqualTo(UncertainWords.Source));
+        Assert.That(check.Question, Does.Contain("clorofil"));
+
+        await engine.SubmitAnswerAsync(Spoken("chlorophyll the green pigment", 0.3, "pigment"));
+        var next = await engine.NextQuestionAsync();
+        Assert.That(next!.QuestionAuthor?.How, Is.Not.EqualTo(UncertainWords.Source), "never two word checks in a row");
+    }
+
+    [Test]
+    public async Task AnEnglishPrimaryStudent_IsNeverAskedAWordCheck()
+    {
+        var engine = await StartAsync(AttemptLanguage.Default);
+        await engine.NextQuestionAsync();
+        await engine.SubmitAnswerAsync(Spoken("it is the clorofil thing", 0.3, "clorofil"));
+        var next = await engine.NextQuestionAsync();
+        Assert.That(next!.QuestionAuthor?.How, Is.Not.EqualTo(UncertainWords.Source));
+    }
+
     [Test]
     public async Task AnEnglishSession_IsUnchanged_NoReviewFlagAndTheEnglishPromptSet()
     {
