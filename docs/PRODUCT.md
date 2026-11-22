@@ -144,7 +144,7 @@ Guides: [Reading integrity notes](guides/integrity-notes.md), [Eye contact and t
   the exact text shown) and the audit log. Transcripts are kept for the organization's retention period (90 days by
   default, configurable), then the student's words are removed and the outcome kept.
 - **Logs are kept at least six months**, separately from retention, as the EU AI Act asks of high-risk systems. Audit
-  rows are never deleted; outside-call timings are kept a year by default and never under 183 days.
+  rows are never deleted; outside-call timings are kept a year by default and never under 184 days.
 - **Export and erasure.** An admin (or the student, for export) can export everything held about a student as JSON,
   and an admin can erase a student's data. The erasure itself is recorded.
 - **Voice measurements are off by default in the EU.** Gadfly can measure differences in a student's pitch, loudness

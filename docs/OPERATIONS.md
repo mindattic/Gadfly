@@ -66,7 +66,7 @@ admin guide's [System status and jobs](guides/admin-system-status.md) page descr
 | App Service application log (`LogFiles/Application`, and the **Log stream** in the portal or `az webapp log tail -g MyApps -n mindattic-gadfly`) | Everything the app logs at Information and above (EF Core commands and ASP.NET Core at Warning) | Files of up to 50 MB, the 10 newest kept. Application logging to the file system must be on for the app: `az webapp log config -g MyApps -n mindattic-gadfly --application-logging filesystem --level information`. |
 | MindAttic.Log's own database | The same structured log, in a SQLite file under the instance's MindAttic Vault folder (`Logging\Gadfly.Server\MindAttic.Log.db`) | Lives on the instance; not a backup. |
 | System status, *Recent errors* | The last 50 errors since the server started | Memory only. |
-| `gadfly.ApiCallTimings` | One row per outside call on a live exam (panel steps, the examiner's voice) | Deleted by the daily `privacy.retention` job once older than `Gadfly:Logs:CallTimingDays` (default 365). No setting can make it shorter than 183 days. |
+| `gadfly.ApiCallTimings` | One row per outside call on a live exam (panel steps, the examiner's voice) | Deleted by the daily `privacy.retention` job once older than `Gadfly:Logs:CallTimingDays` (default 365). No setting can make it shorter than 184 days. |
 | `gadfly.AuditEvents` | Every audited change, refusal, export and download | **Never deleted.** Retention and erasure clear the student's words and grades from an event's detail and mark it *Redacted*; the row stays. |
 
 The six-month floor on both logs is GAD-T466's reading of the EU AI Act's log-keeping duties (Arts. 12, 19 and 26(6));

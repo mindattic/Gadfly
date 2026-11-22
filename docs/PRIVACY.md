@@ -22,7 +22,7 @@ human grades and an authorized person approves before a student sees a result (D
 | Research choice (agreed, declined or withdrew; time; notice version; SHA-256 of the exact text shown) | Proof of the separate, optional research consent (GAD-T452) | Until the student is erased; every choice is kept, the latest counts |
 | Study arm of an assignment | The study's condition label (GAD-T452) | With the assignment |
 | Audit log (who did what, to which record, when; for answer events also the words, for grading events the grades) | Accountability; the EU AI Act's record-keeping (Arts. 12, 19, 26(6)) | **The row is never deleted.** The student's words in it go with the transcript; an erasure clears the detail of every event of that student (see below) |
-| Outside-call timings (call name, start, duration, success, error text; session and turn ids, no content) | Diagnosing slow exams; the AI Act logs | `Gadfly:Logs:CallTimingDays`, a year by default and **never less than 183 days**, whatever the organization's retention period |
+| Outside-call timings (call name, start, duration, success, error text; session and turn ids, no content) | Diagnosing slow exams; the AI Act logs | `Gadfly:Logs:CallTimingDays`, a year by default and **never less than 184 days**, whatever the organization's retention period |
 
 Redaction (`privacy.retention`, daily) keeps the outcome and removes what the student said. Export
 (`GET /privacy/export/{userId}`, the student or an org admin) returns everything held about a student in
@@ -38,7 +38,7 @@ and 26(6)), so the two are kept apart:
 
 - **Retention** (`privacy.retention`) removes the words copied into answer and clarification audit events with the
   transcript, but deletes no audit row and no timing row. The same daily job deletes call-timing rows only once they
-  are older than `Gadfly:Logs:CallTimingDays` (365 by default; a lower setting is raised to 183 days). No job deletes
+  are older than `Gadfly:Logs:CallTimingDays` (365 by default; a lower setting is raised to 184 days). No job deletes
   audit rows.
 - **Erasure** still removes the student's personal data. Their log rows stay, because the law needs the events kept,
   but without the personal content: every audit event the student acted in or that is about them loses its

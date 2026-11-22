@@ -210,7 +210,7 @@ server with the matching seeder (`-Password` chooses the account password). The 
 | `Gadfly:Voice:Mode` | `off`, `mock` or `live`; the other voice settings are in docs/VOICE.md. |
 | `Gadfly:Demo:Password`, `Gadfly:Demo:ApiKey` | Chosen password and API key for the seeded demo accounts. |
 | `Gadfly:AdminDesk:Enabled` | The admin desk (`/admin/desk`) for Owners and Admins; off by default in Production. |
-| `Gadfly:Logs:CallTimingDays` | How long outside-call timings are kept: a year by default, never under 183 days. |
+| `Gadfly:Logs:CallTimingDays` | How long outside-call timings are kept: a year by default, never under 184 days. |
 
 Uploaded files are kept under `%APPDATA%\MindAttic\Gadfly\uploads\<organization>\<collection>\`. Logs go
 to MindAttic.Log's database for `Gadfly.Server`. Health is at `/healthz` and readiness at `/healthz/ready`;

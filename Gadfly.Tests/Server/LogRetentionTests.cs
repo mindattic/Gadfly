@@ -18,7 +18,7 @@ public class LogRetentionPolicyTests
     [TestCase(-5, 365)]
     [TestCase(7, LogRetentionPolicy.MinimumDays)]
     [TestCase(90, LogRetentionPolicy.MinimumDays)]
-    [TestCase(183, 183)]
+    [TestCase(184, 184)]
     [TestCase(730, 730)]
     public void CallTimingDays_NeverFallsBelowSixMonths(int? configured, int expected) =>
         Assert.That(LogRetentionPolicy.CallTimingDays(configured), Is.EqualTo(expected));
@@ -30,8 +30,8 @@ public class LogRetentionPolicyTests
     [Test]
     public void MayDelete_OnlyRowsOlderThanThePeriod()
     {
-        Assert.That(LogRetentionPolicy.MayDelete(Now.AddDays(-182), Now, 7), Is.False, "a 7-day setting cannot shorten a log");
-        Assert.That(LogRetentionPolicy.MayDelete(Now.AddDays(-184), Now, 7), Is.True);
+        Assert.That(LogRetentionPolicy.MayDelete(Now.AddDays(-183), Now, 7), Is.False, "a 7-day setting cannot shorten a log");
+        Assert.That(LogRetentionPolicy.MayDelete(Now.AddDays(-185), Now, 7), Is.True);
         Assert.That(LogRetentionPolicy.MayDelete(Now.AddDays(-300), Now, null), Is.False, "a year by default");
         Assert.That(LogRetentionPolicy.MayDelete(Now.AddDays(-366), Now, null), Is.True);
     }

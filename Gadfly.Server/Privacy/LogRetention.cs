@@ -22,8 +22,8 @@ namespace Gadfly.Server.Privacy;
 /// </summary>
 public static class LogRetentionPolicy
 {
-    /// <summary>The floor: six months, counted generously (183 days), so no setting can make a log shorter.</summary>
-    public const int MinimumDays = 183;
+    /// <summary>The floor: six months, counted generously (184 days, the longest six calendar months), so no setting can make a log shorter.</summary>
+    public const int MinimumDays = 184;
 
     /// <summary>How long call timings are kept when <c>Gadfly:Logs:CallTimingDays</c> is not set: a year.</summary>
     public const int DefaultCallTimingDays = 365;
