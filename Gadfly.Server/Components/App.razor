@@ -18,6 +18,17 @@
 </head>
 <body>
     <Routes @rendermode="PageRenderMode" />
+    @* A dropped connection shows a clear status instead of a frozen or blank page (GAD-T306): Blazor toggles this
+       element's class as the connection is lost, retries and comes back (app.css styles each state). The button
+       retries once; if that fails, or the circuit is gone for good (the server restarted), it reloads the page,
+       which every live page recovers from by re-syncing to the server's current state. *@
+    <div id="components-reconnect-modal" class="components-reconnect-hide">
+        <div class="reconnect-box" role="alert">
+            <p class="reconnect-message"></p>
+            <button type="button" class="reconnect-retry">Try again</button>
+        </div>
+    </div>
+    <script nonce="@CspNonce">(function(){var m=document.getElementById("components-reconnect-modal");if(!m)return;var b=m.querySelector(".reconnect-retry");if(b)b.addEventListener("click",function(){if(window.Blazor&&typeof window.Blazor.reconnect==="function")window.Blazor.reconnect().then(function(ok){if(!ok)location.reload();});else location.reload();});new MutationObserver(function(){if(m.classList.contains("components-reconnect-rejected"))setTimeout(function(){location.reload();},1500);}).observe(m,{attributes:true,attributeFilter:["class"]});})();</script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 </html>

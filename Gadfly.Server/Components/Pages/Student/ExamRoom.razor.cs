@@ -15,6 +15,29 @@ namespace Gadfly.Server.Components.Pages.Student;
 public partial class ExamRoom
 {
     [Inject] private VoiceSettings VoiceConfig { get; set; } = default!;
+    [Inject] private Sessions.CircuitReconnectSignal Reconnect { get; set; } = default!;
+
+    private IDisposable? reconnectSubscription;
+
+    /// <summary>Starts listening for this circuit's own connection coming back after being lost (GAD-T306). Called once,
+    /// from the room's first render; stopped with the room (<see cref="DisposeReconnectWatch"/>).</summary>
+    private void WatchReconnect() => reconnectSubscription ??= Reconnect.Subscribe(OnReconnectedAsync);
+
+    private void DisposeReconnectWatch() => reconnectSubscription?.Dispose();
+
+    /// <summary>
+    /// The page's own connection to the server was lost and has just come back (GAD-T306): re-sync from the server's
+    /// current state (the same path a reload takes) rather than carrying on from whatever this page last knew, which
+    /// may be stale by now (a staff pause or time change, or the exam ending, while the connection was down). Runs on
+    /// the circuit handler's own thread, not a render, so every touch of the room's state is marshalled through
+    /// <c>InvokeAsync</c>.
+    /// </summary>
+    private Task OnReconnectedAsync(CancellationToken ct) => InvokeAsync(async () =>
+    {
+        if (stop.IsCancellationRequested || phase is Phase.NotFound or Phase.Ended) return;
+        await LoadAsync();
+        StateHasChanged();
+    });
 
     /// <summary>The talking examiner is switched on for this server. Without it a spoken exam can't run (there is no typed mode).</summary>
     private bool voiceAvailable;

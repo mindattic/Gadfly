@@ -72,6 +72,20 @@ button.link { background: none; color: var(--accent); padding: 0; text-decoratio
 .help-link-mark { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border: 1.5px solid currentColor; border-radius: 50%; font-size: .8rem; line-height: 1; }
 .help-link:hover .help-link-mark, .help-link:focus-visible .help-link-mark { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .help-link-label { font-weight: 500; }
+
+/* A lost connection (GAD-T306): Blazor's own reconnect element (id fixed by the framework), toggled through these
+   classes as the connection drops, retries and comes back, so a dropped connection never looks like a frozen or
+   blank page. The text per state lives in CSS so no script has to keep it in sync with the class. */
+#components-reconnect-modal { display: none; position: fixed; inset: 0; z-index: 2000; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .45); }
+#components-reconnect-modal.components-reconnect-show,
+#components-reconnect-modal.components-reconnect-failed,
+#components-reconnect-modal.components-reconnect-rejected { display: flex; }
+.reconnect-box { width: min(22rem, 100%); background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem 1.4rem; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+.reconnect-message::before { content: "Reconnecting\2026"; }
+#components-reconnect-modal.components-reconnect-failed .reconnect-message::before { content: "That's taking too long. Check your internet connection, then try again."; }
+#components-reconnect-modal.components-reconnect-rejected .reconnect-message::before { content: "This page needs to reload to continue."; }
+.reconnect-retry { margin-top: .75rem; }
+#components-reconnect-modal.components-reconnect-show .reconnect-retry { display: none; }
 @media (max-width: 640px) { .who { margin-left: 0; width: 100%; } }
 /* A plain data table scrolls sideways rather than squeezing illegibly or forcing the whole page to scroll (GAD-T367):
    a tablet in portrait (commonly 768-820px) is as cramped as a phone for a many-column grid. */
