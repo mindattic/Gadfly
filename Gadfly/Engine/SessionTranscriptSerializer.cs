@@ -38,6 +38,9 @@ public static class SessionTranscriptSerializer
             ClockHeld = session.ClockHeld ? true : null,
             PausedTotal = session.PausedTotal > TimeSpan.Zero ? session.PausedTotal : null,
             PausedSince = session.PausedSince,
+            ExtraTime = session.ExtraTime > TimeSpan.Zero ? session.ExtraTime : null,
+            HeldTotal = session.HeldTotal > TimeSpan.Zero ? session.HeldTotal : null,
+            HeldSince = session.HeldSince,
             Turns = [.. session.Turns],
             Mastery = [.. session.Mastery.Values.OrderBy(m => m.ConceptId, StringComparer.Ordinal)],
         };
@@ -57,7 +60,7 @@ public static class SessionTranscriptSerializer
                 throw new JsonException($"Turn {i} is recorded with index {dto.Turns[i].Index}.");
         return new SocraticSession(dto.Id, dto.SubjectId, dto.Policy, dto.PromptSetId, dto.PromptSetVersion,
             dto.PromptSetSha256, dto.StartedAt, dto.EndedAt, dto.EndReason, dto.Turns, dto.Mastery, dto.ClockHeld == true,
-            dto.PausedTotal ?? TimeSpan.Zero, dto.PausedSince);
+            dto.PausedTotal ?? TimeSpan.Zero, dto.PausedSince, dto.ExtraTime ?? TimeSpan.Zero, dto.HeldTotal ?? TimeSpan.Zero, dto.HeldSince);
     }
 
     private sealed class Dto
@@ -78,6 +81,12 @@ public static class SessionTranscriptSerializer
         public TimeSpan? PausedTotal { get; set; }
         /// <summary>When the open pause began (GAD-T263); absent while the clock runs.</summary>
         public DateTimeOffset? PausedSince { get; set; }
+        /// <summary>Extra time added by staff (GAD-T299); absent means none.</summary>
+        public TimeSpan? ExtraTime { get; set; }
+        /// <summary>Time added back from ended staff pauses (GAD-T299); absent means none.</summary>
+        public TimeSpan? HeldTotal { get; set; }
+        /// <summary>When the open staff pause began (GAD-T299); absent unless staff paused the exam.</summary>
+        public DateTimeOffset? HeldSince { get; set; }
         public List<Turn> Turns { get; set; } = [];
         public List<MasterySnapshot> Mastery { get; set; } = [];
     }

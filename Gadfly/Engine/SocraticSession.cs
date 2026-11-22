@@ -29,9 +29,13 @@ public sealed class SocraticSession
     internal SocraticSession(Guid id, string subjectId, SessionPolicy policy, string promptSetId, int promptSetVersion,
         string promptSetSha256, DateTimeOffset startedAt, DateTimeOffset? endedAt, EndReason endReason,
         IEnumerable<Turn> turns, IEnumerable<MasterySnapshot> mastery, bool clockHeld = false,
-        TimeSpan pausedTotal = default, DateTimeOffset? pausedSince = null)
+        TimeSpan pausedTotal = default, DateTimeOffset? pausedSince = null,
+        TimeSpan extraTime = default, TimeSpan heldTotal = default, DateTimeOffset? heldSince = null)
     {
         ClockHeld = clockHeld;
+        ExtraTime = extraTime < TimeSpan.Zero ? TimeSpan.Zero : extraTime > MaxExtraTime ? MaxExtraTime : extraTime;
+        HeldTotal = heldTotal < TimeSpan.Zero ? TimeSpan.Zero : heldTotal;
+        HeldSince = heldSince;
         PausedTotal = pausedTotal < TimeSpan.Zero ? TimeSpan.Zero : pausedTotal;
         PausedSince = pausedSince;
         Id = id;
@@ -136,7 +140,7 @@ public sealed class SocraticSession
     /// </summary>
     public bool PauseClock(DateTimeOffset at)
     {
-        if (IsEnded || ClockHeld || PausedSince is not null || at < StartedAt) return false;
+        if (IsEnded || ClockHeld || PausedSince is not null || HeldSince is not null || at < StartedAt) return false;
         if (PausedTotal >= PauseAllowance) return false;
         PausedSince = at;
         return true;
@@ -150,6 +154,78 @@ public sealed class SocraticSession
         PausedSince = null;
         return true;
     }
+
+    // ------------------------------------------------------------------ staff time changes (GAD-T299)
+
+    /// <summary>The most extra time staff can add to one exam in all (GAD-T299).</summary>
+    public static readonly TimeSpan MaxExtraTime = TimeSpan.FromHours(2);
+
+    /// <summary>The most time one exam can stand still under staff pauses in all; past it the clock counts down again (GAD-T299).</summary>
+    public static readonly TimeSpan MaxHeldTime = TimeSpan.FromHours(4);
+
+    /// <summary>Extra time added by staff during the exam (GAD-T299), on top of the budget and any accommodation multiplier.</summary>
+    public TimeSpan ExtraTime { get; private set; }
+
+    /// <summary>
+    /// Adds <paramref name="by"/> to the exam's time, up to <see cref="MaxExtraTime"/> in all. Returns the time actually added
+    /// (zero once the cap is reached). Only while the exam runs.
+    /// </summary>
+    public TimeSpan ExtendTime(TimeSpan by)
+    {
+        EnsureRunning();
+        if (by <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(by), "Extra time must be positive.");
+        var room = MaxExtraTime - ExtraTime;
+        var applied = by < room ? by : room;
+        if (applied <= TimeSpan.Zero) return TimeSpan.Zero;
+        ExtraTime += applied;
+        return applied;
+    }
+
+    /// <summary>When a staff pause began (GAD-T299), or null when staff have not paused the exam.</summary>
+    public DateTimeOffset? HeldSince { get; private set; }
+
+    /// <summary>Time added back from staff pauses that have ended, already capped at <see cref="MaxHeldTime"/>.</summary>
+    public TimeSpan HeldTotal { get; private set; }
+
+    /// <summary>True while staff have paused the exam: the clock stands still and answers wait.</summary>
+    public bool IsHeld => HeldSince is not null;
+
+    /// <summary>Time added back for staff pauses at <paramref name="now"/>: ended pauses plus the open one, capped at <see cref="MaxHeldTime"/>.</summary>
+    public TimeSpan HeldCredit(DateTimeOffset now)
+    {
+        var total = HeldTotal;
+        if (HeldSince is { } since && now > since) total += now - since;
+        return total > MaxHeldTime ? MaxHeldTime : total;
+    }
+
+    /// <summary>
+    /// Staff pause the exam at <paramref name="at"/> (GAD-T299). Unlike a device pause this is not limited by the pause allowance and is
+    /// not ended by the student's activity; it ends with <see cref="Release"/>. An open device pause ends first, so the two never overlap.
+    /// False when nothing changed (ended, not started yet, already paused by staff).
+    /// </summary>
+    public bool Hold(DateTimeOffset at)
+    {
+        if (IsEnded || ClockHeld || HeldSince is not null || at < StartedAt) return false;
+        if (PausedSince is not null) ResumeClock(at);
+        HeldSince = at;
+        return true;
+    }
+
+    /// <summary>Ends a staff pause at <paramref name="at"/>, adding the paused time back. False when the exam was not paused by staff.</summary>
+    public bool Release(DateTimeOffset at)
+    {
+        if (HeldSince is null) return false;
+        HeldTotal = HeldCredit(at < HeldSince.Value ? HeldSince.Value : at);
+        HeldSince = null;
+        return true;
+    }
+
+    /// <summary>
+    /// When time runs out, as things stand at <paramref name="now"/>: the start, the budget (with any accommodation), staff extra time,
+    /// and the device-pause and staff-pause time added back.
+    /// </summary>
+    public DateTimeOffset Deadline(DateTimeOffset now) =>
+        StartedAt + Policy.EffectiveTimeBudget + ExtraTime + PausedCredit(now) + HeldCredit(now);
 
     public DateTimeOffset? EndedAt { get; private set; }
     public EndReason EndReason { get; private set; } = EndReason.None;
@@ -170,8 +246,9 @@ public sealed class SocraticSession
     /// <summary>Time left in the budget (with any accommodation multiplier and paused time added back) at <paramref name="now"/> (never negative).</summary>
     public TimeSpan Remaining(DateTimeOffset now)
     {
-        // Paused time (a lost microphone or camera, GAD-T263) is added back, up to the pause allowance.
-        var left = Policy.EffectiveTimeBudget - (now - StartedAt) + PausedCredit(now);
+        // Paused time (a lost microphone or camera, GAD-T263) is added back, up to the pause allowance; staff extra time and staff
+        // pauses (GAD-T299) are added too.
+        var left = Deadline(now) - now;
         return left < TimeSpan.Zero ? TimeSpan.Zero : left;
     }
 
@@ -250,6 +327,7 @@ public sealed class SocraticSession
         EnsureRunning();
         if (reason == EndReason.None) throw new ArgumentException("Give a real end reason.", nameof(reason));
         if (PausedSince is not null) ResumeClock(endedAt);
+        if (HeldSince is not null) Release(endedAt);
         EndReason = reason;
         EndedAt = endedAt;
     }
