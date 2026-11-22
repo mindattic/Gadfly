@@ -37,7 +37,7 @@ public static class ExaminerFiller
 
     /// <summary>
     /// The acknowledgement she gives the moment an answer is in (GAD-T496), the backchannel a listener gives when someone stops
-    /// talking, so the turn never ends in dead air. Receipt only, never assessment: no "good", "right", "exactly" or "correct",
+    /// talking, so the turn never ends in dead air. Receipt only, never assessment: no "good", "right" (nor "alright", which can sound like "that's right": GAD-T519), "exactly" or "correct",
     /// which would leak how the answer was judged; the same few words follow a strong answer and a weak one alike. Offered to the
     /// browser ahead of time (with each question), so it plays without a round trip; prepared ahead in the phrase cache with the
     /// other fixed lines, per examiner voice.
@@ -48,7 +48,6 @@ public static class ExaminerFiller
         "Okay.",
         "Mm-hm.",
         "I see.",
-        "Alright.",
         "Okay, thank you.",
         "Mm. Okay.",
         "Thank you.",
