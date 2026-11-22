@@ -75,7 +75,7 @@
     @switch (phase)
     {
         case Phase.Loading:
-            <p class="hint">Loading your exam…</p>
+            <p class="hint" role="status">Loading your exam…</p>
             break;
 
         case Phase.NotFound:
@@ -248,7 +248,9 @@
                 }
                 else
                 {
-                    <div class="notice" role="alertdialog" aria-labelledby="finish-q">
+                    @* Moves focus here when it opens (GAD-T365): nothing else marks it modal (the page behind still
+                       scrolls and takes clicks), so a screen reader needs to be put here directly to notice it at all. *@
+                    <div class="notice" role="alertdialog" aria-labelledby="finish-q" tabindex="-1" @ref="confirmDialogRef">
                         <p id="finish-q"><strong>Finish the exam now?</strong> What you've answered so far is submitted and this attempt is used up. You can't come back to it.</p>
                         <div class="actions">
                             <button type="button" @onclick="FinishAsync">Yes, finish now</button>
@@ -328,13 +330,30 @@
         }
     }
 
+    private ElementReference confirmDialogRef;
+    private bool confirmDialogFocused;
+
     // Load only once interactive: the first step can call the panel, which must not run during prerender.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
-        await LoadAsync();
-        StateHasChanged();
-        _ = TickAsync();
+        if (firstRender)
+        {
+            await LoadAsync();
+            StateHasChanged();
+            _ = TickAsync();
+        }
+        // The "Finish the exam now?" prompt (GAD-T365): focus moves to it the moment it opens, once, so a screen
+        // reader user is told it's there instead of having to find it; it resets so the next opening focuses again.
+        if (confirmFinish && !confirmDialogFocused)
+        {
+            confirmDialogFocused = true;
+            try { await confirmDialogRef.FocusAsync(); }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or ObjectDisposedException) { }
+        }
+        else if (!confirmFinish)
+        {
+            confirmDialogFocused = false;
+        }
     }
 
     private async Task LoadAsync()
