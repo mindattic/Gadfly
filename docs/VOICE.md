@@ -62,6 +62,13 @@ their attempt or leave them staring at a frozen page.
   armed by it, so nothing is sent until the student presses **Done answering** (or starts over with **Clear and
   answer again**) themselves. A different question, a different session, or a draft older than 30 minutes is never
   restored.
+- **A staff pause closes the microphone (GAD-T471).** When staff pause the exam from the live monitor (GAD-T299), the server
+  pushes it to the room through the live feed (`StaffNoticeBanner`, which shows "Your exam is paused"), and the exam room
+  follows it: `VoiceRoom` gets `CanAnswer = false` with `HeldByStaff`, and `voice-room.js` closes the microphone gate, drops the
+  end-of-answer countdown (nothing is sent while answers would be refused) and says "Your instructor paused the exam…". Speech
+  in progress is committed so its words land in "What I heard"; everything already said stays there and in the reload draft.
+  On release the microphone opens again for the same question with those words still in place, the answer's listening start
+  and response delay unchanged, and nothing is sent until the student carries on and pauses, or presses **Done answering**.
 - **Bounded waits, with a plain retry.** Every hub connect and its first call (`voice-room.js`, `CONNECT_TIMEOUT_MS`,
   15 s) and the exam room's own JS startup (`VoiceRoom.OnAfterRenderAsync`, 20 s) are bounded, the same house style as
   the get-ready page's checks (`StartExam.razor`, GAD-T288): past the bound, the student sees "That's taking too

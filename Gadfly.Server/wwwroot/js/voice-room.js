@@ -498,7 +498,7 @@ export function speak(what, cacheable, style, turn) {
         s.speakToken = null;
         s.speaking = false;
         s.ours = null;
-        if (s.allowed) openMic(); else status("Waiting.");
+        if (s.allowed) openMic(); else status(s.held ? HELD_TEXT : "Waiting.");
     };
     s.speaking = true;
     // No eye-contact remark may start from here on (examiner-gaze.js only speaks one to a listening examiner): Repeat the question
@@ -699,7 +699,7 @@ function sayFiller(s, what) {
             // A question waiting on this line takes it from here (speak()); otherwise go back to what the room was doing.
             if (S !== s || !s.running || s.speakToken || s.speaking) return;
             if (s.allowed) { if (s.gate) openMic(); }
-            else { if (s.avatar) s.avatar.state = "thinking"; status("Thinking about your answer…"); }
+            else { if (s.avatar) s.avatar.state = s.held ? "idle" : "thinking"; status(waitingText(s)); }
         });
     s.fillPlaying = playing;
 }
@@ -710,18 +710,55 @@ export function stopSpeaking() {
     if (S && S.presenter) S.presenter.stopBrowser();
 }
 
-/** Whether an answer may be given right now (a question or a clarification is waiting, nothing is being judged). */
-export function setAllowed(allowed) {
+/**
+ * Whether an answer may be given right now (a question or a clarification is waiting, nothing is being judged). <held> says the
+ * answer is not wanted because staff paused the exam from the live monitor (GAD-T471): the microphone closes the same way, the
+ * status line says why, and on release the microphone opens again with the words already said still there.
+ */
+export function setAllowed(allowed, held) {
     const s = S;
     if (!s) return;
     const was = s.allowed;
     s.allowed = !!allowed;
+    s.held = !s.allowed && !!held;
     if (s.allowed) cancelFill(s);
     // A filler line still playing (GAD-T290) keeps the microphone shut until it ends; its end opens it if an answer is wanted.
     if (!s.running || s.speaking || s.fillPlaying) return;
     if (s.allowed && was && !s.gate) return;
     if (s.allowed) openMic();
-    else { s.gate = true; clearCue(); stopDelayTimer(s); if (s.avatar) s.avatar.state = "thinking"; status("Thinking about your answer…"); }
+    else closeGate(s);
+}
+
+/** What the status line says while staff hold the exam (GAD-T471). */
+const HELD_TEXT = "Your instructor paused the exam. Anything you've already said is kept; you can carry on once they resume it.";
+
+/** The status line while no answer is wanted: the judging wait, or a staff pause (GAD-T471). */
+function waitingText(s) {
+    return s.held ? HELD_TEXT : "Thinking about your answer…";
+}
+
+/**
+ * No answer is wanted any more (a step is running, or staff paused the exam): the microphone gate closes and the end-of-answer
+ * cue is dropped, so nothing is sent. The words already said stay in "What I heard" and in the reload draft (GAD-T471): speech
+ * still in progress is committed now, since the gate would otherwise swallow its final, and that one final is let through (onFinal).
+ */
+function closeGate(s) {
+    const wasListening = !s.gate;
+    s.gate = true;
+    clearCue();
+    stopDelayTimer(s);
+    if (wasListening) {
+        s.lastSpeechEndAt = null;   // the pause is not the student's own
+        s.partial = "";
+        s.displayPartial = "";
+        talking(s, false);
+        if (s.inSpeech && s.speechConn) { s.remarkCommitPending = true; sendCommit(s); }
+        drawTranscript();
+    }
+    // Held by staff she simply waits ("idle"); otherwise she is thinking about the answer. Neither is "listening", so the eye-contact
+    // check neither fades the screen nor speaks a remark meanwhile.
+    if (s.avatar) s.avatar.state = s.held ? "idle" : "thinking";
+    status(waitingText(s));
 }
 
 /** Keeps the newest transcript line in view (the list itself is rendered by VoiceRoom). */
@@ -792,13 +829,19 @@ function openMic() {
         return;
     }
     if (!s || !s.mic || !s.speechConn) return;
+    // An answer already under way (the microphone closed under it for a staff pause, GAD-T471): it carries on where it was, so its
+    // listening start and response delay stay those of the question, and nothing is sent until the student finishes as usual.
+    const resuming = s.segments.length > 0 || s.startedAtUnixMs !== null;
     s.gate = false;
+    s.held = false;
     s.lastSpeechEndAt = null;   // the wait before an answer starts is thinking time, not a pause within it
-    s.listeningStartMs = s.mic.currentTimeMs;
-    startDelay(s);
-    s.speechConn.send("MarkListening", s.listeningStartMs).catch(() => { });
+    if (!resuming) {
+        s.listeningStartMs = s.mic.currentTimeMs;
+        startDelay(s);
+        s.speechConn.send("MarkListening", s.listeningStartMs).catch(() => { });
+    }
     if (s.avatar) s.avatar.state = "listening";
-    status(listenText(s));
+    status(resuming && !s.recovered ? "You can carry on answering. What you'd already said is kept: keep talking, or press Done answering." : listenText(s));
     if (!s.draftChecked) { s.draftChecked = true; tryRestoreDraft(s); }
 }
 
@@ -889,7 +932,7 @@ function listenText(s) {
 function roomStatus(s) {
     if (s.speaking || s.speakToken || s.remarkHold || s.fillPlaying) return "The examiner is speaking…";
     if (!s.gate) return listenText(s);
-    if (!s.allowed) return "Thinking about your answer…";
+    if (!s.allowed) return waitingText(s);
     return "The examiner is ready.";
 }
 

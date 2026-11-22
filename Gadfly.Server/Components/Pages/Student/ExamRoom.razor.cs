@@ -99,8 +99,17 @@ public partial class ExamRoom
     /// An answer may be given by voice when a question is waiting, or a meaning clarification left over from before GAD-T405 is (it
     /// is answered out loud). A spoken answer is never read back, said again or corrected (GAD-T405).
     /// </summary>
-    private bool VoiceCanAnswer => phase == Phase.Answering && !busy && step is { } s
+    private bool VoiceCanAnswer => phase == Phase.Answering && !busy && !staffHeld && step is { } s
         && (s.Verification is null || s.Verification.Kind == ResponseLedger.MeaningKind);
+
+    /// <summary>
+    /// Staff have paused the exam from the live monitor (GAD-T299), as <see cref="StaffNoticeBanner"/> learns it from the live feed
+    /// (GAD-T471). The server refuses answers meanwhile, so the microphone closes (keeping what was already said) instead of letting
+    /// the end-of-answer silence send words that would be turned away; it opens again on release.
+    /// </summary>
+    private bool staffHeld;
+
+    private void OnStaffHeld(bool held) => staffHeld = held;
 
     /// <summary>
     /// Takes only the server's clock state from <paramref name="next"/>: keep whatever this page shows now (a newer step may have

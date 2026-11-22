@@ -52,6 +52,11 @@
 
 @code {
     [Parameter, EditorRequired] public Guid SessionId { get; set; }
+    /// <summary>
+    /// Staff paused (true) or resumed (false) the exam from the live monitor, as pushed to this room (GAD-T471): the exam room closes
+    /// the microphone while held, so nothing is captured or sent while answers are refused, and opens it again on release.
+    /// </summary>
+    [Parameter] public EventCallback<bool> HeldChanged { get; set; }
 
     private bool owned, held, ended;
     private StaffNotice? notice;
@@ -84,6 +89,7 @@
         }
         subscription = LiveSessionFeed.Shared.Subscribe(OnFeed);
         room = LiveSessionFeed.Shared.RoomOpened(org, SessionId, Clock.GetUtcNow());
+        if (held) await HeldChanged.InvokeAsync(true);   // already paused when the room opened (GAD-T471)
     }
 
     private void OnFeed(LiveSessionEvent e)
@@ -96,7 +102,9 @@
             if (e.Kind == LiveEventKind.StaffAction && e.Text is { } said) message = said;
             if (e.Snapshot is { } snap)
             {
+                var wasHeld = held;
                 held = snap.HeldByStaff;
+                if (held != wasHeld) await HeldChanged.InvokeAsync(held);
                 if (snap.State == SessionState.Ended && e.Kind == LiveEventKind.StaffAction)
                 {
                     ended = true;

@@ -173,6 +173,11 @@
     [Parameter] public Guid? PromptId { get; set; }
     /// <summary>True while an answer may be given by voice (a question or a request is waiting and nothing is being judged).</summary>
     [Parameter] public bool CanAnswer { get; set; }
+    /// <summary>
+    /// Staff paused the exam from the live monitor (GAD-T471): <see cref="CanAnswer"/> is false and the browser says why, keeps the
+    /// words already said, and opens the microphone again once it is released.
+    /// </summary>
+    [Parameter] public bool HeldByStaff { get; set; }
     /// <summary>True while voice mode is on and typing the main answer is off.</summary>
     [Parameter] public bool Active { get; set; }
     [Parameter] public EventCallback<bool> ActiveChanged { get; set; }
@@ -196,7 +201,7 @@
     /// <summary>The browser's own speech is reading her lines because the voice provider failed (GAD-T328).</summary>
     private bool browserVoice;
     private string? spokenKey;
-    private bool lastAllowed;
+    private bool lastAllowed, lastHeld;
     /// <summary>The last <see cref="Pondering"/> sent to the browser, and the last filler line said (the next one differs).</summary>
     private bool pondered;
     private string? lastFiller;
@@ -439,10 +444,11 @@
                 await OnExaminerSpeaks.InvokeAsync();
                 await SpeakAsync(text);
             }
-            if (spoke || CanAnswer != lastAllowed)
+            if (spoke || CanAnswer != lastAllowed || HeldByStaff != lastHeld)
             {
                 lastAllowed = CanAnswer;
-                await module!.InvokeVoidAsync("setAllowed", stop.Token, CanAnswer);
+                lastHeld = HeldByStaff;
+                await module!.InvokeVoidAsync("setAllowed", stop.Token, CanAnswer, HeldByStaff);
             }
             if (Pondering != pondered)
             {
@@ -519,6 +525,7 @@
     {
         spokenKey = null;
         lastAllowed = false;
+        lastHeld = false;
         pondered = false;
         await SetStateAsync(VoiceState.On);
         await SyncAsync();
@@ -662,8 +669,9 @@
         if (module is null || state != VoiceState.On || !CanAnswer) return;
         try
         {
-            await module.InvokeVoidAsync("setAllowed", stop.Token, true);
+            await module.InvokeVoidAsync("setAllowed", stop.Token, true, false);
             lastAllowed = true;
+            lastHeld = false;
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
         {

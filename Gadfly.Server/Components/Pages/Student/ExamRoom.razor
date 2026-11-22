@@ -27,7 +27,7 @@
         @* The camera, eye-contact and integrity lines share the title's row (GAD-T416), each one short line until opened. *@
         <div class="exam-bar">
             <WebcamIntegrity SessionId="SessionId" />
-            <StaffNoticeBanner SessionId="SessionId" />
+            <StaffNoticeBanner SessionId="SessionId" HeldChanged="OnStaffHeld" />
 
             @if (integrity is { Level: not IntegrityLevel.Off } watched && phase is Phase.Answering or Phase.Thinking)
             {
@@ -63,7 +63,7 @@
             @* The talking examiner (GAD-T53, mandatory since GAD-T239): kept outside the phase switch so the microphone, the camera and
                the examiner persist from question to question. *@
             <VoiceRoom SessionId="SessionId" TurnIndex="step?.TurnIndex" Question="@step?.Question" Move="@step?.Move" Prompt="@VoicePrompt"
-                       PromptId="step?.Verification?.ResponseId" CanAnswer="VoiceCanAnswer" Active="voiceOn" ActiveChanged="OnVoiceActive"
+                       PromptId="step?.Verification?.ResponseId" CanAnswer="VoiceCanAnswer" HeldByStaff="staffHeld" Active="voiceOn" ActiveChanged="OnVoiceActive"
                        OnAnswer="OnVoiceAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaksAsync" TypedAnswers="typedAnswers" @ref="voiceRoom" Pondering="VoicePondering" />
         }
         else
