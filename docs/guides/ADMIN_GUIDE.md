@@ -380,6 +380,11 @@ A session that never ended counts from one day after it started, and is then mar
 are never stored. Shortening the period applies to sessions that already ended, at the next daily run, and
 redaction can't be undone.
 
+The retention period never shortens the logs. Audit log events are never deleted (only the student's words in them
+go), and the record of how long each outside call took is kept for at least six months (a year by default), whatever
+period you choose. An erasure keeps those events too, without the student's details, and adds an event saying who
+erased whom and when.
+
 ## API keys
 
 Apps that integrate Gadfly (an LMS, a student-information system) call the platform API with an organization **API

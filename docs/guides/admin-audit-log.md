@@ -36,7 +36,9 @@ for any exam, student or attempt id).
 Gadfly's privacy jobs remove a student's words even from the audit log: answers and clarifications when the
 organization's retention period ends, and everything an event carried about a student whose data is erased at their
 request. The event itself stays, marked **Redacted**: you can still see who did what, and when, but not the removed
-detail. See [Privacy in plain words](privacy-in-plain-words.md).
+detail. Events are never deleted, whatever your retention period, so the log always reaches back at least six months.
+Each erasure adds its own event, **privacy.erased**, with who erased which student and when. See
+[Privacy in plain words](privacy-in-plain-words.md).
 
 ## Exporting
 
