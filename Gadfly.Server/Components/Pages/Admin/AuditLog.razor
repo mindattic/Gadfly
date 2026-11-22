@@ -223,6 +223,7 @@ else
         allowed = AuditQueryService.MayRead(me, target);
         if (!allowed && Tenant.OrganizationId is not null && !Tenant.IsSuperAdmin)
         {
+            if (!RendererInfo.IsInteractive) return;   // one visit is audited once, not again for the prerender
             // Recorded like every other refused admin action.
             await using var scope = Scopes.CreateAsyncScopeFor(me);
             await new Gadfly.Server.Assessments.AssessmentGuard(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), Tenant, TimeProvider.System)
