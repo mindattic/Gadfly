@@ -1,0 +1,159 @@
+@using Gadfly.Server.Analytics
+@using Gadfly.Server.Components.Pages.Admin
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+@* Fairness by group (the blueprint audit GAD-T421; ElenchusAtScale Sections 5.3 to 5.7): score gaps between the panel and the
+   human (GAD-T433), by accommodation or by a grouping pasted in for the comparison (used in memory, never stored). Owners and
+   Admins only, since they never grade blind. No student is named; groups under five students are withheld. *@
+
+@if (GroupFairness.ViewerAllowed(Tenant.Role))
+{
+    <section class="analytics-section" aria-labelledby="h-fairness">
+        <h2 id="h-fairness">Fairness by group</h2>
+        <p class="hint">Each table below compares groups of students on one thing that could treat them differently. Groups are the
+            accommodations each assignment declared, or a grouping you paste in. Groups with fewer than @GroupFairness.MinStudents students
+            are withheld. Shown to Owners and Admins only, because the figures include the AI panel's levels and integrity notes, which
+            a grader who is still grading blind must not see.</p>
+        <details class="fairness-grouping">
+            <summary>Compare other groups</summary>
+            <p class="hint">Paste one line per student: their email or user name, a comma, and a group label (for example first language,
+                or a self-described group from a voluntary survey your institution runs). It is used only for these comparisons and is
+                never stored.</p>
+            <label>Grouping <textarea rows="6" @bind="groupingText" placeholder="student@example.edu, Group A"></textarea></label>
+            <button type="button" disabled="@busy" @onclick="CompareAsync">Compare</button>
+            @if (grouped)
+            {
+                <button type="button" class="link" disabled="@busy" @onclick="ClearAsync">Back to accommodation groups</button>
+            }
+        </details>
+        @if (error is not null)
+        {
+            <p class="notice" role="alert">@error</p>
+        }
+        else if (data is null)
+        {
+            <p class="hint" role="status">Loading…</p>
+        }
+        else
+        {
+            <p class="hint">@(grouped ? "Grouped by the grouping you supplied." : "Grouped by the accommodations each assignment declared.")
+                @if (grouped && (data.Unplaced > 0 || unmatched > 0))
+                {
+                    <span> @data.Unplaced student(s) in this scope had no group; @unmatched line(s) matched no member of this organization.</span>
+                }
+            </p>
+
+            @* ---------------------------------------------------------- score gaps (GAD-T433) *@
+            <h3 id="h-score-gaps">Panel and human levels by group</h3>
+            <p class="hint">@ScoreGaps.Caveat</p>
+            @if (data.Gaps.Pairs == 0)
+            {
+                <p class="hint">No objective in this scope has both an AI panel level and a human examiner's level yet.</p>
+            }
+            else
+            {
+                <table class="grid">
+                    <caption>@data.Gaps.Pairs objective(s) graded by both</caption>
+                    <thead><tr><th>Group</th><th>Students</th><th>Objectives</th><th>Mean panel level</th><th>Mean human level</th><th>Panel − human</th><th>Gap in standard deviations</th><th>Same level</th><th>Within one</th><th>Level 0 (panel / human)</th></tr></thead>
+                    <tbody>
+                        @foreach (var g in data.Gaps.Groups)
+                        {
+                            <tr>
+                                <td>@g.Group</td>
+                                <td>@g.Students</td>
+                                @if (g.TooFew)
+                                {
+                                    <td colspan="8" class="hint">Withheld: fewer than @GroupFairness.MinStudents students.</td>
+                                }
+                                else
+                                {
+                                    <td>@g.Pairs</td>
+                                    <td>@Num(g.MeanPanel)</td>
+                                    <td>@Num(g.MeanHuman)</td>
+                                    <td>@(g.MeanGap is { } gap ? ScoreGaps.Signed(gap) : "—")</td>
+                                    <td>@(g.Smd is { } smd ? ScoreGaps.Signed(smd) : "—")</td>
+                                    <td>@AnalyticsService.Pct(g.SameLevel)</td>
+                                    <td>@AnalyticsService.Pct(g.WithinOne)</td>
+                                    <td>@AnalyticsService.Pct(g.PanelInconclusive) / @AnalyticsService.Pct(g.HumanInconclusive)</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @foreach (var w in data.Gaps.Warnings)
+                {
+                    <p class="notice" role="status">@w</p>
+                }
+            }
+        }
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public AnalyticsScope Scope { get; set; } = AnalyticsScope.All;
+
+    /// <summary>Everything the section shows, loaded together for one grouping.</summary>
+    private sealed record Reports(ScoreGapsReport Gaps, int Unplaced);
+
+    private AnalyticsScope? loaded;
+    private Reports? data;
+    private string? groupingText, error;
+    private bool grouped, busy;
+    private int unmatched;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!GroupFairness.ViewerAllowed(Tenant.Role) || loaded == Scope) return;
+        loaded = Scope;
+        await LoadAsync(grouped ? groupingText : null);
+    }
+
+    private async Task CompareAsync()
+    {
+        if (string.IsNullOrWhiteSpace(groupingText)) return;
+        await LoadAsync(groupingText);
+    }
+
+    private async Task ClearAsync()
+    {
+        groupingText = null;
+        await LoadAsync(null);
+    }
+
+    private async Task LoadAsync(string? grouping)
+    {
+        if (busy || Tenant.OrganizationId is not { } org || !GroupFairness.ViewerAllowed(Tenant.Role)) return;
+        busy = true;
+        error = null;
+        try
+        {
+            var scope = Scope;
+            (data, unmatched) = await AdminDb.RunAsync(Scopes, Tenant, async (sp, db) =>
+            {
+                var exams = await GroupFairness.ExamIdsAsync(db, org, scope);
+                var sessions = await GroupFairness.SessionsAsync(db, org, exams);
+                Dictionary<Guid, string>? map = null;
+                var miss = 0;
+                if (grouping is not null)
+                {
+                    var members = (await sp.GetRequiredService<IOrganizationDirectory>().MembersAsync(org))
+                        .Select(m => (m.Member.UserId, m.UserName, m.Email));
+                    (map, miss) = GroupFairness.ParseGrouping(grouping, members);
+                }
+                var groupOf = GroupFairness.Grouper(map);
+                var gaps = await new ScoreGaps(db, org).BuildAsync(sessions, groupOf);
+                var unplaced = sessions.Where(s => groupOf(s) is null).Select(s => s.StudentUserId).Distinct().Count();
+                return (new Reports(gaps, unplaced), miss);
+            });
+            grouped = grouping is not null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            error = "The group comparison could not be loaded. Try again in a moment.";
+        }
+        finally { busy = false; }
+    }
+
+    private static string Num(double? v) => v is { } x ? x.ToString("0.00") : "—";
+}
