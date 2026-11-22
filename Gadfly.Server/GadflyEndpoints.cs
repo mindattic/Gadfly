@@ -80,6 +80,7 @@ public static class GadflyEndpoints
         Reports.CertificateEndpoints.Map(app);   // completion certificate PDF, verified at /transcripts/verify too (GAD-T311)
         app.MapAnalytics();
         Admin.PeopleExportEndpoints.MapPeopleExports(app);   // students / assignments CSV (GAD-T296, GAD-T298)
+        Admin.PlanExportEndpoints.MapPlanExport(app);   // invoice-ready usage CSV (GAD-T371)
         Admin.ExamAuditEndpoints.Map(app);   // exam definition JSON (GAD-T297), audit log CSV/JSON (GAD-T301)
         app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
         Help.HelpEndpoints.Map(app);   // images the help guides show (GAD-T292)

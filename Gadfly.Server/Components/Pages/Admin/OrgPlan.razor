@@ -1,0 +1,102 @@
+@page "/org/plan"
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Platform
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject PlanEnforcement Plans
+
+@* Plan and usage for the organization's own owners and admins (GAD-T309/GAD-T371): what plan they're on, how close they
+   are to its limits, and an invoice-ready usage export. Changing the plan itself is a platform-admin action (PlatformPlan.razor). *@
+
+<PageTitle>Plan &amp; usage · Gadfly Exams</PageTitle>
+<h1>Plan &amp; usage <HelpLink Topic="admin-guide" Anchor="plan-and-usage" /></h1>
+<AdminNav />
+
+@if (status is null)
+{
+    <p class="hint">Loading&hellip;</p>
+}
+else
+{
+    <section class="panel">
+        <h2>@status.Plan plan</h2>
+        @if (status.IsTrial)
+        {
+            @if (status.TrialExpired)
+            {
+                <p class="notice error">Your trial ended @(status.PeriodEnd is { } e ? e.ToString("d MMM yyyy") : ""). Exams can't be started until you choose a plan — contact us to upgrade.</p>
+            }
+            else if (status.PeriodEnd is { } ends)
+            {
+                var daysLeft = Math.Max(0, (int)Math.Ceiling((ends - DateTimeOffset.UtcNow).TotalDays));
+                <p class="hint">Your trial ends @ends.ToString("d MMM yyyy") (@daysLeft day@(daysLeft == 1 ? "" : "s") left).</p>
+            }
+        }
+        else if (status.PlanRenewsAt is { } renews)
+        {
+            <p class="hint">Renews @renews.ToString("d MMM yyyy").</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(status.PlanNote))
+        {
+            <p class="hint">@status.PlanNote</p>
+        }
+    </section>
+
+    <div class="stat-tiles">
+        <div class="stat @(status.StaffSeatsBlocked ? "over" : "")">
+            <span class="label">Staff seats</span>
+            <span class="value">@status.StaffSeatsUsed / @status.StaffSeatLimit</span>
+            <span class="hint">@SeatHint(status.StaffSeatsBlocked, status.StaffSeatsWarning, "staff")</span>
+        </div>
+        <div class="stat @(status.StudentSeatsBlocked ? "over" : "")">
+            <span class="label">Student seats</span>
+            <span class="value">@status.StudentSeatsUsed / @status.StudentSeatLimit</span>
+            <span class="hint">@SeatHint(status.StudentSeatsBlocked, status.StudentSeatsWarning, "student")</span>
+        </div>
+        <div class="stat @(status.ExamsBlocked ? "over" : "")">
+            <span class="label">Exams @(status.IsTrial ? "in your trial" : "this month")</span>
+            <span class="value">@status.ExamsUsedThisPeriod@(status.MonthlyExamAllowance is { } cap ? $" / {cap}" : "")</span>
+            <span class="hint">
+                @if (status.ExamsBlocked)
+                {
+                    <text>No more exams can be started until @(status.IsTrial ? "you choose a plan" : "next month").</text>
+                }
+                else if (status.ExamsWarning)
+                {
+                    <text>80% used.</text>
+                }
+                else
+                {
+                    <text>@(status.MonthlyExamAllowance is null ? "No limit." : "In use.")</text>
+                }
+            </span>
+        </div>
+    </div>
+
+    @if (status.StaffSeatsBlocked || status.StudentSeatsBlocked)
+    {
+        <p class="notice error">You're at your seat limit: adding another @(status.StaffSeatsBlocked ? "staff" : "student") member will be refused until you remove someone or upgrade.</p>
+    }
+
+    <h2 class="section">Usage export</h2>
+    <p class="hint">A CSV of every month's sessions and metered cost, suitable for your own invoicing or records.</p>
+    <a href="@ExportHref">Download usage CSV</a>
+}
+
+@code {
+    private PlanStatus? status;
+    private string ExportHref => "admin/export/plan-usage.csv";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.OrganizationId is not { } org) return;
+        await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+        status = await Plans.StatusAsync(db, org);
+    }
+
+    private static string SeatHint(bool blocked, bool warning, string kind) =>
+        blocked ? $"at the limit: adding another {kind} member is refused" : warning ? "80% used" : "in use";
+}

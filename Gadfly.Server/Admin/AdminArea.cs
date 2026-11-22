@@ -61,6 +61,7 @@ public static class AdminArea
         new("Organization",
         [
             new("org/settings", "Settings", Audience.OrgAdmin),
+            new("org/plan", "Plan & usage", Audience.OrgAdmin),
             new("org/usage", "Usage", Audience.OrgAdmin),
             new("org/api-keys", "API keys", Audience.OrgAdmin),
             new("org/webhooks", "Webhooks", Audience.OrgAdmin),
