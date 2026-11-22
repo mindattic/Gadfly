@@ -15,6 +15,7 @@
 @inject QuestionVoiceStreams QuestionStreams
 @inject ExaminerTts Tts
 @inject Gadfly.Server.Localization.UiText Ui
+@inject IConfiguration Config
 
 @* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
@@ -455,6 +456,8 @@
                 // itself; VoiceHubFilter refuses a StartSession call that asks for anything else.
                 language,
                 keyterms = vocabulary,
+                // What fills her judging wait (GAD-T559): her thinking gesture with a short line, or, for the A/B test's share, the typing ambience.
+                waitArm = ThinkingFiller.ArmFor(SessionId, Config.GetValue<double>(ThinkingFiller.ShareSetting)),
                 // Keys the words-already-spoken draft kept across a reload or a crash (GAD-T306); never sent anywhere else.
                 sessionId = SessionId.ToString("N"),
             });
@@ -877,6 +880,15 @@
         };
         await SetStateAsync(VoiceState.Failed);
     });
+
+    /// <summary>One judging wait ended (GAD-T559): its arm, length and the filler lines said, for the A/B test. Numbers only.</summary>
+    [JSInvokable]
+    public Task OnWaitEnded(string arm, double ms, int lines)
+    {
+        if (ThinkingFiller.Record(arm, ms, lines))
+            Log.LogInformation("Examiner wait ended for session {SessionId}: arm {Arm}, {WaitMs} ms, {Lines} filler lines.", SessionId, arm, (long)ms, lines);
+        return Task.CompletedTask;
+    }
 
     [JSInvokable]
     public Task OnSelfView(string selfView) => InvokeAsync(() =>

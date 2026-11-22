@@ -764,8 +764,9 @@ export function fillWait(first, again, firstAfterMs, againAfterMs) {
     const s = S;
     if (!s || !s.running) return;
     cancelFill(s);
-    const f = s.fill = { timers: [], startedAt: performance.now(), saidAt: null };
-    startFillAmbience(s);
+    const f = s.fill = { timers: [], startedAt: performance.now(), saidAt: null, lines: 0 };
+    // GAD-T559: the typing ambience is only the A/B test's "typing" arm now; by default she makes a thinking gesture with her line.
+    if (waitArm(s) === "typing") startFillAmbience(s);
     const attempt = (what, until) => {
         if (S !== s || s.fill !== f) return;
         const now = performance.now();
@@ -775,6 +776,8 @@ export function fillWait(first, again, firstAfterMs, againAfterMs) {
             return;
         }
         f.saidAt = now;
+        f.lines++;
+        if (waitArm(s) === "gesture") thinkingGesture(s);
         sayFiller(s, what);
     };
     const firstUntil = f.startedAt + Math.max(firstAfterMs, againAfterMs || 0);
@@ -791,6 +794,8 @@ function cancelFill(s) {
     if (!s) return;
     stopFillAmbience(s);   // every exit from the wait (next question, wait ends, mic reopens, stop()) ends the loop here too
     if (!s.fill) return;
+    // The A/B test's measure (GAD-T559): how long the wait lasted and how many lines filled it, by arm. Numbers only.
+    try { s.dotnet.invokeMethodAsync("OnWaitEnded", waitArm(s), Math.round(performance.now() - s.fill.startedAt), s.fill.lines).catch(() => { }); } catch { }
     s.fill.timers.forEach(clearTimeout);
     s.fill = null;
 }
@@ -837,6 +842,27 @@ function fadeVolume(audio, target, ms, done) {
         else if (done) done();
     };
     step();
+}
+
+/** The wait's filler arm (GAD-T559): "gesture" (the default) or "typing" (the A/B test's other arm), set by the server per session. */
+function waitArm(s) {
+    return s.cfg && s.cfg.waitArm === "typing" ? "typing" : "gesture";
+}
+
+/**
+ * Her thinking gesture before a filler line (GAD-T559, research 4.6): a brief glance up and aside, then back to the student with a
+ * small nod, the way people show they are thinking (it also models looking away while thinking as normal). The 3D examiner only;
+ * the portrait just says the line.
+ */
+function thinkingGesture(s) {
+    const a = s.avatar;
+    if (!a || a.mode !== "3d" || !a.head) return;
+    try {
+        const p = typeof a.awayPoint === "function" ? a.awayPoint() : null;
+        if (p) { a.thinkUntil = performance.now() + 1500; a.head.lookAt(p.x, p.y, 1000); }
+        if (typeof a.express === "function") a.express("thinking");
+        setTimeout(() => { try { a.thinkUntil = 0; if (typeof a.holdGaze === "function") a.holdGaze(); if (typeof a.nod === "function") a.nod(); } catch { } }, 1300);
+    } catch { /* the line is said anyway */ }
 }
 
 /** Only while quietly waiting on the panel: the gate shut, nothing being asked or answered, the examiner free to talk. */
