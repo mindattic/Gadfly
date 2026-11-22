@@ -88,8 +88,10 @@ public static class ExaminerFiller
         Backchannels: ["음.", "으음."],
         Remarks: new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["look-away"] = "답변하는 동안 저를 봐 주세요.",
-            ["reading"] = "읽지 마시고, 답변하는 동안 저를 봐 주세요.",
+            // GAD-T605: like English, the first two gentle reminders (GAD-T561, docs/research/attention-and-gaze.md 4.2): warm,
+            // never a request to look at her ("저를 봐 주세요" was dropped).
+            ["look-away"] = Integrity.WebcamIntegrityRecorder.GentleRemindersKorean[0],
+            ["reading"] = Integrity.WebcamIntegrityRecorder.GentleRemindersKorean[1],
             ["face-absent"] = "얼굴이 보이지 않아요. 답변하는 동안 화면 안으로 돌아와 주세요.",
             ["second-face"] = "카메라에 다른 사람이 보여요. 혼자서 답변하고 있는지 확인해 주세요.",
         });
@@ -129,12 +131,14 @@ public static class ExaminerFiller
 
     /// <summary>
     /// Every fixed line for <paramref name="language"/>, in the order they are needed (acknowledgements, backchannels when on, wait
-    /// fillers, remarks), for the phrase cache (GAD-T303). The cache is keyed by voice, model and text, so each language's lines are
-    /// prepared and kept separately for each examiner voice.
+    /// fillers, remarks, then the rest of the gentle reminders), for the phrase cache (GAD-T303). The cache is keyed by voice, model
+    /// and text, so each language's lines are prepared and kept separately for each examiner voice. The gentle reminders (GAD-T605)
+    /// are in it so the first one the examiner says plays at once instead of waiting on synthesis; each line appears once.
     /// </summary>
     public static IEnumerable<string> FixedLines(string? language, bool backchannels)
     {
         var set = For(language);
-        return set.Acknowledgements.Concat(backchannels ? set.Backchannels : []).Concat(set.First).Concat(set.Again).Concat(set.Remarks.Values);
+        return set.Acknowledgements.Concat(backchannels ? set.Backchannels : []).Concat(set.First).Concat(set.Again).Concat(set.Remarks.Values)
+            .Concat(Integrity.WebcamIntegrityRecorder.RemindersFor(language)).Distinct(StringComparer.Ordinal);
     }
 }

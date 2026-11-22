@@ -54,11 +54,27 @@ public class KoreanSpeechTests
         Assert.That(ExaminerFiller.For("fr"), Is.SameAs(ExaminerFiller.English));
         Assert.That(ExaminerFiller.For("ko-KR"), Is.SameAs(ExaminerFiller.Korean));
         var before = ExaminerFiller.Acknowledgements.Concat(ExaminerFiller.Backchannels).Concat(ExaminerFiller.First).Concat(ExaminerFiller.Again)
-            .Concat(Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks.Values);
+            .Concat(Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks.Values)
+            .Concat(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleReminders).Distinct();
         Assert.That(ExaminerFiller.FixedLines("en", backchannels: true), Is.EqualTo(before));
         Assert.That(ExaminerFiller.Remark("look-away", "en"), Is.EqualTo(Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks["look-away"]));
-        Assert.That(ExaminerFiller.Remark("look-away", "ko"), Is.EqualTo("답변하는 동안 저를 봐 주세요."));
+        Assert.That(ExaminerFiller.Remark("look-away", "ko"), Is.EqualTo(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleRemindersKorean[0]));
         Assert.That(ExaminerFiller.Remark("no-such-kind", "ko"), Is.Null);
+    }
+
+    [Test]
+    public void Korean_eye_contact_remarks_never_ask_the_student_to_look_at_her_and_gentle_reminders_are_warmed()
+    {
+        // GAD-T605: the gentle-reminder rule (docs/research/attention-and-gaze.md 4.2) holds in Korean too.
+        foreach (var kind in new[] { "look-away", "reading" })
+            Assert.That(ExaminerFiller.Remark(kind, "ko"), Does.Not.Contain("봐 주세요").And.Not.Contain("보세요").And.Not.Contain("저를 봐"), kind);
+        Assert.That(ExaminerFiller.Remark("reading", "ko"), Is.EqualTo(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleRemindersKorean[1]));
+        var ko = ExaminerFiller.FixedLines("ko", false).ToArray();
+        var en = ExaminerFiller.FixedLines("en", false).ToArray();
+        Assert.That(ko, Is.SupersetOf(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleRemindersKorean));
+        Assert.That(en, Is.SupersetOf(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleReminders));
+        Assert.That(ko, Is.Unique);
+        Assert.That(en, Is.Unique);
     }
 
     [Test]
