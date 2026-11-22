@@ -203,6 +203,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles(VoiceServices.StaticFiles());   // adds .glb (the examiner avatar) and .mjs (GAD-T53)
 app.UseMindAtticAuthentication();   // authn + authz + forced steps (change password, enroll MFA) + CSP
+app.UseGadflySecurityHeaders();   // CSP and the rest of the security headers for every other page (GAD-T385)
 app.UseRateLimiter();
 app.UseAntiforgery();
 
