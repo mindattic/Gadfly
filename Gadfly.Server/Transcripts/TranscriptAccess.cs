@@ -38,6 +38,19 @@ public static class TranscriptAccess
         return null;
     }
 
+    /// <summary>
+    /// True when this caller's copy must name the session code instead of the student (GAD-T480): a grader (a role that enters
+    /// human scores, as <see cref="BlindGrading.AppliesToRole"/>) while the exam's anonymous marking hides the name
+    /// (<see cref="AnonymousMarking.HiddenSessionsAsync"/>), exactly as the grading queue and page do. The student copy is the
+    /// student's own and keeps their name.
+    /// </summary>
+    public static async Task<bool> HidesStudentAsync(GadflyDbContext db, ITenantContext tenant, Guid sessionId, TranscriptAudience audience,
+        DateTimeOffset now, CancellationToken ct)
+    {
+        if (audience == TranscriptAudience.Student || tenant.OrganizationId is not { } org || !BlindGrading.AppliesToRole(tenant.Role)) return false;
+        return (await AnonymousMarking.HiddenSessionsAsync(db, org, [sessionId], now, ct)).Contains(sessionId);
+    }
+
     /// <summary>For an API caller asking for the student copy: only once the result has been published with approval.</summary>
     public static async Task<bool> PublishedToStudentAsync(GadflyDbContext db, Guid org, Guid sessionId, CancellationToken ct)
     {
@@ -59,11 +72,12 @@ public static class TranscriptRegistry
     public const string IssuedAction = "transcript.issued";
     public const string EntityType = "Transcript";
 
-    private sealed record Issued(string Sha256, string Audience, string Format);
+    /// <param name="Anonymous">The copy names the session code instead of the student (GAD-T480); verification rebuilds it the same way.</param>
+    private sealed record Issued(string Sha256, string Audience, string Format, bool Anonymous = false);
 
-    /// <summary>Stamps a copy and records it (saved at once).</summary>
+    /// <summary>Stamps a copy and records it (saved at once). <paramref name="anonymous"/>: the copy was built with the student's name hidden.</summary>
     public static async Task<TranscriptStamp> IssueAsync(GadflyDbContext db, ITenantContext tenant, TranscriptDocument document, TranscriptFormat format,
-        string baseUrl, DateTimeOffset now, CancellationToken ct)
+        string baseUrl, DateTimeOffset now, CancellationToken ct, bool anonymous = false)
     {
         var stamp = TranscriptHash.Stamp(document, now, baseUrl);
         db.AuditEvents.Add(new AuditEvent
@@ -75,7 +89,7 @@ public static class TranscriptRegistry
             EntityType = EntityType,
             EntityId = stamp.Code,
             SessionId = document.SessionId,
-            AfterJson = JsonSerializer.Serialize(new Issued(stamp.Sha256, document.Audience, TranscriptFormats.Extension(format)), TranscriptHash.Json),
+            AfterJson = JsonSerializer.Serialize(new Issued(stamp.Sha256, document.Audience, TranscriptFormats.Extension(format), anonymous), TranscriptHash.Json),
             Reason = $"{TranscriptAudiences.Label(TranscriptAudiences.Parse(document.Audience) ?? TranscriptAudience.Reviewer)} downloaded as {TranscriptFormats.Label(format)}.",
             At = now,
         });
@@ -139,7 +153,7 @@ public static class TranscriptRegistry
         }
     }
 
-    private sealed record IssueRow(Guid OrganizationId, Guid SessionId, string Sha256, string Audience, DateTimeOffset At);
+    private sealed record IssueRow(Guid OrganizationId, Guid SessionId, string Sha256, string Audience, DateTimeOffset At, bool Anonymous = false);
 
     private static async Task<IssueRow?> FirstIssueAsync(GadflyDbContext db, string code, string? sha256, CancellationToken ct)
     {
@@ -153,7 +167,7 @@ public static class TranscriptRegistry
             catch (JsonException) { issued = null; }
             if (issued is null || !TranscriptHash.IsSha256(issued.Sha256)) continue;
             if (sha256 is not null && !string.Equals(issued.Sha256, sha256, StringComparison.OrdinalIgnoreCase)) continue;
-            return new IssueRow(r.OrganizationId!.Value, r.SessionId!.Value, issued.Sha256, issued.Audience, r.At);
+            return new IssueRow(r.OrganizationId!.Value, r.SessionId!.Value, issued.Sha256, issued.Audience, r.At, issued.Anonymous);
         }
         return null;
     }
@@ -162,7 +176,7 @@ public static class TranscriptRegistry
     {
         if (await FirstIssueAsync(db, code, sha256, ct) is not { } issue) return new(Verdict.NotFound, code);
         var audience = TranscriptAudiences.Parse(issue.Audience) ?? TranscriptAudience.Reviewer;
-        var current = await new TranscriptBuilder(db).BuildAsync(issue.OrganizationId, issue.SessionId, audience, ct);
+        var current = await new TranscriptBuilder(db).BuildAsync(issue.OrganizationId, issue.SessionId, audience, ct, issue.Anonymous);
         if (current is null) return new(Verdict.NoLongerHeld, code, issue.Audience, issue.At);
         var now = TranscriptHash.Sha256(TranscriptHash.Canonical(current));
         return new(string.Equals(now, issue.Sha256, StringComparison.OrdinalIgnoreCase) ? Verdict.Matches : Verdict.RecordChangedSince,

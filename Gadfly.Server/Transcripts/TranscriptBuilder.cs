@@ -15,13 +15,18 @@ namespace Gadfly.Server.Transcripts;
 /// </summary>
 public sealed class TranscriptBuilder(GadflyDbContext db)
 {
-    public async Task<TranscriptDocument?> BuildAsync(Guid organizationId, Guid sessionId, TranscriptAudience audience, CancellationToken ct = default)
+    /// <param name="anonymous">
+    /// The student is named by the session code instead (GAD-T480): a grader's copy while anonymous marking hides the name
+    /// (<see cref="Grading.AnonymousMarking"/>), so the download does not give back the name the grading page hides.
+    /// </param>
+    public async Task<TranscriptDocument?> BuildAsync(Guid organizationId, Guid sessionId, TranscriptAudience audience, CancellationToken ct = default,
+        bool anonymous = false)
     {
-        var source = await LoadAsync(organizationId, sessionId, audience, ct);
+        var source = await LoadAsync(organizationId, sessionId, audience, ct, anonymous);
         return source is null ? null : TranscriptComposer.Compose(source, audience);
     }
 
-    public async Task<TranscriptSource?> LoadAsync(Guid org, Guid sessionId, TranscriptAudience audience, CancellationToken ct = default)
+    public async Task<TranscriptSource?> LoadAsync(Guid org, Guid sessionId, TranscriptAudience audience, CancellationToken ct = default, bool anonymous = false)
     {
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == org, ct);
         if (session is null)
@@ -59,7 +64,8 @@ public sealed class TranscriptBuilder(GadflyDbContext db)
             Session = session,
             Exam = exam,
             OrganizationName = orgName,
-            StudentName = student is null ? "(unknown student)" : string.IsNullOrWhiteSpace(student.DisplayName) ? student.UserName : $"{student.DisplayName} ({student.UserName})",
+            StudentName = anonymous ? Grading.AnonymousMarking.Code(sessionId)
+                : student is null ? "(unknown student)" : string.IsNullOrWhiteSpace(student.DisplayName) ? student.UserName : $"{student.DisplayName} ({student.UserName})",
             ConceptTitles = titles,
             Turns = turns,
             Responses = responses,

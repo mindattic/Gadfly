@@ -63,8 +63,8 @@ question that gave the answer away, given after a hint, or left without a usable
 same lines appear on the review page and, for reviewers, in the assessment report. Students don't see them.
 
 **Anonymous marking.** When the assessment's grading policy has **Anonymous marking** on, the grading queue, this
-page, the assessment report and the review pages show a session code (for example *Session 5A7D-9C2E*) instead of
-the student's name, and a banner says so. The name appears once the human score is submitted, in time for
+page, the assessment report, the review pages and a grader's transcript download show a session code (for example
+*Session 5A7D-9C2E*) instead of the student's name, and a banner says so. The name appears once the human score is submitted, in time for
 reconciliation, approval and publishing. It hides the name Gadfly shows; if a student says their name in an answer,
 the transcript still has it. Owners and admins, who don't enter human scores, still see names on the review pages.
 

@@ -34,9 +34,11 @@ public static class TranscriptEndpoints
                 // Not entitled and not found look the same, so a session id from elsewhere reveals nothing.
                 if (entitled is null) return Results.NotFound();
                 var audience = TranscriptAudiences.AtMost(entitled.Value, TranscriptAudiences.Parse(copy));
-                var document = await new TranscriptBuilder(db).BuildAsync(org, sessionId, audience, ct);
+                // GAD-T480: a grader's copy names the session code while anonymous marking hides the student's name.
+                var anonymous = await TranscriptAccess.HidesStudentAsync(db, tenant, sessionId, audience, now, ct);
+                var document = await new TranscriptBuilder(db).BuildAsync(org, sessionId, audience, ct, anonymous);
                 if (document is null) return Results.NotFound();
-                var stamp = await TranscriptRegistry.IssueAsync(db, tenant, document, f, BaseUrl(http.Request), now, ct);
+                var stamp = await TranscriptRegistry.IssueAsync(db, tenant, document, f, BaseUrl(http.Request), now, ct, anonymous);
                 return File(http, f, document, stamp);
             })
             .RequireAuthorization(GadflyPolicies.Member)
