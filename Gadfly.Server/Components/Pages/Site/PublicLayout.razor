@@ -2,10 +2,8 @@
    pages. Those pages render as static HTML (no Blazor circuit), so a signed-out visitor costs one request per page. *@
 @inherits LayoutComponentBase
 
-<HeadContent>
-    <link rel="stylesheet" href="site.css" />
-</HeadContent>
-
+@* site.css and the head tags come from each page's SiteMeta: Blazor shows only one HeadContent per page, the last one
+   rendered, so a HeadContent here would be replaced by the page's. *@
 <div class="site">
     <a class="skip" href="#content">Skip to content</a>
     <Gadfly.Server.Components.Shared.MockBanner />

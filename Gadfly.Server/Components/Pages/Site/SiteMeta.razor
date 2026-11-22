@@ -1,8 +1,15 @@
-@* One page's title, description, canonical link and Open Graph / Twitter card tags (GAD-T308). *@
+@* One page's stylesheet, title, description, canonical link and Open Graph / Twitter card tags (GAD-T308). *@
 @inject NavigationManager Nav
+@inject Gadfly.Socrates.IPanelInfo Panel
 
 <PageTitle>@FullTitle</PageTitle>
 <HeadContent>
+    @* Blazor keeps only the last HeadContent rendered, so the site's stylesheet (and the mock banner's) live here. *@
+    <link rel="stylesheet" href="site.css" />
+    @if (Panel.IsMock)
+    {
+        <link rel="stylesheet" href="demo.css" />
+    }
     <meta name="description" content="@Description" />
     @if (!NoIndex)
     {
