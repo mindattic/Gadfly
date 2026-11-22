@@ -133,7 +133,10 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
     /// (mock questions are templates that state no rubric point), anything else gets the panel's own mock reply.
     /// </summary>
     public static string Complete(string prompt) =>
-        prompt.Contains("LEAKS or SAFE", StringComparison.Ordinal) ? "SAFE" : Ask(prompt).Text;
+        prompt.Contains("LEAKS or SAFE", StringComparison.Ordinal) ? "SAFE"
+        // The live turn's provisional judgment (GAD-T508) sends the judge prompt to the one fast model: the same simulated verdict.
+        : prompt.Contains("You are one judge on a panel grading", StringComparison.Ordinal) ? Judge(prompt)
+        : Ask(prompt).Text;
 
     internal static string FanOut(string prompt)
     {

@@ -70,6 +70,28 @@ public sealed record AnswerJudgment
     public string Summary { get; init; } = "";
 }
 
+/// <summary>
+/// The live turn's quick judgment of an answer (GAD-T508): one fast model (<c>ILiveTurnModel</c>) scores the answer against the
+/// same rubric so the examiner can choose the next move in conversational time. It only steers the conversation; it is never a
+/// grade. The full panel judgment (<see cref="Turn.Judgment"/>) follows in the background and is the one that counts for scores,
+/// reports and review; once it arrives the planner reads it instead. <see cref="FullScore"/> and <see cref="Disagreement"/> record
+/// how the two compared, for reviewers and for calibrating the fast model.
+/// </summary>
+public sealed record ProvisionalJudgment
+{
+    /// <summary>The fast model's verdict, in the panel's shape (one vote). Never persisted as a Judgment row.</summary>
+    public required AnswerJudgment Judgment { get; init; }
+    public string ProviderId { get; init; } = "";
+    public string Model { get; init; } = "";
+    public DateTimeOffset JudgedAt { get; init; }
+    /// <summary>How long the fast model took.</summary>
+    public long ElapsedMs { get; init; }
+    /// <summary>The full panel's overall score, once it arrived (null while the full judgment is pending).</summary>
+    public double? FullScore { get; init; }
+    /// <summary>Set when the full judgment disagreed materially with this one: why (null when they agreed or it is still pending).</summary>
+    public string? Disagreement { get; init; }
+}
+
 /// <summary>A concept's mastery estimate at one moment.</summary>
 public sealed record MasterySnapshot(string ConceptId, double Estimate, int TurnsOnConcept);
 
@@ -87,7 +109,10 @@ public sealed record Turn
     /// <summary>Claim ids from the ledger this question targets (e.g. the two sides of a Contradiction).</summary>
     public IReadOnlyList<string> TargetClaimIds { get; init; } = [];
     public Answer? Answer { get; init; }
+    /// <summary>The full panel judgment: the one that counts for grading. Null until it arrives (GAD-T508: it may follow the next question).</summary>
     public AnswerJudgment? Judgment { get; init; }
+    /// <summary>The live turn's fast single-model judgment that steered the next move (GAD-T508); null when the panel judged on the turn.</summary>
+    public ProvisionalJudgment? Provisional { get; init; }
     /// <summary>The concept's mastery right after this turn was judged.</summary>
     public MasterySnapshot? MasteryAfter { get; init; }
     /// <summary>The learning objective examined (GAD-T89); null in older transcripts, where the concept is the objective.</summary>

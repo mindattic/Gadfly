@@ -24,11 +24,35 @@ public static class PanelUsage
         return new Scope(previous);
     }
 
+    private static readonly AsyncLocal<string?> LiveKind = new();
+
+    /// <summary>
+    /// The kind a single live-model call is metered as (GAD-T508): "live-turn" (the question and its leak guard) unless a caller
+    /// names another, e.g. "live-judge" for the provisional judgment, so the two are told apart in usage and audit. Applied in
+    /// <see cref="Record"/> to any call recorded as "live-turn", so every live-model client is covered.
+    /// </summary>
+    public static string LiveCallKind => LiveKind.Value ?? "live-turn";
+
+    /// <summary>Meters the live-model calls made until disposal as <paramref name="kind"/> (see <see cref="LiveCallKind"/>).</summary>
+    public static IDisposable UseLiveKind(string kind)
+    {
+        var previous = LiveKind.Value;
+        LiveKind.Value = kind;
+        return new KindScope(previous);
+    }
+
+    private sealed class KindScope(string? previous) : IDisposable
+    {
+        public void Dispose() => LiveKind.Value = previous;
+    }
+
     /// <summary>Records a call into the current tracking scope, if any. Thread-safe within one scope.</summary>
     public static void Record(PanelCall call)
     {
         var list = Current.Value;
         if (list is null) return;
+        // A live-model call made under UseLiveKind (the provisional judgment, GAD-T508) is metered as that kind, whichever client made it.
+        if (LiveKind.Value is { } kind && call.Kind == "live-turn") call = call with { Kind = kind };
         lock (list) list.Add(call);
     }
 

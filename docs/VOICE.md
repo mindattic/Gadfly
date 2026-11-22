@@ -312,8 +312,9 @@ production the question's wording was the bottleneck: the panel vote that drafte
 about 7.5 s) and then a second panel vote for its leak guard (`panel.questionGeneration.CheckLeak`, about 4.1 s), one
 after the other, while ElevenLabs' first audio byte takes about 0.17 s. Now:
 
-1. The answer is recorded, verified (a spoken answer is taken as heard: no call) and judged by the panel, as before.
-2. The planner picks the move (local, no call).
+1. The answer is recorded and verified (a spoken answer is taken as heard: no call), then **judged provisionally by the
+   same fast model** (GAD-T508, below): the judge prompt and rubric, one reply (`live.judge`, metered as `live-judge`).
+2. The planner picks the move (local, no call) from that provisional judgment and the panel's judgments of earlier answers.
 3. **One fast model** words the question (`ILiveTurnModel`, `Gadfly/Socrates/LiveTurnModel.cs`; `QuestionGenerator.LiveModel`):
    `Gadfly:LiveTurn:Provider` (default `claude`) and `Gadfly:LiveTurn:Model` (default Claude Sonnet 5, `claude-sonnet-5`; an
    Opus id is refused and replaced by Sonnet 5). Timed as `live.questionGeneration.LiveDraft`.
@@ -327,10 +328,38 @@ provider outage costs speed, never safety. Every call is still metered (`PanelCa
 (`ApiCallTimings`, with a `.firstChunk` row for the streaming seam below). Mock mode (`Gadfly:AiMode=mock`) uses the mock
 panel's own template replies, so nothing is called or billed.
 
+**The panel judges off the turn (GAD-T508).** The multi-model panel's judgment of an answer (aporia check, judges,
+analysis, claim extraction and contradiction checks) no longer blocks the next question. What is provisional and what
+is final:
+
+- *Provisional* (`Turn.Provisional`, a `ProvisionalJudgment`): the fast model's score of the answer against the rubric,
+  plus the local recitation check. It only steers: the planner reads it (`SocraticSession.ForPlanning`) for answers whose
+  full judgment has not arrived, and the concept's running mastery estimate uses it until then. It is never written as a
+  `Judgment` row, never graded, reported, sent as evidence or shown to a reviewer as a grade.
+- *Final* (`Turn.Judgment`): the panel's judgment, exactly as before. Right after the step, the server starts it in the
+  background (`SourceExamEngine.StartFullJudgment`, one answer at a time, in turn order, from a snapshot, so the session's
+  step lock is not held during the panel calls). When it finishes, it is applied under the step lock
+  (`ApplyFinishedJudgmentAsync`): it becomes the turn's judgment, the concept's mastery is replayed from it, a leak the
+  analysis found is flagged, its claims enter the ledger, and the step is saved (`Judgment`/`JudgeVote` rows, mastery,
+  claims, evidence). From then on the planner plans from it. Its panel calls are metered as `exam-judging` and timed under
+  their usual `panel.*` names.
+- *Disagreement*: when the two differ materially (one heard an honest "I don't know" and the other an attempt, they fall
+  on different sides of the evidence thresholds, or they are 0.25 or more apart), the turn's `ProvisionalJudgment.Disagreement`
+  says how, and an audit event `judgment.provisional.disagreed` is written against the answer, for reviewers and for
+  calibrating the fast model. The panel's judgment is the one graded either way.
+
+The exam never ends on a provisional judgment: when the planner would end it, or the student, staff, the clock or the
+stale-session sweep ends it, the pending full judgments are finished first (`SourceExamEngine.EndAsync`), so the report
+reads only the panel's. A panel that still fails at the end does not stop the exam ending; that answer goes to a human, as
+an unjudged answer always has. If the fast model fails on a turn, the panel judges that answer on the turn, after any
+earlier pending ones, as before. Recovery: the provisional and pending state is in the saved transcript, so after a
+restart the pending judgments resume as soon as the session loads, every step starts the next one, and a judgment that
+failed is retried on the student's next step. `Gadfly:LiveTurn:DeferJudging=false` puts the panel judgment back on the turn.
+
 **Prefetching the next step (GAD-T497).** While the student is still speaking, the exam room can send the answer so far
 (the recognizer's finished segments plus its current partial) to `SessionOrchestrator.NotePartialAnswerAsync`. Once those
 words have stood still for `Gadfly:LiveTurn:Prefetch:DebounceMs` (default 700 ms) and are at least `MinWords` long
-(default 4), the whole next step (panel judgment, plan, fast-model question, guard) runs speculatively on a copy of the
+(default 4), the whole next step (the fast model's provisional judgment, plan, fast-model question, guard; GAD-T508: the panel only if the fast model fails, and never on an earlier answer still pending) runs speculatively on a copy of the
 session. When the student finishes with the same words (case, punctuation and spacing aside) and nothing else changed the
 session in the meantime, the answer step adopts the copy: the submitted answer, with its real timings and speech measurements,
 replaces the partial on record, the recitation check is re-run on it, and the next question is ready at once. Otherwise the
@@ -346,8 +375,9 @@ so speaking the text while it is still being generated also needs the guard to r
 goes to the voice.
 
 **Departure from the blueprint.** ElenchusAtScale has the multi-family panel word the questions and vote on the leak guard.
-The owner moved both onto one model for conversational latency (docs/research/blueprint-gap-analysis.md, owner decision 7).
-The panel still grades every answer.
+The owner moved both onto one model for conversational latency (docs/research/blueprint-gap-analysis.md, owner decision 7),
+and with GAD-T508 the live steering too: the next move is chosen from that one model's provisional judgment. Grading still
+uses the full panel: every answer's graded judgment is the panel's, and the exam does not end before it is in.
 
 ## Recognizer latency and unsure-word rate (GAD-T361)
 

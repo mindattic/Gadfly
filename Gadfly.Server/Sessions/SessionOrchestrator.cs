@@ -87,6 +87,8 @@ public sealed partial class SessionOrchestrator(
         public SemaphoreSlim Gate { get; } = new(1, 1);
         /// <summary>The speculative next step prepared from the student's words while they are still answering (GAD-T497).</summary>
         public PrefetchState Prefetch { get; } = new();
+        /// <summary>The full panel judgment a background apply is already waiting on (GAD-T508), so it is watched once.</summary>
+        public Task? JudgingWatched { get; set; }
     }
 
     private sealed record SubjectSnapshot(ConceptMap Map, IReadOnlyList<ConceptRubric> Rubrics);
@@ -324,7 +326,7 @@ public sealed partial class SessionOrchestrator(
             // The server's clock is the authority: an answer arriving well after time ran out is not judged.
             if (TooLate(live))
             {
-                live.Engine.End(EndReason.TimeUp);
+                await live.Engine.EndAsync(EndReason.TimeUp, CancellationToken.None);   // earlier answers' full judgments first (GAD-T508)
                 return null;
             }
 
@@ -542,7 +544,9 @@ public sealed partial class SessionOrchestrator(
                     log.LogWarning(ex, "The last answer could not be judged before the exam ended; it is kept for a human to grade.");
                 }
             }
-            live.Engine.End(reason);
+            // Every answer's full panel judgment is in before the exam ends and its report is written (GAD-T508). Not the caller's
+            // token: a student closing the tab right after finishing must not leave the exam unended.
+            await live.Engine.EndAsync(reason, CancellationToken.None);
             return null;
         }, ct);
 
@@ -582,7 +586,8 @@ public sealed partial class SessionOrchestrator(
     private static async Task<(StudentResponse Original, Guid TurnId)> LastJudgedAsync(Live live, GadflyDbContext db, ResponseLedger ledger, CancellationToken ct)
     {
         var s = live.Engine.Session;
-        var judged = s.Turns.LastOrDefault(t => t.Judgment is not null) ?? throw new SessionRefusedException("You haven't answered a question yet.");
+        // Judged provisionally counts (GAD-T508): the panel's full judgment of it may still be on its way.
+        var judged = s.Turns.LastOrDefault(t => SocraticSession.SteeringJudgment(t) is not null) ?? throw new SessionRefusedException("You haven't answered a question yet.");
         var turnId = await TurnIdAsync(db, s.Id, judged.Index, ct) ?? throw new SessionRefusedException("Your last answer is still being saved; try again.");
         var original = await ledger.OriginalForTurnAsync(s.Id, turnId, ct) ?? throw new SessionRefusedException("Your last answer can't be changed here.");
         return (original, turnId);
@@ -702,7 +707,7 @@ public sealed partial class SessionOrchestrator(
             VerificationState.Unresolved, VerificationState.FlaggedForHumanReview);
         await db.SaveChangesAsync(ct);
         await JudgePendingAsync(live, ledger, p.Response, Compose(p.Response.VerifiedText, null, null), ct);
-        if (!ended) live.Engine.End(EndReason.TimeUp);
+        if (!ended) await live.Engine.EndAsync(EndReason.TimeUp, CancellationToken.None);
         return null;
     }
 
@@ -755,6 +760,8 @@ public sealed partial class SessionOrchestrator(
                 // Persist whatever happened, even if a panel call failed midway: the transcript is the resume point.
                 // Not the caller's token: an aborted connection must not skip saving what the step already did.
                 await PersistAsync(live, studentUserId, calls, CancellationToken.None);
+                // The newest answer's full panel judgment starts now, off the turn, and is applied when it is done (GAD-T508).
+                KickJudging(live);
             }
             var view = await ViewAsync(live, question, ct);
             Admin.LiveSessionFeed.Shared.Stepped(live.OrganizationId, live.StudentUserId, view, clock.GetUtcNow());   // live monitor (GAD-T299)
@@ -791,7 +798,7 @@ public sealed partial class SessionOrchestrator(
                     request.Type == ClarificationType.Transcription ? ResponseLedger.TranscriptKind : ResponseLedger.MeaningKind,
                     request.Question, p.Response.VerifiedText);
             }
-            if (!s.IsEnded && s.Turns.LastOrDefault(t => t.Judgment is not null) is { } judged
+            if (!s.IsEnded && s.Turns.LastOrDefault(t => SocraticSession.SteeringJudgment(t) is not null) is { } judged
                 && await TurnIdAsync(db, s.Id, judged.Index, ct) is { } judgedId
                 && await ledger.OriginalForTurnAsync(s.Id, judgedId, ct) is { } original)
             {
@@ -905,8 +912,12 @@ public sealed partial class SessionOrchestrator(
             // The next question and its leak guard come from one fast model, not the panel vote (GAD-T494): the examiner answers in
             // conversational time. The panel still judges every answer.
             engine.LiveTurnModel = liveModel;
+            // The fast model's provisional judgment steers the next move and the panel's full judgment runs off the turn (GAD-T508).
+            engine.DeferFullJudgment = DeferJudging;
             var live = new Live(engine, organizationId, row.StudentUserId, exam.AssessmentMode);
             _live[sessionId] = live;
+            // A restart (or an evicted cache) left answers judged only provisionally: their full judgments resume now.
+            if (engine.Session.PendingFullJudgments.Count > 0) ResumeJudging(live);
             return live;
         }
         finally
@@ -947,6 +958,9 @@ public sealed partial class SessionOrchestrator(
         var now = clock.GetUtcNow();
 
         meter.Stage(db, org, s.Id, calls, "exam-step");   // GAD-T47: estimated LLM usage of this step
+        var judged = live.Engine.TakeFinishedJudgments();   // full panel judgments finished off the turn (GAD-T508)
+        var judgingCalls = judged.SelectMany(j => j.Calls).ToList();
+        if (judgingCalls.Count > 0) meter.Stage(db, org, s.Id, judgingCalls, "exam-judging");
         row.TranscriptJson = SessionTranscriptSerializer.Serialize(s);
         row.LedgerJson = live.Engine.Ledger.ToJson();
         row.StartedAt = s.StartedAt;   // moves once, when a held clock starts (GAD-T239)
@@ -1003,6 +1017,8 @@ public sealed partial class SessionOrchestrator(
                 judgedIds.Add(t.Id);
             }
         }
+
+        await RecordDisagreementsAsync(db, org, s.Id, stored, judged, ct);
 
         var mastery = await db.ConceptMastery.Where(m => m.SessionId == s.Id).ToDictionaryAsync(m => m.ConceptKey, ct);
         foreach (var conceptKey in s.Policy.ConceptIds)

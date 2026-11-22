@@ -239,9 +239,32 @@ public sealed class SocraticSession
     /// <summary>The last turn, while it still waits for the student's answer.</summary>
     public Turn? OpenTurn => _turns.Count > 0 && _turns[^1].Answer is null ? _turns[^1] : null;
 
-    /// <summary>The last turn, while it is answered but not yet judged. Subjects that don't judge (the
-    /// personal introspection tool) leave every turn here; exam subjects judge before planning on.</summary>
-    public Turn? AwaitingJudgment => _turns.Count > 0 && _turns[^1].Answer is not null && _turns[^1].Judgment is null ? _turns[^1] : null;
+    /// <summary>The last turn, while it is answered but not yet judged at all (neither by the panel nor provisionally, GAD-T508).
+    /// Subjects that don't judge (the personal introspection tool) leave every turn here; exam subjects judge before planning on.</summary>
+    public Turn? AwaitingJudgment => _turns.Count > 0 && _turns[^1].Answer is not null && _turns[^1].Judgment is null
+        && _turns[^1].Provisional is null ? _turns[^1] : null;
+
+    /// <summary>
+    /// Answered turns judged only provisionally so far (GAD-T508): the fast model's judgment steered the next move and the full
+    /// panel judgment, the one that counts, is still to come. In turn order; usually empty or the newest one or two turns.
+    /// </summary>
+    public IReadOnlyList<Turn> PendingFullJudgments => _turns.Where(t => t.Answer is not null && t.Judgment is null && t.Provisional is not null).ToList();
+
+    /// <summary>The judgment the examiner steers by: the full panel judgment once it arrived, else the provisional one (GAD-T508).</summary>
+    public static AnswerJudgment? SteeringJudgment(Turn turn) => turn.Judgment ?? turn.Provisional?.Judgment;
+
+    /// <summary>
+    /// The session as the planner sees it (GAD-T508): every turn still waiting for its full panel judgment carries its provisional
+    /// judgment in <see cref="Turn.Judgment"/>, so the next move is planned from the newest full judgments plus the provisional ones
+    /// still pending. A copy, never persisted; this session itself when nothing is pending.
+    /// </summary>
+    public SocraticSession ForPlanning()
+    {
+        if (!_turns.Any(t => t.Judgment is null && t.Provisional is not null)) return this;
+        return new SocraticSession(Id, SubjectId, Policy, PromptSetId, PromptSetVersion, PromptSetSha256, StartedAt, EndedAt, EndReason,
+            _turns.Select(t => t.Judgment is null && t.Provisional is { } p ? t with { Judgment = p.Judgment } : t), _mastery.Values,
+            ClockHeld, PausedTotal, PausedSince, ExtraTime, HeldTotal, HeldSince);
+    }
 
     /// <summary>Time left in the budget (with any accommodation multiplier and paused time added back) at <paramref name="now"/> (never negative).</summary>
     public TimeSpan Remaining(DateTimeOffset now)
@@ -305,6 +328,62 @@ public sealed class SocraticSession
         var snapshot = new MasterySnapshot(open.ConceptId, Math.Clamp(masteryEstimate, 0, 1), TurnsOn(open.ConceptId));
         _mastery[open.ConceptId] = snapshot;
         return Replace(open with { Judgment = judgment, MasteryAfter = snapshot, Analysis = analysis ?? open.Analysis });
+    }
+
+    /// <summary>
+    /// Records the live turn's provisional judgment of the last turn's answer and the concept's new mastery estimate from it
+    /// (GAD-T508). The turn then counts as judged for planning on, while its full panel judgment is still to come
+    /// (<see cref="PendingFullJudgments"/>).
+    /// </summary>
+    public Turn RecordProvisional(ProvisionalJudgment provisional, double masteryEstimate)
+    {
+        EnsureRunning();
+        ArgumentNullException.ThrowIfNull(provisional);
+        var open = AwaitingJudgment ?? throw new InvalidOperationException("There is no answered, unjudged turn to judge.");
+        var snapshot = new MasterySnapshot(open.ConceptId, Math.Clamp(masteryEstimate, 0, 1), TurnsOn(open.ConceptId));
+        _mastery[open.ConceptId] = snapshot;
+        return Replace(open with { Provisional = provisional, MasteryAfter = snapshot });
+    }
+
+    /// <summary>
+    /// Records the full panel judgment of a turn that was judged provisionally (GAD-T508), which may no longer be the last turn.
+    /// The provisional record is kept, updated with how the two compared. The concept's mastery is then replayed over its turns
+    /// in order (<see cref="RecomputeMastery"/>), so a later turn's estimate builds on the full judgment, as if it had come first.
+    /// </summary>
+    public Turn RecordFullJudgment(int turnIndex, AnswerJudgment judgment, ResponseAnalysis? analysis, ProvisionalJudgment? provisional)
+    {
+        EnsureRunning();
+        ArgumentNullException.ThrowIfNull(judgment);
+        if (turnIndex < 0 || turnIndex >= _turns.Count) throw new ArgumentOutOfRangeException(nameof(turnIndex));
+        var turn = _turns[turnIndex];
+        if (turn.Answer is null || turn.Judgment is not null || turn.Provisional is null)
+            throw new InvalidOperationException($"Turn {turnIndex} is not waiting for its full judgment.");
+        Replace(turn with { Judgment = judgment, Analysis = analysis ?? turn.Analysis, Provisional = provisional ?? turn.Provisional });
+        RecomputeMastery(turn.ConceptId);
+        return _turns[turnIndex];
+    }
+
+    /// <summary>
+    /// Replays a concept's mastery over its answered turns in order (GAD-T508), each from its steering judgment (<see cref="SteeringJudgment"/>),
+    /// with the same update the live step applies: an unjudged or recited answer leaves the estimate where it was.
+    /// </summary>
+    public void RecomputeMastery(string conceptId)
+    {
+        var prior = MasteryModel.Prior;
+        var judgedBefore = 0;
+        MasterySnapshot? last = null;
+        foreach (var t in _turns.Where(t => t.ConceptId == conceptId && t.Answer is not null).ToList())
+        {
+            if (SteeringJudgment(t) is not { } j) continue;
+            var unjudged = ObjectiveAssessor.IsUnjudged(j);
+            var estimate = unjudged || j.Recitation is not null ? prior
+                : MasteryModel.Update(prior, j.OverallScore, MasteryModel.QuestionDifficulty(t.Move, Policy.Difficulty), judgedBefore);
+            last = new MasterySnapshot(conceptId, Math.Clamp(estimate, 0, 1), _turns.Count(x => x.ConceptId == conceptId && x.Index <= t.Index));
+            Replace(t with { MasteryAfter = last });
+            prior = last.Estimate;
+            if (!unjudged) judgedBefore++;
+        }
+        if (last is not null) _mastery[conceptId] = last;
     }
 
     /// <summary>

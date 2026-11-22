@@ -253,3 +253,18 @@ No ticket was filed for any of these. Each is the owner's to make; the dissertat
    still fails closed (A3/M3), the panel still judges every answer (A13/M12), and question authorship is recorded
    (`live-model-draft`, GAD-T431), so self-preference stays testable. The single model's leak-detection rate against
    the panel's is unmeasured.
+   **Extended by GAD-T508: the live steering uses one model, the grading still uses the full panel.** The panel's
+   judgment of an answer no longer blocks the next question. On the turn, the same fast model scores the answer
+   against the same rubric (a provisional judgment, metered as `live-judge`, timed as `live.judge`), and the planner
+   chooses the next move (probe, mastery, aporia) from it. The full multi-model panel judgment (aporia check, judges,
+   analysis, claims and contradiction checks) runs in the background right after the turn. It is the only judgment that
+   is graded, reported, reviewed or sent as evidence, and once it arrives the planner plans from it, with the
+   provisional judgment used only for turns whose full judgment is still pending. The exam never ends, and its report
+   is never written, before every full judgment is in. What this departs from: the dissertation has the panel's verdict
+   shape the exam path as well as the grade (3.8), so that no single model family steers the dialogue; now one family
+   steers it, for at most one or two turns per answer. What still holds: no grade, mastery level or reported result
+   rests on the single model, and every material disagreement between the provisional and the panel's judgment (an
+   honest "I don't know" heard by one and not the other, a different evidence result, or 0.25 or more apart) is kept
+   on the turn and in the audit trail (`judgment.provisional.disagreed`), so the single model's steering error is
+   measurable. How often it steered differently from the panel, and whether that changed which objectives were
+   probed, is unmeasured.

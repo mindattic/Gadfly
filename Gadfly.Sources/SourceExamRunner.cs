@@ -194,7 +194,16 @@ public sealed class SourceExamEngine
         if (Session.AwaitingJudgment is not null)
             throw new InvalidOperationException("The last answer has not been judged; call SubmitAnswerAsync again to finish it.");
 
-        var decision = _planner.Next(Session, _clock.GetUtcNow(), Ledger.ForPlanner());
+        // Planned from the newest full judgments plus the provisional ones still pending (GAD-T508).
+        var decision = _planner.Next(Session.ForPlanning(), _clock.GetUtcNow(), Ledger.ForPlanner());
+        if (decision.EndsSession && Session.PendingFullJudgments.Count > 0)
+        {
+            // The exam would end on a provisional judgment: the panel's full judgments come in first, and decide again from them
+            // (they may show an objective is not yet settled). A speculative copy leaves that to the live session.
+            if (Speculative) throw new InvalidOperationException("A speculative step does not end the exam before the panel has judged.");
+            await FinishFullJudgmentsAsync(ct);
+            decision = _planner.Next(Session.ForPlanning(), _clock.GetUtcNow(), Ledger.ForPlanner());
+        }
         if (decision.EndsSession)
         {
             Diagnostics?.Report($"[End: {decision.Reason}]");
@@ -244,8 +253,11 @@ public sealed class SourceExamEngine
     }
 
     /// <summary>
-    /// Records the answer to the open turn (unless it already has one, e.g. after a crash between
-    /// recording and judging), judges and analyses it, updates mastery and the claim ledger. Returns the judged turn.
+    /// Records the answer to the open turn (unless it already has one, e.g. after a crash between recording and judging) and judges
+    /// it. With <see cref="DeferFullJudgment"/> and a <see cref="LiveTurnModel"/> (the server's live exam, GAD-T508) the judgment
+    /// made here is provisional: one fast model scores the answer so the next move can be planned in conversational time, and the
+    /// full panel judgment (aporia, judges, analysis, claims) follows off the turn (<see cref="StartFullJudgment"/>). Otherwise, or
+    /// when the fast model fails, the panel judges and analyses it here, updates mastery and the claim ledger. Returns the judged turn.
     /// </summary>
     public async Task<Turn> SubmitAnswerAsync(Answer? answer, CancellationToken ct = default)
     {
@@ -260,97 +272,143 @@ public sealed class SourceExamEngine
             turn = Session.AwaitingJudgment ?? throw new InvalidOperationException("There is no question waiting for an answer.");
         }
 
+        if (DeferFullJudgment && LiveTurnModel is { } fast && await ProvisionalAsync(fast, turn, ct) is { } steered) return steered;
+        // No fast model, or it failed: the panel judges on the turn, as before GAD-T508 (an outage costs speed, never the judgment).
+        // Earlier turns still waiting for their full judgment go first, so the claim ledger stays in turn order.
+        if (Session.PendingFullJudgments.Count > 0)
+        {
+            if (Speculative) throw new InvalidOperationException("A speculative step does not run the panel on earlier answers.");
+            await FinishFullJudgmentsAsync(ct);
+        }
+        return await JudgeOnTurnAsync(turn, ct);
+    }
+
+    /// <summary>The panel judges <paramref name="turn"/> on the turn: the whole judgment before the next move (the CLI, and the fallback).</summary>
+    private async Task<Turn> JudgeOnTurnAsync(Turn turn, CancellationToken ct)
+    {
         var concept = _subject.Concept(turn.ConceptId);
         var rubric = _subject.Rubric(concept.Key);
         var objective = ObjectiveOf(turn);
-        AnswerJudgment judgment;
-        ResponseAnalysis? analysis = null;
-        if (await IsAporiaAsync(turn, ct))
-        {
-            judgment = new AnswerJudgment
-            {
-                Criteria = [],
-                OverallScore = 0,
-                RubricVersion = rubric.Version,
-                Summary = "The student said they do not know (aporia).",
-            };
-            analysis = ResponseAnalyzer.ForAporia(turn, objective.Key);
-        }
-        else
-        {
-            var passages = await _subject.PassagesAsync(concept.Key, turn.Answer!.Text, ct);
-            var earlier = Ledger.Describe(concept.Key);
-            // The verdict, the text-style estimate and the analysis each read only the answer, the passages and the earlier claims
-            // (none uses another's result), so their panel calls run together instead of one after another (GAD-T287).
-            var judgeTask = _judge.JudgeAsync(new JudgeInput
-            {
-                Turn = turn,
-                Concept = concept,
-                Rubric = rubric,
-                Passages = passages,
-                EarlierClaims = earlier,
-            }, rubric.Version, ct);
-            var styleTask = AssessTextStyle ? _style.AssessAsync(Session, turn, ct) : null;
-            var analysisTask = AnalyzeResponses
-                ? _analyzer.AnalyzeAsync(new AnalysisInput
-                {
-                    Turn = turn, Objective = objective, Objectives = Objectives, Rubric = rubric, Passages = passages, EarlierClaims = earlier,
-                }, ct)
-                : null;
-            await Task.WhenAll(new Task?[] { judgeTask, styleTask, analysisTask }.OfType<Task>());
-            judgment = await judgeTask;
-            if (styleTask is not null && await styleTask is { } style)
-                judgment = judgment with { TextStyle = style };
-            // Recitation check (GAD-T242): an answer that closely follows the source's wording, or a long fluent one after a long
-            // silent wait, is not accepted as the student's own understanding. It is recorded for review (never a cheating verdict),
-            // left out of mastery and evidence, and the next question asks for it differently, applied, or why.
-            if (RecitationCheck.Check(Session, turn, string.Join('\n', passages.Select(p => p.Text))) is { } recited)
-            {
-                judgment = judgment with
-                {
-                    Recitation = recited,
-                    Summary = string.IsNullOrWhiteSpace(judgment.Summary) ? RecitationCheck.ReviewNote(recited)
-                        : $"{judgment.Summary} {RecitationCheck.ReviewNote(recited)}",
-                };
-                Diagnostics?.Report($"[Recitation on turn {turn.Index + 1}: {recited.Reason}. Not accepted; asking for it differently.]");
-            }
-            if (analysisTask is not null)
-            {
-                analysis = await analysisTask;
-                Diagnostics?.Report($"[Analysis: {analysis.Evidence.Count} evidence, {analysis.Misconceptions.Count} misconception(s), " +
-                    $"{analysis.Uncertainties.Count} uncertaint(ies), {analysis.Claims.Count} claim(s); {analysis.Voters} valid voter(s), " +
-                    $"{analysis.RejectedVotes} rejected{(analysis.Rejections.Count > 0 ? " (" + string.Join("; ", analysis.Rejections) + ")" : "")}, " +
-                    $"{analysis.DroppedItems} unquoted item(s) dropped.]");
-                if (!analysis.IsValid) analysis = null;
-            }
-        }
+        var (judgment, analysis, passages) = await PanelJudgmentAsync(turn, concept, rubric, objective, Ledger.Describe(concept.Key), Session, ct);
+        // Recitation check (GAD-T242): an answer that closely follows the source's wording, or a long fluent one after a long
+        // silent wait, is not accepted as the student's own understanding. It is recorded for review (never a cheating verdict),
+        // left out of mastery and evidence, and the next question asks for it differently, applied, or why.
+        if (passages is not null && RecitationCheck.Check(Session, turn, string.Join('\n', passages.Select(p => p.Text))) is { } recited)
+            judgment = WithRecitation(judgment, recited, turn);
 
-        var prior = Session.Mastery.TryGetValue(concept.Key, out var m) ? m.Estimate : MasteryModel.Prior;
-        var judgedBefore = Session.Turns.Count(t => t.ConceptId == concept.Key && t.Judgment is not null && !ObjectiveAssessor.IsUnjudged(t.Judgment));
-        // A failed panel (no usable verdict) is not evidence of anything: it leaves the estimate where it was,
-        // as ObjectiveAssessor already treats such an answer as neither for nor against (GAD-T176).
-        // A recited answer (GAD-T242) is not evidence of the student's own understanding either: it leaves the estimate too.
-        var estimate = ObjectiveAssessor.IsUnjudged(judgment) || judgment.Recitation is not null ? prior
-            : MasteryModel.Update(prior, judgment.OverallScore,
-                MasteryModel.QuestionDifficulty(turn.Move, Session.Policy.Difficulty), judgedBefore);
-        turn = Session.RecordJudgment(judgment, estimate, analysis);
+        turn = Session.RecordJudgment(judgment, Estimate(turn, judgment), analysis);
 
         // Scenario I: the panel found the question itself gave expected points away (hints teach on purpose).
         if (analysis is { QuestionRevealedAnswer: true } && !MoveProfiles.IsAssistance(turn.Move))
             FlagLeak(turn.Index, LeakSource.Analysis, "A majority of the analysis panel judged the question revealed expected answer points.");
 
-        // Claims the student withdrew in this answer ("I was wrong earlier", GAD-T441) are recorded before the new claims are
-        // checked, so a withdrawn claim is never a premise of a new contradiction. No extra panel call: the analysis found them.
+        await RecordClaimsAsync(Ledger, turn, concept.Title, judgment, analysis, ct);
+        ReportClaims(turn, objective);
+        return Session.Turns[turn.Index];
+    }
+
+    /// <summary>
+    /// The panel's part of judging one answer: the aporia check, then the verdict, the text-style estimate and the analysis together.
+    /// Reads only its arguments (never the live session or ledger), so it can run off the session's step lock (GAD-T508). Passages are
+    /// null for an aporia answer. <paramref name="styleSession"/> is what the text-style estimate compares against.
+    /// </summary>
+    private async Task<(AnswerJudgment Judgment, ResponseAnalysis? Analysis, IReadOnlyList<SourcePassage>? Passages)> PanelJudgmentAsync(Turn turn,
+        ConceptEntry concept, ConceptRubric rubric, ExamObjective objective, string earlier, SocraticSession? styleSession, CancellationToken ct)
+    {
+        if (await IsAporiaAsync(turn, ct))
+            return (AporiaJudgment(rubric.Version), ResponseAnalyzer.ForAporia(turn, objective.Key), null);
+
+        var passages = await _subject.PassagesAsync(concept.Key, turn.Answer!.Text, ct);
+        // The verdict, the text-style estimate and the analysis each read only the answer, the passages and the earlier claims
+        // (none uses another's result), so their panel calls run together instead of one after another (GAD-T287).
+        var judgeTask = _judge.JudgeAsync(new JudgeInput
+        {
+            Turn = turn,
+            Concept = concept,
+            Rubric = rubric,
+            Passages = passages,
+            EarlierClaims = earlier,
+        }, rubric.Version, ct);
+        var styleTask = AssessTextStyle && styleSession is not null ? _style.AssessAsync(styleSession, turn, ct) : null;
+        var analysisTask = AnalyzeResponses
+            ? _analyzer.AnalyzeAsync(new AnalysisInput
+            {
+                Turn = turn, Objective = objective, Objectives = Objectives, Rubric = rubric, Passages = passages, EarlierClaims = earlier,
+            }, ct)
+            : null;
+        await Task.WhenAll(new Task?[] { judgeTask, styleTask, analysisTask }.OfType<Task>());
+        var judgment = await judgeTask;
+        if (styleTask is not null && await styleTask is { } style)
+            judgment = judgment with { TextStyle = style };
+        ResponseAnalysis? analysis = null;
+        if (analysisTask is not null)
+        {
+            analysis = await analysisTask;
+            Diagnostics?.Report($"[Analysis: {analysis.Evidence.Count} evidence, {analysis.Misconceptions.Count} misconception(s), " +
+                $"{analysis.Uncertainties.Count} uncertaint(ies), {analysis.Claims.Count} claim(s); {analysis.Voters} valid voter(s), " +
+                $"{analysis.RejectedVotes} rejected{(analysis.Rejections.Count > 0 ? " (" + string.Join("; ", analysis.Rejections) + ")" : "")}, " +
+                $"{analysis.DroppedItems} unquoted item(s) dropped.]");
+            if (!analysis.IsValid) analysis = null;
+        }
+        return (judgment, analysis, passages);
+    }
+
+    private static AnswerJudgment AporiaJudgment(int rubricVersion) => new()
+    {
+        Criteria = [],
+        OverallScore = 0,
+        RubricVersion = rubricVersion,
+        Summary = "The student said they do not know (aporia).",
+    };
+
+    private AnswerJudgment WithRecitation(AnswerJudgment judgment, RecitationFlag recited, Turn turn)
+    {
+        if (judgment.Recitation is not null) return judgment;
+        Diagnostics?.Report($"[Recitation on turn {turn.Index + 1}: {recited.Reason}. Not accepted; asking for it differently.]");
+        return judgment with
+        {
+            Recitation = recited,
+            Summary = string.IsNullOrWhiteSpace(judgment.Summary) ? RecitationCheck.ReviewNote(recited)
+                : $"{judgment.Summary} {RecitationCheck.ReviewNote(recited)}",
+        };
+    }
+
+    /// <summary>
+    /// The concept's new mastery estimate after <paramref name="turn"/>, from the judgments the examiner steers by. A failed panel (no
+    /// usable verdict) is not evidence of anything: it leaves the estimate where it was, as ObjectiveAssessor already treats such an
+    /// answer as neither for nor against (GAD-T176). A recited answer (GAD-T242) is not evidence of the student's own understanding
+    /// either: it leaves the estimate too.
+    /// </summary>
+    private double Estimate(Turn turn, AnswerJudgment judgment)
+    {
+        var prior = Session.Mastery.TryGetValue(turn.ConceptId, out var m) ? m.Estimate : MasteryModel.Prior;
+        var judgedBefore = Session.Turns.Count(t => t.ConceptId == turn.ConceptId && t.Index != turn.Index
+            && SocraticSession.SteeringJudgment(t) is { } j && !ObjectiveAssessor.IsUnjudged(j));
+        return ObjectiveAssessor.IsUnjudged(judgment) || judgment.Recitation is not null ? prior
+            : MasteryModel.Update(prior, judgment.OverallScore, MasteryModel.QuestionDifficulty(turn.Move, Session.Policy.Difficulty), judgedBefore);
+    }
+
+    /// <summary>
+    /// Claims the student withdrew in this answer ("I was wrong earlier", GAD-T441) are recorded before the new claims are checked,
+    /// so a withdrawn claim is never a premise of a new contradiction. No extra panel call: the analysis found them.
+    /// </summary>
+    private async Task RecordClaimsAsync(ClaimLedger ledger, Turn turn, string conceptTitle, AnswerJudgment judgment, ResponseAnalysis? analysis,
+        CancellationToken ct)
+    {
         var retractions = analysis?.Retractions.Select(r => (r.Quote, r.Text)).ToList();
         if (judgment.OverallScore > 0)
         {
             if (analysis is { Deterministic: false } && (analysis.Claims.Count > 0 || analysis.Retractions.Count > 0))
-                await _claims.AddClaimsAsync(Ledger, turn, analysis.Claims.Select(c => (c.Quote, c.Text)).ToList(), ct, retractions);
+                await _claims.AddClaimsAsync(ledger, turn, analysis.Claims.Select(c => (c.Quote, c.Text)).ToList(), ct, retractions);
             else
-                await _claims.AnalyzeAsync(Ledger, turn, concept.Title, ct);
+                await _claims.AnalyzeAsync(ledger, turn, conceptTitle, ct);
         }
         else
-            ClaimAnalyzer.ApplyRetractions(Ledger, turn, retractions);
+            ClaimAnalyzer.ApplyRetractions(ledger, turn, retractions);
+    }
+
+    private void ReportClaims(Turn turn, ExamObjective objective)
+    {
         foreach (var r in Ledger.Retractions.Where(r => r.TurnIndex == turn.Index))
             Diagnostics?.Report($"[Turn {turn.Index + 1}: the student withdrew {(r.ClaimId is { } id ? $"claim {id}" : "an earlier claim no ledger entry matched")}: \"{r.Text}\".]");
 
@@ -360,13 +418,294 @@ public sealed class SourceExamEngine
             Diagnostics.Report($"[Objective {objective.Key}: {a.Status}, level {(int)a.Level} reported / {(int)a.ProvisionalLevel} provisional; " +
                 $"{a.IndependentAnswers} independent, {a.SupportingAnswers} supporting, {a.ContaminatedAnswers} contaminated, {a.AssistedAnswers} assisted. {a.Explanation}]");
         }
-        return Session.Turns[turn.Index];
+    }
+
+    // ------------------------------------------------------------------ provisional judgment and the full panel off the turn (GAD-T508)
+
+    /// <summary>
+    /// When set (the server's live exam, GAD-T508), an answer is judged provisionally by the <see cref="LiveTurnModel"/> on the turn
+    /// and the panel's full judgment runs off the turn (<see cref="StartFullJudgment"/>, <see cref="ApplyFinishedJudgmentAsync"/>).
+    /// Off by default: the CLI, previews and tests judge with the panel on the turn.
+    /// </summary>
+    public bool DeferFullJudgment { get; set; }
+
+    /// <summary>
+    /// A speculative copy of the session (GAD-T497): it never runs the panel on answers whose full judgment is still pending (the live
+    /// session does that). Where it would have to (the exam would end, or the fast model failed with earlier answers pending), it throws,
+    /// and the speculation is dropped.
+    /// </summary>
+    public bool Speculative { get; set; }
+
+    /// <summary>
+    /// A full panel judgment prepared off the session's step lock for <see cref="TurnIndex"/> (GAD-T508), with the claim ledger as it
+    /// will be once it is applied (<see cref="LedgerBefore"/> is the ledger it was computed from), the panel calls it made (for
+    /// metering) and, once applied, how it compared with the provisional judgment.
+    /// </summary>
+    public sealed record FullJudgment
+    {
+        public required int TurnIndex { get; init; }
+        public AnswerJudgment? Judgment { get; init; }
+        public ResponseAnalysis? Analysis { get; init; }
+        public ClaimLedger? Ledger { get; init; }
+        public string LedgerBefore { get; init; } = "";
+        public IReadOnlyList<PanelCall> Calls { get; init; } = [];
+        public long ElapsedMs { get; init; }
+        /// <summary>Why the panel could not judge (the judgment is then null and the turn stays pending).</summary>
+        public string? Error { get; init; }
+        /// <summary>True once it was recorded on its turn; false when dropped (the turn was judged meanwhile, or the session ended).</summary>
+        public bool Applied { get; init; }
+        /// <summary>The provisional judgment it replaced, as it stood when the full one arrived.</summary>
+        public ProvisionalJudgment? Provisional { get; init; }
+        /// <summary>Set when the full judgment disagreed materially with the provisional one (see <see cref="Disagreement(AnswerJudgment, AnswerJudgment)"/>).</summary>
+        public string? Disagreement { get; init; }
+    }
+
+    /// <summary>A score difference at or above this between the provisional and the full judgment is a material disagreement.</summary>
+    public const double MaterialDisagreement = 0.25;
+
+    private Task<FullJudgment>? _inflight;
+    private int _inflightTurn = -1;
+    private readonly List<FullJudgment> _finished = [];
+
+    /// <summary>
+    /// The provisional judgment (GAD-T508): the judge prompt answered by the one fast model, the recitation check (local), and the
+    /// concept's mastery from it. Null when the fast model fails or gives no usable verdict.
+    /// </summary>
+    private async Task<Turn?> ProvisionalAsync(ILiveTurnModel fast, Turn turn, CancellationToken ct)
+    {
+        var concept = _subject.Concept(turn.ConceptId);
+        var rubric = _subject.Rubric(concept.Key);
+        var started = _clock.GetTimestamp();
+        var text = turn.Answer!.Text.Trim();
+        AnswerJudgment judgment;
+        if (text.Length == 0 || text.Equals(AporiaWord, StringComparison.OrdinalIgnoreCase))
+            judgment = AporiaJudgment(rubric.Version);
+        else
+        {
+            var passages = await _subject.PassagesAsync(concept.Key, turn.Answer.Text, ct);
+            var verdict = await _judge.JudgeWithAsync(fast, new JudgeInput
+            {
+                Turn = turn, Concept = concept, Rubric = rubric, Passages = passages, EarlierClaims = Ledger.Describe(concept.Key),
+            }, rubric.Version, ct);
+            if (verdict is not { } v) return null;
+            // As with the panel's aporia check, only a short answer can be a plain "I don't know" (a long one is an attempt).
+            judgment = v.Aporia && text.Length <= 200 ? AporiaJudgment(rubric.Version) : v.Judgment;
+            if (RecitationCheck.Check(Session, turn, string.Join('\n', passages.Select(p => p.Text))) is { } recited)
+                judgment = WithRecitation(judgment, recited, turn);
+        }
+        var provisional = new ProvisionalJudgment
+        {
+            Judgment = judgment,
+            ProviderId = fast.ProviderId,
+            Model = fast.Model,
+            JudgedAt = _clock.GetUtcNow(),
+            ElapsedMs = (long)_clock.GetElapsedTime(started).TotalMilliseconds,
+        };
+        Diagnostics?.Report($"[Turn {turn.Index + 1} judged provisionally by {fast.ProviderId}/{fast.Model}: {judgment.OverallScore:0.00}; the panel judges it in the background.]");
+        return Session.RecordProvisional(provisional, Estimate(turn, judgment));
+    }
+
+    /// <summary>
+    /// Starts the full panel judgment of the earliest answer still waiting for one, unless it is already running (GAD-T508), and
+    /// returns its task (null when nothing is pending or the session has ended). One at a time, in turn order, so each sees the claim
+    /// ledger of every earlier answer. It reads a snapshot taken here, never the live session, and never throws (a failure comes back
+    /// as <see cref="FullJudgment.Error"/>). <paramref name="retryFailed"/> false leaves a judgment that failed for the next step to retry.
+    /// Call under the session's step serialization, like every other engine call.
+    /// </summary>
+    public Task<FullJudgment>? StartFullJudgment(bool retryFailed = true)
+    {
+        if (Session.IsEnded || Session.PendingFullJudgments.FirstOrDefault() is not { } next) return null;
+        if (_inflight is not null && _inflightTurn == next.Index)
+        {
+            var failed = _inflight.IsFaulted || _inflight.IsCanceled || (_inflight.IsCompletedSuccessfully && _inflight.Result.Error is not null);
+            if (!failed || !retryFailed) return _inflight;
+        }
+        var concept = _subject.Concept(next.ConceptId);
+        var rubric = _subject.Rubric(concept.Key);
+        var objective = ObjectiveOf(next);
+        var earlier = Ledger.Describe(concept.Key);
+        var ledgerBefore = Ledger.ToJson();
+        var styleSession = AssessTextStyle ? SessionTranscriptSerializer.Deserialize(SessionTranscriptSerializer.Serialize(Session)) : null;
+        _inflightTurn = next.Index;
+        _inflight = Task.Run(() => FullJudgmentAsync(next, concept, rubric, objective, earlier, ledgerBefore, styleSession));
+        return _inflight;
+    }
+
+    private async Task<FullJudgment> FullJudgmentAsync(Turn turn, ConceptEntry concept, ConceptRubric rubric, ExamObjective objective, string earlier,
+        string ledgerBefore, SocraticSession? styleSession)
+    {
+        // Its own metering scope: the step that started it may have finished long before it does.
+        using var usage = PanelUsage.Track(out var calls);
+        var started = _clock.GetTimestamp();
+        try
+        {
+            var (judgment, analysis, _) = await PanelJudgmentAsync(turn, concept, rubric, objective, earlier, styleSession, CancellationToken.None);
+            var ledger = ClaimLedger.FromJson(ledgerBefore);
+            await RecordClaimsAsync(ledger, turn, concept.Title, judgment, analysis, CancellationToken.None);
+            return new FullJudgment
+            {
+                TurnIndex = turn.Index, Judgment = judgment, Analysis = analysis, Ledger = ledger, LedgerBefore = ledgerBefore,
+                Calls = Snapshot(calls), ElapsedMs = (long)_clock.GetElapsedTime(started).TotalMilliseconds,
+            };
+        }
+        catch (Exception ex)
+        {
+            return new FullJudgment
+            {
+                TurnIndex = turn.Index, LedgerBefore = ledgerBefore, Calls = Snapshot(calls), Error = $"{ex.GetType().Name}: {ex.Message}",
+                ElapsedMs = (long)_clock.GetElapsedTime(started).TotalMilliseconds,
+            };
+        }
+
+        static IReadOnlyList<PanelCall> Snapshot(IReadOnlyList<PanelCall> list)
+        {
+            lock (list) return [.. list];
+        }
+    }
+
+    /// <summary>
+    /// Applies the full judgment that was running, if it has finished (GAD-T508): it becomes the turn's judgment (the one graded), the
+    /// concept's mastery is replayed from it, a leak the analysis found is flagged, and the claim ledger takes in its claims. Returns
+    /// true when the session changed. Does not wait; call under the session's step serialization.
+    /// </summary>
+    public async Task<bool> ApplyFinishedJudgmentAsync(CancellationToken ct = default)
+    {
+        if (_inflight is not { IsCompleted: true } done) return false;
+        return await ApplyAsync(await done, ct);
+    }
+
+    /// <summary>
+    /// Waits for the full judgment of every answer still pending, one after another in turn order, and applies each (GAD-T508): before
+    /// the session ends, before the panel judges a later answer on the turn, and wherever the full judgments must be in. Returns how many
+    /// were applied; throws when the panel could not judge one (it stays pending, with its provisional judgment).
+    /// </summary>
+    public async Task<int> FinishFullJudgmentsAsync(CancellationToken ct = default)
+    {
+        var applied = 0;
+        while (!Session.IsEnded && StartFullJudgment() is { } task)
+        {
+            var result = await task.WaitAsync(ct);
+            if (result.Error is not null)
+            {
+                await ApplyAsync(result, ct);
+                throw new InvalidOperationException($"The panel could not judge turn {result.TurnIndex + 1}: {result.Error}");
+            }
+            if (await ApplyAsync(result, ct)) applied++;
+        }
+        return applied;
+    }
+
+    /// <summary>
+    /// The full judgments finished since the last call, applied or dropped, with the panel calls they made (GAD-T508): the host meters
+    /// them, and records any material disagreement with the provisional judgment for reviewers.
+    /// </summary>
+    public IReadOnlyList<FullJudgment> TakeFinishedJudgments()
+    {
+        var list = _finished.ToList();
+        _finished.Clear();
+        return list;
+    }
+
+    /// <summary>
+    /// This engine replaces <paramref name="other"/> for the same session (a speculative step adopted, GAD-T497): the full judgment
+    /// <paramref name="other"/> has running, and the finished ones not yet taken, carry over, so nothing is judged twice or left unmetered.
+    /// </summary>
+    public void TakeOverJudgingFrom(SourceExamEngine other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        if (ReferenceEquals(other, this)) return;
+        _inflight = other._inflight;
+        _inflightTurn = other._inflightTurn;
+        _finished.AddRange(other._finished);
+        other._finished.Clear();
+        other._inflight = null;
+        other._inflightTurn = -1;
+    }
+
+    private async Task<bool> ApplyAsync(FullJudgment result, CancellationToken ct)
+    {
+        if (_inflightTurn == result.TurnIndex && _inflight is { IsCompletedSuccessfully: true } && ReferenceEquals(_inflight.Result, result) && result.Error is null)
+        {
+            _inflight = null;
+            _inflightTurn = -1;
+        }
+        if (result.Error is not null || result.Judgment is null)
+        {
+            if (!_finished.Contains(result)) _finished.Add(result with { Calls = Consumed(result) });
+            Diagnostics?.Report($"[The panel could not judge turn {result.TurnIndex + 1} yet: {result.Error}]");
+            return false;
+        }
+        if (Session.IsEnded || result.TurnIndex >= Session.Turns.Count
+            || Session.Turns[result.TurnIndex] is not { Judgment: null, Provisional: { } provisional } turn)
+        {
+            _finished.Add(result with { Calls = Consumed(result) });
+            return false;
+        }
+        var judgment = provisional.Judgment.Recitation is { } recited ? WithRecitation(result.Judgment, recited, turn) : result.Judgment;
+        var disagreement = Disagreement(provisional.Judgment, judgment);
+        var updated = provisional with { FullScore = judgment.OverallScore, Disagreement = disagreement };
+        turn = Session.RecordFullJudgment(result.TurnIndex, judgment, result.Analysis, updated);
+        if (result.Analysis is { QuestionRevealedAnswer: true } && !MoveProfiles.IsAssistance(turn.Move))
+            FlagLeak(turn.Index, LeakSource.Analysis, "A majority of the analysis panel judged the question revealed expected answer points.");
+        if (result.Ledger is not null && Ledger.ToJson() == result.LedgerBefore) Ledger.ReplaceWith(result.Ledger);
+        else await RecordClaimsAsync(Ledger, turn, _subject.Concept(turn.ConceptId).Title, judgment, result.Analysis, ct);
+        ReportClaims(turn, ObjectiveOf(turn));
+        Diagnostics?.Report($"[Turn {turn.Index + 1} judged by the panel: {judgment.OverallScore:0.00} (provisional {provisional.Judgment.OverallScore:0.00})" +
+            (disagreement is null ? ".]" : $"; they disagree: {disagreement}]"));
+        _finished.Add(result with { Calls = Consumed(result), Applied = true, Provisional = updated, Disagreement = disagreement });
+        return true;
+    }
+
+    /// <summary>A finished judgment's calls are metered once: a result seen twice (a failure retried) hands them over only the first time.</summary>
+    private readonly HashSet<FullJudgment> _metered = new(ReferenceEqualityComparer.Instance);
+
+    private IReadOnlyList<PanelCall> Consumed(FullJudgment result) => _metered.Add(result) ? result.Calls : [];
+
+    /// <summary>
+    /// Why the full judgment disagrees materially with the provisional one (GAD-T508), or null when it does not: one heard an honest
+    /// "I don't know" and the other an attempt, the answer falls on a different side of the evidence thresholds (positive, mixed,
+    /// negative), or the overall scores differ by <see cref="MaterialDisagreement"/> or more. A panel with no usable verdict is not
+    /// compared (the answer goes to a human either way).
+    /// </summary>
+    public static string? Disagreement(AnswerJudgment provisional, AnswerJudgment full)
+    {
+        ArgumentNullException.ThrowIfNull(provisional);
+        ArgumentNullException.ThrowIfNull(full);
+        if (ObjectiveAssessor.IsUnjudged(full) || ObjectiveAssessor.IsUnjudged(provisional)) return null;
+        var (pa, fa) = (ObjectiveAssessor.IsAporia(provisional), ObjectiveAssessor.IsAporia(full));
+        if (pa != fa)
+            return fa ? "The panel heard an honest \"I don't know\"; the fast model scored it as an attempt."
+                : "The fast model heard an honest \"I don't know\"; the panel scored it as an attempt.";
+        var (pr, fr) = (ObjectiveAssessor.ResultOf(provisional.OverallScore), ObjectiveAssessor.ResultOf(full.OverallScore));
+        var delta = Math.Abs(provisional.OverallScore - full.OverallScore);
+        if (pr == fr && delta < MaterialDisagreement) return null;
+        return string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"The fast model scored {provisional.OverallScore:0.00} ({pr}), the panel {full.OverallScore:0.00} ({fr}).");
     }
 
     /// <summary>Ends the session early (the student left, the host stopped it).</summary>
     public void End(EndReason reason)
     {
         if (!Session.IsEnded) Session.End(reason, _clock.GetUtcNow());
+    }
+
+    /// <summary>
+    /// Ends the session once every answer's full panel judgment is in (GAD-T508), so the report and grading never read a provisional
+    /// one. A panel that still fails does not stop the session ending: that answer keeps only its provisional judgment and goes to a
+    /// human to grade, as an answer the panel never judged always has.
+    /// </summary>
+    public async Task EndAsync(EndReason reason, CancellationToken ct = default)
+    {
+        if (Session.IsEnded) return;
+        if (Session.PendingFullJudgments.Count > 0)
+        {
+            try { await FinishFullJudgmentsAsync(ct); }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                Diagnostics?.Report($"[Ending with an answer the panel could not judge; it goes to a human: {ex.Message}]");
+            }
+        }
+        End(reason);
     }
 
     /// <summary>The report for the session so far (normally called once it has ended), with per-objective levels.</summary>

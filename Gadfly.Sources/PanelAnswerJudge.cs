@@ -38,10 +38,46 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
 
     public async Task<AnswerJudgment> JudgeAsync(JudgeInput input, int rubricVersion, CancellationToken ct = default)
     {
+        var prompt = Prompt(input);
+        var replies = await panel.FanOutAsync(PanelJson.JsonOnlySystem, prompt, maxTokens: 1500, temperature: 0.1, ct: ct);
+        return Aggregate(input, rubricVersion, replies.Where(r => !r.IsError).Select(r => (r.ProviderId, r.Model, r.Text)).ToList());
+    }
+
+    /// <summary>What the provisional judge adds to the judge prompt (GAD-T508), outside the prompt set: an aporia flag in the same reply.</summary>
+    public const string ProvisionalAporiaInstruction =
+        "Also include a top-level boolean field \"aporia\": true only when the student's answer is an honest statement that they do not know, with no attempt at an answer; otherwise false.";
+
+    /// <summary>
+    /// The live turn's provisional judgment (GAD-T508): the same judge prompt and rubric, answered by one fast model instead of the
+    /// panel, aggregated exactly like a one-member panel. It steers the next move only; the panel's <see cref="JudgeAsync"/> still
+    /// grades. Returns null when the model fails or gives no usable verdict, so the caller falls back to the panel on the turn.
+    /// </summary>
+    public async Task<(AnswerJudgment Judgment, bool Aporia)?> JudgeWithAsync(ILiveTurnModel model, JudgeInput input, int rubricVersion,
+        CancellationToken ct = default)
+    {
+        string reply;
+        try
+        {
+            using var kind = PanelUsage.UseLiveKind("live-judge");
+            reply = await model.CompleteAsync(PanelJson.JsonOnlySystem, Prompt(input) + "\n\n" + ProvisionalAporiaInstruction,
+                maxTokens: 1500, temperature: 0.1, ct: ct);
+        }
+        catch (Exception) when (!ct.IsCancellationRequested)
+        {
+            return null;
+        }
+        var judgment = Aggregate(input, rubricVersion, [(model.ProviderId, model.Model, reply)]);
+        if (judgment.Votes.Count == 0) return null;
+        using var doc = PanelJson.ParseObject(reply);
+        var aporia = doc is not null && doc.RootElement.TryGetProperty("aporia", out var a) && a.ValueKind == System.Text.Json.JsonValueKind.True;
+        return (judgment, aporia);
+    }
+
+    private string Prompt(JudgeInput input)
+    {
         var turn = input.Turn;
         if (turn.Answer is null) throw new ArgumentException("The turn has no answer to judge.", nameof(input));
-
-        var prompt = ExamPrompts.Fill(_prompts[ExamPrompts.JudgeKey], new Dictionary<string, string?>
+        return ExamPrompts.Fill(_prompts[ExamPrompts.JudgeKey], new Dictionary<string, string?>
         {
             ["move"] = turn.Move.ToString(),
             ["concept"] = $"{input.Concept.Title}: {input.Concept.Definition}",
@@ -51,10 +87,14 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
             ["question"] = turn.Question,
             ["answer"] = ExamPrompts.Student(turn.Answer.Text),
         });
-        var replies = await panel.FanOutAsync(PanelJson.JsonOnlySystem, prompt, maxTokens: 1500, temperature: 0.1, ct: ct);
+    }
 
+    /// <summary>Scores, agreement and the reviewer's summary from the judges' replies (each a JSON verdict; unusable ones are skipped).</summary>
+    private AnswerJudgment Aggregate(JudgeInput input, int rubricVersion, IReadOnlyList<(string ProviderId, string Model, string Text)> replies)
+    {
+        var turn = input.Turn;
         var votes = new List<(string Provider, Dictionary<string, (double Score, string Rationale, List<string> Refs)> Criteria, string Verdict, string Model)>();
-        foreach (var reply in replies.Where(r => !r.IsError))
+        foreach (var reply in replies)
         {
             using var doc = PanelJson.ParseObject(reply.Text);
             if (doc is null) continue;
@@ -116,7 +156,7 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
         var representative = votes.Zip(overalls).OrderBy(x => Math.Abs(x.Second - mean)).First().First;
         // An answer written at the grader (asking for marks, "ignore the rubric") never stands on the panel's
         // word alone, however the judges scored it (GAD-T77).
-        var addressesGrader = ExamPrompts.AddressesGrader(turn.Answer.Text);
+        var addressesGrader = ExamPrompts.AddressesGrader(turn.Answer!.Text);
         return new AnswerJudgment
         {
             Criteria = criteria,

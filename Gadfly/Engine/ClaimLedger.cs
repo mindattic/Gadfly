@@ -125,6 +125,20 @@ public sealed class ClaimLedger
     /// <summary>The whole ledger as JSON, persisted beside the session so a resumed exam keeps its memory.</summary>
     public string ToJson() => JsonSerializer.Serialize(new LedgerDto([.. _claims], [.. _contradictions], [.. _retractions], [.. _checks]), Json);
 
+    /// <summary>
+    /// Takes over <paramref name="other"/>'s contents (GAD-T508): a background judgment fills a copy of the ledger off the session's
+    /// step lock and the copy replaces this one when it is applied, provided this ledger did not change in the meantime.
+    /// </summary>
+    public void ReplaceWith(ClaimLedger other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        if (ReferenceEquals(other, this)) return;
+        _claims.Clear(); _claims.AddRange(other._claims);
+        _contradictions.Clear(); _contradictions.AddRange(other._contradictions);
+        _retractions.Clear(); _retractions.AddRange(other._retractions);
+        _checks.Clear(); _checks.AddRange(other._checks);
+    }
+
     public static ClaimLedger FromJson(string? json)
     {
         var ledger = new ClaimLedger();
