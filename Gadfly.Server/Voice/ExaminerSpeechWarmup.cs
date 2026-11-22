@@ -31,19 +31,21 @@ public sealed class ExaminerSpeechWarmup(IServiceProvider services, VoiceSetting
     private readonly SemaphoreSlim _one = new(1, 1);
 
     /// <summary>Warms <paramref name="phrases"/> in the background, in the order given (most urgent first); returns at once.
-    /// <paramref name="voiceId"/> is a session's own examiner voice (GAD-T475), null for the platform voice; the cache is per voice.</summary>
-    public void Warm(IEnumerable<string> phrases, string? voiceId = null)
+    /// <paramref name="voiceId"/> is a session's own examiner voice (GAD-T475), null for the platform voice; the cache is per voice.
+    /// <paramref name="profile"/> is a session's own model and speed (GAD-T530, GAD-T555, <see cref="ExaminerTts"/>), null for the
+    /// library's; the cache is per model and speed too, so each language's lines are kept per voice and language (GAD-T532).</summary>
+    public void Warm(IEnumerable<string> phrases, string? voiceId = null, ExaminerTts.Profile? profile = null)
     {
         if (!settings.Available || !settings.WarmPhrases) return;
-        var todo = Due(phrases, clock.GetUtcNow(), voiceId);
+        var todo = Due(phrases, clock.GetUtcNow(), voiceId, profile);
         if (todo.Length == 0) return;
-        _ = Task.Run(() => RunAsync(todo, voiceId));
+        _ = Task.Run(() => RunAsync(todo, voiceId, profile));
     }
 
     /// <summary>The phrases not prepared yet, or not checked within <see cref="RecheckAfter"/>; each is marked as being checked now.</summary>
-    public string[] Due(IEnumerable<string> phrases, DateTimeOffset now, string? voiceId = null)
+    public string[] Due(IEnumerable<string> phrases, DateTimeOffset now, string? voiceId = null, ExaminerTts.Profile? profile = null)
     {
-        var voice = voiceId is null ? "" : voiceId + "\n";
+        var voice = Prefix(voiceId, profile);
         var due = new List<string>();
         lock (_checked)
         {
@@ -57,10 +59,15 @@ public sealed class ExaminerSpeechWarmup(IServiceProvider services, VoiceSetting
         return [.. due];
     }
 
-    private async Task RunAsync(string[] phrases, string? voiceId)
+    /// <summary>The key prefix of a voice and profile in <see cref="_checked"/>: empty for the platform voice and the library's model.</summary>
+    private static string Prefix(string? voiceId, ExaminerTts.Profile? profile) =>
+        (voiceId is null ? "" : voiceId + "\n") + (profile is null ? "" : $"{profile.ModelId}|{profile.Speed}\n");
+
+    private async Task RunAsync(string[] phrases, string? voiceId, ExaminerTts.Profile? profile)
     {
         var speech = services.GetService<AvatarSpeechService>();
         if (speech is null) return;
+        var own = profile is null ? null : services.GetService<ExaminerTts>();
         await _one.WaitAsync();
         try
         {
@@ -70,11 +77,12 @@ public sealed class ExaminerSpeechWarmup(IServiceProvider services, VoiceSetting
                 {
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                     // Draining the stream with cacheable set stores the whole utterance; a cached one returns at once.
-                    await foreach (var _ in speech.StreamAsync(phrase, voiceId, cacheable: true, cts.Token)) { }
+                    if (own is not null) await foreach (var _ in own.StreamAsync(profile!, phrase, voiceId, cacheable: true, cts.Token)) { }
+                    else await foreach (var _ in speech.StreamAsync(phrase, voiceId, cacheable: true, cts.Token)) { }
                 }
                 catch (Exception ex)
                 {
-                    lock (_checked) _checked.Remove((voiceId is null ? "" : voiceId + "\n") + phrase);   // try again next time
+                    lock (_checked) _checked.Remove(Prefix(voiceId, profile) + phrase);   // try again next time
                     log.LogDebug(ex, "An examiner phrase could not be prepared ahead; it will be synthesized when spoken.");
                 }
             }

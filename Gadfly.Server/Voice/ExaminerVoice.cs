@@ -33,8 +33,17 @@ public static partial class ExaminerVoice
         return null;
     }
 
-    /// <summary>Reads the session's exam voice and its organization's default, tenant-scoped to <paramref name="org"/>.</summary>
-    public static async Task<string?> ForSessionAsync(GadflyDbContext db, VoiceMode mode, Guid org, Guid session, ILogger log, CancellationToken ct)
+    /// <summary>
+    /// The exam's voice, else the organization's, else the platform voice configured for the exam language (GAD-T530,
+    /// <see cref="VoiceSettings.VoiceIdFor"/>), else null (the platform voice). Always null outside live mode.
+    /// </summary>
+    public static string? Choose(VoiceMode mode, string? examVoiceId, string? organizationVoiceId, string? languageVoiceId) =>
+        mode != VoiceMode.Live ? null : Choose(mode, examVoiceId, organizationVoiceId) ?? (IsWellFormed(languageVoiceId) ? languageVoiceId!.Trim() : null);
+
+    /// <summary>Reads the session's exam voice and its organization's default, tenant-scoped to <paramref name="org"/>; with neither,
+    /// <paramref name="languageVoiceId"/> (the platform voice for the attempt's language, GAD-T530).</summary>
+    public static async Task<string?> ForSessionAsync(GadflyDbContext db, VoiceMode mode, Guid org, Guid session, ILogger log, CancellationToken ct,
+        string? languageVoiceId = null)
     {
         if (mode != VoiceMode.Live) return null;
         var examVoice = await db.ExamSessions.AsNoTracking()
@@ -46,6 +55,6 @@ public static partial class ExaminerVoice
         foreach (var (where, id) in new[] { ("exam", examVoice), ("organization default", orgVoice) })
             if (!string.IsNullOrWhiteSpace(id) && !IsWellFormed(id))
                 log.LogWarning("The {Where} examiner voice id for session {SessionId} is not a valid voice id; it is skipped.", where, session);
-        return Choose(mode, examVoice, orgVoice);
+        return Choose(mode, examVoice, orgVoice, languageVoiceId);
     }
 }

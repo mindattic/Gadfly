@@ -89,6 +89,60 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
     /// </summary>
     public string TtsModel { get; init; } = "eleven_flash_v2_5";
 
+    /// <summary>
+    /// The ElevenLabs model per exam language (GAD-T530), <c>Gadfly:Voice:TtsModels:&lt;language&gt;</c> (e.g. <c>TtsModels:ko</c>). A
+    /// language without one uses the examiner's model (<see cref="TtsModel"/>, or <c>MindAttic:Avatar:ElevenLabs:ModelId</c>), which by
+    /// default is <c>eleven_flash_v2_5</c>: it speaks Korean (as do <c>eleven_turbo_v2_5</c>, <c>eleven_multilingual_v2</c> and
+    /// <c>eleven_v3</c>; <c>eleven_flash_v2</c>/<c>eleven_turbo_v2</c> are English only, so a Korean exam must not be left on those).
+    /// </summary>
+    public IReadOnlyDictionary<string, string> TtsModels { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// The examiner's ElevenLabs voice id per exam language (GAD-T530), <c>Gadfly:Voice:VoiceIds:&lt;language&gt;</c>, for a platform voice
+    /// that does not speak that language well. Used only where the exam and the organization name no voice of their own (GAD-T475): their
+    /// choice stands in every language. Unset: the same voice speaks every language (the multilingual models do).
+    /// </summary>
+    public IReadOnlyDictionary<string, string> VoiceIds { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// ESL mode's end-of-answer floor (GAD-T554, docs/research/esl-and-korean.md R3): a student answering in a second language pauses
+    /// longer, and mid-clause, so the shortest silence that ends an answer starts at 6 s instead of <see cref="EndOfAnswerSeconds"/>.
+    /// <c>Gadfly:Voice:Esl:EndOfAnswerSeconds</c>, 2 to 20, default 6. Pilot-tunable, like the rest of the <c>Esl</c> settings.
+    /// </summary>
+    public double EslEndOfAnswerSeconds { get; init; } = 6;
+
+    /// <summary>ESL mode's ceiling for the adaptive silence (<c>Gadfly:Voice:Esl:EndOfAnswerMaxSeconds</c>, up to 30, default 15).</summary>
+    public double EslEndOfAnswerMaxSeconds { get; init; } = 15;
+
+    /// <summary>
+    /// ESL mode's silence after a finished sentence (<c>Gadfly:Voice:Esl:EndOfAnswerCompleteSeconds</c>, 1 to the ESL floor, default 3.5):
+    /// second-language speakers pause after a complete clause while planning the next, so the short cue is longer, and it is used only
+    /// after <see cref="EslCompleteAfterAnswers"/> answers in a row that were not cut off.
+    /// </summary>
+    public double EslEndOfAnswerCompleteSeconds { get; init; } = 3.5;
+
+    /// <summary>How many answers in a row with no cut-off before ESL mode uses the finished-sentence cue at all
+    /// (<c>Gadfly:Voice:Esl:CompleteAfterAnswers</c>, 0 to 10, default 3).</summary>
+    public int EslCompleteAfterAnswers { get; init; } = 3;
+
+    /// <summary>ESL mode multiplies the cut-off backoff step (GAD-T462) by this (<c>Gadfly:Voice:Esl:CutOffBackoffFactor</c>, 1 to 4, default 2).</summary>
+    public double EslCutOffBackoffFactor { get; init; } = 2;
+
+    /// <summary>
+    /// The examiner's speaking speed for a student answering in a second language (GAD-T555): ElevenLabs <c>voice_settings.speed</c>,
+    /// 0.7 to 1.2 (1 is the voice's normal pace). <c>Gadfly:Voice:PlainSpeechSpeed</c>, default 0.9: slightly slower, still natural.
+    /// 1 turns it off.
+    /// </summary>
+    public double PlainSpeechSpeed { get; init; } = 0.9;
+
+    /// <summary>The model configured for <paramref name="language"/>, or null for the examiner's usual model.</summary>
+    public string? TtsModelFor(string? language) =>
+        TtsModels.TryGetValue(Gadfly.Engine.ExamLanguage.Normalize(language), out var m) && !string.IsNullOrWhiteSpace(m) ? m.Trim() : null;
+
+    /// <summary>The platform voice configured for <paramref name="language"/>, or null for the platform's usual voice.</summary>
+    public string? VoiceIdFor(string? language) =>
+        VoiceIds.TryGetValue(Gadfly.Engine.ExamLanguage.Normalize(language), out var v) && ExaminerVoice.IsWellFormed(v) ? v.Trim() : null;
+
     /// <summary>The hard upper bound on the cue after an accommodation is applied: past this the student should press Done answering.</summary>
     public const double EndOfAnswerHardCapSeconds = 45;
 
@@ -114,6 +168,53 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
         var m = double.IsFinite(timeMultiplier) ? Math.Clamp(timeMultiplier, 1, 4) : 1;
         var (floorMs, _) = EndCue(timeMultiplier);
         return Math.Min(floorMs, (int)Math.Round(Math.Min(EndOfAnswerCompleteSeconds * m, EndOfAnswerHardCapSeconds) * 1000));
+    }
+
+    /// <summary>The floor is at least the student's longest calibration-reading pause times this (GAD-T594), as the browser's own
+    /// adaptation takes half again the student's longer pauses (GAD-T264).</summary>
+    public const double CalibratedPauseFactor = 1.5;
+
+    /// <summary>The end-of-answer silences for one student in one attempt (GAD-T264, GAD-T498, GAD-T554), in milliseconds.</summary>
+    /// <param name="FloorMs">The shortest silence that ends an answer.</param>
+    /// <param name="CeilingMs">The longest the silence adapts up to.</param>
+    /// <param name="CompleteMs">The silence after a finished sentence (equal to the floor: no short cue).</param>
+    /// <param name="CompleteAfterAnswers">Answers in a row with no cut-off before the short cue is used (0: at once, as always).</param>
+    /// <param name="BackoffFactor">Multiplies the browser's cut-off backoff step (1: unchanged).</param>
+    public sealed record EndCues(int FloorMs, int CeilingMs, int CompleteMs, int CompleteAfterAnswers, double BackoffFactor);
+
+    /// <summary>
+    /// The end-of-answer silences for <paramref name="speech"/> and the extra-time accommodation (<paramref name="timeMultiplier"/>).
+    /// A default attempt (<see cref="SessionSpeech.IsDefault"/>, or no languages known) gets exactly <see cref="EndCue"/> and
+    /// <see cref="EndCueCompleteMs"/>, as before. ESL mode (a second-language speaker, GAD-T554) starts from the <c>Esl</c> settings,
+    /// with the accommodation stacked on top and the hard cap still applying. A non-English exam never uses the short finished-sentence
+    /// cue: that test reads English punctuation habits and an English list of continuation words (research note R6.2).
+    /// </summary>
+    public EndCues EndCuesFor(double timeMultiplier, SessionSpeech? speech)
+    {
+        var (floorMs, ceilingMs) = EndCue(timeMultiplier);
+        var cues = new EndCues(floorMs, ceilingMs, EndCueCompleteMs(timeMultiplier), 0, 1);
+        if (speech is null || speech.IsDefault) return cues;
+        if (speech.NonNative)
+        {
+            var esl = this with
+            {
+                EndOfAnswerSeconds = EslEndOfAnswerSeconds,
+                EndOfAnswerMaxSeconds = Math.Max(EslEndOfAnswerMaxSeconds, EslEndOfAnswerSeconds),
+                EndOfAnswerCompleteSeconds = Math.Min(EslEndOfAnswerCompleteSeconds, EslEndOfAnswerSeconds),
+            };
+            var (floor, ceiling) = esl.EndCue(timeMultiplier);
+            cues = new EndCues(floor, ceiling, esl.EndCueCompleteMs(timeMultiplier), EslCompleteAfterAnswers, EslCutOffBackoffFactor);
+        }
+        // The student's own calibration reading in the exam language (GAD-T594): a floor shorter than half again their longest pause
+        // while reading is lengthened to it (never past the ceiling); it never shortens anything.
+        if (speech.Calibration is { Readings: > 0, LongestPauseMs: > 0 and < 60_000 } calibration)
+        {
+            var m = double.IsFinite(timeMultiplier) ? Math.Clamp(timeMultiplier, 1, 4) : 1;
+            var calibrated = (int)Math.Round(Math.Min(calibration.LongestPauseMs * CalibratedPauseFactor * m, EndOfAnswerHardCapSeconds * 1000));
+            if (calibrated > cues.FloorMs) cues = cues with { FloorMs = Math.Min(cues.CeilingMs, calibrated) };
+        }
+        if (!Gadfly.Engine.ExamLanguage.IsEnglish(speech.Language)) cues = cues with { CompleteMs = cues.FloorMs };
+        return cues;
     }
 
     /// <summary>"x,y,w" with each a fraction in (0, 1), normalized; anything else is null (no mouth drawn).</summary>
@@ -160,6 +261,26 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
             WarmPhrases = !bool.TryParse(section["WarmPhrases"], out var warm) || warm,
             PortraitMouth = mouth,
             TtsModel = section["TtsModel"] is { Length: > 0 } tts ? tts.Trim() : "eleven_flash_v2_5",
+            TtsModels = PerLanguage(section.GetSection("TtsModels")),
+            VoiceIds = PerLanguage(section.GetSection("VoiceIds")),
+            EslEndOfAnswerSeconds = Number(section["Esl:EndOfAnswerSeconds"], 2, 20, 6),
+            EslEndOfAnswerMaxSeconds = Number(section["Esl:EndOfAnswerMaxSeconds"], 2, 30, 15),
+            EslEndOfAnswerCompleteSeconds = Number(section["Esl:EndOfAnswerCompleteSeconds"], 1, 20, 3.5),
+            EslCompleteAfterAnswers = (int)Number(section["Esl:CompleteAfterAnswers"], 0, 10, 3),
+            EslCutOffBackoffFactor = Number(section["Esl:CutOffBackoffFactor"], 1, 4, 2),
+            PlainSpeechSpeed = double.TryParse(section["PlainSpeechSpeed"], System.Globalization.CultureInfo.InvariantCulture, out var sp) && double.IsFinite(sp) ? Math.Clamp(sp, 0.7, 1.2) : 0.9,
         };
+    }
+
+    private static double Number(string? value, double min, double max, double fallback) =>
+        double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var v) && double.IsFinite(v) ? Math.Clamp(v, min, max) : fallback;
+
+    /// <summary>A per-language section ("ko": value) as normalized language tags to trimmed values; blank values are left out.</summary>
+    private static Dictionary<string, string> PerLanguage(IConfigurationSection section)
+    {
+        var d = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var child in section.GetChildren())
+            if (!string.IsNullOrWhiteSpace(child.Value)) d[Gadfly.Engine.ExamLanguage.Normalize(child.Key)] = child.Value.Trim();
+        return d;
     }
 }

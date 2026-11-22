@@ -11,7 +11,8 @@ namespace Gadfly.Server.Voice;
 /// alignment, chunks that may end mid-word) with a quiet synthetic voice, so mock mode runs exactly the live lip-sync path
 /// (GAD-T303): the library turns the character alignment into word timings, the avatar shapes the mouth from them, and the
 /// captions follow them. Each word is one soft burst per syllable (so the mouth visibly opens and closes on long words), and
-/// commas and full stops leave the pauses a speaker would.
+/// commas and full stops leave the pauses a speaker would. Korean works the same way (GAD-T530): the text is read as UTF-8, every
+/// Hangul character gets its own alignment entry, and a Hangul syllable block is timed as a syllable.
 /// </summary>
 public sealed class MockTextToSpeech : HttpMessageHandler
 {
@@ -40,18 +41,33 @@ public sealed class MockTextToSpeech : HttpMessageHandler
         _ => 0.07,
     };
 
-    /// <summary>A rough syllable count (groups of vowels), at least one.</summary>
+    /// <summary>A rough syllable count (groups of vowels; each Hangul syllable block is one syllable, GAD-T530), at least one.</summary>
     public static int Syllables(string word)
     {
         var count = 0;
         var inVowel = false;
         foreach (var c in word.ToLowerInvariant())
         {
+            if (IsHangulSyllable(c)) { count++; inVowel = false; continue; }
             var vowel = "aeiouy".Contains(c);
             if (vowel && !inVowel) count++;
             inVowel = vowel;
         }
         return Math.Max(1, count);
+    }
+
+    /// <summary>A precomposed Hangul syllable (U+AC00 to U+D7A3): one character, one spoken syllable.</summary>
+    public static bool IsHangulSyllable(char c) => c is >= '\uAC00' and <= '\uD7A3';
+
+    /// <summary>
+    /// How long a word takes to say: the English estimate (0.14 s plus 0.045 s a letter), with each Hangul syllable block counted as a
+    /// syllable (0.17 s) instead of a letter, since one block is a whole consonant-vowel(-consonant) syllable (GAD-T530). English text
+    /// has none, so its timing is unchanged.
+    /// </summary>
+    public static double WordSeconds(string word)
+    {
+        var hangul = word.Count(IsHangulSyllable);
+        return 0.14 + 0.045 * (word.Length - hangul) + 0.17 * hangul;
     }
 
     /// <summary>The newline-delimited JSON chunks for <paramref name="text"/>.</summary>
@@ -73,7 +89,7 @@ public sealed class MockTextToSpeech : HttpMessageHandler
                 chars.Add(" "); starts.Add(t); ends.Add(t + gap);
                 Silence(gap);
             }
-            var seconds = 0.14 + 0.045 * word.Length;
+            var seconds = WordSeconds(word);
             var samples = (int)(seconds * SampleRate);
             var pitch = 150 + (word.Length * 13 % 60);
             var syllables = Syllables(word);

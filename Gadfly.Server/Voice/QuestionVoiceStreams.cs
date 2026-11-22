@@ -40,15 +40,37 @@ public sealed class QuestionVoiceStreams(IServiceProvider services, ApiCallRecor
     /// A new stream for the next question in <paramref name="session"/>, for <paramref name="user"/> only. <paramref name="committedAt"/>
     /// (a <see cref="Stopwatch"/> timestamp) is when the answer before it was committed: the stream's timings count from there.
     /// </summary>
-    public QuestionVoiceStream Open(Guid user, Guid organization, Guid session, string? voiceId, long committedAt, DateTimeOffset committedAtUtc)
+    /// <para><paramref name="profile"/> is the session's own model and speed (GAD-T530, GAD-T555, <see cref="ExaminerTts"/>); null speaks
+    /// with the library's voice, as before.</para>
+    public QuestionVoiceStream Open(Guid user, Guid organization, Guid session, string? voiceId, long committedAt, DateTimeOffset committedAtUtc,
+        ExaminerTts.Profile? profile = null)
     {
         var now = DateTimeOffset.UtcNow;
         foreach (var (id, old) in _streams)
             if (now - old.CreatedAt > KeepFor) { _streams.TryRemove(id, out _); old.Dispose(); }
+        Func<string, string?, CancellationToken, IAsyncEnumerable<SpeechChunk>> tts = profile is null
+            ? (text, voice, ct) => services.GetRequiredService<ElevenLabsTtsClient>().StreamAsync(text, voice, ct)
+            : (text, voice, ct) => services.GetRequiredService<ExaminerTts>().StreamAsync(profile, text, voice, cacheable: false, ct);
         var stream = new QuestionVoiceStream(Guid.NewGuid().ToString("N"), user, organization, session, voiceId, committedAt, committedAtUtc,
-            (text, voice, ct) => services.GetRequiredService<ElevenLabsTtsClient>().StreamAsync(text, voice, ct), timings, log);
+            tts, timings, log);
         _streams[stream.Id] = stream;
         return stream;
+    }
+
+    /// <summary>
+    /// Says a whole text with a session's own model and speed (GAD-T530, GAD-T555): an avatar hub <c>Speak</c> of a text the server
+    /// offered, for a session the library's one voice doesn't fit (<see cref="ExaminerTts.For"/>). Played on the connection like a
+    /// streamed question, as one utterance on the library's own events, so the browser can't tell the two apart; a fixed line
+    /// (<paramref name="cacheable"/>) comes from the phrase cache. Returns the utterance id.
+    /// </summary>
+    public string SpeakText(string connectionId, Guid user, Guid organization, Guid session, string text, string? voiceId, bool cacheable, ExaminerTts.Profile profile)
+    {
+        var stream = new QuestionVoiceStream(Guid.NewGuid().ToString("N"), user, organization, session, voiceId, 0, DateTimeOffset.UtcNow,
+            (t, voice, ct) => services.GetRequiredService<ExaminerTts>().StreamAsync(profile, t, voice, cacheable, ct), timings, log, wholeText: true);
+        _streams[stream.Id] = stream;
+        stream.Say(text, MoveKind.Elicit);
+        stream.Finish(text.Trim());
+        return Play(connectionId, user, Token(stream));
     }
 
     /// <summary>The token the browser passes to <c>Speak</c> to play <paramref name="stream"/>.</summary>
@@ -142,11 +164,15 @@ public sealed class QuestionVoiceStream : IQuestionSpeech, IDisposable
     private TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private ApiCallContext? _context;
     private bool _ended, _claimed, _firstAudio;
+    /// <summary>A whole text spoken through <see cref="QuestionVoiceStreams.SpeakText"/>: not a question being written, so no
+    /// <c>questionText</c> caption parts (the browser already shows the text) and no question timings.</summary>
+    private readonly bool _wholeText;
     private int _disposed;
 
     public QuestionVoiceStream(string id, Guid user, Guid organization, Guid session, string? voiceId, long committedAt, DateTimeOffset committedAtUtc,
-        Func<string, string?, CancellationToken, IAsyncEnumerable<SpeechChunk>> tts, ApiCallRecorder timings, ILogger log)
+        Func<string, string?, CancellationToken, IAsyncEnumerable<SpeechChunk>> tts, ApiCallRecorder timings, ILogger log, bool wholeText = false)
     {
+        _wholeText = wholeText;
         Id = id;
         User = user;
         Organization = organization;
@@ -198,7 +224,7 @@ public sealed class QuestionVoiceStream : IQuestionSpeech, IDisposable
             _parts.Add(added);
             Pulse();
         }
-        if (first) Record("voice.question.firstPart");
+        if (first && !_wholeText) Record("voice.question.firstPart");
         _ = Task.Run(() => SynthesizeAsync(added));
         if (first)
         {
@@ -258,7 +284,7 @@ public sealed class QuestionVoiceStream : IQuestionSpeech, IDisposable
                 if (chunk.Audio.Length > 0 && !_firstAudio)
                 {
                     _firstAudio = true;
-                    Record("voice.question.firstAudio");
+                    if (!_wholeText) Record("voice.question.firstAudio");
                 }
                 await part.Audio.Writer.WriteAsync(chunk, _synth.Token);
             }
@@ -327,7 +353,7 @@ public sealed class QuestionVoiceStream : IQuestionSpeech, IDisposable
                 }
                 if (part is null) break;   // finished (or abandoned) and every part played
 
-                await send("questionText", new { id = utterance, text = part.Text }, ct);
+                if (!_wholeText) await send("questionText", new { id = utterance, text = part.Text }, ct);
                 var partStart = sentMs;
                 byte? carry = null;
                 var reader = part.Audio.Reader;
@@ -351,7 +377,7 @@ public sealed class QuestionVoiceStream : IQuestionSpeech, IDisposable
                         if (audio.Length > 0 && firstSent is null)
                         {
                             firstSent = Stopwatch.GetTimestamp();
-                            Record("voice.question.firstAudioSent");
+                            if (!_wholeText) Record("voice.question.firstAudioSent");
                         }
                         sentMs += audio.Length / bytesPerMs;
                     }
@@ -364,7 +390,7 @@ public sealed class QuestionVoiceStream : IQuestionSpeech, IDisposable
         }
         finally
         {
-            _timings.Record("voice.question.played", DateTimeOffset.UtcNow - Stopwatch.GetElapsedTime(started),
+            if (!_wholeText) _timings.Record("voice.question.played", DateTimeOffset.UtcNow - Stopwatch.GetElapsedTime(started),
                 (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds, ok, ok ? null : "stopped or failed", _context);
         }
     }

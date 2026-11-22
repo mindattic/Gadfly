@@ -32,6 +32,8 @@ public sealed class VoiceGrants(TimeProvider clock)
         public string? Language { get; set; }
         /// <summary>The examiner's voice for this session (GAD-T475, <see cref="ExaminerVoice"/>); null is the platform voice.</summary>
         public string? VoiceId { get; set; }
+        /// <summary>The attempt's exam and primary language (GAD-T528, GAD-T555, <see cref="SessionSpeech"/>); null until the room sets it.</summary>
+        public SessionSpeech? Speech { get; set; }
     }
 
     private readonly ConcurrentDictionary<(Guid User, Guid Session), Armed> _armed = new();
@@ -191,6 +193,40 @@ public sealed class VoiceGrants(TimeProvider clock)
                 if (a.Until > now && a.Until > bestUntil && a.Texts.ContainsKey(key)) (voice, bestUntil) = (a.VoiceId, a.Until);
         }
         return voice;
+    }
+
+    /// <summary>Sets the attempt's languages for this student's session grant (GAD-T528). Does nothing if the session isn't armed.</summary>
+    public void SetSpeech(Guid user, Guid session, SessionSpeech speech)
+    {
+        if (!_armed.TryGetValue((user, session), out var a)) return;
+        lock (a) a.Speech = speech;
+    }
+
+    /// <summary>The attempt's languages for this student's session grant, or null (no grant, or not set: the default behavior).</summary>
+    public SessionSpeech? SpeechOf(Guid user, Guid session)
+    {
+        if (!_armed.TryGetValue((user, session), out var a)) return null;
+        lock (a) return a.Until > clock.GetUtcNow() ? a.Speech : null;
+    }
+
+    /// <summary>
+    /// The languages, organization and session of the student's live grant that offered <paramref name="text"/> (the most recently armed
+    /// one when several did), or null; how <see cref="VoiceHubFilter"/> knows which voice profile a <c>Speak</c> is said with (GAD-T530).
+    /// </summary>
+    public (SessionSpeech? Speech, Guid Organization, Guid Session)? OffererOf(Guid user, string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var now = clock.GetUtcNow();
+        var key = text.Trim();
+        (SessionSpeech?, Guid, Guid)? found = null;
+        var bestUntil = DateTimeOffset.MinValue;
+        foreach (var (k, a) in _armed)
+        {
+            if (k.User != user) continue;
+            lock (a)
+                if (a.Until > now && a.Until > bestUntil && a.Texts.ContainsKey(key)) (found, bestUntil) = ((a.Speech, a.Organization, k.Session), a.Until);
+        }
+        return found;
     }
 
     public bool MaySpeak(Guid user, string? text)

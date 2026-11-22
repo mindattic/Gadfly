@@ -305,6 +305,38 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
   recognizer detect it, same as before this ticket. `VoiceHubFilter` enforces it the same way as the vocabulary: the
   browser may only ask for the language the exam itself specifies.
 
+## Exam language and second-language speakers (GAD-T528, GAD-T554, GAD-T555)
+
+Each attempt has an exam language (`ExamSession.Language`) and a copy of the student's primary language
+(`ExamSession.PrimaryLanguage`, GAD-T534). `SessionSpeech` reads them when the exam room arms the student and keeps them on
+the `VoiceGrants` grant; nothing comes from the browser, and a language is never inferred from the voice. **An English exam
+by a student whose primary language is English (or unknown) behaves exactly as before** (`SessionSpeech.IsDefault`).
+
+- **Recognition (GAD-T529, GAD-T554).** A Korean exam sends `ko` to the recognizer (Scribe `language_code`, Whisper
+  `language`; the hub filter still refuses any other). An English exam by a second-language speaker is pinned to `en`, so an
+  accent never makes the recognizer drift into another language. Keyterms are capped at Scribe realtime's limits, 50 terms
+  and 1,000 characters (GAD-T597), and a Korean attempt gets the exam's Korean objective titles first, then the English.
+- **Endpointing in ESL mode (GAD-T554).** For a second-language speaker the end-of-answer silences start from the `Esl`
+  settings (6 s floor, 15 s ceiling, 3.5 s finished-sentence cue used only after 3 answers in a row that were not cut off,
+  twice the cut-off backoff; docs/research/esl-and-korean.md R3), with the extra-time accommodation on top and the 45 s cap.
+  The student's own calibration reading in the exam language (GAD-T594), when present, can only lengthen the floor (to 1.5
+  times their longest reading pause). A Korean exam never uses the short finished-sentence cue: that test is English.
+- **Voice (GAD-T530, GAD-T555).** `eleven_flash_v2_5`, the default model, speaks Korean, so a Korean exam uses the same
+  voice and model unless `Gadfly:Voice:TtsModels:ko` names another (`eleven_multilingual_v2`, `eleven_turbo_v2_5` and
+  `eleven_v3` speak Korean; `eleven_flash_v2`/`eleven_turbo_v2` do not) or `Gadfly:Voice:VoiceIds:ko` a platform voice for
+  Korean (the exam's or organization's own voice always stands). A second-language speaker hears the examiner at
+  `PlainSpeechSpeed` (0.9). Because the avatar library binds one model and one set of voice settings per process (MAA-T20),
+  a session that needs another model or speed is spoken by Gadfly's own `ElevenLabsTtsClient` (`ExaminerTts`), built from
+  the library's options and HTTP client (the mock voice in mock mode) and sharing its phrase cache; `VoiceHubFilter` plays
+  such a session's `Speak` calls through `QuestionVoiceStreams.SpeakText`, on the library's own events. The mock voice reads
+  Hangul and times each syllable block as a syllable. Captions of her questions are always on.
+- **Lip-sync (GAD-T531).** TalkingHead has no Korean module; `wwwroot/js/lipsync-ko.js` is Gadfly's own (Hangul syllables
+  decomposed to jamo by Unicode arithmetic and mapped to visemes), registered on the loaded head by `examiner-voice.js`.
+  The library passes only word timings to the browser, so visemes are spread over each word by relative duration (Korean is
+  syllable-timed); per-character timings would need the library to forward ElevenLabs' character alignment.
+- **Fillers (GAD-T532).** `ExaminerFiller.For(language)`: Korean acknowledgements, wait fillers, backchannels and
+  eye-contact remarks, reviewed as non-evaluative; prepared per voice and language in the phrase cache.
+
 ## Get-ready microphone test (GAD-T359)
 
 Once the get-ready page's microphone opens, `wwwroot/js/mic-check.js` (hooked in by `system-check.js`, `[data-mic-check]`
@@ -519,6 +551,9 @@ pending that library change.
 | `Gadfly:Voice:SpeechHangoverMs` | Silence after which the browser commits one stretch of speech to the recognizer (300 to 2000, default 700; GAD-T498). |
 | `Gadfly:LiveTurn:Stream` | `false` keeps Claude's live turn on Legion's one-shot call, so questions are spoken whole instead of as they are written (GAD-T495). Default on. |
 | `Gadfly:Voice:BackchannelMs` | The listening "Mm-hm." after a finished sentence and this much silence, without ending the turn (0 = off, the default; else 300 to 3000; GAD-T496). |
+| `Gadfly:Voice:TtsModels:<lang>` / `VoiceIds:<lang>` | The examiner's model / platform voice for one exam language (GAD-T530); unset uses the usual model and voice. |
+| `Gadfly:Voice:PlainSpeechSpeed` | Her speed for a second-language speaker (0.7 to 1.2, default 0.9, 1 = off; GAD-T555). |
+| `Gadfly:Voice:Esl:EndOfAnswerSeconds`, `:EndOfAnswerMaxSeconds`, `:EndOfAnswerCompleteSeconds`, `:CompleteAfterAnswers`, `:CutOffBackoffFactor` | ESL-mode endpointing (defaults 6, 15, 3.5, 3, 2; GAD-T554). |
 | `MindAttic:SpeechRecognition:Provider` | Live only: `Fallback` (default in live since GAD-T357: ElevenLabs Scribe, then OpenAI Whisper), or pin to `ElevenLabs` or `OpenAI` alone. |
 | `MindAttic:Avatar:ElevenLabs:VoiceId` | Live only, required (without it voice stays off). |
 

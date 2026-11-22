@@ -33,6 +33,7 @@ public static class VoiceServices
         services.AddSingleton(settings);
         services.AddSingleton<ExaminerSpeechWarmup>();   // a no-op while voice is off
         services.AddSingleton<QuestionVoiceStreams>();   // questions spoken as they are written (GAD-T495); unused while voice is off
+        services.AddSingleton<ExaminerTts>();            // a session's own voice model and speed (GAD-T530, GAD-T555); unused while voice is off
         if (!settings.Available) return settings;
 
         var mock = settings.Mode == VoiceMode.Mock;

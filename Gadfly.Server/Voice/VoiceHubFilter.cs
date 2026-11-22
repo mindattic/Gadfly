@@ -11,7 +11,7 @@ namespace Gadfly.Server.Voice;
 /// (<see cref="VoiceGrants"/>), the avatar hub speaks only texts the server offered for that student, and the recognizer opens
 /// only while a session is armed.
 /// </summary>
-public sealed class VoiceHubFilter(VoiceGrants grants, Diagnostics.ApiCallRecorder timings, QuestionVoiceStreams questions) : IHubFilter
+public sealed class VoiceHubFilter(VoiceGrants grants, Diagnostics.ApiCallRecorder timings, QuestionVoiceStreams questions, ExaminerTts tts) : IHubFilter
 {
     private static Guid Student(HubCallerContext context)
     {
@@ -50,6 +50,17 @@ public sealed class VoiceHubFilter(VoiceGrants grants, Diagnostics.ApiCallRecord
             if (invocation.HubMethodArguments is not object?[] { Length: >= 2 } speakArgs)
                 throw new HubException("The examiner's voice could not be set.");
             speakArgs[1] = grants.VoiceFor(user, speakArgs[0] as string);
+            // A session the library's one voice doesn't fit (another model for the exam language, GAD-T530, or the slower, plainer pace
+            // for a second-language speaker, GAD-T555) is spoken by Gadfly's own client instead, on the library's own events. Every
+            // other session, every English exam by an English speaker included, goes to the library exactly as before.
+            if (grants.OffererOf(user, speakArgs[0] as string) is { Speech: { } speech } offerer && tts.For(speech) is { } profile
+                && questions.SampleRate is not null)
+            {
+                var connection = invocation.Context.ConnectionId;
+                var cache = speakArgs.Length >= 3 && speakArgs[2] is true;
+                return ValueTask.FromResult<object?>(questions.SpeakText(connection, user, offerer.Organization, offerer.Session,
+                    (string)speakArgs[0]!, (string?)speakArgs[1], cache, profile));
+            }
         }
         // Vocabulary hints and the spoken language are computed server-side from the exam itself (GAD-T357, GAD-T358) and
         // never trusted from the browser: a StartSession call may ask for the language the exam specifies and any subset
