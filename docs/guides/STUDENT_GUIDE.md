@@ -119,6 +119,21 @@ Until then the exam shows "Your answers were submitted. Your result appears here
 and it has been approved and published." If you disagree with a published result, you can open an appeal from the
 result page.
 
+## Your transcript
+
+Once your result is published, the result page also offers **Your transcript**: the official record of your exam.
+It lists every question with its time and how far into the exam it came, each of your answers exactly as it was
+recorded, the read-back and what you replied, any question about what you meant and your reply, every correction
+you made (the original and the corrected text side by side), how long you waited before answering and your
+pauses, and the words the speech recognizer found hard to hear, marked [like this?]. Download it as a PDF, a Word
+document, a page to print, plain text, captions (VTT or SRT) or JSON.
+
+Your copy leaves out the notes meant only for reviewers (camera, sound and browser observations, voice measurements
+and the AI's exam-time scores). Every copy carries a **verification code** such as `7K3M-9QXA-B2CD-EFGH`: anyone
+you give it to (a school, an employer) can type the code at `/transcripts/verify`, or upload the JSON file there, to
+check it is genuine and unchanged. That page never shows what your transcript says. A file you download is yours
+to keep; your organization's retention rules do not reach copies you have saved.
+
 ## Your data
 
 You can download a copy of everything Gadfly holds about you in your organization (your assignments,
