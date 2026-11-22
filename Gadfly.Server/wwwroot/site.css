@@ -2,7 +2,9 @@
    Builds on app.css's palette (paper, ink, oxblood) and adds the examiner portrait's slate for the hero plate.
    No web fonts, no external requests: the serif is the system's Palatino family. */
 .site {
-    --paper: #f6f5f1; --sheet: #ffffff; --ink: #1d1d1f; --muted: #575b60; --rule: #dedbd2; --rule-strong: #c9c4b8;
+    --paper: #f6f5f1; --sheet: #ffffff; --ink: #1d1d1f; --muted: #575b60; --rule: #dedbd2;
+    /* 3:1 against paper and sheet (GAD-T366, WCAG 1.4.11): the contact form's inputs read their border only from this. */
+    --rule-strong: #817c6e;
     --oxblood: #7a3e2e; --oxblood-ink: #ffffff; --slate: #1c2430; --slate-ink: #e9e6df; --slate-muted: #a9b0bb;
     --slate-mark: #e3a68c; --error: #b3261e; --ok: #1e7b45;
     --serif: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", "URW Palladio L", P052, Georgia, serif;
@@ -13,7 +15,7 @@
 }
 @media (prefers-color-scheme: dark) {
     .site {
-        --paper: #16171a; --sheet: #1f2024; --ink: #ecebe8; --muted: #a8a9ad; --rule: #34353a; --rule-strong: #4a4b51;
+        --paper: #16171a; --sheet: #1f2024; --ink: #ecebe8; --muted: #a8a9ad; --rule: #34353a; --rule-strong: #75777f;
         --oxblood: #e09a7d; --oxblood-ink: #16171a; --slate: #10151d; --slate-mark: #e9b39c; --error: #f28b82; --ok: #6fcf97;
     }
 }

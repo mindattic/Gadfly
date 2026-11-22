@@ -2,15 +2,24 @@
 :root {
     --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1f; --muted: #5f6368; --line: #dedbd2;
     --accent: #7a3e2e; --accent-ink: #ffffff; --ok: #1e7b45; --error: #b3261e; --radius: 10px;
+    /* A border that meets 3:1 against --bg and --panel (GAD-T366), for controls whose boundary is the only way to see
+       them (inputs, selects, textareas): --line alone is too faint (WCAG 1.4.11). Decorative dividers keep --line. */
+    --line-strong: #817c6e;
     color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
     :root {
         --bg: #16171a; --panel: #1f2024; --ink: #ecebe8; --muted: #a6a7ab; --line: #34353a;
         --accent: #d98a6c; --accent-ink: #16171a; --ok: #6fcf97; --error: #f28b82; color-scheme: dark;
+        --line-strong: #75777f;
     }
 }
 * { box-sizing: border-box; }
+/* Reduced motion (GAD-T366): a blanket safety net alongside each animated feature's own override, so anything added
+   later without thinking about it is instant rather than missed. */
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
 a { color: var(--accent); }
 h1 { font-size: 1.6rem; margin: 0 0 1rem; }
@@ -41,11 +50,16 @@ main.bare { display: grid; place-items: center; min-height: 100vh; padding: 1rem
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: grid; gap: .6rem; max-width: 560px; }
 .panel h2 { font-size: 1.05rem; margin: 0; }
 label { display: grid; gap: .2rem; font-size: .9rem; }
-input, select, textarea { font: inherit; padding: .45rem .55rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
+input, select, textarea { font: inherit; padding: .45rem .55rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); }
 button { font: inherit; padding: .5rem .9rem; border: 0; border-radius: 6px; background: var(--accent); color: var(--accent-ink); cursor: pointer; justify-self: start; }
 button:disabled { opacity: .6; cursor: default; }
 button.link { background: none; color: var(--accent); padding: 0; text-decoration: underline; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Skip-to-content (GAD-T365), same pattern as the public site's (site.css .skip). */
+.skip { position: absolute; left: -999px; top: .5rem; z-index: 1200; padding: .5rem .9rem; background: var(--ink); color: var(--bg); border-radius: 4px; }
+.skip:focus { left: .5rem; }
+/* Screen-reader-only text: visible to assistive tech, removed from the visual layout (GAD-T366). */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .grid { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .grid th, .grid td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid var(--line); font-size: .92rem; }
 .grid th { color: var(--muted); font-weight: 600; }
