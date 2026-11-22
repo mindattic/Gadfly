@@ -128,6 +128,13 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         return (options.FirstOrDefault() ?? "", "first option");
     }
 
+    /// <summary>
+    /// A single model's reply to <paramref name="prompt"/> (the live-turn model in mock mode, GAD-T494): the leak guard answers SAFE
+    /// (mock questions are templates that state no rubric point), anything else gets the panel's own mock reply.
+    /// </summary>
+    public static string Complete(string prompt) =>
+        prompt.Contains("LEAKS or SAFE", StringComparison.Ordinal) ? "SAFE" : Ask(prompt).Text;
+
     internal static string FanOut(string prompt)
     {
         if (prompt.Contains("You are one judge on a panel grading", StringComparison.Ordinal)) return Judge(prompt);

@@ -117,5 +117,40 @@ public class LegionVotingClient : ISocraticVotingClient, IPanelModels, IDisposab
         return await Task.WhenAll(calls);
     }
 
+    /// <summary>
+    /// One call to one provider (GAD-T494, the live turn's single fast model): <paramref name="model"/> when given, else the panel's
+    /// model for that provider. Metered (kind "live-turn") and timed like a fan-out member; failures are recorded in
+    /// <see cref="Health"/> and rethrown so the caller can fall back to the panel.
+    /// </summary>
+    public async Task<string> CallOneAsync(string providerId, string model, string systemPrompt, string userMessage, int maxTokens,
+        double temperature, CancellationToken ct = default)
+    {
+        var used = string.IsNullOrWhiteSpace(model) ? ModelOf(providerId) : model;
+        var startedAt = DateTimeOffset.UtcNow;
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            using var real = PanelUsage.CaptureReal("live-turn");
+            var text = await provider.CallAsync(providerId, systemPrompt, userMessage, maxTokens, temperature,
+                string.IsNullOrWhiteSpace(model) ? null : new VoterProfile { ProviderId = providerId, ModelOverride = model }, ct);
+            PanelTimings.Report(new ProviderCallTiming(providerId, startedAt, watch.ElapsedMilliseconds, true, null));
+            Health.RecordSuccess(providerId, DateTimeOffset.UtcNow);
+            if (real.Count == 0)
+                PanelUsage.Record(new PanelCall(providerId, used, PanelUsage.Tokens(systemPrompt.Length + userMessage.Length), PanelUsage.Tokens((text ?? "").Length), "live-turn"));
+            return text ?? "";
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            PanelTimings.Report(new ProviderCallTiming(providerId, startedAt, watch.ElapsedMilliseconds, false, "cancelled"));
+            throw;
+        }
+        catch (Exception ex)
+        {
+            PanelTimings.Report(new ProviderCallTiming(providerId, startedAt, watch.ElapsedMilliseconds, false, ex.GetType().Name + ": " + ex.Message));
+            Health.RecordFailure(providerId, ex.Message, DateTimeOffset.UtcNow);
+            throw;
+        }
+    }
+
     public void Dispose() => http.Dispose();
 }

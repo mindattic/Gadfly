@@ -39,6 +39,8 @@ public enum LeakGuardResult
 }
 
 /// <summary>
+/// On a live exam the question and its leak guard come from one fast model (<see cref="LiveModel"/>, GAD-T494) for latency; the
+/// panel path below remains for hosts without one and as the fallback when that model fails.
 /// Words each question through the Legion panel (GAD-T35): several providers draft a question for
 /// the planned move and a judge fuses the sharpest one. A second panel vote guards against
 /// questions that give away rubric points; a leaking draft is redrafted once, then replaced by a
@@ -132,38 +134,61 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             };
             previous = false;
             introspective = false;
-            var result = await panel.AskAsync(ask, "", Quorum.Plurality, ct);
-            var fused = Clean(PanelText(result));
-            var question = Usable(fused);
-            var how = QuestionAuthorship.PanelDraft;
-            if (question.Length == 0)
+            // The live turn's one fast model words the question and guards it (GAD-T494); the panel only when none is set or it failed.
+            var single = LiveModel is { } live ? await LiveDraftAsync(live, ask, ct) : null;
+            QuestionAuthorship author;
+            string question;
+            if (single is { Failed: false } drafted)
             {
-                question = await PickDraftAsync(result, r.Decision.Move, dialogue, ct);
-                how = QuestionAuthorship.ChosenDraft;
+                var fusedOne = Clean(drafted.Text);
+                question = Usable(fusedOne);
+                if (question.Length == 0)
+                {
+                    introspective = IsIntrospective(fusedOne);
+                    reasons.Add(introspective ? "draft asked about the student's own thought process" : $"empty draft ({LiveModel!.ProviderId})");
+                    continue;
+                }
+                author = new QuestionAuthorship(QuestionAuthorship.LiveModelDraft, [LiveModel!.ProviderId], [LiveModel.Model]);
             }
-            if (question.Length == 0)
+            else
             {
-                // A draft asking how the student arrived at their answer is dropped before any guard call: introspective reports
-                // are unreliable evidence (GAD-T445; Nisbett and Wilson 1977), so it is redrafted, never asked.
-                introspective = IsIntrospective(fused) || result.IndividualVotes.Any(v => !v.IsError && IsIntrospective(Clean(v.Decision)));
-                var errors = result.IndividualVotes.Where(v => v.IsError).Select(v => $"; {v.ProviderId}: {v.ErrorMessage}");
-                reasons.Add(introspective ? "draft asked about the student's own thought process"
-                    : $"empty draft ({(result.QuorumReached ? "quorum reached" : "no quorum")}{string.Concat(errors)})");
-                continue;
+                if (single is { } failed) reasons.Add($"live model failed ({failed.Text}); panel drafted instead");
+                var result = await panel.AskAsync(ask, "", Quorum.Plurality, ct);
+                var fused = Clean(PanelText(result));
+                question = Usable(fused);
+                var how = QuestionAuthorship.PanelDraft;
+                if (question.Length == 0)
+                {
+                    question = await PickDraftAsync(result, r.Decision.Move, dialogue, ct);
+                    how = QuestionAuthorship.ChosenDraft;
+                }
+                if (question.Length == 0)
+                {
+                    // A draft asking how the student arrived at their answer is dropped before any guard call: introspective reports
+                    // are unreliable evidence (GAD-T445; Nisbett and Wilson 1977), so it is redrafted, never asked.
+                    introspective = IsIntrospective(fused) || result.IndividualVotes.Any(v => !v.IsError && IsIntrospective(Clean(v.Decision)));
+                    var errors = result.IndividualVotes.Where(v => v.IsError).Select(v => $"; {v.ProviderId}: {v.ErrorMessage}");
+                    reasons.Add(introspective ? "draft asked about the student's own thought process"
+                        : $"empty draft ({(result.QuorumReached ? "quorum reached" : "no quorum")}{string.Concat(errors)})");
+                    continue;
+                }
+                author = Author(result, question, how);
             }
             if (string.IsNullOrWhiteSpace(r.RubricForGuard))
             {
                 LastOutcome = attempt == 0 ? "drafted" : "redrafted";
                 LastGuard = LeakGuardResult.Skipped;
-                LastAuthor = Author(result, question, how);
+                LastAuthor = author;
                 return question;
             }
-            var verdict = await CheckLeakAsync(question, r.RubricForGuard, dialogue, ct);
+            // The guard runs before the question is returned, so a leaking question never reaches the student (GAD-T92).
+            var verdict = single is { Failed: false } ? await CheckLeakLiveAsync(question, r.RubricForGuard, dialogue, ct)
+                : await CheckLeakAsync(question, r.RubricForGuard, dialogue, ct);
             if (verdict == false)
             {
                 LastOutcome = attempt == 0 ? "drafted" : "redrafted";
                 LastGuard = LeakGuardResult.Safe;
-                LastAuthor = Author(result, question, how);
+                LastAuthor = author;
                 return question;
             }
             reasons.Add(verdict == true ? $"leaked: \"{question}\"" : "leak guard undecided");
@@ -248,6 +273,70 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         var d = await panel.DecideAsync(guard, [Leaks, Safe], "", ct);
         if (string.Equals(d.Choice, Leaks, StringComparison.OrdinalIgnoreCase)) return true;
         if (string.Equals(d.Choice, Safe, StringComparison.OrdinalIgnoreCase)) return false;
+        return null;
+    }
+
+    /// <summary>
+    /// The live turn's one fast model (GAD-T494). When set, it words the question and runs its leak guard in one call each,
+    /// instead of the multi-model panel vote; the panel takes over for an attempt when it fails. Null keeps the panel (the CLI,
+    /// reflection runs, tests).
+    /// </summary>
+    public ILiveTurnModel? LiveModel { get; set; }
+
+    /// <summary>The live model's system prompt: one spoken question, nothing around it.</summary>
+    public const string LiveSystemPrompt =
+        "You are the examiner in a spoken Socratic exam. Follow the instructions in the message and reply with only the one question to ask next, as you would say it aloud: no label, no quotes, no commentary.";
+
+    /// <summary>The live guard's system prompt: a one-word verdict.</summary>
+    public const string LiveGuardSystemPrompt =
+        "You guard a spoken exam against questions that give the answer away. Reply with exactly one word: LEAKS or SAFE.";
+
+    private sealed record LiveDraft(string Text, bool Failed);
+
+    /// <summary>One draft from the live model; a provider failure is returned (not thrown) so the panel can draft instead.</summary>
+    private static async Task<LiveDraft> LiveDraftAsync(ILiveTurnModel live, string prompt, CancellationToken ct)
+    {
+        try
+        {
+            return new LiveDraft(await live.CompleteAsync(LiveSystemPrompt, prompt, maxTokens: 300, temperature: 0.4, ct: ct), false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return new LiveDraft($"{ex.GetType().Name}: {ex.Message}", true);
+        }
+    }
+
+    /// <summary>
+    /// The leak guard on the live model (GAD-T494): the same guard prompt, one model, one word back. It fails closed like the panel
+    /// guard: a reply that is neither LEAKS nor SAFE is undecided (null). When the live model fails outright, the panel decides.
+    /// </summary>
+    private async Task<bool?> CheckLeakLiveAsync(string text, string rubric, string dialogue, CancellationToken ct)
+    {
+        var guard = ExamPrompts.Fill(_prompts[ExamPrompts.QuestionGuardKey], new Dictionary<string, string?>
+        {
+            ["rubric"] = rubric,
+            ["dialogue"] = dialogue.Length == 0 ? "(none)" : dialogue,
+            ["question"] = text,
+        }) + "\n\nReply with exactly one word: LEAKS or SAFE.";
+        string reply;
+        try
+        {
+            reply = await LiveModel!.CompleteAsync(LiveGuardSystemPrompt, guard, maxTokens: 5, temperature: 0, ct: ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
+            return await CheckLeakAsync(text, rubric, dialogue, ct);
+        }
+        return ParseGuard(reply);
+    }
+
+    /// <summary>A one-word guard reply: true LEAKS, false SAFE, null anything else (undecided, so the caller fails closed).</summary>
+    internal static bool? ParseGuard(string? reply)
+    {
+        var word = (reply ?? "").Trim().Trim('"', '\'', '*', '.', ' ').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+        word = word.Trim('"', '\'', '*', '.', ',', ':');
+        if (string.Equals(word, Leaks, StringComparison.OrdinalIgnoreCase)) return true;
+        if (string.Equals(word, Safe, StringComparison.OrdinalIgnoreCase)) return false;
         return null;
     }
 

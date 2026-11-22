@@ -211,9 +211,66 @@ public sealed class TimedVotingClient(ISocraticVotingClient inner, ApiCallRecord
     }
 }
 
+/// <summary>
+/// Times the live turn's one fast model (GAD-T494): <c>live.questionGeneration.LiveDraft</c> and <c>.CheckLeakLive</c> (plus
+/// <c>...firstChunk</c>, when the first text delta arrived, for the streaming seam GAD-T495 builds on). The provider's own timing is
+/// labelled with the same name (<c>live.questionGeneration.LiveDraft@claude</c>), as panel fan-outs are.
+/// </summary>
+public sealed class TimedLiveTurnModel(ILiveTurnModel inner, ApiCallRecorder recorder) : ILiveTurnModel
+{
+    public string ProviderId => inner.ProviderId;
+    public string Model => inner.Model;
+
+    public IAsyncEnumerable<string> StreamAsync(string systemPrompt, string userMessage, int maxTokens = 300, double temperature = 0.4,
+        CancellationToken ct = default)
+    {
+        // Named here, synchronously, while the caller is still on the stack (an iterator body runs later).
+        var name = CallNames.Live();
+        return TimedAsync(name, inner.StreamAsync(systemPrompt, userMessage, maxTokens, temperature, ct), ct);
+    }
+
+    private async IAsyncEnumerable<string> TimedAsync(string name, IAsyncEnumerable<string> stream,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+    {
+        ApiCallScope.SetName(name);
+        var startedAt = DateTimeOffset.UtcNow;
+        var watch = Stopwatch.StartNew();
+        var first = true;
+        await using var e = stream.GetAsyncEnumerator(ct);
+        while (true)
+        {
+            string delta;
+            try
+            {
+                if (!await e.MoveNextAsync()) break;
+                delta = e.Current;
+            }
+            catch (Exception ex)
+            {
+                recorder.Record(name, startedAt, watch.ElapsedMilliseconds, false, ApiCallRecorder.Summary(ex));
+                throw;
+            }
+            if (first)
+            {
+                first = false;
+                recorder.Record(name + ".firstChunk", startedAt, watch.ElapsedMilliseconds, true);
+            }
+            yield return delta;
+        }
+        recorder.Record(name, startedAt, watch.ElapsedMilliseconds, true);
+    }
+}
+
 /// <summary>Names a panel call after the code that made it (GAD-T413), read from the stack so no call site needs changing.</summary>
 internal static class CallNames
 {
+    /// <summary>The live-turn model's call (GAD-T494), named like a panel call but under "live.".</summary>
+    public static string Live()
+    {
+        var name = Panel("call");
+        return name.StartsWith("panel.", StringComparison.Ordinal) ? "live." + name["panel.".Length..] : "live." + name;
+    }
+
     public static string Panel(string method)
     {
         try
@@ -232,7 +289,7 @@ internal static class CallNames
                 }
                 if (name.StartsWith('<')) name = Between(name) ?? name;
                 var ns = type.Namespace ?? "";
-                if (type == typeof(TimedVotingClient) || type == typeof(ApiCallRecorder) || ns.StartsWith("System", StringComparison.Ordinal)
+                if (type == typeof(TimedVotingClient) || type == typeof(TimedLiveTurnModel) || type == typeof(CallNames) || type == typeof(ApiCallRecorder) || ns.StartsWith("System", StringComparison.Ordinal)
                     || ns.StartsWith("Microsoft", StringComparison.Ordinal) || ns.StartsWith("Gadfly.Socrates", StringComparison.Ordinal))
                     continue;
                 return Map(type.Name, name);
@@ -424,6 +481,19 @@ public static class ApiCallTimingServices
                 var recorder = sp.GetRequiredService<ApiCallRecorder>();
                 PanelTimings.Observer = t => recorder.Record($"{ApiCallScope.CallName ?? "panel"}@{t.ProviderId}", t.StartedAt, t.DurationMs, t.Succeeded, t.Error);
                 return new TimedVotingClient(inner, recorder);
+            });
+        }
+        // The live turn's one fast model (GAD-T494) is timed the same way.
+        var liveModel = services.LastOrDefault(d => d.ServiceType == typeof(ILiveTurnModel));
+        if (liveModel is not null && liveModel.Lifetime == ServiceLifetime.Singleton)
+        {
+            services.Remove(liveModel);
+            services.AddSingleton<ILiveTurnModel>(sp =>
+            {
+                var inner = liveModel.ImplementationInstance as ILiveTurnModel
+                    ?? (liveModel.ImplementationFactory is { } factory ? (ILiveTurnModel)factory(sp)
+                        : (ILiveTurnModel)ActivatorUtilities.CreateInstance(sp, liveModel.ImplementationType!));
+                return new TimedLiveTurnModel(inner, sp.GetRequiredService<ApiCallRecorder>());
             });
         }
         return services;

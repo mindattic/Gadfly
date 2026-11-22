@@ -62,6 +62,12 @@ public sealed class SourceExamEngine
     /// <summary>Whether answers get the answer-text integrity assessment (GAD-T59). On by default.</summary>
     public bool AssessTextStyle { get; set; } = true;
 
+    /// <summary>
+    /// The live turn's one fast model (GAD-T494): when set, it words each question and runs its leak guard instead of the panel
+    /// vote, so the examiner can answer in conversational time. Null (the default) keeps the panel.
+    /// </summary>
+    public ILiveTurnModel? LiveTurnModel { get => _generator.LiveModel; set => _generator.LiveModel = value; }
+
     /// <summary>Whether answers get the panel response analysis (GAD-T91). On by default; off only for cost-limited runs.</summary>
     public bool AnalyzeResponses { get; set; } = true;
 

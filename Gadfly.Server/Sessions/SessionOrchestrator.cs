@@ -70,7 +70,8 @@ public sealed class SessionOrchestrator(
     ILogger<SessionOrchestrator> log,
     Platform.UsageMeter meter,
     Platform.PlanEnforcement plans,
-    Evidence.EvidenceSyncQueue evidenceQueue)
+    Evidence.EvidenceSyncQueue evidenceQueue,
+    ILiveTurnModel? liveModel = null)
 {
     private sealed class Live(SourceExamEngine engine, Guid organizationId, Guid studentUserId, AssessmentMode mode)
     {
@@ -895,6 +896,9 @@ public sealed class SessionOrchestrator(
             // path of every answer. The owner asked to trim calls and favor a fluid live conversation over
             // catching cheaters for now (GAD-T412); catching cheaters can come back later behind a setting.
             engine.AssessTextStyle = false;
+            // The next question and its leak guard come from one fast model, not the panel vote (GAD-T494): the examiner answers in
+            // conversational time. The panel still judges every answer.
+            engine.LiveTurnModel = liveModel;
             var live = new Live(engine, organizationId, row.StudentUserId, exam.AssessmentMode);
             _live[sessionId] = live;
             return live;

@@ -17,6 +17,8 @@ public sealed record QuestionAuthorship(string How, IReadOnlyList<string> Provid
     public const string PanelDraft = "panel-draft";
     public const string ChosenDraft = "chosen-draft";
     public const string JudgeSynthesis = "judge-synthesis";
+    /// <summary>The live turn's one fast model wrote it (GAD-T494), with no panel vote.</summary>
+    public const string LiveModelDraft = "live-model-draft";
     public const string InstructorText = "instructor-text";
     public const string HintLadder = "hint-ladder";
     public const string FallbackText = "fallback";

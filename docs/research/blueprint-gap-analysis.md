@@ -245,3 +245,11 @@ No ticket was filed for any of these. Each is the owner's to make; the dissertat
 6. **Cleared scores hold the attempt out of grading, and the attempt still counts (decision (d)).** GAD-T262 answered
    two of the three objections. The dissertation's remaining objection is that the cleared attempt counts against the
    student's limit while the feedback that makes a further attempt worthwhile is withdrawn (5.7.4; Rowland 2014).
+7. **One fast model words the live question and runs its leak guard (GAD-T494).** Owner: the spoken exam has to feel like a
+   conversation. The bottleneck on production was the panel vote that drafted each question (about 7.5 s) followed by
+   a second panel vote for the leak guard (about 4.1 s), while the examiner's voice starts in about 0.17 s. Dissertation:
+   the multi-family panel drafts and guards the questions as well as judging the answers (3.8, 4.3.4), so that no single
+   model family shapes the exam path. What still holds: the leak guard still runs before every question is asked and
+   still fails closed (A3/M3), the panel still judges every answer (A13/M12), and question authorship is recorded
+   (`live-model-draft`, GAD-T431), so self-preference stays testable. The single model's leak-detection rate against
+   the panel's is unmeasured.

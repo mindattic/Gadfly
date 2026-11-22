@@ -118,6 +118,11 @@ public static class PanelServiceCollectionExtensions
             sp.GetRequiredService<MockVotingClient>(), sp.GetService<ILoggerFactory>()?.CreateLogger("Gadfly.Panel")));
         services.AddSingleton<ISocraticVotingClient>(sp => sp.GetRequiredService<SelectedPanel>());
         services.AddSingleton<IPanelInfo>(sp => sp.GetRequiredService<SelectedPanel>());
+        // The live turn's one fast model (GAD-T494): the next question and its leak guard, off the multi-model panel.
+        var liveProvider = LiveTurnSettings.Provider(configuration[LiveTurnSettings.ProviderSetting]);
+        var liveModel = LiveTurnSettings.Model(liveProvider, configuration[LiveTurnSettings.ModelSetting], claudeModel);
+        services.AddSingleton<ILiveTurnModel>(sp => new SelectedLiveTurnModel(sp.GetRequiredService<SelectedPanel>(),
+            new LegionLiveTurnModel(sp.GetRequiredService<LegionVotingClient>(), liveProvider, liveModel), new MockLiveTurnModel()));
         return services;
     }
 }
