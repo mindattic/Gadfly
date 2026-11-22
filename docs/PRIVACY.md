@@ -2,7 +2,8 @@
 
 Status: draft for review (GAD-T61). Not legal advice; have counsel review before the first paying
 customer. Defaults follow the open decisions in [SOCRATIC_PLATFORM.md](SOCRATIC_PLATFORM.md): adult
-learners (D6), audio and transcripts kept 90 days, video never stored (D7), the AI's grades are preliminary and a
+learners (D6), transcripts kept 90 days, audio and video never stored (D7 called for audio to be kept
+too; that part is not built yet, see Open items), the AI's grades are preliminary and a
 human grades and an authorized person approves before a student sees a result (D13, master plan Parts 8 to 11).
 
 ## What is collected, and for how long
@@ -12,7 +13,7 @@ human grades and an authorized person approves before a student sees a result (D
 | Account: user name, email, password hash, MFA secret | Sign-in (MindAttic.Authentication) | While the account exists |
 | Organization membership and role | Access control | While a member; erasure deactivates it |
 | Exam answers (transcript), word timings, speech metrics | Judging the answer; the instructor's review | The organization's retention period (default 90 days), then redacted |
-| Answer audio (voice mode) | Instructor review | Same retention period, then deleted |
+| Answer audio (voice mode) | Converted to text and to the voice measurements below, in real time | **Not stored.** Streamed to the speech recognizer and discarded; never written to disk or database (see Open items) |
 | Judgments, mastery, report, grade | The result | With the session, until the organization or the student requests deletion |
 | Integrity events (derived only: face count, gaze region, focus loss, second speaker) | Evidence for a human reviewer | With the session; raw detail redacted with the transcript |
 | Video frames | — | **Never leave the student's device; never stored** |
@@ -53,9 +54,14 @@ session, so changing the wording is visible in the record.
 
 ### Camera checks (Strict exams, GAD-T57)
 
-Only exams set to **Strict** integrity use the camera, and only after the student accepted a notice that
+The camera stays on for the whole exam, whatever the integrity level (voice and camera are mandatory since
+GAD-T239): if it is refused, blocked or lost mid-exam, the exam **pauses** until it is working again
+(docs/VOICE.md), it does not continue without it. What that camera feed is used for differs by integrity
+level: eye contact with the examiner runs whenever the level isn't Off (next section); the face and framing
+checks described in this section — a second face, a reading-like eye pattern, "camera not used" — run only
+when the level is **Strict**, and only after the student accepted a notice that
 says so (the exam room compares the stored notice hash with the current wording, so an attempt consented
-under older wording never turns the camera on; a neutral "camera not used" note is recorded instead). The
+under older wording never turns these checks on; a neutral "camera not used" note is recorded instead). The
 MindAttic.Webcam library runs in the browser from a self-hosted build (no CDN request at exam time). It
 reads landmark numbers in memory; the only pixels it touches are a 16x9 brightness thumbnail averaged to one
 number. The same-person face signature stays in browser memory and has no export. What is sent: type, start,
@@ -69,8 +75,8 @@ sends a closing note (tab closed, crash, lost connection) the reviewer sees the 
 when the exam ended. Nothing else is added: still no frame, image, landmark or face signature.
 Server side only an allow-list of those types is stored (`WebcamIntegrityRecorder`), text and times are
 bounded, volume is rate-limited and capped, confidence is capped at 0.4, and severity is decided by the server
-and never above Low: reviewers see them as low-confidence annotations, never a penalty. If the student declines
-the camera, the exam continues. The webcam modules do not infer emotion or deception.
+and never above Low: reviewers see them as low-confidence annotations, never a penalty. The webcam modules do
+not infer emotion or deception.
 
 ### Eye contact with the examiner and eye-tracking setup (voice exams, GAD-T240, GAD-T305)
 

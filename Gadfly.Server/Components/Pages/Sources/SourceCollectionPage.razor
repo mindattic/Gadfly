@@ -38,8 +38,8 @@ else if (collection is not null)
             <InputFile OnChange="UploadAsync" multiple accept="@SourceLibraryService.AcceptAttribute" disabled="@(uploading || JobActive)" />
             <p class="hint">
                 Plain text and Markdown (@string.Join(", ", SourceLibraryService.AcceptedExtensions)), up to
-                @(SourceLibraryService.MaxFileBytes / (1024 * 1024)) MB each. PDF, Word (DOCX), EPUB and HTML arrive with
-                Tutor.Ingestion. Uploading a file with the same name replaces it.
+                @(SourceLibraryService.MaxFileBytes / (1024 * 1024)) MB each. PDF, Word (DOCX), EPUB and HTML are also
+                accepted: their text is read out automatically. Uploading a file with the same name replaces it.
             </p>
             @if (uploading)
             {

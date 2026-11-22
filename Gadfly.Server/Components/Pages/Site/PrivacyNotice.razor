@@ -42,7 +42,7 @@
                 <tr><td>Account: user name, email, password hash, two-step verification secret</td><td>Signing in</td><td>While the account exists</td></tr>
                 <tr><td>Organization membership and role</td><td>Deciding what you can see and do</td><td>While you are a member</td></tr>
                 <tr><td>Your answers (the transcript), word timings and speech measurements</td><td>Judging the answer, and the instructor's review</td><td>Your institution's retention period (90 days unless it sets another), then the words are removed</td></tr>
-                <tr><td>Answer audio</td><td>Instructor review</td><td>The same retention period, then deleted</td></tr>
+                <tr><td>Answer audio</td><td>Converted to text, and to the voice measurements below, in real time</td><td>Not stored: streamed to the speech recognizer and discarded</td></tr>
                 <tr><td>Judgments, report and grade</td><td>Your result</td><td>With the exam record, until your institution or you ask for it to be deleted</td></tr>
                 <tr><td>Integrity notes, derived only (face count, where you were looking, leaving the exam tab, a second voice)</td><td>Context for a human reviewer</td><td>With the exam record; detail removed with the transcript</td></tr>
                 <tr><td>Video frames</td><td>None</td><td>Never leave your device and are never stored</td></tr>
@@ -54,15 +54,17 @@
         plain notice of what is recorded, and you choose whether to go ahead.</p>
 
     <h2 id="camera">The camera</h2>
-    <p>Camera checks run inside your browser. They work out, in memory, things like whether a face is in view, whether there
-        is a second face, and roughly where you are looking. Only a short description of each event is sent: its type, when
-        it started and ended, a confidence and one sentence. No frame, image, facial landmarks or face signature is sent or
-        kept. These notes are low-confidence context for a reviewer, never a penalty, and they never decide your grade.
-        Nothing in the camera checks infers emotion or deception.</p>
+    <p>Your camera stays on for the whole exam: if it is refused, blocked or lost partway through, the exam pauses until it
+        is working again, rather than carrying on without it. Camera checks run inside your browser. They work out, in
+        memory, things like whether a face is in view, whether there is a second face, roughly where you are looking, and
+        whether you are looking at the examiner while you answer. Only a short description of each event is sent: its type,
+        when it started and ended, a confidence and one sentence. No frame, image, facial landmarks or face signature is
+        sent or kept. These notes are low-confidence context for a reviewer, never a penalty, and they never decide your
+        grade. Nothing in the camera checks infers emotion or deception.</p>
 
     <h2 id="voice">Your voice</h2>
-    <p>Your spoken answers go to a speech-to-text service so the examiner can understand them, and the audio is kept for
-        your institution's review for the retention period above.</p>
+    <p>Your spoken answers go to a speech-to-text service so the examiner can understand them. The audio itself is not
+        stored: it is streamed to that service in real time and discarded.</p>
     <p>Where your institution allows it, your browser also measures a few summary numbers about your voice in each answer
         (pitch, loudness and similar). These are compared only with your own first answers in the same exam. Reviewers see
         the raw differences with a reminder that nerves, effort or a hard question change anyone's voice. The comparison
