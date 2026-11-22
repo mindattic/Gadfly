@@ -266,7 +266,9 @@ public sealed class SourceExamEngine
         {
             var passages = await _subject.PassagesAsync(concept.Key, turn.Answer!.Text, ct);
             var earlier = Ledger.Describe(concept.Key);
-            judgment = await _judge.JudgeAsync(new JudgeInput
+            // The verdict, the text-style estimate and the analysis each read only the answer, the passages and the earlier claims
+            // (none uses another's result), so their panel calls run together instead of one after another (GAD-T287).
+            var judgeTask = _judge.JudgeAsync(new JudgeInput
             {
                 Turn = turn,
                 Concept = concept,
@@ -274,7 +276,16 @@ public sealed class SourceExamEngine
                 Passages = passages,
                 EarlierClaims = earlier,
             }, rubric.Version, ct);
-            if (AssessTextStyle && await _style.AssessAsync(Session, turn, ct) is { } style)
+            var styleTask = AssessTextStyle ? _style.AssessAsync(Session, turn, ct) : null;
+            var analysisTask = AnalyzeResponses
+                ? _analyzer.AnalyzeAsync(new AnalysisInput
+                {
+                    Turn = turn, Objective = objective, Objectives = Objectives, Rubric = rubric, Passages = passages, EarlierClaims = earlier,
+                }, ct)
+                : null;
+            await Task.WhenAll(new Task?[] { judgeTask, styleTask, analysisTask }.OfType<Task>());
+            judgment = await judgeTask;
+            if (styleTask is not null && await styleTask is { } style)
                 judgment = judgment with { TextStyle = style };
             // Recitation check (GAD-T242): an answer that closely follows the source's wording, or a long fluent one after a long
             // silent wait, is not accepted as the student's own understanding. It is recorded for review (never a cheating verdict),
@@ -289,12 +300,9 @@ public sealed class SourceExamEngine
                 };
                 Diagnostics?.Report($"[Recitation on turn {turn.Index + 1}: {recited.Reason}. Not accepted; asking for it differently.]");
             }
-            if (AnalyzeResponses)
+            if (analysisTask is not null)
             {
-                analysis = await _analyzer.AnalyzeAsync(new AnalysisInput
-                {
-                    Turn = turn, Objective = objective, Objectives = Objectives, Rubric = rubric, Passages = passages, EarlierClaims = earlier,
-                }, ct);
+                analysis = await analysisTask;
                 Diagnostics?.Report($"[Analysis: {analysis.Evidence.Count} evidence, {analysis.Misconceptions.Count} misconception(s), " +
                     $"{analysis.Uncertainties.Count} uncertaint(ies), {analysis.Claims.Count} claim(s); {analysis.Voters} valid voter(s), " +
                     $"{analysis.RejectedVotes} rejected{(analysis.Rejections.Count > 0 ? " (" + string.Join("; ", analysis.Rejections) + ")" : "")}, " +
