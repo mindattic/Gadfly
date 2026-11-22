@@ -30,6 +30,14 @@ using MindAttic.Vault.Configuration;
 var builder = WebApplication.CreateBuilder(args);
 // On Azure App Service, application logs go to LogFiles/Application and the log stream (no-op elsewhere).
 builder.Logging.AddAzureWebAppDiagnostics();
+// The provider's own defaults (10MB per file, 2 files retained) cap out fast once a live exam is running and then look
+// like logging "stopped" (GAD-T411, a recurrence of the GAD-T225 go-live logging gap): a bigger, longer-rolling budget
+// keeps it flowing. MindAttic.Log's own SQLite log (GAD-T62) has no such cap; this only widens the Azure file mirror.
+builder.Services.Configure<Microsoft.Extensions.Logging.AzureAppServices.AzureFileLoggerOptions>(o =>
+{
+    o.FileSizeLimit = 50 * 1024 * 1024;
+    o.RetainedFileCountLimit = 10;
+});
 
 // Secrets: on a dev machine MindAttic.Vault's files (the shared LLM provider keys Legion reads, the
 // Security bucket the auth stack needs: pepper, bootstrap-token); in Azure, App Service settings / Key Vault.
