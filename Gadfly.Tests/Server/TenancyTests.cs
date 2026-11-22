@@ -19,6 +19,15 @@ public class TenancyTests : ServerTest
         typeof(AuditEvent),
         // Public site contact requests (GAD-T308): platform data from signed-out visitors, read only by the SuperAdmin.
         typeof(ContactRequest),
+        // Outside-call durations on live exams (GAD-T413): platform diagnostics holding call names and durations only, never
+        // answer or question text; its organization is nullable (voice calls have none), it is written by a background
+        // writer as the system and read only by the SuperAdmin's /healthz/call-timings (GAD-T420).
+        typeof(ApiCallTiming),
+        // Gadfly's own LTI signing key (GAD-T312): one tool identity serves every organization, like the one JWKS document.
+        typeof(LtiToolKey),
+        // LTI OIDC login state (GAD-T380): looked up by its long random state token before any tenant is known; the row
+        // carries its organization and registration, which the launch then checks (GAD-T420).
+        typeof(LtiLoginState),
     ];
 
     [Test]
