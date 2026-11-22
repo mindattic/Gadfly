@@ -174,7 +174,8 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
     /// mark, the agreement statistics, the calibration they would give, and the policy advice. <paramref name="grouping"/> is an
     /// optional pasted "student email or session code, group" list for the by-group SMD; it is used for this view only and never stored.
     /// </summary>
-    public async Task<DoubleMarkingSummary?> SummaryAsync(Guid examId, string? grouping = null, CancellationToken ct = default)
+    public async Task<DoubleMarkingSummary?> SummaryAsync(Guid examId, string? grouping = null, CancellationToken ct = default,
+        Gadfly.Server.Analytics.FairnessGrouping? byLanguage = null)
     {
         if (tenant.OrganizationId is not { } org || !CanSeeAgreement) return null;
         var exam = await db.Exams.AsNoTracking().Where(e => e.Id == examId && e.OrganizationId == org).Select(e => new { e.Id, e.Title }).FirstOrDefaultAsync(ct);
@@ -207,12 +208,48 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
             }
             groups = CalibrationAdvice.SmdByGroup(calibrationItems, groupOf, preview.Thresholds.MaxAbsSmd);
         }
+        else if (byLanguage is Gadfly.Server.Analytics.FairnessGrouping.ExamLanguage or Gadfly.Server.Analytics.FairnessGrouping.PrimaryLanguage)
+            (groups, problems) = await LanguageGroupsAsync(org, items, calibrationItems, byLanguage.Value, preview.Thresholds.MaxAbsSmd, ct);
 
         double? Qwk(Func<DoubleMarkItem, int> human) => RaterAgreement.QuadraticWeightedKappa(items.Select(i => (i.PanelLevel, human(i))).ToList(), PanelCalibration.MinLevel, PanelCalibration.MaxLevel);
         double? Smd(Func<DoubleMarkItem, int> human) => RaterAgreement.StandardizedMeanDifference(items.Select(i => (double)i.PanelLevel).ToList(), items.Select(i => (double)human(i)).ToList());
         var marked = items.Select(i => i.SessionId).Distinct().Count();
         return new DoubleMarkingSummary(exam.Id, exam.Title, sessions.Count, marked, items, preview, Qwk(i => i.FirstLevel), Qwk(i => i.SecondLevel),
             Smd(i => i.FirstLevel), Smd(i => i.SecondLevel), items.Any(i => i.Mock), advice, groups, problems, ungrouped);
+    }
+
+    /// <summary>
+    /// The panel's systematic difference from the markers by exam language or by the student's stated primary language (GAD-T549,
+    /// GAD-T555). Only for the roles the fairness views are for (<see cref="Gadfly.Server.Analytics.GroupFairness.ViewerAllowed"/>),
+    /// and with their rule: a group of fewer than <see cref="Gadfly.Server.Analytics.GroupFairness.MinStudents"/> students keeps
+    /// its name and answer count but no figure.
+    /// </summary>
+    private async Task<(IReadOnlyList<GroupSmd> Groups, IReadOnlyList<string> Problems)> LanguageGroupsAsync(Guid org, IReadOnlyList<DoubleMarkItem> items,
+        IReadOnlyList<CalibrationItem> calibrationItems, Gadfly.Server.Analytics.FairnessGrouping by, double maxAbsSmd, CancellationToken ct)
+    {
+        if (!Gadfly.Server.Analytics.GroupFairness.ViewerAllowed(tenant.Role))
+            return ([], ["Grouping by language is shown to Owners and Admins only, as the fairness views are."]);
+        var ids = items.Select(i => i.SessionId).Distinct().ToList();
+        var langs = (await db.ExamSessions.AsNoTracking().Where(s => s.OrganizationId == org && ids.Contains(s.Id))
+            .Select(s => new { s.Id, s.Language, s.PrimaryLanguage }).ToListAsync(ct)).ToDictionary(s => s.Id);
+        string Label(Guid sessionId)
+        {
+            var l = langs.GetValueOrDefault(sessionId);
+            if (by == Gadfly.Server.Analytics.FairnessGrouping.ExamLanguage) return Gadfly.Server.Analytics.GroupFairness.LanguageLabel(l?.Language);
+            return string.IsNullOrWhiteSpace(l?.PrimaryLanguage) ? Gadfly.Server.Analytics.GroupFairness.NotStated
+                : Gadfly.Server.Analytics.GroupFairness.LanguageLabel(l.PrimaryLanguage);
+        }
+        var groupOf = items.ToDictionary(i => i.ItemId, i => Label(i.SessionId), StringComparer.Ordinal);
+        var students = items.GroupBy(i => groupOf[i.ItemId], StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Select(i => i.StudentUserId).Distinct().Count(), StringComparer.OrdinalIgnoreCase);
+        var problems = new List<string>();
+        var groups = CalibrationAdvice.SmdByGroup(calibrationItems, groupOf, maxAbsSmd).Select(g =>
+        {
+            if (students.GetValueOrDefault(g.Group) >= Gadfly.Server.Analytics.GroupFairness.MinStudents) return g;
+            problems.Add($"{g.Group}: withheld, fewer than {Gadfly.Server.Analytics.GroupFairness.MinStudents} students.");
+            return g with { Smd = null, Flagged = false };
+        }).ToList();
+        return (groups, problems);
     }
 
     /// <summary>Records the double-marked set as the exam's calibration (needs ApproveGradingPolicyChange, checked by the calibration service).</summary>

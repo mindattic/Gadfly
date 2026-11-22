@@ -16,6 +16,23 @@ public sealed record FairSession(Guid Id, Guid StudentUserId, Guid ExamId, bool 
 {
     /// <summary>The session's accommodation group (<see cref="GroupFairness.AccommodationLabel"/>).</summary>
     public string Accommodation => GroupFairness.AccommodationLabel(TypedAnswers, GazeAccommodation, TimeMultiplier);
+    /// <summary>The language the attempt was conducted in (GAD-T549), a BCP-47 tag.</summary>
+    public string Language { get; init; } = Gadfly.Engine.ExamLanguage.English;
+    /// <summary>The student's primary language when the attempt began, as they stated it (GAD-T555); null when not stated.</summary>
+    public string? PrimaryLanguage { get; init; }
+}
+
+/// <summary>How the fairness views group sessions (GAD-T549, GAD-T555).</summary>
+public enum FairnessGrouping
+{
+    /// <summary>By the accommodations each assignment declared (the default).</summary>
+    Accommodation,
+    /// <summary>By the language each attempt was conducted in.</summary>
+    ExamLanguage,
+    /// <summary>By the primary language the student stated before the attempt (never inferred).</summary>
+    PrimaryLanguage,
+    /// <summary>By a grouping pasted in for the comparison (used in memory, never stored).</summary>
+    Pasted,
 }
 
 public static class GroupFairness
@@ -25,6 +42,9 @@ public static class GroupFairness
 
     public const string NoAccommodation = "No accommodation", Typed = "Typed answers", EyeContact = "Eye-contact accommodation",
         ExtraTime = "Extra time";
+
+    /// <summary>The group of attempts whose student stated no primary language (GAD-T555).</summary>
+    public const string NotStated = "Primary language not stated";
 
     /// <summary>
     /// The fairness views are for Owners and Admins only. Instructors, examiners and second reviewers can enter human scores, so
@@ -58,7 +78,10 @@ public static class GroupFairness
         await (from s in db.ExamSessions.AsNoTracking()
                join a in db.ExamAssignments.AsNoTracking() on s.AssignmentId equals a.Id
                where s.OrganizationId == organizationId && a.OrganizationId == organizationId && examIds.Contains(s.ExamId)
-               select new FairSession(s.Id, s.StudentUserId, s.ExamId, a.TypedAnswerAccommodation, a.GazeAccommodation, a.TimeMultiplier))
+               select new FairSession(s.Id, s.StudentUserId, s.ExamId, a.TypedAnswerAccommodation, a.GazeAccommodation, a.TimeMultiplier)
+               {
+                   Language = s.Language, PrimaryLanguage = s.PrimaryLanguage,
+               })
             .ToListAsync(ct);
 
     /// <summary>
@@ -66,6 +89,37 @@ public static class GroupFairness
     /// </summary>
     public static Func<FairSession, string?> Grouper(IReadOnlyDictionary<Guid, string>? pasted) =>
         pasted is null ? s => s.Accommodation : s => Clean(pasted.GetValueOrDefault(s.StudentUserId));
+
+    /// <summary>
+    /// The group of a session under <paramref name="grouping"/> (GAD-T549): by accommodation, by the attempt's language, by the
+    /// student's stated primary language (<see cref="NotStated"/> when they gave none), or by <paramref name="pasted"/>.
+    /// </summary>
+    public static Func<FairSession, string?> Grouper(FairnessGrouping grouping, IReadOnlyDictionary<Guid, string>? pasted = null) => grouping switch
+    {
+        FairnessGrouping.ExamLanguage => s => LanguageLabel(s.Language),
+        FairnessGrouping.PrimaryLanguage => s => string.IsNullOrWhiteSpace(s.PrimaryLanguage) ? NotStated : LanguageLabel(s.PrimaryLanguage),
+        FairnessGrouping.Pasted => Grouper(pasted ?? new Dictionary<Guid, string>()),
+        _ => Grouper(null),
+    };
+
+    /// <summary>A language tag as a group label: its English name ("Korean"), or the tag itself for a language without one.</summary>
+    public static string LanguageLabel(string? tag)
+    {
+        var t = Gadfly.Engine.ExamLanguage.Normalize(tag);
+        var name = Gadfly.Engine.ExamLanguage.EnglishName(t);
+        if (name != t) return name;
+        try { return System.Globalization.CultureInfo.GetCultureInfo(t).EnglishName; }
+        catch (System.Globalization.CultureNotFoundException) { return t; }
+    }
+
+    /// <summary>How a grouping is described under the fairness tables.</summary>
+    public static string Describe(FairnessGrouping grouping) => grouping switch
+    {
+        FairnessGrouping.ExamLanguage => "Grouped by the language each attempt was taken in.",
+        FairnessGrouping.PrimaryLanguage => "Grouped by the primary language each student stated before the attempt (asked, never inferred).",
+        FairnessGrouping.Pasted => "Grouped by the grouping you supplied.",
+        _ => "Grouped by the accommodations each assignment declared.",
+    };
 
     /// <summary>
     /// Reads a grouping pasted in for the comparison, one "email or user name, group" per line (comma, tab or semicolon), against

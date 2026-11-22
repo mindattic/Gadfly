@@ -28,7 +28,16 @@ public static class FairnessCsv
         var gaze = await new GazeFlagRates(db, organizationId).BuildAsync(exams, null, ct);
         var fade = await new FadeCost(db, organizationId).BuildAsync(sessions,
             s => s.GazeAccommodation ? GazeFlagRates.Accommodated : GazeFlagRates.NotAccommodated, ct);
-        return new FairnessTables(gaps, paths, modes, gaze, fade);
+        // GAD-T549 / GAD-T555: score gaps and path drivers again by exam language and by the student's stated primary language.
+        var byExam = GroupFairness.Grouper(FairnessGrouping.ExamLanguage);
+        var byPrimary = GroupFairness.Grouper(FairnessGrouping.PrimaryLanguage);
+        return new FairnessTables(gaps, paths, modes, gaze, fade)
+        {
+            ByExamLanguage = new LanguageTables(await new ScoreGaps(db, organizationId).BuildAsync(sessions, byExam, ct),
+                await new PathDrivers(db, organizationId).BuildAsync(sessions, byExam, ct)),
+            ByPrimaryLanguage = new LanguageTables(await new ScoreGaps(db, organizationId).BuildAsync(sessions, byPrimary, ct),
+                await new PathDrivers(db, organizationId).BuildAsync(sessions, byPrimary, ct)),
+        };
     }
 
     /// <summary>The fairness sections, in the export's own section format (a blank line, then "section,&lt;name&gt;").</summary>
@@ -44,12 +53,12 @@ public static class FairnessCsv
             IFormattable f => f.ToString(null, ci),
             _ => c.ToString(),
         }))).Append("\r\n");
-        void Section(string title, string caveat)
+        void Section(string title, string caveat, string grouping = "accommodations declared on each assignment")
         {
             sb.Append("\r\n");
             Row("section", title);
             Row("caveat", caveat);
-            Row("grouping", "accommodations declared on each assignment; groups under " + GroupFairness.MinStudents + " students are withheld");
+            Row("grouping", grouping + "; groups under " + GroupFairness.MinStudents + " students are withheld");
         }
         void Warnings(IEnumerable<string> warnings) { foreach (var w in warnings) Row("warning", w); }
         object?[] Blank(int n, string first = Withheld) => [first, .. Enumerable.Repeat<object?>(Withheld, n - 1)];
@@ -57,25 +66,46 @@ public static class FairnessCsv
         string Lo(MeanInterval? i) => i is null ? "" : N(i.Low);
         string Hi(MeanInterval? i) => i is null ? "" : N(i.High);
 
+        void Gaps(string name, ScoreGapsReport gaps, string grouping)
+        {
+            Section(name, ScoreGaps.Caveat, grouping);
+            Row("group", "students", "objectives_graded_by_both", "conclusive_pairs", "mean_panel_level", "mean_human_level", "mean_panel_minus_human",
+                "gap_in_standard_deviations", "same_level", "within_one_level", "panel_level_0_share", "human_level_0_share");
+            foreach (var g in gaps.Groups)
+                Row([g.Group, g.Students, .. g.TooFew ? Blank(10) : [g.Pairs, g.Conclusive, N(g.MeanPanel), N(g.MeanHuman), N(g.MeanGap), N(g.Smd),
+                    N(g.SameLevel), N(g.WithinOne), N(g.PanelInconclusive), N(g.HumanInconclusive)]]);
+            Warnings(gaps.Pairs == 0 ? [] : gaps.Warnings);
+        }
+        void Paths(string name, PathDriversReport paths, string grouping)
+        {
+            Section(name, PathDrivers.Caveat, grouping);
+            Row("group", "students", "answers", "typed_share", "pressed_harder", "pressed_hard", "hedging", "vague_wording", "no_reason_or_example",
+                "not_convincing", "evidence_against", "unclear_meaning", "recited", "cut_off_share_of_measured_spoken_answers", "measured_spoken_answers",
+                "long_pauses_per_spoken_minute", "sessions_with_device_pause", "exam_time_paused_share");
+            foreach (var g in paths.Groups)
+                Row([g.Group, g.Students, .. g.TooFew ? Blank(16) : [g.Answers, N(g.TypedShare), N(g.PressureRaised), N(g.Shaky), N(g.Hedging), N(g.Vague),
+                    N(g.NoReason), N(g.NotConvincing), N(g.EvidenceAgainst), N(g.Unclear), N(g.Recited), N(g.CutOff), g.CutOffMeasured,
+                    N(g.LongPausesPerMinute), N(g.SessionsWithDevicePause), N(g.DevicePausedShare)]]);
+            Warnings(paths.Answers == 0 ? [] : paths.Warnings);
+        }
+
         // ---- score gaps (GAD-T433)
-        Section("fairness_score_gaps", ScoreGaps.Caveat);
-        Row("group", "students", "objectives_graded_by_both", "conclusive_pairs", "mean_panel_level", "mean_human_level", "mean_panel_minus_human",
-            "gap_in_standard_deviations", "same_level", "within_one_level", "panel_level_0_share", "human_level_0_share");
-        foreach (var g in t.Gaps.Groups)
-            Row([g.Group, g.Students, .. g.TooFew ? Blank(10) : [g.Pairs, g.Conclusive, N(g.MeanPanel), N(g.MeanHuman), N(g.MeanGap), N(g.Smd),
-                N(g.SameLevel), N(g.WithinOne), N(g.PanelInconclusive), N(g.HumanInconclusive)]]);
-        Warnings(t.Gaps.Pairs == 0 ? [] : t.Gaps.Warnings);
+        Gaps("fairness_score_gaps", t.Gaps, "accommodations declared on each assignment");
 
         // ---- path drivers (GAD-T434) and cut-offs (GAD-T462)
-        Section("fairness_path_drivers", PathDrivers.Caveat);
-        Row("group", "students", "answers", "typed_share", "pressed_harder", "pressed_hard", "hedging", "vague_wording", "no_reason_or_example",
-            "not_convincing", "evidence_against", "unclear_meaning", "recited", "cut_off_share_of_measured_spoken_answers", "measured_spoken_answers",
-            "long_pauses_per_spoken_minute", "sessions_with_device_pause", "exam_time_paused_share");
-        foreach (var g in t.Paths.Groups)
-            Row([g.Group, g.Students, .. g.TooFew ? Blank(16) : [g.Answers, N(g.TypedShare), N(g.PressureRaised), N(g.Shaky), N(g.Hedging), N(g.Vague),
-                N(g.NoReason), N(g.NotConvincing), N(g.EvidenceAgainst), N(g.Unclear), N(g.Recited), N(g.CutOff), g.CutOffMeasured,
-                N(g.LongPausesPerMinute), N(g.SessionsWithDevicePause), N(g.DevicePausedShare)]]);
-        Warnings(t.Paths.Answers == 0 ? [] : t.Paths.Warnings);
+        Paths("fairness_path_drivers", t.Paths, "accommodations declared on each assignment");
+
+        // ---- the same by exam language (GAD-T549) and by stated primary language (GAD-T555)
+        if (t.ByExamLanguage is { } byExam)
+        {
+            Gaps("fairness_score_gaps_by_exam_language", byExam.Gaps, "the language each attempt was taken in");
+            Paths("fairness_path_drivers_by_exam_language", byExam.Paths, "the language each attempt was taken in");
+        }
+        if (t.ByPrimaryLanguage is { } byPrimary)
+        {
+            Gaps("fairness_score_gaps_by_primary_language", byPrimary.Gaps, "the primary language each student stated (asked, never inferred)");
+            Paths("fairness_path_drivers_by_primary_language", byPrimary.Paths, "the primary language each student stated (asked, never inferred)");
+        }
 
         // ---- typed against spoken (GAD-T438)
         var m = t.Modes;
@@ -124,4 +154,13 @@ public static class FairnessCsv
 }
 
 /// <summary>The fairness views of one scope, by accommodation, as the export writes them.</summary>
-public sealed record FairnessTables(ScoreGapsReport Gaps, PathDriversReport Paths, TypedSpokenReport Modes, GazeRatesReport Gaze, FadeCostReport Fade);
+public sealed record FairnessTables(ScoreGapsReport Gaps, PathDriversReport Paths, TypedSpokenReport Modes, GazeRatesReport Gaze, FadeCostReport Fade)
+{
+    /// <summary>Score gaps and path drivers by the language each attempt was taken in (GAD-T549).</summary>
+    public LanguageTables? ByExamLanguage { get; init; }
+    /// <summary>Score gaps and path drivers by the primary language each student stated (GAD-T555).</summary>
+    public LanguageTables? ByPrimaryLanguage { get; init; }
+}
+
+/// <summary>The fairness tables that are repeated by language.</summary>
+public sealed record LanguageTables(ScoreGapsReport Gaps, PathDriversReport Paths);

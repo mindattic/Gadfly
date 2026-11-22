@@ -115,7 +115,19 @@ else
             <h3>Systematic difference by group</h3>
             <p class="hint">An overall SMD can hide a gap that one group of students carries. Paste one "student email or session code, group" per line. The list is used for this check only and is never stored.</p>
             <div class="gr-form-row gr-wide"><textarea rows="5" @bind="grouping" placeholder="student@example.edu, group A"></textarea></div>
-            <div class="gr-actions"><button type="button" disabled="@busy" @onclick="CheckGroupsAsync">Check by group</button></div>
+            <div class="gr-actions">
+                <button type="button" disabled="@busy" @onclick="CheckGroupsAsync">Check by group</button>
+                @if (Gadfly.Server.Analytics.GroupFairness.ViewerAllowed(Tenant.Role))
+                {
+                    @* GAD-T549 / GAD-T555: the same check by exam language, or by the primary language students stated (never inferred). *@
+                    <button type="button" class="link" disabled="@busy" @onclick="() => CheckLanguageAsync(Gadfly.Server.Analytics.FairnessGrouping.ExamLanguage)">By exam language</button>
+                    <button type="button" class="link" disabled="@busy" @onclick="() => CheckLanguageAsync(Gadfly.Server.Analytics.FairnessGrouping.PrimaryLanguage)">By primary language</button>
+                }
+            </div>
+            @if (byLanguage is { } bl)
+            {
+                <p class="hint">@Gadfly.Server.Analytics.GroupFairness.Describe(bl) A difference here is a reason to look at how the panel reads answers in that language, not a finding about the students.</p>
+            }
             @if (summary.GroupProblems.Count > 0)
             {
                 <ul class="gr-flags">@foreach (var p in summary.GroupProblems) { <li>@p</li> }</ul>
@@ -167,6 +179,7 @@ else
     private IReadOnlyDictionary<string, string>? currentModels;
     private string examTitle = "";
     private string grouping = "";
+    private Gadfly.Server.Analytics.FairnessGrouping? byLanguage;
     private int recheckDays;
     private bool gate, doubleMarking, busy, ok, loaded;
     private string? message;
@@ -185,7 +198,7 @@ else
             var title = await sp.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>().Exams
                 .Where(e => e.Id == ExamId && e.OrganizationId == Tenant.OrganizationId).Select(e => e.Title).FirstOrDefaultAsync() ?? "";
             var c = await sp.GetRequiredService<PanelCalibrationService>().StatusAsync(ExamId);
-            var d = await sp.GetRequiredService<DoubleMarkingService>().SummaryAsync(ExamId, grouping);
+            var d = await sp.GetRequiredService<DoubleMarkingService>().SummaryAsync(ExamId, byLanguage is null ? grouping : null, byLanguage: byLanguage);
             return new Loaded(s, title, c, d, sp.GetRequiredService<PanelModelInventory>().Current,
                 PanelCalibrationService.RecheckDays(sp.GetRequiredService<IConfiguration>()));
         });
@@ -224,6 +237,16 @@ else
     {
         if (busy) return;
         busy = true;
+        byLanguage = null;
+        try { await LoadAsync(); }
+        finally { busy = false; }
+    }
+
+    private async Task CheckLanguageAsync(Gadfly.Server.Analytics.FairnessGrouping by)
+    {
+        if (busy) return;
+        busy = true;
+        byLanguage = by;
         try { await LoadAsync(); }
         finally { busy = false; }
     }

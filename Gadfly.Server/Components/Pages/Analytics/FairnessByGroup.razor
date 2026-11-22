@@ -16,6 +16,20 @@
             accommodations each assignment declared, or a grouping you paste in. Groups with fewer than @GroupFairness.MinStudents students
             are withheld. Shown to Owners and Admins only, because the figures include the AI panel's levels and integrity notes, which
             a grader who is still grading blind must not see.</p>
+        @* GAD-T549 / GAD-T555: the same tables by exam language, or by the primary language students stated (asked, never inferred). *@
+        <fieldset class="fairness-grouping-mode" disabled="@busy">
+            <legend>Group by</legend>
+            <label><input type="radio" name="fair-grouping" checked="@(mode == FairnessGrouping.Accommodation)" @onchange="() => GroupByAsync(FairnessGrouping.Accommodation)" /> Accommodation</label>
+            <label><input type="radio" name="fair-grouping" checked="@(mode == FairnessGrouping.ExamLanguage)" @onchange="() => GroupByAsync(FairnessGrouping.ExamLanguage)" /> Exam language</label>
+            <label><input type="radio" name="fair-grouping" checked="@(mode == FairnessGrouping.PrimaryLanguage)" @onchange="() => GroupByAsync(FairnessGrouping.PrimaryLanguage)" /> Student's primary language</label>
+            @if (mode == FairnessGrouping.Pasted) { <span class="hint">· your pasted grouping</span> }
+        </fieldset>
+        @if (mode is FairnessGrouping.ExamLanguage or FairnessGrouping.PrimaryLanguage)
+        {
+            <p class="hint">A gap by language can come from the examiner, the speech recognizer, the judges or the human graders, or from real
+                differences in preparation: it is a reason to look, not a finding. A student's primary language is what they told us before the
+                attempt; it is never inferred, and graders never see it beside a student's answers.</p>
+        }
         <details class="fairness-grouping">
             <summary>Compare other groups</summary>
             <p class="hint">Paste one line per student: their email or user name, a comma, and a group label (for example first language,
@@ -38,7 +52,7 @@
         }
         else
         {
-            <p class="hint">@(grouped ? "Grouped by the grouping you supplied." : "Grouped by the accommodations each assignment declared.")
+            <p class="hint">@GroupFairness.Describe(mode)
                 @if (grouped && (data.Unplaced > 0 || unmatched > 0))
                 {
                     <span> @data.Unplaced student(s) in this scope had no group; @unmatched line(s) matched no member of this organization.</span>
@@ -229,29 +243,36 @@
     private Reports? data;
     private string? groupingText, error;
     private bool grouped, busy;
+    private FairnessGrouping mode = FairnessGrouping.Accommodation;
     private int unmatched;
 
     protected override async Task OnParametersSetAsync()
     {
         if (!GroupFairness.ViewerAllowed(Tenant.Role) || loaded == Scope) return;
         loaded = Scope;
-        await LoadAsync(grouped ? groupingText : null);
+        await LoadAsync(grouped ? groupingText : null, mode);
+    }
+
+    private async Task GroupByAsync(FairnessGrouping next)
+    {
+        await LoadAsync(null, next);
     }
 
     private async Task CompareAsync()
     {
         if (string.IsNullOrWhiteSpace(groupingText)) return;
-        await LoadAsync(groupingText);
+        await LoadAsync(groupingText, FairnessGrouping.Pasted);
     }
 
     private async Task ClearAsync()
     {
         groupingText = null;
-        await LoadAsync(null);
+        await LoadAsync(null, FairnessGrouping.Accommodation);
     }
 
-    private async Task LoadAsync(string? grouping)
+    private async Task LoadAsync(string? grouping, FairnessGrouping by)
     {
+        if (grouping is null && by == FairnessGrouping.Pasted) by = FairnessGrouping.Accommodation;
         if (busy || Tenant.OrganizationId is not { } org || !GroupFairness.ViewerAllowed(Tenant.Role)) return;
         busy = true;
         error = null;
@@ -270,7 +291,7 @@
                         .Select(m => (m.Member.UserId, m.UserName, m.Email));
                     (map, miss) = GroupFairness.ParseGrouping(grouping, members);
                 }
-                var groupOf = GroupFairness.Grouper(map);
+                var groupOf = GroupFairness.Grouper(grouping is null ? by : FairnessGrouping.Pasted, map);
                 var gaps = await new ScoreGaps(db, org).BuildAsync(sessions, groupOf);
                 var paths = await new PathDrivers(db, org).BuildAsync(sessions, groupOf);
                 var unplaced = sessions.Where(s => groupOf(s) is null).Select(s => s.StudentUserId).Distinct().Count();
@@ -278,6 +299,7 @@
                 return (new Reports(gaps, paths, modes, unplaced), miss);
             });
             grouped = grouping is not null;
+            mode = grouped ? FairnessGrouping.Pasted : by;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
