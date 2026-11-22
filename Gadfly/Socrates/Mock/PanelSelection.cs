@@ -10,7 +10,7 @@ namespace Gadfly.Socrates.Mock;
 /// auto mode — whichever a one-time startup probe allows (live when at least one provider answers, otherwise
 /// mock). The choice is made once per process and never flips mid-run, so a session is never half live, half mock.
 /// </summary>
-public sealed class SelectedPanel : ISocraticVotingClient, IPanelInfo
+public sealed class SelectedPanel : ISocraticVotingClient, IPanelInfo, IPanelModels
 {
     private readonly LegionVotingClient _live;
     private readonly MockVotingClient _mock;
@@ -51,6 +51,9 @@ public sealed class SelectedPanel : ISocraticVotingClient, IPanelInfo
     public bool IsMock => Decision.Mock;
     public string Mode => IsMock ? PanelModes.Mock : PanelModes.Live;
     public string Reason => Decision.Reason;
+
+    /// <summary>The models of the panel actually in use: the mock's in mock mode, the live members' otherwise (GAD-T429).</summary>
+    public IReadOnlyDictionary<string, string> ConfiguredModels => IsMock ? _mock.ConfiguredModels : _live.ConfiguredModels;
 
     private async Task<ISocraticVotingClient> PanelAsync() => (await _decision.ConfigureAwait(false)).Mock ? _mock : _live;
 

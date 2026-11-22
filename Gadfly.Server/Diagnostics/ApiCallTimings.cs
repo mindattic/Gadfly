@@ -175,10 +175,13 @@ public sealed class ApiCallTimingWriter(ApiCallRecorder recorder, IServiceScopeF
 /// panel.questionGeneration.*, panel.aporia, panel.verify.*, and so on. Wraps the registered panel and keeps its
 /// <see cref="IPanelInfo"/>, so mock output is still flagged as mock.
 /// </summary>
-public sealed class TimedVotingClient(ISocraticVotingClient inner, ApiCallRecorder recorder) : ISocraticVotingClient, IPanelInfo
+public sealed class TimedVotingClient(ISocraticVotingClient inner, ApiCallRecorder recorder) : ISocraticVotingClient, IPanelInfo, IPanelModels
 {
     public ISocraticVotingClient Inner => inner;
     public bool IsMock => inner is IPanelInfo { IsMock: true };
+    /// <summary>The wrapped panel's models (GAD-T429/T431), so question authorship and calibration see through the timer.</summary>
+    public IReadOnlyDictionary<string, string> ConfiguredModels =>
+        inner is IPanelModels m ? m.ConfiguredModels : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     public string Mode => inner is IPanelInfo info ? info.Mode : PanelModes.Live;
     public string Reason => inner is IPanelInfo info ? info.Reason : "";
 

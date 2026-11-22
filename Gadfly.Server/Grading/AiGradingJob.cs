@@ -18,7 +18,8 @@ public sealed record AiGradingPayload(Guid SessionId);
 /// move is audited. Idempotent: objectives already graded for the session are not graded again, so a retry
 /// continues where a failed attempt stopped. The AI grade is never final.
 /// </summary>
-public sealed class AiGradingJob(GadflyDbContext db, ISocraticVotingClient panel, TimeProvider clock, ILogger<AiGradingJob> log) : IJobHandler
+public sealed class AiGradingJob(GadflyDbContext db, ISocraticVotingClient panel, TimeProvider clock, ILogger<AiGradingJob> log,
+    PanelModelInventory models, IConfiguration config) : IJobHandler
 {
     public const string JobKind = "grading.ai";
     public string Kind => JobKind;
@@ -60,13 +61,15 @@ public sealed class AiGradingJob(GadflyDbContext db, ISocraticVotingClient panel
         var policy = GradingJson.Read<PolicySnapshot>(grade.PolicyJson);
         if (policy is null)
         {
-            policy = PolicySnapshot.From(policyRow, now) with
-            {
-                Panel = (await PanelCalibrationService.LatestAsync(db, exam.OrganizationId, exam.Id, ct))?.ToNote(),   // GAD-T270
-            };
+            // GAD-T270 calibration, checked against the models the panel runs now (GAD-T429), and the exam's gate on it (GAD-T427).
+            var calibration = await PanelCalibrationService.LatestAsync(db, exam.OrganizationId, exam.Id, models.Current, now,
+                PanelCalibrationService.RecheckDays(config), ct);
+            var settings = await PanelGovernanceService.LatestAsync(db, exam.OrganizationId, exam.Id, ct);
+            policy = PanelGovernanceService.ApplyGate(PolicySnapshot.From(policyRow, now) with { Panel = calibration?.ToNote() }, settings, calibration);
             grade.PolicyJson = GradingJson.Write(policy);
             GradingAudit.Add(db, grade.OrganizationId, GradingActor.System, "grade.policy.applied", "FinalGrade", grade.SessionId.ToString(), grade.SessionId, now,
-                after: policy, reason: policy.Source == "exam-policy" ? "The exam's grading policy." : "The exam has no grading policy; the platform defaults apply.");
+                after: policy, reason: (policy.Source == "exam-policy" ? "The exam's grading policy." : "The exam has no grading policy; the platform defaults apply.")
+                    + (policy.Gate is { Applied: true } gate ? " " + gate.Reason : ""));
             await db.SaveChangesAsync(ct);
         }
 

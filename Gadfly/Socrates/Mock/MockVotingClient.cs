@@ -19,11 +19,15 @@ namespace Gadfly.Socrates.Mock;
 /// MOCK banner on every screen. Student-facing text (questions) carries no marker: the banner labels the session.
 /// </para>
 /// </summary>
-public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
+public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo, IPanelModels
 {
     public const string ProviderId = "mock";
     public const string ModelName = "gadfly-mock-1";
     public const string Marker = "[MOCK]";
+
+    /// <summary>The mock's one member (GAD-T429): a calibration recorded against it never carries over to a real panel.</summary>
+    public IReadOnlyDictionary<string, string> ConfiguredModels { get; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { [ProviderId] = ModelName };
 
     public bool IsMock => true;
     public string Mode => PanelModes.Mock;

@@ -40,6 +40,11 @@ public sealed record PolicySnapshot
     /// panel's grades for this exam are provisional (not accepted on calibration evidence).
     /// </summary>
     public PanelCalibrationNote? Panel { get; init; }
+    /// <summary>
+    /// The calibration gate when the exam uses it (GAD-T427): whether it set the panel's weight to 0 for this session, and why.
+    /// Null when the exam does not gate the panel.
+    /// </summary>
+    public PanelGateNote? Gate { get; init; }
 
     public static PolicySnapshot From(GradingPolicy? p, DateTimeOffset now) => p is null
         ? new PolicySnapshot { TakenAt = now }

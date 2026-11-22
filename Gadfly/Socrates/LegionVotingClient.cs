@@ -5,7 +5,7 @@ using MindAttic.Legion.Providers;
 namespace Gadfly.Socrates;
 
 /// <summary>Real <see cref="ISocraticVotingClient"/> backed by a live <see cref="LlmVotingService"/>.</summary>
-public class LegionVotingClient : ISocraticVotingClient, IDisposable
+public class LegionVotingClient : ISocraticVotingClient, IPanelModels, IDisposable
 {
     private readonly HttpClient http;
     private readonly VotingConfiguration config;
@@ -67,6 +67,20 @@ public class LegionVotingClient : ISocraticVotingClient, IDisposable
 
     private string ModelOf(string id) =>
         config.ModelOverrides.GetValueOrDefault(id) ?? LlmProviderRuntimeConfigurationResolver.GetModel(id) ?? LegionClient.DefaultModels.GetValueOrDefault(id, "");
+
+    /// <summary>
+    /// The model each member would run (GAD-T429): the providers with a key, or every allowed provider when none has one yet.
+    /// Read from configuration only; no provider is called.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> ConfiguredModels
+    {
+        get
+        {
+            var ids = config.ActiveProviderIds;
+            if (ids.Count == 0) ids = [.. config.AllowedProviderIds];
+            return ids.Distinct(StringComparer.OrdinalIgnoreCase).ToDictionary(id => id, ModelOf, StringComparer.OrdinalIgnoreCase);
+        }
+    }
 
     public async Task<IReadOnlyList<PanelReply>> FanOutAsync(string systemPrompt, string userMessage, int maxTokens = 4096,
         double temperature = 0.2, CancellationToken ct = default)

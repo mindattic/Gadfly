@@ -14,6 +14,8 @@ public static class GradingSetup
     {
         services.AddScoped<GradingService>();
         services.AddScoped<PanelCalibrationService>();   // per-exam panel acceptance (GAD-T270)
+        services.AddScoped<PanelModelInventory>();   // the panel's model ids, for calibration expiry (GAD-T429)
+        services.AddScoped<PanelGovernanceService>();   // calibration gate and double-marking settings (GAD-T427, GAD-T428)
         services.AddScoped<ClassSummaryService>();   // class summary PDF for instructors (GAD-T311/GAD-T378)
         services.AddJobHandler<AiGradingJob>();
         services.AddHostedService<GradingSweeper>();
