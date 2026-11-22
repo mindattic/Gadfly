@@ -366,7 +366,9 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             Approvals = approvals.Select(a => (a, names.GetValueOrDefault(a.ActorUserId) ?? "(unknown)")).ToList(),
             Appeals = appeals.Select(a => (a, anonymous && a.StudentUserId == session.StudentUserId ? studentName : names.GetValueOrDefault(a.StudentUserId) ?? "(unknown)")).ToList(),
             // Blind grading: the AI-grade audit entries carry its scores, so they stay hidden with the grades.
-            Audit = audit.Where(a => aiVisible || a.Action != "grade.ai.recorded")
+            // Blind double marking (GAD-T428, GAD-T480): a second mark's level and comment never show on the grading page, or the first
+            // examiner's "blind" grade could be anchored on it; they are read only on the double-marking results page.
+            Audit = audit.Where(a => (aiVisible || a.Action != "grade.ai.recorded") && a.Action != DoubleMarkingService.MarkAction)
                 .Select(a => (a, a.ActorUserId is { } u ? names.GetValueOrDefault(u) ?? "(unknown)" : "Gadfly")).ToList(),
             Names = names, SecondReviewers = secondReviewers.Select(s => (s.UserId, s.UserName)).ToList(), RequestedSecondReviews = requested,
             JobState = jobs.GetValueOrDefault(sessionId).State, JobError = jobs.GetValueOrDefault(sessionId).Error, Viewer = Actor,

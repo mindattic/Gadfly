@@ -64,7 +64,8 @@ public sealed record DoubleMarkingSummary(
 /// the first examiner's original blind level, the second marker's level), the human-human QWK and the panel's agreement with
 /// each marker, and records it as the exam's calibration in one step.
 /// </summary>
-public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tenant, TimeProvider clock, PanelCalibrationService calibration)
+public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tenant, TimeProvider clock, PanelCalibrationService calibration,
+    PanelModelInventory models)
 {
     public const string MarkAction = "grade.second-mark.recorded";
     public const string MarkEntity = "SecondMark";
@@ -215,8 +216,12 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
     {
         if (tenant.OrganizationId is not { } org) return (GradingResult.Fail("No active organization."), null);
         var sessions = await EndedSessionsAsync(org, examId, ct);
-        var items = await ItemsAsync(org, examId, sessions, ct);
-        if (items.Count == 0) return (GradingResult.Fail("No answer has a panel grade, a blind first grade and a second mark yet."), null);
+        // GAD-T480: the calibration is recorded against the models the panel runs now, so only answers those models graded count.
+        var (items, otherModels) = await ItemsAsync(org, examId, sessions, currentModelsOnly: true, ct);
+        if (items.Count == 0)
+            return (GradingResult.Fail(otherModels > 0
+                ? $"No double-marked answer was graded by the models the panel runs now ({otherModels} were graded by earlier models). Re-grade or double-mark new answers, then record the calibration."
+                : "No answer has a panel grade, a blind first grade and a second mark yet."), null);
         return await calibration.EvaluateAsync(examId, null, items.Select(i => i.ToCalibration()).ToList(), ct,
             PanelCalibrationService.SourceDoubleMarking, fromMockGrades: items.Any(i => i.Mock));
     }
@@ -246,12 +251,18 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
             .Select(g => g.Last()).Select(x => new Mark(x.r.SessionId!.Value, x.m!.ObjectiveId, x.r.ActorUserId, x.m.Level, x.m.Comment, x.r.At)).ToList();
     }
 
-    private async Task<List<DoubleMarkItem>> ItemsAsync(Guid org, Guid examId, List<EndedSession> sessions, CancellationToken ct)
+    private async Task<List<DoubleMarkItem>> ItemsAsync(Guid org, Guid examId, List<EndedSession> sessions, CancellationToken ct) =>
+        (await ItemsAsync(org, examId, sessions, currentModelsOnly: false, ct)).Items;
+
+    /// <param name="currentModelsOnly">Leave out answers the panel graded with other models than it runs now (counted in OtherModels).</param>
+    private async Task<(List<DoubleMarkItem> Items, int OtherModels)> ItemsAsync(Guid org, Guid examId, List<EndedSession> sessions, bool currentModelsOnly,
+        CancellationToken ct)
     {
+        var otherModels = 0;
         var ids = sessions.Select(s => s.Id).ToList();
-        if (ids.Count == 0) return [];
+        if (ids.Count == 0) return ([], 0);
         var marks = (await MarksAsync(org, ids, ct)).GroupBy(m => (m.SessionId, m.ObjectiveId)).ToDictionary(g => g.Key, g => g.OrderBy(m => m.At).First());
-        if (marks.Count == 0) return [];
+        if (marks.Count == 0) return ([], 0);
         var objectives = (await GradingInputs.LoadObjectivesAsync(db, examId, org, ct)).ToDictionary(o => o.Id);
         var ai = (await db.AiObjectiveGrades.AsNoTracking().Where(g => g.OrganizationId == org && ids.Contains(g.SessionId))
             .Select(g => new { g.SessionId, g.ObjectiveId, g.Level, g.IsMock, g.CriteriaJson, g.CreatedAt }).ToListAsync(ct))
@@ -261,19 +272,37 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
             .Select(h => new { h.SessionId, h.ObjectiveId, h.Level, h.ReviewerUserId, h.SubmittedAt }).ToListAsync(ct))
             .GroupBy(h => (h.SessionId, h.ObjectiveId)).ToDictionary(g => g.Key, g => g.OrderBy(x => x.SubmittedAt).First());
         var student = sessions.ToDictionary(s => s.Id, s => s.StudentUserId);
+        var current = models.Current;
 
         var items = new List<DoubleMarkItem>();
         foreach (var ((sessionId, objectiveId), mark) in marks.OrderBy(m => m.Key.SessionId).ThenBy(m => m.Key.ObjectiveId))
         {
             if (!ai.TryGetValue((sessionId, objectiveId), out var a) || !first.TryGetValue((sessionId, objectiveId), out var h)) continue;
             if (h.ReviewerUserId == mark.By) continue;   // never counts one person twice
-            var members = GradingJson.Read<StoredAiDetail>(a.CriteriaJson)?.Voters.Select(v => (int)v.Level).ToList() ?? [];
+            var voters = GradingJson.Read<StoredAiDetail>(a.CriteriaJson)?.Voters ?? [];
+            // GAD-T480: a calibration is recorded against the models the panel runs now, so it may only rest on grades those models gave.
+            // A grade from before a model change would otherwise renew an expired calibration on the old models' agreement.
+            if (currentModelsOnly && !GradedByCurrentModels(voters, current)) { otherModels++; continue; }
+            var members = voters.Select(v => (int)v.Level).ToList();
             var code = AnonymousMarking.Code(sessionId);
             var title = objectives.TryGetValue(objectiveId, out var o) ? o.Title : "(removed objective)";
             items.Add(new DoubleMarkItem($"{code} / {(o?.Key ?? objectiveId.ToString("N")[..8])}", sessionId, objectiveId, code, title,
                 (int)a.Level, (int)h.Level, mark.Level, members, a.IsMock, student[sessionId]));
         }
-        return items;
+        return (items, otherModels);
+    }
+
+    /// <summary>
+    /// True when every panel member that graded the answer runs the same model now (GAD-T480): the grade describes the panel a
+    /// calibration would be recorded against. A grade without voter detail cannot show that and is left out. Null
+    /// <paramref name="current"/> (the host's panel does not say) skips the check, as the calibration's own expiry check does.
+    /// </summary>
+    public static bool GradedByCurrentModels(IReadOnlyList<VoterGrade> voters, IReadOnlyDictionary<string, string>? current)
+    {
+        if (current is null) return true;
+        if (voters.Count == 0) return false;
+        var now = current.ToDictionary(m => m.Key.Trim(), m => (m.Value ?? "").Trim(), StringComparer.OrdinalIgnoreCase);
+        return voters.All(v => now.TryGetValue(v.ProviderId.Trim(), out var model) && string.Equals(model, (v.Model ?? "").Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     private async Task<(ExamSession? Session, Exam? Exam, string? Refusal)> CheckAsync(Guid sessionId, string attempted, CancellationToken ct)

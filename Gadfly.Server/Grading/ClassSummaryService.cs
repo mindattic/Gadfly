@@ -64,8 +64,11 @@ public sealed class ClassSummaryService(GadflyDbContext db, ITenantContext tenan
                 continue;
             }
             if (!await TranscriptAccess.PublishedToStudentAsync(db, org, sessionId, ct)) { completedNotReleased++; continue; }
-            var w = await grading.WorkspaceAsync(sessionId, ct);
-            if (w is null) { completedNotReleased++; continue; }   // refused or gone between listing and loading; counted as not yet visible
+            // LoadAsync, not WorkspaceAsync (GAD-T480): this is an aggregate over released results, not a visit to one grading page, so it
+            // must not refuse the sessions the caller second-marked (they were miscounted as not released) or record the caller as having
+            // seen each double-marked session's grades (which barred them from second-marking it). ViewTranscripts was checked above.
+            var w = await grading.LoadAsync(sessionId, ct);
+            if (w is null) { completedNotReleased++; continue; }   // gone between listing and loading; counted as not yet visible
             released.Add(AssessmentReport.Build(w, forStudent: false));
         }
 
