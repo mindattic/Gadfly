@@ -82,7 +82,7 @@
     }
     else
     {
-        <VoiceRoom SessionId="practice.Id" TurnIndex="practice.Turn" Question="@practice.Line" CanAnswer="CanAnswer"
+        <VoiceRoom SessionId="practice.Id" VoiceFromAssignment="Assignment" TurnIndex="practice.Turn" Question="@practice.Line" CanAnswer="CanAnswer"
                    Active="voiceOn" ActiveChanged="OnVoiceActive" OnAnswer="OnAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaks" Pondering="pondering" />
 
         <section class="panel wide exam-card practice-card" aria-labelledby="practice-step-title">
@@ -126,6 +126,12 @@
 </div>
 
 @code {
+    /// <summary>
+    /// Opened from an exam's get-ready page (GAD-T560): my-exams/practice?assignment={id} runs the free practice with that exam's own
+    /// examiner voice, so the student rehearses with the same examiner. Only the student's own assignment is honoured.
+    /// </summary>
+    [SupplyParameterFromQuery(Name = "assignment")] public Guid? Assignment { get; set; }
+
     private readonly PracticeInterview practice = new();
     private bool started, voiceOn, pondering;
     private Timer? ticker;

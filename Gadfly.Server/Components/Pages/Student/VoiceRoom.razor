@@ -253,6 +253,8 @@
     /// <summary>"Say it another way" was pressed (GAD-T602): the exam room asks the engine for a reworded question and hands it back
     /// through <see cref="SpeakAnotherWayAsync"/>. No button without it (the practice).</summary>
     [Parameter] public EventCallback OnSayAnotherWay { get; set; }
+    /// <summary>The practice run (GAD-T560): the student's assignment whose examiner voice to use; null in an exam (the session's own).</summary>
+    [Parameter] public Guid? VoiceFromAssignment { get; set; }
     /// <summary>False while a rewording is being prepared.</summary>
     [Parameter] public bool CanSayAnotherWay { get; set; } = true;
 
@@ -562,6 +564,17 @@
         {
             await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
             var db = scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>();
+            // The practice run before an exam (GAD-T560) uses that exam's own examiner voice, so the student meets the same examiner.
+            if (VoiceFromAssignment is { } assignment)
+            {
+                var examVoice = await (from a in db.ExamAssignments.AsNoTracking()
+                                       join e in db.Exams.AsNoTracking() on a.ExamId equals e.Id
+                                       where a.Id == assignment && a.OrganizationId == org && a.StudentUserId == user && e.OrganizationId == org
+                                       select e.VoiceId).FirstOrDefaultAsync(stop.Token);
+                var orgVoice = await db.OrganizationSettings.AsNoTracking().Where(o => o.OrganizationId == org)
+                    .Select(o => o.DefaultVoiceId).FirstOrDefaultAsync(stop.Token);
+                return ExaminerVoice.Choose(Settings.Mode, examVoice, orgVoice, Settings.VoiceIdFor(speech.Language));
+            }
             return await ExaminerVoice.ForSessionAsync(db, Settings.Mode, org, SessionId, Log, stop.Token, Settings.VoiceIdFor(speech.Language));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
