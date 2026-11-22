@@ -70,7 +70,7 @@ starts and ends.
 | What | How |
 |---|---|
 | Lip sync | The library asks ElevenLabs for speech **with timestamps** (character alignment), turns the characters into word timings and streams PCM with them; TalkingHead shapes the mouth from each word's sounds over that word's provider-measured time. Per-character (phoneme) timing would be finer: filed as MAA-T9. |
-| Starting quickly | Speech is streamed: she starts on the first audio chunk. The examiner's voice model defaults to ElevenLabs' low-latency `eleven_flash_v2_5` unless `MindAttic:Avatar:ElevenLabs:ModelId` is set (`Gadfly:Voice:TtsModel` changes the default). Faster first audio options are MAA-T15. |
+| Starting quickly | Speech is streamed: she starts on the first audio chunk. The examiner's voice model defaults to ElevenLabs' low-latency `eleven_flash_v2_5` unless `MindAttic:Avatar:ElevenLabs:ModelId` is set (`Gadfly:Voice:TtsModel` changes the default). Faster first audio options are MAA-T15. Quality-vs-latency tiers are below (GAD-T415). |
 | Prepared ahead | Fixed lines (the eye-contact remarks, the wait fillers) are synthesized once per server into the library's phrase cache when the first exam room opens (`ExaminerSpeechWarmup`, off with `Gadfly:Voice:WarmPhrases=false`), so they start at once. Questions are cached after their first playing, so **Repeat the question** and a reload replay instantly. The next question itself is written only after the answer is judged; with no read-back (GAD-T405) judging starts the moment the answer is in, and the wait fillers cover that wait after every answer. A supported prefetch is MAA-T14. |
 | Speaking style | A fixed server-side map from the kind of question to one of three styles (`Voice/ExaminerStyle.cs`): `open` (opening a topic or a new situation: brows lifted a little, a slight tilt), `probe` (following up: a small lean and the opposite tilt) and `neutral` (requests, closings, hints, fillers, remarks). All three keep the same mild, friendly baseline; none smiles more or frowns, and a counterexample or contradiction (which tend to follow a weak answer) looks exactly like any probe, so her face never hints at the grade. A public style API is MAA-T10. |
 | Captions | The whole question is shown at once, dimmed, and each word lights as she says it, counted from the moment her audio actually starts, on the provider's word timings. |
@@ -180,6 +180,29 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
 - The transcript reaches Gadfly through the student's browser (server to browser to server), the same trust model as the
   existing `SessionHub.Answer`. The metrics and verification advice are recomputed on the server from the relayed words.
   A server-side tap on the recognizer (so the browser never carries the text) would need a hook in the speech library.
+
+## Voice quality vs. latency (GAD-T415)
+
+ElevenLabs offers several text-to-speech model tiers that trade voice quality for how long the examiner takes to start
+speaking. `Gadfly:Voice:TtsModel` already picks the tier (GAD-T303), and today defaults to the fast end of that
+tradeoff, per the owner's "fluid conversation now" call:
+
+| Tier | Example model ids | Latency | Voice quality |
+|---|---|---|---|
+| Fast / low-latency (**default**) | `eleven_flash_v2_5`, `eleven_turbo_v2_5` | First audio in well under a second; this is what keeps the question-and-answer rhythm of an exam feeling live. | Noticeably more robotic/clipped than the quality tier, especially on longer or more expressive sentences. |
+| Quality | `eleven_multilingual_v2` (the library's own upstream default) | Visibly slower to start — often a second or more before the first chunk, which shows up as a longer pause before each question. | ElevenLabs' most natural-sounding voice; worth it for a recorded demo or a review, less so mid-exam. |
+
+**Current limitation — not yet admin-selectable per organization or per exam.** `ElevenLabsOptions.ModelId`
+(`MindAttic.Avatar.ElevenLabs`) is bound once from configuration into a singleton when the server starts
+(`AddMindAtticAvatar` in `MindAttic.Avatar.AspNetCore`) and stays fixed for the life of the process; every organization's
+voice exams on that process share it. Unlike the voice id, which `AvatarSpeechService.StreamAsync`/`AvatarSpeechHub.Speak`
+already accept as a per-call override, there is no per-call or per-session override for the model id, so Gadfly cannot
+safely let one organization run "quality" while another runs "fast" at the same time on a shared server, and changing the
+tier at all still means editing `Gadfly:Voice:TtsModel` (or `MindAttic:Avatar:ElevenLabs:ModelId`) and restarting the
+app — there's no admin screen for it yet. Filed against the library as MAA-T20 (add a per-call `modelId` override
+mirroring `voiceId`, and make the option hot-reloadable) so Gadfly can later expose a real per-organization picker in
+`OrgSettings.razor` next to the EU voice-measures toggle (GAD-T259); tracked on the Gadfly side as GAD-T415, left open
+pending that library change.
 
 ## Configuration
 
