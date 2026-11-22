@@ -75,3 +75,18 @@ answers blind and independently of Erin, and the panel's levels, Erin's and the 
 panel-human QWK is at least .70, no more than .10 below the two examiners' own agreement, and |SMD| is under .15, on at
 least 30 answers. No published source tests LLM grading of spoken Socratic answers, so these figures can only come
 from Gadfly's own double-marked answers (research note 05).
+
+The same double-marked pilot sets how many objectives an examination needs before its score is used summatively
+(GAD-T443; ElenchusAtScale 3.7). `SessionPolicy.MinSummativeObjectives` defaults to 4, which is a setting, not an
+estimate. To estimate it, export one row per rater per answer, with every rater marking every student on every
+objective, as a CSV with the columns `student,objective,rater,score`, and run:
+
+```
+gadfly reliability pilot-grades.csv --target 0.8
+```
+
+It prints how much of the score variance comes from the students, the objectives, the raters and their interactions,
+the reliability of an examination of 1 to 20 objectives (relative, for ranking students, and absolute, for a fixed pass
+mark), and the fewest objectives reaching the target. `--raters N` projects for a different number of markers per
+answer. Students, objectives or raters with gaps are left out and named. With fewer than about 30 students the
+estimate is rough: set the minimum from it, then re-run as more double-marked exams come in.
