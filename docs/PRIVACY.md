@@ -72,6 +72,22 @@ bounded, volume is rate-limited and capped, confidence is capped at 0.4, and sev
 and never above Low: reviewers see them as low-confidence annotations, never a penalty. If the student declines
 the camera, the exam continues. The webcam modules do not infer emotion or deception.
 
+### Eye contact with the examiner and eye-tracking setup (voice exams, GAD-T240, GAD-T305)
+
+Any exam whose integrity level isn't Off checks, on the device, that the student looks at the talking examiner while
+answering (docs/VOICE.md). Still nothing leaves the device but numbers:
+
+- **The setup.** The get-ready page's eye-tracking check reads landmark numbers in memory and, twice a second, a 32x24
+  brightness thumbnail that is averaged to two numbers (the face's brightness and the rest of the picture's) and dropped, to
+  tell a dark face from a bright light behind it. Its advice is shown to the student only and sent nowhere.
+- **The calibration.** The five-dot setup keeps four numbers (how a gaze point maps onto the page) and its accuracy in
+  degrees in that browser tab's `sessionStorage`, for up to two hours, so the exam room can reuse it. It is not a face
+  template, is never sent, and is gone when the tab closes.
+- **What is sent.** Per eye-contact episode: type, start, end, a confidence and codes only ("remarked", "peak:NN", and the
+  session's tracking quality as `q:NN;m:cal|head;a:N.N`: a 0..100 score, the method and the accuracy in degrees). The server
+  writes every sentence a reviewer reads and keeps the quality numbers in the event's `DataJson`, which is cleared with the
+  rest of the session's integrity detail on erasure. No frame, image, landmark, gaze trace or face signature is sent.
+
 ### Voice measurements (voice exams, GAD-T232, GAD-T259)
 
 During each spoken answer the exam room's browser measures the student's own voice from the same audio it
