@@ -1386,6 +1386,9 @@ namespace Gadfly.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("AllowSingleGrader")
+                        .HasColumnType("bit");
+
                     b.Property<string>("DefaultAvatarId")
                         .HasColumnType("nvarchar(max)");
 

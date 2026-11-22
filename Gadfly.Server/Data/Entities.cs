@@ -40,6 +40,12 @@ public sealed class OrganizationSettings
     public bool InEuropeanUnion { get; set; }
     /// <summary>GAD-T259: whether voice measurements (VoiceStrain) run in voice exams. See <see cref="VoiceMeasuresSetting"/>.</summary>
     public VoiceMeasuresSetting VoiceMeasures { get; set; } = VoiceMeasuresSetting.RegionDefault;
+    /// <summary>
+    /// GAD-T285: separation of duties in grading. False (the default): the person who entered a grade's human score cannot
+    /// reconcile its disagreements or approve it. True: a small organization with one grader may, and every such act is
+    /// audited as grade.separation-of-duties.waived. Turning it on or off is audited too.
+    /// </summary>
+    public bool AllowSingleGrader { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
