@@ -281,6 +281,16 @@ public sealed class PrivacyService(GadflyDbContext db, ITenantContext tenant, Ti
             var assignmentIds = db.ExamAssignments.Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId).Select(a => a.Id);
             await db.StudyArmMembers.Where(m => m.OrganizationId == organizationId && assignmentIds.Contains(m.AssignmentId)).ExecuteDeleteAsync(ct);
             await db.ResearchConsents.Where(c => c.OrganizationId == organizationId && c.StudentUserId == studentUserId).ExecuteDeleteAsync(ct);
+            // GAD-T479: an LTI-launched assignment has a grade-passback row pointing at it (a restricting foreign key), which made the
+            // assignment delete below fail and roll the whole erasure back; and a waiting LMS link request holds the LMS name and email
+            // offered for this student's account. Both go first.
+            await db.LtiAssignmentLinks.Where(l => l.OrganizationId == organizationId && assignmentIds.Contains(l.AssignmentId)).ExecuteDeleteAsync(ct);
+            await db.LtiLinkRequests.Where(r => r.OrganizationId == organizationId && r.CandidateUserId == studentUserId).ExecuteDeleteAsync(ct);
+            // Notification emails: the log keeps that an email was sent but not the student's address, and one still waiting is never sent.
+            await db.Set<EmailLog>().Where(e => e.OrganizationId == organizationId && e.ToUserId == studentUserId && e.Status == EmailLogStatus.Queued)
+                .ExecuteUpdateAsync(u => u.SetProperty(e => e.Status, EmailLogStatus.Skipped).SetProperty(e => e.Error, "The student's data was erased before this email was sent."), ct);
+            await db.Set<EmailLog>().Where(e => e.OrganizationId == organizationId && e.ToUserId == studentUserId)
+                .ExecuteUpdateAsync(u => u.SetProperty(e => e.ToEmail, (string?)null), ct);
             await db.ExamAssignments.Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId).ExecuteDeleteAsync(ct);
             await db.OrganizationMembers.Where(m => m.OrganizationId == organizationId && m.UserId == studentUserId)
                 .ExecuteUpdateAsync(u => u.SetProperty(m => m.IsActive, false), ct);

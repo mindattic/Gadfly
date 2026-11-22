@@ -515,6 +515,35 @@ public class PrivacyServiceTests : ServerTest
     }
 
     [Test]
+    public async Task Erasure_SucceedsForAnLtiLaunchedStudent_AndStopsTheirWaitingEmails()
+    {
+        // GAD-T479: the LTI grade-passback row restricts its assignment's delete, so erasure used to fail and roll back for any
+        // student who came in through an LMS; and a queued notification email still went out after the erasure.
+        var (w, _, _) = await Seed.EndedSessionAsync(Words);
+        var logId = Guid.NewGuid();
+        await using (var db = OrgDb(w.Org))
+        {
+            db.LtiAssignmentLinks.Add(new LtiAssignmentLink
+            {
+                AssignmentId = w.AssignmentId, OrganizationId = w.Org, ResourceLinkId = Guid.NewGuid(), LtiSubject = "lms-sub-1", CreatedAt = DateTimeOffset.UtcNow,
+            });
+            db.Set<EmailLog>().Add(new EmailLog
+            {
+                Id = logId, OrganizationId = w.Org, Kind = Gadfly.Server.Notifications.EmailKinds.Reminder, ToUserId = w.StudentId, ToEmail = "student@example.edu",
+                Status = EmailLogStatus.Queued, CreatedAt = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+        Assert.DoesNotThrowAsync(() => WithPrivacy(w.Org, p => p.DeleteStudentDataAsync(w.Org, w.StudentId)));
+        await using var check = SystemDb();
+        Assert.That(await check.ExamAssignments.AnyAsync(a => a.Id == w.AssignmentId), Is.False);
+        Assert.That(await check.LtiAssignmentLinks.AnyAsync(l => l.AssignmentId == w.AssignmentId), Is.False);
+        var log = await check.Set<EmailLog>().AsNoTracking().SingleAsync(e => e.Id == logId);
+        Assert.That(log.Status, Is.EqualTo(EmailLogStatus.Skipped), "a waiting email is never sent after erasure");
+        Assert.That(log.ToEmail, Is.Null, "the log no longer holds the student's address");
+    }
+
+    [Test]
     public async Task Erasure_RemovesTheAppealTextFromTheAuditTrail()
     {
         var (w, sessionId, _) = await Seed.EndedSessionAsync(Words);
