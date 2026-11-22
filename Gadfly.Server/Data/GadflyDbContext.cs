@@ -164,7 +164,19 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
         b.HasDefaultSchema(Schema);
         b.ApplyMindAtticAuthConfiguration(organizations: true);   // the library's tables (accounts and organizations) in the "auth" schema
 
-        b.Entity<OrganizationSettings>().HasKey(x => x.OrganizationId);
+        b.Entity<OrganizationSettings>(e =>
+        {
+            e.HasKey(x => x.OrganizationId);
+            e.Property(x => x.Plan).HasMaxLength(32);   // as the PlanLimits migration created it (GAD-T369, GAD-T491)
+        });
+        // EmailLog and StudentNotificationPreference as the PlanLimits migration created them (GAD-T310, GAD-T491).
+        b.Entity<EmailLog>(e =>
+        {
+            e.Property(x => x.Kind).HasMaxLength(32);
+            e.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
+            e.HasIndex(x => new { x.Kind, x.RelatedId });
+        });
+        b.Entity<StudentNotificationPreference>().HasIndex(x => new { x.OrganizationId, x.UserId }).IsUnique();
 
         b.Entity<SourceCollection>(e =>
         {
