@@ -162,7 +162,12 @@ does process features that the EU AI Act guidelines treat as emotion recognition
   Turning them on for EU students ("On for everyone") needs counsel's confirmation first. AI that evaluates learning outcomes or monitors students during tests is
   high-risk (Annex III, point 3): selling into the EU requires risk management, data governance,
   logging (the session record and prompt-set hash), human oversight (human grading and approval), accuracy
-  documentation and registration before deployment.
+  documentation and registration before deployment. The review of these duties (GAD-T453) is in
+  [COMPLIANCE.md](COMPLIANCE.md), for counsel to check: the Digital Omnibus on AI (in force 27 July 2026) moved the
+  Annex III high-risk date to 2 December 2027, while the prohibitions have applied since 2 February 2025; the EU
+  markers suit the voice default but are not the Act's territorial test (where the output is used); turning voice
+  measurements on for EU students risks Art. 5(1)(f) and should wait for counsel; the identity-drift face comparison
+  is closest to biometric verification, outside the Act's prohibitions but biometric data under GDPR Art. 9.
 - **Illinois BIPA, Texas CUBI, Washington biometric law.** Face geometry is biometric. The webcam
   modules compute it on the device and send only derived events (counts, regions, "same person");
   written consent and a published retention schedule are still required where these laws apply.

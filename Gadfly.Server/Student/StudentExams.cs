@@ -312,7 +312,7 @@ public static class StudentExams
 public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraphs)
 {
     /// <summary>Bumped whenever the wording changes; part of the hashed text.</summary>
-    public const string Version = "2026-11-21.2";
+    public const string Version = "2026-11-22.1";   // GAD-T453: the same-face check's note is sent; the face data is not
 
     /// <remarks>Every exam is spoken with the camera on (GAD-T239), so <paramref name="mode"/> no longer changes the wording.</remarks>
     /// <param name="typedAnswers">
@@ -378,7 +378,7 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
     private static IEnumerable<string> CameraNotice()
     {
         yield return "Camera: this exam uses your camera. Your browser will ask you to allow it. The camera is analysed on your own device only. No video, photo, screenshot, audio or image of your face is recorded, stored or sent anywhere, and the face data used for the checks is held in your browser's memory and discarded when the exam ends.";
-        yield return "What is sent and kept from the camera: only short event notes, each with a type, a start and end time, a confidence and one plain sentence, for example \"no face in view for 12 seconds\", \"a second face appeared\", \"looked to the left for 8 seconds\", \"eye movements like reading something off-screen\", or \"the camera was not used\". The device also checks that the same face is in front of the camera throughout; that check is never sent. Short glances away while you think are noted as normal. Nothing is made of your emotions, mood or honesty: the camera is not used to judge any of that.";
+        yield return "What is sent and kept from the camera: only short event notes, each with a type, a start and end time, a confidence and one plain sentence, for example \"no face in view for 12 seconds\", \"a second face appeared\", \"looked to the left for 8 seconds\", \"eye movements like reading something off-screen\", or \"the camera was not used\". The device also checks that the same face stays in front of the camera; if it may have changed, a note saying so is sent like the others, but the face data used for the check never leaves your device.Short glances away while you think are noted as normal. Nothing is made of your emotions, mood or honesty: the camera is not used to judge any of that.";
         yield return "Camera notes are for your instructor to read alongside your answers, as low-confidence evidence, never an automatic fail. The camera must be on to take this exam: without it the exam can't start, and it pauses if the camera stops.";
     }
 
