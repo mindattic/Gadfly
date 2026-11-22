@@ -32,6 +32,15 @@ public sealed class VoiceHubFilter(VoiceGrants grants, Diagnostics.ApiCallRecord
         if (invocation.Hub is AvatarSpeechHub && invocation.HubMethodName == nameof(AvatarSpeechHub.Speak)
             && !grants.MaySpeak(user, invocation.HubMethodArguments.FirstOrDefault() as string))
             throw new HubException("The examiner can only say what the exam asked.");
+        // The examiner's voice is the server's choice (GAD-T475): whatever voice id the browser sent is replaced with the one
+        // the exam room chose for this session (null = the platform voice). The arguments are the array the hub method is
+        // invoked with; if that ever isn't so, refuse rather than let a browser-chosen id through.
+        if (invocation.Hub is AvatarSpeechHub && invocation.HubMethodName == nameof(AvatarSpeechHub.Speak))
+        {
+            if (invocation.HubMethodArguments is not object?[] { Length: >= 2 } speakArgs)
+                throw new HubException("The examiner's voice could not be set.");
+            speakArgs[1] = grants.VoiceFor(user, speakArgs[0] as string);
+        }
         // Vocabulary hints and the spoken language are computed server-side from the exam itself (GAD-T357, GAD-T358) and
         // never trusted from the browser: a StartSession call may ask for the language the exam specifies and any subset
         // of its own vocabulary, nothing else.

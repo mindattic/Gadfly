@@ -321,6 +321,14 @@ counters above.
   cannot be used as a free text-to-speech endpoint.
 - Provider keys stay on the server: ElevenLabs key from Vault (`MindAttic:Vault:LLM:elevenlabs:apiKey`, already loaded),
   voice id from `MindAttic:Avatar:ElevenLabs:VoiceId`. The browser can't pick a provider or a voice.
+- **Per-exam and per-organization voice (GAD-T475, live mode only).** When the exam room arms a student it reads the
+  exam's voice id, else the organization's default voice id, else none (the platform voice), in `ExaminerVoice`, and
+  stores it on the student's grant. `VoiceHubFilter` overwrites the `voiceId` argument of every `Speak` call with the
+  grant's choice, whatever the browser sent, so `MindAttic:Avatar:Hub:AllowClientVoiceId` is switched on in live mode only
+  for that filtered value. An id not shaped like an ElevenLabs voice id is skipped (logged) rather than sent. The fixed
+  examiner lines are pre-warmed per voice. Mock mode is unchanged: no id is passed and the fake voice speaks. The avatar
+  model is still the deployment's one (`Gadfly:Voice:AvatarModelUrl`); a per-exam avatar needs an avatar catalog in
+  MindAttic.Avatar.
 - The transcript reaches Gadfly through the student's browser (server to browser to server), the same trust model as the
   existing `SessionHub.Answer`. The metrics and verification advice are recomputed on the server from the relayed words.
   A server-side tap on the recognizer (so the browser never carries the text) would need a hook in the speech library.

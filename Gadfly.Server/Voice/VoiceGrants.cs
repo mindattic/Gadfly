@@ -30,6 +30,8 @@ public sealed class VoiceGrants(TimeProvider clock)
         /// </summary>
         public HashSet<string> Vocabulary { get; } = new(StringComparer.OrdinalIgnoreCase);
         public string? Language { get; set; }
+        /// <summary>The examiner's voice for this session (GAD-T475, <see cref="ExaminerVoice"/>); null is the platform voice.</summary>
+        public string? VoiceId { get; set; }
     }
 
     private readonly ConcurrentDictionary<(Guid User, Guid Session), Armed> _armed = new();
@@ -154,6 +156,34 @@ public sealed class VoiceGrants(TimeProvider clock)
             if (!allowed) return false;
         }
         return true;
+    }
+
+    /// <summary>Sets the examiner's voice for this student's session grant (GAD-T475), chosen server-side by
+    /// <see cref="ExaminerVoice"/>. Does nothing if the session isn't (or is no longer) armed.</summary>
+    public void SetVoice(Guid user, Guid session, string? voiceId)
+    {
+        if (!_armed.TryGetValue((user, session), out var a)) return;
+        lock (a) a.VoiceId = string.IsNullOrWhiteSpace(voiceId) ? null : voiceId.Trim();
+    }
+
+    /// <summary>
+    /// The voice to say <paramref name="text"/> in: that of the student's live grant that offered it (the most recently armed one
+    /// when several did), or null for the platform voice. <see cref="VoiceHubFilter"/> puts this into every <c>Speak</c> call.
+    /// </summary>
+    public string? VoiceFor(Guid user, string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var now = clock.GetUtcNow();
+        var key = text.Trim();
+        string? voice = null;
+        var bestUntil = DateTimeOffset.MinValue;
+        foreach (var (k, a) in _armed)
+        {
+            if (k.User != user) continue;
+            lock (a)
+                if (a.Until > now && a.Until > bestUntil && a.Texts.ContainsKey(key)) (voice, bestUntil) = (a.VoiceId, a.Until);
+        }
+        return voice;
     }
 
     public bool MaySpeak(Guid user, string? text)

@@ -84,7 +84,7 @@ double marking, bias probes and a self-preference check, fairness views by group
 consent and export, an in-app help center with guided tours, and a public product site. [PRODUCT.md](PRODUCT.md)
 describes it for a buyer; [OPERATIONS.md](OPERATIONS.md) is the runbook.
 
-Known gaps: the examiner voice and avatar ids chosen per organization or exam are saved but not used (GAD-T475);
+Known gaps: the examiner avatar id chosen per organization or exam is saved but not used (the voice id is, GAD-T475);
 LTI passes back one grade per placement; webhooks offer one event; speech-to-text and text-to-speech are not
 metered for cost. Where the build departs from the dissertation by owner decision is listed in
 [research/blueprint-gap-analysis.md](research/blueprint-gap-analysis.md).

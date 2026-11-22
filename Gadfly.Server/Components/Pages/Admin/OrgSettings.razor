@@ -52,7 +52,7 @@ else
             <InputText @bind-Value="form.DefaultAvatarId" autocomplete="off" placeholder="Platform default" />
         </label>
         <ValidationMessage For="() => form.DefaultAvatarId" class="error" />
-        <p class="hint">Saved for a later release: today every exam uses the platform's examiner voice and avatar, whatever is set here or on the exam.</p>
+        <p class="hint">The voice id is an ElevenLabs voice id (letters and digits, from the voice's page in ElevenLabs). Every exam speaks with it unless the exam sets its own; leave it empty for the platform voice. The avatar id is saved for a later release: today every exam shows the platform's examiner (GAD-T475).</p>
 
         <h2>What instructors see</h2>
         <label class="check">
@@ -150,6 +150,7 @@ else
         public decimal? MonthlyCostQuotaUsd { get; set; }
 
         [StringLength(100, ErrorMessage = "At most 100 characters.")]
+        [RegularExpression(@"^\s*[A-Za-z0-9]{10,64}\s*$", ErrorMessage = "That doesn't look like an ElevenLabs voice id (letters and digits only).")]
         public string? DefaultVoiceId { get; set; }
 
         [StringLength(100, ErrorMessage = "At most 100 characters.")]

@@ -432,6 +432,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
         var voice = string.IsNullOrWhiteSpace(form.VoiceId) ? null : form.VoiceId.Trim();
         var avatar = string.IsNullOrWhiteSpace(form.AvatarId) ? null : form.AvatarId.Trim();
         if (voice?.Length > 100 || avatar?.Length > 100) return new(false, "Keep the voice and avatar ids under 100 characters.");
+        if (voice is not null && !Voice.ExaminerVoice.IsWellFormed(voice)) return new(false, "That voice id doesn't look like an ElevenLabs voice id (letters and digits only, copied from the voice's page in ElevenLabs).");
         var reason = string.IsNullOrWhiteSpace(form.Reason) ? null : form.Reason.Trim();
         if (reason?.Length > 1000) return new(false, "Keep the reason under 1000 characters.");
         var language = string.IsNullOrWhiteSpace(form.Language) ? null : form.Language.Trim();

@@ -275,6 +275,8 @@ public static class ExamDefinitionJson
         if ((e.Topic?.Trim().Length ?? 0) > 200) errors.Add("Details: keep the topic under 200 characters.");
         if ((e.Instructions?.Length ?? 0) > 4000) errors.Add("Details: keep the instructions under 4000 characters.");
         if ((e.VoiceId?.Trim().Length ?? 0) > 100) errors.Add("Details: the examiner voice id is longer than 100 characters.");
+        else if (!string.IsNullOrWhiteSpace(e.VoiceId) && !Voice.ExaminerVoice.IsWellFormed(e.VoiceId))
+            errors.Add("Details: the examiner voice id is not an ElevenLabs voice id (letters and digits only).");
         if ((e.AvatarId?.Trim().Length ?? 0) > 100) errors.Add("Details: the examiner avatar id is longer than 100 characters.");
         EnumOrNull<AssessmentMode>(e.AssessmentMode, "Details: the assessment mode", errors);
         EnumOrNull<ExamMode>(e.Mode, "Details: the answer mode", errors);

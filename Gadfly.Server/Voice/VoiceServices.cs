@@ -58,6 +58,9 @@ public static class VoiceServices
             o.ApiKey = "mock-key-not-real";
             o.VoiceId ??= "mock-voice";
         });
+        // Live: let the per-session voice id through to the library (GAD-T475). The "client" here is VoiceHubFilter, which
+        // overwrites the browser's argument with the server's choice on every Speak; mock never passes an id on.
+        if (!mock) services.Configure<AvatarHubOptions>(o => o.AllowClientVoiceId = true);
         // The mock voice is the client's primary handler: no request can reach api.elevenlabs.io, whatever else is configured.
         if (mock) services.AddHttpClient("ElevenLabsTtsClient").ConfigurePrimaryHttpMessageHandler(() => new MockTextToSpeech());
         // How long the examiner's voice takes, to first byte and to the end of the audio (GAD-T413).

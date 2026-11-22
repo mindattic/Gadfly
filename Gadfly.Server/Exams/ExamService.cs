@@ -145,6 +145,8 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
         var org = Org;
         if (string.IsNullOrWhiteSpace(draft.Title)) return new(false, "Give the exam a title.");
         if (draft.Title.Trim().Length > 200) return new(false, "Keep the title under 200 characters.");
+        if (!string.IsNullOrWhiteSpace(draft.VoiceId) && !Voice.ExaminerVoice.IsWellFormed(draft.VoiceId))
+            return new(false, "That voice id doesn't look like an ElevenLabs voice id (letters and digits only, copied from the voice's page in ElevenLabs).");
         if (!await db.SourceCollections.AnyAsync(c => c.Id == draft.CollectionId && c.OrganizationId == org, ct))
             return new(false, "Choose a source collection.");
 

@@ -72,7 +72,7 @@ reloads it.
 **Exams** (`/admin/exams`) lists every exam with its status, objectives, how many students it is assigned to, completed
 attempts, average completed time and whether its window is open. From a row's **Actions** you can change its
 **settings** (duration and minimum objectives are frozen once it is published; integrity level, read-out check and
-examiner voice and avatar (saved but not used yet, GAD-T475) apply to attempts that start from then on, with a reason once anyone has started), see
+examiner voice (the avatar id is saved but not used yet, GAD-T475) apply to attempts that start from then on, with a reason once anyone has started), see
 **objective coverage** (how many attempts examined each objective), set its **window**, **open now** or **close now**
 for everyone it is assigned to, **preview it as a student** (the real examiner logic on the practice panel; nothing is
 saved and it never counts as an attempt), **duplicate** it (a new draft with everything but its assignments and
@@ -292,7 +292,8 @@ setting with consequences is written to the audit log.
 |---|---|---|
 | **Keep what students said for (days)** | 90 | How long transcripts and what the student said are kept (7 to 3650 days). See **Data retention**. Students see the number in the notice before every attempt. |
 | **Provider cost ceiling per month (USD)** | no limit | When the month's AI cost reaches it, new exam sessions are refused with "Your organization has reached its monthly usage limit. Please contact your instructor."; sessions already running finish. |
-| **Default voice id**, **Default avatar id** | platform default | Saved, but **not used yet**: every exam speaks with the deployment's own examiner voice and shows its avatar, whatever is set here or on the exam (GAD-T475). |
+| **Default voice id** | platform default | The ElevenLabs voice id (letters and digits, from the voice's page in ElevenLabs) every exam in the organization speaks with, unless the exam sets its own (GAD-T475). Empty uses the deployment's voice. Applies to exam rooms opened from then on; an id that isn't shaped like a voice id is refused when saved. |
+| **Default avatar id** | platform default | Saved, but **not used yet**: every exam shows the deployment's examiner avatar, whatever is set here or on the exam (GAD-T475). |
 | **Instructors see and manage only what they created** | on | See **What instructors see**. |
 | **Allow a single grader (small organization)** | off | See **Separation of duties in grading**. |
 | **Separate reconciler and approver** | Automatic | Or **Always**, or **Off**. See **Separation of duties in grading**. |

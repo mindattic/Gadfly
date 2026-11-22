@@ -325,6 +325,12 @@
             var (cueFloorMs, cueCeilingMs) = Settings.EndCue(await TimeMultiplierAsync());
             var (language, vocabulary) = await VocabularyAsync();
             Grants.SetVocabulary(user, SessionId, language, vocabulary);
+            // The exam's voice, else the organization's default, else the platform's (GAD-T475): chosen here, enforced by VoiceHubFilter.
+            if (await ExaminerVoiceAsync() is { } voice)
+            {
+                Grants.SetVoice(user, SessionId, voice);
+                Warmup.Warm(FixedLines(), voice);
+            }
             module = await JS.InvokeAsync<IJSObjectReference>("import", startupBound.Token, "./js/voice-room.js");
             self = DotNetObjectReference.Create(this);
             var caps = await module.InvokeAsync<Capabilities>("init", startupBound.Token, self, new
@@ -425,6 +431,24 @@
         {
             Log.LogDebug(ex, "The exam's language and vocabulary could not be read for session {SessionId}.", SessionId);
             return (null, []);
+        }
+    }
+
+    /// <summary>This session's examiner voice id (GAD-T475), or null for the platform voice (always null outside live mode, or when
+    /// it can't be read).</summary>
+    private async Task<string?> ExaminerVoiceAsync()
+    {
+        if (Settings.Mode != VoiceMode.Live) return null;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
+            var db = scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>();
+            return await ExaminerVoice.ForSessionAsync(db, Settings.Mode, org, SessionId, Log, stop.Token);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.LogDebug(ex, "The examiner voice could not be read for session {SessionId}; the platform voice is used.", SessionId);
+            return null;
         }
     }
 
