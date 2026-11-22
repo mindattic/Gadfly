@@ -220,6 +220,8 @@
     /// <summary>The last <see cref="Pondering"/> sent to the browser, and the last filler line said (the next one differs).</summary>
     private bool pondered;
     private string? lastFiller;
+    /// <summary>The last acknowledgement handed to the browser (GAD-T496); the next one differs.</summary>
+    private string? lastAck;
     /// <summary>The camera self-view, as voice-room.js reports it: starting, on, hidden, denied or unavailable.</summary>
     private string selfState = "starting";
     /// <summary>The interview so far: every question or request the examiner spoke and every answer spoken back (GAD-T231).</summary>
@@ -285,10 +287,13 @@
 
     /// <summary>
     /// The examiner's fixed lines, prepared once per server in the avatar's phrase cache so the first one a student hears starts at
-    /// once (GAD-T303): the wait fillers first, since one follows every answer (GAD-T329), then the eye-contact remarks.
+    /// once (GAD-T303): the acknowledgements first, since one is said the moment every answer is in (GAD-T496), then the wait
+    /// fillers (GAD-T329), then the eye-contact remarks.
     /// </summary>
-    private static IEnumerable<string> FixedLines() =>
-        ExaminerFiller.First
+    private IEnumerable<string> FixedLines() =>
+        ExaminerFiller.Acknowledgements
+            .Concat(Settings.BackchannelMs > 0 ? ExaminerFiller.Backchannels : [])
+            .Concat(ExaminerFiller.First)
             .Concat(ExaminerFiller.Again)
             .Concat(Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks.Values);
 
@@ -344,6 +349,8 @@
                 // long a silence closes one stretch of speech and commits it to the recognizer).
                 endCueCompleteMs = Settings.EndCueCompleteMs(timeMultiplier),
                 hangoverMs = Settings.SpeechHangoverMs,
+                // The listening "Mm-hm." after a finished sentence (GAD-T496); 0 is off.
+                backchannelMs = Settings.BackchannelMs,
                 modelUrl = Settings.AvatarModelUrl,
                 portraitUrl = Settings.PortraitUrl,
                 // Where the portrait's mouth is, so it can move while she speaks in portrait mode (GAD-T303).
@@ -495,6 +502,9 @@
             }
             if (spoke || CanAnswer != lastAllowed || HeldByStaff != lastHeld)
             {
+                // An answer window opens: the acknowledgement she says the moment that answer is in (GAD-T496) goes ahead now, so the
+                // browser plays it without waiting on the server.
+                if (CanAnswer && (spoke || !lastAllowed)) await OfferAcknowledgementAsync();
                 lastAllowed = CanAnswer;
                 lastHeld = HeldByStaff;
                 await module!.InvokeVoidAsync("setAllowed", stop.Token, CanAnswer, HeldByStaff);
@@ -525,6 +535,20 @@
         var longWait = Grants.Offer(user, SessionId, again) ? again : null;
         await module!.InvokeVoidAsync("fillWait", stop.Token, first, longWait,
             ExaminerFiller.FirstAfter.TotalMilliseconds, ExaminerFiller.AgainAfter.TotalMilliseconds);
+    }
+
+    /// <summary>
+    /// Offers the next acknowledgement (GAD-T496) and hands it to the browser, which says it the moment the answer is committed
+    /// (unless she is already saying something). Never the same one twice running; fixed lines only, never text from the browser.
+    /// </summary>
+    private async Task OfferAcknowledgementAsync()
+    {
+        var ack = ExaminerFiller.PickAcknowledgement(Random.Shared, lastAck);
+        if (!Grants.Offer(user, SessionId, ack)) return;
+        lastAck = ack;
+        await module!.InvokeVoidAsync("nextAcknowledgement", stop.Token, ack);
+        if (Settings.BackchannelMs > 0)
+            await module!.InvokeVoidAsync("backchannels", stop.Token, ExaminerFiller.Backchannels.Where(t => Grants.Offer(user, SessionId, t)).ToArray());
     }
 
     private async Task SpeakAsync(string text, bool repeat = false)

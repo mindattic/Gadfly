@@ -59,6 +59,14 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
     public int SpeechHangoverMs { get; init; } = 700;
 
     /// <summary>
+    /// The listening backchannel (GAD-T496): after a finished sentence and this many milliseconds of silence, while the
+    /// end-of-answer countdown runs, she makes a soft "Mm." or "Mm-hm." that does not end the turn (speaking again stops her at once).
+    /// 0 turns it off, the default: the microphone is open while she makes it, so it relies on the browser's echo cancellation to
+    /// keep her sound out of the answer. <c>Gadfly:Voice:BackchannelMs</c>, 0 or 300 to 3000.
+    /// </summary>
+    public int BackchannelMs { get; init; }
+
+    /// <summary>
     /// Prepare the examiner's fixed lines ahead in the avatar's phrase cache (GAD-T303, <see cref="ExaminerSpeechWarmup"/>), so the
     /// first one a student hears starts at once. <c>Gadfly:Voice:WarmPhrases</c>, default true.
     /// </summary>
@@ -140,6 +148,7 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
         var max = double.TryParse(section["EndOfAnswerMaxSeconds"], System.Globalization.CultureInfo.InvariantCulture, out var x) && double.IsFinite(x) ? Math.Clamp(x, cue, 30) : Math.Max(12, cue);
         var complete = double.TryParse(section["EndOfAnswerCompleteSeconds"], System.Globalization.CultureInfo.InvariantCulture, out var d) && double.IsFinite(d) ? Math.Clamp(d, 1, cue) : Math.Min(2, cue);
         var hangover = int.TryParse(section["SpeechHangoverMs"], System.Globalization.CultureInfo.InvariantCulture, out var h) ? Math.Clamp(h, 300, 2000) : 700;
+        var backchannel = int.TryParse(section["BackchannelMs"], System.Globalization.CultureInfo.InvariantCulture, out var b) && b > 0 ? Math.Clamp(b, 300, 3000) : 0;
         var portrait = section["PortraitUrl"] ?? "/assets/portrait.png";
         var mouth = section["PortraitMouth"] is { Length: > 0 } m ? ParseMouth(m) : portrait == "/assets/portrait.png" ? DefaultPortraitMouth : null;
         return new VoiceSettings(mode, string.IsNullOrWhiteSpace(model) ? null : model, portrait, cue)
@@ -147,6 +156,7 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
             EndOfAnswerMaxSeconds = max,
             EndOfAnswerCompleteSeconds = complete,
             SpeechHangoverMs = hangover,
+            BackchannelMs = backchannel,
             WarmPhrases = !bool.TryParse(section["WarmPhrases"], out var warm) || warm,
             PortraitMouth = mouth,
             TtsModel = section["TtsModel"] is { Length: > 0 } tts ? tts.Trim() : "eleven_flash_v2_5",

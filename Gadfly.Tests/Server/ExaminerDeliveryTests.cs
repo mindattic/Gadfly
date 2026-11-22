@@ -84,4 +84,22 @@ public class ExaminerDeliveryTests
         Assert.That(warmup.Due(lines, start + TimeSpan.FromMinutes(1)), Is.Empty, "just prepared: nothing to do");
         Assert.That(warmup.Due(lines, start + ExaminerSpeechWarmup.RecheckAfter), Is.EqualTo(first), "checked again after a while");
     }
+
+    [Test]
+    public void Acknowledgements_never_repeat_back_to_back_and_never_judge_the_answer()
+    {
+        // GAD-T496: receipt, not assessment, so nothing in them can leak how an answer was graded.
+        var judging = new[] { "good", "great", "right", "correct", "exactly", "excellent", "interesting", "wrong", "nice", "perfect" };
+        foreach (var line in ExaminerFiller.Acknowledgements)
+            Assert.That(judging.Any(w => line.Contains(w, StringComparison.OrdinalIgnoreCase)), Is.False, line);
+        var random = new Random(7);
+        string? last = null;
+        for (var i = 0; i < 200; i++)
+        {
+            var next = ExaminerFiller.PickAcknowledgement(random, last);
+            Assert.That(next, Is.Not.EqualTo(last));
+            Assert.That(ExaminerFiller.Acknowledgements, Does.Contain(next));
+            last = next;
+        }
+    }
 }

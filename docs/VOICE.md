@@ -138,6 +138,7 @@ starts and ends.
 | Lip sync | The library asks ElevenLabs for speech **with timestamps** (character alignment), turns the characters into word timings and streams PCM with them; TalkingHead shapes the mouth from each word's sounds over that word's provider-measured time. Per-character (phoneme) timing would be finer: filed as MAA-T9. |
 | Starting quickly | Speech is streamed: she starts on the first audio chunk. The examiner's voice model defaults to ElevenLabs' low-latency `eleven_flash_v2_5` unless `MindAttic:Avatar:ElevenLabs:ModelId` is set (`Gadfly:Voice:TtsModel` changes the default). Faster first audio options are MAA-T15. Quality-vs-latency tiers are below (GAD-T415). |
 | Prepared ahead | Fixed lines (the wait fillers first, then the eye-contact remarks) are synthesized once per server into the library's phrase cache when the first exam room opens (`ExaminerSpeechWarmup`, off with `Gadfly:Voice:WarmPhrases=false`), so they start at once. The cache is bounded and questions go into it too, so an exam room opened ten minutes or more after the last check checks the lines again: a line still cached costs nothing (and is kept), and only one pushed out is synthesized again (GAD-T329). Questions are cached after their first playing, so **Repeat the question** and a reload replay instantly. The next question itself is written only after the answer is judged; with no read-back (GAD-T405) judging starts the moment the answer is in, and the wait fillers cover that wait after every answer. A supported prefetch is MAA-T14. |
+| Acknowledging the answer | The moment an answer is in (the end-of-answer silence or **Done answering**), she says a short acknowledgement, the backchannel a listener gives when someone stops talking (GAD-T496): "Mm, okay.", "Okay.", "Mm-hm.", "I see.", "Alright.", "Okay, thank you.", "Mm. Okay." or "Thank you." (`ExaminerFiller.Acknowledgements`). Receipt, never assessment: no "good", "right" or "correct", and the same lines follow strong and weak answers alike. The server picks the next one (never the same twice running) and offers it when each answer window opens, so the browser plays it with no round trip; it goes through the avatar hub like every line, so she lip-syncs it, and it is prepared ahead per examiner voice with the other fixed lines (in mock mode by the mock voice), so it costs nothing per turn. The microphone is already shut, so it is never heard as part of the answer. A question ready before it has made a sound skips it; the wait filler below holds off until 1.5 s after it. A kept answer sent again is not acknowledged twice. Optionally (`Gadfly:Voice:BackchannelMs`, off by default), while the student still holds the floor, a finished sentence followed by that many milliseconds of silence (500 is a natural choice) gets a soft "Mm." or "Mm-hm." that does not end the turn: the countdown runs on and speaking again stops her at once. Once per answer; off by default because the microphone is open while she makes it and only the browser's echo cancellation keeps her sound out of the answer. |
 | Filling the wait | While the panel judges an answer and writes the next question (GAD-T290), she says one short neutral line if the question isn't ready within 2 seconds ("Let me think about that.", "Okay, give me a moment.", ...) and one more if the wait passes 20 seconds ("Just a moment more."), over a quiet page-turn sound (GAD-T409). The lines are fixed in `Voice/ExaminerFiller.cs`, picked at random (never the same first line twice running), never about the answer (no "good" or "interesting"), spoken with the microphone shut, and never put in the transcript or the record. A question that arrives mid-line waits for the line to finish; the rest are dropped. They are prepared ahead (above), so the first one plays at once. |
 | Speaking style | A fixed server-side map from the kind of question to one of three styles (`Voice/ExaminerStyle.cs`): `open` (opening a topic or a new situation: brows lifted a little, a slight tilt), `probe` (following up: a small lean and the opposite tilt) and `neutral` (requests, closings, hints, fillers, remarks). All three keep the same mild, friendly baseline; none smiles more or frowns, and a counterexample or contradiction (which tend to follow a weak answer) looks exactly like any probe, so her face never hints at the grade. A public style API is MAA-T10. |
 | Captions | The whole question is shown at once, dimmed, and each word lights as she says it, counted from the moment her audio actually starts, on the provider's word timings. |
@@ -303,6 +304,39 @@ the microphone's own `echoCancellation` setting where the browser reports one). 
 math (`rms`, `toDbfs` from `@mindattic/speechrecognition`) rather than re-deriving it. Advice only, the same spirit as the
 eye-tracking setup check next to it: it never blocks **Begin exam**, and a failure to load just leaves the panel empty.
 
+## The live turn: how fast the examiner answers (GAD-T494)
+
+After the student stops speaking, the step on the server (`SessionOrchestrator.AnswerAsync`) records the answer, judges
+it, plans the next move and words the next question; the examiner starts speaking when that question comes back. On
+production the question's wording was the bottleneck: the panel vote that drafted it (`panel.questionGeneration.Generate`,
+about 7.5 s) and then a second panel vote for its leak guard (`panel.questionGeneration.CheckLeak`, about 4.1 s), one
+after the other, while ElevenLabs' first audio byte takes about 0.17 s. Now:
+
+1. The answer is recorded, verified (a spoken answer is taken as heard: no call) and judged by the panel, as before.
+2. The planner picks the move (local, no call).
+3. **One fast model** words the question (`ILiveTurnModel`, `Gadfly/Socrates/LiveTurnModel.cs`; `QuestionGenerator.LiveModel`):
+   `Gadfly:LiveTurn:Provider` (default `claude`) and `Gadfly:LiveTurn:Model` (default Claude Sonnet 5, `claude-sonnet-5`; an
+   Opus id is refused and replaced by Sonnet 5). Timed as `live.questionGeneration.LiveDraft`.
+4. **The same model runs the leak guard** on that question, a one-word LEAKS/SAFE reply (`live.questionGeneration.CheckLeakLive`).
+   The question is returned only after the guard says SAFE. LEAKS redrafts once and then uses the plain fallback question,
+   and a reply that is neither word counts as undecided and also falls back (fail closed), exactly as with the panel guard (GAD-T92).
+5. The question goes to the examiner's voice.
+
+If the fast model fails (provider down, timeout), that attempt goes back to the panel vote and the panel guard, so a
+provider outage costs speed, never safety. Every call is still metered (`PanelCall`, kind `live-turn`) and timed
+(`ApiCallTimings`, with a `.firstChunk` row for the streaming seam below). Mock mode (`Gadfly:AiMode=mock`) uses the mock
+panel's own template replies, so nothing is called or billed.
+
+**Streaming seam (GAD-T495).** `ILiveTurnModel.StreamAsync` returns the reply as an `IAsyncEnumerable<string>` of text deltas.
+MindAttic.Legion has no streaming call yet, so today the Legion-backed model yields the whole reply as one delta. A
+streaming provider call fits behind the same interface. The generator still guards the whole question before returning it,
+so speaking the text while it is still being generated also needs the guard to run on each sentence before that sentence
+goes to the voice.
+
+**Departure from the blueprint.** ElenchusAtScale has the multi-family panel word the questions and vote on the leak guard.
+The owner moved both onto one model for conversational latency (docs/research/blueprint-gap-analysis.md, owner decision 7).
+The panel still grades every answer.
+
 ## Recognizer latency and unsure-word rate (GAD-T361)
 
 Two in-memory counters for the status page, the same spirit as `Diagnostics/ApiCallTimings.cs` (GAD-T413) but without a
@@ -380,6 +414,7 @@ pending that library change.
 | `Gadfly:Voice:EndOfAnswerMaxSeconds` | Longest the silence may adapt to for a student who pauses long (up to 30, default 12). Both are multiplied by the extra-time accommodation. |
 | `Gadfly:Voice:EndOfAnswerCompleteSeconds` | The shorter silence that ends an answer whose last words are a finished sentence (1 to the floor, default 2; GAD-T498). Multiplied by the extra-time accommodation. |
 | `Gadfly:Voice:SpeechHangoverMs` | Silence after which the browser commits one stretch of speech to the recognizer (300 to 2000, default 700; GAD-T498). |
+| `Gadfly:Voice:BackchannelMs` | The listening "Mm-hm." after a finished sentence and this much silence, without ending the turn (0 = off, the default; else 300 to 3000; GAD-T496). |
 | `MindAttic:SpeechRecognition:Provider` | Live only: `Fallback` (default in live since GAD-T357: ElevenLabs Scribe, then OpenAI Whisper), or pin to `ElevenLabs` or `OpenAI` alone. |
 | `MindAttic:Avatar:ElevenLabs:VoiceId` | Live only, required (without it voice stays off). |
 

@@ -90,6 +90,7 @@ export function init(dotnet, cfg) {
         pauses: [], lastSpeechEndAt: null,   // the student's own mid-answer pauses, which the end-of-answer cue adapts to (GAD-T264)
         fill: null, fillPlaying: null,       // filling the wait while an answer is judged (GAD-T290): pending lines, the one being said
         fillAmbience: null,                  // the quiet page-turn loop under the wait (GAD-T409)
+        ack: null, ackPlaying: null, ackEndedAt: null, ackDeferredAllowed: false,   // the acknowledgement as an answer goes in (GAD-T496)
         remarkOver: null, remarkEnded: null, // an eye-contact remark being said, which a question waits for (GAD-T472)
         acoustics: new VoiceAcoustics(),   // voice strain indicators (GAD-T232): summary numbers only, never audio
         hubUp: true, replayQueue: [],   // reconnect buffering (GAD-T360): audio and commits sent while the hub is down are replayed, in order
@@ -165,6 +166,7 @@ async function start() {
                 if (s.gate) return;
                 if (s.lastSpeechEndAt !== null && s.startedAtUnixMs !== null) notePause(s, performance.now() - s.lastSpeechEndAt);
                 s.lastSpeechEndAt = null;
+                cancelBackchannel(s, true);   // she never talks over the student (GAD-T496)
                 s.startedAtUnixMs ??= Date.now();
                 freezeDelay(s);
                 clearCue();
@@ -354,6 +356,7 @@ function createAvatar(s, src) {
         // This room's own utterance has started playing (not a gaze remark, which speaks through another connection): the
         // caption and mouth clock starts with her audio, so the words light as she says them.
         if (s.ours && !s.ours.started && !s.remarkHold) { s.ours.started = true; s.presenter && s.presenter.started(); }
+        if (s.ackPlaying && !s.ackPlaying.started) s.ackPlaying.started = true;   // her acknowledgement is audible now (GAD-T496)
     });
     el.addEventListener("speech-error", (e) => { if (s.avatar === el && s.ours && e.detail && e.detail.id === s.utterId) s.ours.failed = true; });
     return el;
@@ -538,6 +541,8 @@ export function speak(what, cacheable, style, turn, repeat) {
     // during "Please look at me while you answer" played both at once). Both are short and stop themselves if they stall; the extra
     // bounds here are only backstops.
     const bounded = (p, ms) => p ? Promise.race([p, new Promise((r) => setTimeout(r, ms))]) : Promise.resolve();
+    // The question is ready before her acknowledgement (GAD-T496) has made a sound: it is dropped, and the question goes first.
+    if (s.ackPlaying && !s.ackPlaying.started && s.speech) { s.ackPlaying.skipped = true; s.speech.stop().catch(() => { }); }
     const ready = Promise.all([bounded(s.fillPlaying, FILL.timeoutMs + 1000), bounded(s.remarkOver, REMARK_WAIT_MS)]);
     ready.then(() => {
         if (S !== s || s.speakToken !== token) return;   // replaced meanwhile: the newer call finishes the turn
@@ -619,7 +624,7 @@ function interrupt(s) {
 // ---------------------------------------------------------------------------------------------------- filling the wait
 
 /** Filler timings (GAD-T290): a line stops itself after timeoutMs; a blocked attempt retries every retryMs; lines are gapMs apart. */
-const FILL = { timeoutMs: 6000, retryMs: 500, gapMs: 8000, lateMs: 10000 };
+const FILL = { timeoutMs: 6000, retryMs: 500, gapMs: 8000, lateMs: 10000, afterAckMs: 1500 };
 
 /**
  * The panel is judging the answer, taken as heard (GAD-T405), and writing the next question (GAD-T290). If the wait outlasts
@@ -638,7 +643,8 @@ export function fillWait(first, again, firstAfterMs, againAfterMs) {
     const attempt = (what, until) => {
         if (S !== s || s.fill !== f) return;
         const now = performance.now();
-        if (!canFill(s) || (f.saidAt !== null && now - f.saidAt < FILL.gapMs)) {
+        if (!canFill(s) || (f.saidAt !== null && now - f.saidAt < FILL.gapMs)
+            || (s.ackEndedAt !== null && now - s.ackEndedAt < FILL.afterAckMs)) {
             if (now + FILL.retryMs < until) f.timers.push(setTimeout(() => attempt(what, until), FILL.retryMs));
             return;
         }
@@ -733,6 +739,56 @@ function sayFiller(s, what) {
     s.fillPlaying = playing;
 }
 
+// ------------------------------------------------------------------------------------------- acknowledging an answer
+
+/** Longest an acknowledgement may take before it is cut off (GAD-T496): it is a word or two. */
+const ACK_TIMEOUT_MS = 3000;
+
+/**
+ * The acknowledgement for the next answer (GAD-T496): a short fixed line the server picked (never the same twice running, never
+ * evaluative) and already offered to the avatar hub, so it plays the instant the answer is in, with no round trip.
+ */
+export function nextAcknowledgement(what) {
+    if (S) S.ack = what || null;
+}
+
+/**
+ * Says the pending acknowledgement as the answer goes in ("Mm, okay.", "I see."), through the avatar hub like every line, so she
+ * lip-syncs it; it comes from the phrase cache prepared at room start, so it costs nothing per turn. Only when she is free to talk
+ * (no question, filler or remark under way). The microphone gate is already shut, so it is never heard as part of an answer, and
+ * the wait filler (GAD-T290) holds off until shortly after it. A question that is ready before it has made a sound skips it (speak()).
+ */
+function sayAck(s) {
+    const what = s.ack;
+    s.ack = null;
+    cancelBackchannel(s, false);
+    if (!what || S !== s || !s.running || !s.avatarOk || !s.speech || !s.avatar
+        || s.speaking || s.speakToken || s.remarkHold || s.fillPlaying) return;
+    const ack = { started: false, skipped: false };
+    s.ackPlaying = ack;
+    s.ackDeferredAllowed = false;
+    showCaption(what);
+    let timer = null;
+    const allowance = new Promise((resolve) => { timer = setTimeout(() => resolve(true), ACK_TIMEOUT_MS); });
+    const playing = Promise.race([s.speech.speak(what, undefined, true).then(() => false), allowance])
+        .then((late) => { if (late && S === s && s.speech) s.speech.stop().catch(() => { }); })
+        .catch(() => { })
+        .finally(() => {
+            clearTimeout(timer);
+            if (s.fillPlaying === playing) s.fillPlaying = null;
+            if (s.ackPlaying === ack) s.ackPlaying = null;
+            s.ackEndedAt = performance.now();
+            const reopen = s.ackDeferredAllowed;
+            s.ackDeferredAllowed = false;
+            if (S !== s || !s.running || s.speakToken || s.speaking) return;   // a question takes it from here
+            if (reopen && s.allowed) { if (s.gate) openMic(); resendKept(s); return; }
+            if (s.kept) { resendKept(s); return; }
+            if (!s.allowed) { if (s.avatar) s.avatar.state = s.held ? "idle" : "thinking"; status(waitingText(s)); }
+            else if (s.gate && s.avatar) s.avatar.state = "thinking";   // the answer is on its way: she is not listening
+        });
+    s.fillPlaying = playing;
+}
+
 /** Barge-in: the student starts talking over a question, or leaves. */
 export function stopSpeaking() {
     if (S && S.speech) S.speech.stop().catch(() => { });
@@ -751,6 +807,8 @@ export function setAllowed(allowed, held) {
     s.allowed = !!allowed;
     s.held = !s.allowed && !!held;
     if (s.allowed) cancelFill(s);
+    // An answer is wanted again while her acknowledgement plays (GAD-T496): its end opens the microphone (sayAck).
+    if (s.ackPlaying) s.ackDeferredAllowed = s.allowed;
     // A filler line still playing (GAD-T290) keeps the microphone shut until it ends; its end opens it if an answer is wanted.
     if (!s.running || s.speaking || s.fillPlaying) return;
     if (s.allowed && was && !s.gate) return;
@@ -816,6 +874,8 @@ export function stop() {
     unwatchVisibility(s);
     cancelFill(s);
     s.fillPlaying = null;
+    s.ackPlaying = null;
+    s.ack = null;
     endRemarkWait(s);   // nothing of this room waits on a remark any more (GAD-T472)
     s.speakToken = null;
     s.ours = null;
@@ -866,6 +926,7 @@ function openMic() {
     s.carryFinals = false;   // the gate is open again: finals join the answer the usual way (GAD-T474)
     s.lastSpeechEndAt = null;   // the wait before an answer starts is thinking time, not a pause within it
     if (!resuming) {
+        s.backchannelSaid = false;   // one listening backchannel per answer (GAD-T496)
         s.listeningStartMs = s.mic.currentTimeMs;
         startDelay(s);
         s.speechConn.send("MarkListening", s.listeningStartMs).catch(() => { });
@@ -1015,6 +1076,39 @@ function armCue(s) {
     if (cue) { cue.style.setProperty("--cue-ms", ms + "ms"); cue.dataset.active = "true"; }
     status("Finishing your answer… keep talking to add more.");
     s.cueTimer = setTimeout(() => void submit(false), ms);
+    armBackchannel(s);
+}
+
+/**
+ * The listening backchannel (GAD-T496, off unless Gadfly:Voice:BackchannelMs is set): once a finished sentence has been followed
+ * by cfg.backchannelMs of silence, she gives a soft "Mm." or "Mm-hm." that does not end the turn. The countdown runs on; speaking
+ * again stops her at once and simply carries on the answer. At most once per answer, and only when the short (finished-sentence)
+ * countdown is running and she is otherwise silent. Off by default: the microphone is open while she makes it, so it relies on
+ * the browser's echo cancellation to keep her sound out of the answer.
+ */
+function armBackchannel(s) {
+    const lines = s.backchannels;
+    const ms = s.cfg.backchannelMs;
+    if (!(ms > 0) || !lines || !lines.length || s.backchannelSaid || s.gate || !finishedSentence(s) || awaitingFinal(s)) return;
+    s.backchannelTimer = setTimeout(() => {
+        s.backchannelTimer = null;
+        if (S !== s || !s.running || s.gate || s.inSpeech || !s.cueTimer || s.backchannelSaid || !s.avatarOk || !s.speech
+            || s.speaking || s.speakToken || s.remarkHold || s.fillPlaying) return;
+        s.backchannelSaid = true;
+        const what = lines[Math.floor(Math.random() * lines.length)];
+        const bc = s.backchannelPlaying = s.speech.speak(what, undefined, true).catch(() => { })
+            .finally(() => { if (s.backchannelPlaying === bc) s.backchannelPlaying = null; });
+    }, ms);
+}
+
+/** Lines the server offered for the listening backchannel (GAD-T496); nothing is said with none. */
+export function backchannels(lines) {
+    if (S) S.backchannels = Array.isArray(lines) ? lines.filter((x) => typeof x === "string" && x) : null;
+}
+
+function cancelBackchannel(s, silence) {
+    if (s.backchannelTimer) { clearTimeout(s.backchannelTimer); s.backchannelTimer = null; }
+    if (silence && s.backchannelPlaying && s.speech) { s.backchannelPlaying = null; s.speech.stop().catch(() => { }); }
 }
 
 /**
@@ -1086,15 +1180,18 @@ const CUT_OFF_BACKOFF_MS = 750;
 function noteCutOff(s) {
     if (!s || s.cutWatch == null) return;
     const ms = performance.now() - s.cutWatch;
+    // An eye-contact remark is the examiner talking too (GAD-T316): the microphone may be hearing her, not the student. The watch
+    // stays on through her acknowledgement (GAD-T496), so a student who carries on right after it is still noticed.
+    if (Number.isFinite(ms) && ms >= 0 && ms <= CUT_OFF_MS && (s.speaking || s.fillPlaying || s.remarkHold)) return;
     s.cutWatch = null;
-    // An eye-contact remark is the examiner talking too (GAD-T316): the microphone may be hearing her, not the student.
-    if (!Number.isFinite(ms) || ms < 0 || ms > CUT_OFF_MS || s.speaking || s.fillPlaying || s.remarkHold) return;
+    if (!Number.isFinite(ms) || ms < 0 || ms > CUT_OFF_MS) return;
     s.cutOffBackoffMs = Math.min(CUT_OFF_BACKOFF_MS * 4, (s.cutOffBackoffMs || 0) + CUT_OFF_BACKOFF_MS);   // GAD-T498
     s.dotnet.invokeMethodAsync("OnAnswerCutOff", Math.round(ms)).catch(() => { });
 }
 
 function clearCue() {
     if (!S) return;
+    cancelBackchannel(S, false);
     if (S.cueTimer) { clearTimeout(S.cueTimer); S.cueTimer = null; }
     const cue = q("cue");
     if (cue) cue.dataset.active = "false";
@@ -1240,7 +1337,7 @@ function discard() {
     status("Cleared. Answer again whenever you're ready.");
 }
 
-async function submit(immediate) {
+async function submit(immediate, resend) {
     const s = S;
     if (!s || s.gate || s.segments.length === 0) return;
     clearCue();
@@ -1263,6 +1360,8 @@ async function submit(immediate) {
     status("Sending your answer…");
     // Sent by the silence, not by "Done answering": watch the next few seconds for the student going on (GAD-T462).
     s.cutWatch = immediate ? null : performance.now();
+    // She acknowledges the answer at once (GAD-T496), not after the round trip; a kept answer sent again was acknowledged already.
+    if (!resend) sayAck(s);
     s.sending = true;
     try {
         let taken;
@@ -1285,7 +1384,9 @@ async function submit(immediate) {
         // microphone reopened under it.
         if (S === s) {
             s.cutWatch = null;
-            if (s.running && s.allowed && !s.speaking && !s.speakToken && !s.fillPlaying && !s.remarkHold) {
+            // Her acknowledgement (GAD-T496) is still playing: its end opens the microphone again for this answer.
+            if (s.ackPlaying && s.allowed) { s.ackDeferredAllowed = true; status("That did not go through. Press Done answering to try again."); }
+            else if (s.running && s.allowed && !s.speaking && !s.speakToken && !s.fillPlaying && !s.remarkHold) {
                 s.gate = false;
                 if (s.avatar) s.avatar.state = "listening";
                 status("That did not go through. Press Done answering to try again.");
@@ -1344,7 +1445,7 @@ function resendKept(s) {
         if (!s.gate) status(KEPT_GIVE_UP_TEXT);
         return;
     }
-    void submit(true);
+    void submit(true, true);
 }
 
 function toggleMode(button) {

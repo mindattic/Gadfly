@@ -35,6 +35,39 @@ public static class ExaminerFiller
         "Still thinking. One moment.",
     ];
 
+    /// <summary>
+    /// The acknowledgement she gives the moment an answer is in (GAD-T496), the backchannel a listener gives when someone stops
+    /// talking, so the turn never ends in dead air. Receipt only, never assessment: no "good", "right", "exactly" or "correct",
+    /// which would leak how the answer was judged; the same few words follow a strong answer and a weak one alike. Offered to the
+    /// browser ahead of time (with each question), so it plays without a round trip; prepared ahead in the phrase cache with the
+    /// other fixed lines, per examiner voice.
+    /// </summary>
+    public static readonly IReadOnlyList<string> Acknowledgements =
+    [
+        "Mm, okay.",
+        "Okay.",
+        "Mm-hm.",
+        "I see.",
+        "Alright.",
+        "Okay, thank you.",
+        "Mm. Okay.",
+        "Thank you.",
+    ];
+
+    /// <summary>
+    /// The soft listening sounds she may make while the student is still holding the floor (GAD-T496, only when
+    /// <c>Gadfly:Voice:BackchannelMs</c> is set): a finished sentence followed by a short silence gets one of these, which does not
+    /// end the turn. Non-words on purpose: no "yes", "right" or "okay" that could read as agreement or a verdict.
+    /// </summary>
+    public static readonly IReadOnlyList<string> Backchannels = ["Mm.", "Mm-hm."];
+
+    /// <summary>An acknowledgement, never the same as <paramref name="last"/>, so two answers in a row never get the same one.</summary>
+    public static string PickAcknowledgement(Random random, string? last)
+    {
+        var choices = Acknowledgements.Where(t => t != last).ToArray();
+        return choices[random.Next(choices.Length)];
+    }
+
     /// <summary>A first and a long-wait line, the first never the same as <paramref name="lastFirst"/> so turns in a row vary.</summary>
     public static (string First, string Again) Pick(Random random, string? lastFirst)
     {
