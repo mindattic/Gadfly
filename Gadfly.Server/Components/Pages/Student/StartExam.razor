@@ -27,6 +27,11 @@ else if (assignment is null)
 }
 else
 {
+    @if (assignment.CanStart && !assignment.CanResumeDirectly)
+    {
+        @* The tour only points at the page: it never opens or touches the camera, microphone or system check (GAD-T341). *@
+        <Tour Id="@Tours.TourIds.GetReady" Float="true" />
+    }
     <h1>@assignment.ExamTitle <span>· get ready</span></h1>
 
     @if (assignment.CanResumeDirectly)
@@ -39,13 +44,13 @@ else
     }
     else
     {
-        <ol class="steps">
+        <ol class="steps" data-tour="ready-steps">
             <li class="@(Done(1) ? "done" : "")">System check</li>
             <li class="@(Done(2) ? "done" : "")">How it works</li>
             <li class="@(Done(3) ? "done" : "")">Notice and consent</li>
         </ol>
 
-        <section class="panel wide">
+        <section class="panel wide" data-tour="ready-check">
             <h2>1. System check</h2>
             @if (checks is null)
             {
@@ -126,7 +131,7 @@ else
                 <li>The clock is kept on the server; if you reload the page, you return to the same question.</li>
                 <li>You won't see scores during the exam. Your result is published once it has been graded and approved.</li>
             </ul>
-            <div class="practice">
+            <div class="practice" data-tour="ready-practice">
                 <h3>Try one (practice, not recorded)</h3>
                 <p class="question">@practiceQuestion</p>
                 @if (practiceFollowUp is null)
@@ -163,7 +168,7 @@ else
             </div>
         </section>
 
-        <section class="panel wide">
+        <section class="panel wide" data-tour="ready-consent">
             <h2>3. @notice!.Title</h2>
             @foreach (var p in notice.Paragraphs)
             {
