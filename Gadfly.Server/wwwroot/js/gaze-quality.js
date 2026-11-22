@@ -362,7 +362,8 @@ export async function start(video, panel) {
         const unshare = shareVideo(video);
         const opening = core.retain();
         // A start that outlives the timeout or the page section still opens the camera later: stop it then.
-        opening.then(() => { if (Q !== q) { try { core.stop(); } catch { } } }, () => { });
+        // Also when this same check gave up on it (the timeout released q.core but left Q as it was): that camera was left on (GAD-T316).
+        opening.then(() => { if (Q !== q || q.core !== core) { try { core.stop(); } catch { } } }, () => { });
         try { await bounded(opening, GAZE.loadTimeoutMs); } finally { unshare(); }
         if (Q !== q) return;
         await measure(q);

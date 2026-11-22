@@ -34,8 +34,12 @@ export function start(stream, panel) {
         const settings = track && track.getSettings ? track.getSettings() : {};
         m.echoCancellation = settings.echoCancellation;
         panel.textContent = "Listening for a few seconds to check your microphone…";
+        try { m.ctx.resume().catch(() => { }); } catch { }
         m.timer = setInterval(() => {
             if (M !== m || m.done) return;
+            // A context the browser holds suspended until the page's first click (a reload of this page) reads pure silence: those
+            // frames are not counted, or the room was always "quiet" with no clipping (GAD-T316). Resuming works once there's been a click.
+            if (m.ctx.state !== "running") { try { m.ctx.resume().catch(() => { }); } catch { } return; }
             analyser.getFloatTimeDomainData(buf);
             let peak = 0;
             for (let i = 0; i < buf.length; i++) { const a = Math.abs(buf[i]); if (a > peak) peak = a; }
@@ -74,5 +78,5 @@ export function stop() {
     M = null;
     if (!m) return;
     if (m.timer) clearInterval(m.timer);
-    try { m.ctx && m.ctx.close(); } catch { }
+    try { m.ctx && m.ctx.close().catch(() => { }); } catch { }
 }
