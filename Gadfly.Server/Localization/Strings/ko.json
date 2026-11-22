@@ -159,5 +159,11 @@
   "getReady.examiner.choose": "시험관 고르기",
   "getReady.examiner.choice.female": "여성 시험관",
   "getReady.examiner.choice.male": "남성 시험관",
-  "getReady.examiner.comingSoon": "(준비 중)"
+  "getReady.examiner.comingSoon": "(준비 중)",
+  "getReady.step.language": "사용 언어",
+  "getReady.language.title": "사용 언어",
+  "getReady.language.why": "모국어가 아닌 언어로 시험을 보는 학생도 공정하게 평가받을 수 있도록 여쭤보는 거예요. 답한 내용은 채점에 절대 쓰이지 않으며, 이를 바탕으로 출신 등을 추정하는 일도 없어요.",
+  "getReady.language.spoken": "어떤 언어를 할 수 있나요?",
+  "getReady.language.primary": "가장 잘하는 언어는 무엇인가요?",
+  "getReady.language.editable": "답한 내용은 시험을 시작할 때 저장되고 다음에 자동으로 채워져요. 시험 전에 언제든 여기서 바꿀 수 있어요."
 }

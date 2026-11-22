@@ -55,11 +55,40 @@ else
     {
         <p class="hint ready-intro">@T["getReady.intro"]</p>
         <ol class="steps" data-tour="ready-steps">
+            <li class="@(spoken.Count > 0 ? "done" : "")">@T["getReady.step.language"]</li>
             <li class="@(Done(1) ? "done" : "")">@T["getReady.step.check"]</li>
             <li class="@(Done(2) ? "done" : "")">@T["getReady.step.examiner"]</li>
             <li class="@(Done(3) ? "done" : "")">@T["getReady.step.how"]</li>
             <li class="@(Done(4) ? "done" : "")">@T["getReady.step.consent"]</li>
         </ol>
+
+        <section class="panel wide language-panel" data-tour="ready-language" aria-labelledby="ready-language-title">
+            @* The language questions (GAD-T552): asked, never inferred; prefilled from the saved profile; saved when the exam begins. *@
+            <h2 id="ready-language-title">@T["getReady.language.title"]</h2>
+            <p class="hint">@T["getReady.language.why"]</p>
+            <fieldset>
+                <legend>@T["getReady.language.spoken"]</legend>
+                <div class="language-options">
+                    @foreach (var l in StudentLanguages.Choices)
+                    {
+                        <label lang="@l.Tag">
+                            <input type="checkbox" checked="@spoken.Contains(l.Tag)" @onchange="e => ToggleSpoken(l.Tag, e)" />
+                            @l.NativeName
+                        </label>
+                    }
+                </div>
+            </fieldset>
+            <label class="language-primary">
+                @T["getReady.language.primary"]
+                <select @bind="primary" @bind:after="OnPrimaryChanged">
+                    @foreach (var l in StudentLanguages.Choices.Where(c => spoken.Count == 0 || spoken.Contains(c.Tag)))
+                    {
+                        <option value="@l.Tag" lang="@l.Tag">@l.NativeName</option>
+                    }
+                </select>
+            </label>
+            <p class="hint">@T["getReady.language.editable"]</p>
+        </section>
 
         <section class="panel wide" data-tour="ready-check" aria-labelledby="ready-check-title">
             <h2 id="ready-check-title">@T["getReady.check.title"]</h2>
@@ -383,6 +412,45 @@ else
 
     private bool previewPlayed;
 
+    /// <summary>The language answers (GAD-T552): prefilled from the saved profile, saved when the exam begins.</summary>
+    private List<string> spoken = [];
+    private string primary = "en";
+
+    private void ToggleSpoken(string tag, ChangeEventArgs e)
+    {
+        if (e.Value is true) { if (!spoken.Contains(tag)) spoken.Add(tag); }
+        else spoken.Remove(tag);
+        if (spoken.Count > 0 && !spoken.Contains(primary)) primary = spoken[0];
+    }
+
+    private void OnPrimaryChanged()
+    {
+        if (!spoken.Contains(primary)) spoken.Add(primary);
+    }
+
+    /// <summary>Loads the saved answers; a student who hasn't answered yet starts with the page's language ticked.</summary>
+    private async Task LoadLanguagesAsync(Guid org, Guid user)
+    {
+        var saved = await StudentLanguages.LoadAsync(Scopes, org, user);
+        if (saved is not null)
+        {
+            spoken = saved.Spoken.ToList();
+            primary = saved.Primary;
+        }
+        else
+        {
+            primary = T.Language;
+            spoken = [primary];
+        }
+    }
+
+    /// <summary>Saves the language answers; best effort, never stops the exam.</summary>
+    private async Task SaveLanguagesAsync(Guid org, Guid user)
+    {
+        try { await StudentLanguages.SaveAsync(Scopes, org, user, new LanguageAnswers(spoken, primary), Clock.GetUtcNow()); }
+        catch (Exception ex) when (ex is not OperationCanceledException) { }
+    }
+
     /// <summary>The examiners on offer and the one chosen (GAD-T595); the remembered choice is read once the page is live.</summary>
     private IReadOnlyList<ExaminerOption> examiners = [];
     private ExaminerOption examiner = null!;
@@ -430,6 +498,7 @@ else
             if (assignment is not null)
             {
                 (orgName, retentionDays) = await StudentExams.OrganizationAsync(Scopes, org);
+                await LoadLanguagesAsync(org, user);
                 BuildNotice();
             }
         }
@@ -694,6 +763,8 @@ else
         {
             // An attempt already in progress is resumed as it is (even if the exam was archived since:
             // archiving blocks only new attempts); otherwise the orchestrator starts the next attempt.
+            // The language answers first: the attempt copies the primary language from the profile (GAD-T552).
+            await SaveLanguagesAsync(org, user);
             var sessionId = assignment.ActiveSessionId
                             ?? await Sessions.CreateOrResumeAsync(org, assignment.AssignmentId, user, clientInfo);
             await Sessions.RecordConsentAsync(org, sessionId, user, notice.Sha256);
