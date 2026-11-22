@@ -14,7 +14,7 @@ to the entries in them. Nothing here changes code.
 | 1 | Follow-up moves | `Gadfly/Engine/Moves.cs`, `QuestionPlanner.cs`, `ExamPrompts.cs` | Supported, with changes | GAD-T266, GAD-T267, GAD-T268 |
 | 2 | Probing on hesitation | `AnswerDelivery.cs`, `QuestionGenerator.cs` (GAD-T233) | Content cues supported; strain cue not | GAD-T258, GAD-T267 |
 | 3 | Recitation check | `RecitationCheck.cs` (GAD-T242) | Source-overlap supported; read-out pattern weak | GAD-T272 |
-| 4 | Gaze fade and "look at me" | `wwwroot/js/examiner-gaze.js` (GAD-T240) | Legal, weak as evidence; owner decision (c) | GAD-T261 |
+| 4 | Gaze fade and "look at me" | `wwwroot/js/examiner-gaze.js` (GAD-T240) | Legal, weak as evidence; owner decision (c) | GAD-T261, GAD-T305 |
 | 5 | Voice strain | `Gadfly.Server/Voice/VoiceStrain.cs` | Not supported; legal risk; owner decision (b) | GAD-T258, GAD-T259 |
 | 6 | Time limits and the end-of-answer cue | `SessionPolicy.cs`, `voice-room.js`, `StudentExams.cs` | Time budget supported; two choices questioned | GAD-T263, GAD-T264 |
 | 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273, GAD-T285 (done) |
@@ -153,6 +153,26 @@ reviewers as low-confidence context. Only notes leave the device, never frames.
   answering minutes, by accommodation or by a grouping the institution pastes in (used in memory, never stored). Groups
   under 5 students are withheld, and rates that differ by more than a quarter between groups are flagged. Until they
   have been compared, eye-contact episodes are context only.
+
+**Done (GAD-T305): fewer false look-aways, and an honest quality score.** The decision still stands; the mechanic now
+measures better and says how far to trust it:
+- **Gaze vector, not head direction alone.** Iris position plus head pose, followed to the camera's plane and mapped onto
+  the page by a five-dot calibration (get-ready page or "Set up eye contact again"). Leaning or turning the head while
+  looking at the examiner no longer counts as looking away (in a synthetic check, a 10 cm lean read as a 10 degree
+  deviation by head direction and under 1 degree by the gaze vector). The examiner's region is her stage as shown on screen
+  plus a margin that grows with the measured accuracy and noise, and a look-away needs both estimates to agree.
+- **Measured, not claimed.** Each calibration's accuracy is its leave-one-out error in degrees, checked again by a look at
+  the examiner in the room; worse than 6 degrees gets one retry and is then not used (the old head-direction check is the
+  fallback). This keeps within the webcam evidence above: the goal is fewer false look-aways, not precision.
+- **Quality with every note.** Each eye-contact episode carries the session's tracking quality (0..100 from accuracy,
+  steadiness, tracking coverage, lighting and framing, frame rate; at most 50 without a calibration). Reviewers read it in
+  the note ("Eye-tracking quality this session: fair (55/100; head and eye direction only)"); a poor score keeps a
+  look-away or reading note at Info, and the confidence sent scales with it, still capped at 0.4.
+- **Setup advice.** The get-ready page checks lighting (including a bright light behind the student), camera angle,
+  distance, how steadily the eyes can be followed (glare on glasses) and device speed, with plain advice. It never blocks
+  the exam. Thinking grace and the accommodation are unchanged; under the accommodation there are no calibration dots.
+- **Still to do.** The thresholds (quality bands, margins, the 6 degree cut-off) are reasoned from the literature and a
+  synthetic face, not validated on real students; compare flag rates by quality band and by group once pilot data exists.
 
 ## 5. Voice strain (owner decision (b))
 
