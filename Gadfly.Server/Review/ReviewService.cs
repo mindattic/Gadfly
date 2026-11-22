@@ -232,7 +232,8 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
             Grade = grade,
             Score = input.Score is { } s ? Math.Round(s, 2) : null,
             Comment = comment,
-            OverridesRecommendation = GradePolicy.Overrides(grade, input.Score, report?.Recommendation, report?.OverallScore),
+            // GAD-T460: against the objective levels (the reported result), never the running-estimate recommendation.
+            OverridesRecommendation = GradePolicy.Overrides(grade, input.Score, ReportedLevels.FromReportJson(report?.ReportJson)),
             DecidedAt = _clock.GetUtcNow(),
         });
         await db.SaveChangesAsync(ct);
@@ -281,7 +282,10 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
             sb.AppendLine().AppendLine("## Instructor decision").AppendLine();
             sb.AppendLine($"- Grade: **{g.Grade}**" + (g.Score is { } s ? $" ({s.ToString("0.##", ci)}%)" : ""));
             sb.AppendLine($"- Decided by {v.Grades[0].DecidedBy} on {g.DecidedAt.UtcDateTime.ToString("u", ci)}");
-            if (!v.Blinded) sb.AppendLine(g.OverridesRecommendation ? "- Overrides the AI recommendation" : "- Agrees with the AI recommendation");
+            // GAD-T460: compared with the objective levels; a report without levels (or all Level 0) has nothing to agree with.
+            var levels = ReportedLevels.FromReportJson(v.Report?.ReportJson);
+            if (!v.Blinded && GradePolicy.Outcome(levels) is not null)
+                sb.AppendLine(GradePolicy.Overrides(g, levels) ? "- Differs from the AI's objective levels" : "- Agrees with the AI's objective levels");
             if (!string.IsNullOrWhiteSpace(g.Comment)) sb.AppendLine().AppendLine(g.Comment);
         }
         return sb.ToString();
@@ -367,11 +371,15 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
     }
 }
 
-/// <summary>Whether an instructor's grade differs from the AI recommendation (decision D13).</summary>
+/// <summary>
+/// Whether an instructor's grade differs from the AI's reported result (decision D13). Since GAD-T425 that result is the
+/// corroborated level of each learning objective, not the running-estimate recommendation, so the override flag compares
+/// against the levels (GAD-T460). No average stands in for a level: the outcome is read from every objective's level.
+/// </summary>
 public static class GradePolicy
 {
-    // Conventional grades that agree with each recommendation. Anything else counts as an override, so
-    // the instructor's own words always win and the record says so.
+    // Conventional grades that agree with each outcome. Anything else counts as an override, so the instructor's own words
+    // always win and the record says so.
     private static readonly Dictionary<string, string[]> Agreeing = new(StringComparer.Ordinal)
     {
         [Engine.SessionReport.Mastered] = ["mastered", "pass", "passed", "a+", "a", "a-", "excellent", "proficient"],
@@ -379,20 +387,46 @@ public static class GradePolicy
         [Engine.SessionReport.NotDemonstrated] = ["not-demonstrated", "not demonstrated", "fail", "failed", "d+", "d", "d-", "f", "incomplete"],
     };
 
-    /// <summary>The grades that would agree with a recommendation, for the form's hint.</summary>
-    public static IReadOnlyList<string> AgreeingGrades(string? recommendation) =>
-        recommendation is not null && Agreeing.TryGetValue(recommendation, out var g) ? g : [];
+    /// <summary>The lowest level at which an objective counts as understood (Level 3, Conceptual Understanding).</summary>
+    public const int UnderstoodLevel = 3;
 
     /// <summary>
-    /// True when the grade names a different outcome than the recommendation, or the score is more than
-    /// 10 points from the AI's overall mastery. False when there is no recommendation to override.
+    /// The outcome the objective levels support: "mastered" when every objective reached Level 3 or more, "not-demonstrated"
+    /// when no objective with enough evidence got past Level 1 (Recognition), otherwise "partial". Null when there are no
+    /// levels, or every objective is Level 0: insufficient evidence supports no outcome, so no grade can override it.
     /// </summary>
-    public static bool Overrides(string grade, double? score, string? recommendation, double? aiScore)
+    public static string? Outcome(IReadOnlyList<ObjectiveLevel> levels)
     {
-        if (string.IsNullOrWhiteSpace(recommendation)) return false;
+        var conclusive = levels.Where(l => !l.Insufficient).ToList();
+        if (conclusive.Count == 0) return null;
+        if (levels.All(l => l.Level >= UnderstoodLevel)) return Engine.SessionReport.Mastered;
+        if (conclusive.All(l => l.Level <= 1)) return Engine.SessionReport.NotDemonstrated;
+        return Engine.SessionReport.Partial;
+    }
+
+    /// <summary>The grades that would agree with the levels' outcome, for the form's hint.</summary>
+    public static IReadOnlyList<string> AgreeingGrades(IReadOnlyList<ObjectiveLevel> levels) =>
+        Outcome(levels) is { } o && Agreeing.TryGetValue(o, out var g) ? g : [];
+
+    /// <summary>
+    /// True when the grade names a different outcome than the objective levels support, or the score (a percentage) lies more
+    /// than 10 points outside the range the levels span (Level n reads as n x 20%, from the lowest to the highest objective
+    /// with enough evidence). False when the levels support no outcome (none, or all Level 0), so there is nothing to override.
+    /// </summary>
+    public static bool Overrides(string grade, double? score, IReadOnlyList<ObjectiveLevel> levels)
+    {
+        if (Outcome(levels) is not { } outcome) return false;
         var g = grade.Trim().ToLowerInvariant();
-        var gradeAgrees = Agreeing.TryGetValue(recommendation, out var ok) ? ok.Contains(g) : g == recommendation.ToLowerInvariant();
-        var scoreAgrees = score is not { } s || aiScore is not { } ai || Math.Abs(s - ai * 100) <= 10;
+        var gradeAgrees = Agreeing.TryGetValue(outcome, out var ok) && ok.Contains(g);
+        var conclusive = levels.Where(l => !l.Insufficient).Select(l => l.Level * 20.0).ToList();
+        var scoreAgrees = score is not { } s || (s >= conclusive.Min() - 10 && s <= conclusive.Max() + 10);
         return !gradeAgrees || !scoreAgrees;
     }
+
+    /// <summary>
+    /// The override flag to show for a grade: worked out from the report's levels at display time, so grades saved before
+    /// GAD-T460 (which compared against the old running-estimate recommendation) read the same way as new ones.
+    /// </summary>
+    public static bool Overrides(GradeDecision grade, IReadOnlyList<ObjectiveLevel> levels) =>
+        Overrides(grade.Grade, grade.Score, levels);
 }

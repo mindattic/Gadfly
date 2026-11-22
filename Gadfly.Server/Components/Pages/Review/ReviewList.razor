@@ -80,8 +80,9 @@ else
                         @if (r.LatestGrade is { } g)
                         {
                             <strong>@g.Grade</strong>
-                            @* Blind grading leaves Recommendation null: whether the grade overrode it would reveal the AI's view. *@
-                            @if (g.OverridesRecommendation && r.Recommendation is not null) { <span class="hint"> (override)</span> }
+                            @* GAD-T460: compared with the objective levels. Blind grading leaves AiLevels empty: whether the grade
+                               differs from them would reveal the AI's view. *@
+                            @if (GradePolicy.Overrides(g, r.AiLevels)) { <span class="hint" title="This grade differs from the AI's objective levels"> (override)</span> }
                         }
                         else if (r.NeedsGrade)
                         {

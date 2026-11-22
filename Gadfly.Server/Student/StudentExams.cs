@@ -13,8 +13,12 @@ namespace Gadfly.Server.Student;
 /// </remarks>
 public enum AssignmentStanding { NotOpenYet, Open, InProgress, Completed, Closed, Unavailable, Archived }
 
-/// <summary>Results the instructor released for one assignment (never shown before release).</summary>
-public sealed record ReleasedResult(string? Grade, string? Comment, string? Recommendation, DateTimeOffset ReleasedAt);
+/// <summary>
+/// Results the instructor released for one assignment (never shown before release). <paramref name="Levels"/> is the AI report's
+/// corroborated level per learning objective (Level 0 = insufficient evidence), the reported result since GAD-T425; the old
+/// running-estimate recommendation is no longer carried (GAD-T460). Empty when the report predates objectives.
+/// </summary>
+public sealed record ReleasedResult(string? Grade, string? Comment, IReadOnlyList<Gadfly.Server.Review.ObjectiveLevel> Levels, DateTimeOffset ReleasedAt);
 
 /// <summary>One row of the student's dashboard (GAD-T51).</summary>
 public sealed record StudentAssignmentView
@@ -93,7 +97,7 @@ public static class StudentExams
             .ToListAsync(ct);
         var reports = releasedSessionIds.Count == 0 ? [] : await db.SessionReports.AsNoTracking()
             .Where(r => r.OrganizationId == organizationId && releasedSessionIds.Contains(r.SessionId))
-            .Select(r => new { r.SessionId, r.Recommendation, r.CreatedAt })
+            .Select(r => new { r.SessionId, r.ReportJson, r.CreatedAt })
             .ToListAsync(ct);
 
         // Clear scores leaves an audit row on the assignment (GAD-T262); the student is told the attempts still count. A
@@ -126,7 +130,7 @@ public static class StudentExams
                 var sessionId = grade?.SessionId ?? mine.Where(s => s.State == SessionState.Ended).OrderByDescending(s => s.Attempt).Select(s => (Guid?)s.Id).FirstOrDefault();
                 var report = reports.Where(r => r.SessionId == sessionId).OrderByDescending(r => r.CreatedAt).FirstOrDefault();
                 if (grade is not null || report is not null)
-                    result = new ReleasedResult(grade?.Grade, grade?.Comment, report?.Recommendation, released);
+                    result = new ReleasedResult(grade?.Grade, grade?.Comment, Gadfly.Server.Review.ReportedLevels.FromReportJson(report?.ReportJson), released);
             }
 
             rows.Add(new StudentAssignmentView
@@ -252,15 +256,13 @@ public static class StudentExams
         _ => "Not available yet",
     };
 
-    /// <summary>A student-readable label for the AI's recommendation (the instructor decides the grade).</summary>
-    public static string DescribeRecommendation(string? recommendation) => recommendation switch
-    {
-        null or "" => "",
-        "mastered" => "Understanding shown",
-        "partial" => "Partly shown",
-        "not-demonstrated" => "Not yet shown",
-        var other => other,
-    };
+    /// <summary>
+    /// A student-readable line for one objective's level (GAD-T460; the instructor decides the grade). Level 0 is worded as
+    /// not enough evidence, never as no understanding.
+    /// </summary>
+    public static string DescribeLevel(Gadfly.Server.Review.ObjectiveLevel level) => level.Insufficient
+        ? $"{level.Title}: not enough evidence to say"
+        : $"{level.Title}: Level {level.Level} of 5 ({level.Label})";
 
     /// <summary>The session's owner-checked state, or null when it isn't the student's.</summary>
     public static Task<(SessionState State, Guid AssignmentId, string ExamTitle)?> SessionAsync(

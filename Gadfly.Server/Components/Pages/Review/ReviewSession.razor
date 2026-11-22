@@ -319,7 +319,7 @@ else
     {
         <h2 class="section">Earlier instructor decisions</h2>
         <table class="grid">
-            <thead><tr><th>When</th><th>By</th><th>Grade</th><th>Score</th><th>Override</th><th>Comment</th></tr></thead>
+            <thead><tr><th>When</th><th>By</th><th>Grade</th><th>Score</th><th title="Whether the grade differs from the AI's objective levels">Override</th><th>Comment</th></tr></thead>
             <tbody>
                 @foreach (var (g, by) in view.Grades)
                 {
@@ -328,7 +328,7 @@ else
                         <td>@by</td>
                         <td><strong>@g.Grade</strong></td>
                         <td>@(g.Score?.ToString("0.##") ?? "—")</td>
-                        <td>@(view.Blinded ? "hidden (blind grading)" : g.OverridesRecommendation ? "yes" : "no")</td>
+                        <td>@(view.Blinded ? "hidden (blind grading)" : GradePolicy.Outcome(levels) is null ? "—" : GradePolicy.Overrides(g, levels) ? "yes" : "no")</td>
                         <td>@g.Comment</td>
                     </tr>
                 }
@@ -343,6 +343,7 @@ else
 
     private SessionReviewView? view;
     private bool loading = true;
+    private IReadOnlyList<ObjectiveLevel> levels = [];
 
     private ReviewService Service => new(Db, Tenant.OrganizationId!.Value, viewerRole: Tenant.Role);
 
@@ -350,6 +351,8 @@ else
     {
         loading = true;
         view = await Service.GetAsync(SessionId);
+        // GAD-T460: the override column compares each grade with the report's objective levels, not the running estimate.
+        levels = ReportedLevels.FromReportJson(view?.Report?.ReportJson);
         loading = false;
     }
 
