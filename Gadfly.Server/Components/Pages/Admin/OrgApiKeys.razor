@@ -128,7 +128,7 @@ else
         try
         {
             var (row, key) = await AdminDb.RunAsync(Scopes, Tenant, (sp, _) =>
-                sp.GetRequiredService<ApiKeyService>().CreateAsync(org, user, form.Name));
+                sp.GetRequiredService<ApiKeyService>().CreateAsync(org, user, form.Name, Tenant.Role));
             created = new Created(row.Name, key);
             copied = false;
             form = new();
@@ -165,13 +165,11 @@ else
     private async Task RevokeAsync(Guid id)
     {
         if (Tenant.OrganizationId is not { } org) return;
-        var now = Clock.GetUtcNow();
-        var n = await AdminDb.RunAsync(Scopes, Tenant, (_, db) => db.ApiKeys
-            .Where(k => k.Id == id && k.OrganizationId == org && k.RevokedAt == null)
-            .ExecuteUpdateAsync(u => u.SetProperty(k => k.RevokedAt, now)));
+        var revoked = await AdminDb.RunAsync(Scopes, Tenant, (sp, _) =>
+            sp.GetRequiredService<ApiKeyService>().RevokeAsync(id, Tenant.UserId, Tenant.Role));
         confirming = null;
-        ok = n > 0;
-        message = n > 0 ? "Key revoked." : "That key was already revoked.";
+        ok = revoked;
+        message = revoked ? "Key revoked." : "That key was already revoked.";
         await LoadAsync();
     }
 }

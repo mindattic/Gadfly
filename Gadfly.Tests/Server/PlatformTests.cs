@@ -302,6 +302,25 @@ public class ApiKeyAndUsageTests : ServerTest
     }
 
     [Test]
+    public async Task Create_And_Revoke_AreAudited()
+    {
+        var org = await Seed.OrganizationAsync();
+        var actor = Guid.NewGuid();
+        Guid id;
+        await using (var scope = Scope(TenantSnapshot.ForOrganization(org)))
+            id = (await scope.ServiceProvider.GetRequiredService<ApiKeyService>().CreateAsync(org, actor, "Audited key", "Admin")).Row.Id;
+        await using (var scope = Scope(TenantSnapshot.ForOrganization(org)))
+            Assert.That(await scope.ServiceProvider.GetRequiredService<ApiKeyService>().RevokeAsync(id, actor, "Admin"), Is.True);
+
+        await using var db = SystemDb();
+        var events = await db.AuditEvents.AsNoTracking()
+            .Where(e => e.EntityType == "ApiKey" && e.EntityId == id.ToString())
+            .OrderBy(e => e.At).ToListAsync();
+        Assert.That(events.Select(e => e.Action), Is.EqualTo(new[] { "apikey.created", "apikey.revoked" }));
+        Assert.That(events, Has.All.Matches<AuditEvent>(e => e.OrganizationId == org && e.ActorUserId == actor && e.ActorRole == "Admin"));
+    }
+
+    [Test]
     public async Task Revoke_IsOnceOnly_AndScopedToTheOrganization()
     {
         var org = await Seed.OrganizationAsync();
@@ -310,12 +329,12 @@ public class ApiKeyAndUsageTests : ServerTest
         await using (var scope = Scope(TenantSnapshot.ForOrganization(org)))
             id = (await scope.ServiceProvider.GetRequiredService<ApiKeyService>().CreateAsync(org, Guid.Empty, "k")).Row.Id;
         await using (var scope = Scope(TenantSnapshot.ForOrganization(other)))
-            Assert.That(await scope.ServiceProvider.GetRequiredService<ApiKeyService>().RevokeAsync(id), Is.False, "another organization can't revoke it");
+            Assert.That(await scope.ServiceProvider.GetRequiredService<ApiKeyService>().RevokeAsync(id, Guid.Empty), Is.False, "another organization can't revoke it");
         await using (var scope = Scope(TenantSnapshot.ForOrganization(org)))
         {
             var keys = scope.ServiceProvider.GetRequiredService<ApiKeyService>();
-            Assert.That(await keys.RevokeAsync(id), Is.True);
-            Assert.That(await keys.RevokeAsync(id), Is.False);
+            Assert.That(await keys.RevokeAsync(id, Guid.Empty), Is.True);
+            Assert.That(await keys.RevokeAsync(id, Guid.Empty), Is.False);
         }
     }
 

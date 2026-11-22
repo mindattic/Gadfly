@@ -19,11 +19,14 @@ public sealed class ApiKeyService(GadflyDbContext db, TimeProvider clock)
     public const string KeyPrefix = "gfk_";
 
     /// <summary>Creates a key for the caller's organization and returns the full key (shown once).</summary>
-    public async Task<(ApiKey Row, string Key)> CreateAsync(Guid organizationId, Guid createdBy, string name, CancellationToken ct = default)
+    /// <remarks>Audited (GAD-T327): an API key can act for the whole organization, so who created it and when is recorded.</remarks>
+    public async Task<(ApiKey Row, string Key)> CreateAsync(Guid organizationId, Guid createdBy, string name,
+        string? actorRole = null, CancellationToken ct = default)
     {
         var prefix = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(4));
         var secret = Base64Url(RandomNumberGenerator.GetBytes(32));
         var key = $"{KeyPrefix}{prefix}_{secret}";
+        var now = clock.GetUtcNow();
         var row = new ApiKey
         {
             OrganizationId = organizationId,
@@ -32,9 +35,16 @@ public sealed class ApiKeyService(GadflyDbContext db, TimeProvider clock)
             KeyHash = Hash(key),
             Scopes = "exams",
             CreatedByUserId = createdBy,
-            CreatedAt = clock.GetUtcNow(),
+            CreatedAt = now,
         };
         db.ApiKeys.Add(row);
+        db.AuditEvents.Add(new AuditEvent
+        {
+            OrganizationId = organizationId, ActorUserId = createdBy == Guid.Empty ? null : createdBy, ActorRole = actorRole,
+            Action = "apikey.created", EntityType = "ApiKey", EntityId = row.Id.ToString(),
+            AfterJson = $"{{\"name\":{JsonString(row.Name)},\"prefix\":{JsonString(row.Prefix)}}}",
+            Reason = "GAD-T327: creating an API key is an organization-wide grant.", At = now,
+        });
         await db.SaveChangesAsync(ct);
         return (row, key);
     }
@@ -42,9 +52,25 @@ public sealed class ApiKeyService(GadflyDbContext db, TimeProvider clock)
     public async Task<IReadOnlyList<ApiKey>> ListAsync(CancellationToken ct = default) =>
         await db.ApiKeys.AsNoTracking().OrderByDescending(k => k.CreatedAt).ToListAsync(ct);
 
-    public async Task<bool> RevokeAsync(Guid id, CancellationToken ct = default) =>
-        await db.ApiKeys.Where(k => k.Id == id && k.RevokedAt == null)
-            .ExecuteUpdateAsync(u => u.SetProperty(k => k.RevokedAt, clock.GetUtcNow()), ct) > 0;
+    /// <summary>Revokes a key (tenant-scoped by the ambient query filter). Audited (GAD-T327).</summary>
+    public async Task<bool> RevokeAsync(Guid id, Guid? actorUserId = null, string? actorRole = null, CancellationToken ct = default)
+    {
+        var row = await db.ApiKeys.FirstOrDefaultAsync(k => k.Id == id && k.RevokedAt == null, ct);
+        if (row is null) return false;
+        var now = clock.GetUtcNow();
+        row.RevokedAt = now;
+        db.AuditEvents.Add(new AuditEvent
+        {
+            OrganizationId = row.OrganizationId, ActorUserId = actorUserId is { } a && a != Guid.Empty ? a : null, ActorRole = actorRole,
+            Action = "apikey.revoked", EntityType = "ApiKey", EntityId = row.Id.ToString(),
+            BeforeJson = $"{{\"name\":{JsonString(row.Name)},\"prefix\":{JsonString(row.Prefix)}}}",
+            Reason = "GAD-T327: revoking an API key ends its access at once.", At = now,
+        });
+        await db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    private static string JsonString(string s) => System.Text.Json.JsonSerializer.Serialize(s);
 
     public static string Hash(string key) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
 

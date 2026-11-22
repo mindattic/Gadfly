@@ -29,10 +29,11 @@ else
         <ValidationMessage For="() => form.RetentionDays" class="error" />
         <p class="hint">
             When an ended exam session is older than this, a daily job redacts what the student said: typed and
-            spoken answers, word timings, speech metrics, answer audio, quoted claims, the raw detail of integrity
+            spoken answers, word timings, speech metrics, quoted claims, the raw detail of integrity
             events and the saved session transcript. The outcome stays: judgments, concept mastery, the AI report
-            and the instructor's grade. Video is never stored. Shortening the period applies to existing sessions
-            at the next daily run, and redaction cannot be undone. Allowed: 7 to 3650 days (default 90).
+            and the instructor's grade. Answer audio and video are never stored in the first place. Shortening the
+            period applies to existing sessions at the next daily run, and redaction cannot be undone. Allowed: 7
+            to 3650 days (default 90).
         </p>
 
         <h2>Monthly cost quota</h2>
@@ -40,7 +41,7 @@ else
             <InputNumber @bind-Value="form.MonthlyCostQuotaUsd" min="0" step="0.01" placeholder="No limit" />
         </label>
         <ValidationMessage For="() => form.MonthlyCostQuotaUsd" class="error" />
-        <p class="hint">Leave empty for no limit. LLM, speech-to-text and text-to-speech costs are counted against it (see Usage).</p>
+        <p class="hint">Leave empty for no limit. Only AI panel (LLM) costs are counted against it today (see Usage); speech-to-text and text-to-speech are not yet metered.</p>
 
         <h2>Voice exam defaults</h2>
         <label>Default voice id

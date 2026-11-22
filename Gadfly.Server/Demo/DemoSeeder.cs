@@ -395,7 +395,7 @@ public static class DemoSeeder
             return null;   // the caller already knows it
         }
         if (await db.ApiKeys.AnyAsync(k => k.OrganizationId == org && k.Name == "Demo" && k.RevokedAt == null, ct)) return null;
-        var (_, created) = await keys.CreateAsync(org, owner, "Demo", ct);
+        var (_, created) = await keys.CreateAsync(org, owner, "Demo", ct: ct);
         return created;
     }
 
