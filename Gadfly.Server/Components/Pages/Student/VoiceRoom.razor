@@ -95,6 +95,8 @@
             @* The transcript scrolls inside its own panel (voice-room.js keeps the newest line in view); the page never grows. *@
             <section class="voice-transcript" aria-labelledby="voice-transcript-title">
                 <h2 id="voice-transcript-title" class="verify-label">Transcript</h2>
+                @* While the student answers the conversation is tucked away (GAD-T512): the question stays as the caption under her face. *@
+                <p class="hint voice-transcript-quiet">@ExamRoomText.TranscriptQuiet</p>
                 @if (transcript.Count == 0)
                 {
                     <p class="hint">Each question and each answer you @(TypedAnswers ? "give" : "speak") will appear here as the interview goes.</p>

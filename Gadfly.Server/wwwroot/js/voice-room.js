@@ -523,6 +523,7 @@ export function streamDone(token, text, turn) {
     const st = s && s.stream;
     if (!s || !s.running || !st || st.token !== token) return false;
     st.text = text || "";
+    if (st.text) s.questionText = st.text;   // the caption under her face while the student answers (GAD-T512)
     if (turn !== undefined && turn !== null) s.turn = turn;
     return true;
 }
@@ -538,6 +539,7 @@ function begin(what, cacheable, style, turn, repeat, stream) {
     s.cutWatch = null;   // the next question: speech from here on is not a cut-off of the last answer (GAD-T462)
     const wasListening = !s.gate;
     s.gate = true;
+    answering(false);   // she speaks: the conversation comes back into view (GAD-T512)
     // An answer the page could not take yet (GAD-T473) is kept through the same question asked again (Repeat the question, or Try
     // again after a lost device) and sent once she has finished. A different question means the exam moved on without it: it is
     // dropped, never sent as this question's answer, and the student is told so plainly.
@@ -602,6 +604,7 @@ function begin(what, cacheable, style, turn, repeat, stream) {
     ready.then(() => {
         if (S !== s || s.speakToken !== token) return;   // replaced meanwhile: the newer call finishes the turn
         if (!s.running) { done(); return; }
+        if (what) s.questionText = what;   // the caption under her face while the student answers (GAD-T512)
         if (s.presenter) { s.presenter.idle(); s.presenter.prepare(what, style); } else showCaption(what);
         void (stream ? deliverStream(s, token, stream) : deliver(s, token, what, !!cacheable)).finally(done);
     });
@@ -925,6 +928,7 @@ function waitingText(s) {
 function closeGate(s) {
     const wasListening = !s.gate;
     s.gate = true;
+    answering(false);
     clearCue();
     stopDelayTimer(s);
     if (wasListening) {
@@ -1068,6 +1072,7 @@ function openMic() {
     // Typed answers (GAD-T260): the answer box is the exam room's; the examiner listens (the gaze check follows that state).
     if (s && s.cfg.typed && s.running) {
         s.gate = false;
+        answering(true);
         if (s.avatar) s.avatar.state = "listening";
         status(listenText(s));
         return;
@@ -1087,6 +1092,7 @@ function openMic() {
         s.speechConn.send("MarkListening", s.listeningStartMs).catch(() => { });
     }
     if (s.avatar) s.avatar.state = "listening";
+    answering(true);
     // After a staff pause (GAD-T471) or Repeat the question (GAD-T474) the words already said are still in "What I heard".
     status(resuming && s.segments.length > 0 && !s.recovered
         ? "You can carry on answering. What you'd already said is kept: keep talking, press Done answering, or Clear and answer again to start over."
@@ -1537,6 +1543,7 @@ async function submit(immediate, resend) {
     };
     s.gate = true;
     talking(s, false);
+    answering(false);
     // She stops listening once the answer is in (GAD-T316): left "listening" until the page's reply, the eye-contact check kept
     // treating the student as answering, and could fade the screen or start a spoken remark after the answer was already sent.
     if (s.avatar) s.avatar.state = "thinking";
@@ -1832,6 +1839,22 @@ function stopFaceFollow(s) {
 }
 
 // ------------------------------------------------------------------------------------------------------------ captions
+
+/**
+ * While the student answers (GAD-T512, docs/research/attention-and-gaze.md 4.5) the conversation below is tucked away, so nothing
+ * pulls the eyes down off her face, and the question stays as a caption right under her face; it all comes back when the answer
+ * ends or she speaks again.
+ */
+function answering(on) {
+    const room = document.querySelector(".voice-room");
+    if (room) room.dataset.answering = on ? "true" : "false";
+    const s = S;
+    if (!on || !s || !s.questionText) return;
+    const el = q("caption");
+    // Her acknowledgement or a filler line may have replaced it meanwhile: the question goes back.
+    const norm = (t) => String(t || "").replace(/\s+/g, " ").trim();
+    if (el && norm(el.textContent) !== norm(s.questionText)) showCaption(s.questionText);
+}
 
 function clearCaptions() {
     if (!S) return;

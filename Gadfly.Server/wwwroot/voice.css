@@ -50,8 +50,15 @@
 .voice-transcript h2 { margin: 0; flex: none; }
 .voice-transcript .hint { margin: 0; }
 .voice-log { margin: 0; padding: 0 .25rem 0 0; list-style: none; display: grid; align-content: start; gap: .4rem; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-.voice-line { display: grid; gap: .1rem; padding: .35rem .55rem; border-left: 3px solid var(--line); border-radius: 4px; font-size: .92rem; }
-.voice-line-you { border-left-color: var(--accent); }
+/* A conversation (GAD-T512): the examiner's lines on the left, the student's on the right, the newest at the bottom (auto-scrolled). */
+.voice-line { display: grid; gap: .1rem; max-width: 88%; padding: .35rem .55rem; border-left: 3px solid var(--line); border-radius: 4px; font-size: .92rem; }
+.voice-line-examiner { justify-self: start; }
+.voice-line-you { justify-self: end; border-left: none; border-right: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent); }
+/* While the student answers the conversation is tucked away so nothing pulls the eyes down off her face; the question stays as the
+   caption under her (voice-room.js answering()). */
+.voice-transcript-quiet { display: none; }
+.voice-room[data-answering="true"] .voice-transcript-quiet { display: block; }
+.voice-room[data-answering="true"] .voice-log { visibility: hidden; }
 .voice-who { font-size: .74rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .voice-said { white-space: pre-wrap; overflow-wrap: anywhere; }
 .voice-line-delay { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
