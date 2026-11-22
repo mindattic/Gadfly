@@ -4,9 +4,64 @@ For organization owners and admins, and for MindAttic staff who run the platform
 organizations, members and roles, two-step verification, data retention, API keys, webhooks, usage, and
 data export and erasure. Instructors' work is in the [Instructor guide](INSTRUCTOR_GUIDE.md).
 
-Owners and admins manage all of this in the **organization admin console**: the links at the top of
-every admin page are **Members** (`/org/members`), **Settings** (`/org/settings`), **API keys**
-(`/org/api-keys`), **Webhooks** (`/org/webhooks`) and **Usage** (`/org/usage`).
+Owners and admins manage all of this from the **Admin** area. Signing in takes an owner or admin straight
+to the **Dashboard** (`/admin`), and **Admin** in the top bar always leads back there.
+
+## Admin navigation
+
+Every admin page shows the same navigation under the top bar, in labelled groups. Each person sees only the
+entries their role can open.
+
+| Group | Entries |
+|---|---|
+| Overview | **Dashboard** (`/admin`), **Live sessions** (`/admin/live`) |
+| People | **Students** (`/admin/students`, and one student at `/admin/students/{id}`), **Members** (`/org/members`) |
+| Exams | **Exams** (`/admin/exams`), **Assignments** (`/admin/assignments`), **Desk** (`/admin/desk`, when the admin desk is turned on), **Source material**, **Assessments**, **Exam builder** |
+| Results | **Grading** (`/grading`), **Review** (`/review`), **Analytics** (`/analytics`) |
+| Organization | **Settings**, **Usage**, **API keys**, **Webhooks** (all under `/org/...`), **Audit log** (`/admin/audit`), **System status** (`/admin/status`) |
+| Platform | **Organizations** (`/platform/organizations`), MindAttic staff only |
+
+Instructors keep their own links in the top bar (source material, assessments, review, analytics, grading);
+examiners and second reviewers see **Grading**. A page still being finished in this release says "Coming in
+this release" instead of leading nowhere.
+
+The **admin desk** (exams, students and resets on one page) moved from `/admin` to `/admin/desk`.
+
+## Dashboard
+
+The dashboard (`/admin`) is the owner's and admin's home. It has four parts.
+
+**Getting started.** Until an organization has done each of them, a checklist leads: create an exam, add
+students, assign the exam, and watch a practice interview (add yourself a test student, sign in as them and
+take the practice interview from **My exams**). Each step links to the page where it is done and ticks
+itself off; the checklist goes away once an interview has ended.
+
+**Needs attention.** Each kind shows how many there are, the oldest few, and a link to the full list. Every
+row links straight to the place to act.
+
+| Kind | What it counts | Each row opens |
+|---|---|---|
+| Interviews in progress | Started and not yet ended (running or paused) | Live sessions |
+| Attempts waiting to be graded | Ended attempts with no grade yet, or still before human review is done | That attempt's grading page |
+| Grades to reconcile | Attempts where the AI and the grader disagree by enough to need a reconciliation | That attempt's grading page |
+| Grades waiting for final approval | Grades ready to approve | That attempt's grading page |
+| Open appeals | Appeals a student opened and nobody has resolved | That attempt's grading page |
+| Not started, closing within 3 days | Assignments of a published exam that close in the next 3 days and the student has not started | The student |
+| Background work that failed | Jobs of this organization (reading notes, AI grading, webhook delivery, retention) that failed in the last 7 days, with the error | System status |
+
+When nothing is waiting the dashboard says so.
+
+**The last 7 and 30 days.** Exams taken (interviews that ended), the completion rate (of the interviews
+started in the period and no longer running, how many reached a proper end rather than being abandoned or
+failing), the median interview length, and the grading turnaround (the median time from an interview's end to
+its grade's final approval, over grades approved in the period). An attempt that never counted, because it
+was cut off by an update to the examiner, is left out. A dash means there is nothing to measure yet. Hover a
+figure to see what it was worked out from; **Analytics** and **Usage** have more detail.
+
+**Quick actions.** Create an exam, add students, assign an exam, watch live, grade, and invite staff.
+
+The dashboard only reads: it changes nothing. It shows your current organization only, and **Refresh**
+reloads it.
 
 ## Organizations
 
