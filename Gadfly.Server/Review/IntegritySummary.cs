@@ -9,8 +9,8 @@ public sealed record IntegritySummaryLine(string Label, string Source, int Count
 /// <summary>
 /// A session's integrity summary (GAD-T60): every signal from every source (browser, webcam, audio,
 /// answer text) grouped and explained for the reviewing instructor. It is a reading aid, never a
-/// verdict: there is no automatic failing, normal behavior such as looking away while thinking is
-/// shown separately as normal, and the overall level only says how much there is to look at.
+/// verdict: there is no automatic failing, ordinary behavior such as a brief look away (many causes,
+/// none of which the camera can tell apart; GAD-T446) is shown separately as normal, and the overall level only says how much there is to look at.
 /// </summary>
 public sealed record IntegritySummary(string Level, string Headline, IReadOnlyList<IntegritySummaryLine> Lines,
     IReadOnlyList<IntegritySummaryLine> Normal, int TurnsWithSignals)

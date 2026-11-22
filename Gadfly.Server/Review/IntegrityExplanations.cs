@@ -4,7 +4,9 @@ namespace Gadfly.Server.Review;
 /// Plain-language readings of integrity events for the reviewer (GAD-T54, docs/SOCRATIC_PLATFORM.md
 /// "Eye movement" and "Anti-cheating layers"). Every event is evidence for a human to weigh, never a
 /// verdict: the platform never infers deception or emotion and never auto-fails anyone (D2). Looking
-/// up or away while answering is a well-supported sign of thinking, so it is shown as normal.
+/// away has many causes and a webcam cannot tell reading from any other one (Rayner 2009; ElenchusAtScale Appendix A,
+/// corrections 34 and 42: no verified source shows that looking away is a sign of thinking), so these readings name the
+/// possible causes and never claim to know which it was (GAD-T446). A brief look away is shown as normal and not counted.
 /// </summary>
 public static class IntegrityExplanations
 {
@@ -12,10 +14,10 @@ public static class IntegrityExplanations
 
     private static readonly Dictionary<string, Entry> Known = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["looked-away"] = new("Looked away while thinking",
-            "Normal. People look up or away from a screen to think while recalling or reasoning; it is not a sign of dishonesty.", true),
-        ["gaze-away"] = new("Looked away while thinking",
-            "Normal. People look up or away from a screen to think while recalling or reasoning; it is not a sign of dishonesty.", true),
+        ["looked-away"] = new("Looked away",
+            "Ordinary. Looking away has many causes (recalling, planning an answer, nerves, a noise, a habit, reading something), and the camera cannot tell which. On its own it is not a sign of dishonesty.", true),
+        ["gaze-away"] = new("Looked away",
+            "Ordinary. Looking away has many causes (recalling, planning an answer, nerves, a noise, a habit, reading something), and the camera cannot tell which. On its own it is not a sign of dishonesty.", true),
         ["glance"] = new("Glanced away",
             "Normal. Brief glances away from the screen happen in every conversation and mean nothing on their own.", true),
         ["face-absent"] = new("No face in view",
@@ -25,17 +27,17 @@ public static class IntegrityExplanations
         ["identity-drift"] = new("Possibly a different person",
             "The face partway through did not closely match the one at the start. Camera angle and lighting cause false alarms; compare with the start of the session."),
         ["offscreen-reading"] = new("Reading pattern off-screen",
-            "A sustained look at one off-screen spot with repeated left-to-right sweeps, the pattern of reading notes or another screen. The most meaningful webcam signal, but still evidence, not proof."),
-        ["thinking-glance"] = new("Glanced away while thinking",
-            "Normal. A short look away from the screen, the kind people make while recalling or reasoning. Shown so you can see it was noticed and judged ordinary; it is never counted.", true),
+            "A sustained look at one off-screen spot with repeated left-to-right sweeps, which can be reading notes or another screen. Webcam eye tracking is too coarse to tell reading from other eye movement reliably, so this is a guess from the movement, not a finding; check it against the answers given."),
+        ["thinking-glance"] = new("Brief glance away",
+            "Ordinary. A short look away from the screen, which happens in every conversation and means nothing on its own. Shown so you can see it was noticed; it is never counted.", true),
         ["gaze-off-screen"] = new("Looked off-screen for a while",
-            "The head and eyes pointed away from the screen for several seconds. Long looks away can be thinking, reading something, or a distraction (a notification, a pet, a noise); read it against the answer given. Low confidence: it comes from head direction, not from where the eyes were exactly."),
+            "The head and eyes pointed away from the screen for several seconds. Looking away has many causes (recalling, planning an answer, nerves, reading something, a notification, a pet, a noise), and the camera cannot tell which; read it against the answer given. Low confidence: it comes from head direction, not from where the eyes were exactly."),
         ["reading-pattern"] = new("Reading pattern off-screen",
             "Repeated sweeps and returns of the eyes toward one off-screen spot, the movement of reading text placed there. It can have other explanations; check it against the answers given. Evidence to weigh, never proof."),
         ["examiner-look-away"] = new("Looked away from the examiner while answering",
-            "In the voice interview the student's head and eyes turned away from the examiner's face for a while during an answer (the summary says how long, and whether the examiner asked out loud for eye contact). Looking away is often thinking; read it against the answer. Low confidence: webcam gaze is good to a few degrees at best, never an exact point on the screen. The summary also gives the session's eye-tracking quality (good, fair or poor, and whether it was set up to the student's screen or used head direction only); weigh a fair or poor note even less."),
+            "In the voice interview the student's head and eyes turned away from the examiner's face for a while during an answer (the summary says how long, and whether the examiner asked out loud for eye contact). Looking away has many causes (recalling, planning an answer, nerves, a noise, a habit, reading something), and the camera cannot tell which; read it against the answer. Low confidence: webcam gaze is good to a few degrees at best, never an exact point on the screen. The summary also gives the session's eye-tracking quality (good, fair or poor, and whether it was set up to the student's screen or used head direction only); weigh a fair or poor note even less."),
         ["examiner-reading"] = new("Reading-like eyes while answering",
-            "During an answer the eyes swept and jumped back away from the examiner, the movement of reading. The student may have been re-reading the question or transcript on screen; check it against the answer. Evidence to weigh, never proof."),
+            "During an answer the eyes swept and jumped back away from the examiner, which can be the movement of reading. Webcam eye tracking is too coarse to tell reading from other eye movement reliably, and the student may have been re-reading the question or transcript on screen; check it against the answer. Evidence to weigh, never proof."),
         ["examiner-face-absent"] = new("Face out of view while answering",
             "The camera saw no face for part of an answer in the voice interview. Often harmless (leaning out of frame, the camera moved); check whether the answer continued."),
         ["examiner-second-face"] = new("Second face while answering",
@@ -53,7 +55,7 @@ public static class IntegrityExplanations
         ["reading-cadence"] = new("Reading-aloud rhythm",
             "The answer's pace and pauses sounded like reading rather than talking. Weak evidence on its own; some people speak carefully when nervous."),
         ["fluent-after-silence"] = new("Long wait, then a smooth answer",
-            "A long gap before the first word, followed by an answer with none of the usual hesitation. Common causes are thinking carefully before speaking, or a student who simply speaks smoothly once ready. Weak evidence: weigh it against how the student answered other questions."),
+            "A long gap before the first word, followed by an answer with none of the usual hesitation. Innocent explanations include planning the answer before speaking, or a student who simply speaks smoothly once ready. Weak evidence: weigh it against how the student answered other questions."),
         ["tab-hidden"] = new("Exam tab hidden",
             "The exam tab was hidden (another tab or window was in front). Could be looking something up, or a notification or accident; check the time it lasted."),
         ["focus-lost"] = new("Window lost focus",
@@ -83,7 +85,7 @@ public static class IntegrityExplanations
         // Any gaze-related event we don't know by name is still just looking around.
         if (type.Contains("gaze", StringComparison.OrdinalIgnoreCase) || type.Contains("glance", StringComparison.OrdinalIgnoreCase)
             || type.Contains("look", StringComparison.OrdinalIgnoreCase))
-            return ("Looked away", "Normal. Looking away from the screen is a sign of thinking, not of dishonesty.", true);
+            return ("Looked away", "Ordinary. Looking away has many causes (recalling, planning an answer, nerves, a noise, a habit, reading something), and the camera cannot tell which. On its own it is not a sign of dishonesty.", true);
         var label = type.Replace('-', ' ');
         return (char.ToUpperInvariant(label.FirstOrDefault()) + label[Math.Min(1, label.Length)..],
             $"A {source} signal. Treat it as evidence to weigh with the answers around it, not as a finding.", false);

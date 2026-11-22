@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Gadfly.Server.Analytics;
 
 // Eye-contact flag rates by group (GAD-T261, docs/EVIDENCE_MAP.md mechanic 4). Webcam gaze is coarse (about 4 degrees), people
-// look away to think, and face and eye detection can fail more for some groups than others (research note 06). Before anyone
+// look away for many reasons the camera cannot tell apart, and face and eye detection can fail more for some groups than others (research note 06). Before anyone
 // relies on the voice room's look-away episodes or its screen fade, these rates are compared across groups: by the eye-contact
 // accommodation, and by any grouping the institution supplies for the comparison (it is used in memory, never stored). Plain
 // arithmetic over stored rows; no student is named and groups too small to report are withheld.

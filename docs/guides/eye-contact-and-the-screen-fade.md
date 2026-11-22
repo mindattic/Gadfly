@@ -40,8 +40,8 @@ The notes are for a person reading your exam afterwards, next to the answer you 
 
 ## What it does not mean
 
-- It is **never a verdict.** Looking away can mean thinking, nerves, a noise in the room, or a habit. Reviewers are
-  told exactly that.
+- It is **never a verdict.** Looking away has many causes (recalling, planning an answer, nerves, a noise in
+  the room, a habit), and the camera can't tell which. Reviewers are told exactly that.
 - It is **never part of your grade.** No score is calculated from it.
 - It is **hidden from the examiner who grades you blind**, until their grade is in.
 - It doesn't try to read your emotions or decide whether you are honest.

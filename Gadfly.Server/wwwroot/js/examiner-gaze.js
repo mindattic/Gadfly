@@ -16,8 +16,8 @@
 // While the student is answering (the examiner's avatar is listening):
 //   - looking away for GAZE.fadeStartMs starts fading the exam screen toward a heavy dim and blur over GAZE.fadeRampMs, with a
 //     warning to look back at the examiner; it restores smoothly as soon as the gaze returns. A look away that begins in the
-//     first GAZE.thinkingGraceMs of an answer gets GAZE.thinkingFadeStartMs instead: people look away to think, most of all
-//     when they start to explain (GAD-T261, docs/EVIDENCE_MAP.md mechanic 4);
+//     first GAZE.thinkingGraceMs of an answer gets GAZE.thinkingFadeStartMs instead: a precaution for a student gathering an
+//     answer, not a finding that a look away is thinking (GAD-T261, GAD-T446, docs/EVIDENCE_MAP.md mechanic 4);
 //   - a longer look away (GAZE.remarkAfterMs past the fade start), a reading pattern, no face or a second face makes the
 //     examiner say so out loud ("Please look at me while you answer"), at most once every GAZE.remarkGapMs;
 //   - with an eye-contact accommodation on the assignment (options.accommodation, GAD-T261), there are no calibration dots, the
@@ -51,7 +51,7 @@ export const GAZE = Object.freeze({
     switchMs: 200,
     /** The screen starts to fade after this much continuous look-away while answering (also when a look-away episode starts)... */
     fadeStartMs: 2000,
-    /** ...but a look away that begins within this long of the answer starting is thinking time (GAD-T261)... */
+    /** ...but a look away that begins within this long of the answer starting gets more time, while the student gathers an answer (GAD-T261, GAD-T446)... */
     thinkingGraceMs: 10000,
     /** ...and starts to fade only after this much. */
     thinkingFadeStartMs: 6000,
@@ -767,7 +767,7 @@ function tick(g) {
 
 /**
  * How much continuous look-away starts the fade (and a look-away episode): longer when the look away began in the first
- * GAZE.thinkingGraceMs of the answer, when looking away is most often thinking (GAD-T261).
+ * GAZE.thinkingGraceMs of the answer, as a precaution while the student gathers an answer (GAD-T261; not a claim that it is thinking, GAD-T446).
  */
 function fadeStartFor(g, now) {
     if (g.awayPerf == null || !g.answering) return GAZE.fadeStartMs;

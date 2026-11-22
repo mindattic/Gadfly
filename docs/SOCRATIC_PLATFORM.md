@@ -124,27 +124,34 @@ voice work exists. Erin can try the questioning itself early (milestone 1).
 
 ## Eye movement: what it can and can't tell you
 
-Short answer: **looking up or away is a well-supported sign of *thinking*, not of lying.** Eye movement
-can't detect lies.
+Short answer: **looking away has many causes, and a webcam cannot tell them apart.** It is not evidence of
+lying, and eye movement can't detect lies.
 
 - The "eye-accessing cues" idea (looking up-right means constructing a lie, up-left means remembering)
   comes from Neuro-Linguistic Programming. It was tested directly (Wiseman et al., 2012, *PLoS ONE*) and
   **found no effect**. No reliable gaze-based lie detector exists.
-- **Gaze aversion during hard thinking is real.** People look away from faces and screens to reduce visual
-  load while retrieving or reasoning (Glenberg et al., 1998; Doherty-Sneddon's work with children, where
-  averting gaze *improved* answers). So a student looking up before answering is probably doing exactly
-  what we want.
+- **Why people look away is not something Gadfly can know.** Recalling, planning an answer, nerves, a noise
+  in the room, a habit, a disability or cultural norms about eye contact can all make a student look away.
+  This page used to say that looking away is "a well-supported sign of thinking"; no source in the project's
+  verified research supports that (ElenchusAtScale, Appendix A, corrections 34 and 42; the open item is to
+  find that literature or keep the wording neutral). The reviewer wording now says only that looking away
+  has many causes (GAD-T446).
 - **Pupil dilation** tracks cognitive load, but a consumer webcam can't measure it reliably.
-- **What a webcam *can* usefully show for exam integrity**: no face, a second face, a different person
-  partway through, and, most useful, **sustained fixation on one off-screen region with a reading pattern**
-  (repeated left-to-right sweeps), which suggests reading from another screen or notes.
+- **Webcam gaze is coarse.** Its error is about 4 degrees, 100 to 250 pixels (Papoutsaki et al., 2016), while
+  reading moves in jumps of 7 to 9 letters (Rayner, 2009). A webcam cannot reliably tell reading notes from
+  any other look away; a "reading pattern" note is a guess from eye movement, not a finding
+  ([EVIDENCE_MAP.md](EVIDENCE_MAP.md) mechanic 4).
+- **What a webcam *can* show for exam integrity**, all as low-confidence context: no face, a second face, a
+  different person partway through, a look away from the examiner, and a reading-like eye movement. None of
+  them is more than a reason to read the answers given at the time.
 - **Legal**: the EU AI Act (Art. 5(1)(f)) **prohibits emotion recognition in education**, and it lists
   AI that evaluates learning outcomes or monitors students during tests as **high-risk** (Annex III). Face
   geometry is biometric data under Illinois BIPA, which requires written consent and a retention policy.
 
-**So the platform will:** annotate "looked away while thinking" as normal, flag only behavioral integrity
-signals (faces, voices, off-screen reading, focus loss), show them to the instructor as evidence with
-explanations, and **never infer deception or emotion, and never auto-fail anyone** (D2).
+**So the platform will:** show a brief look away as ordinary and not count it, note longer ones and the other
+behavioral signals (faces, voices, reading-like eye movement, focus loss) for the instructor as context with
+plain explanations that name their many innocent causes, and **never infer deception or emotion, and never
+auto-fail anyone** (D2).
 
 ## Anti-cheating layers
 

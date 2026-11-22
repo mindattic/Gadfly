@@ -25,6 +25,38 @@ public class WebcamIntegrityTests
     public void The_librarys_event_types_are_accepted(string type) =>
         Assert.That(WebcamIntegrityRecorder.Clean.From(Event(type), Start, End), Is.Not.Null);
 
+    /// <summary>
+    /// GAD-T446: no verified source shows that looking away is a sign of thinking, so a look-away note is written by the server,
+    /// names its many causes and never says the student was thinking, whatever the browser's library sent.
+    /// </summary>
+    [TestCase("thinking-glance")]
+    [TestCase("gaze-off-screen")]
+    [TestCase("examiner-look-away")]
+    [TestCase("examiner-reading")]
+    public void A_look_away_note_never_claims_the_student_was_thinking(string type)
+    {
+        var c = WebcamIntegrityRecorder.Clean.From(Event(type, summary: "a short glance of the kind people make while thinking"), Start, End)!;
+        Assert.That(c.Summary, Does.Not.Contain("think").IgnoreCase);
+        Assert.That(c.Summary, Does.Contain("30 s"));
+    }
+
+    /// <summary>GAD-T446: the reviewer's reading of any gaze event names causes, never "thinking", and calls nothing the most meaningful signal.</summary>
+    [TestCase("looked-away")]
+    [TestCase("gaze-away")]
+    [TestCase("thinking-glance")]
+    [TestCase("gaze-off-screen")]
+    [TestCase("offscreen-reading")]
+    [TestCase("reading-pattern")]
+    [TestCase("examiner-look-away")]
+    [TestCase("examiner-reading")]
+    [TestCase("some-new-gaze-type")]
+    public void Reviewer_gaze_wording_claims_only_what_the_evidence_supports(string type)
+    {
+        var (label, explanation, _) = Gadfly.Server.Review.IntegrityExplanations.For(type, "webcam");
+        Assert.That(label + " " + explanation, Does.Not.Contain("thinking").IgnoreCase);
+        Assert.That(explanation, Does.Not.Contain("most meaningful").IgnoreCase);
+    }
+
     [TestCase("low-light")]
     [TestCase("emotion-stress")]
     [TestCase("deception")]

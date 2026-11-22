@@ -12,7 +12,6 @@ important, how little each one proves on its own.
   until that grader's scores are in, so a flag can't colour their reading of the answers.
 - **Gadfly never infers dishonesty or emotion.** Each note says what was measured, not what it means about the person.
 - **Most notes are low confidence.** Camera and eye-contact notes are capped at low confidence and low severity.
-
 ## The notes
 
 | Note | Where it comes from | What it can mean |
@@ -21,12 +20,12 @@ important, how little each one proves on its own.
 | **Copied the question** | The browser | Pasting it elsewhere; or copying it to re-read it. |
 | **Extra screen connected**, **left full screen** | The browser, on Strict exams only | A second display in use; or a laptop docked to a monitor. |
 | **Developer tools may be open** | The browser, a guess | Information only; never counted as a flag. |
-| **Looked away from the examiner**, **the screen faded** | The eye-contact check, on the student's device | Thinking (looking away to recall is normal), nerves, noise in the room; or reading something off-screen. Read it with the answer given at the time. |
-| **Reading-like eye movement** | The eye-contact check | Reading notes; or scanning while thinking. A sustained pattern at one off-screen spot is the one worth a look. |
+| **Looked away from the examiner**, **the screen faded** | The eye-contact check, on the student's device | Looking away has many causes: recalling, planning an answer, nerves, a habit, noise in the room, or reading something off-screen. The camera cannot tell which. Read it with the answer given at the time. |
+| **Reading-like eye movement** | The eye-contact check | Reading notes; or eye movement that only looks like reading. Webcam eye tracking is too coarse to tell reading from other movement reliably, so this is a guess, worth a look only alongside the answer. |
 | **Face not in view**, **a second face**, **a possible change of person** | The camera checks (Strict) and the eye-contact check | Someone else in the room or answering; or someone walking past, poor light, the student moving. |
 | **A second voice**, **reading cadence**, **fluent after a long silence** | The audio of a spoken answer | Help from someone else, or reading out; or a TV, someone talking nearby, a carefully prepared answer. |
 | **Sounds read out** (the read-out check) | Timing and fluency of the answer | Reading from notes; or a well-rehearsed explanation. Students quote and memorize honestly: this is not a finding of cheating. It is not applied to students with extra time. |
-| **Text style estimate (unvalidated)** | The panel, at 70% or more | That an answer reads more like written text than the student's other answers. Tools like this misfire often, especially on non-native speakers, and this one's false-flag rate is not yet measured. |
+| **Text style estimate (unvalidated)** | The panel, at 70% or more | That an answer reads more like written text than the student's other answers. Tools like this misfire often, especially on non-native speakers, and this one's false-flag rate is not yet measured. Switched off since 22 November 2026; you will see it only on older exams. |
 | **Voice measurements** | The browser, numbers only (off by default in the EU/EEA) | Differences in pitch, steadiness, loudness and pace from the student's first answers. Effort, nerves, a hard question, tiredness or the room change a voice. It names no state and says nothing about emotion or honesty. |
 
 Notes from a student with the **eye-contact accommodation** are kept at the lowest level and labelled as such.

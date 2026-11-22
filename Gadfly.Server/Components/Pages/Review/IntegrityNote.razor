@@ -1,7 +1,7 @@
 @using Gadfly.Server.Review
 
-@* One integrity event, explained plainly (GAD-T54). Normal behavior (looking away while thinking) is
-   shown as such, not as a flag. *@
+@* One integrity event, explained plainly (GAD-T54). Ordinary behavior (a brief look away, which has
+   many causes the camera cannot tell apart; GAD-T446) is shown as such, not as a flag. *@
 <div class="integrity @(Event.IsNormalBehavior ? "normal" : "sev-" + Event.Severity.ToString().ToLowerInvariant())">
     <div>
         <strong>@Event.Label</strong>

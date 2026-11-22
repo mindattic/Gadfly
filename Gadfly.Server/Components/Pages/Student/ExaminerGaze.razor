@@ -4,8 +4,8 @@
    away fades the exam screen with a warning to look back (restored when they do), and a longer one, a reading pattern, no face
    or a second face makes the examiner ask out loud for eye contact. Each episode is stored as a webcam integrity event with its
    start and end (WebcamIntegrityRecorder.RecordExaminerGazeAsync), for a person to review; never a frame, never a verdict.
-   Renders nothing for an exam whose integrity level is Off. The fade waits longer at the start of each answer, when looking away
-   is usually thinking, and an eye-contact accommodation on the assignment turns off the fade and the spoken request (GAD-T261).
+   Renders nothing for an exam whose integrity level is Off. The fade waits longer at the start of each answer, when a student is
+   gathering an answer (a precaution, not a finding that a look away is thinking; GAD-T446), and an eye-contact accommodation on the assignment turns off the fade and the spoken request (GAD-T261).
    GAD-T305: where the student looks comes from a gaze vector (iris plus head pose) mapped onto the page by a five-dot
    calibration (the get-ready page's, reused, or one run here), with the head-direction check as the fallback; every episode
    carries the session's tracking quality, which the server turns into a sentence for the reviewer (GazeQuality). *@

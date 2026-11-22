@@ -384,9 +384,28 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
             "face-absent" => $"No face has been in view for {so} so far; still going.",
             "multiple-faces" => $"More than one face has been in view for {so} so far; still going. It may be a person, a photo or a reflection.",
             "identity-drift" => $"The face in view has looked different from the one at the start for {so} so far; still going. Face geometry is a weak signal.",
-            "gaze-off-screen" => $"The student has looked away from the screen for {so} so far; still going. Long looks away can be thinking, reading something, or a distraction.",
+            "gaze-off-screen" => $"The student has looked away from the screen for {so} so far; still going. {ManyCauses}",
             "reading-pattern" => $"Reading-like eye movement has been seen for {so} so far; still going.",
             _ => $"Camera event \"{type}\" for {so} so far; still going.",
+        };
+    }
+
+    /// <summary>
+    /// What every look-away note says about why (GAD-T446): looking away has many causes and the camera cannot tell which. No
+    /// verified source shows that looking away is a sign of thinking (ElenchusAtScale Appendix A, corrections 34 and 42), and
+    /// webcam gaze cannot tell reading from any other look (Rayner 2009), so the note names causes and never picks one.
+    /// </summary>
+    public const string ManyCauses = "Looking away has many causes (recalling, planning an answer, nerves, a noise, reading something) and the camera cannot tell which; read it with the answer given.";
+
+    /// <summary>Server-written words for a finished look away from the screen (null for every other type).</summary>
+    public static string? GazeSummary(string type, TimeSpan span)
+    {
+        var so = span.TotalMinutes >= 1 ? $"{(int)span.TotalMinutes} min {span.Seconds} s" : $"{Math.Max(0, (int)Math.Round(span.TotalSeconds))} s";
+        return type switch
+        {
+            "thinking-glance" => $"A brief look away from the screen ({so}). Not a concern on its own.",
+            "gaze-off-screen" => $"Looked away from the screen for {so}. {ManyCauses}",
+            _ => null,
         };
     }
 
@@ -400,8 +419,8 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         var said = remarked ? " The examiner asked out loud for eye contact." : "";
         return type switch
         {
-            "examiner-look-away" => $"Looked away from the examiner for {so} while answering.{said} Looking away can be thinking; read it with the answer given.",
-            "examiner-reading" => $"Eye movement like reading, away from the examiner, for {so} while answering.{said} It can have other explanations (re-reading the transcript on screen); check it against the answer.",
+            "examiner-look-away" => $"Looked away from the examiner for {so} while answering.{said} {ManyCauses}",
+            "examiner-reading" => $"Eye movement like reading, away from the examiner, for {so} while answering.{said} Webcam eye tracking cannot reliably tell reading from other eye movement, and it can have other explanations (re-reading the question on screen); check it against the answer.",
             "examiner-face-absent" => $"No face in view for {so} while answering.{said} Often harmless (leaning out of frame, the camera moved); check whether the answer continued.",
             "examiner-second-face" => $"More than one face in view for {so} while answering.{said} It may be a person, a photo or a reflection.",
             "examiner-fade" => $"The exam screen dimmed for {so} (at most {fadePeakPercent ?? 0}% faded) because the student looked away from the examiner while answering, with a warning to look back; it cleared when they did.",
@@ -455,6 +474,9 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
                 ? UnavailableReasons.GetValueOrDefault(ReasonOf(e.Summary), UnavailableReasons["error"])
                 : Text(e.Summary, MaxSummary);
             if (ongoing) summary = PartialSummary(type, span);
+            // The webcam library writes its own words for a look away ("the kind people make while thinking"); no verified source
+            // supports reading a look away as thinking (GAD-T446), so the server writes these from the type and span instead.
+            else if (GazeSummary(type, span) is { } gazeWords) summary = gazeWords;
             var severity = SeverityOf(type, span);
             string? data = null;
             if (ExaminerTypes.Contains(type))
