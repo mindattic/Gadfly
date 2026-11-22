@@ -24,6 +24,8 @@ public sealed record VerificationInput
     public required string AnswerText { get; init; }
     /// <summary>"text" or "voice".</summary>
     public string Modality { get; init; } = "text";
+    /// <summary>The attempt's exam language (GAD-T535): the clarification is worded in it.</summary>
+    public string Language { get; init; } = ExamLanguage.English;
     public double? SpeechConfidence { get; init; }
     public IReadOnlyList<TimedWord> Words { get; init; } = [];
     public required string ConceptTitle { get; init; }
@@ -86,7 +88,9 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
         var text = (input.AnswerText ?? "").Trim();
         if (text.Length == 0 || IsAporiaWord(text)) return hints;
 
-        if (StudentAsks().Match(text) is { Success: true } ask)
+        var ask = StudentAsks().Match(text);
+        if (!ask.Success && LanguageText.HasHangul(text)) ask = KoreanStudentAsks().Match(text);
+        if (ask.Success)
             hints.Add(new(ClarificationTrigger.StudentRequest, null, $"The student asked to clarify (\"{ask.Value.Trim()}\")."));
 
         if (IsIncomplete(text))
@@ -108,6 +112,7 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
     {
         var t = text.Trim();
         if (t.Length == 0) return false;
+        if (LanguageText.IsIncompleteKorean(t) is { } korean) return korean;   // a Korean last word: Korean endings decide (GAD-T537)
         if (t.EndsWith("...", StringComparison.Ordinal) || t.EndsWith('…') || t.EndsWith('-') || t.EndsWith('—') || t.EndsWith('–')) return true;
         if (".!?)\"'”".Contains(t[^1])) return false;
         var last = WordRx().Matches(t).Select(m => m.Value.ToLowerInvariant()).LastOrDefault();
@@ -234,7 +239,7 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
     public async Task<ClarificationQuestion> WordAsync(VerificationInput input, VerificationDecision decision, string rubricForGuard,
         string dialogue, CancellationToken ct = default)
     {
-        var template = Template(decision.Trigger, decision.Phrase);
+        var template = Template(decision.Trigger, decision.Phrase, input.Language);
         if (decision.Trigger == ClarificationTrigger.StudentRequest)
             return new(template, true, "template: the student asked to clarify");
         var phrase = decision.Phrase ?? Tail(input.AnswerText, 10);
@@ -282,9 +287,16 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
     }
 
     /// <summary>The fixed fallback: only the student's own words, nothing to lead with.</summary>
-    public static string Template(ClarificationTrigger trigger, string? phrase)
+    public static string Template(ClarificationTrigger trigger, string? phrase, string? language = null)
     {
         var p = phrase is null ? null : Clip(phrase.Trim().Trim('"', '\'', '“', '”'), 120);
+        if (ExamLanguage.IsKorean(language))   // the same templates in Korean (GAD-T535): only the student's own words, nothing to lead with
+        {
+            if (trigger == ClarificationTrigger.StudentRequest) return "더 설명하고 싶으시군요. 답변에 덧붙이거나 설명하고 싶은 것을 말씀해 주세요.";
+            if (string.IsNullOrWhiteSpace(p)) return "어떤 뜻이었는지 자신의 말로 조금 더 설명해 주시겠어요?";
+            if (trigger == ClarificationTrigger.IncompleteSentence) return $"답변이 “{p}”에서 멈춘 것 같아요. 그 생각을 어떻게 마무리하시겠어요?";
+            return $"“{p}”라고 하셨는데, 무슨 뜻인가요?";
+        }
         if (trigger == ClarificationTrigger.StudentRequest)
             return "You asked to clarify. Go ahead: what would you like to add or explain about your answer?";
         if (string.IsNullOrWhiteSpace(p))
@@ -362,6 +374,10 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
     [GeneratedRegex(@"\b(can|could|may)\s+i\s+(clarify|rephrase|re-?word|explain\s+(that|this|it)\s+(better|again|differently))\b|\blet\s+me\s+(clarify|rephrase)\b|\bi\s+(want|would\s+like|'d\s+like)\s+to\s+(clarify|rephrase)\b",
         RegexOptions.IgnoreCase)]
     private static partial Regex StudentAsks();
+
+    /// <summary>The student asks, in Korean, to clarify or correct their own answer (다시 설명해도 될까요, 정정할게요, 다시 말할게요).</summary>
+    [GeneratedRegex(@"(다시|좀\s*더)\s*(설명|말)(해도|할게|하겠)|정정(할게|하겠|해도)|고쳐\s*(말|말할게|말하겠)|제\s*말은")]
+    private static partial Regex KoreanStudentAsks();
 
     /// <summary>Confirmation-seeking forms that put an interpretation in the student's mouth.</summary>
     [GeneratedRegex(@"^\s*(so\s+)?(do|did|are|were|is|was)\s+you\s+(mean|saying|suggesting|implying|referring)\b|\bdo\s+you\s+mean\b|\bin\s+other\s+words\b|\bis\s+it\s+that\b|\b(or|versus)\b.{0,60}\?$",

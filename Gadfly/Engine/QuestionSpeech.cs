@@ -71,13 +71,17 @@ public sealed class SentenceSplitter
         var start = 0;
         for (var i = 0; i < text.Length; i++)
         {
-            if (text[i] is not ('.' or '?' or '!')) continue;
+            if (!IsTerminator(text[i])) continue;
             var end = i;
-            while (end + 1 < text.Length && text[end + 1] is '.' or '?' or '!') end++;
+            while (end + 1 < text.Length && IsTerminator(text[end + 1])) end++;
             while (end + 1 < text.Length && text[end + 1] is '"' or '\'' or '”' or '’' or ')' or ']') end++;
             // The end of the text so far is not yet the end of a sentence: the next piece may continue it ("3." then "5").
             if (end + 1 >= text.Length) break;
-            if (!char.IsWhiteSpace(text[end + 1]) || (text[i] == '.' && !EndsSentence(text, start, i)))
+            // Korean (GAD-T537): a Korean sentence may run straight into the next with no space ("요.그리고"), and full-width
+            // punctuation ends one too; both only ever apply around Hangul, so English splits exactly as before.
+            var joined = !char.IsWhiteSpace(text[end + 1]) && !(LanguageText.IsHangul(text[end + 1]) && i > 0 && LanguageText.IsHangul(text[i - 1]))
+                && !(IsFullWidth(text[i]) && end + 1 < text.Length);
+            if (joined || (text[i] == '.' && !EndsSentence(text, start, i)))
             {
                 i = end;
                 continue;
@@ -99,6 +103,10 @@ public sealed class SentenceSplitter
         return rest;
     }
 
+    private static bool IsTerminator(char c) => c is '.' or '?' or '!' or '。' or '？' or '！';
+
+    private static bool IsFullWidth(char c) => c is '。' or '？' or '！';
+
     /// <summary>Whether the full stop at <paramref name="dot"/> ends a sentence (not an abbreviation or an initial).</summary>
     private static bool EndsSentence(string text, int start, int dot)
     {
@@ -106,7 +114,7 @@ public sealed class SentenceSplitter
         while (w > start && !char.IsWhiteSpace(text[w - 1])) w--;
         var word = text[w..dot].TrimStart('(', '"', '\'', '“', '‘');
         if (word.Length == 0) return true;
-        if (word.Length == 1 && char.IsLetter(word[0])) return false;
+        if (word.Length == 1 && char.IsLetter(word[0]) && !LanguageText.IsHangul(word[0])) return false;   // an initial; one Hangul syllable is a word
         return !Abbreviations.Contains(word);
     }
 }

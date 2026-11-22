@@ -86,7 +86,8 @@ public static class RecitationCheck
         var matches = words.Count >= MinWordsForSourceMatch && (overlap >= SourceOverlapCue || longest >= LongestCopiedCue);
 
         // The timing half is skipped when the exam switched it off or the student has an accommodation (GAD-T272).
-        var readOutReason = session.Policy.ReadOutCheckActive ? ReadOutReason(session, turn, words.Count) : null;
+        var readOutReason = session.Policy.ReadOutCheckActive ? ReadOutReason(session, turn,
+            LanguageText.HasHangul(answer.Text) ? LanguageText.WordCount(answer.Text) : words.Count) : null;   // Korean words in English-word units (GAD-T537)
         var readOut = readOutReason is not null;
 
         if (!matches && !readOut) return null;

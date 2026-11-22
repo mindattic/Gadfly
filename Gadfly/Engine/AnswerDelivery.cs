@@ -207,14 +207,17 @@ public sealed record AnswerDelivery
 
     /// <summary>Hedging phrases in <paramref name="text"/>, lower-cased, in order, each once.</summary>
     public static IReadOnlyList<string> HedgesIn(string? text) => string.IsNullOrWhiteSpace(text) ? []
-        : Hedge.Matches(text).Select(m => Regex.Replace(m.Value.ToLowerInvariant(), @"\s+", " ").Replace('’', '\'')).Distinct().ToList();
+        : Hedge.Matches(text).Select(m => Regex.Replace(m.Value.ToLowerInvariant(), @"\s+", " ").Replace('’', '\'')).Distinct()
+            .Concat(LanguageText.HasHangul(text) ? LanguageText.KoreanHedges(text) : []).ToList();   // Korean lists only on Hangul (GAD-T537)
 
     /// <summary>Vague phrases in <paramref name="text"/> ("stuff", "somehow", "and so on"...), lower-cased, in order, each once.</summary>
     public static IReadOnlyList<string> VagueIn(string? text) => string.IsNullOrWhiteSpace(text) ? []
-        : VaguePhrase.Matches(text).Select(m => Regex.Replace(m.Value.ToLowerInvariant(), @"\s+", " ")).Distinct().ToList();
+        : VaguePhrase.Matches(text).Select(m => Regex.Replace(m.Value.ToLowerInvariant(), @"\s+", " ")).Distinct()
+            .Concat(LanguageText.HasHangul(text) ? LanguageText.KoreanVague(text) : []).ToList();
 
     /// <summary>True when <paramref name="text"/> gives a reason ("because", "so", "which means", "if"...) or an example ("for example", "such as"...).</summary>
-    public static bool HasReasonOrExample(string? text) => !string.IsNullOrWhiteSpace(text) && Reasoning.IsMatch(text);
+    public static bool HasReasonOrExample(string? text) => !string.IsNullOrWhiteSpace(text)
+        && (Reasoning.IsMatch(text) || LanguageText.HasHangul(text) && LanguageText.KoreanReasonOrExample(text));
 
     private static string Quoted(IEnumerable<string> phrases) => string.Join(", ", phrases.Select(x => $"\"{x}\""));
 
