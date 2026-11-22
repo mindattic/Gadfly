@@ -87,6 +87,16 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     public DbSet<StudentNotificationPreference> StudentNotificationPreferences => Set<StudentNotificationPreference>();   // reminder opt-out (GAD-T310)
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();   // every notification email queued or sent (GAD-T310)
 
+    // LTI 1.3 (GAD-T312): a platform registration per LMS connection, Gadfly's own signing key, OIDC login state,
+    // the placement-to-exam mapping deep linking creates, the LTI-subject-to-user map, and the assignment-to-placement
+    // link grade passback reads.
+    public DbSet<LtiToolKey> LtiToolKeys => Set<LtiToolKey>();
+    public DbSet<LtiRegistration> LtiRegistrations => Set<LtiRegistration>();
+    public DbSet<LtiLoginState> LtiLoginStates => Set<LtiLoginState>();
+    public DbSet<LtiResourceLink> LtiResourceLinks => Set<LtiResourceLink>();
+    public DbSet<LtiUserMapping> LtiUserMappings => Set<LtiUserMapping>();
+    public DbSet<LtiAssignmentLink> LtiAssignmentLinks => Set<LtiAssignmentLink>();
+
     // Master-plan assessment model (docs/MASTER-PLAN.md Part 17.4).
     public DbSet<Course> Courses => Set<Course>();
     public DbSet<LearningObjective> LearningObjectives => Set<LearningObjective>();
@@ -113,7 +123,6 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
         c.Properties<ProcessingStatus>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<RubricPointKind>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<ExamStatus>().HaveConversion<string>().HaveMaxLength(32);
-        c.Properties<EmailLogStatus>().HaveConversion<string>().HaveMaxLength(32);   // GAD-T310
         c.Properties<ExamMode>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<IntegrityLevel>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<VoiceMeasuresSetting>().HaveConversion<string>().HaveMaxLength(32);
@@ -122,6 +131,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
         c.Properties<DeliveryStatus>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<UsageKind>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<JobState>().HaveConversion<string>().HaveMaxLength(32);
+        c.Properties<EmailLogStatus>().HaveConversion<string>().HaveMaxLength(32);   // GAD-T310
         c.Properties<decimal>().HavePrecision(18, 6);
         c.Properties<Gadfly.Assessment.MasteryLevel>().HaveConversion<string>().HaveMaxLength(40);
         c.Properties<Gadfly.Assessment.AssessmentDimension>().HaveConversion<string>().HaveMaxLength(40);
@@ -333,6 +343,55 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             // no tenant query filter, so both name the organization explicitly on top of state/kind and a recency order.
             e.HasIndex(x => new { x.OrganizationId, x.State, x.CompletedAt });
             e.HasIndex(x => new { x.OrganizationId, x.Kind, x.CreatedAt });
+        });
+
+        // LTI 1.3 (GAD-T312). LtiToolKey and LtiLoginState are not tenant-owned (see their doc comments).
+        b.Entity<LtiToolKey>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Kid).HasMaxLength(40);
+        });
+        b.Entity<LtiRegistration>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Issuer).HasMaxLength(500);
+            e.Property(x => x.ClientId).HasMaxLength(200);
+            e.Property(x => x.DeploymentId).HasMaxLength(200);
+            e.Property(x => x.AuthLoginUrl).HasMaxLength(1000);
+            e.Property(x => x.AuthTokenUrl).HasMaxLength(1000);
+            e.Property(x => x.KeySetUrl).HasMaxLength(1000);
+            e.HasIndex(x => new { x.Issuer, x.ClientId, x.DeploymentId }).IsUnique();
+            e.HasIndex(x => x.OrganizationId);
+        });
+        b.Entity<LtiLoginState>(e =>
+        {
+            e.HasKey(x => x.State);
+            e.Property(x => x.State).HasMaxLength(100);
+            e.Property(x => x.Nonce).HasMaxLength(100);
+            e.Property(x => x.TargetLinkUri).HasMaxLength(2000);
+            e.HasIndex(x => x.ExpiresAt);
+        });
+        b.Entity<LtiResourceLink>(e =>
+        {
+            e.Property(x => x.ContextId).HasMaxLength(255);
+            e.Property(x => x.ResourceLinkId).HasMaxLength(255);
+            e.Property(x => x.LineItemsUrl).HasMaxLength(1000);
+            e.Property(x => x.LineItemUrl).HasMaxLength(1000);
+            e.Property(x => x.ContextMembershipsUrl).HasMaxLength(1000);
+            e.HasOne<Exam>().WithMany().HasForeignKey(x => x.ExamId);
+            e.HasIndex(x => new { x.RegistrationId, x.ContextId, x.ResourceLinkId }).IsUnique();
+        });
+        b.Entity<LtiUserMapping>(e =>
+        {
+            e.Property(x => x.LtiSubject).HasMaxLength(255);
+            e.HasIndex(x => new { x.RegistrationId, x.LtiSubject }).IsUnique();
+        });
+        b.Entity<LtiAssignmentLink>(e =>
+        {
+            e.HasKey(x => x.AssignmentId);
+            e.Property(x => x.LtiSubject).HasMaxLength(255);
+            e.HasOne<ExamAssignment>().WithOne().HasForeignKey<LtiAssignmentLink>(x => x.AssignmentId);
+            e.HasIndex(x => x.ResourceLinkId);
         });
 
         // ---- master-plan assessment model
