@@ -69,6 +69,19 @@ public class PathDriversTests
         Assert.That(b.Hedging, Is.Null);
     }
 
+    /// <summary>GAD-T480: answers whose pauses were not measured (voice measurements off, older answers) don't dilute the rate.</summary>
+    [Test]
+    public void Long_pauses_are_a_rate_over_measured_answers_only()
+    {
+        var ids = Enumerable.Range(0, 5).Select(_ => Guid.NewGuid()).ToList();
+        var answers = ids.SelectMany(s => new[]
+        {
+            new PathDriverAnswer("A", s, false, 60, 2, false, false, false, false, false, false, false, false, ProbePressure.Steady),
+            new PathDriverAnswer("A", s, false, 60, 0, false, false, false, false, false, false, false, false, ProbePressure.Steady, PausesMeasured: false),
+        });
+        Assert.That(PathDrivers.Summarize(answers, []).Single().LongPausesPerMinute, Is.EqualTo(2));
+    }
+
     [Test]
     public void No_reason_counts_only_answers_whose_question_asked_for_one()
     {

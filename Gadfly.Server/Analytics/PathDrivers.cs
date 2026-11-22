@@ -21,7 +21,8 @@ namespace Gadfly.Server.Analytics;
 /// or voice measurements off).
 /// </param>
 public sealed record PathDriverAnswer(string Group, Guid Student, bool Typed, double AnswerSeconds, int LongPauses, bool Hedging, bool Vague,
-    bool ReasonAsked, bool NoReason, bool NotConvincing, bool EvidenceAgainst, bool Unclear, bool Recited, ProbePressure Pressure, bool? CutOff = null);
+    bool ReasonAsked, bool NoReason, bool NotConvincing, bool EvidenceAgainst, bool Unclear, bool Recited, ProbePressure Pressure, bool? CutOff = null,
+    bool PausesMeasured = true);
 
 /// <summary>One session's exam time and the time its clock stood still for a lost device.</summary>
 public sealed record PathDriverSession(string Group, Guid Student, double ExamMinutes, double DevicePausedMinutes, double StaffHeldMinutes);
@@ -96,13 +97,23 @@ public sealed class PathDrivers(GadflyDbContext db, Guid organizationId)
                 d.Cues.Any(c => c.StartsWith("the judges did not find it convincing", StringComparison.Ordinal)),
                 d.Cues.Any(c => c.StartsWith("evidence against understanding", StringComparison.Ordinal)),
                 d.Cues.Any(c => c.StartsWith("unclear meaning", StringComparison.Ordinal)),
-                d.Recitation is not null, d.Pressure, answer.Mode == "voice" ? AnswerCutOff.Read(answer.SpeechMetrics) : null));
+                d.Recitation is not null, d.Pressure, answer.Mode == "voice" ? AnswerCutOff.Read(answer.SpeechMetrics) : null,
+                PausesMeasured(answer)));
         }
         if (list.Count == 0) return (list, null);
         var end = transcript.EndedAt ?? transcript.Turns.Select(t => t.Answer?.CompletedAt ?? t.AskedAt).Max();
         var minutes = Math.Max(0, (end - transcript.StartedAt).TotalMinutes);
         return (list, new PathDriverSession(group, student, minutes, transcript.PausedTotal.TotalMinutes, transcript.HeldTotal.TotalMinutes));
     }
+
+    /// <summary>
+    /// Whether the answer's long pauses were measured (GAD-T480): a spoken answer carrying the pause count, taken with voice
+    /// measurements on. Where they are off (EU/EEA organizations and students, GAD-T283) or the answer predates the count,
+    /// AnswerDelivery reads the count as 0, which is "not measured", not "no long pauses".
+    /// </summary>
+    public static bool PausesMeasured(Answer answer) =>
+        answer.Mode == "voice" && answer.SpeechMetrics.ContainsKey(AnswerDelivery.LongPauseCountKey)
+        && !(answer.SpeechMetrics.TryGetValue(AnswerDelivery.StrainOffKey, out var off) && off > 0);
 
     /// <summary>One row per group; groups under <see cref="GroupFairness.MinStudents"/> students keep only their name and size.</summary>
     public static IReadOnlyList<PathDriverGroup> Summarize(IEnumerable<PathDriverAnswer> answers, IEnumerable<PathDriverSession> sessions)
@@ -119,7 +130,9 @@ public sealed class PathDrivers(GadflyDbContext db, Guid organizationId)
                 var pool = of is null ? all : all.Where(of).ToList();
                 return pool.Count == 0 ? null : pool.Count(f) / (double)pool.Count;
             }
-            var spoken = all.Where(a => !a.Typed).ToList();
+            // Only answers whose pauses were measured: unmeasured ones (voice measurements off, older answers) count no pauses and would
+            // otherwise dilute the rate, making a group with many EU students look calmer than it is (GAD-T480).
+            var spoken = all.Where(a => !a.Typed && a.PausesMeasured).ToList();
             var spokenMinutes = spoken.Sum(a => a.AnswerSeconds) / 60;
             var rows = bySession.GetValueOrDefault(g.Key) ?? [];
             var examMinutes = rows.Sum(r => r.ExamMinutes);

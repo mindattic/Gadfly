@@ -84,6 +84,14 @@ public sealed class FadeCost(GadflyDbContext db, Guid organizationId)
         var overall = Summarize("All students", answers);
         var groups = GroupFairness.Ordered(answers.GroupBy(a => a.Group, StringComparer.OrdinalIgnoreCase)
             .Select(g => Summarize(g.First().Group, g.ToList())), g => g.Group).ToList();
+        // GAD-T480: a withheld group's figure must not come back as the overall row minus the shown groups (with two groups, or one
+        // student pasted as a group of their own, that is exact). When any group with compared students is withheld, so is the
+        // overall figure it is part of; the counts stay.
+        if (groups.Count > 1)
+        {
+            if (groups.Any(g => g.ScoreDiff is null && g.Compared > 0)) overall = overall with { ScoreDiff = null, SecondsDiff = null };
+            if (groups.Any(g => g.AfterScoreDiff is null && g.ComparedAfter > 0)) overall = overall with { AfterScoreDiff = null };
+        }
         return new FadeCostReport(overall, groups, answers.Count, Warnings(overall, groups));
     }
 
@@ -124,6 +132,9 @@ public sealed class FadeCost(GadflyDbContext db, Guid organizationId)
             w.Add($"Fewer than {GroupFairness.MinStudents} students have both a faded and an unfaded judged answer, so the fade's cost can't be estimated yet.");
             return w;
         }
+        if (overall.ScoreDiff is null)
+            w.Add($"The all-students figures are withheld because a group has fewer than {GroupFairness.MinStudents} students compared: " +
+                  "with the other groups shown, they would give that group's figures away.");
         if (overall.ScoreDiff is { } d && d.ExcludesZero && d.Mean <= -ScoreThreshold)
             w.Add($"Answers during which the screen faded were judged {-d.Mean:0.00} lower (of 1) than the same students' other answers " +
                   $"(roughly {-d.High:0.00} to {-d.Low:0.00}). This may be what the fade costs, or harder questions drawing more looking away; " +

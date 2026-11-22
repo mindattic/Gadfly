@@ -74,6 +74,22 @@ public class FadeCostTests
         Assert.That(r.Warnings, Has.Some.Contains("can't be estimated yet"));
     }
 
+    /// <summary>GAD-T480: the overall row minus a shown group would give a withheld group's figure, so it is withheld too.</summary>
+    [Test]
+    public void A_withheld_group_withholds_the_overall_figures()
+    {
+        var answers = Students("Shown", 6, 0.6, 0.7, 0.7).Concat(Students("Small", 1, 0.1, 0.2, 0.7)).ToList();
+        var r = FadeCost.Compare(answers);
+        Assert.That(r.Groups.Single(g => g.Group == "Small").ScoreDiff, Is.Null);
+        Assert.That(r.Groups.Single(g => g.Group == "Shown").ScoreDiff, Is.Not.Null);
+        Assert.That(r.Overall.TooFew, Is.False);
+        Assert.That(r.Overall.ScoreDiff, Is.Null);
+        Assert.That(r.Overall.SecondsDiff, Is.Null);
+        Assert.That(r.Overall.AfterScoreDiff, Is.Null);
+        Assert.That(r.Overall.Compared, Is.EqualTo(7));
+        Assert.That(r.Warnings, Has.Some.Contains("withheld"));
+    }
+
     [Test]
     public void A_cost_that_differs_between_groups_is_warned()
     {
