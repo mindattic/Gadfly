@@ -579,8 +579,9 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var rec = new GradeReconciliation
         {
             OrganizationId = Org, DisagreementId = d.Id, ReviewerUserId = Actor.UserId!.Value, SecondReviewerUserId = second, Cause = cause,
-            Resolution = resolution.Trim(), ResolvedAiScore = resolvedAiScore is { } a ? Math.Round(a, 2) : null,
-            ResolvedHumanScore = resolvedHumanScore is { } h ? Math.Round(h, 2) : null, At = Now,
+            // The same rounding a submitted human score gets (half away from zero), so 2.345 is 2.35 here too (GAD-T315).
+            Resolution = resolution.Trim(), ResolvedAiScore = resolvedAiScore is { } a ? Math.Round(a, 2, MidpointRounding.AwayFromZero) : null,
+            ResolvedHumanScore = resolvedHumanScore is { } h ? Math.Round(h, 2, MidpointRounding.AwayFromZero) : null, At = Now,
         };
         db.GradeReconciliations.Add(rec);
         d.ResolvedAt = Now;
