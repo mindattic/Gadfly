@@ -28,6 +28,10 @@ Each follow-up is one of a few classic moves. You don't need to name them; it ju
 | **Apply** | "Here's a new situation. What happens?" | Use the idea, step by step. |
 | **Synthesize** | "How does this connect to…?" | Link the two ideas; say what one tells you about the other. |
 
+**Changed your mind?** Say so plainly ("I was wrong earlier about…"). The correction is recorded, the earlier
+claim no longer counts as something you hold, and the examiner won't hold it against you as a contradiction.
+Correcting yourself for a good reason is a strength.
+
 ## "I don't know" is a real answer
 
 If you genuinely don't know, say so (or press **I don't know**). Socrates called that moment *aporia*: honest

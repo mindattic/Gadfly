@@ -288,9 +288,21 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
             return new { objective = currentKey, stance, dimension, quote = s, note = $"{Marker} Keyword overlap {coverage:P0} with the rubric; simulated, not an AI reading." };
         }).Take(4).ToList();
 
+        // A withdrawal ("I was wrong earlier", GAD-T441): the earlier claim sharing the most key words with the answer.
+        var retractions = new List<object>();
+        if (Retraction().Match(answer) is { Success: true } said)
+        {
+            var earlier = Regex.Matches(Section(prompt, "Student's earlier claims:", "Source passages:"), @"(?m)^\s*\[turn \d+\]\s*(.+)$")
+                .Select(m => Regex.Replace(m.Groups[1].Value.Trim(), @"\s*\(withdrawn by the student at turn \d+\)$", "")).ToList();
+            var target = earlier.Select(e => (Text: e, Score: Coverage(Keywords(e), answerWords))).Where(x => x.Score > 0)
+                .OrderByDescending(x => x.Score).Select(x => x.Text).FirstOrDefault();
+            if (target is not null) retractions.Add(new { quote = said.Value, claim = target });
+        }
+
         return JsonSerializer.Serialize(new
         {
             claims,
+            retractions,
             misconceptions = shown.Select(m => new { objective = currentKey, misconception = m, quote = sentences.FirstOrDefault() ?? answer }),
             uncertainties = vague is null ? Array.Empty<string>() : [$"{Marker} \"{vague}\" could refer to different things."],
             evidence,
@@ -319,6 +331,9 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         var rest = DontKnowPhrase().Replace(answer, " ");
         return Keywords(rest).Count <= 3;
     }
+
+    [GeneratedRegex(@"\b(i\s+was\s+wrong(\s+(earlier|before))?|i\s+take\s+(that|it)\s+back|scratch\s+that|i\s+no\s+longer\s+think|i\s+made\s+a\s+mistake(\s+(earlier|before))?)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex Retraction();
 
     [GeneratedRegex(@"\b(i\s+(really\s+)?(do\s*n[o']?t|dont|don't)\s+know|no\s+idea|not\s+sure|can'?t\s+answer|cannot\s+answer|i\s+dunno|aporia|i\s+have\s+no\s+clue|sorry|honestly|really)\b", RegexOptions.IgnoreCase)]
     private static partial Regex DontKnowPhrase();

@@ -69,6 +69,8 @@ public sealed record ObjectiveAssessment
     public IReadOnlyList<string> Uncertainties { get; init; } = [];
     /// <summary>Contradictions in the student's claims not yet put to the student.</summary>
     public int UnconfrontedContradictions { get; init; }
+    /// <summary>Contradictions the student settled themselves by withdrawing one of the claims before it was put to them (GAD-T441).</summary>
+    public int WithdrawnContradictions { get; init; }
     /// <summary>Turns whose question (or a clarification on it) revealed the answer.</summary>
     public IReadOnlyList<int> LeakedTurns { get; init; } = [];
     /// <summary>Highest level any independent answer was positive for (the tentative top).</summary>
@@ -249,13 +251,15 @@ public static class ObjectiveAssessor
         var concepts = new HashSet<string>(objective.ConceptKeys.Count > 0 ? objective.ConceptKeys : [key], StringComparer.Ordinal);
         var mine = (contradictions ?? []).Where(c => concepts.Contains(c.ConceptId)).ToList();
         var confronting = session.Turns.Where(t => t.Move == MoveKind.Contradiction).ToList();
-        int unconfronted = 0, failedConfrontations = 0, unjudgedConfrontations = 0;
+        int unconfronted = 0, failedConfrontations = 0, unjudgedConfrontations = 0, withdrawn = 0;
         foreach (var c in mine)
         {
             var asked = confronting.Where(t => t.TargetClaimIds.Contains(c.FirstClaimId) && t.TargetClaimIds.Contains(c.SecondClaimId)).ToList();
             // Only a usable verdict settles a confrontation: asked but unanswered or unjudged stays pending, never consistent.
             var judgedTurn = asked.FirstOrDefault(t => t.Answer is not null && t.Judgment is { } tj && !IsUnjudged(tj));
-            if (asked.Count == 0) unconfronted++;
+            // The student withdrew one side before it was put to them (GAD-T441): settled by their own correction, not pending.
+            if (asked.Count == 0 && c.WithdrawnAtTurn is not null) withdrawn++;
+            else if (asked.Count == 0) unconfronted++;
             else if (judgedTurn is null) unjudgedConfrontations++;
             else if (ResolutionScore(judgedTurn.Judgment!) < 0.5) failedConfrontations++;
         }
@@ -323,6 +327,8 @@ public static class ObjectiveAssessor
         var uncertainties = turns.LastOrDefault(t => t.Analysis is not null && t.Judgment is not null)?.Analysis?.Uncertainties ?? [];
         var explanation = Explain(status, enough, independent.Count, minCorr, topCorroborated, ceilingTested, unconfronted, unjudgedConfrontations, untested.Count,
             ladder, capReasons, outcomes.Count(o => o.Contaminated), assistedCount, atLimit, session.IsEnded, left);
+        if (withdrawn > 0)
+            explanation += $" {withdrawn} contradiction(s) settled by the student withdrawing one of the two claims.";
 
         return new ObjectiveAssessment
         {
@@ -352,6 +358,7 @@ public static class ObjectiveAssessor
             UntestedMisconceptions = untested,
             Uncertainties = uncertainties,
             UnconfrontedContradictions = unconfronted,
+            WithdrawnContradictions = withdrawn,
             LeakedTurns = turns.Where(t => t.Leak is not null).Select(t => t.Index).ToList(),
             TentativeHigh = ladder.TentativeHigh,
             PlausibleCeiling = ladder.Ceiling,

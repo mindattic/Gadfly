@@ -7,7 +7,14 @@ namespace Gadfly.Engine;
 public sealed record PlannerConcept(string Id, IReadOnlyList<string>? RelatedConceptIds = null);
 
 /// <summary>A pair of the student's own claims that conflict, found by the claim ledger.</summary>
-public sealed record ContradictionCandidate(string ConceptId, string FirstClaimId, string SecondClaimId);
+public sealed record ContradictionCandidate(string ConceptId, string FirstClaimId, string SecondClaimId)
+{
+    /// <summary>
+    /// The turn at which the student withdrew one of the two claims (GAD-T441); null while both stand. A withdrawn contradiction
+    /// is never put to the student: the withdrawal settled it, and the withdrawn claim is no longer a premise.
+    /// </summary>
+    public int? WithdrawnAtTurn { get; init; }
+}
 
 /// <summary>Where a concept stands in the session.</summary>
 public enum ConceptStatus { NotStarted, Open, Mastered, Aporia, Exhausted }
@@ -192,6 +199,7 @@ public sealed class QuestionPlanner
         // Confronted per claim pair, as the assessor counts it: one turn that targets both claims.
         var confronting = session.Turns.Where(t => t.Move == MoveKind.Contradiction).ToList();
         var pending = last.Move == MoveKind.Contradiction ? null : contradictions?.FirstOrDefault(c => concepts.Contains(c.ConceptId)
+            && c.WithdrawnAtTurn is null
             && !confronting.Any(t => t.TargetClaimIds.Contains(c.FirstClaimId) && t.TargetClaimIds.Contains(c.SecondClaimId)));
         if (pending is not null)
             return Decide(MoveKind.Contradiction, "Two of the student's own claims conflict: consistency must be settled before any level is stated.",

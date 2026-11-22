@@ -325,13 +325,20 @@ public sealed class SourceExamEngine
         if (analysis is { QuestionRevealedAnswer: true } && !MoveProfiles.IsAssistance(turn.Move))
             FlagLeak(turn.Index, LeakSource.Analysis, "A majority of the analysis panel judged the question revealed expected answer points.");
 
+        // Claims the student withdrew in this answer ("I was wrong earlier", GAD-T441) are recorded before the new claims are
+        // checked, so a withdrawn claim is never a premise of a new contradiction. No extra panel call: the analysis found them.
+        var retractions = analysis?.Retractions.Select(r => (r.Quote, r.Text)).ToList();
         if (judgment.OverallScore > 0)
         {
-            if (analysis is { Deterministic: false, Claims.Count: > 0 })
-                await _claims.AddClaimsAsync(Ledger, turn, analysis.Claims.Select(c => (c.Quote, c.Text)).ToList(), ct);
+            if (analysis is { Deterministic: false } && (analysis.Claims.Count > 0 || analysis.Retractions.Count > 0))
+                await _claims.AddClaimsAsync(Ledger, turn, analysis.Claims.Select(c => (c.Quote, c.Text)).ToList(), ct, retractions);
             else
                 await _claims.AnalyzeAsync(Ledger, turn, concept.Title, ct);
         }
+        else
+            ClaimAnalyzer.ApplyRetractions(Ledger, turn, retractions);
+        foreach (var r in Ledger.Retractions.Where(r => r.TurnIndex == turn.Index))
+            Diagnostics?.Report($"[Turn {turn.Index + 1}: the student withdrew {(r.ClaimId is { } id ? $"claim {id}" : "an earlier claim no ledger entry matched")}: \"{r.Text}\".]");
 
         if (Diagnostics is not null)
         {

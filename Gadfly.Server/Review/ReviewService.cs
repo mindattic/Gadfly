@@ -97,8 +97,8 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         var judgments = (blinded ? [] : await db.Judgments.AsNoTracking().Include(j => j.Votes)
                 .Where(j => j.OrganizationId == organizationId && turnIds.Contains(j.TurnId)).ToListAsync(ct))
             .GroupBy(j => j.TurnId).ToDictionary(g => g.Key, g => g.OrderByDescending(j => j.CreatedAt).First());
-        var claims = blinded ? [] : await db.SessionClaims.AsNoTracking().Where(c => c.SessionId == sessionId && c.OrganizationId == organizationId).ToListAsync(ct);
-        var claimsById = claims.ToDictionary(c => c.Id);
+        // The claim ledger (saved with the session) is the record of contradictions and withdrawn claims (GAD-T441).
+        var ledger = blinded ? new Gadfly.Engine.ClaimLedger() : ReadLedger(session.LedgerJson);
 
         // Every criterion's citations, resolved to the passage text in one query.
         var criteria = judgments.ToDictionary(kv => kv.Key, kv => ParseCriteria(kv.Value.CriteriaJson));
@@ -131,8 +131,17 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                         Dissents: Math.Abs(v.OverallScore - j.OverallScore) >= 0.25)).ToList(),
                     j.TextStyleScore);
             }
-            var contradictions = claims.Where(c => c.TurnId == t.Id && c.ContradictsClaimId is { } other && claimsById.ContainsKey(other))
-                .Select(c => new ContradictionView(c.Quote, claimsById[c.ContradictsClaimId!.Value].Quote)).ToList();
+            var contradictions = ledger.Contradictions
+                .Select(c => (First: ledger.Find(c.FirstClaimId), Second: ledger.Find(c.SecondClaimId)))
+                .Where(x => x.First is not null && x.Second is not null && x.Second.TurnIndex == t.Index)
+                .Select(x => new ContradictionView(x.Second!.Quote, x.First!.Quote)
+                {
+                    EarlierTurn = x.First.TurnIndex + 1,
+                    Withdrawn = ledger.IsWithdrawn(x.First.Id) || ledger.IsWithdrawn(x.Second.Id),
+                }).ToList();
+            var retractions = ledger.Retractions.Where(r => r.TurnIndex == t.Index)
+                .Select(r => new RetractionView(r.Quote, r.Text, r.ClaimId is { } id && ledger.Find(id) is { } earlier ? earlier.TurnIndex + 1 : null))
+                .ToList();
             var metrics = ParseMetrics(t.SpeechMetricsJson);
             return new TurnView(t.Id, t.Index, t.ConceptKey, Title(t.ConceptKey), t.Move, t.Question, blinded ? null : t.PlannerReason, t.AskedAt,
                 t.AnswerText, t.AnswerMode, t.AnswerStartedAt, t.AnswerCompletedAt, !string.IsNullOrEmpty(t.AudioRef), blinded ? null : t.MasteryAfter,
@@ -143,6 +152,7 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                 // Voice strain (GAD-T232) is kept from a blinded grader like the planner's reasoning: it must not prime the grade.
                 Strain = blinded || t.AnswerMode != "voice" ? null : Gadfly.Server.Voice.VoiceStrain.Describe(metrics),
                 Recitation = recitations.GetValueOrDefault(t.Id),
+                Retractions = retractions,
             };
         }).ToList();
 
@@ -286,6 +296,19 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
     {
         try { return JsonSerializer.Deserialize<List<CriterionScore>>(json, Json) ?? []; }
         catch (JsonException) { return []; }
+    }
+
+    /// <summary>The session's claim ledger; an empty one when none was saved or it can't be read (the review still opens).</summary>
+    private static Gadfly.Engine.ClaimLedger ReadLedger(string? json)
+    {
+        try
+        {
+            return Gadfly.Engine.ClaimLedger.FromJson(json);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return new Gadfly.Engine.ClaimLedger();
+        }
     }
 
     private static IReadOnlyDictionary<string, double> ParseMetrics(string? json)

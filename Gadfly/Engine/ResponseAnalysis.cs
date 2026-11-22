@@ -26,6 +26,11 @@ public sealed record ObjectiveEvidence(string ObjectiveKey, EvidencePolarity Pol
 public sealed record ResponseAnalysis
 {
     public IReadOnlyList<AnalysisClaim> Claims { get; init; } = [];
+    /// <summary>
+    /// Earlier claims the student explicitly withdrew in this answer ("I was wrong earlier", GAD-T441): the quote is their words
+    /// withdrawing it, the text the earlier claim restated. The ledger marks the matching claim withdrawn.
+    /// </summary>
+    public IReadOnlyList<AnalysisClaim> Retractions { get; init; } = [];
     public IReadOnlyList<AnalysisMisconception> Misconceptions { get; init; } = [];
     /// <summary>What remains unclear about the answer's meaning (a reason to ask a neutral clarification).</summary>
     public IReadOnlyList<string> Uncertainties { get; init; } = [];

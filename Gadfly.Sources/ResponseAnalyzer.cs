@@ -35,6 +35,8 @@ public sealed class ResponseAnalyzer(ISocraticVotingClient panel, PromptSet? pro
     public const int MaxQuote = 400;
 
     private static readonly HashSet<string> RootKeys = ["claims", "misconceptions", "uncertainties", "evidence", "questionRevealedAnswer"];
+    /// <summary>Root keys a reply may add (GAD-T441); a voter that leaves them out is still valid.</summary>
+    private static readonly HashSet<string> OptionalRootKeys = ["retractions"];
 
     public async Task<ResponseAnalysis> AnalyzeAsync(AnalysisInput input, CancellationToken ct = default)
     {
@@ -122,7 +124,8 @@ public sealed class ResponseAnalyzer(ISocraticVotingClient panel, PromptSet? pro
             var root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return Fail("root is not an object");
             var names = root.EnumerateObject().Select(p => p.Name).ToList();
-            if (names.Count != RootKeys.Count || names.Distinct(StringComparer.Ordinal).Count() != names.Count || !names.All(RootKeys.Contains))
+            var required = names.Where(n => !OptionalRootKeys.Contains(n)).ToList();
+            if (required.Count != RootKeys.Count || names.Distinct(StringComparer.Ordinal).Count() != names.Count || !required.All(RootKeys.Contains))
                 return Fail("root keys are not exactly " + string.Join(", ", RootKeys) + " (got " + string.Join(", ", names) + ")");
 
             var dropped = 0;
@@ -133,6 +136,18 @@ public sealed class ResponseAnalyzer(ISocraticVotingClient panel, PromptSet? pro
                 var quote = c["quote"];
                 if (IsVerbatim(quote, answer)) claims.Add(new AnalysisClaim(Clip(quote), c["claim"]));
                 else dropped++;
+            }
+
+            // Withdrawn earlier claims (GAD-T441): the quote must be the student's own words withdrawing it.
+            var retractions = new List<AnalysisClaim>();
+            if (root.TryGetProperty("retractions", out _))
+            {
+                if (!Objects(root, "retractions", ["quote", "claim"], out var retractionItems)) return Fail("retractions do not match the schema");
+                foreach (var r in retractionItems)
+                {
+                    if (IsVerbatim(r["quote"], answer)) retractions.Add(new AnalysisClaim(Clip(r["quote"]), r["claim"]));
+                    else dropped++;
+                }
             }
 
             var misconceptions = new List<AnalysisMisconception>();
@@ -171,7 +186,7 @@ public sealed class ResponseAnalyzer(ISocraticVotingClient panel, PromptSet? pro
 
             return new ResponseAnalysis
             {
-                Claims = claims, Misconceptions = misconceptions, Uncertainties = uncertainties, Evidence = evidence,
+                Claims = claims, Retractions = retractions, Misconceptions = misconceptions, Uncertainties = uncertainties, Evidence = evidence,
                 QuestionRevealedAnswer = revealed.GetBoolean(), Voters = 1, DroppedItems = dropped,
             };
         }
@@ -188,6 +203,8 @@ public sealed class ResponseAnalyzer(ISocraticVotingClient panel, PromptSet? pro
         var needed = votes.Count == 1 ? 1 : votes.Count / 2 + 1;
 
         var claims = Cluster(votes, v => v.Claims, (a, b) => QuotesOverlap(a.Quote, b.Quote) || PanelJson.Similarity(a.Text, b.Text) >= 0.5, needed).Select(c => c.First).ToList();
+        var retractions = Cluster(votes, v => v.Retractions, (a, b) => QuotesOverlap(a.Quote, b.Quote) || PanelJson.Similarity(a.Text, b.Text) >= 0.5, needed)
+            .Select(c => c.First).ToList();
         var misconceptions = Cluster(votes, v => v.Misconceptions,
             (a, b) => a.ObjectiveKey == b.ObjectiveKey && PanelJson.Similarity(a.Text, b.Text) >= 0.4, needed).Select(c => c.First).ToList();
         var uncertainties = Cluster(votes, v => v.Uncertainties, (a, b) => PanelJson.Similarity(a, b) >= 0.35, needed).Select(c => c.First).ToList();
@@ -204,6 +221,7 @@ public sealed class ResponseAnalyzer(ISocraticVotingClient panel, PromptSet? pro
         return new ResponseAnalysis
         {
             Claims = claims,
+            Retractions = retractions,
             Misconceptions = misconceptions,
             Uncertainties = uncertainties,
             Evidence = evidence,

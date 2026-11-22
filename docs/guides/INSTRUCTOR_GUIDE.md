@@ -209,7 +209,9 @@ reached 80% mastery; *partial*: average mastery at least 52.5%; *not-demonstrate
 - the **move** (Elicit, Clarify, Probe, Counterexample, Contradiction, Apply, Synthesize);
 - the student's **answer** as confirmed, how long they took to start speaking, and how they spoke (pace, pauses,
   hesitations, recognizer confidence), with any corrections;
-- a **contradiction** warning when an answer conflicts with something said earlier;
+- a **contradiction** warning when an answer conflicts with something said earlier (with the earlier turn);
+- a **withdrew an earlier claim** note when the student said an earlier claim was wrong: the claim stays on record, but
+  it is no longer treated as something they hold, so it is never put to them as a contradiction;
 - the **judgment**: an overall score, the panel's agreement, a summary, and a score per rubric criterion with the
   reason and **citations** that open the passage from your material;
 - **each judge's verdict**; a judge 25 points or more from the panel is marked **dissents**;

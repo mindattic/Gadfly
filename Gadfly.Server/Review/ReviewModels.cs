@@ -53,7 +53,19 @@ public sealed record JudgmentView(
     double? TextStyleScore);
 
 /// <summary>A claim the student made that contradicts an earlier one.</summary>
-public sealed record ContradictionView(string Quote, string EarlierQuote);
+public sealed record ContradictionView(string Quote, string EarlierQuote)
+{
+    /// <summary>The turn (1-based) of the earlier claim, when known.</summary>
+    public int? EarlierTurn { get; init; }
+    /// <summary>The student later withdrew one of the two claims (GAD-T441).</summary>
+    public bool Withdrawn { get; init; }
+}
+
+/// <summary>
+/// An earlier claim the student explicitly withdrew in this answer (GAD-T441). It stays on record but is no longer a premise of a
+/// contradiction. <see cref="EarlierTurn"/> is null when no recorded claim matched what they withdrew.
+/// </summary>
+public sealed record RetractionView(string Quote, string Text, int? EarlierTurn);
 
 /// <summary>
 /// The recitation check's finding on one answer (GAD-T242), as the reviewer sees it (GAD-T248): how much of the answer follows
@@ -119,6 +131,9 @@ public sealed record TurnView(
 
     /// <summary>The recitation check's finding when this answer read as possibly recited (GAD-T248); null otherwise.</summary>
     public RecitationView? Recitation { get; init; }
+
+    /// <summary>Earlier claims the student withdrew in this answer (GAD-T441); empty when none, or for a blinded grader.</summary>
+    public IReadOnlyList<RetractionView> Retractions { get; init; } = [];
 }
 
 /// <summary>An integrity event, with a plain-language reading of what it does and doesn't mean.</summary>

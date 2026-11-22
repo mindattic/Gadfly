@@ -67,6 +67,20 @@ follow-ups it received, and `SessionPolicy.MinSummativeObjectives`, 4 by default
 examination must cover for summative use). The figure of four is a setting, not an estimate: no source gives it as
 enough for any target reliability, and only a double-marked pilot can (ElenchusAtScale, correction 38).
 
+**Blueprint safeguards (GAD-T421 audit).**
+- No introspection questions (GAD-T445, prompt set v9; ElenchusAtScale 2.3.2). People's reports of how they reached an
+  answer may be reconstructions (01: NisbettWilson1977), so a question such as "how did you arrive at that?" asks for
+  process information the student may never have attended to. The question prompt and the leak guard forbid such
+  questions, `QuestionGenerator.IsIntrospective` drops a draft that asks one before any guard call (it is redrafted, never
+  asked), and the judge and the analysis score whether a justification is correct and connected, never whether it reports
+  how the student thought.
+- Claim retractions (GAD-T441, prompt set v10; M6, 3.4). Only the student's standing assertions are premises of a
+  contradiction. The analysis (or, without one, the claims prompt) records an earlier claim the student explicitly
+  withdraws ("I was wrong earlier"); `ClaimLedger.Retract` matches it to the ledger by word overlap, with no extra panel
+  call. The withdrawn claim stays on record (marked withdrawn in the earlier-claims list the judges see, and on the review
+  page) but is never checked against new claims, and a contradiction resting on it is not put to the student; one already
+  put to them is still judged on how they resolved it.
+
 ## 2. Probing on hesitation
 
 **What Gadfly does.** Before each question, `AnswerDelivery.Read` collects cues from what the last answer said and how

@@ -152,7 +152,12 @@ else
 
                     @foreach (var c in t.Contradictions)
                     {
-                        <p class="notice warn">Contradicts an earlier answer: “@c.Quote” vs earlier “@c.EarlierQuote”.</p>
+                        <p class="notice warn">Contradicts an earlier answer@(c.EarlierTurn is { } et ? $" (turn {et})" : ""): “@c.Quote” vs earlier “@c.EarlierQuote”.@(c.Withdrawn ? " The student later withdrew one of the two claims." : "")</p>
+                    }
+                    @foreach (var r in t.Retractions)
+                    {
+                        @* GAD-T441: a withdrawn claim is kept on record but is no longer a premise of a contradiction. *@
+                        <p class="notice">Withdrew an earlier claim@(r.EarlierTurn is { } rt ? $" (turn {rt})" : ""): “@r.Text” — in their words, “@r.Quote”. Kept on record; no longer treated as something the student holds.@(r.EarlierTurn is null ? " No recorded claim matched it exactly." : "")</p>
                     }
 
                     @if (t.Judgment is { } j)
