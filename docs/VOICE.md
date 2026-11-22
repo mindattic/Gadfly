@@ -173,6 +173,9 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
   (`fadeRestoreMs`) when the gaze returns. After `remarkAfterMs` (5 s), or at once for a reading pattern, no face or a second
   face, the examiner says so out loud ("Please look at me while you answer"), at most once per `remarkGapMs` (15 s). The words
   are fixed server-side (`WebcamIntegrityRecorder.ExaminerRemarks`) and offered to the avatar hub like any question.
+  One voice at a time (GAD-T472): **Repeat the question** pressed while she is saying a remark waits for the remark to finish
+  (bounded at 13 s, a little past the remark's own 12 s cut-off) and then asks the question; once a question is on its way no
+  remark can start, since she is no longer listening.
 - **Recorded for review.** Each episode is a webcam integrity event with start and end: `examiner-look-away`,
   `examiner-reading`, `examiner-face-absent`, `examiner-second-face`, and `examiner-fade` (with its peak). Summaries are
   written by the server (the browser sends only codes: "remarked" or "peak:NN", then the quality below); confidence at most

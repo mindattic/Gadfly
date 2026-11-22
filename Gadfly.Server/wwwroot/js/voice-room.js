@@ -90,6 +90,7 @@ export function init(dotnet, cfg) {
         pauses: [], lastSpeechEndAt: null,   // the student's own mid-answer pauses, which the end-of-answer cue adapts to (GAD-T264)
         fill: null, fillPlaying: null,       // filling the wait while an answer is judged (GAD-T290): pending lines, the one being said
         fillAmbience: null,                  // the quiet page-turn loop under the wait (GAD-T409)
+        remarkOver: null, remarkEnded: null, // an eye-contact remark being said, which a question waits for (GAD-T472)
         acoustics: new VoiceAcoustics(),   // voice strain indicators (GAD-T232): summary numbers only, never audio
         hubUp: true, replayQueue: [],   // reconnect buffering (GAD-T360): audio and commits sent while the hub is down are replayed, in order
         commitSentAt: [], latenciesMs: [],   // recognizer latency (GAD-T361): commit-to-final time, kept for the next answer's diagnostics
@@ -500,10 +501,15 @@ export function speak(what, cacheable, style, turn) {
         if (s.allowed) openMic(); else status("Waiting.");
     };
     s.speaking = true;
-    // A filler line still being said (GAD-T290) finishes first, so the two never overlap and its end isn't taken for this one's.
-    // The line is short and stops itself if it stalls; the extra bound here is only a backstop.
-    const filler = s.fillPlaying;
-    const ready = filler ? Promise.race([filler, new Promise((r) => setTimeout(r, FILL.timeoutMs + 1000))]) : Promise.resolve();
+    // No eye-contact remark may start from here on (examiner-gaze.js only speaks one to a listening examiner): Repeat the question
+    // pressed mid-answer used to leave her "listening" until the question's delivery began (GAD-T472).
+    if (s.avatar && s.avatar.state === "listening") s.avatar.state = "idle";
+    // A filler line still being said (GAD-T290), or an eye-contact remark (GAD-T245, spoken on the gaze module's own hub through the
+    // same examiner), finishes first, so two lines never overlap and its end isn't taken for this one's (GAD-T472: Repeat the question
+    // during "Please look at me while you answer" played both at once). Both are short and stop themselves if they stall; the extra
+    // bounds here are only backstops.
+    const bounded = (p, ms) => p ? Promise.race([p, new Promise((r) => setTimeout(r, ms))]) : Promise.resolve();
+    const ready = Promise.all([bounded(s.fillPlaying, FILL.timeoutMs + 1000), bounded(s.remarkOver, REMARK_WAIT_MS)]);
     ready.then(() => {
         if (S !== s || s.speakToken !== token) return;   // replaced meanwhile: the newer call finishes the turn
         if (!s.running) { done(); return; }
@@ -744,6 +750,7 @@ export function stop() {
     unwatchVisibility(s);
     cancelFill(s);
     s.fillPlaying = null;
+    endRemarkWait(s);   // nothing of this room waits on a remark any more (GAD-T472)
     s.speakToken = null;
     s.ours = null;
     s.speaking = false;
@@ -819,6 +826,8 @@ function tryRestoreDraft(s) {
 function remarkHold(s, active) {
     if (!s) return;
     if (active) {
+        // Settles when the remark ends: a question asked meanwhile (Repeat the question) waits for it in speak() (GAD-T472).
+        if (!s.remarkOver) s.remarkOver = new Promise((resolve) => { s.remarkEnded = resolve; });
         // Always mark the remark, even when the gate is already closed (thinking, sending): the avatar's speaking-start for a remark must never set
         // the speaking flag, nothing clears it but this room's own utterances.
         s.remarkHold = true;
@@ -839,6 +848,7 @@ function remarkHold(s, active) {
         const closed = s.remarkClosedGate;
         s.remarkHold = false;
         s.remarkClosedGate = false;
+        endRemarkWait(s);
         // The answer was taken from her meanwhile ("I don't know", time up): the remark left her idle, and examiner-gaze.js puts an
         // idle examiner back to "listening", so the eye-contact check went on treating the judging wait as answering (GAD-T316).
         if (s.running && !s.allowed && !s.speaking && !s.speakToken && !s.fillPlaying && s.avatar && s.avatar.state === "idle") s.avatar.state = "thinking";
@@ -853,6 +863,20 @@ function remarkHold(s, active) {
             s.cueTimer = setTimeout(() => void submit(false), ms);
         }
     }
+}
+
+/**
+ * Longest a question waits for an eye-contact remark to finish (GAD-T472): the gaze module cuts a stalled remark off after its own
+ * remarkTimeoutMs (12 s, examiner-gaze.js); this is only a backstop a little past that.
+ */
+const REMARK_WAIT_MS = 13000;
+
+/** The remark is over (or the room stopped): a question waiting on it in speak() goes ahead (GAD-T472). */
+function endRemarkWait(s) {
+    const ended = s.remarkEnded;
+    s.remarkEnded = null;
+    s.remarkOver = null;
+    if (ended) ended();
 }
 
 /** What the status line says while an answer is open. */
