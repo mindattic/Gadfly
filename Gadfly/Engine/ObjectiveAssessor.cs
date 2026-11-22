@@ -23,6 +23,13 @@ public sealed record AnswerOutcome(int TurnIndex, MoveKind Move, int ProbedLevel
 {
     /// <summary>Counts as independently demonstrated examination evidence.</summary>
     public bool Independent => !Contaminated && !Assisted;
+    /// <summary>
+    /// An Apply answer whose situation reused a source example or one the student already discussed (GAD-T442): it is
+    /// extrapolation, so it does not show transfer.
+    /// </summary>
+    public bool NotNovel { get; init; }
+    /// <summary>The answer shows transfer: Apply, in a situation new to the student (GAD-T268, GAD-T442).</summary>
+    public bool CreditsTransfer => MoveProfiles.CreditsTransfer(Move) && !NotNovel;
 }
 
 /// <summary>
@@ -204,7 +211,7 @@ public static class ObjectiveAssessor
             foreach (var e in t.Analysis!.Evidence)
             {
                 // Transfer is credited only from Apply (GAD-T268): older analyses may still carry it from another move.
-                var dimension = MoveProfiles.CreditedDimension(t.Move, e.Dimension);
+                var dimension = MoveProfiles.CreditedDimension(t, e.Dimension);
                 list.Add(new CollectedEvidence(t.Index, e.ObjectiveKey, e.Polarity, dimension, e.Quote, e.Note, e.Support,
                     Assisted: IsAssisted(session, t, e.ObjectiveKey) || MoveProfiles.IsAssistance(t.Move),
                     Contaminated: IsContaminated(session, t, e.ObjectiveKey, dimension) || IsRecited(t), t.Move));
@@ -261,7 +268,10 @@ public static class ObjectiveAssessor
             }
             var probed = MoveProfiles.ProbedLevel(t.Move);
             if (MoveProfiles.IsAssistance(t.Move)) probed = MoveProfiles.ProbedLevel(LastProbing(turns, t.Index) ?? MoveKind.Elicit);
-            outcomes.Add(new AnswerOutcome(t.Index, t.Move, probed, score, ResultOf(score), contaminated, assisted, IsAporia(t.Judgment)));
+            outcomes.Add(new AnswerOutcome(t.Index, t.Move, probed, score, ResultOf(score), contaminated, assisted, IsAporia(t.Judgment))
+            {
+                NotNovel = t.Move == MoveKind.Apply && !MoveProfiles.CreditsTransfer(t),
+            });
             previousJudged = t;
         }
 
@@ -376,7 +386,7 @@ public static class ObjectiveAssessor
             Consistency = ConsistencyOf(mine.Count, unconfronted, unjudgedConfrontations, failedConfrontations, withdrawn),
             ReasoningShown = independent.Any(o => o.Result == AnswerResult.Positive && o.ProbedLevel >= 3),
             // Only Apply, a situation new to the student, shows transfer; a ScenarioVariation what-if is extrapolation (GAD-T268).
-            TransferShown = independent.Any(o => o.Result == AnswerResult.Positive && MoveProfiles.CreditsTransfer(o.Move)),
+            TransferShown = independent.Any(o => o.Result == AnswerResult.Positive && o.CreditsTransfer),
             CriticalReasoningShown = independent.Any(o => o.Result == AnswerResult.Positive && o.ProbedLevel >= 5),
             UnresolvedMisconceptions = unresolved,
             UntestedMisconceptions = untested,
@@ -440,7 +450,7 @@ public static class ObjectiveAssessor
             if (pos.Skip(lv).Sum() >= minCorroboration) { level = lv; break; }
         // Level 5 also needs transfer shown (Part 5.3: transfer *and* critical reasoning), and only Apply, a situation new to
         // the student, shows transfer: a ScenarioVariation what-if is extrapolation (GAD-T268).
-        if (level == 5 && !outcomes.Any(o => o.Result == AnswerResult.Positive && MoveProfiles.CreditsTransfer(o.Move))) level = 4;
+        if (level == 5 && !outcomes.Any(o => o.Result == AnswerResult.Positive && o.CreditsTransfer)) level = 4;
         var high = 1;
         for (var lv = 5; lv >= 2; lv--)
             if (pos[lv] > 0) { high = lv; break; }

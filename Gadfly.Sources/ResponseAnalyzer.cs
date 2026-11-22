@@ -75,7 +75,7 @@ public sealed class ResponseAnalyzer(ISocraticVotingClient panel, PromptSet? pro
         return merged with
         {
             Rejections = rejections,
-            Evidence = merged.Evidence.Select(e => e with { Dimension = MoveProfiles.CreditedDimension(turn.Move, e.Dimension) }).ToList(),
+            Evidence = merged.Evidence.Select(e => e with { Dimension = MoveProfiles.CreditedDimension(turn, e.Dimension) }).ToList(),
         };
     }
 

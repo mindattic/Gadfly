@@ -257,7 +257,7 @@ public sealed class SocraticSession
 
     /// <summary>Asks a new question. The previous turn must be answered first.</summary>
     public Turn Ask(string conceptId, MoveKind move, string question, DateTimeOffset askedAt, IReadOnlyList<string>? targetClaimIds = null,
-        string reason = "", string? objectiveKey = null, bool isReplacement = false)
+        string reason = "", string? objectiveKey = null, bool isReplacement = false, ApplyNoveltyCheck? novelty = null)
     {
         if (MoveProfiles.IsAssistance(move) && Policy.Mode != Gadfly.Assessment.AssessmentMode.Learning)
             throw new InvalidOperationException("Examination mode never teaches: hints and guided explanations are Learning Mode only.");
@@ -275,6 +275,7 @@ public sealed class SocraticSession
             Reason = reason,
             ObjectiveKey = objectiveKey,
             IsReplacement = isReplacement,
+            Novelty = move == MoveKind.Apply ? novelty : null,
         };
         _turns.Add(turn);
         return turn;

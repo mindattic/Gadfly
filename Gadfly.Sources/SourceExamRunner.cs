@@ -221,12 +221,18 @@ public sealed class SourceExamEngine
         }, ct);
         // An Apply question's reason carries its transfer label, so reviewers see how its situation differs from the source,
         // and that the transfer measured is sequestered (GAD-T268).
+        // Whether the Apply situation is really new (GAD-T442): word overlap with the passages the question was grounded in and
+        // with the student's earlier answers. Deterministic and local, so it adds no wait; a reused situation is not redrafted
+        // (that would be another panel round trip) but recorded, and its answer is credited as extrapolation, not transfer.
+        var novelty = decision.Move == MoveKind.Apply
+            ? ApplyNovelty.Check(question, grounding.Text, Session, concept.Title, objective?.Title, related)
+            : null;
         var reason = decision.Move == MoveKind.Apply
-            ? $"{decision.Reason} Transfer item ({TransferLabels.Label(TransferLabels.Next(Session, decision.ObjectiveKey ?? concept.Key))}). {TransferLabels.Caveat}"
+            ? $"{decision.Reason} Transfer item ({TransferLabels.Label(TransferLabels.Next(Session, decision.ObjectiveKey ?? concept.Key))}). {TransferLabels.Caveat} {novelty!.Describe()}"
             : decision.Reason;
         Diagnostics?.Report($"[{decision.Move} on {decision.ObjectiveKey ?? concept.Key}{(decision.IsReplacement ? " (replacement)" : "")}: {reason} Question {_generator.LastOutcome}.]");
         return Session.Ask(concept.Key, decision.Move, question, _clock.GetUtcNow(), decision.TargetClaimIds, reason,
-            decision.ObjectiveKey, decision.IsReplacement);
+            decision.ObjectiveKey, decision.IsReplacement, novelty);
     }
 
     /// <summary>

@@ -98,4 +98,9 @@ public sealed record Turn
     public ResponseAnalysis? Analysis { get; init; }
     /// <summary>Set when this turn's question or a clarification on it was found to reveal the answer (GAD-T92).</summary>
     public LeakFlag? Leak { get; init; }
+    /// <summary>
+    /// For an Apply question: whether its situation was checked new to the student (GAD-T442). Null for other moves and in
+    /// older transcripts. When <see cref="ApplyNoveltyCheck.Novel"/> is false the answer is extrapolation, never transfer.
+    /// </summary>
+    public ApplyNoveltyCheck? Novelty { get; init; }
 }

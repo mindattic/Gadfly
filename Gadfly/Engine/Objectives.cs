@@ -134,6 +134,23 @@ public static class MoveProfiles
     public static bool CreditsTransfer(MoveKind move) => move == MoveKind.Apply;
 
     /// <summary>
+    /// True when <paramref name="turn"/> credits transfer: an Apply question whose situation was not found to reuse a source
+    /// example or a situation the student already discussed (GAD-T442). One that did is extrapolation, credited like
+    /// ScenarioVariation. Older transcripts carry no novelty check and keep the move's rule.
+    /// </summary>
+    public static bool CreditsTransfer(Turn turn) => CreditsTransfer(turn.Move) && turn.Novelty?.Novel != false;
+
+    /// <summary>
+    /// The dimension an evidence item drawn by <paramref name="turn"/> may be credited on: as
+    /// <see cref="CreditedDimension(MoveKind, AssessmentDimension)"/>, and an Apply turn whose situation was not new
+    /// (GAD-T442) credits knowledge transfer as application, like ScenarioVariation's extrapolation.
+    /// </summary>
+    public static AssessmentDimension CreditedDimension(Turn turn, AssessmentDimension dimension) =>
+        dimension == AssessmentDimension.KnowledgeTransfer && turn.Move == MoveKind.Apply && !CreditsTransfer(turn)
+            ? AssessmentDimension.Application
+            : CreditedDimension(turn.Move, dimension);
+
+    /// <summary>
     /// The dimension an evidence item may be credited on, given the move that drew it (GAD-T268): knowledge transfer is
     /// credited only from Apply. From ScenarioVariation it is extrapolation, credited as application; from any other move,
     /// as conceptual understanding. Every other dimension stands as the panel gave it.
