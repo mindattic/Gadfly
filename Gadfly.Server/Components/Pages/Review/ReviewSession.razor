@@ -46,7 +46,17 @@ else
         <p class="notice warn">The judging panel disagreed on @view.JudgesDisagreed answer@(view.JudgesDisagreed == 1 ? "" : "s"). Those answers are marked below; please read them before grading.</p>
     }
 
+    @if (view.Blinded)
+    {
+        @* GAD-T285: integrity flags (gaze, reading, recitation, the text-style estimate) stay hidden until the blind human score is in. *@
+        <section class="integrity-summary" aria-labelledby="integrity-heading">
+            <h2 id="integrity-heading" class="section">Integrity summary</h2>
+            <p>Hidden until your human evaluation is submitted (blind grading): integrity flags such as gaze, recitation and the text-style estimate could prime the grade, so you grade the answers first.</p>
+        </section>
+    }
     var integrity = IntegritySummary.From(view.Integrity, view.Turns);
+    @if (!view.Blinded)
+    {
     <section class="integrity-summary level-@integrity.Level" aria-labelledby="integrity-heading">
         <h2 id="integrity-heading" class="section">Integrity summary</h2>
         <p>@integrity.Headline</p>
@@ -75,6 +85,7 @@ else
         }
         <p class="hint">Each signal also appears on the timeline below, next to the answer it happened during. The grade is your decision; no signal fails a student automatically.</p>
     </section>
+    }
 
     <h2 class="section">Timeline</h2>
     @if (view.Timeline.Count == 0)
