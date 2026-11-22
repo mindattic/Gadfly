@@ -4,8 +4,9 @@
 @inject ITenantContext Tenant
 
 @* Fairness by group (the blueprint audit GAD-T421; ElenchusAtScale Sections 5.3 to 5.7): score gaps between the panel and the
-   human (GAD-T433), by accommodation or by a grouping pasted in for the comparison (used in memory, never stored). Owners and
-   Admins only, since they never grade blind. No student is named; groups under five students are withheld. *@
+   human (GAD-T433), path-driver rates (GAD-T434) and typed against spoken answers (GAD-T438), by accommodation or by a grouping
+   pasted in for the comparison (used in memory, never stored). Owners and Admins only, since they never grade blind. No student
+   is named; groups under five students are withheld. *@
 
 @if (GroupFairness.ViewerAllowed(Tenant.Role))
 {

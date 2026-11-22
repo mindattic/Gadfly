@@ -16,6 +16,7 @@ human grades and an authorized person approves before a student sees a result (D
 | Answer audio (voice mode) | Converted to text and to the voice measurements below, in real time | **Not stored.** Streamed to the speech recognizer and discarded; never written to disk or database (see Open items) |
 | Judgments, mastery, report, grade | The result | With the session, until the organization or the student requests deletion |
 | Integrity events (derived only: face count, gaze region, focus loss, second speaker) | Evidence for a human reviewer | With the session; raw detail redacted with the transcript |
+| Reference transcripts (a person's transcript of a sampled spoken answer, GAD-T426) | Measuring the speech recognizer's word error rate by group; never grading | With the answer's words: redacted with the transcript, removed on erasure. Typed only by someone who heard the answer live or from a recording the student agreed to that the institution keeps; Gadfly itself still stores no audio |
 | Video frames | — | **Never leave the student's device; never stored** |
 | Consent record (time + SHA-256 of the exact text shown) | Proof of consent | With the session |
 | Research choice (agreed, declined or withdrew; time; notice version; SHA-256 of the exact text shown) | Proof of the separate, optional research consent (GAD-T452) | Until the student is erased; every choice is kept, the latest counts |

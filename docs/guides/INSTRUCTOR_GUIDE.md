@@ -270,7 +270,10 @@ completion, mastery by learning objective (human or AI), the engine's mastery es
 knowledge gaps, recurring misconceptions, AI–human agreement ("agreement is not validity"), transcript corrections
 and clarifications, and reliability indicators. Two fairness views help you spot a problem with the tool rather than
 the students: **speech recognition accuracy by group** and **eye-contact flag rates by group** (groups smaller than
-5 students are withheld; a grouping you paste in is never stored).
+5 students are withheld; a grouping you paste in is never stored). Owners and admins see more there (panel and human
+levels by group, what made the examiner press harder, typed against spoken answers, camera episodes, what the screen
+fade costs, and reference transcripts for the speech check), because those views use the AI panel's levels and integrity
+notes, which an instructor who may be grading blind does not see; see the admin guide's Analytics section.
 
 ## 9. Export
 

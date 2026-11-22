@@ -151,6 +151,15 @@ voice or its timing. This closes the gap ElenchusAtScale recorded as correction 
 still steered probing): on main no voice-derived cue reaches the question prompt, with measurements on or off. GAD-T267:
 each objective's report shows how many follow-ups it got, so harder probing does not silently lower a score.
 
+**Done.** GAD-T434 (found by GAD-T421, ElenchusAtScale M15, Sections 5.3.3, 5.3.4 and 6.4, A.10 "content cues by
+language"): Analytics, "Fairness by group" (Owners and Admins), recomputes every cue from each session's stored transcript
+exactly as the examiner computed it and reports, per answer and by accommodation (typed answers included) or by a pasted
+grouping such as first language: how often the pressure was raised and raised hard, how often each cue fired (the
+no-reason cue per answer whose question asked for one), long pauses per spoken minute, and the share of sessions and exam
+time paused for a lost device. A cue firing more than a quarter more often for one group is warned, with the reminder that
+the hedging, vague-phrase and reason lists are English. Whether the adaptive end-of-answer silence cut an answer off
+(Section 5.3.4) is not recorded by the exam room, so it is not measured yet.
+
 ## 3. Recitation check
 
 **What Gadfly does.** `RecitationCheck` (GAD-T242) flags an answer whose wording closely follows the source (six-word runs,
@@ -248,7 +257,25 @@ measures better and says how far to trust it:
   distance, how steadily the eyes can be followed (glare on glasses) and device speed, with plain advice. It never blocks
   the exam. Thinking grace and the accommodation are unchanged; under the accommodation there are no calibration dots.
 - **Still to do.** The thresholds (quality bands, margins, the 6 degree cut-off) are reasoned from the literature and a
-  synthetic face, not validated on real students; compare flag rates by quality band and by group once pilot data exists.
+  synthetic face, not validated on real students; compare flag rates by quality band and by group once pilot data exists
+  (the comparison itself now exists, GAD-T447 below).
+
+**Done (GAD-T447): camera episodes and tracking quality by group** (found by GAD-T421, ElenchusAtScale Section 5.6.1,
+correction 50, A.10 "gaze quality by group"). For Owners and Admins the eye-contact section of Analytics adds absent-face,
+second-face and changed-face episodes per 10 answering minutes, the episodes the face-detection evidence concerns most
+(06: YoderHimes2022; Buolamwini and Gebru 2018), and each group's tracking quality (sessions with a score, median score,
+share poor, share calibrated). The rates can also be grouped by the session's quality band (good, fair, poor, none). Rates
+that differ by more than a quarter, or median quality 10 or more points apart, are warned. The bottleneck stays webcam
+resolution (about 4 degrees); the per-session calibration and quality score are the mitigation, and this shows whether they
+work equally for every group.
+
+**Done (GAD-T448): what the fade costs** (found by GAD-T421, ElenchusAtScale Section 5.7.3, "What would test it"). Shown
+with the gaze rates (Owners and Admins, since it uses the panel's exam-time scores): within each student, the judged score
+(0 to 1) and length of answers during which the screen faded against the same student's other answers, and the answer right
+after a faded one against their clean answers, overall and by group, with approximate 95% intervals. A drop of 0.05 or more
+whose interval is clear of zero is warned, and so is a difference of 0.05 between groups. Within-student comparison cancels
+out who the student is, not the question (a hard question can both draw a look away and get a weaker answer), so a drop is a
+reason to look at the fade, not proof of a cost. The fade itself is unchanged.
 
 ## 5. Voice strain (owner decision (b), reversed 2026-11-21)
 
@@ -361,7 +388,8 @@ grammar, accent or fluency. The AI grade is never final.
   human reviewer, who sees the recognizer's low-confidence words and its advice to check (recorded on each answer). It
   also leaves the word error rate comparison of GAD-T265 without new references: its reference is a transcript the
   student checked, and no spoken answer taken since GAD-T405 has one. A human listener's transcript of a sample of
-  answers is needed before it can be run on them (ElenchusAtScale, Appendix A, correction 43; `docs/PILOT.md`).
+  answers is needed before it can be run on them (ElenchusAtScale, Appendix A, correction 43; `docs/PILOT.md`); GAD-T426
+  (below) provides it.
 - Without feedback, repeated attempts give about no benefit when students mostly fail (03: Rowland2014, Dunlosky2013).
   Gains transfer weakly to objectives that were not tested (03: PanRickard2018).
 
@@ -394,6 +422,33 @@ grading panel is kept apart from the examiner's exam-time judgments. The stance 
 "contradicting evidence" flag for the human reviewer. The answers are listed to the panel in a fresh random order on
 every call, as the rubric criteria and levels already were, but each keeps a stable number, so a citation always
 resolves to the same answer.
+
+**Done.** GAD-T433 (found by GAD-T421, ElenchusAtScale Sections 5.4.1, 5.4.3 and 3.9): score gaps by group. Analytics,
+"Fairness by group" (Owners and Admins only, since they never grade blind), compares the panel's latest level with the
+human examiner's latest level on the same objectives within each group: mean levels, panel minus human, that gap as a
+standardized mean difference, exact and within-one agreement, and level 0 counted apart. Groups are the accommodations
+each assignment declared, or a grouping pasted in for the comparison (used in memory, never stored); groups under 5
+students are withheld. A group whose panel-minus-human gap is 0.15 standard deviations or more (the automated-scoring
+threshold of GAD-T270) is warned, and so are groups whose gaps differ by a quarter of a level or more. A difference in
+levels between groups is not treated as unfairness; a gap that appears for one group and not another is.
+
+**Done.** GAD-T426 (found by GAD-T421, ElenchusAtScale Section 5.3.1, A.9, M14, correction 43): human-reference
+transcripts. From the speech-recognition section of Analytics, Owners and Admins open "Reference transcripts", draw a sample
+of spoken answers (spread across students and across the fillers-and-repetitions bands, never redrawing an answer that has a
+reference) and type what a person who heard each answer says was actually said, stating how they heard it and confirming the
+student agreed. Gadfly still stores no audio (docs/PRIVACY.md), so the listener was present or used a recording the
+institution keeps under its own consent. Each reference is an audit event (`response.reference-transcribed`), never read by
+grading and never changing the answer, and is cleared with the answer's words by retention and erasure. The word error rate
+by group is then measured against it, and against student checks for answers before GAD-T405. The read-back stays removed.
+Still open: keeping consented audio for the sample inside Gadfly (D7, GAD-T53).
+
+**Done.** GAD-T438 (found by GAD-T421, ElenchusAtScale Section 5.7.1, A.10 "the typed group"): typed answers against
+spoken ones, in "Fairness by group" (Owners and Admins). Human and panel levels, panel-human agreement and the integrity-note
+rate (notes at Low or above per 10 answering minutes) for students with the typed-answers accommodation against everyone
+else, overall and objective by objective, with the typed-minus-spoken human level averaged over objectives where both sides
+have 5 or more students. The caveat is always shown: the typed group chose itself through a documented need, so a difference
+is not the effect of typing. Agreement 15 points apart and note rates more than a quarter apart are warned. Decision (a) is
+unchanged.
 
 ## 8. Learning Mode hints
 
@@ -584,7 +639,10 @@ approved every one, and all are done.
 
 Later changes by the owner that this map now records, not filed from it: GAD-T305 (calibrated gaze and a quality score,
 mechanic 4), GAD-T290 and GAD-T409 (the judging wait, mechanic 6), GAD-T405 (no read-back of spoken answers, mechanic 7),
-GAD-T412 (text-style estimate switched off, mechanic 9).
+GAD-T412 (text-style estimate switched off, mechanic 9). Measurements filed by the blueprint audit GAD-T421, none changing
+a decision: GAD-T426 (human-reference transcripts, mechanic 7), GAD-T433 (score gaps by group, mechanic 7), GAD-T434
+(path-driver rates by group, mechanic 2), GAD-T438 (typed against spoken, decision (a)), GAD-T447 (camera episodes and
+tracking quality by group, mechanic 4), GAD-T448 (what the fade costs, mechanic 4 and decision (c)).
 
 ## What the evidence does not let Gadfly claim
 
