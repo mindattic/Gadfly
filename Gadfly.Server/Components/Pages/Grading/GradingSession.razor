@@ -15,7 +15,7 @@
 
 @if (loading)
 {
-    <p class="hint">Loading…</p>
+    <p class="hint" role="status">Loading…</p>
 }
 else if (w is null)
 {
@@ -61,7 +61,7 @@ else
                 <h2>AI preliminary grading</h2>
                 @if (w.JobState is "Failed")
                 {
-                    <p class="error">AI grading failed: @w.JobError</p>
+                    <p class="error" role="alert">AI grading failed: @w.JobError</p>
                     <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.StartAiGradingAsync(SessionId))">Retry AI grading</button>
                 }
                 else if (w.JobState is "Queued" or "Running")

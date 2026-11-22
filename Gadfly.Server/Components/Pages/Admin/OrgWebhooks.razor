@@ -51,7 +51,7 @@
 <h2 class="section">Endpoints</h2>
 @if (hooks is null)
 {
-    <p class="hint">Loading…</p>
+    <p class="hint" role="status">Loading…</p>
 }
 else if (hooks.Count == 0)
 {
@@ -95,7 +95,7 @@ else
 <h2 class="section">Recent deliveries</h2>
 @if (deliveries is null)
 {
-    <p class="hint">Loading…</p>
+    <p class="hint" role="status">Loading…</p>
 }
 else if (deliveries.Count == 0)
 {

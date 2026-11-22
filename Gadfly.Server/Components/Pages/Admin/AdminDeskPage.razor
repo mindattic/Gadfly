@@ -56,7 +56,7 @@
 
     @if (exams is null)
     {
-        <p class="hint">Loading…</p>
+        <p class="hint" role="status">Loading…</p>
     }
     else if (exams.Count == 0)
     {
@@ -142,7 +142,7 @@ else if (CurrentTab == "students")
 
     @if (students is null)
     {
-        <p class="hint">Loading…</p>
+        <p class="hint" role="status">Loading…</p>
     }
     else if (students.Count == 0)
     {
@@ -213,7 +213,7 @@ else
 
     @if (assignments is null)
     {
-        <p class="hint">Loading…</p>
+        <p class="hint" role="status">Loading…</p>
     }
     else if (assignments.Count == 0)
     {
