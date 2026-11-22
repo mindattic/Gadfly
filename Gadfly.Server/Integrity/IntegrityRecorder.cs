@@ -204,6 +204,7 @@ public sealed class IntegrityRecorder(GadflyDbContext db, TimeProvider clock, IL
         try
         {
             await db.SaveChangesAsync(ct);
+            if (added > 0) Admin.LiveSessionFeed.Shared.IntegrityRecorded(organizationId, sessionId, now);   // live monitor (GAD-T299)
         }
         catch (DbUpdateException ex)
         {

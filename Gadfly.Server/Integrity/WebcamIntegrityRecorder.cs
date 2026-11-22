@@ -281,7 +281,11 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
             added++;
         }
 
-        try { await db.SaveChangesAsync(ct); }
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            if (added > 0) Admin.LiveSessionFeed.Shared.IntegrityRecorded(organizationId, sessionId, clock.GetUtcNow());   // live monitor (GAD-T299)
+        }
         catch (DbUpdateException ex)
         {
             log.LogWarning(ex, "Could not store webcam events for session {SessionId}.", sessionId);

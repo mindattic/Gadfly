@@ -290,6 +290,7 @@ public sealed class HubIntegrityRecorder(Data.GadflyDbContext db, TimeProvider c
             added++;
         }
         await db.SaveChangesAsync(ct);
+        Admin.LiveSessionFeed.Shared.IntegrityRecorded(org, sessionId, now);   // live monitor (GAD-T299)
         return added + webcamStored;
     }
 
