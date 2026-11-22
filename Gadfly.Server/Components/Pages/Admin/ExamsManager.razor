@@ -1,10 +1,532 @@
 @page "/admin/exams"
 @attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Admin
+@using Gadfly.Server.Data
+@using Gadfly.Server.Exams
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject NavigationManager Nav
+@inject ILogger<ExamsManager> Log
 
-@* Placeholder (GAD-T300) so the admin navigation never leads nowhere. GAD-T297 replaces this file with the real page. *@
+@* The exams manager (GAD-T297): every exam with its counts; duplicate, archive and restore, windows, settings, objective coverage,
+   export and import as JSON, and Preview as a student. Every change is audited by ExamAdminService. *@
 <PageTitle>Exams · Gadfly Exams</PageTitle>
-<h1>Exams</h1>
-<div class="panel admin-soon">
-    <p><strong>Coming in this release.</strong> Every exam in one place: create, publish, copy and archive.</p>
-    <p class="hint">Until then, the <a href="admin/desk">admin desk</a> and the <a href="admin">dashboard</a> cover the everyday work.</p>
+<HeadContent><link rel="stylesheet" href="admin-exams.css" /></HeadContent>
+
+<div class="xm-head">
+    <h1>Exams</h1>
+    <div class="row-actions">
+        <a href="assessments/new">New exam</a>
+        <button type="button" class="link" @onclick="() => ShowImport(!importing)">@(importing ? "Close import" : "Import from a file")</button>
+        <button type="button" class="link" @onclick="LoadAsync" disabled="@loading">Refresh</button>
+    </div>
 </div>
+
+@if (message is not null)
+{
+    <p class="notice @(messageOk ? "ok-note" : "error-note")" role="status">@message</p>
+}
+
+@if (importing)
+{
+    <section class="panel xm-panel" aria-labelledby="import-h">
+        <h2 id="import-h">Import an exam</h2>
+        <p class="hint">A file exported from Gadfly (<code>.gadfly-exam.json</code>). It arrives as a draft on the source material you choose; nothing is published or assigned.</p>
+        @if (collections.Count == 0)
+        {
+            <p class="notice">There is no processed source material yet. <a href="sources">Add source material</a> first: an exam examines what its material covers.</p>
+        }
+        else
+        {
+            <label>File <InputFile OnChange="PickFileAsync" accept=".json,application/json" /></label>
+            <label>Source material
+                <select @bind="importCollection">
+                    <option value="@Guid.Empty">Choose…</option>
+                    @foreach (var c in collections)
+                    {
+                        <option value="@c.Id">@c.Title</option>
+                    }
+                </select>
+            </label>
+            <label>Course
+                <select @bind="importCourse">
+                    <option value="@Guid.Empty">The course named in the file, if this organization has it</option>
+                    @foreach (var c in courses)
+                    {
+                        <option value="@c.Id">@c.Title</option>
+                    }
+                </select>
+            </label>
+            <button type="button" @onclick="ImportAsync" disabled="@(busy || importJson is null || importCollection == Guid.Empty)">Import</button>
+            @if (importFileName is not null)
+            {
+                <p class="hint">Chosen: @importFileName</p>
+            }
+        }
+        @if (importErrors.Count > 0)
+        {
+            <div class="xm-problems" role="alert">
+                <p><strong>Fix these in the file, then try again:</strong></p>
+                <ul>@foreach (var e in importErrors) { <li>@e</li> }</ul>
+            </div>
+        }
+        @if (importWarnings.Count > 0)
+        {
+            <div class="xm-warnings">
+                <p><strong>Imported, with notes:</strong></p>
+                <ul>@foreach (var w in importWarnings) { <li>@w</li> }</ul>
+            </div>
+        }
+    </section>
+}
+
+@if (error is not null)
+{
+    <div class="notice" role="alert">
+        <p><strong>The exams could not load.</strong> @error</p>
+        <button type="button" @onclick="LoadAsync" disabled="@loading">Try again</button>
+    </div>
+}
+else if (rows is null)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else if (rows.Count == 0)
+{
+    <div class="notice">
+        <p><strong>No exams yet.</strong> Create one from your source material, or import a file exported from Gadfly.</p>
+        <p><a href="assessments/new">Create an exam</a> · <a href="admin/desk">Quick exam from notes (desk)</a></p>
+    </div>
+}
+else
+{
+    <div class="xm-filters">
+        <label>Find <input type="search" placeholder="Title, course or source material" @bind="search" @bind:event="oninput" /></label>
+        <label>Status
+            <select @bind="statusFilter">
+                <option value="">Active (draft and published)</option>
+                <option value="Draft">Drafts</option>
+                <option value="Published">Published</option>
+                <option value="Archived">Archived</option>
+                <option value="All">All</option>
+            </select>
+        </label>
+    </div>
+
+    var shown = Shown().ToList();
+    @if (shown.Count == 0)
+    {
+        <p class="notice">No exam matches. <button type="button" class="link" @onclick="ClearFilters">Show all</button></p>
+    }
+    else
+    {
+        <table class="grid xm-table">
+            <thead>
+                <tr>
+                    <th scope="col">Exam</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="num">Objectives</th>
+                    <th scope="col" class="num">Assigned</th>
+                    <th scope="col" class="num">Completed</th>
+                    <th scope="col" class="num">Average time</th>
+                    <th scope="col">Window</th>
+                    <th scope="col"><span class="sr-only">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in shown)
+                {
+                    <tr class="@(selected == r.Id ? "xm-selected" : null)">
+                        <td>
+                            <a href="assessments/@r.Id"><strong>@r.Title</strong></a>
+                            <span class="hint xm-sub">@(r.CourseTitle ?? "No course") · @r.CollectionTitle@(r.AssessmentMode == Gadfly.Assessment.AssessmentMode.Learning ? " · practice" : "")</span>
+                        </td>
+                        <td><span class="xm-status s-@r.Status">@r.Status</span></td>
+                        <td class="num">@r.Objectives</td>
+                        <td class="num">@r.Assigned</td>
+                        <td class="num" title="@r.Started started">@r.Completed</td>
+                        <td class="num">@Duration(r.AverageTime)</td>
+                        <td>@r.Window.Describe()</td>
+                        <td>
+                            <details class="xm-actions">
+                                <summary>Actions</summary>
+                                <div>
+                                    <button type="button" class="link" @onclick="() => OpenSettingsAsync(r.Id)">Settings</button>
+                                    <button type="button" class="link" @onclick="() => OpenCoverageAsync(r.Id)">Objective coverage</button>
+                                    <button type="button" class="link" @onclick="() => OpenWindow(r)">Window…</button>
+                                    @if (r.Status == ExamStatus.Published && r.Assigned > 0)
+                                    {
+                                        <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.OpenNowAsync(r.Id))" disabled="@busy">Open now</button>
+                                    }
+                                    @if (r.Assigned > 0 && r.Window.Closed < r.Window.Assignments)
+                                    {
+                                        <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.CloseNowAsync(r.Id))" disabled="@busy">Close now</button>
+                                    }
+                                    <a href="admin/exams/@r.Id/preview">Preview as a student</a>
+                                    <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.DuplicateAsync(r.Id))" disabled="@busy">Duplicate</button>
+                                    <a href="@ExamAuditEndpoints.ExamExportPath(r.Id)" download>Export as JSON</a>
+                                    <a href="admin/assignments">Assign…</a>
+                                    <a href="admin/audit?exam=@r.Id">History</a>
+                                    @if (r.Status == ExamStatus.Archived)
+                                    {
+                                        <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.RestoreAsync(r.Id))" disabled="@busy">Restore</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="link xm-danger" @onclick="() => ConfirmArchive(r)" disabled="@busy">Archive</button>
+                                    }
+                                </div>
+                            </details>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="hint">Average time counts completed attempts only. Archived exams can't be started or assigned; their attempts and results are kept.</p>
+    }
+}
+
+@if (archiving is { } a)
+{
+    <section class="panel xm-panel xm-confirm" aria-labelledby="archive-h" role="alertdialog">
+        <h2 id="archive-h">Archive "@a.Title"?</h2>
+        <p>Students can no longer start it and it can't be assigned. @(a.Started > 0 ? $"Its {a.Started} attempt(s) and their results are kept, and an attempt in progress can be finished." : "")
+           You can restore it later.</p>
+        <div class="row-actions">
+            <button type="button" class="danger" @onclick="ArchiveAsync" disabled="@busy">Archive</button>
+            <button type="button" class="link" @onclick="() => archiving = null">Cancel</button>
+        </div>
+    </section>
+}
+
+@if (settings is { } sv)
+{
+    <section class="panel xm-panel" aria-labelledby="settings-h">
+        <h2 id="settings-h">Settings: @sv.Title</h2>
+        @if (sv.PolicyFrozen)
+        {
+            <p class="hint">This exam is @sv.Status.ToString().ToLowerInvariant(): its duration and minimum objectives are frozen with its policy, because students sit it under them.
+                <button type="button" class="link" @onclick="() => RunAsync(sv.Form.ExamId, s => s.DuplicateAsync(sv.Form.ExamId))">Duplicate it</button> to change those.
+                The rest applies to attempts that start from now on.</p>
+        }
+        <label>Duration (minutes)
+            <input type="number" min="@ExamService.MinDurationMinutes" max="@ExamService.MaxDurationMinutes" @bind="sv.Form.DurationMinutes" disabled="@sv.PolicyFrozen" />
+        </label>
+        <label>Minimum objectives for a summative result
+            <input type="number" min="1" max="50" @bind="sv.Form.MinSummativeObjectives" disabled="@sv.PolicyFrozen" />
+            <span class="hint">An attempt that examined fewer is reported as formative (practice), not as a grade.</span>
+        </label>
+        <label>Integrity level
+            <select @bind="sv.Form.IntegrityLevel">
+                <option value="@IntegrityLevel.Off">Off: no integrity notes</option>
+                <option value="@IntegrityLevel.Standard">Standard</option>
+                <option value="@IntegrityLevel.Strict">Strict</option>
+            </select>
+            <span class="hint">Integrity notes are low-confidence reviewer notes, never a verdict and never part of a grade.</span>
+        </label>
+        <label class="xm-check"><input type="checkbox" @bind="sv.Form.ReadOutCheck" /> Read-out check (flags a long, fluent answer after a long silent wait for a reviewer; never for a student with extra time)</label>
+        <label>Examiner voice id <input @bind="sv.Form.VoiceId" maxlength="100" placeholder="Organization default" /></label>
+        <label>Examiner avatar id <input @bind="sv.Form.AvatarId" maxlength="100" placeholder="Organization default" /></label>
+        <span class="hint">The voice and avatar are used where this deployment's voice service supports a choice per exam.</span>
+        @if (sv.StartedAttempts > 0)
+        {
+            <label>Why (required: @sv.StartedAttempts attempt@(sv.StartedAttempts == 1 ? " has" : "s have") started)
+                <textarea rows="2" maxlength="1000" @bind="sv.Form.Reason"></textarea>
+            </label>
+        }
+        <div class="row-actions">
+            <button type="button" @onclick="SaveSettingsAsync" disabled="@busy">Save settings</button>
+            <button type="button" class="link" @onclick="() => settings = null">Close</button>
+        </div>
+    </section>
+}
+
+@if (windowFor is { } wf)
+{
+    <section class="panel xm-panel" aria-labelledby="window-h">
+        <h2 id="window-h">Window: @wf.Title</h2>
+        @if (wf.Assigned == 0)
+        {
+            <p class="notice">It isn't assigned to anyone yet. <a href="admin/assignments">Assign it</a>; the window is set on each assignment.</p>
+        }
+        else
+        {
+            <p class="hint">Sets the same window on all @wf.Assigned assignment@(wf.Assigned == 1 ? "" : "s"). Times are UTC. Leave a box empty for no limit at that end.
+                An attempt already in progress can always be finished.</p>
+            <label>Opens (UTC) <input type="datetime-local" @bind="windowOpens" /></label>
+            <label>Closes (UTC) <input type="datetime-local" @bind="windowCloses" /></label>
+            <div class="row-actions">
+                <button type="button" @onclick="SaveWindowAsync" disabled="@busy">Set window</button>
+                <button type="button" class="link" @onclick="() => windowFor = null">Close</button>
+            </div>
+        }
+    </section>
+}
+
+@if (coverage is { } cv)
+{
+    <section class="panel xm-panel xm-wide" aria-labelledby="coverage-h">
+        <h2 id="coverage-h">Objective coverage: @cv.Title</h2>
+        @if (cv.AttemptsStarted == 0)
+        {
+            <p class="notice">No attempt has started yet, so nothing has been examined.</p>
+        }
+        else if (cv.Rows.Count == 0)
+        {
+            <p class="notice">This exam has no objectives or concepts to report on.</p>
+        }
+        else
+        {
+            <p class="hint">Of @cv.AttemptsStarted started attempt@(cv.AttemptsStarted == 1 ? "" : "s"): how many examined each @(cv.ByConcept ? "concept" : "objective")@(cv.ByConcept ? "" : ", and how many produced independent evidence (not after a hint, and not after a question that gave the answer away)").
+                An objective few attempts reach may need more time, fewer objectives, or a higher question limit.</p>
+            <table class="grid">
+                <thead>
+                    <tr><th scope="col">@(cv.ByConcept ? "Concept" : "Objective")</th><th scope="col" class="num">Examined</th>
+                        @if (!cv.ByConcept) { <th scope="col" class="num">With independent evidence</th> }
+                        <th scope="col">Share</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var o in cv.Rows)
+                    {
+                        var share = (double)o.AttemptsExamined / cv.AttemptsStarted;
+                        <tr>
+                            <td>@o.Title <span class="hint">@o.Key</span></td>
+                            <td class="num">@o.AttemptsExamined</td>
+                            @if (!cv.ByConcept) { <td class="num">@o.AttemptsWithIndependentEvidence</td> }
+                            <td><span class="xm-bar" style="--share:@((Math.Min(1, share) * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></span> @share.ToString("P0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        <button type="button" class="link" @onclick="() => coverage = null">Close</button>
+    </section>
+}
+
+@code {
+    private IReadOnlyList<ExamAdminRow>? rows;
+    private IReadOnlyList<CollectionOption> collections = [];
+    private IReadOnlyList<CourseOption> courses = [];
+    private string? error, message;
+    private bool messageOk, loading, busy, importing;
+    private string search = "", statusFilter = "";
+    private Guid? selected;
+    private ExamAdminRow? archiving, windowFor;
+    private ExamSettingsView? settings;
+    private ExamCoverage? coverage;
+    private DateTime? windowOpens, windowCloses;
+    private string? importJson, importFileName;
+    private Guid importCollection, importCourse;
+    private IReadOnlyList<string> importErrors = [], importWarnings = [];
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task<T> WithServiceAsync<T>(Func<ExamAdminService, Task<T>> work)
+    {
+        // Its own scope per call, so the page never shares the circuit's DbContext with the layout or another click.
+        await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+        return await work(ActivatorUtilities.CreateInstance<ExamAdminService>(scope.ServiceProvider));
+    }
+
+    private async Task LoadAsync()
+    {
+        if (loading) return;
+        loading = true;
+        error = null;
+        try
+        {
+            rows = await WithServiceAsync(s => s.ListAsync(includeArchived: true));
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "The exams manager failed to load for organization {Org}", Tenant.OrganizationId);
+            error = "Something went wrong reading the exams. Try again in a moment; if it keeps happening, check System status.";
+        }
+        finally { loading = false; }
+    }
+
+    private IEnumerable<ExamAdminRow> Shown()
+    {
+        IEnumerable<ExamAdminRow> q = rows ?? [];
+        q = statusFilter switch
+        {
+            "" => q.Where(r => r.Status != ExamStatus.Archived),
+            "All" => q,
+            _ => q.Where(r => r.Status.ToString() == statusFilter),
+        };
+        var term = search.Trim();
+        if (term.Length > 0)
+            q = q.Where(r => r.Title.Contains(term, StringComparison.OrdinalIgnoreCase) || (r.CourseTitle?.Contains(term, StringComparison.OrdinalIgnoreCase) ?? false)
+                             || r.CollectionTitle.Contains(term, StringComparison.OrdinalIgnoreCase));
+        return q;
+    }
+
+    private void ClearFilters()
+    {
+        search = "";
+        statusFilter = "All";
+    }
+
+    private void Say(string text, bool ok)
+    {
+        message = text;
+        messageOk = ok;
+    }
+
+    private void CloseDialogs()
+    {
+        settings = null;
+        coverage = null;
+        windowFor = null;
+        archiving = null;
+    }
+
+    private async Task RunAsync(Guid examId, Func<ExamAdminService, Task<Gadfly.Server.Assessments.AssessmentResult>> action)
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await WithServiceAsync(action);
+            Say(r.Message, r.Ok);
+            if (r.Ok)
+            {
+                CloseDialogs();
+                selected = r.Id ?? examId;
+                await LoadAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "An exams manager action failed for exam {Exam}", examId);
+            Say("That didn't work because of an unexpected error. Nothing was changed; try again.", false);
+        }
+        finally { busy = false; }
+    }
+
+    private void ConfirmArchive(ExamAdminRow r)
+    {
+        CloseDialogs();
+        archiving = r;
+        selected = r.Id;
+    }
+
+    private async Task ArchiveAsync()
+    {
+        if (archiving is not { } a) return;
+        await RunAsync(a.Id, s => s.ArchiveAsync(a.Id));
+    }
+
+    private async Task OpenSettingsAsync(Guid id)
+    {
+        CloseDialogs();
+        selected = id;
+        settings = await WithServiceAsync(s => s.SettingsAsync(id));
+        if (settings is null) Say("That exam could not be opened.", false);
+    }
+
+    private async Task OpenCoverageAsync(Guid id)
+    {
+        CloseDialogs();
+        selected = id;
+        coverage = await WithServiceAsync(s => s.CoverageAsync(id));
+        if (coverage is null) Say("That exam could not be opened.", false);
+    }
+
+    private void OpenWindow(ExamAdminRow r)
+    {
+        CloseDialogs();
+        selected = r.Id;
+        windowFor = r;
+        windowOpens = r.Window.EarliestOpens?.UtcDateTime;
+        windowCloses = r.Window.LatestCloses?.UtcDateTime;
+    }
+
+    private async Task SaveWindowAsync()
+    {
+        if (windowFor is not { } w) return;
+        DateTimeOffset? opens = windowOpens is { } o ? new DateTimeOffset(DateTime.SpecifyKind(o, DateTimeKind.Utc)) : null;
+        DateTimeOffset? closes = windowCloses is { } c ? new DateTimeOffset(DateTime.SpecifyKind(c, DateTimeKind.Utc)) : null;
+        await RunAsync(w.Id, s => s.SetWindowAsync(w.Id, opens, closes));
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        if (settings is not { } sv) return;
+        await RunAsync(sv.Form.ExamId, s => s.SaveSettingsAsync(sv.Form));
+    }
+
+    private async Task ShowImport(bool show)
+    {
+        importing = show;
+        importErrors = importWarnings = [];
+        if (!show) return;
+        CloseDialogs();
+        try
+        {
+            collections = await WithServiceAsync(s => s.CollectionsAsync());
+            courses = await WithServiceAsync(s => s.CoursesAsync());
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "The exams manager could not list source material for an import");
+            Say("The source material could not be listed. Try again in a moment.", false);
+        }
+    }
+
+    private async Task PickFileAsync(InputFileChangeEventArgs e)
+    {
+        importErrors = importWarnings = [];
+        importJson = null;
+        importFileName = null;
+        var file = e.File;
+        if (file.Size > ExamDefinitionJson.MaxBytes)
+        {
+            importErrors = [$"That file is larger than {ExamDefinitionJson.MaxBytes / (1024 * 1024)} MB; an exam definition is much smaller. Is it the right file?"];
+            return;
+        }
+        try
+        {
+            using var reader = new StreamReader(file.OpenReadStream(ExamDefinitionJson.MaxBytes));
+            importJson = await reader.ReadToEndAsync();
+            importFileName = file.Name;
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Reading an exam file for import failed");
+            importErrors = ["The file could not be read. Choose it again."];
+        }
+    }
+
+    private async Task ImportAsync()
+    {
+        if (busy || importJson is null) return;
+        busy = true;
+        try
+        {
+            var json = importJson;
+            var collection = importCollection;
+            Guid? course = importCourse == Guid.Empty ? null : importCourse;
+            var r = await WithServiceAsync(s => s.ImportAsync(json, collection, course));
+            importErrors = r.Errors;
+            importWarnings = r.Warnings;
+            Say(r.Message, r.Ok);
+            if (r.Ok)
+            {
+                importJson = null;
+                importFileName = null;
+                selected = r.Id;
+                statusFilter = "";
+                await LoadAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Importing an exam failed");
+            Say("The import failed because of an unexpected error. Nothing was created; try again.", false);
+        }
+        finally { busy = false; }
+    }
+
+    private static string Duration(TimeSpan? t) => t is not { } d ? "—" : d.TotalHours >= 1 ? $"{(int)d.TotalHours} h {d.Minutes} min" : $"{Math.Max(1, (int)Math.Round(d.TotalMinutes))} min";
+}

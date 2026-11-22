@@ -1,0 +1,186 @@
+@page "/admin/exams/{ExamId:guid}/preview"
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Admin
+@using Gadfly.Server.Data
+@implements IDisposable
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+@inject ILogger<ExamPreviewPage> Log
+
+@* Preview as a student (GAD-T297): the exam's real question engine on the mock panel, in memory. Nothing is saved. *@
+<PageTitle>Preview · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="admin-exams.css" /></HeadContent>
+
+<p><a href="admin/exams">← Exams</a></p>
+<h1>Preview@(preview is null ? "" : $": {preview.Title}")</h1>
+
+<div class="notice xm-preview-note" role="note">
+    <strong>Preview, not an attempt.</strong> This runs the exam's real examiner logic (its objectives, rubric, source material and settings)
+    on the practice AI panel, so its questions follow the same plan a student's would, but its wording and judgements are simple stand-ins.
+    Nothing is saved: no attempt, no grade, no integrity notes, nothing in grading, analytics or reports. Students answer out loud on camera to the
+    talking examiner; here you type what a student might say.
+</div>
+
+@if (error is not null)
+{
+    <div class="notice" role="alert">
+        <p><strong>The preview could not start.</strong> @error</p>
+        <button type="button" @onclick="StartAsync" disabled="@busy">Try again</button> <a href="admin/exams">Back to exams</a>
+    </div>
+}
+else if (preview is null)
+{
+    <p class="hint" role="status">Starting the preview…</p>
+}
+else
+{
+    <div class="xm-preview-bar">
+        <span>Time left <strong>@Remaining()</strong></span>
+        <span>Objectives finished <strong>@preview.ObjectivesClosed of @preview.ObjectivesTotal</strong></span>
+        <span class="row-actions">
+            <button type="button" class="link" @onclick="RestartAsync" disabled="@busy">Start again</button>
+            @if (!preview.IsEnded)
+            {
+                <button type="button" class="link" @onclick="EndPreview" disabled="@busy">End preview</button>
+            }
+        </span>
+    </div>
+
+    <ol class="xm-turns">
+        @foreach (var t in preview.Turns())
+        {
+            <li class="xm-turn">
+                <div class="xm-q">
+                    <span class="hint">@t.Number · @t.ConceptTitle · @t.Move</span>
+                    <p>@t.Question</p>
+                    @if (t.Why is not null)
+                    {
+                        <details><summary class="hint">Why this question (reviewers see this; students don't)</summary><p class="hint">@t.Why</p></details>
+                    }
+                </div>
+                @if (t.Answer is not null)
+                {
+                    <div class="xm-a"><span class="hint">Answer</span><p>@t.Answer</p>
+                        @if (!string.IsNullOrWhiteSpace(t.Note)) { <p class="hint">Practice panel's note: @t.Note</p> }
+                    </div>
+                }
+            </li>
+        }
+    </ol>
+
+    @if (preview.IsEnded)
+    {
+        <div class="notice">
+            <p><strong>The interview ended</strong> (@EndWords(preview.EndReason)). A student would now see that their answers were submitted.</p>
+            <button type="button" @onclick="RestartAsync" disabled="@busy">Preview again</button>
+        </div>
+    }
+    else if (preview.OpenTurn is not null)
+    {
+        <div class="panel xm-answer">
+            <label>What a student might say
+                <textarea rows="3" @bind="answer" @bind:event="oninput" maxlength="4000" disabled="@busy"></textarea>
+            </label>
+            <div class="row-actions">
+                <button type="button" @onclick="AnswerAsync" disabled="@(busy || string.IsNullOrWhiteSpace(answer))">Answer</button>
+                <button type="button" class="link" @onclick="DontKnowAsync" disabled="@busy">"I don't know"</button>
+                @if (busy) { <span class="hint" role="status">The examiner is thinking…</span> }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter] public Guid ExamId { get; set; }
+
+    private ExamPreview? preview;
+    private string? error;
+    private string answer = "";
+    private bool busy;
+    private Timer? ticker;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await StartAsync();
+        ticker = new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private async Task StartAsync()
+    {
+        busy = true;
+        error = null;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            preview = await ExamPreview.StartAsync(db, Tenant, Clock, ExamId);
+            await preview.NextAsync();
+        }
+        catch (InvalidOperationException ex)
+        {
+            error = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Starting an exam preview failed for exam {Exam}", ExamId);
+            error = "Something went wrong preparing the exam. Try again in a moment.";
+        }
+        finally { busy = false; }
+    }
+
+    private async Task RestartAsync()
+    {
+        preview?.End();
+        preview = null;
+        answer = "";
+        await StartAsync();
+    }
+
+    private void EndPreview() => preview?.End();
+
+    private Task DontKnowAsync() => SendAsync(Gadfly.Sources.SourceExamEngine.AporiaWord);
+
+    private Task AnswerAsync() => SendAsync(answer);
+
+    private async Task SendAsync(string text)
+    {
+        if (preview is null || busy) return;
+        busy = true;
+        try
+        {
+            await preview.AnswerAsync(text);
+            answer = "";
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "An exam preview step failed for exam {Exam}", ExamId);
+            error = "The preview stopped because of an unexpected error. Start it again.";
+            preview = null;
+        }
+        finally { busy = false; }
+    }
+
+    private string Remaining()
+    {
+        var r = preview?.Remaining ?? TimeSpan.Zero;
+        if (r < TimeSpan.Zero) r = TimeSpan.Zero;
+        return $"{(int)r.TotalMinutes}:{r.Seconds:00}";
+    }
+
+    private static string EndWords(string? reason) => reason switch
+    {
+        "TimeUp" => "time ran out",
+        "AllConceptsClosed" or "Completed" => "every objective was finished",
+        "MaxTurns" => "the question limit was reached",
+        "Abandoned" => "you ended the preview",
+        null => "ended",
+        _ => System.Text.RegularExpressions.Regex.Replace(reason, "(?<=[a-z])(?=[A-Z])", " ").ToLowerInvariant(),
+    };
+
+    public void Dispose()
+    {
+        ticker?.Dispose();
+        preview?.End();
+    }
+}
