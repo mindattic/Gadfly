@@ -172,7 +172,7 @@ a rarer accommodation within an exam is shown as `suppressed`. Each download is 
 | File | One row per | Columns |
 |---|---|---|
 | `sessions.csv` | attempt | `session, student, exam, arm, attempt, state, end_reason, started_week, days_since_first_attempt, duration_s, answer_channel, extra_time, eye_contact_accommodation, typed_answer_accommodation, voice_measures, result_published, feedback_released_before_attempt, final_status, final_percent, turns, cues_total, integrity_notes, integrity_notes_info_or_low, words_redacted_by_retention` |
-| `turns.csv` | question | `session, turn, concept, move, asked_at_s, answer_latency_s, answer_duration_s, answer_channel, word_count, recognizer_confidence, low_confidence_words, reference_words, wer_substitutions, wer_deletions, wer_insertions, word_error_rate, time_to_first_word_s, speech_rate_wpm, pause_ratio, long_pauses, disfluency_per_100_words, voice_vs_baseline, panel_score, panel_agreement, panel_needs_human_review, panel_votes, text_style_score, mastery_after, cue_count, cue_kinds, probe_pressure` |
+| `turns.csv` | question | `session, turn, concept, move, asked_at_s, answer_latency_s, answer_duration_s, answer_channel, word_count, recognizer_confidence, low_confidence_words, reference_words, wer_substitutions, wer_deletions, wer_insertions, word_error_rate, time_to_first_word_s, speech_rate_wpm, pause_ratio, long_pauses, disfluency_per_100_words, voice_vs_baseline, cut_off_watched, cut_off, cut_off_resume_s, panel_score, panel_agreement, panel_needs_human_review, panel_votes, text_style_score, mastery_after, cue_count, cue_kinds, probe_pressure` |
 | `objectives.csv` | objective | `objective, exam, key, ordinal, weight, max_score` |
 | `panel_scores.csv` | AI panel grade per objective | `session, objective, level, score, max_score, confidence` (mock grades never) |
 | `human_scores.csv` | human mark | `session, objective, rater, rater_role, level, score, max_score, blind, superseded, hours_after_session` (double marks are two rows) |
@@ -190,5 +190,9 @@ reference and the rate, as counts only (neither transcript is exported), for con
 and blank once retention has removed the words. By speaker group still needs a speaker group the export does not carry:
 the study collects it itself, with its own consent, and matches it by study code. The referenced answers are a sample
 drawn to cover answers with many fillers and repetitions, so compare groups with each other, not with benchmarks.
+Answer cut-offs (GAD-T462, GAD-T470) are in `turns.csv` as voice measurements, blank wherever those are: `cut_off_watched`
+is 1 for a spoken answer watched for one, `cut_off` 1 when the student went on speaking within 3 seconds of the silence
+that closed the answer, and `cut_off_resume_s` that delay. Compare its rate between groups; it never steered probing
+or entered a grade, and a cut-off may be an afterthought.
 Integrity notes are exported because 7.5 asks how they are treated; they are low-confidence notes, never a verdict and
 never part of a grade, and the analysis must treat them so.

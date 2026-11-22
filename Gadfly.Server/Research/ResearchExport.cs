@@ -240,7 +240,8 @@ public static class ResearchExport
             var voiceAllowed = VoiceExportable(input.VoiceMeasures, input.OrganizationInEu, s.StudentInEu);
             foreach (var t in turnsBySession.GetValueOrDefault(s.SessionId) ?? [])
             {
-                var m = FilterMetrics(ReadMetrics(t.SpeechMetricsJson), voiceAllowed);
+                var raw = ReadMetrics(t.SpeechMetricsJson);
+                var m = FilterMetrics(raw, voiceAllowed);
                 string M(string metricKey) => m.TryGetValue(metricKey, out var v) ? Num(v) : "";
                 var c = cues[s.SessionId].GetValueOrDefault(t.Index);
                 turnRows.Add(
@@ -254,6 +255,7 @@ public static class ResearchExport
                     .. WerCells(t),
                     M(SpeechMetricKeys.TimeToFirstWordSeconds), M(SpeechMetricKeys.SpeechRateWpm), M(SpeechMetricKeys.PauseRatio),
                     M(SpeechMetricKeys.LongPauseCount), M(SpeechMetricKeys.DisfluencyPer100), M(VoiceStrain.VsBaselineKey),
+                    .. CutOffCells(t.AnswerMode, raw, voiceAllowed),
                     t.PanelScore is { } ps ? Num(ps) : "", t.PanelAgreement is { } pa ? Num(pa) : "",
                     t.NeedsHumanReview is { } nh ? Bool(nh) : "", Num(t.PanelVotes), t.TextStyleScore is { } ts ? Num(ts) : "",
                     t.MasteryAfter is { } ma ? Num(ma) : "",
@@ -325,6 +327,7 @@ public static class ResearchExport
                 "word_count", "recognizer_confidence", "low_confidence_words",
                 "reference_words", "wer_substitutions", "wer_deletions", "wer_insertions", "word_error_rate",
                 "time_to_first_word_s", "speech_rate_wpm", "pause_ratio", "long_pauses", "disfluency_per_100_words", "voice_vs_baseline",
+                "cut_off_watched", "cut_off", "cut_off_resume_s",
                 "panel_score", "panel_agreement", "panel_needs_human_review", "panel_votes", "text_style_score", "mastery_after",
                 "cue_count", "cue_kinds", "probe_pressure",
             ], turnRows),
@@ -405,6 +408,11 @@ public static class ResearchExport
         Voice measurements (time to first word, speech rate, pauses, disfluency, the comparison with the student's first answers)
         are blank wherever voice measurements were off, and always for an organization or a student in the EU/EEA.
 
+        Answer cut-offs (turns.csv: cut_off_watched, cut_off, cut_off_resume_s) are voice measurements too, blank under the same
+        rule. cut_off_watched is 1 when the spoken answer was watched for one; cut_off is 1 when the end-of-answer silence closed
+        the answer and the student went on speaking within 3 seconds (the delay is cut_off_resume_s). It may be an afterthought
+        rather than a real cut-off; it never steered the questions and never entered a grade.
+
         Word error rate (turns.csv: reference_words, wer_substitutions, wer_deletions, wer_insertions, word_error_rate) is filled
         only for a spoken answer that a person transcribed by ear for the speech-recognition accuracy check, measured against
         that reference after lowercasing and removing punctuation. Only the counts are exported, never either transcript. The
@@ -484,6 +492,23 @@ public static class ResearchExport
     private static IReadOnlyList<string> WerCells(ExportTurn t) => t.WordErrors is not { } w || t.AnswerMode != "voice"
         ? ["", "", "", "", ""]
         : [Num(w.ReferenceWords), Num(w.Substitutions), Num(w.Deletions), Num(w.Insertions), Num(Math.Round(w.Rate, 4))];
+
+    // ---- answer cut-offs (GAD-T470)
+
+    /// <summary>
+    /// cut_off_watched, cut_off, cut_off_resume_s for one answer (GAD-T462's measure): "1" in cut_off_watched when the spoken
+    /// answer was watched for a cut-off, then cut_off 1 or 0, and the seconds to the student speaking again when it was cut off.
+    /// It is a voice measurement, so all three are blank wherever voice measurements may not be exported (off for the
+    /// organization, an EU/EEA organization or student, or this answer marked unmeasured), for a typed answer, and for an answer
+    /// recorded before the measure existed.
+    /// </summary>
+    public static IReadOnlyList<string> CutOffCells(string? answerMode, IReadOnlyDictionary<string, double>? metrics, bool voiceAllowed)
+    {
+        if (!voiceAllowed || answerMode != "voice" || metrics is null || metrics.ContainsKey(VoiceStrain.OffKey)
+            || AnswerCutOff.Read(metrics) is not { } cut)
+            return ["", "", ""];
+        return ["1", Bool(cut), AnswerCutOff.ResumeSeconds(metrics) is { } s ? Num(s) : ""];
+    }
 
     // ---- formatting
 
