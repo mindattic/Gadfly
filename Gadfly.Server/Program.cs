@@ -119,6 +119,10 @@ builder.Services.AddJobHandler<SourceProcessingJob>();
 builder.Services.AddSingleton<SessionOrchestrator>();
 builder.Services.AddScoped<HubIntegrityRecorder>();
 builder.Services.AddScoped<Gadfly.Server.Integrity.IntegrityRecorder>();
+// A session a student abandons outright (no pause, never comes back) is closed once well past its own deadline (GAD-T306).
+builder.Services.AddScoped<StaleSessionSweep>();
+builder.Services.AddJobHandler<StaleSessionJob>();
+builder.Services.AddHostedService<StaleSessionScheduler>();
 builder.Services.AddSignalR(o => o.MaximumReceiveMessageSize = 256 * 1024);
 // Voice exam room (GAD-T53): speech recognition relay and the examiner avatar, behind Gadfly:Voice:Mode (mock | live | off).
 builder.AddVoiceExam();

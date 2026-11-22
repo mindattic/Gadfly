@@ -86,6 +86,9 @@ public sealed class LiveSessionService(GadflyDbContext db, ITenantContext tenant
     public const string ResumedAction = AuditPrefix + "resumed";
     public const string EndedAction = AuditPrefix + "ended";
     public const string NoticeAction = AuditPrefix + "notice";
+    /// <summary>Written by <see cref="Sessions.StaleSessionSweep"/> (GAD-T306), not by a staff member: an abandoned session closed on
+    /// its own once it sat well past its deadline. Shares the staff-action prefix so it appears on the same review timeline.</summary>
+    public const string AutoClosedAction = AuditPrefix + "auto-closed";
 
     /// <summary>The most extra time one action can add.</summary>
     public const int MaxExtendMinutesPerAction = 60;
@@ -330,9 +333,10 @@ public sealed class LiveSessionService(GadflyDbContext db, ITenantContext tenant
             ResumedAction => ("Staff resumed the exam", "The paused time was added back.", a.Reason),
             EndedAction => ("Staff ended the exam", "Ended early from the live monitor; the answers so far were submitted and graded as usual.", a.Reason),
             NoticeAction => ("Staff sent the student a notice", Field("text") is { } t ? $"“{t}”" : null, (string?)null),
+            AutoClosedAction => ("Closed automatically", "Nobody came back to it and it sat well past its own time limit; graded as usual.", a.Reason),
             _ => ("Staff action", a.Action, a.Reason),
         };
-        return new StaffActionView(a.At, label, detail, reason, byName ?? "(unknown)");
+        return new StaffActionView(a.At, label, detail, reason, byName ?? (a.Action == AutoClosedAction ? "System (automatic)" : "(unknown)"));
     }
 
     /// <summary>A span as whole minutes in words ("1 minute", "25 minutes"); under a minute reads "less than a minute".</summary>
