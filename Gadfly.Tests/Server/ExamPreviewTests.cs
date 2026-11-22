@@ -1,6 +1,7 @@
 using Gadfly.Engine;
 using Gadfly.Server.Admin;
 using Gadfly.Server.Data;
+using Gadfly.Server.Sources;
 using Gadfly.Server.Tenancy;
 using Gadfly.Sources;
 using Microsoft.EntityFrameworkCore;
@@ -88,7 +89,11 @@ public class ExamPreviewTests : ServerTest
     public async Task AnExamWithoutAConceptMap_SaysToProcessTheSourceFirst()
     {
         var org = await Seed.OrganizationAsync();
-        var exam = new Exam { OrganizationId = org, CollectionId = Guid.NewGuid(), Title = "Unprocessed", Status = ExamStatus.Draft, PolicyJson = "{}", CreatedAt = DateTimeOffset.UtcNow };
+        // A real source collection (an exam must reference one: FK_Exams_SourceCollections_CollectionId), never processed, so no concept map.
+        var collectionId = Guid.NewGuid();
+        await using (var db = OrgDb(org))
+            await new SqlSourceStore(db, org, Guid.Empty).EnsureCollectionAsync(collectionId.ToString(), "Unprocessed source");
+        var exam = new Exam { OrganizationId = org, CollectionId = collectionId, Title = "Unprocessed", Status = ExamStatus.Draft, PolicyJson = "{}", CreatedAt = DateTimeOffset.UtcNow };
         await using (var db = OrgDb(org))
         {
             db.Exams.Add(exam);
