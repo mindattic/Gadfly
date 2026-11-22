@@ -32,6 +32,19 @@ public sealed class VoiceHubFilter(VoiceGrants grants, Diagnostics.ApiCallRecord
         if (invocation.Hub is AvatarSpeechHub && invocation.HubMethodName == nameof(AvatarSpeechHub.Speak)
             && !grants.MaySpeak(user, invocation.HubMethodArguments.FirstOrDefault() as string))
             throw new HubException("The examiner can only say what the exam asked.");
+        // Vocabulary hints and the spoken language are computed server-side from the exam itself (GAD-T357, GAD-T358) and
+        // never trusted from the browser: a StartSession call may ask for the language the exam specifies and any subset
+        // of its own vocabulary, nothing else.
+        if (invocation.Hub is MindAttic.SpeechRecognition.AspNetCore.SpeechRecognitionHub
+            && invocation.HubMethodName == nameof(MindAttic.SpeechRecognition.AspNetCore.SpeechRecognitionHub.StartSession)
+            && invocation.HubMethodArguments.FirstOrDefault() is MindAttic.SpeechRecognition.AspNetCore.StartSessionRequest request)
+        {
+            var allowedLanguage = grants.AllowedLanguage(user);
+            if (allowedLanguage is not null && !string.Equals(request.Language, allowedLanguage, StringComparison.OrdinalIgnoreCase))
+                throw new HubException("This exam's spoken language is set by the exam, not the browser.");
+            if (!grants.IsVocabularyAllowed(user, request.Keyterms))
+                throw new HubException("Vocabulary hints must come from the exam itself.");
+        }
         return Timed(user, invocation, next);
     }
 

@@ -23,6 +23,13 @@ public sealed class VoiceGrants(TimeProvider clock)
         /// <summary>Exam rooms currently holding this grant.</summary>
         public int Rooms { get; set; } = 1;
         public Dictionary<string, DateTimeOffset> Texts { get; } = new(StringComparer.Ordinal);
+        /// <summary>
+        /// The exam's own vocabulary and spoken language (GAD-T358, GAD-T357), computed server-side by
+        /// <see cref="VoiceVocabulary"/> when the exam room arms the student: what the recognizer may be asked to use as
+        /// keyterm hints. Never set from anything the browser sends.
+        /// </summary>
+        public HashSet<string> Vocabulary { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public string? Language { get; set; }
     }
 
     private readonly ConcurrentDictionary<(Guid User, Guid Session), Armed> _armed = new();
@@ -87,6 +94,66 @@ public sealed class VoiceGrants(TimeProvider clock)
             if (until > now && until > bestUntil) (best, bestUntil) = ((a.Organization, k.Session), until);
         }
         return best;
+    }
+
+    /// <summary>
+    /// Records the exam's own vocabulary and spoken language for this student's session grant (GAD-T358, GAD-T357),
+    /// computed server-side (<see cref="VoiceVocabulary"/>) by the exam room once it has armed the student. Does nothing
+    /// if the session isn't (or is no longer) armed.
+    /// </summary>
+    public void SetVocabulary(Guid user, Guid session, string? language, IReadOnlyList<string> vocabulary)
+    {
+        if (!_armed.TryGetValue((user, session), out var a)) return;
+        lock (a)
+        {
+            a.Language = string.IsNullOrWhiteSpace(language) ? null : language.Trim();
+            a.Vocabulary.Clear();
+            foreach (var term in vocabulary) if (!string.IsNullOrWhiteSpace(term)) a.Vocabulary.Add(term.Trim());
+        }
+    }
+
+    /// <summary>
+    /// The spoken language the exam expects for this student's most recently armed grant, or null when any (the
+    /// recognizer then detects it). Used to refuse a <c>StartSession</c> call that asks for a different one
+    /// (<see cref="VoiceHubFilter"/>): the browser can request only what the exam itself specifies.
+    /// </summary>
+    public string? AllowedLanguage(Guid user)
+    {
+        var now = clock.GetUtcNow();
+        string? language = null;
+        var bestUntil = DateTimeOffset.MinValue;
+        foreach (var (k, a) in _armed)
+        {
+            if (k.User != user) continue;
+            DateTimeOffset until;
+            string? lang;
+            lock (a) { until = a.Until; lang = a.Language; }
+            if (until > now && until > bestUntil) (language, bestUntil) = (lang, until);
+        }
+        return language;
+    }
+
+    /// <summary>
+    /// True when every one of <paramref name="keyterms"/> is part of the vocabulary this student's armed grant computed
+    /// from their own exam (GAD-T358): a <c>StartSession</c> call may ask the recognizer to use any subset of it, but
+    /// never a term the server did not itself put there. A student with no armed grant, or an exam with no computed
+    /// vocabulary at all, allows nothing (an empty request still passes: no hints is always safe).
+    /// </summary>
+    public bool IsVocabularyAllowed(Guid user, IEnumerable<string>? keyterms)
+    {
+        if (keyterms is null) return true;
+        var now = clock.GetUtcNow();
+        foreach (var term in keyterms)
+        {
+            if (string.IsNullOrWhiteSpace(term)) continue;
+            var allowed = _armed.Any(kv =>
+            {
+                if (kv.Key.User != user) return false;
+                lock (kv.Value) return kv.Value.Until > now && kv.Value.Vocabulary.Contains(term.Trim());
+            });
+            if (!allowed) return false;
+        }
+        return true;
     }
 
     public bool MaySpeak(Guid user, string? text)
