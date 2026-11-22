@@ -36,8 +36,18 @@ public static class EmailTemplates
     private const string Panel = "#ffffff";
     private const string Line = "#dedbd2";
 
-    public static RenderedEmail Render(string kind, EmailData d)
+    /// <param name="language">
+    /// The recipient's language (GAD-T544): "ko" renders the student emails in Korean (the staff-only test email stays English);
+    /// anything else, English as before.
+    /// </param>
+    public static RenderedEmail Render(string kind, EmailData d, string? language = null)
     {
+        if (Gadfly.Engine.ExamLanguage.IsKorean(language) && Korean(kind, d) is { } ko)
+        {
+            var koHtml = Wrap(d.OrganizationName, ko.Lead, ko.Body, ko.Action.Label ?? d.ActionLabel, ko.Action.Url ?? d.ActionUrl, korean: true);
+            var koText = PlainText(d.OrganizationName, ko.Lead, ko.Body, ko.Action.Label ?? d.ActionLabel, ko.Action.Url ?? d.ActionUrl);
+            return new RenderedEmail(ko.Subject, koHtml, koText);
+        }
         var (subject, lead, body, action) = kind switch
         {
             EmailKinds.ExamAssigned => (
@@ -138,6 +148,72 @@ public static class EmailTemplates
     public static string? AbsoluteActionUrl(string? url, IConfiguration configuration) =>
         AbsoluteActionUrl(url, PublicBaseUrlKeys.Select(k => configuration[k]).FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)));
 
+    /// <summary>
+    /// The student emails in Korean (GAD-T544): the same facts and the same single action, in polite 합쇼체/해요체; terminology per
+    /// docs/LOCALIZATION.md. Null for a kind with no Korean version (it is then sent in English).
+    /// </summary>
+    private static (string Subject, string Lead, string Body, (string? Label, string? Url) Action)? Korean(string kind, EmailData d)
+    {
+        string Title() => string.IsNullOrWhiteSpace(d.ExamTitle) ? "시험" : d.ExamTitle!;
+        string KoWhen(DateTimeOffset at) => at.UtcDateTime.ToString("yyyy년 M월 d일 HH:mm", System.Globalization.CultureInfo.GetCultureInfo("ko-KR")) + " UTC";
+        return kind switch
+        {
+            EmailKinds.ExamAssigned => (
+                $"새 시험이 배정되었습니다: {Title()}",
+                $"{d.OrganizationName}에서 시험을 배정했습니다.",
+                Paragraphs(
+                    $"<strong>{Esc(Title())}</strong> 시험이 내 시험 목록에 추가되었습니다.",
+                    d.DueAtUtc is { } due ? $"마감: {KoWhen(due)}" : null,
+                    d.AttemptsAllowed is { } n ? $"응시 기회는 {n}회입니다." : null),
+                ("내 시험 열기", d.ActionUrl)),
+            EmailKinds.Reminder => (
+                $"알림: {Title()} 마감이 다가오고 있습니다",
+                $"{d.OrganizationName}에서 보내는 알림입니다.",
+                Paragraphs(
+                    $"<strong>{Esc(Title())}</strong> 시험의 마감이 {(d.DueAtUtc is { } due ? KoWhen(due) + "입니다" : "곧입니다")}. 아직 시험을 마치지 않으셨어요.",
+                    "이미 응시하셨다면 따로 하실 일은 없습니다."),
+                ("내 시험 열기", d.ActionUrl)),
+            EmailKinds.ResultReleased => (
+                $"{Title()} 결과가 나왔습니다",
+                $"{d.OrganizationName}에서 결과를 공개했습니다.",
+                Paragraphs(
+                    $"<strong>{Esc(Title())}</strong> 시험의 결과를 확인하실 수 있습니다.",
+                    d.Score is { } s ? $"결과: <strong>{Esc(s)}</strong>" : null,
+                    "잘못된 부분이 있다면 결과 페이지에서 이의 신청을 하실 수 있습니다."),
+                ("내 결과 보기", d.ActionUrl)),
+            EmailKinds.AppealReceived => (
+                $"{Title()} 이의 신청이 접수되었습니다",
+                "이의 신청이 제출되었습니다.",
+                Paragraphs(
+                    $"<strong>{Esc(Title())}</strong>에 대한 이의 신청이 접수되어 담당 교수자의 검토를 기다리고 있습니다.",
+                    "검토하는 동안에도 이전에 공개된 결과는 계속 볼 수 있습니다. 결정이 나면 다시 이메일로 알려 드리겠습니다."),
+                (null, null)),
+            EmailKinds.AppealDecided => (
+                $"{Title()} 이의 신청 결과가 나왔습니다",
+                "이의 신청에 대한 결정이 내려졌습니다.",
+                Paragraphs(
+                    $"<strong>{Esc(Title())}</strong>에 대한 이의 신청 결과: <strong>{Esc(d.AppealOutcome ?? "처리 완료")}</strong>",
+                    d.AppealResolution is { Length: > 0 } r ? Esc(r) : null),
+                ("내 결과 보기", d.ActionUrl)),
+            EmailKinds.AttemptReset => (
+                $"{Title()} 응시 기록이 초기화되었습니다",
+                $"{d.OrganizationName}에서 시험을 초기화했습니다.",
+                Paragraphs(
+                    $"기관에서 <strong>{Esc(Title())}</strong>의 응시 기록을 초기화했습니다. 이전의 답변, 점수, 성적은 더 이상 반영되지 않습니다.",
+                    "처음부터 다시 응시하실 수 있습니다."),
+                ("내 시험 열기", d.ActionUrl)),
+            EmailKinds.LmsLink => (
+                "LMS 로그인을 Gadfly 계정과 연결해 주세요",
+                $"{d.OrganizationName}: 본인 확인이 필요합니다.",
+                Paragraphs(
+                    "누군가 이 이메일 주소로 학교 학습 관리 시스템(LMS)에서 Gadfly 시험을 열고, 새 계정 대신 이미 가지고 계신 Gadfly 계정을 사용하겠다고 요청했습니다.",
+                    "본인이 요청하셨다면 24시간 안에 <strong>같은 브라우저에서</strong> 아래 링크를 열어 주세요. 그 뒤로는 수업에서 Gadfly를 열면 이 계정으로 연결됩니다.",
+                    "본인이 아니라면 이 이메일은 무시하셔도 됩니다. 아무것도 바뀌지 않으며, 링크는 저절로 만료됩니다."),
+                ("LMS 로그인 연결하기", d.ActionUrl)),
+            _ => ((string Subject, string Lead, string Body, (string? Label, string? Url) Action)?)null,
+        };
+    }
+
     private static string Req(string? s) => string.IsNullOrWhiteSpace(s) ? "your exam" : s;
     private static string Esc(string s) => WebUtility.HtmlEncode(s);
     private static string When(DateTimeOffset at) => at.UtcDateTime.ToString("d MMM yyyy HH:mm") + " UTC";
@@ -146,8 +222,11 @@ public static class EmailTemplates
         string.Join("", lines.Where(l => !string.IsNullOrWhiteSpace(l))
             .Select(l => $"<p style=\"margin:0 0 .9em;color:{Ink};font-size:15px;line-height:1.55\">{l}</p>"));
 
-    private static string Wrap(string organizationName, string lead, string bodyHtml, string? actionLabel, string? actionUrl)
+    private static string Wrap(string organizationName, string lead, string bodyHtml, string? actionLabel, string? actionUrl, bool korean = false)
     {
+        var footer = korean
+            ? $"이 메일은 {Esc(organizationName)}을(를) 대신해 Gadfly가 자동으로 보낸 메일입니다. 받을 예정이 없었다면 무시하셔도 됩니다."
+            : $"This is an automated message from Gadfly on behalf of {Esc(organizationName)}. If you weren't expecting it, you can ignore it.";
         var button = actionLabel is { Length: > 0 } && actionUrl is { Length: > 0 }
             ? $"""
                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:1.1em 0 .2em">
@@ -159,7 +238,7 @@ public static class EmailTemplates
             : "";
         return $"""
                 <!doctype html>
-                <html>
+                <html lang="{(korean ? "ko" : "en")}">
                 <body style="margin:0;padding:0;background:{Bg};font-family:-apple-system,'Segoe UI',system-ui,sans-serif">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{Bg};padding:24px 0">
                     <tr><td align="center">
@@ -174,7 +253,7 @@ public static class EmailTemplates
                           {button}
                         </td></tr>
                         <tr><td style="padding:16px 28px;border-top:1px solid {Line};color:{Muted};font-size:12px">
-                          This is an automated message from Gadfly on behalf of {Esc(organizationName)}. If you weren't expecting it, you can ignore it.
+                          {footer}
                         </td></tr>
                       </table>
                     </td></tr>

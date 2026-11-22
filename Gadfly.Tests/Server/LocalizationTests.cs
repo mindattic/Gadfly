@@ -143,6 +143,20 @@ public class LocalizationTests
         Assert.That(Gadfly.Server.Student.PracticeInterview.SoundsLikeIDontKnow("서울입니다"), Is.False);
     }
 
+    /// <summary>GAD-T544: student emails render in Korean for a Korean-primary recipient; English stays English.</summary>
+    [Test]
+    public void StudentEmails_RenderInKorean_OnlyWhenAsked()
+    {
+        var d = new Gadfly.Server.Notifications.EmailData("Org", "Kim", "Ethics 101", new DateTimeOffset(2026, 12, 1, 9, 0, 0, TimeSpan.Zero), 2, ActionUrl: "https://x/my-exams");
+        var ko = Gadfly.Server.Notifications.EmailTemplates.Render(Gadfly.Server.Notifications.EmailKinds.ExamAssigned, d, "ko");
+        var en = Gadfly.Server.Notifications.EmailTemplates.Render(Gadfly.Server.Notifications.EmailKinds.ExamAssigned, d);
+        Assert.That(ko.Subject, Does.Contain("Ethics 101").And.Contain("배정"));
+        Assert.That(ko.Html, Does.Contain("lang=\"ko\"").And.Contain("2026년 12월 1일 09:00 UTC").And.Contain("응시 기회는 2회"));
+        Assert.That(ko.Text, Does.Contain("내 시험 열기: https://x/my-exams"));
+        Assert.That(en.Subject, Is.EqualTo("Ethics 101 has been assigned to you"));
+        Assert.That(Gadfly.Server.Notifications.EmailTemplates.Render(Gadfly.Server.Notifications.EmailKinds.Test, d, "ko").Subject, Is.EqualTo("Gadfly test email"));
+    }
+
     [Test]
     public void CookieValue_NamesTheFullCulture() =>
         Assert.That(LocalizationSetup.CookieValue("ko"), Is.EqualTo("c=ko-KR|uic=ko-KR"));
