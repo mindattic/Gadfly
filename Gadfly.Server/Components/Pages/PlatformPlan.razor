@@ -1,0 +1,197 @@
+@page "/platform/organizations/plan/{Id:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.SuperAdmin)]
+@using System.ComponentModel.DataAnnotations
+@using Gadfly.Server.Data
+@using Gadfly.Server.Platform
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+
+@* A platform admin sets one organization's plan, limits and renewal date (GAD-T309/GAD-T370). *@
+
+<PageTitle>@(orgName ?? "Organization") plan · Gadfly Exams</PageTitle>
+<p class="hint"><a href="platform/organizations">&larr; Customer organizations</a></p>
+<h1>@(orgName ?? "Organization")'s plan</h1>
+
+@if (form is null)
+{
+    <p class="hint">Loading&hellip;</p>
+}
+else
+{
+    @if (status is not null)
+    {
+        <div class="stat-tiles">
+            <div class="stat @(status.StaffSeatsBlocked ? "over" : "")">
+                <span class="label">Staff seats</span>
+                <span class="value">@status.StaffSeatsUsed / @status.StaffSeatLimit</span>
+                <span class="hint">@(status.StaffSeatsBlocked ? "at the limit" : status.StaffSeatsWarning ? "80% used" : "in use")</span>
+            </div>
+            <div class="stat @(status.StudentSeatsBlocked ? "over" : "")">
+                <span class="label">Student seats</span>
+                <span class="value">@status.StudentSeatsUsed / @status.StudentSeatLimit</span>
+                <span class="hint">@(status.StudentSeatsBlocked ? "at the limit" : status.StudentSeatsWarning ? "80% used" : "in use")</span>
+            </div>
+            <div class="stat @(status.ExamsBlocked ? "over" : "")">
+                <span class="label">Exams this period</span>
+                <span class="value">@status.ExamsUsedThisPeriod@(status.MonthlyExamAllowance is { } cap ? $" / {cap}" : "")</span>
+                <span class="hint">
+                    @(status.IsTrial ? $"trial period from {status.PeriodStart:yyyy-MM-dd}" : $"since {status.PeriodStart:yyyy-MM-dd}")
+                    @(status.TrialExpired ? " — trial has ended" : "")
+                </span>
+            </div>
+        </div>
+    }
+
+    <EditForm Model="form" OnValidSubmit="SaveAsync" FormName="platform-plan" class="panel">
+        <DataAnnotationsValidator />
+        <h2>Plan</h2>
+        <label>Plan
+            <InputSelect @bind-Value="form.Plan">
+                @foreach (var p in PlanCatalog.All)
+                {
+                    <option value="@p">@p</option>
+                }
+            </InputSelect>
+        </label>
+        <button type="button" class="link" @onclick="UseDefaults">Use @(form.Plan)'s usual numbers</button>
+
+        <h2>Seats</h2>
+        <label>Staff seats (owners, admins, instructors, examiners, second reviewers)
+            <InputNumber @bind-Value="form.StaffSeatLimit" min="0" />
+        </label>
+        <ValidationMessage For="() => form.StaffSeatLimit" class="error" />
+        <label>Student seats
+            <InputNumber @bind-Value="form.StudentSeatLimit" min="0" />
+        </label>
+        <ValidationMessage For="() => form.StudentSeatLimit" class="error" />
+
+        <h2>Exam allowance</h2>
+        <label>Exams allowed per period (empty = no limit)
+            <InputNumber @bind-Value="form.MonthlyExamAllowance" min="0" />
+        </label>
+        <p class="hint">For Trial, this is the one-off total over the 30-day trial window below. For a paid plan, it renews every calendar month.</p>
+
+        <h2>Trial and renewal</h2>
+        <label>Trial started (only meaningful while the plan is Trial)
+            <InputDate @bind-Value="form.TrialStartedAt" />
+        </label>
+        <label>Renewal date (shown to the owner; informational for a paid plan)
+            <InputDate @bind-Value="form.PlanRenewsAt" />
+        </label>
+
+        <h2>Note</h2>
+        <label>Note (e.g. a Custom plan's agreed terms)
+            <InputTextArea @bind-Value="form.PlanNote" rows="3" />
+        </label>
+        <ValidationMessage For="() => form.PlanNote" class="error" />
+
+        <button type="submit" disabled="@busy">Save plan</button>
+        @if (message is not null)
+        {
+            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+        }
+    </EditForm>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private sealed class Form
+    {
+        public string Plan { get; set; } = PlanCatalog.Trial;
+
+        [Range(0, 100000, ErrorMessage = "Must be zero or more.")]
+        public int StaffSeatLimit { get; set; }
+
+        [Range(0, 1000000, ErrorMessage = "Must be zero or more.")]
+        public int StudentSeatLimit { get; set; }
+
+        [Range(0, 10000000, ErrorMessage = "Must be zero or more.")]
+        public int? MonthlyExamAllowance { get; set; }
+
+        public DateTime? TrialStartedAt { get; set; }
+        public DateTime? PlanRenewsAt { get; set; }
+
+        [StringLength(4000, ErrorMessage = "At most 4,000 characters.")]
+        public string? PlanNote { get; set; }
+    }
+
+    private string? orgName;
+    private Form? form;
+    private PlanStatus? status;
+    private string? message;
+    private bool ok, busy;
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        using var scope = Scopes.CreateSystemScope();   // platform staff act across organizations (GAD-T370)
+        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+        orgName = await db.Organizations.AsNoTracking().Where(o => o.Id == Id).Select(o => o.Name).FirstOrDefaultAsync();
+        var row = await db.OrganizationSettings.AsNoTracking().FirstOrDefaultAsync(s => s.OrganizationId == Id);
+        form = new Form
+        {
+            Plan = row is null || !PlanCatalog.IsValid(row.Plan) ? PlanCatalog.Trial : row.Plan,
+            StaffSeatLimit = row?.StaffSeatLimit ?? PlanCatalog.DefaultsFor(PlanCatalog.Trial).StaffSeats,
+            StudentSeatLimit = row?.StudentSeatLimit ?? PlanCatalog.DefaultsFor(PlanCatalog.Trial).StudentSeats,
+            MonthlyExamAllowance = row?.MonthlyExamAllowance ?? PlanCatalog.DefaultsFor(PlanCatalog.Trial).MonthlyExams,
+            TrialStartedAt = row?.TrialStartedAt?.UtcDateTime,
+            PlanRenewsAt = row?.PlanRenewsAt?.UtcDateTime,
+            PlanNote = row?.PlanNote,
+        };
+        status = await scope.ServiceProvider.GetRequiredService<PlanEnforcement>().StatusAsync(db, Id);
+    }
+
+    private void UseDefaults()
+    {
+        if (form is null) return;
+        var d = PlanCatalog.DefaultsFor(form.Plan);
+        form.StaffSeatLimit = d.StaffSeats;
+        form.StudentSeatLimit = d.StudentSeats;
+        form.MonthlyExamAllowance = d.MonthlyExams;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (form is null || busy) return;
+        busy = true;
+        message = null;
+        try
+        {
+            using var scope = Scopes.CreateSystemScope();
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            var row = await db.OrganizationSettings.FirstOrDefaultAsync(s => s.OrganizationId == Id);
+            if (row is null) db.OrganizationSettings.Add(row = new OrganizationSettings { OrganizationId = Id });
+            var now = Clock.GetUtcNow();
+            var before = new { row.Plan, row.StaffSeatLimit, row.StudentSeatLimit, row.MonthlyExamAllowance, row.TrialStartedAt, row.PlanRenewsAt };
+            row.Plan = PlanCatalog.IsValid(form.Plan) ? form.Plan : PlanCatalog.Trial;
+            row.StaffSeatLimit = Math.Max(0, form.StaffSeatLimit);
+            row.StudentSeatLimit = Math.Max(0, form.StudentSeatLimit);
+            row.MonthlyExamAllowance = form.MonthlyExamAllowance is { } n ? Math.Max(0, n) : null;
+            row.TrialStartedAt = form.TrialStartedAt is { } t ? new DateTimeOffset(DateTime.SpecifyKind(t, DateTimeKind.Utc)) : null;
+            row.PlanRenewsAt = form.PlanRenewsAt is { } r ? new DateTimeOffset(DateTime.SpecifyKind(r, DateTimeKind.Utc)) : null;
+            row.PlanNote = string.IsNullOrWhiteSpace(form.PlanNote) ? null : form.PlanNote.Trim();
+            row.UpdatedAt = now;
+            db.AuditEvents.Add(new AuditEvent
+            {
+                OrganizationId = Id, ActorUserId = Tenant.UserId, ActorRole = "PlatformAdmin", Action = "platform.plan.changed",
+                EntityType = "OrganizationSettings", EntityId = Id.ToString(), BeforeJson = System.Text.Json.JsonSerializer.Serialize(before),
+                AfterJson = System.Text.Json.JsonSerializer.Serialize(new { row.Plan, row.StaffSeatLimit, row.StudentSeatLimit, row.MonthlyExamAllowance, row.TrialStartedAt, row.PlanRenewsAt }),
+                At = now,
+            });
+            await db.SaveChangesAsync();
+            ok = true;
+            message = "Plan saved.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            message = "The plan could not be saved: " + ex.Message;
+        }
+        finally { busy = false; }
+    }
+}
