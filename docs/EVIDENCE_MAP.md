@@ -68,6 +68,10 @@ only from Apply, and each Apply question carries a transfer label), GAD-T267 (ea
 follow-ups it received, and `SessionPolicy.MinSummativeObjectives`, 4 by default, sets the fewest objectives an
 examination must cover for summative use). The figure of four is a setting, not an estimate: no source gives it as
 enough for any target reliability, and only a double-marked pilot can (ElenchusAtScale, correction 38).
+`gadfly reliability <grades.csv>` does that estimate (GAD-T443; ElenchusAtScale 3.7, 7.1): from a pilot in which every
+rater marks every student on every objective, it estimates the student, objective, rater and interaction variance
+components and reports the fewest objectives whose average reaches a chosen reliability (0.8 by default), to set the
+minimum from (docs/PILOT.md).
 
 **Blueprint safeguards (GAD-T421 audit).**
 - No introspection questions (GAD-T445, prompt set v9; ElenchusAtScale 2.3.2). People's reports of how they reached an
