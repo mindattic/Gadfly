@@ -55,6 +55,9 @@ export function createPresenter(avatar, stage, caption, cfg, onPortrait) {
     const on = (target, type, fn, opts) => { if (!target) return; target.addEventListener(type, fn, opts); p.listeners.push(() => target.removeEventListener(type, fn, opts)); };
 
     on(document, "visibilitychange", () => { if (document.hidden) pause(p, "hidden"); else resume(p, "hidden"); });
+    // Made while the tab is hidden (the 3D examiner taking over from the portrait in a background tab, or a page opened there):
+    // starts paused, or her next question played unheard behind the tab and showing it again resumed nothing (GAD-T316).
+    if (document.hidden) pause(p, "hidden");
     on(window, "resize", () => { p.mouthGeo = null; });
     // The stage also changes size without the window doing so: it fills the height the exam room leaves it (GAD-T416).
     if (stage && typeof ResizeObserver === "function") {

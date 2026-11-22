@@ -207,7 +207,10 @@ async function start() {
         if (S !== s || !s.running) return;
         // Typed answers (GAD-T260) need no speech recognizer: only the examiner's own hub below.
         if (!s.cfg.typed) {
-        s.speechConn =new signalR.HubConnectionBuilder().withUrl(SPEECH_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
+        const speechConn = s.speechConn = new signalR.HubConnectionBuilder().withUrl(SPEECH_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
+        // A connection this room has already let go (stop(), then Try again) must not act on the new one: its late close used to
+        // report "lost" and pause the exam again, and a late reconnect called into a field stop() had nulled (GAD-T316).
+        const current = () => S === s && s.running && s.speechConn === speechConn;
         s.speechConn.on("partial", (t) => {
             // Stable partials (GAD-T360): the shown text only shrinks after a short hold, so a momentary correction that
             // immediately regrows never flickers the line the student is watching.
@@ -222,17 +225,21 @@ async function start() {
         // A dropped connection retries a few times on its own (GAD-T306) before this room gives up and asks the
         // student to press Try again: a clear status either way, never a silent stall. Audio and commits captured while it
         // is down are queued, not lost (GAD-T360, below): the mic keeps running and nothing the student says is dropped.
-        s.speechConn.onreconnecting(() => { s.hubUp = false; status("Reconnecting…"); });
+        s.speechConn.onreconnecting(() => { if (!current()) return; s.hubUp = false; status("Reconnecting…"); });
         s.speechConn.onreconnected(async () => {
+            if (!current()) return;
             try {
-                await s.speechConn.invoke("StartSession", startSessionArgs(s));
+                await speechConn.invoke("StartSession", startSessionArgs(s));
+                if (!current()) return;
                 s.hubUp = true;
                 await replayQueueAsync(s);
-                status(listenText(s));
+                // What the room is doing now, not always "Listening": a reconnect during a question, a wait filler or the
+                // judging wait must not tell the student to answer (GAD-T316).
+                status(roomStatus(s));
             }
-            catch { problem("hub", "The connection to speech recognition was lost.", true); }
+            catch { if (current()) problem("hub", "The connection to speech recognition was lost.", true); }
         });
-        s.speechConn.onclose(() => { if (s.running) problem("hub", "The connection to speech recognition was lost.", true); });
+        s.speechConn.onclose(() => { if (current()) problem("hub", "The connection to speech recognition was lost.", true); });
         // Bounded (GAD-T306): a connect or an initial invoke that never resolves (no error, no close event to react
         // to) must not leave the room stuck on "Connecting you to the examiner…" forever.
         await withTimeout(s.speechConn.start(), CONNECT_TIMEOUT_MS);
@@ -257,7 +264,8 @@ async function start() {
         stage.appendChild(el);
         s.avatar = el;
         s.presenter = await createPresenter(s, el);
-        s.avatarConn = new signalR.HubConnectionBuilder().withUrl(AVATAR_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
+        const avatarConn = s.avatarConn = new signalR.HubConnectionBuilder().withUrl(AVATAR_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
+        const currentAvatar = () => S === s && s.running && s.avatarConn === avatarConn;
         s.speech = pkg.attachSpeechHub(el, s.avatarConn);
         s.avatarPkg = pkg;
         s.avatarConn.on("speechStart", (m) => { s.utterId = m && m.id; });
@@ -265,8 +273,10 @@ async function start() {
         // A dropped connection to the examiner's own hub (previously not even noticed) retries a few times on its own
         // before this room gives up and asks the student to press Try again, the same as a dropped microphone or
         // camera (GAD-T306): without this, a lost connection here just left the examiner silent and unresponsive.
-        s.avatarConn.onreconnecting(() => status("Reconnecting…"));
-        s.avatarConn.onclose(() => { if (s.running) problem("hub", "The connection to the examiner was lost.", true); });
+        s.avatarConn.onreconnecting(() => { if (currentAvatar()) status("Reconnecting…"); });
+        // Back again: the status line said "Reconnecting…" until something else happened to replace it (GAD-T316).
+        s.avatarConn.onreconnected(() => { if (currentAvatar()) status(roomStatus(s)); });
+        s.avatarConn.onclose(() => { if (currentAvatar()) problem("hub", "The connection to the examiner was lost.", true); });
         // The model starts downloading now, alongside the hub connect below, not after it.
         if (standIn) load3d(s, stage);
         // Bounded (GAD-T306), like the hub above: a connect that never resolves must not hold up the fallback below.
@@ -289,10 +299,14 @@ async function start() {
         s.dotnet.invokeMethodAsync("OnAvatarMode", "none", "The examiner's picture could not start; questions are read out by your browser and shown as text.").catch(() => { });
     }
 
+    // Stopped during the avatar's awaits (a lost device, Try again, the page leaving): telling the page the examiner started would
+    // undo its pause, and a second visibility listener would leak (GAD-T316).
+    if (S !== s || !s.running) return;
     if (!s.cfg.typed) watchVisibility(s);   // a closed laptop lid (GAD-T306) is caught here, not only by a track's own "ended" event
     s.gate = true;
     status("The examiner is ready.");
-    await s.dotnet.invokeMethodAsync("OnVoiceStarted", s.mic ? (s.mic.vadKind || "energy") : "typed");
+    // start() runs detached (void start()): a circuit that went away must not surface as an unhandled rejection (GAD-T316).
+    await s.dotnet.invokeMethodAsync("OnVoiceStarted", s.mic ? (s.mic.vadKind || "energy") : "typed").catch(() => { });
 }
 
 function fail(kind, message, s) {
@@ -466,11 +480,14 @@ export function speak(what, cacheable, style, turn) {
     s.startedAtUnixMs = null;
     s.acoustics.reset();
     resetDelay(s);
-    // A fresh set of segments for this turn: any draft kept from a reload mid-answer (GAD-T306) no longer applies.
+    // A fresh set of segments for this turn: any draft kept from a reload mid-answer (GAD-T306) no longer applies. Except the
+    // first time after a reload: the page asks the same question again, and clearing here wiped the draft before the microphone
+    // opened to restore it, so recovery never happened (GAD-T316). Until that restore is tried, a draft for another turn is
+    // simply not loaded (VoiceDraft.load matches the turn) and the next save replaces it.
     s.turn = turn ?? s.turn;
     s.recovered = false;
     text("recovered", "");
-    VoiceDraft.clear(s.sessionId);
+    if (s.draftChecked) VoiceDraft.clear(s.sessionId);
     drawTranscript();
     status("The examiner is speaking…");
     const token = s.speakToken = {};
@@ -639,16 +656,20 @@ function stopFillAmbience(s) {
     fadeVolume(audio, 0, FILL_AMBIENCE.fadeOutMs, () => { try { audio.pause(); } catch { } });
 }
 
-/** Ramps an <audio> element's volume toward target over ms, then calls done (shared by the wait ambience's fade in/out). */
+/**
+ * Ramps an <audio> element's volume toward target over ms, then calls done (shared by the wait ambience's fade in/out). Timer
+ * steps, not animation frames (GAD-T316): a hidden tab runs no animation frames, so a fade-out begun there never reached its
+ * pause() and the page-turn loop played on behind the next question until the tab was shown again.
+ */
 function fadeVolume(audio, target, ms, done) {
     const from = audio.volume, startedAt = performance.now();
     const step = () => {
-        const t = Math.min(1, (performance.now() - startedAt) / ms);
+        const t = document.hidden && target < from ? 1 : Math.min(1, (performance.now() - startedAt) / ms);
         try { audio.volume = from + (target - from) * t; } catch { return; }
-        if (t < 1) requestAnimationFrame(step);
+        if (t < 1) setTimeout(step, 16);
         else if (done) done();
     };
-    requestAnimationFrame(step);
+    step();
 }
 
 /** Only while quietly waiting on the panel: the gate shut, nothing being asked or answered, the examiner free to talk. */
@@ -738,7 +759,7 @@ export function stop() {
     s.latenciesMs = [];
     s.displayPartial = "";
     if (s.displayShrinkTimer) { clearTimeout(s.displayShrinkTimer); s.displayShrinkTimer = null; }
-    try { s.mic && s.mic.stop(); } catch { }
+    try { s.mic && Promise.resolve(s.mic.stop()).catch(() => { }); } catch { }   // async: a failed close is not an unhandled rejection
     // Hold the connection in a local: the fields are nulled below, before this promise settles, so reading s.speechConn in the
     // callback threw and the speech hub connection was never closed (GAD-T200).
     const speechConn = s.speechConn;
@@ -818,6 +839,9 @@ function remarkHold(s, active) {
         const closed = s.remarkClosedGate;
         s.remarkHold = false;
         s.remarkClosedGate = false;
+        // The answer was taken from her meanwhile ("I don't know", time up): the remark left her idle, and examiner-gaze.js puts an
+        // idle examiner back to "listening", so the eye-contact check went on treating the judging wait as answering (GAD-T316).
+        if (s.running && !s.allowed && !s.speaking && !s.speakToken && !s.fillPlaying && s.avatar && s.avatar.state === "idle") s.avatar.state = "thinking";
         if (!closed || !s.running || !s.gate || !s.allowed || s.speaking) return;   // something else (a question, a send) took over the gate
         s.gate = false;
         if (s.avatar) s.avatar.state = "listening";
@@ -835,6 +859,14 @@ function remarkHold(s, active) {
 function listenText(s) {
     if (s.cfg.typed) return "Type your answer in the box below.";
     return s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.";
+}
+
+/** The status line for whatever the room is doing right now (after a hub reconnect, which interrupted it). */
+function roomStatus(s) {
+    if (s.speaking || s.speakToken || s.remarkHold || s.fillPlaying) return "The examiner is speaking…";
+    if (!s.gate) return listenText(s);
+    if (!s.allowed) return "Thinking about your answer…";
+    return "The examiner is ready.";
 }
 
 function onFinal(seg) {
@@ -920,7 +952,8 @@ function noteCutOff(s) {
     if (!s || s.cutWatch == null) return;
     const ms = performance.now() - s.cutWatch;
     s.cutWatch = null;
-    if (!Number.isFinite(ms) || ms < 0 || ms > CUT_OFF_MS || s.speaking || s.fillPlaying) return;
+    // An eye-contact remark is the examiner talking too (GAD-T316): the microphone may be hearing her, not the student.
+    if (!Number.isFinite(ms) || ms < 0 || ms > CUT_OFF_MS || s.speaking || s.fillPlaying || s.remarkHold) return;
     s.dotnet.invokeMethodAsync("OnAnswerCutOff", Math.round(ms)).catch(() => { });
 }
 
@@ -1084,6 +1117,9 @@ async function submit(immediate) {
     };
     s.gate = true;
     talking(s, false);
+    // She stops listening once the answer is in (GAD-T316): left "listening" until the page's reply, the eye-contact check kept
+    // treating the student as answering, and could fade the screen or start a spoken remark after the answer was already sent.
+    if (s.avatar) s.avatar.state = "thinking";
     status("Sending your answer…");
     // Sent by the silence, not by "Done answering": watch the next few seconds for the student going on (GAD-T462).
     s.cutWatch = immediate ? null : performance.now();
@@ -1097,7 +1133,16 @@ async function submit(immediate) {
         }
     } catch {
         // The answer is still held here: let the student try again.
-        if (S === s) { s.cutWatch = null; s.gate = false; status("That did not go through. Press Done answering to try again."); }
+        // Only while this answer is still wanted (GAD-T316): a question being asked or the room stopped meanwhile must not have the
+        // microphone reopened under it.
+        if (S === s) {
+            s.cutWatch = null;
+            if (s.running && s.allowed && !s.speaking && !s.speakToken && !s.fillPlaying && !s.remarkHold) {
+                s.gate = false;
+                if (s.avatar) s.avatar.state = "listening";
+                status("That did not go through. Press Done answering to try again.");
+            }
+        }
     }
 }
 

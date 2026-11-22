@@ -862,6 +862,9 @@ function remark(g, kind) {
             if (!what || G !== g || !avatar.isConnected) return;
             const speech = await avatarSpeech(g, avatar);
             if (!speech) return;
+            // Still answering after those round trips (GAD-T316): an answer handed in meanwhile (the silence or Done answering)
+            // must not get "Please look at me while you answer" spoken over the judging wait or the next question.
+            if (G !== g || !avatar.isConnected || avatar.dataset.state !== "listening") return;
             // The voice room stops capturing the microphone while the examiner speaks, so the remark isn't transcribed into the answer.
             held = true;
             holdMic(true);
