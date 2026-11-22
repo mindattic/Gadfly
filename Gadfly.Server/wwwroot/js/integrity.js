@@ -261,3 +261,61 @@ export function stop(keepUnsent) {
     }
     if (state === s) state = null;
 }
+
+// ------------------------------------------------------------------------------------------------ leaving the window (GAD-T511)
+// Separate from the integrity notes above, and run for every exam whatever its integrity level: leaving the exam window (the tab
+// hidden, or the window losing focus) for a second or more pauses the exam at once (OnWindowLeft) and, on return, reports how long
+// it lasted (OnWindowBack). Blips under a second (a click into the browser's own chrome) are ignored. Nothing here blocks anything
+// or counts strikes on screen; the server notes each absence and, after several or a long one, asks an instructor to look.
+
+const WINDOW_MIN_AWAY_MS = 1000;
+const WINDOW_PENDING_KEY = "gadfly-window-away-";
+
+let F = null;
+
+/** Starts watching the exam window. dotnet: [JSInvokable] OnWindowLeft() and OnWindowBack(durationMs). */
+export function watchFocus(dotnet, sessionId) {
+    unwatchFocus();
+    const f = F = { dotnet, key: WINDOW_PENDING_KEY + (sessionId || ""), awaySince: null, reported: false, timer: null, cleanup: [] };
+    const on = (target, name, handler) => { target.addEventListener(name, handler); f.cleanup.push(() => target.removeEventListener(name, handler)); };
+    const away = () => {
+        if (F !== f || f.awaySince != null) return;
+        f.awaySince = Date.now();
+        f.timer = setTimeout(() => {
+            if (F !== f || f.awaySince == null) return;
+            f.reported = true;
+            // Kept across a reload or a closed tab while away, so the absence still reaches the server when the room opens again.
+            try { sessionStorage.setItem(f.key, String(f.awaySince)); } catch { }
+            f.dotnet.invokeMethodAsync("OnWindowLeft").catch(() => { });
+        }, WINDOW_MIN_AWAY_MS);
+    };
+    const back = () => {
+        if (F !== f || f.awaySince == null || document.visibilityState === "hidden" || !document.hasFocus()) return;
+        const since = f.awaySince;
+        f.awaySince = null;
+        clearTimeout(f.timer);
+        if (!f.reported) return;
+        f.reported = false;
+        try { sessionStorage.removeItem(f.key); } catch { }
+        f.dotnet.invokeMethodAsync("OnWindowBack", Date.now() - since).catch(() => { });
+    };
+    on(document, "visibilitychange", () => (document.visibilityState === "hidden" ? away() : back()));
+    on(window, "blur", away);
+    on(window, "focus", back);
+    // Away when the page reloaded (or the tab was closed and opened again): report it now, measured to this moment.
+    try {
+        const pending = Number(sessionStorage.getItem(f.key));
+        sessionStorage.removeItem(f.key);
+        if (pending > 0 && Date.now() - pending >= WINDOW_MIN_AWAY_MS) dotnet.invokeMethodAsync("OnWindowBack", Date.now() - pending).catch(() => { });
+    } catch { }
+    if (document.visibilityState === "hidden" || !document.hasFocus()) away();
+    return true;
+}
+
+export function unwatchFocus() {
+    const f = F;
+    if (!f) return;
+    F = null;
+    clearTimeout(f.timer);
+    for (const undo of f.cleanup) { try { undo(); } catch { } }
+}

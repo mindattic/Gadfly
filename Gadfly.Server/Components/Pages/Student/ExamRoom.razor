@@ -71,6 +71,39 @@
         {
             <p class="error" role="alert">This exam is spoken, but the talking examiner isn't turned on on this server, so the exam can't go ahead. Please tell your instructor.</p>
         }
+        @* Leaving the exam window (GAD-T511): a neutral line, never a strike count or a threat. *@
+        @if (windowAway)
+        {
+            <p class="notice exam-window" role="status">@ExamRoomText.WindowAway</p>
+        }
+        else if (windowBackNotice)
+        {
+            <p class="notice exam-window" role="status">@ExamRoomText.WindowBack</p>
+        }
+    }
+
+    @if (reviewNotice && phase is Phase.Answering or Phase.Thinking or Phase.Ended)
+    {
+        @* Several or long absences (GAD-T511): a person decides; the student is told and may explain. Nothing is cancelled. *@
+        <section class="panel wide exam-review-note" aria-labelledby="review-note-title">
+            <h2 id="review-note-title" class="verify-label">@ExamRoomText.ReviewTitle</h2>
+            <p>@ExamRoomText.ReviewBody</p>
+            @if (reviewNoteSent)
+            {
+                <p class="ok" role="status">@ExamRoomText.ReviewNoteThanks</p>
+            }
+            else
+            {
+                <label>
+                    @ExamRoomText.ReviewNoteLabel
+                    <textarea rows="3" maxlength="1000" @bind="reviewNote" @bind:event="oninput"></textarea>
+                </label>
+                <div class="actions">
+                    <button type="button" class="secondary" disabled="@(reviewNoteSending || string.IsNullOrWhiteSpace(reviewNote))" @onclick="SendReviewNoteAsync">@ExamRoomText.ReviewNoteSend</button>
+                    <button type="button" class="link" @onclick="() => reviewNotice = false">@ExamRoomText.ReviewNoteLater</button>
+                </div>
+            }
+        </section>
     }
 
     @switch (phase)
@@ -347,6 +380,7 @@
             StateHasChanged();
             _ = TickAsync();
             WatchReconnect();
+            _ = StartWindowWatchAsync();   // leaving the exam window pauses it (GAD-T511)
         }
         // The "Finish the exam now?" prompt (GAD-T365): focus moves to it the moment it opens, once, so a screen
         // reader user is told it's there instead of having to find it; it resets so the next opening focuses again.
@@ -698,6 +732,7 @@
     {
         stop.Cancel();
         DisposeReconnectWatch();
+        await DisposeWindowWatchAsync();
         ticker?.Dispose();
         if (integrityModule is not null)
         {
