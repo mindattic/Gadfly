@@ -136,7 +136,9 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
             var metrics = ParseMetrics(t.SpeechMetricsJson);
             return new TurnView(t.Id, t.Index, t.ConceptKey, Title(t.ConceptKey), t.Move, t.Question, blinded ? null : t.PlannerReason, t.AskedAt,
                 t.AnswerText, t.AnswerMode, t.AnswerStartedAt, t.AnswerCompletedAt, !string.IsNullOrEmpty(t.AudioRef), blinded ? null : t.MasteryAfter,
-                metrics, jv, contradictions)
+                // The raw voice measurements (pitch, jitter, loudness, pausing) are what the strain summary below is made of: a blind
+                // grader gets neither (GAD-T315).
+                blinded ? new Dictionary<string, double>() : metrics, jv, contradictions)
             {
                 // Voice strain (GAD-T232) is kept from a blinded grader like the planner's reasoning: it must not prime the grade.
                 Strain = blinded || t.AnswerMode != "voice" ? null : Gadfly.Server.Voice.VoiceStrain.Describe(metrics),

@@ -380,7 +380,7 @@ else
     private async Task LoadAsync()
     {
         var scope = Scope;
-        report = await AdminDb.RunAsync(Scopes, Tenant, (_, db) => new AnalyticsService(db, Tenant.OrganizationId!.Value, Clock).BuildAsync(scope));
+        report = await AdminDb.RunAsync(Scopes, Tenant, (_, db) => new AnalyticsService(db, Tenant.OrganizationId!.Value, Clock, Tenant.Role).BuildAsync(scope));
         // Default to the human examiner's levels when any exist, else the AI's.
         source = report.ObjectiveMastery.Any(m => m.Source == LevelSource.Human && m.Total > 0) ? LevelSource.Human : LevelSource.Ai;
     }

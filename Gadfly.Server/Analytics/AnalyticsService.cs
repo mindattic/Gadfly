@@ -90,7 +90,13 @@ public sealed record AnalyticsReport(
 /// Computes the Part 12.3 analytics for one organization. Every query names the organization explicitly on
 /// top of GadflyDbContext's tenant filter. Rows are loaded per scope and aggregated in memory.
 /// </summary>
-public sealed class AnalyticsService(GadflyDbContext db, Guid organizationId, TimeProvider? clock = null)
+/// <remarks>
+/// <paramref name="viewerRole"/> is the caller's role (null: no redaction). A viewer who can enter human scores is a potential
+/// blind examiner (<see cref="Grading.BlindGrading"/>, decision D25): the AI preliminary grades, the exam-time judge's notes and
+/// verdicts and the engine's mastery estimates of sessions whose grading is still blind are left out of what they see, since an
+/// assessment with one session waiting would otherwise show that session's AI levels (GAD-T315).
+/// </remarks>
+public sealed class AnalyticsService(GadflyDbContext db, Guid organizationId, TimeProvider? clock = null, string? viewerRole = null)
 {
     /// <summary>Plan text (Part 12.3, 15.3) shown beside every agreement figure.</summary>
     public const string AgreementCaveat =
@@ -145,6 +151,11 @@ public sealed class AnalyticsService(GadflyDbContext db, Guid organizationId, Ti
             .Select(s => new { s.Id, s.ExamId, s.AssignmentId, s.State, s.StartedAt, s.EndReason }).ToListAsync(ct);
         var sessionIds = sessions.Select(s => s.Id).ToList();
         var sessionExam = sessions.ToDictionary(s => s.Id, s => s.ExamId);
+        // Sessions whose AI and exam-time evaluation is hidden from this viewer (blind grading): counted in completion only.
+        var blind = Grading.BlindGrading.AppliesToRole(viewerRole)
+            ? await Grading.BlindGrading.BlindSessionsAsync(db, organizationId, sessionIds, (clock ?? TimeProvider.System).GetUtcNow(), ct)
+            : [];
+        var openIds = blind.Count == 0 ? sessionIds : sessionIds.Where(id => !blind.Contains(id)).ToList();
 
         // ---- completion
         var completion = exams.Select(e =>
@@ -168,7 +179,7 @@ public sealed class AnalyticsService(GadflyDbContext db, Guid organizationId, Ti
         var objectiveTitle = objectives.ToDictionary(o => o.Id, o => string.IsNullOrWhiteSpace(o.Title) ? o.Key : o.Title);
 
         var aiAll = await db.AiObjectiveGrades.AsNoTracking()
-            .Where(g => g.OrganizationId == organizationId && sessionIds.Contains(g.SessionId))
+            .Where(g => g.OrganizationId == organizationId && openIds.Contains(g.SessionId))
             .Select(g => new { g.Id, g.SessionId, g.ObjectiveId, g.Level, g.Score, g.MaxScore, g.MisconceptionsJson, g.IsMock, g.CreatedAt })
             .ToListAsync(ct);
         var mockExcluded = aiAll.Count(g => g.IsMock);
@@ -197,7 +208,7 @@ public sealed class AnalyticsService(GadflyDbContext db, Guid organizationId, Ti
 
         // ---- engine concept mastery (existing sessions, before objective grading exists)
         var conceptRecords = await db.ConceptMastery.AsNoTracking()
-            .Where(c => c.OrganizationId == organizationId && sessionIds.Contains(c.SessionId))
+            .Where(c => c.OrganizationId == organizationId && openIds.Contains(c.SessionId))
             .Select(c => new { c.SessionId, c.ConceptKey, c.Estimate, c.Status }).ToListAsync(ct);
         var collectionIds = exams.Select(e => e.CollectionId).Distinct().ToList();
         var conceptTitles = (await db.Concepts.AsNoTracking()
@@ -216,7 +227,7 @@ public sealed class AnalyticsService(GadflyDbContext db, Guid organizationId, Ti
 
         // ---- misconceptions: AI grades' identified misconceptions + evidence recorded with stance Misconception
         var evidence = await db.AssessmentEvidence.AsNoTracking()
-            .Where(e => e.OrganizationId == organizationId && sessionIds.Contains(e.SessionId) && e.Stance == EvidenceStance.Misconception)
+            .Where(e => e.OrganizationId == organizationId && openIds.Contains(e.SessionId) && e.Stance == EvidenceStance.Misconception)
             .Select(e => new { e.SessionId, e.ObjectiveId, e.Note }).ToListAsync(ct);
         var mentions = new List<(string Text, Guid ObjectiveId, Guid SessionId, string Source)>();
         foreach (var g in aiLatest.Values)
@@ -296,7 +307,7 @@ public sealed class AnalyticsService(GadflyDbContext db, Guid organizationId, Ti
         // ---- reliability
         var judgments = await (from j in db.Judgments.AsNoTracking()
                                join t in db.SessionTurns.AsNoTracking() on j.TurnId equals t.Id
-                               where j.OrganizationId == organizationId && sessionIds.Contains(t.SessionId)
+                               where j.OrganizationId == organizationId && openIds.Contains(t.SessionId)
                                select new { j.Agreement, j.NeedsHumanReview }).ToListAsync(ct);
         var buckets = new int[5];
         foreach (var j in judgments) buckets[Math.Clamp((int)(j.Agreement * 5), 0, 4)]++;
