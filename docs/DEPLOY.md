@@ -15,7 +15,7 @@ anywhere:
 | Data Protection keys | blob container `gadfly-dp-keys`, Key Vault key `gadfly-dp-protect` | Signs cookies, launch links and webhook secrets |
 | Secrets | Key Vault `kv-tutor-f65744` | Auth pepper, reset key, bootstrap token, LLM and ElevenLabs keys |
 | Deploy | `tools/deploy-azure.ps1` (via MindAttic.Deploy) | Clean export, migrate, publish, zip deploy, health and login smoke checks |
-| Deploy (CI) | `.github/workflows/azure-deploy.yml` | Manual trigger, once the repo secrets exist. **Not** the same as the script: see the note under **Versions** |
+| Deploy (CI) | `.github/workflows/azure-deploy.yml` | Manual trigger, once the repo secrets exist. Runs `tools/deploy-azure.ps1` itself, so it is the same deploy (GAD-T477) |
 
 ## One-time setup
 
@@ -103,10 +103,12 @@ number is the deploy count, not a semantic version.
   deploy the script reported as live but untagged.
 
 The manual GitHub workflow (GitHub → mindattic/Gadfly → Actions → **Build and deploy Gadfly to Azure App Service** →
-Run workflow) builds, migrates and deploys on a runner, but it is **not** equivalent to the script: it doesn't pass
-`GadflyVersion` (the app shows `dev` with no number), doesn't tag `vN`, doesn't check that the app is in mock mode, and
-restarts the app instead of following the Kudu deployment. Use `tools/deploy-azure.ps1` (through MindAttic.Deploy) for
-releases until the workflow is brought in line.
+Run workflow, from `main`) has no deploy steps of its own: it signs in to Azure with the repo secrets and runs
+`tools/deploy-azure.ps1` on a Windows runner (GAD-T477). So a CI deploy gets the same version number and `vN` tag, the
+same mock-mode refusal, migrate-first, Kudu follow-up and health and login checks as a desk deploy. Its **dry run**
+box passes `-DryRun`. It never passes `-AllowLive` or `-AllowUnpushed`; those stay desk decisions. The deploy identity
+needs Website Contributor on the app (it reads `Gadfly__AiMode` and the Kudu log) and its database user; the workflow's
+own token has `contents: write` to push the tag. Change deploy steps in the script only: the workflow just calls it.
 
 The first sign-in on a new deployment is `admin` with the `gadfly-bootstrap-token` password; you're made to change it
 and set up MFA. Then rotate the `gadfly-bootstrap-token` secret to a new random value.
@@ -144,7 +146,6 @@ print it once in the log.
 ## After the first deploy
 
 - Custom domain and certificate (App Service → Custom domains), if wanted.
-- Bring the GitHub workflow in line with the script (version, tag, mock check) before switching its trigger to
-  `push` on `main`.
+- If the GitHub workflow's trigger is ever switched to `push` on `main`, every push becomes a numbered release: think twice.
 - Watch `/healthz/ready` (anonymous) and `/healthz/providers` (SuperAdmin only) for failing checks and LLM keys; see
   [OPERATIONS.md](OPERATIONS.md).

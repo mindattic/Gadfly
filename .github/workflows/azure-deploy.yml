@@ -1,19 +1,30 @@
 name: Build and deploy Gadfly to Azure App Service
 
 # Deploys Gadfly.Server (the Gadfly Exams web app + platform API). GAD-T63, docs/DEPLOY.md.
-#   build    restore, publish Gadfly.Server, build an EF migrations bundle
-#   migrate  apply pending migrations to the Azure SQL database (the deploy step owns DDL; the web app never migrates)
-#   deploy   push the package to the App Service, restart it, wait for /healthz and /login
 #
-# Manual only (workflow_dispatch) until the Azure resources exist: run tools/provision-azure.ps1 first
-# (docs/DEPLOY.md), add the repo secrets AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID, then
-# switch the trigger to push on main if wanted.
+# This workflow does not have its own deploy steps. It signs in to Azure and runs tools/deploy-azure.ps1, the same
+# script MindAttic.Deploy runs, so a CI deploy and a desk deploy are one code path and can never drift apart again
+# (GAD-T477: the old copy here had no V<N> version, no vN tag and no mock-mode check). The script:
+#   refuses a commit not on origin/main and an app whose Gadfly__AiMode is not mock,
+#   exports the commit with git archive, migrates the database first (stops if that fails),
+#   publishes with -p:GadflyVersion=<N>, zip-deploys and follows the Kudu deployment,
+#   waits for /healthz and /login to answer 200, and only then tags the commit vN and pushes the tag.
+# Change the steps in the script, never here.
+#
+# Manual only (workflow_dispatch). Needs the repo secrets AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID and
+# the deploy identity set up per docs/DEPLOY.md (Website Contributor on the app, a user on the Gadfly database that can
+# alter it). Run it from main: the script refuses anything not on origin/main.
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: export, restore, list migrations, publish and zip; migrate, deploy and tag nothing'
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  contents: write          # the script pushes the vN tag after a successful deploy
   id-token: write          # azure/login OIDC
 
 concurrency:
@@ -21,54 +32,38 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  PUBLISH_PROJECT: Gadfly.Server/Gadfly.Server.csproj
-  AZURE_RESOURCE_GROUP: MyApps
-  APP: mindattic-gadfly
-  SQL_SERVER: sql-mindattic-f65744.database.windows.net
-  SQL_DATABASE: Gadfly
   DOTNET_VERSION: '10.x'
 
 jobs:
-  build:
+  deploy:
     runs-on: windows-2025
     steps:
+      - name: Refuse anything but main
+        if: github.ref != 'refs/heads/main'
+        shell: pwsh
+        run: throw "Deploys run from main only (this run is on $env:GITHUB_REF)."
+
+      # Full history and tags: the script checks the commit is on origin/main and numbers the deploy from the vN tags.
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      # MindAttic.* packages come from the git-tracked lib/local-packages feed (no C:\LocalNuGet on a runner).
-      - name: Restore
-        run: dotnet restore ${{ env.PUBLISH_PROJECT }} --ignore-failed-sources
-
-      - name: Publish
-        run: dotnet publish ${{ env.PUBLISH_PROJECT }} -c Release -o publish --no-restore
-
-      - name: Migrations bundle
+      - name: Tools for the script
+        shell: pwsh
         run: |
           dotnet tool install --global dotnet-ef
-          dotnet ef migrations bundle --project Gadfly.Server --configuration Release --self-contained -r win-x64 -o efbundle/efbundle.exe
+          # NuGet.config lists the dev-box feed C:\LocalNuGet; an empty folder keeps restore from failing on a runner.
+          # The MindAttic.* packages come from the git-tracked lib/local-packages feed.
+          New-Item -ItemType Directory -Force C:\LocalNuGet | Out-Null
+          # The script creates an annotated vN tag.
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-      - uses: actions/upload-artifact@v7
-        with:
-          name: gadfly-app
-          path: publish/
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: gadfly-efbundle
-          path: efbundle/
-
-  migrate:
-    runs-on: windows-2025
-    needs: build
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          name: gadfly-efbundle
-          path: efbundle/
-
+      # A dry run signs in too: it lists the database's pending migrations.
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -76,53 +71,13 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # "Active Directory Default" picks up the az login above; the deploy identity is db_ddladmin on Gadfly.
-      - name: Apply migrations
+      # No -AllowLive and no -AllowUnpushed, ever: a live-mode app or an unpushed commit is a desk decision, made by
+      # running the script by hand.
+      - name: Deploy with tools/deploy-azure.ps1
         shell: pwsh
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          $cs = "Server=tcp:$env:SQL_SERVER,1433;Database=$env:SQL_DATABASE;Authentication=Active Directory Default;Encrypt=True;Connect Timeout=120;"
-          ./efbundle/efbundle.exe --connection $cs
-
-  deploy:
-    runs-on: windows-2025
-    needs: migrate
-    steps:
-      - uses: actions/download-artifact@v8
-        with:
-          name: gadfly-app
-          path: publish/
-
-      - name: Azure login (OIDC)
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.APP }}
-          package: publish/
-
-      - name: Restart onto the new build
-        shell: pwsh
-        run: az webapp restart --resource-group $env:AZURE_RESOURCE_GROUP --name $env:APP
-
-      # The serverless database may be paused; the first connection after a pause takes about a minute.
-      - name: Smoke-test health and the sign-in page
-        shell: pwsh
-        run: |
-          $base = "https://$env:APP.azurewebsites.net"
-          foreach ($path in '/healthz', '/login') {
-            $ok = $false
-            $deadline = (Get-Date).AddMinutes(12)
-            while (-not $ok -and (Get-Date) -lt $deadline) {
-              try {
-                $r = Invoke-WebRequest -Uri "$base$path" -UseBasicParsing -TimeoutSec 120
-                if ($r.StatusCode -eq 200) { $ok = $true; Write-Host "${path}: 200" }
-              } catch { Write-Host "${path}: $($_.Exception.Message)" }
-              if (-not $ok) { Start-Sleep -Seconds 15 }
-            }
-            if (-not $ok) { throw "$base$path never returned 200." }
-          }
+          $deployArgs = @{ Ref = $env:GITHUB_SHA }
+          if ($env:DRY_RUN -eq 'true') { $deployArgs.DryRun = $true }
+          ./tools/deploy-azure.ps1 @deployArgs
