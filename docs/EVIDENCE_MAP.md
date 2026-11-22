@@ -92,6 +92,14 @@ enough for any target reliability, and only a double-marked pilot can (ElenchusA
   ledger with its overlap and verdict, and `gadfly contradiction-audit <ledgers>` draws a stratified sample of claim
   pairs (flagged, possible, checked and clear, never checked) for a person to label, then estimates the false-flag and
   miss rates from the labels. The rates are unknown until a pilot is labelled.
+- Apply novelty is checked, not only asked for (GAD-T442; M5, 5.2.2). Each Apply question's situation words (its content
+  words, less the concept's and objective's own terms and the usual question wording) are compared with every sentence of
+  the source passages it was grounded in and with each of the student's earlier answers (`ApplyNovelty.Check`). When one
+  of them holds half or more of those words (at least three), the situation is not new: the turn records the match, the
+  reviewer's "why this question" says so, and the answer is credited as extrapolation (application), never as transfer,
+  so it cannot show transfer or lift an objective to Level 5. Word overlap only, no model call, so it adds no wait; the
+  question is not redrafted for it, since a redraft is another panel round trip. A paraphrased reuse in other words can
+  pass the check.
 
 ## 2. Probing on hesitation
 
