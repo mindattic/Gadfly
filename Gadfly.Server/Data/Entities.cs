@@ -350,7 +350,8 @@ public sealed class ExamSession : ITenantOwned
     /// <summary>
     /// The student's primary language when the attempt started, copied from their StudentLanguageProfile (GAD-T552), so a later edit
     /// of the profile never changes how a finished attempt was conducted. Null when the student had no profile (treated as the exam
-    /// language). When it differs from <see cref="Language"/> the examiner and judges make allowances for a non-native speaker (GAD-T555).
+    /// language). Used only to switch the non-native-speaker adaptations on (GAD-T555) and to group fairness views (GAD-T549): it is never
+    /// shown to graders and never sent to the judges, and it is never inferred from the voice (EU AI Act Art. 5(1)(g)).
     /// </summary>
     public string? PrimaryLanguage { get; set; }
     /// <summary>

@@ -50,7 +50,53 @@ public sealed class StudentLanguageProfile : ITenantOwned
     public string PrimaryLanguage { get; set; } = ExamLanguage.English;
     /// <summary>Comma-separated BCP-47 tags of every language the student speaks, primary included.</summary>
     public string LanguagesSpoken { get; set; } = ExamLanguage.English;
+    /// <summary>
+    /// Voice calibration per language (GAD-T594): JSON object, language tag to <see cref="VoiceCalibration"/>. Only derived measures
+    /// from the student reading a pangram are kept, never the audio. They tune endpointing and recognition for this student; they are
+    /// never shown to graders, never sent to judges, and a language is never inferred from them (EU AI Act Art. 5(1)(g)).
+    /// </summary>
+    public string? VoiceCalibrationJson { get; set; }
+    public DateTimeOffset? VoiceCalibratedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+
+    private static readonly System.Text.Json.JsonSerializerOptions Json = new(System.Text.Json.JsonSerializerDefaults.Web);
+
+    /// <summary>The calibration per language (empty when none or unreadable).</summary>
+    public IReadOnlyDictionary<string, VoiceCalibration> ReadVoiceCalibration()
+    {
+        if (string.IsNullOrWhiteSpace(VoiceCalibrationJson)) return new Dictionary<string, VoiceCalibration>();
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, VoiceCalibration>>(VoiceCalibrationJson, Json)
+                ?? new Dictionary<string, VoiceCalibration>();
+        }
+        catch (System.Text.Json.JsonException) { return new Dictionary<string, VoiceCalibration>(); }
+    }
+
+    /// <summary>Records <paramref name="calibration"/> for <paramref name="language"/>, keeping the other languages'.</summary>
+    public void WriteVoiceCalibration(string language, VoiceCalibration calibration, DateTimeOffset at)
+    {
+        var all = ReadVoiceCalibration().ToDictionary(kv => kv.Key, kv => kv.Value);
+        all[ExamLanguage.Normalize(language)] = calibration;
+        VoiceCalibrationJson = System.Text.Json.JsonSerializer.Serialize(all, Json);
+        VoiceCalibratedAt = at;
+        UpdatedAt = at;
+    }
+}
+
+/// <summary>
+/// Derived voice measures from one calibration reading in one language (GAD-T594): how fast the student speaks, how long they pause,
+/// and how sure the recognizer was. No audio and no voice features beyond these numbers.
+/// </summary>
+public sealed record VoiceCalibration
+{
+    public double SpeechRateWordsPerMinute { get; init; }
+    public double SpeechRateSyllablesPerSecond { get; init; }
+    public double MeanPauseMs { get; init; }
+    public double LongestPauseMs { get; init; }
+    public double RecognitionConfidence { get; init; }
+    public int Readings { get; init; }
+    public DateTimeOffset MeasuredAt { get; init; }
 }
 
 public static class LanguageModel

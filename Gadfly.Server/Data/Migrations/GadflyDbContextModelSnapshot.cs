@@ -2662,6 +2662,12 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset?>("VoiceCalibratedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("VoiceCalibrationJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId", "UserId")
