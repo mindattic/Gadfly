@@ -98,11 +98,30 @@ public sealed class AiObjectiveGrader(ISocraticVotingClient panel, Random? shuff
             };
         }
 
-        var prompt = BuildPrompt(objective, criteria, usable, input.Evidence.Except(usable).ToList(), order);
+        var excluded = input.Evidence.Except(usable).ToList();
+        // A student whose primary language differs from the exam language (GAD-T555, research note esl-and-korean R5.2): the panel
+        // reads each answer's content view, fillers, repetitions and false starts removed by a fixed rule; it is never told why.
+        if (input.ContentView) usable = usable.Select(e => e with { VerifiedText = LanguageText.ContentView(e.VerifiedText) }).ToList();
+        var prompt = BuildPrompt(objective, criteria, usable, excluded, order);
+        // A non-English exam (GAD-T536): Korean answers judged directly against the English rubric, quoted in Korean with an English
+        // gloss, and every grade needs a human's approval until bilingual calibration exists. An English exam's prompt is unchanged.
+        if (!ExamLanguage.IsEnglish(input.Language))
+        {
+            prompt += CrossLingualRule(input.Language);
+            flags.Add(ReviewFlags.CrossLingual);
+        }
         var replies = await panel.FanOutAsync(SystemPrompt, prompt, maxTokens: 2500, temperature: 0.1, ct: ct);
         mock = IsMockPanel(panel, replies);
         var votes = replies.Where(r => !r.IsError).Select(r => ParseVote(r, criteria, usable)).OfType<Vote>().ToList();
         return Merge(objective, criteria, usable, votes, flags, ambiguities, mock);
+    }
+
+    /// <summary>The grading rule added for answers in another language than the rubric (GAD-T536).</summary>
+    public static string CrossLingualRule(string? language)
+    {
+        var name = ExamLanguage.EnglishName(language);
+        return $"\nLanguage: the answers are in {name}; the rubric and the source are in English. Judge the meaning of each {name} answer directly against the English rubric (do not translate it first): "
+            + $"a correct idea earns the same level in {name} as in English. Copy quotes exactly in {name} and give an English gloss in the rationale. Write the rationale, explanation, misconceptions and ambiguities in English.\n";
     }
 
     // ------------------------------------------------------------------ evidence selection

@@ -179,7 +179,8 @@ internal static class GradingInputs
             c.Levels.ToDictionary(l => l.Level, l => l.Descriptor))).ToList();
         return new ObjectiveGradingInput(
             new GradingObjective(objective.Key, objective.Title, objective.Description, objective.MaxScore, criteria, conceptTitle, definition, misconceptions),
-            items, allowAssisted);
+            items, allowAssisted, Language: session.Language,
+            ContentView: new Gadfly.Engine.AttemptLanguage(session.Language, session.PrimaryLanguage).IsNonNative);   // GAD-T536, GAD-T555
     }
 
     private static T? Read<T>(string? json) where T : class

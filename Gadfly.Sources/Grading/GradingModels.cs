@@ -29,7 +29,11 @@ public sealed record EvidenceItem(Guid ResponseId, int Sequence, string Question
 public enum EvidenceStanceHint { Supports, Contradicts, Misconception, Uncertain }
 
 /// <summary>Everything needed to grade one objective.</summary>
-public sealed record ObjectiveGradingInput(GradingObjective Objective, IReadOnlyList<EvidenceItem> Evidence, bool AllowAssistedEvidence = false);
+/// <param name="Language">The attempt's exam language (GAD-T536): a non-English one adds the cross-lingual rule and review flag.</param>
+/// <param name="ContentView">The student's primary language differs from the exam language (GAD-T555): the panel reads each
+/// answer's content view (<see cref="Gadfly.Engine.LanguageText.ContentView"/>). The panel is never told why.</param>
+public sealed record ObjectiveGradingInput(GradingObjective Objective, IReadOnlyList<EvidenceItem> Evidence, bool AllowAssistedEvidence = false,
+    string Language = Gadfly.Engine.ExamLanguage.English, bool ContentView = false);
 
 /// <summary>The merged evaluation of one criterion.</summary>
 public sealed record CriterionGrade(string Criterion, AssessmentDimension Dimension, MasteryLevel Level, decimal Score, decimal MaxScore,
@@ -112,6 +116,8 @@ public static class ReviewFlags
     public const string Mock = "mock-panel";
     public const string ContradictingEvidence = "contradicting-evidence";
     public const string LowConfidenceSpeech = "low-confidence-speech";
+    /// <summary>The answers are in another language than the rubric (GAD-T536): a human approves the grade until bilingual calibration exists.</summary>
+    public const string CrossLingual = "cross-lingual-uncalibrated";
 
     public static string Describe(string flag) => flag switch
     {
