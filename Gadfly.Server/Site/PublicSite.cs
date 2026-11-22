@@ -17,7 +17,7 @@ public static class PublicSite
     public static readonly IReadOnlyList<string> AnonymousRoutes = [.. Pages, "robots.txt", "sitemap.xml", NotFoundRoute];
 
     /// <summary>The catch-all page's route pattern (the branded 404), as the endpoint table spells it.</summary>
-    public const string NotFoundRoute = "{*path}";
+    public const string NotFoundRoute = "{*path:nonfile}";
 
     public static IServiceCollection AddPublicSite(this IServiceCollection services)
     {

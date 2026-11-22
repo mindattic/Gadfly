@@ -1,4 +1,5 @@
-<Router AppAssembly="typeof(Program).Assembly">
+@* NotFoundPage: the branded 404 (GAD-T308), rendered when a page calls NavigationManager.NotFound(). *@
+<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Gadfly.Server.Components.Pages.Site.NotFound)">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
             <NotAuthorized>

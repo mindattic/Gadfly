@@ -1,9 +1,12 @@
-@page "/{*path}"
+@page "/{*path:nonfile}"
 @attribute [AllowAnonymous]
 @attribute [ExcludeFromInteractiveRouting]
 @layout PublicLayout
-@* The branded 404 (GAD-T308): a catch-all with the lowest route priority, so every real page and endpoint wins. Static
-   and data-free, for signed-in and signed-out visitors alike; it answers with status 404. *@
+@* The branded 404 (GAD-T308): a catch-all with the lowest route priority, so every real page and endpoint wins. It must
+   never match a path with a file extension (the "nonfile" constraint): routing picks an endpoint before UseStaticFiles
+   runs, and static files are only served when no endpoint matched. Static and data-free, for signed-in and signed-out
+   visitors alike. It answers 404 through NavigationManager.NotFound(), and Routes.razor renders this same page as the
+   Router's NotFoundPage (then with no path, so it does not call NotFound again). *@
 
 <SiteMeta Title="Page not found" Path="/" NoIndex="true" Description="This address doesn't match a page on Gadfly Exams." />
 
@@ -24,10 +27,10 @@
 
 @code {
     [Parameter] public string? Path { get; set; }
-    [CascadingParameter] private HttpContext? Http { get; set; }
+    [Inject] private NavigationManager Nav { get; set; } = default!;
 
     protected override void OnInitialized()
     {
-        if (Http is { Response.HasStarted: false }) Http.Response.StatusCode = StatusCodes.Status404NotFound;
+        if (Path is not null) Nav.NotFound();
     }
 }
