@@ -21,16 +21,11 @@ public static class GadflyEndpoints
     /// <summary>Every route a signed-out visitor may reach.</summary>
     public static readonly IReadOnlyList<string> AnonymousRoutes =
         ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "launch", "error", "openapi/{documentName}.json", "transcripts/verify", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p),
-         .. Help.HelpEndpoints.AnonymousRoutes];   // the help center: a student with a broken microphone may never get past sign-in (GAD-T292)
+         .. Help.HelpEndpoints.AnonymousRoutes,   // the help center: a student with a broken microphone may never get past sign-in (GAD-T292)
+         .. Site.PublicSite.AnonymousRoutes];   // the public site: landing, product and legal pages, robots, sitemap, the 404 catch-all (GAD-T308)
 
     /// <summary>The path <c>UseExceptionHandler</c> re-executes in production (Program.cs).</summary>
     public const string ErrorPath = "/error";
-
-    private const string ErrorPageHtml =
-        "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\" /><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />" +
-        "<title>Something went wrong · Gadfly Exams</title><link rel=\"stylesheet\" href=\"/app.css\" /></head><body><main><h1>Something went wrong</h1>" +
-        "<p class=\"notice\">Gadfly hit an unexpected problem on our side. Nothing you typed was lost on your device, and an exam in progress keeps its place: " +
-        "go back and try again. If it keeps happening, tell your instructor.</p><p><a href=\"/\">Back to Gadfly</a></p></main></body></html>";
 
     private static readonly IReadOnlyList<string> AnonymousPrefixes = ["_framework/"];
 
@@ -67,7 +62,7 @@ public static class GadflyEndpoints
             {
                 http.Response.Headers.CacheControl = "no-store";
                 var failed = http.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>() is not null;
-                return Results.Content(ErrorPageHtml, "text/html; charset=utf-8", System.Text.Encoding.UTF8,
+                return Results.Content(Site.PublicSite.ErrorPageHtml, "text/html; charset=utf-8", System.Text.Encoding.UTF8,
                     failed ? StatusCodes.Status500InternalServerError : StatusCodes.Status404NotFound);
             })
             .AllowAnonymous().ExcludeFromDescription();
@@ -80,6 +75,7 @@ public static class GadflyEndpoints
         app.MapAnalytics();
         app.MapOpenApi("/openapi/{documentName}.json").AllowAnonymous();
         Help.HelpEndpoints.Map(app);   // images the help guides show (GAD-T292)
+        Site.PublicSite.MapPublicSite(app);   // robots.txt and sitemap.xml (GAD-T308)
 
         // Switch the active organization: only to one the caller is a member of (checked against the
         // sign-in claims by HttpTenantContext on every request, so a forged cookie just falls back).
