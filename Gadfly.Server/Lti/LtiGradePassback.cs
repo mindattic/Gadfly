@@ -234,13 +234,20 @@ public sealed class LtiPassbackSweeper(IServiceScopeFactory scopes, TimeProvider
 
         // Every LTI-linked assignment with a released final grade not yet matching what was last sent, whose retry (if any) is
         // due and which hasn't run out of tries on that same grade. SendIfDueAsync makes the authoritative check (latest attempt,
-        // approval records); this only narrows the candidates.
+        // approval records); this only narrows the candidates. Only the latest attempt counts, and only placements with a gradebook
+        // service on a connection that is on (GAD-T479): SendIfDueAsync would answer NotDue / NoGradebook for the rest without
+        // saving anything, so they would stay candidates for ever and, past 200 of them, crowd every real send out of Take(200).
         var now = clock.GetUtcNow();
         var candidates = await (
             from link in db.LtiAssignmentLinks.AsNoTracking()
+            join rl in db.LtiResourceLinks.AsNoTracking() on link.ResourceLinkId equals rl.Id
+            join reg in db.LtiRegistrations.AsNoTracking() on rl.RegistrationId equals reg.Id
             join s in db.ExamSessions.AsNoTracking() on link.AssignmentId equals s.AssignmentId
             join g in db.FinalGrades.AsNoTracking() on s.Id equals g.SessionId
-            where g.FinalPercent != null
+            where reg.Enabled && rl.OrganizationId == link.OrganizationId && reg.OrganizationId == link.OrganizationId
+                  && ((rl.LineItemUrl != null && rl.LineItemUrl != "") || (rl.LineItemsUrl != null && rl.LineItemsUrl != ""))
+                  && s.Attempt == db.ExamSessions.Where(o => o.AssignmentId == link.AssignmentId).Max(o => o.Attempt)
+                  && g.FinalPercent != null
                   && (g.Status == GradeStatus.Published || g.Status == GradeStatus.UnderAppeal || g.Status == GradeStatus.Amended)
                   && (link.PassbackSentAt == null || link.LastPassbackPercent != g.FinalPercent)
                   && (link.PassbackPendingPercent == null || link.PassbackPendingPercent != g.FinalPercent
