@@ -8,7 +8,8 @@ namespace Gadfly.Server.Grading;
 /// (<see cref="AssessmentReport.ToMarkdown"/>, <see cref="AssessmentReport.ToCsv"/>). Says the same thing in the same
 /// order as the Markdown, laid out with the same hand-written PDF engine the transcript downloads use
 /// (<see cref="TranscriptPdf.RenderBlocks"/>; GAD-T295), so no new PDF library is needed. Per objective: the AI and
-/// examiner levels, what was missing and what the next level asks for, just as the Markdown shows them.
+/// examiner levels, the path the objective took (reviewers only), what was missing and what the next level asks for, just as
+/// the Markdown shows them.
 /// </summary>
 public static class GradingReportPdf
 {
@@ -52,6 +53,13 @@ public static class GradingReportPdf
                     + (o.AiExplanation is { Length: > 0 } x ? $". {x}" : "")));
             if (o.Reconciliation is not null) b.Add(new(BlockKind.Small, "Reconciliation: " + o.Reconciliation));
             if (r.ChangeLine(o) is { } change) b.Add(new(BlockKind.Small, change));
+            // GAD-T320: the objective's path (GAD-T435), as the Markdown shows it; reviewers only, never in the student's copy.
+            if (!r.ForStudent && r.Paths.GetValueOrDefault(o.Key) is { } path)
+            {
+                b.Add(new(BlockKind.Small, "Path: " + path.MovesLine()));
+                if (path.CriteriaLine() is { } coverage) b.Add(new(BlockKind.Small, "Coverage: " + coverage));
+                if (path.ExclusionsLine() is { } excluded && path.Questions > 0) b.Add(new(BlockKind.Small, "Exclusions: " + excluded));
+            }
             if (o.WhatWasMissing.Count > 0)
             {
                 b.Add(new(BlockKind.Small, [new Run("What was missing:", Italic: true)], 1));
