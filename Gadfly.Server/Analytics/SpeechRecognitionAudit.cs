@@ -31,7 +31,8 @@ public sealed class SpeechRecognitionAudit(GadflyDbContext db, Guid organization
         "Spoken answers are no longer read back to the student, so newer answers add to the word error rate only once a listener has " +
         "transcribed them; the unsure-word share still covers every spoken answer. Student checks were asked mostly when the recognizer " +
         "was unsure, so those rates describe the answers most at risk: compare groups with each other, not with published benchmarks. " +
-        "Recognizers make more errors for some accents and dialects and for people who stutter.";
+        "Recognizers make more errors for some accents and dialects and for people who stutter. Answers in Korean are scored by " +
+        "character (character error rate), since Korean spacing varies.";
 
     /// <summary>The analytics scope's assessments (published or archived, as the analytics page reports on).</summary>
     public async Task<IReadOnlyList<Guid>> ExamIdsAsync(AnalyticsScope scope, CancellationToken ct = default)
@@ -88,6 +89,26 @@ public sealed class SpeechRecognitionAudit(GadflyDbContext db, Guid organization
         // Withheld groups keep only their name and size.
         groups = groups.Select(g => g.Reportable ? g : new SpeechGroupStats(g.Group, g.Students, 0, 0, 0, 0, 0, null, null, null, false)).ToList();
         return new SpeechAuditReport(groups, samples.Count, unplaced, Warnings(groups));
+    }
+
+    /// <summary>
+    /// Groups each student by primary language (GAD-T554: recognition by first language, for monitoring a gap such as Korean speakers'
+    /// English): the primary language copied onto their most recent attempt in <paramref name="examIds"/> (ExamSession.PrimaryLanguage,
+    /// GAD-T534), else that attempt's exam language. Read from what the student said about themselves, never inferred from their voice,
+    /// and used only for this comparison.
+    /// </summary>
+    public async Task<Func<Guid, string?>> PrimaryLanguageGroupsAsync(IReadOnlyCollection<Guid> examIds, CancellationToken ct = default)
+    {
+        var rows = await db.ExamSessions.AsNoTracking()
+            .Where(s => s.OrganizationId == organizationId && examIds.Contains(s.ExamId))
+            .Select(s => new { s.StudentUserId, s.PrimaryLanguage, s.Language, s.CreatedAt }).ToListAsync(ct);
+        var byStudent = rows.GroupBy(r => r.StudentUserId).ToDictionary(g => g.Key, g =>
+        {
+            var latest = g.MaxBy(r => r.CreatedAt)!;
+            var tag = string.IsNullOrWhiteSpace(latest.PrimaryLanguage) ? latest.Language : latest.PrimaryLanguage;
+            return "Primary language: " + Gadfly.Engine.ExamLanguage.EnglishName(tag);
+        });
+        return id => byStudent.GetValueOrDefault(id);
     }
 
     /// <summary>Each student's observed-disfluency band over all their recognized answers.</summary>

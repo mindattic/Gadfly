@@ -96,10 +96,31 @@ public static partial class SpeechAccuracy
         WordRx().Matches((text ?? "").ToLowerInvariant()).Select(m => m.Value.Trim('\'')).Where(w => w.Length > 0).ToList();
 
     /// <summary>Substitutions, deletions and insertions turning <paramref name="reference"/> into <paramref name="hypothesis"/>.</summary>
-    public static WordErrorCount WordErrors(string? reference, string? hypothesis)
+    public static WordErrorCount WordErrors(string? reference, string? hypothesis) => Errors(NormalizedWords(reference), NormalizedWords(hypothesis));
+
+    /// <summary>True when <paramref name="text"/> has Hangul (Korean syllables or jamo).</summary>
+    public static bool IsKorean(string? text) => (text ?? "").Any(c => c is >= '\uAC00' and <= '\uD7A3' or >= '\u3131' and <= '\u318E' or >= '\u1100' and <= '\u11FF');
+
+    /// <summary>
+    /// The units an error rate is scored over (GAD-T554, research note R6.1): words, as word error rate is conventionally scored, except
+    /// for a Korean reference, which is scored by character (letters and digits, spaces and punctuation left out): Korean spacing is
+    /// inconsistent, so word error rate over-counts errors there and character error rate is the measure used for it.
+    /// </summary>
+    public static IReadOnlyList<string> ErrorUnits(string? text, bool korean) =>
+        korean ? (text ?? "").ToLowerInvariant().Where(char.IsLetterOrDigit).Select(c => c.ToString()).ToList() : NormalizedWords(text);
+
+    /// <summary>
+    /// <see cref="WordErrors"/>, or the character errors for a Korean <paramref name="reference"/> (<see cref="ErrorUnits"/>); the count's
+    /// <see cref="WordErrorCount.ReferenceWords"/> is then reference characters. English text scores exactly as <see cref="WordErrors"/>.
+    /// </summary>
+    public static WordErrorCount UnitErrors(string? reference, string? hypothesis)
     {
-        var r = NormalizedWords(reference);
-        var h = NormalizedWords(hypothesis);
+        var korean = IsKorean(reference);
+        return Errors(ErrorUnits(reference, korean), ErrorUnits(hypothesis, korean));
+    }
+
+    private static WordErrorCount Errors(IReadOnlyList<string> r, IReadOnlyList<string> h)
+    {
         // cost[i, j] is the fewest edits aligning r[..i] with h[..j]; op[i, j] the last edit, for the backtrace.
         var cost = new int[r.Count + 1, h.Count + 1];
         var op = new byte[r.Count + 1, h.Count + 1];   // 0 match, 1 substitution, 2 deletion, 3 insertion
@@ -173,7 +194,7 @@ public static partial class SpeechAccuracy
         int refWords = 0, errors = 0;
         foreach (var s in list.Where(s => s.TranscriptChecked))
         {
-            var e = WordErrors(s.ReferenceText, s.RecognizedText);
+            var e = UnitErrors(s.ReferenceText, s.RecognizedText);   // characters for Korean answers (GAD-T554)
             refWords += e.ReferenceWords;
             errors += e.Errors;
         }

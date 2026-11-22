@@ -148,6 +148,21 @@ public class KoreanSpeechTests
         Assert.That(VoiceVocabulary.Cap([" Mitosis ", "mitosis", "", null, new string('y', 61), "광합성"]), Is.EqualTo(new[] { "Mitosis", "광합성" }));
     }
 
+    // ------------------------------------------------------------------------------- monitoring (GAD-T554)
+
+    [Test]
+    public void Korean_answers_are_scored_by_character_and_english_ones_by_word_as_before()
+    {
+        // A spacing difference alone is no error in Korean (character error rate); one wrong syllable is one error of six characters.
+        var spacing = Gadfly.Sources.Verification.SpeechAccuracy.UnitErrors("광합성은 빛을 이용해요", "광합성은빛을 이용해요");
+        Assert.That((spacing.Errors, spacing.ReferenceWords), Is.EqualTo((0, 10)));
+        var one = Gadfly.Sources.Verification.SpeechAccuracy.UnitErrors("광합성은 빛을", "광합성는 빛을");
+        Assert.That((one.Errors, one.ReferenceWords), Is.EqualTo((1, 6)));
+        const string reference = "The cell divides into two cells.", recognized = "The sell divides in two cells";
+        Assert.That(Gadfly.Sources.Verification.SpeechAccuracy.UnitErrors(reference, recognized),
+            Is.EqualTo(Gadfly.Sources.Verification.SpeechAccuracy.WordErrors(reference, recognized)));
+    }
+
     // ------------------------------------------------------------------------------------- endpointing (GAD-T554)
 
     [Test]

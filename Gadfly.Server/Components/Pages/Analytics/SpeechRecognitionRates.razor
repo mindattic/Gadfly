@@ -72,6 +72,8 @@
             or speech group from a voluntary survey your institution runs). It is used only for this comparison and is never stored.</p>
         <label>Grouping <textarea rows="6" @bind="groupingText" placeholder="student@example.edu, Group A"></textarea></label>
         <button type="button" disabled="@busy" @onclick="CompareAsync">Compare</button>
+        @* Recognition by the student's own stated primary language (GAD-T554); never inferred from the voice. *@
+        <button type="button" disabled="@busy" @onclick="ByLanguageAsync">Compare by primary language</button>
         @if (grouped)
         {
             <button type="button" class="link" disabled="@busy" @onclick="ClearAsync">Back to the transcript-based groups</button>
@@ -110,6 +112,15 @@
         await LoadAsync(null);
     }
 
+    private async Task ByLanguageAsync()
+    {
+        groupingText = null;
+        await LoadAsync(ByLanguage);
+    }
+
+    /// <summary>Stands for "group by primary language" in <see cref="LoadAsync"/> (never a pasted grouping: it has no comma).</summary>
+    private const string ByLanguage = "\u0001primary-language";
+
     private async Task LoadAsync(string? grouping)
     {
         if (busy || Tenant.OrganizationId is not { } org) return;
@@ -122,6 +133,7 @@
                 var audit = new SpeechRecognitionAudit(db, org);
                 var exams = await audit.ExamIdsAsync(scope);
                 if (grouping is null) return (await audit.BuildAsync(exams), 0);
+                if (grouping == ByLanguage) return (await audit.BuildAsync(exams, await audit.PrimaryLanguageGroupsAsync(exams)), 0);
                 var members = (await sp.GetRequiredService<IOrganizationDirectory>().MembersAsync(org))
                     .Select(m => (m.Member.UserId, m.UserName, m.Email));
                 var (map, miss) = SpeechRecognitionAudit.ParseGrouping(grouping, members);
