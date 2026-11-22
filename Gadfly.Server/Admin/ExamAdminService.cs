@@ -579,6 +579,10 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
         ExamDefinitionJson.ToSnapshot(d.GradingPolicy).ApplyTo(grading);
         db.GradingPolicies.Add(grading);
 
+        // A fixed opening question (GAD-T436) is approved only after the leak check against this organization's own rubric.
+        if ((d.Objectives ?? []).Any(od => !string.IsNullOrWhiteSpace(od?.OpeningQuestion)))
+            warnings.Add("The file has fixed opening questions. They were not imported as approved: approve each again on the Objectives step, " +
+                         "where it is checked against this source material.");
         var unlinked = new List<string>();
         var ordinal = 0;
         foreach (var od in d.Objectives ?? [])

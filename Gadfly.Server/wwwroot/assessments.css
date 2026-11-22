@@ -49,3 +49,7 @@ input, select, textarea { max-width: 100%; box-sizing: border-box; }
 .as-pending { border-left: 4px solid var(--accent); }
 .as-history { padding-left: 1.2rem; display: grid; gap: .5rem; }
 .link.error { color: var(--error); }
+
+/* Fixed opening question per objective (GAD-T436). */
+.as-opening { margin-top: .5rem; }
+.as-opening-text { margin: .25rem 0 .5rem; padding: .4rem .75rem; border-left: 3px solid var(--accent, currentColor); font-style: italic; }

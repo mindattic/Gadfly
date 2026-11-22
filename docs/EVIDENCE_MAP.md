@@ -45,7 +45,9 @@ guard redrafts any question that reveals expected answer points.
 - The never-hint rule in the scored exam is supported (03: Bisra2018; 04: keep the unaided score unaided).
 - A fixed opening per objective anchors comparability (02: Joughin2010). Gadfly fixes the opening move (Elicit) and the
   rubric, but each opening question is newly worded by the panel, so the stronger condition, the same opening question
-  for every student, is not met (ElenchusAtScale, correction 31).
+  for every student, was not met (ElenchusAtScale, correction 31). Since GAD-T436 the instructor can fix it: an approved
+  opening question per objective is asked word for word to every student (with no panel call), and only objectives without
+  one get a newly worded opening. Approval runs the leak guard against the concept's rubric and fails closed.
 
 **Evidence against or limits.**
 - A Contradiction shows that two claims are inconsistent. It does not show which one is wrong (01: Benson1995, Benson2000).

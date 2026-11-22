@@ -81,6 +81,8 @@ public sealed record ObjectiveView(Guid Id, string Key, string Title, string? De
 {
     /// <summary>Learning Mode's fixed hint ladder (GAD-T271); empty means the engine's default ladder.</summary>
     public IReadOnlyList<string> HintLadder { get; init; } = [];
+    /// <summary>The fixed opening question approved for this objective (GAD-T436); null when the examiner words it for each student.</summary>
+    public string? OpeningQuestion { get; init; }
 }
 
 /// <summary>The grading policy as the teacher edits it: weights as percentages (40/60), thresholds in percentage points.</summary>

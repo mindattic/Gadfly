@@ -88,6 +88,11 @@ public sealed class ObjectiveDefinition
     public decimal? Weight { get; set; }
     public decimal? MaxScore { get; set; }
     public List<string>? HintLadder { get; set; }
+    /// <summary>
+    /// The fixed opening question approved for this objective (GAD-T436), for the record. An import does not approve it again:
+    /// it has to be checked against the importing organization's own source material, on the Objectives step.
+    /// </summary>
+    public string? OpeningQuestion { get; set; }
     public List<CriterionDefinition>? Criteria { get; set; }
 }
 
@@ -193,6 +198,7 @@ public static class ExamDefinitionJson
                     Weight = o.Weight,
                     MaxScore = o.MaxScore,
                     HintLadder = [.. Sessions.SessionObjectives.HintLadder(o)],
+                    OpeningQuestion = p.OpeningQuestions.TryGetValue(o.Key, out var opening) ? opening : null,
                     Criteria = o.Criteria.OrderBy(c => c.Ordinal).Select(c => new CriterionDefinition
                     {
                         Dimension = c.Dimension.ToString(),
@@ -322,6 +328,8 @@ public static class ExamDefinitionJson
                 if (ladderError is not null) errors.Add($"{at}: {ladderError}");
                 if (ladder.Any(r => r?.Contains('\n') == true)) errors.Add($"{at}: a hint ladder rung must be one line.");
             }
+            if ((o.OpeningQuestion?.Length ?? 0) > SessionPolicy.MaxOpeningQuestionLength)
+                errors.Add($"{at}: keep its opening question under {SessionPolicy.MaxOpeningQuestionLength} characters.");
             var criteria = o.Criteria ?? [];
             if (criteria.Count > MaxCriteriaPerObjective) errors.Add($"{at}: at most {MaxCriteriaPerObjective} rubric criteria.");
             for (var j = 0; j < Math.Min(criteria.Count, MaxCriteriaPerObjective); j++)

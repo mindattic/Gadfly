@@ -75,6 +75,14 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         // from the voice or its timing does.
         var recent = r.Session.Turns.TakeLast(DialogueTurns).ToList();
         LastDelivery = recent.LastOrDefault(t => t.Answer is not null) is { } answered ? AnswerDelivery.Read(r.Session, answered) : null;
+        // A fixed opening question (GAD-T436) is asked word for word: no panel call, so it is also the quickest question to ask.
+        // It was leak-guarded when the instructor approved it.
+        if (FixedOpening(r) is { } fixedOpening)
+        {
+            LastOutcome = FixedOpeningOutcome;
+            LastGuard = LeakGuardResult.Safe;
+            return fixedOpening;
+        }
         var targets = string.Join("\n", r.Decision.TargetClaimIds.Select(id => r.Ledger.Find(id))
             .Where(c => c is not null).Select(c => $"- (turn {c!.TurnIndex + 1}) {ExamPrompts.Student(c.Quote)}"));
         // An Apply question is labelled by how its situation differs from the source (GAD-T268, Barnett and Ceci 2002).
@@ -149,6 +157,23 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         // Only a guard verdict is reported as one: with no draft to check (or no rubric), no guard ran.
         LastGuard = !guarded ? LeakGuardResult.Skipped : undecided ? LeakGuardResult.UndecidedReplaced : LeakGuardResult.LeakedReplaced;
         return Fallback(r.Decision.Move, r.ConceptTitle, r.RelatedConceptTitle);
+    }
+
+    /// <summary>What <see cref="LastOutcome"/> says when the question was the objective's fixed opening question (GAD-T436).</summary>
+    public const string FixedOpeningOutcome = "fixed opening question, approved by the instructor and asked word for word";
+
+    /// <summary>
+    /// The objective's fixed opening question (GAD-T436) when <paramref name="r"/> plans its opening: an Elicit that is not a
+    /// replacement, on an objective with an approved opening in the policy, and the first question asked on that objective.
+    /// Null otherwise (the panel words the question).
+    /// </summary>
+    public static string? FixedOpening(QuestionRequest r)
+    {
+        ArgumentNullException.ThrowIfNull(r);
+        if (r.Decision.Move != MoveKind.Elicit || r.Decision.IsReplacement || r.Decision.ObjectiveKey is not { } key) return null;
+        if (r.Session.Policy.OpeningQuestions is not { } fixedQuestions || !fixedQuestions.TryGetValue(key, out var text)
+            || string.IsNullOrWhiteSpace(text)) return null;
+        return ObjectiveAssessor.TurnsOn(r.Session, key).Any() ? null : text.Trim();
     }
 
     /// <summary>

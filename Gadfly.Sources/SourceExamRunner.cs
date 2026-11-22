@@ -230,6 +230,8 @@ public sealed class SourceExamEngine
         var reason = decision.Move == MoveKind.Apply
             ? $"{decision.Reason} Transfer item ({TransferLabels.Label(TransferLabels.Next(Session, decision.ObjectiveKey ?? concept.Key))}). {TransferLabels.Caveat} {novelty!.Describe()}"
             : decision.Reason;
+        if (_generator.LastOutcome == QuestionGenerator.FixedOpeningOutcome)
+            reason = $"{reason} Fixed opening question: approved by the instructor and asked word for word to every student (GAD-T436).".Trim();
         Diagnostics?.Report($"[{decision.Move} on {decision.ObjectiveKey ?? concept.Key}{(decision.IsReplacement ? " (replacement)" : "")}: {reason} Question {_generator.LastOutcome}.]");
         return Session.Ask(concept.Key, decision.Move, question, _clock.GetUtcNow(), decision.TargetClaimIds, reason,
             decision.ObjectiveKey, decision.IsReplacement, novelty);

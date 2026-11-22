@@ -90,6 +90,17 @@ public sealed record SessionPolicy
     /// </summary>
     public string? Language { get; init; }
 
+    /// <summary>
+    /// Fixed opening questions (GAD-T436), by objective key: the instructor-approved question asked word for word as the first
+    /// question on that objective to every student, so the one observation all students share is literally the same
+    /// (ElenchusAtScale M2, 2.4.3, correction 31). An objective without one gets an opening newly worded by the panel. Stored in
+    /// the exam's existing policy JSON, so it needed no schema change.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> OpeningQuestions { get; init; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>Longest fixed opening question accepted (GAD-T436).</summary>
+    public const int MaxOpeningQuestionLength = 500;
+
     /// <summary>Throws when the policy is not usable.</summary>
     public void Validate()
     {
@@ -103,6 +114,13 @@ public sealed record SessionPolicy
         if (MinCorroboratingAnswers is < 2 or > 5) throw new ArgumentException("MinCorroboratingAnswers must be 2 to 5.");
         if (MaxAssistsPerObjective is < 0 or > 5) throw new ArgumentException("MaxAssistsPerObjective must be 0 to 5.");
         if (MinSummativeObjectives is < 1 or > 50) throw new ArgumentException("MinSummativeObjectives must be 1 to 50.");
+        foreach (var (key, text) in OpeningQuestions ?? new Dictionary<string, string>())
+        {
+            if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(text))
+                throw new ArgumentException("A fixed opening question needs an objective and some text.");
+            if (text.Length > MaxOpeningQuestionLength)
+                throw new ArgumentException($"A fixed opening question must be at most {MaxOpeningQuestionLength} characters.");
+        }
         var keys = Objectives.Select(o => o.Key).ToList();
         if (keys.Any(string.IsNullOrWhiteSpace)) throw new ArgumentException("Every objective needs a key.");
         if (keys.Distinct(StringComparer.Ordinal).Count() != keys.Count) throw new ArgumentException("Objective keys must be unique.");

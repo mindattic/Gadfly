@@ -369,6 +369,11 @@ else
                                 · @o.Criteria.Count criteri@(o.Criteria.Count == 1 ? "on" : "a")
                                 · @(o.HintLadder.Count == 0 ? "default hint ladder" : $"{o.HintLadder.Count} hint{(o.HintLadder.Count == 1 ? "" : "s")} in its ladder")
                             </p>
+                            @if (Id is { } openingExamId)
+                            {
+                                <OpeningQuestionEditor ExamId="openingExamId" ObjectiveId="o.Id" Current="@o.OpeningQuestion"
+                                                       Editable="@(Editable && o.ConceptKey is not null && !o.ConceptMissing)" Changed="ReloadAsync" />
+                            }
                             @if (Editable)
                             {
                                 <div class="eb-actions">

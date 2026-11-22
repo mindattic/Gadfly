@@ -100,8 +100,9 @@ The file is JSON with `"format": "gadfly.exam"` and `"version": 1`. Under `"exam
 instructions, assessment mode, integrity level, examiner voice and avatar, `settings` (duration, question limit,
 difficulty, thresholds, minimum objectives, read-out check, concept keys), `gradingPolicy` (weights as fractions,
 review and reconciliation thresholds, blind grading, what happens when evidence is inconclusive) and `objectives`
-(key, title, description, concept key, weight, maximum score, hint ladder, and rubric criteria each with six level
-descriptions, 0 to 5). It never contains students, attempts, answers or grades. A newer Gadfly reads older versions; an
+(key, title, description, concept key, weight, maximum score, hint ladder, fixed opening question, and rubric criteria
+each with six level descriptions, 0 to 5). An import does not approve fixed opening questions: approve each again on the
+Objectives step, where it is checked against the new source material. It never contains students, attempts, answers or grades. A newer Gadfly reads older versions; an
 older one refuses a newer file with a message saying so.
 
 All of these changes are recorded in the audit log: `assessment.duplicated`, `assessment.archived`,

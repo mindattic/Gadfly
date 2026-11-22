@@ -1,0 +1,131 @@
+@using Gadfly.Server.Assessments
+@using Gadfly.Server.Tenancy
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+@* Fixed opening question for one objective (GAD-T436): written or drafted, leak-checked, approved, asked word for word. *@
+
+<div class="as-opening">
+    @if (Current is { } fixedQuestion && !editing)
+    {
+        <p class="hint"><strong>Fixed opening question</strong>, asked word for word to every student:</p>
+        <blockquote class="as-opening-text">@fixedQuestion</blockquote>
+    }
+    else if (!editing)
+    {
+        <p class="hint"><strong>Opening question:</strong> worded by the examiner for each student.
+            @if (Editable) { <span>Fix one so every student starts this objective with exactly the same question and their answers compare directly.</span> }
+        </p>
+    }
+
+    @if (Editable)
+    {
+        @if (editing)
+        {
+            <label>Opening question (one line, spoken aloud; at most @Gadfly.Engine.SessionPolicy.MaxOpeningQuestionLength characters)
+                <textarea rows="2" @bind="text" @bind:event="oninput" maxlength="@Gadfly.Engine.SessionPolicy.MaxOpeningQuestionLength"
+                          placeholder="For example: In your own words, what is ... and why does it matter?"></textarea>
+            </label>
+            <p class="hint">Ask the student to explain the idea in their own words. Before it is saved it is checked, like every examiner question,
+                for giving away points the student is expected to make; one that does, or that the check cannot clear, is not saved.</p>
+            <div class="eb-actions">
+                <button type="button" disabled="@busy" @onclick="DraftAsync">@(busy && drafting ? "Drafting…" : "Draft one with the examiner")</button>
+                <button type="button" disabled="@(busy || string.IsNullOrWhiteSpace(text))" @onclick="ApproveAsync">@(busy && !drafting ? "Checking…" : "Check and approve")</button>
+                <button type="button" class="link" disabled="@busy" @onclick="Cancel">Cancel</button>
+            </div>
+        }
+        else
+        {
+            <div class="eb-actions">
+                <button type="button" class="link" @onclick="Start">@(Current is null ? "Fix an opening question" : "Change it")</button>
+                @if (Current is not null)
+                {
+                    <button type="button" class="link error" disabled="@busy" @onclick="RemoveAsync">Remove it</button>
+                }
+            </div>
+        }
+        @if (message is not null)
+        {
+            <p class="@(ok ? "ok" : "error")" role="status">@message</p>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Guid ExamId { get; set; }
+    [Parameter, EditorRequired] public Guid ObjectiveId { get; set; }
+    /// <summary>The approved fixed opening question; null when the examiner words it for each student.</summary>
+    [Parameter] public string? Current { get; set; }
+    [Parameter] public bool Editable { get; set; }
+    /// <summary>Raised after an approval or removal, so the page reloads.</summary>
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private bool editing, busy, drafting, ok;
+    private string text = "";
+    private string? message;
+
+    private void Start()
+    {
+        text = Current ?? "";
+        message = null;
+        editing = true;
+    }
+
+    private void Cancel()
+    {
+        editing = false;
+        message = null;
+    }
+
+    private async Task<T> Run<T>(Func<OpeningQuestionService, Task<T>> work)
+    {
+        await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+        return await work(ActivatorUtilities.GetServiceOrCreateInstance<OpeningQuestionService>(scope.ServiceProvider));
+    }
+
+    private async Task DraftAsync()
+    {
+        if (busy) return;
+        busy = drafting = true;
+        try
+        {
+            var d = await Run(s => s.DraftAsync(ExamId, ObjectiveId));
+            ok = d.Ok;
+            message = d.Message;
+            if (d.Text is { } drafted) text = drafted;
+        }
+        finally { busy = drafting = false; }
+    }
+
+    private async Task ApproveAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await Run(s => s.ApproveAsync(ExamId, ObjectiveId, text));
+            ok = r.Ok;
+            message = r.Message;
+            if (r.Ok)
+            {
+                editing = false;
+                await Changed.InvokeAsync();
+            }
+        }
+        finally { busy = false; }
+    }
+
+    private async Task RemoveAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await Run(s => s.RemoveAsync(ExamId, ObjectiveId));
+            ok = r.Ok;
+            message = r.Message;
+            if (r.Ok) await Changed.InvokeAsync();
+        }
+        finally { busy = false; }
+    }
+}

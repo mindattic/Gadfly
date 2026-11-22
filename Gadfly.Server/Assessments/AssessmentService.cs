@@ -167,7 +167,10 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
             o.ConceptKey is { } k ? concepts.GetValueOrDefault(k) : null, o.ConceptKey is { } k2 && !concepts.ContainsKey(k2),
             o.Weight, o.MaxScore, o.Ordinal,
             o.Criteria.OrderBy(c => c.Ordinal).Select(c => new CriterionView(c.Id, c.Dimension, c.Name, c.Description, c.Weight, c.Ordinal, LevelTexts(c))).ToList())
-            { HintLadder = Gadfly.Server.Sessions.SessionObjectives.HintLadder(o) })
+            {
+                HintLadder = Gadfly.Server.Sessions.SessionObjectives.HintLadder(o),
+                OpeningQuestion = p.OpeningQuestions.TryGetValue(o.Key, out var opening) ? opening : null,
+            })
             .ToList();
 
         var policy = await db.GradingPolicies.AsNoTracking().FirstOrDefaultAsync(x => x.ExamId == examId && x.OrganizationId == org, ct);
@@ -322,6 +325,12 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
             };
             db.LearningObjectives.Add(o);
         }
+        // A fixed opening question was leak-checked against its concept's rubric (GAD-T436): relinking the objective drops it.
+        if (before is not null && o.ConceptKey != conceptKey
+            && await db.Exams.FirstOrDefaultAsync(e => e.Id == exam.Id && e.OrganizationId == org, ct) is { } trackedExam
+            && OpeningQuestionService.Drop(trackedExam, o.Key) is { } droppedOpening)
+            guard.Audit("objective.opening.removed", "LearningObjective", o.Id.ToString(), new { o.Key, OpeningQuestion = droppedOpening },
+                reason: "The objective was linked to another concept, so its approved opening question no longer applies.");
         o.Title = title;
         o.Description = description;
         o.ConceptKey = conceptKey;
@@ -381,6 +390,11 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
             db.RubricCriteria.Remove(c);
         }
         db.LearningObjectives.Remove(o);
+        // Its fixed opening question (GAD-T436) goes with it, so a later objective that reuses the key does not inherit it.
+        if (await db.Exams.FirstOrDefaultAsync(e => e.Id == exam.Id && e.OrganizationId == org, ct) is { } trackedExam
+            && OpeningQuestionService.Drop(trackedExam, o.Key) is { } droppedOpening)
+            guard.Audit("objective.opening.removed", "LearningObjective", o.Id.ToString(), new { o.Key, OpeningQuestion = droppedOpening },
+                reason: "The objective was removed.");
         guard.Audit("objective.deleted", "LearningObjective", o.Id.ToString(), ObjectiveAudit(o));
         await SaveAsync(ct);
         return new(true, "Objective removed.", exam.Id);

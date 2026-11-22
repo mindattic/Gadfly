@@ -124,6 +124,15 @@ The learning objectives are what the exam examines and what is graded. Under **S
 one isn't examinable yet), a **Weight**, a **Maximum score** and, for Learning mode, an optional **hint ladder** (one
 hint per line). **Move up** / **Move down** set the order they are examined in.
 
+Under each objective, **Fix an opening question** makes the first question on that objective the same, word for word,
+for every student, so their first answers compare directly. Without one, the examiner words the opening afresh for each
+student. Write it yourself or press **Draft one with the examiner**, edit the draft, then **Check and approve**: like
+every examiner question it is checked for giving away points the student is expected to make, and one that does (or that
+the check cannot clear) is not saved. It must be one spoken line and must not ask how the student arrived at an answer.
+**Change it** and **Remove it** are there until you publish. Linking the objective to another concept, or removing the
+objective, removes its opening question, since it was checked against that concept's rubric. Approvals and removals are
+in the audit log.
+
 ### 3. Rubric
 
 Each objective has criteria. A criterion has a **Name**, a **Dimension** (factual knowledge, conceptual
