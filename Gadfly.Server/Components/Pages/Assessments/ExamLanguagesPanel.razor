@@ -34,14 +34,12 @@
         {
             <p role="status" class="lang-message @(ok ? "ok" : "error")">@message</p>
         }
-        @ChildContent?.Invoke(view)
+        <ExamTextsEditor ExamId="ExamId" Version="version" />
     }
 </section>
 
 @code {
     [Parameter, EditorRequired] public Guid ExamId { get; set; }
-    /// <summary>More of the panel below the offered languages (the per-language texts, GAD-T540).</summary>
-    [Parameter] public RenderFragment<ExamLanguagesView>? ChildContent { get; set; }
     /// <summary>Raised after the offered languages change.</summary>
     [Parameter] public EventCallback OnChanged { get; set; }
 
@@ -49,6 +47,7 @@
     private readonly HashSet<string> offered = new(StringComparer.Ordinal);
     private string? message;
     private bool ok, busy, loaded;
+    private int version;
     private Guid? loadedFor;
 
     private bool Changed => view is not null && !offered.SetEquals(view.Offered);
@@ -87,7 +86,11 @@
             ok = r.Ok;
             message = r.Message;
             await LoadAsync();
-            if (r.Ok) await OnChanged.InvokeAsync();
+            if (r.Ok)
+            {
+                version++;
+                await OnChanged.InvokeAsync();
+            }
         }
         finally { busy = false; }
     }

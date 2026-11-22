@@ -1,0 +1,174 @@
+@using Gadfly.Engine
+@using Gadfly.Server.Translation
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+@* An exam's texts in each language other than English (GAD-T540): a machine-translated draft the instructor reviews, edits and
+   approves. Staff pages stay in English; the texts themselves are in the language they are for. *@
+@if (view is null)
+{
+    if (!loaded) { <p class="hint" role="status">Loading the texts…</p> }
+}
+else
+{
+    @foreach (var l in view.Languages)
+    {
+        var form = Form(l.Language);
+        var name = ExamLanguage.EnglishName(l.Language);
+        <form class="lang-texts" @onsubmit="() => SaveAsync(l.Language, approve: false)" @onsubmit:preventDefault aria-label="@($"{name} texts")">
+            <h3>
+                @name texts <span lang="@l.Language">(@ExamLanguage.NativeName(l.Language))</span>
+                @if (l.Status is ExamLocalizationStatus.Approved)
+                {
+                    <span class="lang-status approved">approved @AssessmentOps.When(l.ApprovedAt)</span>
+                }
+                else if (l.Status is ExamLocalizationStatus.MachineDraft)
+                {
+                    <span class="lang-status draft">machine draft, not yet approved</span>
+                }
+            </h3>
+            @if (!l.Offered)
+            {
+                <p class="hint">@name is turned off for this exam, so students do not see these texts. They are kept in case you turn it back on.</p>
+            }
+            @if (l.Empty)
+            {
+                <p class="hint">No @name texts yet: students who take the exam in @name read the English title, instructions and objective titles.
+                    Generate a machine-translated draft, then check and approve it.</p>
+            }
+            else
+            {
+                @if (l.Status is ExamLocalizationStatus.MachineDraft)
+                {
+                    <p class="hint">A machine translation can be wrong in ways that matter in an exam. Read each text against the English, correct it, then approve.
+                        Until then, students choosing @name see these texts with a note that they were machine-translated.</p>
+                }
+                @if (l.Missing.Count > 0)
+                {
+                    <p class="hint error">Not translated yet: @string.Join(", ", l.Missing). Students see the English for these.</p>
+                }
+                <fieldset class="lang-fieldset" disabled="@(!view.CanEdit || busy)">
+                    <legend class="lang-sr">@name texts</legend>
+                    <label>Title <span class="lang-source">English: @view.Title</span>
+                        <input @bind="form.Title" maxlength="@ExamLanguageService.MaxTitle" lang="@l.Language" autocomplete="off" />
+                    </label>
+                    @if (!string.IsNullOrWhiteSpace(view.Instructions))
+                    {
+                        <label>Instructions shown to students <span class="lang-source">English: @view.Instructions</span>
+                            <textarea rows="4" @bind="form.Instructions" maxlength="@ExamLanguageService.MaxInstructions" lang="@l.Language"></textarea>
+                        </label>
+                    }
+                    @if (view.Objectives.Count > 0)
+                    {
+                        <ul class="lang-objectives" aria-label="Objective titles">
+                            @foreach (var o in view.Objectives)
+                            {
+                                <li>
+                                    <label>Objective <span class="lang-source">English: @o.Title</span>
+                                        <input value="@form.ObjectiveTitles.GetValueOrDefault(o.Key)" @onchange="e => form.ObjectiveTitles[o.Key] = e.Value?.ToString() ?? string.Empty"
+                                               maxlength="@ExamLanguageService.MaxObjectiveTitle" lang="@l.Language" autocomplete="off" />
+                                    </label>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </fieldset>
+            }
+            @if (view.CanEdit)
+            {
+                <div class="lang-actions">
+                    @if (!l.Empty)
+                    {
+                        <button type="submit" disabled="@busy">Save</button>
+                        <button type="button" disabled="@busy" @onclick="() => SaveAsync(l.Language, approve: true)">Save and approve</button>
+                    }
+                    @if (confirmReplace == l.Language)
+                    {
+                        <button type="button" class="error" disabled="@busy" @onclick="() => DraftAsync(l.Language, replace: true)">Replace the approved texts with a new draft</button>
+                        <button type="button" class="link" @onclick="() => confirmReplace = null">Keep them</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="@(l.Empty ? "" : "link")" disabled="@busy" @onclick="() => DraftAsync(l.Language, replace: false)">
+                            @(l.Empty ? "Generate a machine-translated draft" : "Generate a new draft from the English")
+                        </button>
+                    }
+                </div>
+                @if (view.MockTranslation)
+                {
+                    <p class="hint">Mock mode: no translation model is called, so a draft is the English text behind a marker.</p>
+                }
+            }
+            @if (messages.GetValueOrDefault(l.Language) is { } m)
+            {
+                <p role="status" class="lang-message @(m.Ok ? "ok" : "error")">@m.Message</p>
+            }
+        </form>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public Guid ExamId { get; set; }
+    /// <summary>Changes whenever the offered languages change, so the texts reload.</summary>
+    [Parameter] public int Version { get; set; }
+
+    private ExamLocalizationsView? view;
+    private readonly Dictionary<string, ExamTextsForm> forms = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ExamLanguageResult> messages = new(StringComparer.Ordinal);
+    private string? confirmReplace;
+    private bool busy, loaded;
+    private (Guid, int)? loadedFor;
+
+    private Task<T> Run<T>(Func<ExamLanguageService, Task<T>> work) => LanguageOps.RunAsync(Scopes, Tenant, work);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedFor == (ExamId, Version)) return;
+        loadedFor = (ExamId, Version);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        view = await Run(s => s.TextsAsync(ExamId));
+        forms.Clear();
+        if (view is not null)
+            foreach (var l in view.Languages)
+                forms[l.Language] = new ExamTextsForm
+                {
+                    Title = l.Title, Instructions = l.Instructions,
+                    ObjectiveTitles = new Dictionary<string, string>(l.ObjectiveTitles, StringComparer.Ordinal),
+                };
+        loaded = true;
+    }
+
+    private ExamTextsForm Form(string language) => forms.TryGetValue(language, out var f) ? f : forms[language] = new ExamTextsForm();
+
+    private async Task DraftAsync(string language, bool replace)
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await Run(s => s.DraftAsync(ExamId, language, replace));
+            confirmReplace = !r.Ok && !replace && view?.Languages.FirstOrDefault(l => l.Language == language)?.Status == ExamLocalizationStatus.Approved ? language : null;
+            messages[language] = r;
+            await LoadAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task SaveAsync(string language, bool approve)
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var form = Form(language);
+            var r = await Run(s => s.SaveTextsAsync(ExamId, language, form, approve));
+            messages[language] = r;
+            if (r.Ok) await LoadAsync();
+        }
+        finally { busy = false; }
+    }
+}
