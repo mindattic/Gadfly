@@ -342,19 +342,24 @@ public class SessionOrchestratorTests : ServerTest
         Assert.That(row.State, Is.Not.EqualTo(SessionState.Ended));
     }
 
-    /// <summary>GAD-T314: finishing right after a step failed between recording and judging an answer judges that answer first.</summary>
+    /// <summary>
+    /// GAD-T314: finishing right after a step failed between recording and judging an answer judges that answer first.
+    /// A spoken answer is taken as heard and judged at once, with no read-back/confirm round trip any more (GAD-T405), so
+    /// the "recorded but not judged" gap this test exercises is the panel failing during that immediate judging, not a
+    /// still-pending transcript confirmation.
+    /// </summary>
     [Test]
     public async Task Finish_JudgesAnAnswerThatWasRecordedButNotJudged()
     {
         var w = await Seed.ExamAsync();
         var id = await StartedAsync(w);
         await Orchestrator.CurrentAsync(w.Org, id, w.StudentId);
-        // A spoken answer waits for the transcript confirmation; the confirmation records it, then the panel fails while judging.
-        var pending = await Orchestrator.AnswerAsync(w.Org, id, w.StudentId,
-            new Answer { Text = "Plants make sugar from light energy.", Mode = "voice", CompletedAt = Clock.GetUtcNow() });
-        Assert.That(pending.Verification, Is.Not.Null);
         Panel.Fail = true;
-        try { await Orchestrator.ConfirmTranscriptAsync(w.Org, id, w.StudentId, pending.Verification!.ResponseId); }
+        try
+        {
+            await Orchestrator.AnswerAsync(w.Org, id, w.StudentId,
+                new Answer { Text = "Plants make sugar from light energy.", Mode = "voice", CompletedAt = Clock.GetUtcNow() });
+        }
         catch (Exception) { /* the failing panel surfaces; the recorded answer is the resume point */ }
         Panel.Fail = false;
 
