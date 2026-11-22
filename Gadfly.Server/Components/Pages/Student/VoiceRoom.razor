@@ -652,6 +652,25 @@
         }
     }
 
+    /// <summary>
+    /// The spoken answer just sent was turned away before it reached the exam (nothing usable to record) and the same question is
+    /// still waiting (GAD-T316). The browser shut its microphone when it sent the answer and nothing else would open it again, so
+    /// the student was told to say it again with no way to: this opens it for the same question.
+    /// </summary>
+    public async Task ListenAgainAsync()
+    {
+        if (module is null || state != VoiceState.On || !CanAnswer) return;
+        try
+        {
+            await module.InvokeVoidAsync("setAllowed", stop.Token, true);
+            lastAllowed = true;
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
+        {
+            Log.LogDebug(ex, "The microphone could not be reopened for session {SessionId}.", SessionId);
+        }
+    }
+
     /// <summary>A typed answer was handed in (GAD-T260): it joins the on-screen transcript like a spoken one.</summary>
     public void NoteTypedAnswer(string text)
     {

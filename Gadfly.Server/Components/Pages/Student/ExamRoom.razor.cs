@@ -194,6 +194,8 @@ public partial class ExamRoom
         if (built is null)
         {
             error = "I didn't catch an answer to record. Please say it again.";
+            // The browser shut the microphone when it sent this: open it again for the same question (GAD-T316).
+            if (voiceRoom is not null) await voiceRoom.ListenAgainAsync();
             return;
         }
         var text = built.Answer.Text;
