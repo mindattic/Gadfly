@@ -303,6 +303,8 @@ public static class ApiEndpoints
             return Results.Ok(new
             {
                 s.Id, s.AssignmentId, s.StudentUserId, state = s.State.ToString(), s.StartedAt, s.EndedAt, s.EndReason,
+                // GAD-T425: the per-objective levels are the result; recommendation/overallScore are deprecated steering values.
+                objectiveLevels = Gadfly.Server.Review.ReportedLevels.FromReportJson(report?.ReportJson),
                 recommendation = report?.Recommendation, overallScore = report?.OverallScore,
                 report = report is null ? (object?)null : JsonDocument.Parse(report.ReportJson).RootElement,
                 grade = grade is null ? null : new { grade.Grade, grade.Score, grade.Comment, grade.DecidedAt },

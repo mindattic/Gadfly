@@ -23,6 +23,12 @@ public sealed record ReviewListRow(
 {
     /// <summary>GAD-T285: true when blind grading hides this session's integrity flags from the viewer (IntegrityFlags is then 0).</summary>
     public bool FlagsHidden { get; init; }
+    /// <summary>
+    /// GAD-T425: the AI report's corroborated level per learning objective (Level 0 = insufficient evidence); empty when blind
+    /// grading hides the report or the report predates objectives. This, not <see cref="Recommendation"/> or
+    /// <see cref="AiScore"/> (the examiner's running estimate, which only steers questioning), is what the list shows.
+    /// </summary>
+    public IReadOnlyList<ObjectiveLevel> AiLevels { get; init; } = [];
     public bool IsGraded => LatestGrade is not null;
     public bool NeedsGrade => State == SessionState.Ended && LatestGrade is null;
 }

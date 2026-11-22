@@ -77,11 +77,16 @@ public static class AdminPeople
 
     public static int ClampPageSize(int size) => Math.Clamp(size <= 0 ? 25 : size, 5, MaxPageSize);
 
-    /// <summary>A grade as the admin pages show it: the final percent with its status, else the AI's overall estimate.</summary>
-    public static string? Score(decimal? finalPercent, GradeStatus? status, double? aiOverall)
+    /// <summary>
+    /// A grade as the admin pages show it: the final percent with its status, else the AI report's per-objective levels
+    /// (GAD-T425). The examiner's running mastery estimate and the mean answer score are never shown as the student's
+    /// score: they only steer the questions (ElenchusAtScale Prop. 3.3, M9, M10).
+    /// </summary>
+    public static string? Score(decimal? finalPercent, GradeStatus? status, string? aiReportJson)
     {
         if (finalPercent is { } pct) return $"{pct.ToString("0.#", CultureInfo.InvariantCulture)}%{(status is { } s ? $" ({Words(s)})" : "")}";
-        if (aiOverall is { } ai) return $"AI estimate {(ai * 100).ToString("0", CultureInfo.InvariantCulture)}%";
+        if (Gadfly.Server.Review.ReportedLevels.Short(Gadfly.Server.Review.ReportedLevels.FromReportJson(aiReportJson)) is { } levels)
+            return $"AI {char.ToLowerInvariant(levels[0])}{levels[1..]}, not yet graded";
         return null;
     }
 

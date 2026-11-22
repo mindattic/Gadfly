@@ -1050,7 +1050,9 @@ public sealed class SessionOrchestrator(
             await Platform.WebhookOutbox.StageAsync(db, org, Platform.WebhookService.SessionCompleted, new
             {
                 sessionId = s.Id, assignmentId = row.AssignmentId, studentUserId = row.StudentUserId, examId = row.ExamId,
-                endReason = s.EndReason.ToString(), recommendation = report.Recommendation, overallScore = report.OverallScore,
+                endReason = s.EndReason.ToString(),
+                objectiveLevels = Gadfly.Server.Review.ReportedLevels.From(report),   // GAD-T425: the result; the next two are deprecated steering values
+                recommendation = report.Recommendation, overallScore = report.OverallScore,
             }, now, ct);
         }
         await db.SaveChangesAsync(ct);

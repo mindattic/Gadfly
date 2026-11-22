@@ -56,7 +56,7 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         var flagCounts = flags.Where(f => f.Severity != IntegritySeverity.Info && !IntegrityExplanations.For(f.Type, f.Source).Normal)
             .GroupBy(f => f.SessionId).ToDictionary(g => g.Key, g => g.Count());
         var reports = (await db.SessionReports.AsNoTracking().Where(r => r.OrganizationId == organizationId && ids.Contains(r.SessionId))
-                .Select(r => new { r.SessionId, r.Recommendation, r.OverallScore, r.CreatedAt }).ToListAsync(ct))
+                .Select(r => new { r.SessionId, r.Recommendation, r.OverallScore, r.ReportJson, r.CreatedAt }).ToListAsync(ct))
             .GroupBy(r => r.SessionId).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.CreatedAt).First());
         var grades = (await db.GradeDecisions.AsNoTracking().Where(g => g.OrganizationId == organizationId && ids.Contains(g.SessionId)).ToListAsync(ct))
             .GroupBy(g => g.SessionId).ToDictionary(g => g.Key, g => g.OrderByDescending(d => d.DecidedAt).First());
@@ -69,7 +69,12 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                 !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r) ? r.Recommendation : null,
                 !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r2) ? r2.OverallScore : null,
                 blind.Contains(s.Id) ? 0 : disagreed.GetValueOrDefault(s.Id), blind.Contains(s.Id) ? 0 : flagCounts.GetValueOrDefault(s.Id),
-                grades.GetValueOrDefault(s.Id)) { FlagsHidden = blind.Contains(s.Id) })
+                grades.GetValueOrDefault(s.Id))
+            {
+                FlagsHidden = blind.Contains(s.Id),
+                // GAD-T425: the per-objective levels are what the list reports, never the running estimate.
+                AiLevels = !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r3) ? ReportedLevels.FromReportJson(r3.ReportJson) : [],
+            })
             .Where(r => !filter.NeedsGradeOnly || r.NeedsGrade)
             .Where(r => !filter.NeedsHumanReviewOnly || r.JudgesDisagreed > 0)
             .ToList();

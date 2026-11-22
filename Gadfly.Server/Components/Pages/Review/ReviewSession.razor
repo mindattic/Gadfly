@@ -28,8 +28,21 @@ else
         <div><span class="hint">Started</span> @(s.StartedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "—")</div>
         <div><span class="hint">Times on this page</span> UTC</div>
         <div><span class="hint">Ended</span> @(s.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "—")</div>
-        <div><span class="hint">AI recommendation</span>
-            @if (view.Report is { } rep) { <span class="tag rec-@rep.Recommendation">@rep.Recommendation</span> @Pct(rep.OverallScore) }
+        @* GAD-T425: the AI report's result is its corroborated level per learning objective (Level 0 = insufficient evidence),
+           never the examiner's running estimate or a mean of the answer scores. *@
+        <div><span class="hint">AI levels</span>
+            @if (view.Report is { } rep)
+            {
+                var levels = ReportedLevels.FromReportJson(rep.ReportJson);
+                if (levels.Count > 0)
+                {
+                    <span>@ReportedLevels.Detail(levels)</span>
+                }
+                else
+                {
+                    <span>none (this report was written before learning objectives)</span>
+                }
+            }
             else if (view.Blinded) { <span>hidden until the human evaluation is submitted (blind grading)</span> }
             else { <span>none yet</span> }
         </div>
@@ -258,9 +271,14 @@ else
 
     @if (view.Mastery.Count > 0)
     {
-        <h2 class="section">Mastery by concept</h2>
+        <h2 class="section">Examiner's running estimate by concept</h2>
+        <p class="hint">
+            The examiner keeps a running estimate of each concept to decide what to ask next. It steers the questions; it is
+            not a score, a level or a grade, and it plays no part in the result. The result is the level for each learning
+            objective above and in the AI report.
+        </p>
         <table class="grid">
-            <thead><tr><th>Concept</th><th>Mastery</th><th>Questions</th><th>Status</th></tr></thead>
+            <thead><tr><th>Concept</th><th>Running estimate (steering only)</th><th>Questions</th><th>Status</th></tr></thead>
             <tbody>
                 @foreach (var m in view.Mastery)
                 {

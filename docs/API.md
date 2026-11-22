@@ -382,6 +382,10 @@ Finish) or `Failed`, and `null` while running. An empty array when there are non
   "startedAt": "2026-12-02T14:03:11+00:00",
   "endedAt": "2026-12-02T14:19:47+00:00",
   "endReason": "Mastery",
+  "objectiveLevels": [
+    { "title": "Explain osmosis", "level": 4, "label": "Application", "insufficient": false },
+    { "title": "Predict water movement", "level": 0, "label": "Insufficient Evidence for Reliable Assessment", "insufficient": true }
+  ],
   "recommendation": "mastered",
   "overallScore": 0.86,
   "report": {
@@ -429,8 +433,9 @@ Finish) or `Failed`, and `null` while running. An empty array when there are non
 
 | Field | Meaning |
 |---|---|
-| `recommendation` | The AI's recommendation: `mastered` (every concept reached 80% mastery), `partial` (average at least 52.5%) or `not-demonstrated`. `null` until the attempt ends. |
-| `overallScore` | Average mastery over the examined concepts, 0 to 1. |
+| `objectiveLevels` | The AI report's result: the level the evidence supports for each learning objective, 1 to 5, with its label. Level 0 (`insufficient: true`) means the evidence was insufficient to assess reliably, never zero understanding. Empty until the attempt ends, and for reports written before learning objectives. Use this, not the two fields below, wherever you show an AI result. |
+| `recommendation` | **Deprecated; not a score.** The examiner's running-estimate band (`mastered`, `partial`, `not-demonstrated`), which only steers which question comes next. Kept so existing integrations don't break; do not show it as the student's result. `null` until the attempt ends. |
+| `overallScore` | **Deprecated; not a score.** The mean of the examiner's running estimate over the examined concepts, 0 to 1: a steering aid, never a grade. |
 | `report` | The full AI report (per-concept mastery and status, quoted evidence with source citations, disputed turns), or `null` until the attempt ends. Concept `status` is `NotStarted`, `Open`, `Mastered`, `Aporia` or `Exhausted`. |
 | `grade` | The latest decision of the older single-grader review, or `null`. The graded result comes from the grading workflow (see "Grading workflow" below): AI grades are preliminary, and a final grade exists only after human grading and approval. |
 
@@ -610,7 +615,8 @@ Each delivery is a `POST` with a JSON body:
 }
 ```
 
-`session.completed` is sent once per attempt, when it ends for any reason. The instructor's grade comes
+`session.completed` is sent once per attempt, when it ends for any reason. `objectiveLevels` is the AI's result
+per learning objective; `recommendation` and `overallScore` are deprecated steering values, not a score (see Result). The instructor's grade comes
 later; read it from the result endpoint.
 
 | Header | Value |
@@ -653,6 +659,7 @@ static bool VerifyGadflySignature(string secret, string header, string rawBody, 
     var expected = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes($"{t}.{rawBody}"))).ToLowerInvariant();
     return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(expected), Encoding.ASCII.GetBytes(v1));
 }
+    "objectiveLevels": [{ "title": "Explain osmosis", "level": 4, "label": "Application", "insufficient": false }],
 ```
 
 Node.js:

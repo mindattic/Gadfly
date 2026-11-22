@@ -139,12 +139,15 @@ public class SessionReportTests
     }
 
     [Test]
-    public void Markdown_ShowsTheRecommendationAndDisputes()
+    public void Markdown_ReportsLevelsNotTheRunningEstimate_AndDisputes()
     {
         var s = Session();
         s.Judged("a", MoveKind.Elicit, 0.9, 0.7, needsReview: true, answer: "words | with pipe");
         var md = SessionReport.From(s, new Dictionary<string, string> { ["a"] = "A | B" }).ToMarkdown();
-        Assert.That(md, Does.Contain("**Recommendation: partial**"));
+        // GAD-T425: the running estimate is labelled a steering aid and never stated as the result.
+        Assert.That(md, Does.Not.Contain("Recommendation:"));
+        Assert.That(md, Does.Not.Contain("overall mastery"));
+        Assert.That(md, Does.Contain("Running estimate (steering only)"));
         Assert.That(md, Does.Contain("the instructor decides the grade"));
         Assert.That(md, Does.Contain("Judges disagreed on turn(s) 1"));
         Assert.That(md, Does.Contain("A \\| B"));

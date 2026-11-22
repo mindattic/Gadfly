@@ -202,7 +202,11 @@ public static class ExamCommand
         await File.WriteAllTextAsync(jsonReportPath, report.ToJson());
 
         Console.WriteLine();
-        Console.WriteLine($"Session ended ({session.EndReason}). Recommendation: {report.Recommendation}, overall mastery {report.OverallScore:P0}.");
+        // GAD-T425: the result is each objective's level (0 = insufficient evidence); the running estimate only steers.
+        Console.WriteLine($"Session ended ({session.EndReason}).");
+        foreach (var o in report.Objectives)
+            Console.WriteLine($"  {o.Title,-40} Level {o.Level} ({o.LevelLabel})");
+        Console.WriteLine("Examiner's running estimate by concept (steers the questions; not a score):");
         foreach (var c in report.Concepts.Where(c => c.Turns > 0))
             Console.WriteLine($"  {c.Title,-40} {c.Mastery:P0}  {c.Status}");
         Console.WriteLine($"Report: {reportPath}");

@@ -124,15 +124,6 @@ The learning objectives are what the exam examines and what is graded. Under **S
 one isn't examinable yet), a **Weight**, a **Maximum score** and, for Learning mode, an optional **hint ladder** (one
 hint per line). **Move up** / **Move down** set the order they are examined in.
 
-Under each objective, **Fix an opening question** makes the first question on that objective the same, word for word,
-for every student, so their first answers compare directly. Without one, the examiner words the opening afresh for each
-student. Write it yourself or press **Draft one with the examiner**, edit the draft, then **Check and approve**: like
-every examiner question it is checked for giving away points the student is expected to make, and one that does (or that
-the check cannot clear) is not saved. It must be one spoken line and must not ask how the student arrived at an answer.
-**Change it** and **Remove it** are there until you publish. Linking the objective to another concept, or removing the
-objective, removes its opening question, since it was checked against that concept's rubric. Approvals and removals are
-in the audit log.
-
 ### 3. Rubric
 
 Each objective has criteria. A criterion has a **Name**, a **Dimension** (factual knowledge, conceptual
@@ -206,12 +197,14 @@ Each change is written to the audit log. Typed answers as an accommodation are n
 
 ## 6. Review a session
 
-Open **Review**. Each row is one attempt: student, exam, attempt number, state, when it ended, the AI recommendation,
-how many answers the judges disagreed on, and how many integrity flags there were (shown as "hidden" while you still
+Open **Review**. Each row is one attempt: student, exam, attempt number, state, when it ended, the AI's level for each
+learning objective (hover for the objective names), how many answers the judges disagreed on, and how many integrity flags there were (shown as "hidden" while you still
 owe a blind grade). Filter by exam, **Needs a grade** or **Judges disagreed**. Open a session to read it.
 
-**The summary** shows the state and end reason, times, the AI recommendation (*mastered*: every examined concept
-reached 80% mastery; *partial*: average mastery at least 52.5%; *not-demonstrated*: lower) and export links.
+**The summary** shows the state and end reason, times, the **AI levels** (the level the evidence supports for each
+learning objective, 1 to 5; **Level 0** means the evidence was insufficient to assess reliably, never zero
+understanding) and export links. The examiner's running estimate is not shown as a result anywhere: it only decides
+what to ask next, and no average of answer scores stands in for a level.
 
 **The timeline** lists every question in order, with:
 
@@ -235,8 +228,10 @@ yourself before grading.
 questions, and what it means in plain words. They are evidence to weigh, never findings, and never part of a grade.
 See [Reading integrity notes](integrity-notes.md) for what each one means and how weak it is.
 
-**Mastery and the AI report.** **Mastery by concept** shows each concept's final estimate and how it closed
-(Mastered, Aporia, Exhausted, Open). The **AI report** is the panel's write-up, with quoted evidence and citations.
+**Running estimate and the AI report.** **Examiner's running estimate by concept** shows where the examiner's
+steering estimate ended for each concept and how questioning on it closed (Mastered, Aporia, Exhausted, Open). It is
+labelled as a steering aid: it is not a score, a level or a grade. The admin assignment and student pages likewise
+show the AI levels (not a percentage) until a final grade exists. The **AI report** is the panel's write-up, with quoted evidence and citations.
 
 ## 7. Grade and publish
 

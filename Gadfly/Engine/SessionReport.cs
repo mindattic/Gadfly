@@ -120,9 +120,12 @@ public sealed record SessionReport
     public required DateTimeOffset StartedAt { get; init; }
     public DateTimeOffset? EndedAt { get; init; }
     public required EndReason EndReason { get; init; }
-    /// <summary>"mastered", "partial" or "not-demonstrated".</summary>
+    /// <summary>
+    /// "mastered", "partial" or "not-demonstrated", from the running estimate. A steering aid kept for older readers and the
+    /// API; never shown as the student's result (GAD-T425): <see cref="Objectives"/> levels are.
+    /// </summary>
     public required string Recommendation { get; init; }
-    /// <summary>Mean mastery over examined concepts, 0..1.</summary>
+    /// <summary>Mean running estimate over examined concepts, 0..1. A steering aid, never a score (GAD-T425).</summary>
     public required double OverallScore { get; init; }
     public required IReadOnlyList<ConceptReport> Concepts { get; init; }
     public int TurnsJudged { get; init; }
@@ -256,8 +259,14 @@ public sealed record SessionReport
         string Pct(double v) => (v * 100).ToString("0", ci) + "%";
         var sb = new StringBuilder();
         sb.AppendLine("# Socratic session report").AppendLine();
-        sb.AppendLine($"**Recommendation: {Recommendation}** (overall mastery {Pct(OverallScore)}). " +
-                      "This is the AI panel's recommendation; the instructor decides the grade.").AppendLine();
+        // GAD-T425 (ElenchusAtScale Prop. 3.3, Prop. 3.4(b), M9, M10, Section 4.5): what is reported is the corroborated level
+        // of each learning objective, Level 0 meaning insufficient evidence. The running estimate (Recommendation,
+        // OverallScore, each concept's Mastery) only steers the questions and is never stated as the result.
+        sb.AppendLine(Objectives.Count > 0
+            ? "**Result: the level for each learning objective, below.** Level 0 means the evidence was insufficient to assess " +
+              "reliably, not zero understanding. This is the AI panel's report; the instructor decides the grade."
+            : "**No per-objective levels:** this report was written before learning objectives, and the instructor decides the grade " +
+              "from the evidence below.").AppendLine();
         sb.AppendLine("| | |").AppendLine("|---|---|");
         sb.AppendLine($"| Session | `{SessionId}` |");
         sb.AppendLine($"| Subject | {SubjectId} |");
@@ -293,9 +302,11 @@ public sealed record SessionReport
         }
 
         sb.AppendLine("## Concepts").AppendLine();
-        sb.AppendLine("| Concept | Mastery | Status | Turns | Avg. score |").AppendLine("|---|---|---|---|---|");
+        sb.AppendLine("> The running estimate is the examiner's steering aid for choosing the next question. It is not a score, a level " +
+                      "or a grade, and no average of answer scores stands in for a level.").AppendLine();
+        sb.AppendLine("| Concept | Running estimate (steering only) | Status | Turns |").AppendLine("|---|---|---|---|");
         foreach (var c in Concepts)
-            sb.AppendLine($"| {Escape(c.Title)} | {Pct(c.Mastery)} | {c.Status} | {c.Turns} | {(c.AverageScore is { } a ? Pct(a) : "-")} |");
+            sb.AppendLine($"| {Escape(c.Title)} | {Pct(c.Mastery)} | {c.Status} | {c.Turns} |");
         sb.AppendLine();
 
         foreach (var c in Concepts.Where(c => c.Evidence.Count > 0))

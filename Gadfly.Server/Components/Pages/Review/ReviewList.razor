@@ -46,7 +46,7 @@ else
         <thead>
             <tr>
                 <th>Student</th><th>Exam</th><th>Attempt</th><th>State</th><th>Ended</th>
-                <th>AI recommendation</th><th title="Answers where the judging panel disagreed">Disagreed</th>
+                <th title="The level the AI report found for each learning objective, 1 to 5; Level 0 means the evidence was insufficient, not zero understanding">AI levels</th><th title="Answers where the judging panel disagreed">Disagreed</th>
                 <th title="Integrity flags (normal behavior like looking away is not counted)">Flags</th><th>Grade</th>
             </tr>
         </thead>
@@ -60,10 +60,14 @@ else
                     <td>@r.State</td>
                     <td>@(r.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "—")</td>
                     <td>
-                        @if (r.Recommendation is not null)
+                        @* GAD-T425: the corroborated per-objective levels, never the examiner's running estimate or a mean score. *@
+                        @if (ReportedLevels.Short(r.AiLevels) is { } levels)
                         {
-                            <span class="tag rec-@r.Recommendation">@r.Recommendation</span>
-                            <span class="hint">@Pct(r.AiScore)</span>
+                            <span title="@ReportedLevels.Detail(r.AiLevels)">@levels</span>
+                        }
+                        else if (r.Recommendation is not null)
+                        {
+                            <span class="hint" title="This report was written before learning objectives, so it has no levels">no levels</span>
                         }
                         else
                         {
@@ -151,5 +155,4 @@ else
         currentPage = Math.Clamp(currentPage, 1, TotalPages);
     }
 
-    private static string Pct(double? v) => v is { } x ? $"{x * 100:0}%" : "";
 }

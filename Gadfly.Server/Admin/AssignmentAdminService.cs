@@ -192,15 +192,15 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
         var finals = await db.FinalGrades.AsNoTracking().Where(g => g.OrganizationId == org && sessionIds.Contains(g.SessionId))
             .Select(g => new { g.SessionId, g.FinalPercent, g.Status }).ToDictionaryAsync(g => g.SessionId, ct);
         var reports = (await db.SessionReports.AsNoTracking().Where(r => r.OrganizationId == org && sessionIds.Contains(r.SessionId))
-                .Select(r => new { r.SessionId, r.OverallScore, r.CreatedAt }).ToListAsync(ct))
-            .GroupBy(r => r.SessionId).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.CreatedAt).First().OverallScore);
+                .Select(r => new { r.SessionId, r.ReportJson, r.CreatedAt }).ToListAsync(ct))
+            .GroupBy(r => r.SessionId).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.CreatedAt).First().ReportJson);
         return flat.Select(f =>
         {
             string? score = null;
             if (latest.TryGetValue(f.Id, out var sid))
             {
                 finals.TryGetValue(sid, out var g);
-                score = AdminPeople.Score(g?.FinalPercent, g?.Status, reports.TryGetValue(sid, out var ai) ? ai : (double?)null);
+                score = AdminPeople.Score(g?.FinalPercent, g?.Status, reports.GetValueOrDefault(sid));
             }
             return new AssignmentListRow(f.Id, f.ExamId, f.ExamTitle, f.ExamStatus, f.StudentUserId, AdminPeople.NameOf(f.UserName, f.DisplayName),
                 f.UserName, f.Email, f.StudentActive, f.OpensAt, f.ClosesAt, f.AttemptsAllowed, f.Used, ProgressOf(f), score, f.ReleasedAt,

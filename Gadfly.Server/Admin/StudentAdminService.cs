@@ -252,8 +252,8 @@ public sealed class StudentAdminService(IServiceProvider sp)
         var finals = await db.FinalGrades.AsNoTracking().Where(g => g.OrganizationId == org && sessionIds.Contains(g.SessionId))
             .Select(g => new { g.SessionId, g.FinalPercent, g.Status }).ToDictionaryAsync(g => g.SessionId, ct);
         var reports = (await db.SessionReports.AsNoTracking().Where(r => r.OrganizationId == org && sessionIds.Contains(r.SessionId))
-                .Select(r => new { r.SessionId, r.OverallScore, r.CreatedAt }).ToListAsync(ct))
-            .GroupBy(r => r.SessionId).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.CreatedAt).First().OverallScore);
+                .Select(r => new { r.SessionId, r.ReportJson, r.CreatedAt }).ToListAsync(ct))
+            .GroupBy(r => r.SessionId).ToDictionary(g => g.Key, g => g.OrderByDescending(r => r.CreatedAt).First().ReportJson);
         var integrity = (await db.IntegrityEvents.AsNoTracking().Where(e => e.OrganizationId == org && sessionIds.Contains(e.SessionId))
                 .GroupBy(e => e.SessionId)
                 .Select(g => new { g.Key, All = g.Count(), Raised = g.Count(e => e.Severity == IntegritySeverity.Medium || e.Severity == IntegritySeverity.High) })
@@ -266,7 +266,7 @@ public sealed class StudentAdminService(IServiceProvider sp)
                 var attempts = mine.Select(s =>
                 {
                     finals.TryGetValue(s.Id, out var f);
-                    var score = AdminPeople.Score(f?.FinalPercent, f?.Status, reports.TryGetValue(s.Id, out var ai) ? ai : (double?)null);
+                    var score = AdminPeople.Score(f?.FinalPercent, f?.Status, reports.GetValueOrDefault(s.Id));
                     integrity.TryGetValue(s.Id, out var i);
                     return new ProfileAttempt(s.Id, s.Attempt, s.State, s.EndReason, s.StartedAt, s.EndedAt, s.EndReason != AdminPeople.NotAnAttempt,
                         score, i?.All ?? 0, i?.Raised ?? 0);
