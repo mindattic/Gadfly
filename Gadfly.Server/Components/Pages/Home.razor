@@ -7,6 +7,7 @@
 @inject ITenantContext Tenant
 @inject NavigationManager Nav
 @inject IAuthorizationService Authz
+@inject IConfiguration Config
 
 <PageTitle>Gadfly Exams</PageTitle>
 
@@ -28,7 +29,16 @@ else
     <h1>@Greeting</h1>
     <div class="cards">
         <AuthorizeView Policy="@Gadfly.Server.Desk.DeskAccess.Policy">
-            <a class="card" href="admin/desk"><h2>Admin desk</h2><p>Exams, students and who sits what: create, assign, and reset an attempt in one click.</p></a>
+            <Authorized>
+                <a class="card" href="admin/desk"><h2>Admin desk</h2><p>Exams, students and who sits what: create, assign, and reset an attempt in one click.</p></a>
+            </Authorized>
+            <NotAuthorized>
+                @if (Gadfly.Server.Desk.DeskAccess.NeedsMfaForDesk(context.User, Tenant, Config))
+                {
+                    @* GAD-T247: every desk admin needs two-step verification, a listed account included. *@
+                    <a class="card" href="account/mfa/setup"><h2>Admin desk</h2><p>Set up two-step verification first: the admin desk opens only after a sign-in with it.</p></a>
+                }
+            </NotAuthorized>
         </AuthorizeView>
         @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor)
         {

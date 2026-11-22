@@ -154,12 +154,11 @@ also shows in the student's history.
 ## The admin desk
 
 The **admin desk** (`/admin/desk`, **Desk** in the admin navigation) puts the everyday work on one page, in three
-tabs. It is on when the server setting `Gadfly:AdminDesk:Enabled` is `true`; owners and admins of the organization
-can use it, and so can accounts listed by user name in `Gadfly:AdminDesk:Admins` (for a pilot).
-
-> **Important.** Accounts listed in `Gadfly:AdminDesk:Admins` reach the desk **without** two-step verification
-> and act with admin rights in that organization. Keep that list empty in production, or limited to accounts you
-> control.
+tabs. It is on when the server setting `Gadfly:AdminDesk:Enabled` is `true` — **off by default in Production**
+(GAD-T247); a pilot that wants it turns the setting on explicitly. Owners and admins of the organization can use
+it, and so can accounts listed by user name in `Gadfly:AdminDesk:Admins` (for a pilot, so a non-admin account
+such as the owner's own can also sit exams and reset them). Every desk admin needs two-step verification to sign
+in, listed accounts included (GAD-T247); there is no exception any more.
 
 **Exams.** **New exam** creates an exam straight from notes: a **Subject** and **Topic** (the title defaults to
 "Subject: Topic"), the source notes pasted in or uploaded as files, a **Duration** (default 20 minutes), whether
@@ -184,7 +183,9 @@ score, and the **Transcript**. Two repair actions:
 | **Reset** | Removes every attempt of that student on that exam, with its transcript, scores and grades, so the student starts fresh. It can't be undone, and it is refused while an attempt is running or paused. |
 | **Clear scores** | Removes the grades and reports (a copy is archived in the audit log); the attempts and transcripts stay and still count as used, and the student is told so. |
 
-Every desk action is written to the audit log.
+Every desk action is written to the audit log with who did it: **Reset** as `desk.assignment-reset` (with the
+attempts removed), **Clear scores** as `desk.scores-cleared` plus one `desk.scores-archived` row per attempt holding a
+copy of its grading records, and password resets, attempt changes and exam edits under their own `desk.*` actions.
 
 ## Organizations
 
@@ -260,8 +261,8 @@ admin desk.
 
 Every staff role (owner, admin, instructor, examiner, second reviewer) must sign in with an authenticator app
 (TOTP). New staff accounts enroll at first sign-in; after that every sign-in asks for the code, and staff pages refuse
-a sign-in without it. Students don't need it. (The only exception is the admin desk's configured list of accounts,
-above.)
+a sign-in without it. Students don't need it, except a student account listed as a desk admin: it opens the admin
+desk only after a sign-in with two-step verification (the home page points it to the setup page).
 
 On a development machine (the `Development` environment) the requirement is off unless
 `Gadfly:RequireMfaInDevelopment` is `true`. It is always on in production.
@@ -449,7 +450,7 @@ genuine AI evaluations and must not be used to grade anyone." It is set by the s
 | Setting | Effect |
 |---|---|
 | `Gadfly:OpenExams` | When `true`, every published exam is offered to every student who opens **My exams** (with 50 attempts), without assigning it. Useful for a demo; turn it off for real classes. |
-| `Gadfly:AdminDesk:Enabled`, `Gadfly:AdminDesk:Admins`, `Gadfly:AdminDesk:Organization` | The admin desk and who may use it (see above). |
+| `Gadfly:AdminDesk:Enabled`, `Gadfly:AdminDesk:Admins`, `Gadfly:AdminDesk:Organization` | The admin desk and who may use it (see above). Off in Production unless set to `true`. |
 | `Gadfly:Notifications:SendInMockMode` | `true` lets a mock-mode server send notification emails, for a developer whose SMTP points at a local test inbox. Off by default. |
 | `Gadfly:Voice:Mode` | `live`, `mock` or `off`. With `off`, the get-ready page's **Spoken examiner** check fails and no exam can begin. |
 | `Gadfly:RequireMfaInDevelopment` | Two-step verification on a development machine. |

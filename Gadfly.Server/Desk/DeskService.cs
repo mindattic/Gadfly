@@ -15,11 +15,11 @@ using MindAttic.Authentication.Services;
 namespace Gadfly.Server.Desk;
 
 /// <summary>
-/// Who may open the admin desk (GAD-T246): the desk is on (<see cref="EnabledSetting"/>) and the caller holds the desk's
-/// Admin role in the active organization, either as that organization's Owner or Admin (with the same MFA rule as every
-/// staff policy) or as an account named in <see cref="AdminsSetting"/>, which holds the desk Admin role alongside whatever
-/// membership role it has (the owner's 'ryan' account is a Student there, so it can sit exams and reset them from the app).
-/// Hardening before real students (MFA for listed accounts and the like) is GAD-T247.
+/// Who may open the admin desk (GAD-T246, hardened GAD-T247): the desk is on (<see cref="EnabledSetting"/>), the caller
+/// has signed in with MFA (the same rule as every staff policy, with no exception), and holds the desk's Admin role in
+/// the active organization, either as that organization's Owner or Admin or as an account named in
+/// <see cref="AdminsSetting"/>, which holds the desk Admin role alongside whatever membership role it has (the owner's
+/// 'ryan' account is a Student there, so it can sit exams and reset them from the app).
 /// </summary>
 public static class DeskAccess
 {
@@ -37,14 +37,29 @@ public static class DeskAccess
         config.GetSection(AdminsSetting).GetChildren().Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v!.Trim()).ToList();
 
     /// <summary>True when <paramref name="user"/> may use the desk on <paramref name="tenant"/>'s active organization.</summary>
-    public static bool IsDeskAdmin(ClaimsPrincipal? user, ITenantContext tenant, IConfiguration config)
+    public static bool IsDeskAdmin(ClaimsPrincipal? user, ITenantContext tenant, IConfiguration config) =>
+        Allowed(user, tenant, config, requireMfa: true);
+
+    /// <summary>
+    /// True when <paramref name="user"/> would be a desk admin but hasn't signed in with two-step verification yet
+    /// (GAD-T247), so the home page can say why the desk is missing and where to set it up instead of hiding it silently.
+    /// </summary>
+    public static bool NeedsMfaForDesk(ClaimsPrincipal? user, ITenantContext tenant, IConfiguration config) =>
+        OrgRoleHandler.MfaRequired && user is not null && !user.HasClaim(MaClaims.Amr, "mfa")
+        && Allowed(user, tenant, config, requireMfa: false);
+
+    private static bool Allowed(ClaimsPrincipal? user, ITenantContext tenant, IConfiguration config, bool requireMfa)
     {
         if (!IsEnabled(config) || user?.Identity?.IsAuthenticated != true) return false;
         if (tenant.IsSystem || tenant.OrganizationId is null || tenant.UserId is null || tenant.Role is null or OrgRoles.Api) return false;
-        // Org Owners and Admins need the same MFA as everywhere else. A listed account skips it for now, at the owner's request
-        // ("admin mode now, hide it under security later"); GAD-T247 adds MFA for listed accounts before real students use the desk.
-        if (tenant.Role is OrgRoles.Owner or OrgRoles.Admin)
-            return !OrgRoleHandler.MfaRequired || user.HasClaim(MaClaims.Amr, "mfa");
+        // Every desk admin needs the same MFA as every other staff policy (GAD-T247): Owners and Admins already did; a
+        // listed account used to skip it (the owner's earlier request, "admin mode now, hide it under security later"),
+        // which GAD-T292's help-center agent flagged as a real gap now that the desk is reachable before real students
+        // use it. There is no separate enrollment prompt for a listed account that isn't also an Owner/Admin/Instructor/
+        // Examiner/SecondReviewer (those roles alone force MFA enrollment at sign-in): it can enroll any time at
+        // /account/mfa/setup, and simply can't open the desk until it has.
+        if (requireMfa && OrgRoleHandler.MfaRequired && !user.HasClaim(MaClaims.Amr, "mfa")) return false;
+        if (tenant.Role is OrgRoles.Owner or OrgRoles.Admin) return true;
         var name = user.Identity?.Name;
         return name is { Length: > 0 } && ListedAdmins(config).Contains(name, StringComparer.OrdinalIgnoreCase)
             && IsListedAdminOrganization(tenant, config);
