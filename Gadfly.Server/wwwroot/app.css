@@ -122,3 +122,11 @@ h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
 .empty-state { display: grid; justify-items: center; gap: .4rem; text-align: center; padding: 3rem 1rem; color: var(--muted); }
 .empty-state h2 { margin: 0; color: var(--ink); font-size: 1.1rem; }
 .empty-state p { margin: 0; max-width: 32rem; }
+
+/* Printing (GAD-T397): the top bar never prints (nowhere to click on paper), and a page marks its own nav links, download
+   buttons and other controls with .no-print the same way. Ink-economical white paper regardless of the screen's theme,
+   matching the public site's and the transcript's own print rules. */
+@media print {
+    .topbar, .no-print { display: none !important; }
+    body { background: #fff; color: #000; }
+}

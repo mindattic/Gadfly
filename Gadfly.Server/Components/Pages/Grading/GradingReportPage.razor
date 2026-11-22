@@ -6,7 +6,7 @@
 
 <PageTitle>Assessment report · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
-<p class="hint"><a href="grading/@SessionId">← Grading workspace</a></p>
+<p class="hint no-print"><a href="grading/@SessionId">← Grading workspace</a></p>
 
 @if (loading)
 {
@@ -20,7 +20,7 @@ else if (report is null)
 else
 {
     <h1>Assessment report <span>· reviewer view</span></h1>
-    <p class="hint">
+    <p class="hint no-print">
         <a href="@GradingSetup.ReportMarkdownPath(SessionId)" download data-enhance-nav="false">Download Markdown</a> ·
         <a href="@GradingSetup.ReportCsvPath(SessionId)" download data-enhance-nav="false">Download CSV</a> ·
         <a href="@GradingSetup.ReportPdfPath(SessionId)" download data-enhance-nav="false">Download PDF</a>

@@ -40,6 +40,14 @@
     .gr-summary { grid-template-columns: 1fr 1fr; }
 }
 
+/* Printing (GAD-T397): the report's panels keep their border but print on white paper regardless of the screen's theme
+   (app.css already hides the top bar and anything marked .no-print); .gr-report's own break-inside rule keeps an
+   objective from splitting across a page. */
+@media print {
+    .gr-banner, .gr-objective, .gr-response, .gr-hidden { background: #fff; color: #000; }
+    .gr-mock, .gr-banner.mock { background: #fff; color: #000; border: 1px solid #000; }
+}
+
 /* Speech-recognition notes on voice responses (GAD-T265). */
 .gr-speech { margin: .3rem 0; font-size: .9rem; }
 .gr-speech.corrected { color: var(--ink); border-left: 3px solid var(--accent); padding-left: .6rem; }
