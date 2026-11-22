@@ -1,10 +1,124 @@
 @page "/admin/status"
 @attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Admin
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject ILogger<SystemStatus> Log
 
-@* Placeholder (GAD-T300) so the admin navigation never leads nowhere. GAD-T302 replaces this file with the real page. *@
+@* Whether the examiner, speech and background work are healthy (GAD-T300, GAD-T302), and how long a live exam's outside
+   calls take (GAD-T413, GAD-T317/GAD-T392): the panel's own steps and the examiner's voice, which together make up most of
+   the pause a student sees between answering and the next question. *@
 <PageTitle>System status · Gadfly Exams</PageTitle>
-<h1>System status</h1>
-<div class="panel admin-soon">
-    <p><strong>Coming in this release.</strong> Whether the examiner, speech and background work are healthy.</p>
-    <p class="hint">Until then, the <a href="admin/desk">admin desk</a> and the <a href="admin">dashboard</a> cover the everyday work.</p>
+
+<div class="dash-head">
+    <h1>System status</h1>
+    <div class="row-actions">
+        @if (data is not null)
+        {
+            <span class="hint">Updated @data.GeneratedAt.UtcDateTime.ToString("HH:mm") UTC</span>
+        }
+        <button type="button" class="link" @onclick="LoadAsync" disabled="@loading">Refresh</button>
+    </div>
 </div>
+
+@if (error is not null)
+{
+    <div class="notice dash-error" role="alert">
+        <p><strong>System status could not load.</strong> @error</p>
+        <button type="button" @onclick="LoadAsync" disabled="@loading">Try again</button>
+    </div>
+}
+else if (data is null)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else
+{
+    <section aria-labelledby="health-h">
+        <h2 id="health-h" class="section">Health</h2>
+        <div class="stat-tiles">
+            <div class="stat">
+                <span class="label">Database</span>
+                <span class="value @(data.DatabaseHealthy ? "ok" : "error")">@(data.DatabaseHealthy ? "Healthy" : "Unhealthy")</span>
+            </div>
+            <div class="stat">
+                <span class="label">Background jobs waiting or running</span>
+                <span class="value">@data.Jobs.PendingOrRunning</span>
+            </div>
+            <div class="stat">
+                <span class="label">Oldest job still waiting</span>
+                <span class="value">@(data.Jobs.OldestPendingSince is { } since ? AdminDashboardService.Ago(data.GeneratedAt - since) : "none")</span>
+            </div>
+            <div class="stat">
+                <span class="label">Jobs failed, last 24h</span>
+                <span class="value @(data.Jobs.FailedInWindow > 0 ? "error" : null)">@data.Jobs.FailedInWindow</span>
+            </div>
+        </div>
+    </section>
+
+    <section aria-labelledby="timings-h">
+        <h2 id="timings-h" class="section">Time to the next question (outside calls, last 24h)</h2>
+        <p class="hint">
+            Every outside call a live exam makes &#8212; the AI panel's own steps and the examiner's voice &#8212; timed from
+            when it started to when it finished. These add up to most of the pause a student sees between answering and the
+            next question appearing; the small remainder spent inside the exam engine itself is not yet its own metric
+            (that engine is under active work on a separate performance ticket).
+        </p>
+        @if (data.CallTimings.Count == 0)
+        {
+            <p class="notice">No outside calls recorded in this window yet.</p>
+        }
+        else
+        {
+            <table class="grid">
+                <thead>
+                    <tr><th>Call</th><th>Count</th><th>Average</th><th>Worst</th><th>Succeeded</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in data.CallTimings)
+                    {
+                        <tr>
+                            <td>@t.CallName</td>
+                            <td>@t.Count</td>
+                            <td>@AdminDashboardService.Duration(TimeSpan.FromMilliseconds(t.AvgMs))</td>
+                            <td>@AdminDashboardService.Duration(TimeSpan.FromMilliseconds(t.MaxMs))</td>
+                            <td class="@(t.SuccessRate < 1 ? "error" : null)">@t.SuccessRate.ToString("P0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <p class="hint">Sampled over the most recent @data.CallSampleSize.ToString("N0") call(s) in the window, whichever comes first.</p>
+        }
+    </section>
+}
+
+@code {
+    private SystemStatusReport? data;
+    private string? error;
+    private bool loading;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (loading) return;
+        loading = true;
+        error = null;
+        try
+        {
+            // Its own scope, so this page never shares the circuit's DbContext with the layout (same pattern as the dashboard).
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+            data = await ActivatorUtilities.CreateInstance<AdminStatusService>(scope.ServiceProvider).LoadAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            error = "System status is for the organization's owners and admins.";
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "System status failed to load for organization {Org}", Tenant.OrganizationId);
+            error = "Something went wrong reading the numbers. Try again in a moment.";
+        }
+        finally { loading = false; }
+    }
+}
