@@ -39,6 +39,7 @@ else
         <div><span class="hint">Panel</span>@(w.Policy.Panel is { Accepted: true } pc ? $"calibrated for this exam (QWK {pc.PanelHumanQwk:0.00}, {pc.Items} answers)" : w.Policy.Panel is not null ? "not accepted on its last calibration: grades are provisional" : "not calibrated for this exam: grades are provisional")</div>
         <div><span class="hint">Ended</span>@(w.Session.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm") ?? "—") UTC</div>
         <div><span class="hint">Report</span><a href="grading/@w.Session.Id/report">view</a> · <a href="@GradingSetup.ReportMarkdownPath(w.Session.Id)" download data-enhance-nav="false">Markdown</a> · <a href="@GradingSetup.ReportCsvPath(w.Session.Id)" download data-enhance-nav="false">CSV</a></div>
+        <div><span class="hint">Transcript</span><Gadfly.Server.Transcripts.TranscriptLinks SessionId="w.Session.Id" Label="" /> · <a href="@Gadfly.Server.Transcripts.TranscriptFormats.Path(w.Session.Id, Gadfly.Server.Transcripts.TranscriptFormat.Pdf, Gadfly.Server.Transcripts.TranscriptAudience.Student).TrimStart('/')" download data-enhance-nav="false" title="Exactly what the student sees once the result is published">student copy</a></div>
     </div>
     @if (w.Policy.Source != "exam-policy")
     {
