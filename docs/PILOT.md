@@ -69,12 +69,37 @@ The owner pastes the forms into the chat. Each problem and wish is filed as a ti
 prioritised with the owner, and worked like any other ticket. GAD-T66 closes when at least five sessions are done
 and their feedback is filed.
 
-Before any exam's AI grades are relied on, its panel is calibrated (GAD-T270): a second examiner grades the pilot
-answers blind and independently of Erin, and the panel's levels, Erin's and the second examiner's are posted to
-`POST /grading/calibration/{examId}` (docs/API.md, "Panel calibration"). The panel is accepted for that exam only when
+Before any exam's AI grades are relied on, its panel is calibrated (GAD-T270). Since GAD-T428 the double marking
+happens in the app: on **Grading > Panel calibration**, open the exam, tick **Double marking** and, for the pilot,
+**Human-only until calibrated** (GAD-T427: the panel then counts for nothing in the mark until a calibration is
+accepted). Erin grades as usual (blind by default); a second examiner grades the same sessions from **Second marking**,
+which shows only a session code, the rubric and the answers the panel saw, never the panel's or Erin's grade. The
+calibration page then shows the human-human QWK, the panel's agreement with each marker and whether the thresholds
+hold, and **Record as this exam's calibration** saves it (levels can still be posted from outside to
+`POST /grading/calibration/{examId}`, docs/API.md, "Panel calibration"). The panel is accepted for that exam only when
 panel-human QWK is at least .70, no more than .10 below the two examiners' own agreement, and |SMD| is under .15, on at
 least 30 answers. No published source tests LLM grading of spoken Socratic answers, so these figures can only come
-from Gadfly's own double-marked answers (research note 05).
+from Gadfly's own double-marked answers (research note 05). Mock-panel grades never accept a panel.
+
+The same page turns the set into policy suggestions (ElenchusAtScale 3.8, 5.4.1): the AI weight whose combined grade
+agrees best with the independent second marker (0 to 50%; 0 whenever the panel was not accepted), review and
+reconciliation thresholds from how far the two examiners themselves differ, a boundary margin and a panel-spread
+limit. They change nothing by themselves: adopt them with a grading-policy change request. Paste a "student email,
+group" list to see the SMD by group (an overall SMD can hide a gap one group carries); the list is never stored.
+
+A calibration records the model id of every panel member and **expires** when any of them changes (GAD-T429): grades
+are provisional again and a gated exam goes back to human-only until it is re-run. After 180 days
+(`Gadfly:Grading:RecalibrateAfterDays`) the page asks for a re-run of the calibration and the bias probes; nothing
+re-runs by itself.
+
+Before the panel's grades are trusted, also run its **bias probes** (GAD-T432; ElenchusAtScale 4.6.1, 5.3.2, 6.8) from
+the exam's **Bias probes** page: the panel grades a sample of answers again padded, less fluent and with a spoken
+instruction to the grader; the page shows the estimated provider cost and runs only when someone with the policy
+approval permission ticks the cost and starts it (mock mode costs nothing). The human paraphrase probe on the same page
+has each examiner mark one form of each answer blind, so a fluency effect shared with people is told apart from the
+panel's own. Offline, `gadfly bias-check answers.json` runs the panel probes on the mock panel; `--live --approve-spend
+<usd>` runs them for real after printing the estimate. Once enough sessions record who wrote each question, the
+**Self-preference check** page (GAD-T431) shows whether a grading member favours answers to its own family's questions.
 
 The same double-marked pilot sets how many objectives an examination needs before its score is used summatively
 (GAD-T443; ElenchusAtScale 3.7). `SessionPolicy.MinSummativeObjectives` defaults to 4, which is a setting, not an

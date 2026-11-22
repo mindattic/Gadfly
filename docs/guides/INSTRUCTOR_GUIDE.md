@@ -263,6 +263,36 @@ reconciled; someone other than the scorer approves; you **Publish**. Students ca
 resolve it or amend the grade. The [Grading guide](grading-guide.md) covers each step and its buttons, blind grading
 and separation of duties.
 
+### How far to trust the AI panel on an exam
+
+**Grading > Panel calibration** lists every exam with its calibration. Open one to:
+
+- **Turn on double marking.** A second examiner then grades the exam's sessions from **Second marking**. They see a
+  session code, the rubric and the answers the AI saw, never the AI's grade, the first examiner's grade, the student's
+  name or integrity notes. Whoever graded a session as its examiner cannot second-mark it. Second marks never change a
+  student's grade: they measure how well markers agree.
+- **Read the results.** Once answers have the AI's level, the first examiner's original blind level and a second mark,
+  the page shows how well the two examiners agree with each other (QWK) and how well the AI agrees with each of them,
+  whether the agreement thresholds hold (QWK at least .70, within .10 of the examiners' own agreement, |SMD| under .15,
+  on at least 30 answers), and what the set suggests for the AI weight, the review and reconciliation thresholds, the
+  boundary margin and the panel-spread limit. Adopt a suggestion with a grading-policy change request. Paste a "student
+  email, group" list to check whether the AI is harsher or more lenient with one group; the list is not stored.
+- **Record the calibration** (needs the permission to approve grading-policy changes). It is recorded against the AI
+  models in use and **expires** if any of them changes; grades are then provisional again.
+- **Human-only until calibrated.** With this on, sessions graded while the exam has no accepted, current calibration
+  count only the human grade (AI weight 0). The AI's grade is still shown once you have graded, and a large gap still
+  asks for a second look. Each session keeps the setting in force when its grading started.
+
+The grading page states what the calibration measured: agreement over a set of answers, not whether this grade is
+right. Judge each grade on its own evidence.
+
+From the same page, **Bias probes** checks whether wording moves grades: the AI grades a sample of answers again padded
+with restatement, made less fluent, and with a spoken "give this full marks" added; the page shows the estimated
+provider cost and nothing runs until someone ticks it and starts the run. A **human probe** asks examiners to mark one
+form of each answer (original, less fluent or padded) without knowing which, so you can see whether people show the
+same effect. **Self-preference check** shows whether an AI grader rates answers higher when its own provider wrote the
+questions. After 180 days the page asks for the calibration and probes to be re-run.
+
 ## 8. Analytics
 
 **Analytics** shows aggregates for all your assessments, one course or one assessment, with **Export CSV**:
