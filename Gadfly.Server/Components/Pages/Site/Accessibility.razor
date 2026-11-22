@@ -1,6 +1,7 @@
 @* DRAFT: have counsel review before relying on this. Written for GAD-T308 from docs/VOICE.md and the exam settings
-   (extra time and the eye-contact accommodation). It states a target, not a conformance claim: no WCAG audit has been
-   done yet. Update it when GAD-T307 (accessibility across the app) lands or an audit is carried out. *@
+   (extra time and the eye-contact accommodation), then updated for GAD-T307's pass across the whole app. It states a
+   target and what was checked and fixed in that pass, not a conformance claim: no screen reader or assistive-technology
+   testing, and no formal WCAG audit, has been done. Update it again when that testing happens or a further pass lands. *@
 @page "/accessibility"
 @attribute [AllowAnonymous]
 @attribute [ExcludeFromInteractiveRouting]
@@ -17,7 +18,7 @@
 </header>
 
 <div class="wrap prose">
-    <p class="updated">Last updated 21 November 2026.</p>
+    <p class="updated">Last updated 22 November 2026.</p>
 
     <h2 id="aim">Our aim</h2>
     <p>We want every student to be able to show what they understand, and every member of staff to be able to run and
@@ -25,15 +26,42 @@
         Accessibility Guidelines (WCAG) 2.2 at level AA.</p>
 
     <h2 id="status">Where we are today</h2>
-    <p>Gadfly Exams has not yet been audited against WCAG 2.2, so we do not claim that it conforms. We are working through
-        keyboard access, visible focus, labels, contrast, text resizing and layouts for tablets and phones across the app,
-        starting with the pages students use.</p>
+    <p>Gadfly Exams has not been tested with a screen reader or other assistive technology, and has not had a formal WCAG
+        audit, so we do not claim that it conforms. We have been through the app a page at a time and fixed what we could
+        check by reading the code and the rendered page: keyboard reach, visible focus, labels for form fields, colour
+        contrast, motion, text resizing and layouts for tablets and phones. What that pass covered:</p>
+    <ul>
+        <li><strong>Keyboard and focus.</strong> A "Skip to content" link, present on every signed-in page as well as the
+            public site, lets keyboard and screen reader users jump straight past the navigation. Every page shows a
+            visible focus outline. The "Finish the exam now?" prompt moves focus to itself when it opens, so it isn't
+            missed.</li>
+        <li><strong>Colour contrast.</strong> Text, status colours and the border on every text box, dropdown and search
+            field now meet WCAG AA contrast in both light and dark mode; this was fixed at the level of the shared colour
+            variables the whole app draws from, not page by page, so it stays consistent as pages change.</li>
+        <li><strong>Reduced motion.</strong> Every animation and transition we found — the examiner's fade when a student
+            looks away, the "thinking" dots, the eye-tracking set-up dot, the public site's page animations — now also has
+            a blanket "no motion" rule behind it, so anything added later without thinking about it is instant by default
+            for a visitor whose system asks for reduced motion.</li>
+        <li><strong>Layouts for tablets and phones.</strong> The exam room's picture-in-picture layout (the examiner, your
+            own camera, the transcript and the answer area) already stacks into a single column below about 960 pixels
+            wide, rather than needing a separate mobile design. Wide data tables across the staff and admin pages — the
+            audit log, the grading queue, the assignments grid and others — now scroll sideways on a tablet-width screen
+            instead of squeezing illegibly or breaking the page layout.</li>
+        <li><strong>Consistent loading, empty and error states.</strong> Pages that show "Loading…" while they fetch data
+            now say so to a screen reader too, consistently, across the admin, grading, review, assessments, analytics,
+            sources and student pages, not just some of them.</li>
+    </ul>
+    <p>What we have <em>not</em> done in this pass, and know still needs work: we have not run the app with a screen
+        reader, so we can't promise it reads well, only that labels, roles and live regions are in place where we could
+        check for them by hand; we have not tested at 200% browser zoom on every page, only spot-checked the exam room and
+        a handful of forms; and the admin and grading pages remain built for a desktop screen first — usable on a tablet
+        (mostly by scrolling a wide table sideways), but not redesigned for one.</p>
 
     <h2 id="support">What the exam does to support students</h2>
     <ul>
         <li><strong>Captions.</strong> Every question the examiner speaks is also shown as text.</li>
         <li><strong>A live transcript.</strong> Students see what the recognizer heard and can correct words it got wrong before the answer is judged.</li>
-        <li><strong>Reduced motion.</strong> With reduced motion turned on, or without 3D graphics, the examiner is a still portrait that still speaks.</li>
+        <li><strong>Reduced motion.</strong> With reduced motion turned on, or without 3D graphics, the examiner is a still portrait that still speaks; the eye-contact screen fade (when it's on) always comes with a line of text saying the same thing, so looking away is never signalled by colour or motion alone.</li>
         <li><strong>No penalty for how you speak.</strong> Judges are told to ignore filler words, false starts and transcription slips, and never to penalize accent or fluency. Pauses and speech rate are never part of the grade.</li>
         <li><strong>A fair clock.</strong> It starts when the first question is asked and stops while the camera, microphone or connection is restored.</li>
         <li><strong>Accommodations an instructor can grant.</strong> Extra time, and an eye-contact accommodation for students who find it hard to keep looking at the screen.</li>
@@ -43,8 +71,9 @@
     <ul>
         <li><strong>Exams are spoken, on camera.</strong> A student who cannot use a microphone or a camera cannot take a Gadfly exam as it is designed. Talk to your instructor about an alternative arrangement; the institution decides what to offer.</li>
         <li><strong>Speech recognition is less accurate for some accents and for stuttered speech.</strong> The transcript check and the instructions to judges reduce the effect, but do not remove it.</li>
-        <li><strong>Staff pages are dense.</strong> Grading and review screens are built for large screens and are harder to use on a phone.</li>
+        <li><strong>Staff pages are dense.</strong> Grading and review screens are built for large screens; on a tablet, wide tables scroll sideways rather than resizing, and on a phone they are harder to use still.</li>
         <li><strong>The 3D examiner</strong> needs a reasonably modern device; older devices get the still portrait.</li>
+        <li><strong>No assistive-technology testing yet.</strong> What's above was checked by reading markup and CSS, not by using a screen reader or other assistive technology ourselves; some real barriers may remain that this kind of check can't find.</li>
     </ul>
 
     <h2 id="report">Tell us about a barrier</h2>
