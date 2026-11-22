@@ -242,8 +242,12 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
 
     // ------------------------------------------------------------ exports
 
-    /// <summary>The session as CSV, one row per turn.</summary>
-    public static string ToCsv(SessionReviewView v)
+    /// <summary>
+    /// The session as CSV, one row per turn. <paramref name="pathCells"/> gives each turn's objective-path cells by its stored
+    /// index (GAD-T461, <see cref="ObjectivePathCsv.ForReview"/>); without it those columns are empty. While this view is blinded
+    /// only the questions summary is kept, whatever the cells say.
+    /// </summary>
+    public static string ToCsv(SessionReviewView v, Func<int, string?[]>? pathCells = null)
     {
         var ci = CultureInfo.InvariantCulture;
         var sb = new StringBuilder();
@@ -251,19 +255,21 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         string T(DateTimeOffset? d) => d is { } x ? x.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", ci) : "";
         void Row(params string?[] cells) => sb.AppendJoin(',', cells.Select(Csv)).Append("\r\n");
 
-        Row("session_id", "student", "exam", "attempt", "turn", "concept_key", "concept", "move", "question", "answer", "answer_mode",
+        Row(["session_id", "student", "exam", "attempt", "turn", "concept_key", "concept", "move", "question", "answer", "answer_mode",
             "asked_at", "answer_started_at", "answer_completed_at", "latency_s", "overall_score", "agreement", "judges_disagreed",
-            "judge_summary", "criteria", "votes", "text_style_score", "mastery_after", "integrity_events");
+            "judge_summary", "criteria", "votes", "text_style_score", "mastery_after", "integrity_events", .. ObjectivePathCsv.TurnHeaders]);
         foreach (var t in v.Turns)
         {
             var j = t.Judgment;
             var events = v.Integrity.Where(e => e.TurnId == t.TurnId).Select(e => e.Type);
-            Row(v.Session.Id.ToString(), v.StudentName, v.ExamTitle, v.Session.Attempt.ToString(ci), t.Index.ToString(ci), t.ConceptKey,
+            var path = pathCells?.Invoke(t.Index) ?? new string?[ObjectivePathCsv.TurnHeaders.Length];
+            if (v.Blinded) path = [path[0], null, null];
+            Row([v.Session.Id.ToString(), v.StudentName, v.ExamTitle, v.Session.Attempt.ToString(ci), t.Index.ToString(ci), t.ConceptKey,
                 t.ConceptTitle, t.Move, t.Question, t.AnswerText, t.AnswerMode, T(t.AskedAt), T(t.AnswerStartedAt), T(t.AnswerCompletedAt),
                 F(t.LatencySeconds), F(j?.OverallScore), F(j?.Agreement), j is null ? "" : j.NeedsHumanReview ? "yes" : "no", j?.Summary,
                 j is null ? "" : string.Join(" | ", j.Criteria.Select(c => $"{c.Criterion}={F(c.Score)}")),
                 j is null ? "" : string.Join(" | ", j.Votes.Select(x => $"{x.ProviderId}={F(x.OverallScore)}")),
-                F(j?.TextStyleScore), F(t.MasteryAfter), string.Join(" | ", events));
+                F(j?.TextStyleScore), F(t.MasteryAfter), string.Join(" | ", events), .. path]);
         }
         return sb.ToString();
     }

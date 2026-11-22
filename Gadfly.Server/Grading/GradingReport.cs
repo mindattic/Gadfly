@@ -246,15 +246,17 @@ public sealed record AssessmentReport
     {
         var sb = new StringBuilder();
         void Row(params string?[] cells) => sb.AppendJoin(',', cells.Select(Csv)).Append("\r\n");
-        Row("session_id", "student", "exam", "attempt", "status", "final_percent", "label", "objective_key", "objective", "max_score", "weight",
+        Row(["session_id", "student", "exam", "attempt", "status", "final_percent", "label", "objective_key", "objective", "max_score", "weight",
             "ai_score", "ai_level", "ai_confidence", "ai_excluded", "ai_mock", "human_score", "human_level", "combined", "band", "reconciliation", "evidence_responses",
-            "what_was_missing", "previous_attempt", "previous_combined", "change", "feedback_before_attempt");
+            "what_was_missing", "previous_attempt", "previous_combined", "change", "feedback_before_attempt", .. ObjectivePathCsv.ObjectiveHeaders]);
         foreach (var o in Objectives)
-            Row(SessionId.ToString(), StudentName, ExamTitle, Attempt.ToString(CultureInfo.InvariantCulture), Status, N(FinalPercent), Label, o.Key, o.Title, N(o.MaxScore), N(o.Weight),
+            Row([SessionId.ToString(), StudentName, ExamTitle, Attempt.ToString(CultureInfo.InvariantCulture), Status, N(FinalPercent), Label, o.Key, o.Title, N(o.MaxScore), N(o.Weight),
                 N(o.AiScore), o.AiLevel, o.AiConfidence, o.AiExcluded ? "yes" : "no", o.AiIsMock ? "yes" : "no", N(o.HumanScore), o.HumanLevel, N(o.Combined), o.Band,
                 o.Reconciliation, string.Join(" ", o.Evidence.Select(e => e.Sequence)),
                 string.Join(" | ", o.WhatWasMissing), o.PreviousAttempt?.ToString(CultureInfo.InvariantCulture), N(o.PreviousCombined), N(o.Change),
-                o.FeedbackBeforeAttempt is { } fb ? fb ? "yes" : "no" : null);
+                o.FeedbackBeforeAttempt is { } fb ? fb ? "yes" : "no" : null,
+                // GAD-T461: the objective's path, as on the grading page; criteria and exclusions empty while blind, none for students.
+                .. ObjectivePathCsv.ObjectiveCells(ForStudent ? null : Paths.GetValueOrDefault(o.Key))]);
         return sb.ToString();
     }
 

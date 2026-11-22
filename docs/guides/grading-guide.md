@@ -118,3 +118,20 @@ anything.
 The grading page offers the assessment report as Markdown and the scores as CSV, and the official transcript in
 several formats. While your grading is blind you get the grader copy, which leaves out integrity notes, voice
 measurements and every AI score. See [Transcripts](INSTRUCTOR_GUIDE.md#transcripts) in the Instructor guide.
+
+**The path in the CSV files.** Both reviewer CSV files carry the same path each objective took as the grading and
+review pages show:
+
+- The **scores CSV** (one row per objective) ends with `path_questions` and `path_follow_ups` (how many questions
+  and follow-ups the objective got), `path_moves` (each kind of question and how many times it was asked, for
+  example `opening question=1 | probe the reasoning=2`), `criteria_reached` and `criteria_not_reached` (rubric
+  criteria the evidence reached, and those left at Level 0 and out of the score), `coverage_percent` (the share of
+  the objective's weight the reached criteria carry) and `exclusions` (every answer the level does not rest on, as
+  `turn 4: reason`, or `none` when every answer counted).
+- The **session CSV** from the review page (one row per turn) ends with `objective_path` (the questions summary
+  for that turn's objective), `objective_coverage` (the criteria reached and the weight covered) and
+  `turn_excluded` (`no`, or `yes:` and why this answer was not counted).
+
+While your grading is blind only the questions are filled in: the criteria, coverage and exclusion cells stay empty
+until you submit your own scores, just as on the pages. An empty exclusion cell therefore means "not shown yet",
+never "nothing excluded". Students never get these columns.

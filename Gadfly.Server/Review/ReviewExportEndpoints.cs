@@ -1,5 +1,6 @@
 using System.Text;
 using Gadfly.Server.Data;
+using Gadfly.Server.Grading;
 using Gadfly.Server.Tenancy;
 
 namespace Gadfly.Server.Review;
@@ -16,11 +17,14 @@ public static class ReviewExportEndpoints
 
     public static void Map(IEndpointRouteBuilder app)
     {
-        app.MapGet("/review/{sessionId:guid}/turns.csv", async (Guid sessionId, GadflyDbContext db, ITenantContext tenant, CancellationToken ct) =>
+        app.MapGet("/review/{sessionId:guid}/turns.csv", async (Guid sessionId, GadflyDbContext db, ITenantContext tenant, GradingService grading, CancellationToken ct) =>
             {
                 var view = await LoadAsync(db, tenant, sessionId, ct);
-                return view is null ? Results.NotFound()
-                    : Results.File(Utf8Bom(ReviewService.ToCsv(view)), "text/csv; charset=utf-8", ReviewService.FileStem(view) + ".csv");
+                if (view is null) return Results.NotFound();
+                // GAD-T461: each turn's objective path, read through the grading workspace like the review page, so blind grading
+                // hides the same criteria and exclusions there and here.
+                var paths = ObjectivePathCsv.ForReview(await grading.WorkspaceAsync(sessionId, ct));
+                return Results.File(Utf8Bom(ReviewService.ToCsv(view, paths)), "text/csv; charset=utf-8", ReviewService.FileStem(view) + ".csv");
             })
             .RequireAuthorization(GadflyPolicies.Instructor);
 
