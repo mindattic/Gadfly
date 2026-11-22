@@ -72,4 +72,7 @@ button.link { background: none; color: var(--accent); padding: 0; text-decoratio
 .help-link-mark { display: inline-grid; place-items: center; width: 1.35rem; height: 1.35rem; border: 1.5px solid currentColor; border-radius: 50%; font-size: .8rem; line-height: 1; }
 .help-link:hover .help-link-mark, .help-link:focus-visible .help-link-mark { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .help-link-label { font-weight: 500; }
-@media (max-width: 640px) { .who { margin-left: 0; width: 100%; } .grid { display: block; overflow-x: auto; } }
+@media (max-width: 640px) { .who { margin-left: 0; width: 100%; } }
+/* A plain data table scrolls sideways rather than squeezing illegibly or forcing the whole page to scroll (GAD-T367):
+   a tablet in portrait (commonly 768-820px) is as cramped as a phone for a many-column grid. */
+@media (max-width: 900px) { .grid { display: block; overflow-x: auto; } }
