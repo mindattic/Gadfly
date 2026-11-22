@@ -327,6 +327,18 @@ provider outage costs speed, never safety. Every call is still metered (`PanelCa
 (`ApiCallTimings`, with a `.firstChunk` row for the streaming seam below). Mock mode (`Gadfly:AiMode=mock`) uses the mock
 panel's own template replies, so nothing is called or billed.
 
+**Prefetching the next step (GAD-T497).** While the student is still speaking, the exam room can send the answer so far
+(the recognizer's finished segments plus its current partial) to `SessionOrchestrator.NotePartialAnswerAsync`. Once those
+words have stood still for `Gadfly:LiveTurn:Prefetch:DebounceMs` (default 700 ms) and are at least `MinWords` long
+(default 4), the whole next step (panel judgment, plan, fast-model question, guard) runs speculatively on a copy of the
+session. When the student finishes with the same words (case, punctuation and spacing aside) and nothing else changed the
+session in the meantime, the answer step adopts the copy: the submitted answer, with its real timings and speech measurements,
+replaces the partial on record, the recitation check is re-run on it, and the next question is ready at once. Otherwise the
+copy is dropped and the answer is judged as usual. Cost limits: one speculation in flight per session, at most `MaxPerTurn`
+(default 2) per question, none while a step runs. Every speculative call is metered as `exam-prefetch` and timed, used or not.
+`Gadfly:LiveTurn:Prefetch=false` turns it off. The client half (VoiceRoom's `OnPartialAnswer` callback into
+`ExamRoom.OnPartialAnswerAsync`, fed from `voice-room.js` on each recognizer partial) is wired separately.
+
 **Streaming seam (GAD-T495).** `ILiveTurnModel.StreamAsync` returns the reply as an `IAsyncEnumerable<string>` of text deltas.
 MindAttic.Legion has no streaming call yet, so today the Legion-backed model yields the whole reply as one delta. A
 streaming provider call fits behind the same interface. The generator still guards the whole question before returning it,

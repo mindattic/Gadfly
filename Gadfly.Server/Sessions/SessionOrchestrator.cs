@@ -63,7 +63,7 @@ public sealed class SessionRefusedException(string message) : Exception(message)
 /// SessionTurn / Judgment / JudgeVote / ConceptMastery / SessionClaim / SessionReport rows for
 /// review), guarded by the session's row version so two servers cannot both advance it.
 /// </summary>
-public sealed class SessionOrchestrator(
+public sealed partial class SessionOrchestrator(
     IServiceScopeFactory scopes,
     ISocraticVotingClient panel,
     TimeProvider clock,
@@ -71,7 +71,8 @@ public sealed class SessionOrchestrator(
     Platform.UsageMeter meter,
     Platform.PlanEnforcement plans,
     Evidence.EvidenceSyncQueue evidenceQueue,
-    ILiveTurnModel? liveModel = null)
+    ILiveTurnModel? liveModel = null,
+    IConfiguration? configuration = null)
 {
     private sealed class Live(SourceExamEngine engine, Guid organizationId, Guid studentUserId, AssessmentMode mode)
     {
@@ -84,6 +85,8 @@ public sealed class SessionOrchestrator(
         public Guid StudentUserId { get; } = studentUserId;
         public bool IsFor(Guid org, Guid student) => OrganizationId == org && StudentUserId == student;
         public SemaphoreSlim Gate { get; } = new(1, 1);
+        /// <summary>The speculative next step prepared from the student's words while they are still answering (GAD-T497).</summary>
+        public PrefetchState Prefetch { get; } = new();
     }
 
     private sealed record SubjectSnapshot(ConceptMap Map, IReadOnlyList<ConceptRubric> Rubrics);
@@ -355,7 +358,10 @@ public sealed class SessionOrchestrator(
                 return open;   // the same question, now with a pending request
             }
             await db.SaveChangesAsync(ct);
-            await live.Engine.SubmitAnswerAsync(answer with { Text = response.VerifiedText }, ct);
+            var final = answer with { Text = response.VerifiedText };
+            // The next step may already be ready: judged and followed up from the same words while the student was still answering (GAD-T497).
+            if (await AdoptPrefetchAsync(live, open.Index, final, ct) is { } prefetched) return prefetched.Next;
+            await live.Engine.SubmitAnswerAsync(final, ct);
             return await live.Engine.NextQuestionAsync(ct);
         }, ct);
 

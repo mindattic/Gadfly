@@ -349,6 +349,43 @@ public sealed class SocraticSession
         EndedAt = endedAt;
     }
 
+    /// <summary>
+    /// Puts the answer as finally submitted (its timings, words and speech measurements) on a turn that was answered, judged and
+    /// followed up speculatively from the same words (GAD-T497): the words must be the same (<see cref="SameWords"/>; case,
+    /// punctuation and spacing may differ), so nothing judged changes.
+    /// </summary>
+    public Turn ReplaceAnswerDetails(int turnIndex, Answer answer)
+    {
+        ArgumentNullException.ThrowIfNull(answer);
+        if (turnIndex < 0 || turnIndex >= _turns.Count) throw new ArgumentOutOfRangeException(nameof(turnIndex));
+        var turn = _turns[turnIndex];
+        if (turn.Answer is null || !SameWords(turn.Answer.Text, answer.Text))
+            throw new InvalidOperationException("Only the details of the same answer can be replaced.");
+        return Replace(turn with { Answer = answer });
+    }
+
+    /// <summary>The words of an answer, for comparing two transcripts of it: lower case, letters, digits and apostrophes, single spaces.</summary>
+    public static string Words(string? text)
+    {
+        const char Apostrophe = (char)0x27, RightQuote = (char)0x2019;
+        var b = new System.Text.StringBuilder((text ?? "").Length);
+        var space = false;
+        foreach (var ch in (text ?? "").ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(ch) || ch == Apostrophe || ch == RightQuote)
+            {
+                if (space && b.Length > 0) b.Append(' ');
+                b.Append(ch == RightQuote ? Apostrophe : ch);
+                space = false;
+            }
+            else space = true;
+        }
+        return b.ToString();
+    }
+
+    /// <summary>True when two transcripts say the same words (<see cref="Words"/>).</summary>
+    public static bool SameWords(string? a, string? b) => string.Equals(Words(a), Words(b), StringComparison.Ordinal);
+
     private Turn Replace(Turn updated)
     {
         _turns[updated.Index] = updated;

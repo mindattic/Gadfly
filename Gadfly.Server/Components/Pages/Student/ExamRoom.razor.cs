@@ -217,6 +217,19 @@ public partial class ExamRoom
         finally { StateHasChanged(); }
     }
 
+    /// <summary>
+    /// The answer so far while the student is still speaking (GAD-T497): the recognizer's finished segments plus its current partial,
+    /// for the question at <paramref name="turn"/>. The server may prepare the next step from it; nothing changes on the page. For
+    /// VoiceRoom's <c>OnPartialAnswer</c> callback (voice-room.js sends the running transcript on each recognizer partial).
+    /// </summary>
+    internal async Task OnPartialAnswerAsync(int turn, string text)
+    {
+        if (busy || phase != Phase.Answering || step is null || step.Verification is not null || turn != step.TurnIndex) return;
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        try { await Sessions.NotePartialAnswerAsync(org, SessionId, user, turn, text); }
+        catch (Exception) { /* a hint only: never disturbs the exam */ }
+    }
+
     private async Task<bool> TakeVoiceAnswerAsync(VoiceAnswerPayload payload)
     {
         if (busy || phase != Phase.Answering || step is null || !VoiceCanAnswer) return false;
