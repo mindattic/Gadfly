@@ -18,6 +18,10 @@ human grades and an authorized person approves before a student sees a result (D
 | Integrity events (derived only: face count, gaze region, focus loss, second speaker) | Evidence for a human reviewer | With the session; raw detail redacted with the transcript |
 | Reference transcripts (a person's transcript of a sampled spoken answer, GAD-T426) | Measuring the speech recognizer's word error rate by group; never grading | With the answer's words: redacted with the transcript, removed on erasure. Typed only by someone who heard the answer live or from a recording the student agreed to that the institution keeps; Gadfly itself still stores no audio |
 | Video frames | — | **Never leave the student's device; never stored** |
+| Exam language of an attempt (GAD-T534) | Conducting the exam in the language the student chose | With the session |
+| Language profile: the languages a student speaks and their primary language (GAD-T552), and per-language voice calibration figures (speech rate, pause lengths; never audio, GAD-T594) | Adapting the examiner and recognizer for a second-language speaker; fairness views in aggregate | Until the student changes it or is erased. **Stated by the student, never inferred** from the voice, name or anything else; never shown to graders beside an answer and never sent to the judges. A copy of the primary language is kept on each attempt so a later edit does not change how it was run |
+| Machine translations of an attempt for graders (GAD-T548) | Helping a grader read an answer in another language | **Not stored.** Made on request, held in the server's memory cache only, never written to the record, the audit log or a download |
+| Localized exam texts (GAD-T540) | What a student reads in their exam language | With the exam; drafts, edits and approvals in the audit log |
 | Consent record (time + SHA-256 of the exact text shown) | Proof of consent | With the session |
 | Research choice (agreed, declined or withdrew; time; notice version; SHA-256 of the exact text shown) | Proof of the separate, optional research consent (GAD-T452) | Until the student is erased; every choice is kept, the latest counts |
 | Study arm of an assignment | The study's condition label (GAD-T452) | With the assignment |
@@ -212,7 +216,10 @@ examiner's voice, and speech-to-text through ElevenLabs Scribe) and OpenAI (spee
 fallback when Scribe fails; `MindAttic:SpeechRecognition:Provider`, docs/VOICE.md); Microsoft Azure (hosting,
 database); and, only when card checkout is configured for plan upgrades, the payment provider (Stripe), which receives
 the organization's checkout and never any student data. Answers are sent to the LLM providers for judging, and the
-student's voice to the speech-to-text provider while they speak; no video and no account details are sent.
+student's voice to the speech-to-text provider while they speak; no video and no account details are sent. When a grader
+asks for a machine translation of an attempt in another language (GAD-T548), its questions and answers go to the same LLM
+provider that runs the live turn, for that translation only; the student's primary language is never sent to any provider
+as part of judging.
 
 ## Open items
 

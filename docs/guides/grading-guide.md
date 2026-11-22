@@ -110,6 +110,14 @@ the student. On the grading page:
 - **Amend the grade**, with a reason, changes it (**Amend**, or **Amend and resolve the appeal**). The student's
   result is marked "amended". Republish it.
 
+## Exams taken in another language
+
+A student may take an exam in Korean (GAD-T526). The grading page, the review page and the second-mark sheet show the
+student's own words, which are the record, and offer **Show a machine translation into English**. Each translation sits under
+its original, labelled as machine translation; it is never saved with the record or put in a download. Grade the original
+against the English rubric, as the AI panel does: understanding counts, not accent, grammar or fluency. If a translation decides
+a grade, ask someone who reads the language. You are not shown the student's primary language: it is not evidence (GAD-T548).
+
 ## Second marking
 
 On an exam flagged for double marking, a second examiner grades its sessions from **Second marking** (linked from

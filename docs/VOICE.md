@@ -307,6 +307,9 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
 
 ## Exam language and second-language speakers (GAD-T528, GAD-T554, GAD-T555)
 
+The whole localization architecture (offered languages, localized texts, the engine, grading and fairness by language) is in
+[LOCALIZATION.md](LOCALIZATION.md); this section covers the voice side.
+
 Each attempt has an exam language (`ExamSession.Language`) and a copy of the student's primary language
 (`ExamSession.PrimaryLanguage`, GAD-T534). `SessionSpeech` reads them when the exam room arms the student and keeps them on
 the `VoiceGrants` grant; nothing comes from the browser, and a language is never inferred from the voice. **An English exam

@@ -80,6 +80,18 @@ attempts), **export** it as JSON, see its **history**, and **archive** or **rest
 an exported exam as a draft, listing every problem in the file if it can't. Every change is in the audit log. See
 [Exams manager](admin-exams.md).
 
+### Exam languages (GAD-T539, GAD-T540)
+
+An exam is offered in English and Korean unless you turn a language off. The **Languages** panel (in the assessment
+editor's Details step, and under **Edit** on the admin desk's Exams tab) lists the languages; untick one and **Save
+languages** to stop offering it (at least one stays on; an attempt already started keeps its language). Below it, each
+language other than English has its texts: the exam's title, instructions and objective titles. **Generate a
+machine-translated draft** writes a first version from the English (in mock mode the English behind a marker, since no model
+is called); read each text against the English shown beside it, correct it, then **Save and approve**. Until you approve,
+students who choose that language see the draft with a note that it was machine-translated. The source material, rubric and
+grading policy are never translated: answers in every language are judged against the same standard. Every change is in the
+audit log. See [LOCALIZATION.md](../LOCALIZATION.md).
+
 ## Live sessions
 
 **Live sessions** (`/admin/live`) shows every exam in progress right now, with the actions to step in: **Add time**,
@@ -495,6 +507,11 @@ the top (all assessments, a course or one assessment), names no student, and wit
 "Eye-contact accommodation", "Extra time", or a combination), or a grouping you paste in: one line per student with their
 email or user name, a comma and a group label (first language, or a self-described group from a voluntary survey). A pasted
 grouping is used for that comparison only and never stored; lines that match no member are counted, never shown.
+The fairness section can also group by **exam language** (the language each attempt was taken in) or by **the student's
+primary language** (what the student told us before the attempt, never inferred; "Primary language not stated" when they
+gave none), with the same withholding; the analytics CSV repeats the score gaps and path drivers both ways, and the panel
+calibration page checks the panel's systematic difference by either (GAD-T549). A gap by language is a reason to look at the
+examiner, the recognizer, the judges and the graders, not a finding about the students.
 
 - **Speech recognition accuracy by group** (everyone with analytics). Word error rate needs a reference: what was actually
   said. Spoken answers are no longer read back to the student, so newer answers have one only once a person has transcribed

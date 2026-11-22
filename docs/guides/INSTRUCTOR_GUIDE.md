@@ -121,6 +121,12 @@ Open **Assessments**. First create a **course** (**New course**: a **Title**, a 
 | Difficulty | 1 gentle to 5 rigorous: how hard the follow-ups push. |
 | Instructions shown to students | Shown on the student's **My exams** (up to 4,000 characters). |
 
+Once the assessment exists, the **Languages** panel below the details sets the languages students may take it in (English and
+Korean by default) and holds the Korean title, instructions and objective titles: generate a machine-translated draft, check
+each text against the English beside it, then **Save and approve**. The source material and rubric stay in English; a Korean
+answer is judged against the same rubric. You can correct these texts after publishing, since they change only what a student
+reads. See [LOCALIZATION.md](../LOCALIZATION.md).
+
 ### 2. Objectives
 
 The learning objectives are what the exam examines and what is graded. Under **Suggested from the source material**,
@@ -233,6 +239,12 @@ owe a blind grade). Filter by exam, **Needs a grade** or **Judges disagreed**. O
 learning objective, 1 to 5; **Level 0** means the evidence was insufficient to assess reliably, never zero
 understanding) and export links. The examiner's running estimate is not shown as a result anywhere: it only decides
 what to ask next, and no average of answer scores stands in for a level.
+
+**An exam taken in another language.** The questions and answers are shown exactly as given: they are the record. A bar at the
+top says which language it was, with **Show a machine translation into English**: each translation then appears under its
+original, labelled as machine translation. Grade the original; a translation can be wrong, so check one that matters with
+someone who reads the language. Translations are never saved with the session or put in any download. The student's primary
+language is not shown here on purpose (GAD-T548).
 
 **The timeline** lists every question in order, with:
 

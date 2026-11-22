@@ -119,6 +119,15 @@ After GAD-T507 the same scan reports **no violations** on any page, theme or wid
 conformance: it can't judge reading order, meaningful names, keyboard traps in custom widgets or how a page sounds in a
 screen reader.
 
+## Languages (GAD-T526)
+
+- The page's `<html lang>` follows the interface language the student chose (English or Korean), so a screen reader uses the
+  right voice (WCAG 3.1.1). Text in another language than the page carries its own `lang`: a language's own name in a picker,
+  a student's Korean answer on an English staff page, a machine translation under it (WCAG 3.1.2).
+- A machine translation is always labelled in text, not by styling alone ("Machine translation from Korean into English").
+- Korean interface text follows the glossary and style in [LOCALIZATION.md](LOCALIZATION.md); the examiner's captions are
+  always on, in the exam language.
+
 ## Known gaps
 
 - **The voice and camera exam** is spoken and on camera by design. A student who cannot speak, hear or use a camera
