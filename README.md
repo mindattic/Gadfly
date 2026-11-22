@@ -35,8 +35,8 @@ claude.ai export. It is documented further down.
 - Know whether a student understands, from their own reasoning, when a pasted answer proves nothing.
 - Keep a human accountable for every grade: the AI panel scores each objective, an examiner grades blind,
   large gaps go to a second reviewer, and an authorized person approves before a student sees anything.
-- Keep the evidence intact: the original answer, every clarification and every typed correction stay on
-  the record, with an append-only audit trail.
+- Keep the evidence intact: each answer as it was heard, with the words the recognizer was unsure of, and every
+  clarification stay on the record, with an audit trail whose rows are never deleted.
 - Protect students: integrity signals are low-confidence notes for a reviewer, never a verdict, and video
   never leaves the student's device ([docs/PRIVACY.md](docs/PRIVACY.md)).
 - Try it without spending anything: the default development setup runs a clearly labelled mock panel, so
@@ -80,30 +80,48 @@ citation ledger are in [docs/research/](docs/research/README.md).
 Gadfly Exams, the web platform (`Gadfly.Server`):
 
 - **Organizations and roles.** Owner, Admin, Instructor, Examiner, Second reviewer and Student, on
-  MindAttic.Authentication (Argon2id, MFA for staff, lockout), with invitations by email and an
-  organization admin console: members, retention, cost quota, API keys, webhooks, usage.
+  MindAttic.Authentication (Argon2id, MFA for every staff role, lockout), with invitations by email (one at a time
+  or by CSV), and plans with seat and exam limits (Trial, Standard, Institution, Custom).
 - **Source material.** Upload `.txt`, Markdown, PDF, DOCX, EPUB or HTML. Gadfly turns it into an editable
-  concept map and versioned rubrics with citations to the passages.
-- **Assessments.** Courses, learning objectives, rubric criteria with level descriptors 0 to 5, a locked
-  grading policy (AI and human weights, disagreement thresholds), assignments, and a student dashboard
-  with system check and consent.
-- **The exam room.** A text exam where each question is written from the previous answer, with neutral
-  clarifying questions, typed corrections, "I don't know" recorded as honest aporia, resumable sessions
-  and a server-side time limit.
-- **Voice and avatar.** Voice exams where a talking examiner (`<ma-avatar>`) asks and the student answers
-  aloud, always with a typing fallback. See [docs/VOICE.md](docs/VOICE.md).
-- **Webcam and browser integrity signals.** On Strict exams, presence, a second face and gaze region are
-  derived on the student's device with MindAttic.Webcam, after the student accepts a notice that says what
-  is and is not collected; tab switches, pastes and answer-text style are reviewer-only context. See
-  [docs/PRIVACY.md](docs/PRIVACY.md).
-- **Grading.** AI preliminary grades per objective, blind human grading, combined scoring,
-  reconciliation with a second reviewer, final approval, publication, appeals and amendments, with a
-  Markdown and CSV report.
-- **Review and analytics.** An instructor review timeline with citations and each judge's verdict, and
-  educational analytics at `/analytics`.
-- **Privacy.** Retention, student data export and erasure.
-- **Platform API.** Organization API keys, signed launch links and signed webhooks, with an OpenAPI
-  document at `/openapi/v1.json`.
+  concept map and versioned rubrics with citations to the passages; a person approves that version before a
+  summative exam can be published.
+- **Assessments.** Courses, learning objectives, rubric criteria with level descriptors 0 to 5, optional fixed
+  opening questions (checked so they give nothing away), a locked grading policy (AI and human weights,
+  disagreement thresholds, blind and anonymous marking), assignments with windows, attempts and accommodations, and
+  a preview that runs the real examiner logic on the practice panel without saving anything.
+- **The spoken exam room.** A talking examiner (`<ma-avatar>`) asks each question aloud and the student answers
+  aloud, on camera: voice and camera are mandatory, and typing exists only as a typed-answers accommodation staff
+  grant. Each question is written from the previous answer; unclear answers get a neutral clarifying question;
+  "I don't know" is recorded as honest aporia; answers are taken as heard, with the words the recognizer was unsure
+  of marked for graders. The server keeps time, a lost device pauses the exam and stops the clock, and a reload or
+  dropped connection resumes the same question. A get-ready page checks the browser, camera and microphone, and an
+  ungraded five-minute practice interview lets students meet the examiner first. See [docs/VOICE.md](docs/VOICE.md).
+- **Integrity notes, never verdicts.** Eye contact (with a gentle screen fade), camera presence and a second face,
+  browser focus and copying, a second voice and answers that sound read out are low-confidence notes for a reviewer:
+  hidden from a blind grader, never part of a grade, and shown to the student with their result. Video never leaves
+  the student's device. See [docs/PRIVACY.md](docs/PRIVACY.md).
+- **Grading with people accountable.** AI preliminary grades per objective from a multi-model panel, blind human
+  grading, combined scoring, reconciliation, separation of duties (scorer, reconciler and approver), final approval,
+  publication, appeals and amendments. Reviewers see the path each objective took. Reports as Markdown, CSV and
+  PDF; a class-summary PDF; a completion certificate.
+- **Checking the AI.** Blind double marking, per-exam panel calibration (which can hold the AI's weight at zero until
+  accepted, and expires when the models or grading prompts change), bias probes for the panel and for human
+  graders, and a self-preference check.
+- **Transcripts.** An official transcript per session in PDF, Word, HTML, text, WebVTT, SRT and JSON, in a reviewer,
+  grader or student copy, each with a verification code anyone can check at `/transcripts/verify`.
+- **Review and analytics.** A review timeline with citations and each judge's verdict, and analytics at
+  `/analytics` with fairness views by group (speech-recognition accuracy, eye-contact and camera rates, score gaps,
+  what made the examiner press harder, typed against spoken answers) and CSV export.
+- **Admin area.** Dashboard, students directory and profiles, exams manager (windows, duplicate, archive,
+  export/import as JSON), assignments console, live sessions monitor (add time, pause, end, send a notice), audit
+  log viewer with export, system status with job retry, plan and usage, settings, email preview, and an in-app help
+  center with guided tours.
+- **Privacy.** Retention (7 days to 10 years, 90 by default), audit and call-timing logs kept at least six months,
+  student data export and erasure, voice measurements off by default in the EU/EEA, and an optional research consent
+  with a de-identified research export.
+- **Integrations.** LTI 1.3 for Canvas, Moodle, Blackboard Learn and D2L Brightspace (deep linking, roster sync, grade
+  passback), the platform API v1 with organization API keys and signed launch links, and signed webhooks, with an
+  OpenAPI document at `/openapi/v1.json`. Optional card checkout for plan upgrades, off until payment keys are set.
 - **Public site.** Signed-out visitors at `/` see the product site (`Components/Pages/Site/`): how it works, the
   science, pricing (Trial, Standard, Institution, Custom; plan numbers in `Site/SitePlans.cs`), a request-a-demo form,
   terms, privacy notice, accessibility statement, security page, a branded 404 and an offline page, with `robots.txt`
@@ -191,16 +209,21 @@ server with the matching seeder (`-Password` chooses the account password). The 
 | `Gadfly:RequireMfaInDevelopment` | Staff are not asked for MFA in Development unless this is `true`. |
 | `Gadfly:Voice:Mode` | `off`, `mock` or `live`; the other voice settings are in docs/VOICE.md. |
 | `Gadfly:Demo:Password`, `Gadfly:Demo:ApiKey` | Chosen password and API key for the seeded demo accounts. |
+| `Gadfly:AdminDesk:Enabled` | The admin desk (`/admin/desk`) for Owners and Admins; off by default in Production. |
+| `Gadfly:Logs:CallTimingDays` | How long outside-call timings are kept: a year by default, never under 183 days. |
 
 Uploaded files are kept under `%APPDATA%\MindAttic\Gadfly\uploads\<organization>\<collection>\`. Logs go
-to MindAttic.Log's database for `Gadfly.Server`. The health check is at `/healthz`.
+to MindAttic.Log's database for `Gadfly.Server`. Health is at `/healthz` and readiness at `/healthz/ready`;
+[docs/OPERATIONS.md](docs/OPERATIONS.md) has the rest of the monitoring endpoints.
 
 ## Deployment
 
 Gadfly.Server deploys to Azure App Service with Azure SQL, Key Vault and a managed identity.
 `npm run deploy -- --app gadfly` in MindAttic.Deploy (which runs `tools/deploy-azure.ps1`) exports the commit
-cleanly, migrates the database first, deploys, and checks `/healthz` and `/login`; a manual GitHub Actions
-workflow does the same on a runner. [docs/DEPLOY.md](docs/DEPLOY.md) has the procedure. The instance at
+cleanly, migrates the database first, deploys, checks `/healthz` and `/login`, and tags the release `vN` (the
+app shows V&lt;N&gt; in its title). A manual GitHub Actions workflow also deploys, but without the version, tag and
+mock-mode check. [docs/DEPLOY.md](docs/DEPLOY.md) has the procedure and the app settings a release must check;
+[docs/OPERATIONS.md](docs/OPERATIONS.md) the release checklist, monitoring, backups and incident steps. The instance at
 https://mindattic-gadfly.azurewebsites.net runs in mock mode.
 
 ## Using Gadfly from your own app
@@ -408,7 +431,7 @@ Gadfly.Personal/    The personal introspection subject: ingestion, corpus, minin
 Gadfly.Tour/        The end-to-end demo tour that drives a real server as real users
 Gadfly.Tests/       NUnit tests and fixtures
 samples/            InProcess (the engine as packages) and HostedApi (the platform API)
-tools/              provision-azure.ps1 and sync-voice-assets.ps1
+tools/              deploy-azure.ps1, provision-azure.ps1 and sync-voice-assets.ps1
 lib/                Vendored MindAttic NuGet packages used by CI builds
 ```
 
@@ -430,18 +453,46 @@ and `Gadfly.Server` are two hosts. The full plan is in [docs/SOCRATIC_PLATFORM.m
 
 ## Limitations
 
-- Reports export as Markdown and CSV; a PDF export is not built.
-- Integration is through the platform API and the packages; there are no ready-made LMS connectors or
-  billing.
-- The master plan's validity studies (Part 15.3) happen with real institutions after launch; Gadfly
-  makes no validity claims until then.
+- Gadfly makes no validity claims until its own pilot ([docs/PILOT.md](docs/PILOT.md)) measures them; the master
+  plan's validity studies (Part 15.3) happen with real institutions. How well the AI panel grades spoken,
+  transcribed answers, whether follow-ups resist a relayed answer, and fairness across groups have measurement tools
+  built in but no results yet.
+- The examiner's prompts and the answer-content cues (hedging, vague wording) are written for English.
+- The organization's and each exam's examiner voice and avatar ids are saved but not used: every exam uses the
+  deployment's voice and avatar (GAD-T475).
+- LTI sends one grade per placement (the final percentage), not one per objective; LTI 1.1 isn't supported. There is
+  no institutional single sign-on (SAML or OpenID Connect) apart from the LMS launch.
+- Webhooks offer one event, `session.completed`.
+- Only AI panel (LLM) calls are metered for cost; speech-to-text and text-to-speech are not yet counted.
+- No accessibility conformance is claimed: the app was checked toward WCAG 2.2 AA but has not had screen-reader
+  testing or a formal audit (see `/accessibility`).
 - The hosted instance runs in mock mode, so its questions and scores are templates, not AI judgments.
+
+### Where the build departs from the dissertation
+
+Gadfly follows the *Elenchus at Scale* dissertation, with owner decisions that differ from it
+([docs/research/blueprint-gap-analysis.md](docs/research/blueprint-gap-analysis.md) has the full list and reasons):
+
+- Spoken answers are judged as heard: the student isn't asked to confirm or correct the transcript, so recognizer
+  doubts are flagged to graders instead.
+- Voice and camera are mandatory; typing is only an accommodation staff grant.
+- A long look away from the examiner fades the screen and the examiner asks the student to look back, softened by a
+  grace period and the eye-contact accommodation, with its rate and cost measured by group.
+- Clearing an attempt's scores holds it out of grading, and the attempt still counts against the student's limit.
+- The answer text-style estimate is switched off (the dissertation agrees it shouldn't be used), but kept so it could
+  return behind a setting; the dissertation says not before its false-flag rate by group is measured.
+- Probing pressure comes only from what the answer says, never from the voice: not a departure, since the dissertation
+  argued for it.
 
 ## Documentation
 
 | What | Where |
 |---|---|
+| Buyers: what Gadfly does, the exam, grading, safeguards, privacy, integrations, plans, and what isn't shown yet | [Product overview](docs/PRODUCT.md) |
+| Running the service: monitoring, backups and restore, rotating secrets, incidents, the release checklist | [Operations runbook](docs/OPERATIONS.md) |
 | Instructors: material, concepts and rubrics, exams, review and grading | [Instructor guide](docs/guides/INSTRUCTOR_GUIDE.md) |
+| Examiners and reviewers: blind grading, reconciliation, approval, second marking | [Grading guide](docs/guides/grading-guide.md) |
+| Connecting an LMS (Canvas, Moodle, Blackboard, Brightspace) | [LTI setup](docs/guides/lti-setup.md) |
 | Students: how the exam works, what is recorded, results | [Student guide](docs/guides/STUDENT_GUIDE.md) |
 | The science behind Gadfly: the elenchus, why follow-ups reveal understanding, the limits, citations | [Science](docs/SCIENCE.md), [research notes](docs/research/README.md) |
 | The dissertation (in progress): *Elenchus at Scale: Socratic Oral Assessment by Synthetic Examiners* | [mindattic/Dissertation.ElenchusAtScale](https://github.com/mindattic/Dissertation.ElenchusAtScale), read at [mindattic.github.io/Dissertation.ElenchusAtScale](https://mindattic.github.io/Dissertation.ElenchusAtScale/) |
@@ -450,7 +501,8 @@ and `Gadfly.Server` are two hosts. The full plan is in [docs/SOCRATIC_PLATFORM.m
 | The owner's product plan, and what is built against it | [Master plan](docs/MASTER-PLAN.md), [status](docs/MASTER-PLAN-STATUS.md) |
 | Requirements traceability, architecture, schema, state machines | [Design](docs/DESIGN.md) |
 | The Socratic exam platform: plan, milestones, open decisions | [Socratic platform](docs/SOCRATIC_PLATFORM.md) |
-| What is collected, for how long, and the regulatory notes | [Privacy](docs/PRIVACY.md) |
+| What is collected, for how long, and the regulatory notes | [Privacy](docs/PRIVACY.md), [Compliance](docs/COMPLIANCE.md) |
+| Each exam-room mechanic against the research for and against it, and the owner's decisions | [Evidence map](docs/EVIDENCE_MAP.md), [blueprint gap analysis](docs/research/blueprint-gap-analysis.md) |
 | Voice exam room, avatar and audio signals | [Voice](docs/VOICE.md) |
 | The demo tour and mock mode | [Tour](docs/TOUR.md) |
 | Deploying to Azure | [Deploy](docs/DEPLOY.md) |

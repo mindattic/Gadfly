@@ -30,7 +30,7 @@ human grading accountability; functional correctness; maintainability; performan
 | Part 4.4 non-leading questions | Leak-guard vote on every question with redraft and safe fallback | Engine/QuestionGenerator.cs |
 | Part 7 AI scoring (per concept) | Panel judge with criteria, citations, per-voter verdicts, agreement, human-review flag | Gadfly.Sources/PanelAnswerJudge.cs |
 | Part 14 materials + RAG | Ingestion, concept map, cited rubrics, hybrid retrieval | Gadfly.Sources |
-| Part 13.2 text examination | Exam room, resumable sessions, server time limit | Gadfly.Server |
+| Part 13.2 text examination | Exam room, resumable sessions, server time limit (since GAD-T239 every exam is spoken; typing remains only as an accommodation) | Gadfly.Server |
 | Part 16 isolation, RBAC basics, privacy | Tenant filter + write guard, org roles, MFA, retention, export/erase | Gadfly.Server |
 | Part 12.2 review (single grader) | Review timeline, evidence, integrity summary, grade, release | Components/Pages/Review |
 | Part 17 API | Platform API v1, webhooks, SessionHub | Gadfly.Server/Platform, Sessions |
@@ -46,12 +46,16 @@ human grading accountability; functional correctness; maintainability; performan
   topics, objectives, rubric criteria on the Part 5.1 dimensions and level descriptors 0–5, where level 0
   is Insufficient Evidence and never zero understanding.
 - **Transcript integrity.** Every answer keeps an immutable original plus versions, verification states,
-  clarifications and typed corrections (transcription / meaning / substantive revision).
-- **Integrity signals.** Answer-text style and browser signals stay reviewer-only context; the plan forbids
-  treating AI-text detection as proof, which matches how they are already shown.
+  clarifications and typed corrections (transcription / meaning / substantive revision). Since GAD-T405 (owner
+  decision) a spoken answer is taken as heard, with no read-back or correction; the recognizer's unsure words are
+  marked for graders instead, and corrections remain for typed answers.
+- **Integrity signals.** Browser, camera and eye-contact signals stay reviewer-only context (and are shown to the
+  student with their result); the answer-text style estimate is switched off (GAD-T412). The plan forbids treating
+  AI-text detection as proof, which matches how they are shown.
 - **Voice, avatar and webcam signals** (MindAttic.SpeechRecognition, MindAttic.Avatar, MindAttic.Webcam) were
-  built after the core product (docs/VOICE.md, docs/PRIVACY.md): the plan makes voice optional, typing is always
-  available, and webcam signals stay reviewer-only context.
+  built after the core product (docs/VOICE.md, docs/PRIVACY.md). The plan made voice optional with typing always
+  available; the owner decided otherwise (GAD-T239): voice and camera are mandatory, and typing is only a
+  staff-granted accommodation (GAD-T260). Webcam signals stay reviewer-only context.
 
 ## Build order
 
@@ -63,13 +67,27 @@ the master-plan part it implements.
 | 1 | Design pack | Part 19 Phase 1 |
 | 2 | Courses/objectives/rubric criteria, grading policy, roles, audit log, response versioning (one schema foundation) | Parts 5, 9, 10, 16, 17.4, 4 |
 | 3 | Mock mode, demo tour, test harness | Part 22, owner's tour + tests |
-| 4 | Verification engine, student confirmation UI | Part 4, 13 |
+| 4 | Verification engine, student confirmation UI (the spoken read-back later removed by owner decision, GAD-T405) | Part 4, 13 |
 | 5 | Examination control, strategies A–H, response analysis, contamination, learning mode | Parts 2, 3, 5, 6 |
 | 6 | AI grading per objective, blind human grading, combined scoring, reconciliation, approval/statuses/appeals, report | Parts 7–11 |
 | 7 | Teacher setup UI, analytics, demo assessments | Part 12, 19 |
 | 8 | Exhaustive NUnit tests (scenarios A–J and every rule) | Part 20 |
 | 9 | Azure deployment and go-live | Part 19 Phase 7 |
-| 10 | Voice, avatar, webcam (built); LMS integrations, billing (not built) | Part 13.3, 18.3 |
+| 10 | Voice, avatar, webcam; LMS integration (LTI 1.3: Canvas, Moodle, Blackboard, Brightspace); plans, limits and optional card checkout (all built) | Part 13.3, 18.3 |
+
+## Where it stands (22 November 2026)
+
+Every row of the build order is built. Beyond the plan, the product now also has: an admin suite (dashboard,
+students, exams manager, assignments console, live sessions monitor, audit log viewer, system status and readiness),
+PDF reports, official transcripts with verification codes and a completion certificate, panel calibration with blind
+double marking, bias probes and a self-preference check, fairness views by group in analytics, an optional research
+consent and export, an in-app help center with guided tours, and a public product site. [PRODUCT.md](PRODUCT.md)
+describes it for a buyer; [OPERATIONS.md](OPERATIONS.md) is the runbook.
+
+Known gaps: the examiner voice and avatar ids chosen per organization or exam are saved but not used (GAD-T475);
+LTI passes back one grade per placement; webhooks offer one event; speech-to-text and text-to-speech are not
+metered for cost. Where the build departs from the dissertation by owner decision is listed in
+[research/blueprint-gap-analysis.md](research/blueprint-gap-analysis.md).
 
 Nothing here claims validity results: Part 15.3's validation studies happen with real institutions after
 launch, and the product says so.

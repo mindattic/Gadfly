@@ -4,9 +4,9 @@
 
 ### Can I type my answers instead of speaking?
 
-No. Every exam is spoken, on camera, because explaining out loud and answering follow-ups is what the exam
-measures. If speaking isn't possible for you, talk to your instructor before the exam; see
-[Accommodations](accommodations.md).
+Not by choosing it yourself. Every exam is spoken, on camera, because explaining out loud and answering follow-ups
+is what the exam measures. If speaking isn't possible for you (a speech, hearing or anxiety need), ask your instructor
+before the exam: they can grant **typed answers** as an accommodation. See [Accommodations](accommodations.md).
 
 ### Is my camera recording me?
 
@@ -38,7 +38,8 @@ it again in your own words.
 
 ### Can I pause the exam?
 
-Not on purpose. The exam pauses by itself if your microphone, camera or connection stops, and the clock stops for
+Not on purpose. (Staff can pause an exam from their live monitor, for example to deal with a problem; the exam then
+says so and keeps what you were saying.) The exam pauses by itself if your microphone, camera or connection stops, and the clock stops for
 up to 10 minutes in all while you fix it. You can always take a moment to think before you answer.
 
 ### What happens if my internet drops or I close the page?
@@ -79,8 +80,9 @@ rules and must not be used to grade anyone. If you see it during a real exam, te
 
 ### Can a student type answers?
 
-Not today: there is no typed answer mode. Typed answers as an instructor-granted accommodation are being built
-(see [Accommodations](accommodations.md)).
+Only with the **typed answers** accommodation, which an instructor or admin grants for one student on one exam; the
+student can never switch to typing. The examiner still speaks the questions, the camera stays on, and typed answers
+are marked as typed for reviewers. See [Accommodations](accommodations.md).
 
 ### Do integrity notes affect the grade?
 
@@ -95,8 +97,10 @@ organization can ask its admin to turn on **Allow a single grader** in Organizat
 
 ### A student's exam can't continue. What do I do?
 
-An organization admin can reset the attempt from the admin desk's **Student exams** tab (it removes that student's
-attempts on that exam so they start fresh), or change the attempts allowed. See the [Admin guide](ADMIN_GUIDE.md).
+While it is running, **Live sessions** (`/admin/live`) lets an owner or admin pause, resume, add time, send the
+student a notice or end it. Afterwards, the **Assignments** console's **Grant another attempt** or **Reset attempt**
+(with a reason) lets the student sit it again, and the admin desk's **Reset** removes that student's attempts on that
+exam so they start fresh. See the [Admin guide](ADMIN_GUIDE.md).
 
 ### Why can't an instructor see another instructor's exam?
 
@@ -104,5 +108,11 @@ By default each instructor sees what they created. An admin can change that in *
 
 ### Where is the audit log?
 
-Today each session's audit trail is on its grading page (**Audit trail**). An organization-wide audit log page is
-being built; see [Audit log](admin-audit-log.md).
+Owners and admins open **Audit log** (`/admin/audit`) in the admin navigation: every recorded change in the
+organization, with filters and CSV or JSON export. Each session's own trail is also at the bottom of its grading page
+(**Audit trail**). See [Audit log](admin-audit-log.md).
+
+### How do I learn a page quickly?
+
+Press **Show me around** at the top of the page for a short guided tour, or the **?** beside the page's title for its
+help. See [Guided tours](guided-tours.md).

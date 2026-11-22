@@ -54,8 +54,8 @@ Students don't need two-step verification (an authenticator app); staff do.
 
 ## Finding your exam: My exams
 
-Sign in and open **My exams**. You are not emailed when an exam is assigned to you: it simply appears here. Each
-exam shows:
+Sign in and open **My exams**. An exam assigned to you appears here (your organization may also email you about it;
+see [Email](#email)). Each exam shows:
 
 | What you see | What it means |
 |---|---|
@@ -71,6 +71,10 @@ instructions from your instructor. If your instructor closes an exam to new atte
 through one, the exam says so and you can still finish the attempt you started (but not after its window closes).
 Each exam also says how you answer it: **Spoken exam, on camera**, or, if your instructor granted typed answers,
 **Spoken questions, typed answers (your accommodation)**.
+
+New to the page? Press **Show me around** at the top for a short guided tour of it; it starts by itself the first
+time you open **My exams**. The get-ready page has one too. See [Guided tours](guided-tours.md). There is never a tour
+inside the exam room or the practice interview.
 
 ### Practise first: meet your examiner
 
@@ -152,6 +156,10 @@ under **What I heard** as you speak.
 - **I don't know** is a real answer. Socrates called that moment *aporia*: honest puzzlement, the start of real
   learning. The examiner notes it and tries another angle or moves on.
 
+**Typed answers (accommodation only).** If your instructor granted you typed answers, the examiner still speaks each
+question and your camera stays on, but you type your answer in the box and press **Submit answer** (or Ctrl+Enter).
+You can't switch to typing yourself; see [Accommodations](accommodations.md).
+
 ### Your answer is taken as heard
 
 Once your answer is sent, it is taken as the examiner heard it and the exam moves on, like a conversation with a
@@ -219,8 +227,9 @@ grade, and nothing is blocked.** The notice before each exam lists exactly what 
 
 **Voice measurements.** Unless your organization or your instructor turned them off, the exam room also measures
 a few things about your voice (pitch, steadiness, loudness) and compares each answer with your own first answers.
-You see a short line about it in your own transcript. It describes your voice, never your feelings or honesty, may
-make the examiner ask a further question, and never changes your grade. In the EU and EEA it is **off** by default.
+You see a short line about it in your own transcript. It describes your voice, never your feelings or honesty. It
+never changes which questions the examiner asks or how hard it presses (that comes only from what you say), and never
+changes your grade. In the EU and EEA it is **off** by default.
 
 Your answers are kept for your organization's retention period, shown in the notice (90 days unless your
 organization set another), and then removed. The outcome (the judgments, your result and the examiner's comments)

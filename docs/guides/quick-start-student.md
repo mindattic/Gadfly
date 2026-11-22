@@ -4,8 +4,8 @@ Five steps from your invitation to a submitted exam.
 
 1. **Sign in.** Use the link in your invitation email to choose a password, or the user name and temporary
    password your instructor gave you (you'll choose a new one at first sign-in).
-2. **Open My exams.** Your assigned exams are listed with their window and attempts. You aren't emailed when an
-   exam is assigned; check here.
+2. **Open My exams.** Your assigned exams are listed with their window and attempts (you may also get an email when
+   one is assigned). **Show me around** at the top gives a short tour of the page.
 3. **Press Start and get ready.** Allow your microphone and camera, say a few words so the meter moves, and wait
    until every check shows ✓. Try the practice question out loud. Read the notice, tick the box, press **Begin exam**.
    (Nothing is recorded and no attempt is used until you press Begin exam.)
@@ -22,7 +22,8 @@ Five steps from your invitation to a submitted exam.
 - Work through the [checklist](before-your-exam.md): headset, quiet room, light in front of you, other call apps
   closed.
 - Practise explaining each topic **out loud**, including the *why*.
-- Need extra time, or can't keep eye contact? Ask your instructor for an [accommodation](accommodations.md) now.
+- Need extra time, can't keep eye contact, or can't answer aloud? Ask your instructor for an
+  [accommodation](accommodations.md) now.
 
 ## If something goes wrong
 

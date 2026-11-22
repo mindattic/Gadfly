@@ -28,6 +28,7 @@ tells you where to go, and you press **Show me around** once you are there.
 | Page | For | What the tour shows |
 | --- | --- | --- |
 | Dashboard | Admins | The admin menu, setup checklist, what needs attention, the numbers and quick actions |
+| Admin desk | Admins | The three tabs (exams, students, student exams), each form and the list below it |
 | Students | Admins | Adding, inviting and importing students, filters and the list |
 | Exams | Admins | Creating and importing exams, filters, status and the actions on each exam |
 | Assignments | Admins | Assigning an exam, the list and grid views, filters and changing many at once |

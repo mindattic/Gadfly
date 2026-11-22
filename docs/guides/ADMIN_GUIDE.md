@@ -19,12 +19,15 @@ entries their role can open.
 | People | **Students** (`/admin/students`, and one student at `/admin/students/{id}`), **Members** (`/org/members`) |
 | Exams | **Exams** (`/admin/exams`), **Assignments** (`/admin/assignments`), **Desk** (`/admin/desk`, when the admin desk is turned on), **Source material**, **Assessments**, **Exam builder** |
 | Results | **Grading** (`/grading`), **Review** (`/review`), **Analytics** (`/analytics`) |
-| Organization | **Settings**, **Usage**, **API keys**, **Webhooks**, **Research** (all under `/org/...`), **Audit log** (`/admin/audit`), **System status** (`/admin/status`) |
-| Platform | **Organizations** (`/platform/organizations`), MindAttic staff only |
+| Organization | **Settings**, **Plan & usage**, **Usage**, **API keys**, **Webhooks**, **Research**, **LMS connection** (all under `/org/...`), **Audit log** (`/admin/audit`), **System status** (`/admin/status`), **Email preview** (`/admin/email-preview`) |
+| Platform | **Organizations** (`/platform/organizations`, with each organization's **Plan & limits**), MindAttic staff only; demo requests from the public site are at `/platform/requests` |
 
 Instructors keep their own links in the top bar (source material, assessments, review, analytics, grading);
-examiners and second reviewers see **Grading**. A page still being finished in this release says "Coming in
-this release" instead of leading nowhere.
+examiners and second reviewers see **Grading**.
+
+The **?** beside a page's title opens the help for that page. The dashboard, the admin desk, Students, Exams,
+Assignments and Live sessions each have a short guided tour: it starts by itself the first time you open the page, and
+**Show me around** at the top of the page replays it whenever you like. See [Guided tours](guided-tours.md).
 
 The **admin desk** (exams, students and resets on one page) moved from `/admin` to `/admin/desk`.
 
@@ -69,13 +72,19 @@ reloads it.
 **Exams** (`/admin/exams`) lists every exam with its status, objectives, how many students it is assigned to, completed
 attempts, average completed time and whether its window is open. From a row's **Actions** you can change its
 **settings** (duration and minimum objectives are frozen once it is published; integrity level, read-out check and
-examiner voice and avatar apply to attempts that start from then on, with a reason once anyone has started), see
+examiner voice and avatar (saved but not used yet, GAD-T475) apply to attempts that start from then on, with a reason once anyone has started), see
 **objective coverage** (how many attempts examined each objective), set its **window**, **open now** or **close now**
 for everyone it is assigned to, **preview it as a student** (the real examiner logic on the practice panel; nothing is
 saved and it never counts as an attempt), **duplicate** it (a new draft with everything but its assignments and
 attempts), **export** it as JSON, see its **history**, and **archive** or **restore** it. **Import from a file** brings in
 an exported exam as a draft, listing every problem in the file if it can't. Every change is in the audit log. See
 [Exams manager](admin-exams.md).
+
+## Live sessions
+
+**Live sessions** (`/admin/live`) shows every exam in progress right now, with the actions to step in: **Add time**,
+**Pause** and **Resume**, **End exam** and **Send a notice** to the student. See [Live sessions monitor](admin-live-sessions.md).
+
 ## Students
 
 **Students** (`/admin/students`) lists every student of your organization, a page at a time.
@@ -145,7 +154,7 @@ Tick rows in the list (or assigned cells in the grid) to change many at once:
 | **Move due date** | Moves each due date by a number of days, forward or back; assignments with no due date are skipped. |
 | **Grant another attempt** | One more attempt each (at most 20). Needs a reason. |
 | **Reset attempt** | Clears the scores of the attempts so far, keeping an archived copy of every grade, report, reconciliation, approval and appeal in the audit log (the same rule as the desk's **Clear scores**); the attempts and transcripts stay, still count, and are not graded again unless someone decides to; then grants one more attempt so the student can sit it again. Needs a reason; refused while an attempt is in progress or when there is no attempt yet. |
-| **Accommodations** | Extra time (from the next attempt), no eye contact expected, and typed answers (both from the next answer). Granted by staff for one student on one exam; students never see a switch for them. |
+| **Accommodations** | Extra time (from the next attempt), no eye contact expected (from the next answer), and typed answers (the next time the student opens the exam). Granted by staff for one student on one exam; students never see a switch for them. |
 | **Unassign** | Removes assignments with no attempt yet. An assignment with an attempt is kept, since its transcript and grades belong to it. Needs a reason. |
 
 Every change is recorded in the audit log once per assignment, with the reason where one is asked for, so it
@@ -202,7 +211,9 @@ when they do, a drop-down in the top bar switches between them.
 MindAttic staff (the platform **SuperAdmin**) create organizations at **Organizations**
 (`/platform/organizations`): **Name** (2 to 200 characters, unique), **Owner user name**, **Owner email** and
 **Temporary password**, then **Create organization**. The owner must change the password at first sign-in and set
-up two-step verification. There is no screen yet to rename or deactivate an organization.
+up two-step verification. **Plan & limits** on each organization's row sets its plan, seat limits, exam allowance,
+trial dates and renewal date, and shows its current use against them (see **Plan and usage**). There is no screen yet
+to rename or deactivate an organization.
 
 The very first account on a new server is the bootstrap SuperAdmin: user name `admin`, with the password from the
 Vault secret `Security:bootstrap-token`. It must change its password and enroll two-step verification at first
@@ -281,7 +292,7 @@ setting with consequences is written to the audit log.
 |---|---|---|
 | **Keep what students said for (days)** | 90 | How long transcripts and what the student said are kept (7 to 3650 days). See **Data retention**. Students see the number in the notice before every attempt. |
 | **Provider cost ceiling per month (USD)** | no limit | When the month's AI cost reaches it, new exam sessions are refused with "Your organization has reached its monthly usage limit. Please contact your instructor."; sessions already running finish. |
-| **Default voice id**, **Default avatar id** | platform default | Saved for voice exams. The deployment's own voice and avatar settings decide what students hear and see today. |
+| **Default voice id**, **Default avatar id** | platform default | Saved, but **not used yet**: every exam speaks with the deployment's own examiner voice and shows its avatar, whatever is set here or on the exam (GAD-T475). |
 | **Instructors see and manage only what they created** | on | See **What instructors see**. |
 | **Allow a single grader (small organization)** | off | See **Separation of duties in grading**. |
 | **Separate reconciler and approver** | Automatic | Or **Always**, or **Off**. See **Separation of duties in grading**. |
@@ -385,6 +396,12 @@ go), and the record of how long each outside call took is kept for at least six 
 period you choose. An erasure keeps those events too, without the student's details, and adds an event saying who
 erased whom and when.
 
+## LMS connection
+
+**LMS connection** (`/org/lti`) connects Canvas, Moodle, Blackboard Learn or D2L Brightspace over LTI 1.3: instructors
+add Gadfly exams from their course, students launch them with one click, rosters refresh on a schedule, and published
+grades go back to the course gradebook. [Connecting your LMS](lti-setup.md) has the setup for each platform.
+
 ## API keys
 
 Apps that integrate Gadfly (an LMS, a student-information system) call the platform API with an organization **API
@@ -413,6 +430,33 @@ most an hour apart), up to 8 attempts. **Deactivate…** stops a webhook; delive
 **Recent deliveries** lists the latest 50 with their event, endpoint, status (delivered, failed and retrying, gave up,
 pending), attempt and your endpoint's response code: the first place to look when an integration says it heard
 nothing.
+
+## Plan and usage
+
+**Plan & usage** (`/org/plan`, owners and admins) shows the organization's plan and how it stands against it.
+
+| Plan | Staff seats | Student seats | Exams |
+|---|---|---|---|
+| Trial | 3 | 25 | 50 in all, over 30 days from the trial's start |
+| Standard | 10 | 250 | 500 a calendar month |
+| Institution | 50 | 2,500 | 5,000 a calendar month |
+| Custom | by agreement | by agreement | by agreement |
+
+These are the numbers a plan starts with; MindAttic can set different ones for your organization. Staff seats count
+active owners, admins, instructors, examiners and second reviewers; student seats count active students. An exam is
+one attempt started (an attempt replaced by an update to the examiner doesn't count).
+
+- At **80%** of a limit the page says so.
+- At a **seat limit**, adding or inviting another member of that kind is refused until someone is removed or the plan
+  is upgraded.
+- At the **exam allowance**, or when a **trial has ended**, no new attempt can start (attempts already running
+  finish). Students are told to contact their instructor; the trial message asks the owner to choose a plan.
+
+**Upgrade** offers card payment for a self-serve plan change, but only when MindAttic has configured a payment
+provider for this deployment; otherwise ask MindAttic to change the plan. **Download usage CSV** gives every month's
+sessions and metered cost, for your own invoicing or records.
+
+The monthly **provider cost ceiling** on **Settings** is a separate limit on AI cost (see **Organization settings**).
 
 ## Usage
 
@@ -567,6 +611,11 @@ genuine AI evaluations and must not be used to grade anyone." It is set by the s
 | `/healthz` | Anonymous: the app and its database are up. |
 | `/healthz/ready` | Anonymous: the system status page's checks (database, migrations, AI panel, voice, jobs, webhooks, errors) as names and states only. 200 when ready, 503 when the database does not answer or migrations are not applied; the rest only warn. |
 | `/healthz/providers` | SuperAdmin only: the state of each AI provider on the panel. A provider that fails several calls in a row is logged as an error and the panel carries on without it. |
+| `/healthz/call-timings` | SuperAdmin only: a plain-text table of the latest outside calls on live exams (`?session=<id>` for one attempt, `&limit=` up to 2000), newest first, then slowest first, then totals per call. |
+| `/healthz/voice-recognition` | SuperAdmin only: the speech recognizer's latency and unsure-word rate since the server started. |
 
-Application logs go to MindAttic.Log's database for Gadfly.Server; every exam step is logged with its session and
-organization. See [System status and jobs](admin-system-status.md) for the status page.
+Application logs go to MindAttic.Log's own database for Gadfly.Server (a local SQLite file on the server) and, on
+Azure, to the App Service log files and log stream; every exam step is logged with its session and organization. The
+audit log is never deleted, and call timings are kept at least six months (`Gadfly:Logs:CallTimingDays`, a year by
+default, never under 183). See [System status and jobs](admin-system-status.md) for the status page; MindAttic's own
+runbook for running the platform is docs/OPERATIONS.md in the repository.

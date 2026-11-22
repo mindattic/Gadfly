@@ -4,17 +4,18 @@ Status: done (GAD-T63; the owner said go, decision D16 in [SOCRATIC_PLATFORM.md]
 https://mindattic-gadfly.azurewebsites.net and runs in mock mode (D23). The steps below are how it was set up and how to
 repeat it in another subscription.
 
-Gadfly.Server runs next to Tutor in the existing **MyApps** resource group, on the existing App Service
-plan and Azure SQL server, with a managed identity and no passwords anywhere:
+Gadfly.Server runs next to Tutor: the app in the existing **MyApps** resource group on the existing App Service
+plan, the database on the existing Azure SQL server in **rg-mindattic-data**, with a managed identity and no passwords
+anywhere:
 
 | Piece | Name | Notes |
 |---|---|---|
-| App Service | `mindattic-gadfly` | .NET 10, WebSockets on (Blazor Server), always on, HTTPS only |
-| Database | `Gadfly` on `sql-mindattic-f65744` | Serverless, auto-pause after 60 min |
+| App Service | `mindattic-gadfly` (group `MyApps`) | .NET 10, WebSockets on (Blazor Server), always on, HTTPS only |
+| Database | `Gadfly` on `sql-mindattic-f65744` (group `rg-mindattic-data`) | Serverless, auto-pause after 60 min |
 | Data Protection keys | blob container `gadfly-dp-keys`, Key Vault key `gadfly-dp-protect` | Signs cookies, launch links and webhook secrets |
 | Secrets | Key Vault `kv-tutor-f65744` | Auth pepper, reset key, bootstrap token, LLM and ElevenLabs keys |
 | Deploy | `tools/deploy-azure.ps1` (via MindAttic.Deploy) | Clean export, migrate, publish, zip deploy, health and login smoke checks |
-| Deploy (CI) | `.github/workflows/azure-deploy.yml` | Manual trigger; same steps on a runner, once the repo secrets exist |
+| Deploy (CI) | `.github/workflows/azure-deploy.yml` | Manual trigger, once the repo secrets exist. **Not** the same as the script: see the note under **Versions** |
 
 ## One-time setup
 
@@ -101,10 +102,29 @@ number is the deploy count, not a semantic version.
 - Never pass a non-whole number (the build refuses it), never create or move a `vN` tag by hand except to repair a
   deploy the script reported as live but untagged.
 
-The manual GitHub workflow does the same on a runner: GitHub → mindattic/Gadfly → Actions → **Build and deploy
-Gadfly to Azure App Service** → Run workflow. The first sign-in is `admin` with the `gadfly-bootstrap-token`
-password; you're made to change it and set up MFA. Then rotate the `gadfly-bootstrap-token` secret to a new random
-value.
+The manual GitHub workflow (GitHub → mindattic/Gadfly → Actions → **Build and deploy Gadfly to Azure App Service** →
+Run workflow) builds, migrates and deploys on a runner, but it is **not** equivalent to the script: it doesn't pass
+`GadflyVersion` (the app shows `dev` with no number), doesn't tag `vN`, doesn't check that the app is in mock mode, and
+restarts the app instead of following the Kudu deployment. Use `tools/deploy-azure.ps1` (through MindAttic.Deploy) for
+releases until the workflow is brought in line.
+
+The first sign-in on a new deployment is `admin` with the `gadfly-bootstrap-token` password; you're made to change it
+and set up MFA. Then rotate the `gadfly-bootstrap-token` secret to a new random value.
+
+### App settings a release must check
+
+- **Admin desk.** `Gadfly:AdminDesk:Enabled` is off by default in Production (GAD-T247). Set
+  `Gadfly__AdminDesk__Enabled=true` in the App Service settings to keep the desk. Only the organization's Owners and
+  Admins can use it, and every desk admin needs MFA. `Gadfly:AdminDesk:Admins` is deprecated (GAD-T459): honoured
+  through V2 only, so give the owner's account the Owner or Admin role.
+- **Voice.** `Gadfly:Voice:Mode` defaults to `off` outside Development, and with voice off the get-ready page's
+  **Spoken examiner** check fails and no exam can begin. A deployment that runs exams sets `Gadfly__Voice__Mode`
+  (`mock` for the mock instance, `live` with `MindAttic__Avatar__ElevenLabs__VoiceId` and the ElevenLabs key; live
+  without the voice id turns voice off). Neither `provision-azure.ps1` nor this page sets it for you.
+- **AI mode.** `Gadfly__AiMode` must be `mock` unless the owner has approved live spending; the script refuses
+  otherwise without `-AllowLive`.
+
+The full release checklist and smoke checks are in [OPERATIONS.md](OPERATIONS.md).
 
 ## Running it locally
 
@@ -124,5 +144,7 @@ print it once in the log.
 ## After the first deploy
 
 - Custom domain and certificate (App Service → Custom domains), if wanted.
-- Switch the workflow trigger to `push` on `main` once a deploy has gone through cleanly.
-- Watch `/healthz/providers` (SuperAdmin only) for failing LLM keys.
+- Bring the GitHub workflow in line with the script (version, tag, mock check) before switching its trigger to
+  `push` on `main`.
+- Watch `/healthz/ready` (anonymous) and `/healthz/providers` (SuperAdmin only) for failing checks and LLM keys; see
+  [OPERATIONS.md](OPERATIONS.md).

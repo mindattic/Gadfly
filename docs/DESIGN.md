@@ -44,7 +44,7 @@ output is schema-validated and treated as a recommendation.
 | Part 2.4 | Adaptive question selection by information value | `QuestionPlanner`, `MoveProfiles` (Gadfly/Engine/Objectives.cs) | GAD-T89, T90 | built |
 | Part 3 | Examination and Learning modes, assisted evidence kept apart | `AssessmentMode`, `Exam.AssessmentMode`, `GradingPolicy.AllowAssistedEvidence`, `MoveKind.Hint/GuidedExplanation`, `AssessmentEvidence.Assisted` | GAD-T93 | built |
 | Part 4.1-4.2 | Accurate, versioned transcript | `StudentResponse` (immutable original), `TranscriptVersion`, `ResponseLedger` | GAD-T86 | built |
-| Part 4.3-4.5 | Transcription and meaning verification, non-leading confirmation, confidence triggers | `ResponseVerifier` (Component C), `ClarificationEvent` | GAD-T87, T88 | built |
+| Part 4.3-4.5 | Transcription and meaning verification, non-leading confirmation, confidence triggers | `ResponseVerifier` (Component C), `ClarificationEvent`. Spoken answers are taken as heard since GAD-T405 (owner decision): no read-back; unsure words are named to the panel and marked for the grader (GAD-T265); meaning clarification stays | GAD-T87, T88, T405 | built (read-back removed by owner decision) |
 | Part 4.6 | Verification states | `VerificationState`, `VerificationMachine` | GAD-T86 | built |
 | Part 4.7 | Correction integrity (transcription / meaning / substantive revision) | `CorrectionKind`, `CorrectionRules`, `ResponseKind.SubstantiveRevision` | GAD-T86, T88 | built |
 | Part 5.1 | Multidimensional assessment | `AssessmentDimension`, `RubricCriterion.Dimension` | GAD-T81 | built |
@@ -60,12 +60,16 @@ output is schema-validated and treated as a recommendation.
 | Part 12.1 | Teacher assessment setup | `/assessments` pages, `AssessmentService` | GAD-T85 | built |
 | Part 12.2 | Examination review | `/review` and `/grading` | GAD-T54, T95 | built |
 | Part 12.3 | Educational analytics | `/analytics`, `Gadfly.Server/Analytics` | GAD-T102 | built |
-| Part 13.2 | Text examination | `/exam/{id}` (`ExamRoom.razor`), `SessionHub`, `SessionOrchestrator` | GAD-T44 | built |
-| Part 13.3 | Voice examination | `Gadfly.Server/Voice`, `VoiceRoom.razor`, MindAttic.SpeechRecognition and MindAttic.Avatar ([VOICE.md](VOICE.md)) | GAD-T53, T58 | built |
+| Part 13.2 | Text examination | `/exam/{id}` (`ExamRoom.razor`), `SessionHub`, `SessionOrchestrator`. Since GAD-T239 every exam is spoken; typed answers survive only as the staff-granted accommodation (`ExamRoom.Typed.cs`, GAD-T260) | GAD-T44, T239, T260 | built (as an accommodation) |
+| Part 13.3 | Voice examination | `Gadfly.Server/Voice`, `VoiceRoom.razor`, MindAttic.SpeechRecognition and MindAttic.Avatar ([VOICE.md](VOICE.md)); mandatory with the camera | GAD-T53, T58, T239 | built |
+| Part 18.3 | Integrations, billing | LTI 1.3 (`Gadfly.Server/Lti`, [lti-setup](guides/lti-setup.md)); plans and enforcement (`Platform/PlanCatalog.cs`, `PlanEnforcement`); optional card checkout (`Platform/CheckoutService.cs`, off without payment keys) | GAD-T309, T370, T371, T372, T380 | built |
+| Reports | Assessment report, class summary and certificate as PDF; official transcripts with verification codes | `Grading/GradingReportPdf.cs`, `Transcripts/` | GAD-T295, T311 | built |
+| Panel trust | Blind double marking, panel calibration (gating the AI weight), bias probes, self-preference check | `Gadfly.Server/Grading` (calibration, second marking, bias probes) | GAD-T427, T428, T429, T431, T432, T469 | built |
+| Operations | Admin suite, help center and tours, system status and readiness, audit viewer | `Admin/`, `Help/`, `Tours/`, `/healthz/ready`; [OPERATIONS.md](OPERATIONS.md) | GAD-T292, T293, T296..T302, T356 | built |
 | Part 14 | Course material ingestion, grounded questions, RAG | `SourceIngestor`, `ConceptMapBuilder`, `RubricBuilder`, `GroundingRetriever`, `SourceProcessingJob` | GAD-T33..T37 | built |
 | Part 15.1-15.2 | Fairness, comparable difficulty | Fixed prompt sets per session (`PromptSetSha256`), deterministic planner, policy snapshot per grade | GAD-T89 | partly built |
 | Part 15.3 | Scoring validation studies | Not a product feature: run with institutions after launch; analytics shows the agreement caveat | — | process |
-| Part 15.4 | Academic integrity (signals are context, never proof) | `IntegrityEvent`, `IntegrityRecorder`, `TextStyleAssessor`, reviewer-only display | GAD-T59 | built |
+| Part 15.4 | Academic integrity (signals are context, never proof) | `IntegrityEvent`, `IntegrityRecorder`, reviewer-only display (and the student's own result page, GAD-T450); `TextStyleAssessor` switched off (GAD-T412) | GAD-T59 | built |
 | Part 16.1 | Institutional data protection | Tenant filter and write guard, retention, export/erase | GAD-T41, T42, T62 | built |
 | Part 16.2 | Role-based access control | `PermissionMatrix` (section 9), `OrgRoles`, `GadflyPolicies` | GAD-T83 | built |
 | Part 16.3 | Data security | Section 10 | GAD-T64 | built |

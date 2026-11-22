@@ -27,11 +27,14 @@ can start with the [Grading guide](grading-guide.md).
 | More than one organization | A drop-down in the top bar switches between them. Everything you see is scoped to the organization selected there. |
 
 The top bar shows **Source material**, **Assessments**, **Review**, **Analytics** and **Grading** (owners and admins
-reach everything from **Admin**). **Help** is always there.
+reach everything from **Admin**). **Help** is always there, and the **?** beside a page's title opens the help for
+that page. The grading queue, a grading session and a session review each have a short guided tour: it starts by itself
+the first time, and **Show me around** at the top of the page replays it (see [Guided tours](guided-tours.md)).
 
 ## What the student experiences
 
-Knowing this makes everything else make sense. Every exam is **spoken and on camera**; there is no typed answer mode.
+Knowing this makes everything else make sense. Every exam is **spoken and on camera**. A student can't switch to
+typing; only staff can grant typed answers, as an accommodation (see [Accommodations](#5-accommodations)).
 
 1. **My exams** lists the exam with its window and attempts.
 2. **Start** opens a get-ready page: a system check (browser, cookies, connection, screen, the spoken examiner,
@@ -197,9 +200,11 @@ A published assessment's last step is **Assign to students**:
 | Extra time (accommodation) | None, 1.25×, 1.5× or 2×, for the students you assign in this batch. |
 
 Students who already have this assessment are skipped. Students must already be members of the organization (an
-admin invites them). Students are **not** emailed when you assign; they find it under **My exams**.
+admin invites them). The exam appears under the student's **My exams**, and each newly assigned student is sent an
+**Exam assigned** email (when your organization's email is on and an email sender is configured).
 
-The **Assignments** table shows each student's window, attempts used, extra time, eye contact, EU/EEA residence, the
+The **Assignments** table shows each student's window, attempts used, extra time, answers (spoken or typed), eye
+contact, EU/EEA residence, the
 latest session's state (opened, consented, in progress, paused, ended, failed) and results ("Grade and publish in
 Grading" links to the grading queue). Above the table, **Download class summary (PDF)** saves a one-exam overview:
 the score distribution (mean, median, a histogram), each learning objective's class average and a plain list of
@@ -212,10 +217,11 @@ awaiting grading or release is counted but never named.
 |---|---|---|
 | **Extra time** | **Extra time (accommodation)** when assigning | Multiplies the time limit, and lengthens the pause before an answer is taken as finished. |
 | **Eye contact not expected** | **Declare accommodation** / **Withdraw** in the **Eye contact** column | The screen doesn't fade and the examiner doesn't ask the student to look at it (face presence is still noticed). Applies from their next answer. Use it for, for example, autism, low vision, nystagmus or a cultural norm. |
+| **Typed answers** | **Grant typed answers** / **Withdraw** in the **Answers** column | The student types each answer instead of speaking it; the examiner still speaks the questions, the camera stays on and the eye-contact check still applies. Typed answers are marked as typed for reviewers, and a paste into the answer box is noted for review. Only for a documented speech, hearing or anxiety need. Applies the next time the student opens the exam. |
 | **Lives in the EU/EEA** | **Mark as EU/EEA** / **Unmark** in **Lives in EU/EEA** | Voice measurements are off for this student unless your organization turned them on for everyone. |
 
-Each change is written to the audit log. Typed answers as an accommodation are not available yet; see
-[Accommodations](accommodations.md).
+Each change is written to the audit log. Owners and admins can also set any of these for many assignments at once on
+the [Assignments console](admin-assignments.md). See [Accommodations](accommodations.md).
 
 ## 6. Review a session
 
@@ -230,9 +236,12 @@ what to ask next, and no average of answer scores stands in for a level.
 
 **The timeline** lists every question in order, with:
 
-- the **move** (Elicit, Clarify, Probe, Counterexample, Contradiction, Apply, Synthesize);
-- the student's **answer** as confirmed, how long they took to start speaking, and how they spoke (pace, pauses,
-  hesitations, recognizer confidence), with any corrections;
+- the **move**: the kind of question (opening question, clarify, probe the reasoning, cause and effect,
+  counterexample, contradiction, apply to a new situation, change one condition, test an assumption, explain in own
+  reasoning, connect two objectives, and in Learning mode a hint or guided explanation);
+- the student's **answer** as heard (or as typed, for a typed-answer accommodation), how long they took to start
+  speaking, and how they spoke (pace, pauses, hesitations, recognizer confidence), with the words the recognizer was
+  unsure of marked;
 - a **contradiction** warning when an answer conflicts with something said earlier (with the earlier turn);
 - a **withdrew an earlier claim** note when the student said an earlier claim was wrong: the claim stays on record, but
   it is no longer treated as something they hold, so it is never put to them as a contradiction;
@@ -241,6 +250,13 @@ what to ask next, and no average of answer scores stands in for a level.
 - **each judge's verdict**; a judge 25 points or more from the panel is marked **dissents**;
 - the **text style** estimate (unvalidated; never affects the score);
 - mastery after the answer, and the integrity notes from during that answer.
+
+**The path each objective took.** For each learning objective: how many questions were asked on it and of which
+kinds, which rubric criteria the evidence reached (a criterion with no evidence is left out of the score and the rest
+reweighted, so a short path is scored on fewer criteria), and which answers the level does not rest on and why (read as
+recited, after a question that gave the answer away, after a hint, or with no usable verdict). The criteria and
+exclusions come from the AI panel, so they stay hidden while you owe a blind grade. The same lines are in the grading
+report's Markdown, CSV and PDF.
 
 **Judges disagreed.** When the panel's agreement on an answer is below 60%, or no judge returned a usable verdict,
 the answer is marked "Judges disagreed — review this answer" and the votes are opened for you. Read those answers
@@ -338,7 +354,7 @@ Which copy you get depends on who you are, and Gadfly decides it, not the page:
 |---|---|---|
 | Reviewer copy | Owners and Admins; Instructors and second reviewers once grading is not blind | Nothing: it adds integrity notes, voice measurements, the examiner's reason for each question and the AI panel's exam-time reading |
 | Grader copy | Anyone who can grade while a session's grading is blind | Integrity notes, voice measurements and every AI score, so nothing can colour your reading |
-| Student copy | The student, once their result is published; staff can download it too (**student copy** link) to see exactly what the student sees | The same as the grader copy |
+| Student copy | The student, once their result is published; staff can download it too (**student copy** link) to see exactly what the student sees | The same as the grader copy (the student's result page lists the integrity notes on their attempt separately, with their plain explanation, so they can respond in an appeal) |
 
 Every copy carries a **verification code** (for example `7K3M-9QXA-B2CD-EFGH`) and a SHA-256 hash, on every page.
 Anyone holding a copy (a registrar, an appeals panel, an employer) can type the code at `/transcripts/verify`, or

@@ -2,8 +2,8 @@
 
 Status: draft for review (GAD-T61). Not legal advice; have counsel review before the first paying
 customer. Defaults follow the open decisions in [SOCRATIC_PLATFORM.md](SOCRATIC_PLATFORM.md): adult
-learners (D6), transcripts kept 90 days, audio and video never stored (D7 called for audio to be kept
-too; that part is not built yet, see Open items), the AI's grades are preliminary and a
+learners (D6), transcripts kept 90 days, audio and video never stored (D7 had called for audio to be kept too; Gadfly
+stores none, see Open items), the AI's grades are preliminary and a
 human grades and an authorized person approves before a student sees a result (D13, master plan Parts 8 to 11).
 
 ## What is collected, and for how long
@@ -55,8 +55,9 @@ and 26(6)), so the two are kept apart:
 ### Exported transcripts (GAD-T295)
 
 A transcript download (PDF, Word, web page, text, captions or JSON) contains the exam's title, the student's name,
-the attempt, every question with its times and the examiner's move, every answer as recorded, the read-back,
-clarifications, corrections (original and corrected text), the response delay and pause counts, and the words the
+the attempt, every question with its times and the examiner's move, every answer as recorded, clarifications,
+corrections (original and corrected text; spoken answers since November 2026 are taken as heard and have no read-back
+or correction, older sessions show both), the response delay and pause counts, and the words the
 speech recognizer was unsure of. It never contains audio or video. Three copies exist, chosen by the server for each
 download:
 
@@ -201,17 +202,21 @@ does process features that the EU AI Act guidelines treat as emotion recognition
 - **COPPA** (under 13): out of scope while customers are adults (D6). K-12 needs verifiable parental
   consent first.
 - **GDPR / UK GDPR:** MindAttic is the processor for customer organizations; a Data Processing
-  Agreement, sub-processor list (LLM providers, ElevenLabs, Azure) and international-transfer basis
+  Agreement, sub-processor list (LLM providers, ElevenLabs and OpenAI for speech, Azure) and international-transfer basis
   are needed. Export and erasure above serve access and erasure requests.
 
 ## Sub-processors (to publish)
 
-LLM providers used by the Legion panel (Anthropic, OpenAI, Google, DeepSeek as configured), ElevenLabs
-(speech), Microsoft Azure (hosting, database). Answers are sent to the LLM providers for judging; no
-video and no account details are sent.
+LLM providers used by the Legion panel (Anthropic, OpenAI, Google, DeepSeek as configured); ElevenLabs (the
+examiner's voice, and speech-to-text through ElevenLabs Scribe) and OpenAI (speech-to-text through Whisper, the live
+fallback when Scribe fails; `MindAttic:SpeechRecognition:Provider`, docs/VOICE.md); Microsoft Azure (hosting,
+database); and, only when card checkout is configured for plan upgrades, the payment provider (Stripe), which receives
+the organization's checkout and never any student data. Answers are sent to the LLM providers for judging, and the
+student's voice to the speech-to-text provider while they speak; no video and no account details are sent.
 
 ## Open items
 
 - Customer-facing privacy policy and terms of service (from this draft).
 - Data Processing Agreement template.
-- Audio storage and deletion once voice mode stores audio (GAD-T53).
+- Audio is not stored. If a future release ever keeps answer audio (D7, GAD-T53), its storage, retention and deletion
+  must be added here first.

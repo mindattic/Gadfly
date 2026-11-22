@@ -27,7 +27,9 @@ everything they need is on the grading page.
 
 ## The grading queue
 
-Open **Grading**. Each row is an ended attempt with its grade status. **Start grading** opens it; **Retry AI grading**
+Open **Grading**. The first time, a short guided tour points out the queue and its filters; **Show me around** replays
+it, and the grading page of one attempt has its own (see [Guided tours](guided-tours.md)). Each row is an ended
+attempt with its grade status. **Start grading** opens it; **Retry AI grading**
 appears if the AI step failed. AI grading normally starts by itself shortly after an exam ends.
 
 The statuses, in order: **Examination Completed**, **Transcript Verification Pending** (the transcript still waits
@@ -37,7 +39,8 @@ Approval**, **Finalized**, **Published**, and later **Under Appeal** or **Amende
 ## 1. Your evaluation
 
 While the grade is **Human Review Pending**, the grading page shows the full transcript (the student's original and
-confirmed answers, clarifications and corrections) and, for each learning objective, a form:
+answers as heard, with the words the speech recognizer was unsure of marked, any clarifications, and on sessions
+before November 2026 the student's confirmations and corrections) and, for each learning objective, a form:
 
 - **Level** (0 to 5) and **Score** (0 to the objective's maximum);
 - **Comment** (the student sees it in their report);
@@ -107,6 +110,16 @@ the student. On the grading page:
 - **Amend the grade**, with a reason, changes it (**Amend**, or **Amend and resolve the appeal**). The student's
   result is marked "amended". Republish it.
 
+## Second marking
+
+On an exam flagged for double marking, a second examiner grades its sessions from **Second marking** (linked from
+**Grading > Panel calibration**). The sheet shows a session code, the rubric and the answers, never the AI's grade, the
+first examiner's grade, the student's name or integrity notes. Whoever graded a session as its examiner can't
+second-mark it; a second marker is refused that session's normal grading page, and anyone who has seen its grades there
+can no longer second-mark it. Second marks never change a grade: they measure how well markers agree, for the panel's
+calibration. The [Instructor guide](INSTRUCTOR_GUIDE.md#how-far-to-trust-the-ai-panel-on-an-exam) covers calibration,
+bias probes and the self-preference check.
+
 ## The audit trail
 
 Every step is recorded with who and when. **Audit trail** at the bottom of the grading page lists the session's
@@ -115,8 +128,9 @@ anything.
 
 ## Downloads
 
-The grading page offers the assessment report as Markdown and the scores as CSV, and the official transcript in
-several formats. While your grading is blind you get the grader copy, which leaves out integrity notes, voice
+The grading page offers the assessment report as Markdown, as a PDF, and the scores as CSV, and the official
+transcript in several formats. The report's Markdown and PDF both carry each objective's **Path**, **Coverage** and
+**Exclusions** lines for reviewers (the student's copy never does). While your grading is blind you get the grader copy, which leaves out integrity notes, voice
 measurements and every AI score. See [Transcripts](INSTRUCTOR_GUIDE.md#transcripts) in the Instructor guide.
 
 **The path in the CSV files.** Both reviewer CSV files carry the same path each objective took as the grading and

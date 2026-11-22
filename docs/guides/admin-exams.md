@@ -50,7 +50,8 @@ Open **Actions** on a row:
 | Minimum objectives for a summative result | Editable | Frozen |
 | Integrity level | Editable | Editable |
 | Read-out check | Editable | Editable |
-| Examiner voice id and avatar id | Editable | Editable |
+| Spoken language (what the student is expected to speak; also the recognizer's vocabulary-hint language), or let the recognizer detect it | Editable | Editable |
+| Examiner voice id and avatar id | Editable | Editable (saved, but not used yet: every exam uses the platform's examiner voice and avatar) |
 
 The duration and the minimum objectives shape what is measured, so once students sit an exam under them they stay as
 they were; duplicate the exam to change them. Changes to a published exam apply to attempts that start from then on;

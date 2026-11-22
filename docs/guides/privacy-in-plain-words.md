@@ -17,9 +17,9 @@ including your organization's retention period.
 
 | What | Why |
 |---|---|
-| Every question, and the **transcript** of your spoken answers, with the corrections you made | So people can grade what you said |
+| Every question, and the **transcript** of your spoken answers as they were heard (or your typed answers, if you have that accommodation) | So people can grade what you said |
 | When each question was asked and when you started and finished answering | Timing is part of the record of the conversation |
-| **How you spoke**: pace, pauses, hesitations, how sure the speech recognizer was, whether more than one voice was heard | Context for the reviewer, and so the examiner can ask a follow-up |
+| **How you spoke**: pace, pauses, hesitations, how sure the speech recognizer was, whether more than one voice was heard | Context for the reviewer; they never change which questions you are asked or your grade |
 | **Voice measurements** (unless they are off for you; see below) | Context only; never part of the grade |
 | **Eye-contact notes**: when you looked away while answering, for how long, whether the screen faded | Context for the reviewer; never part of the grade |
 | **Browser notes**, if your exam has them: switching tab or window, copying the question, leaving full screen, a second screen | Context for the reviewer; nothing is blocked |
@@ -50,6 +50,9 @@ When they are off, the numbers are thrown away before anything is stored.
   "[redacted after the retention period]".
 - **The outcome** (questions, scores, your grade, comments, the approval, the consent record) is kept with your
   exam until your organization deletes it.
+- **The audit log** (who did what in the organization, and when) is never deleted, so it always reaches back at least
+  six months. Your words are removed from it on the same schedule as above, and everything it says about you is
+  removed if your data is erased; the fact that something happened, and who did it, stays.
 
 ## Who can see it
 

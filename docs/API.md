@@ -7,9 +7,9 @@ launch link into the exam room, read results, and receive a signed webhook when 
 Everything is under `/api/v1`, speaks JSON (camelCase), and acts inside one organization: the one that
 owns the API key. A machine-readable description is at [`/openapi/v1.json`](#openapi).
 
-> Exams created through the API run in the text exam room unless their mode is set to Voice (see
-> [VOICE.md](VOICE.md)). The examples use a local server; the hosted instance is at
-> https://mindattic-gadfly.azurewebsites.net.
+> Every exam, however it was created, is taken in the spoken exam room, on camera: the student answers aloud to the
+> talking examiner (see [VOICE.md](VOICE.md)); typed answers exist only as an accommodation staff grant per student
+> and exam. The examples use a local server; the hosted instance is at https://mindattic-gadfly.azurewebsites.net.
 
 ## Authentication
 
@@ -157,8 +157,8 @@ curl -X POST https://localhost:7311/api/v1/collections/6b1f0a52-7c1e-4a43-9d8e-2
 { "saved": ["chapter1.md", "chapter2.md"] }
 ```
 
-- Only `.txt`, `.text`, `.md` and `.markdown` files are accepted for now. PDF, DOCX, EPUB and HTML arrive
-  with Tutor.Ingestion.
+- Accepted: `.txt`, `.text`, `.md`, `.markdown`, `.pdf`, `.docx`, `.epub`, `.html` and `.htm` (the same as the
+  source library page). A scanned, image-only PDF uploads but yields no text.
 - Each file must be 1 byte to 20 MB. Keep each request under the server's request size limit (about
   28 MB by default); send large sets in several requests.
 - Reserved Windows device names are refused whatever the extension: `CON`, `PRN`, `AUX`, `NUL`,
@@ -266,7 +266,7 @@ Archived concepts are left out. `404` until the collection has been processed.
 | `minutes` | 20 | Clamped to 1–240. |
 | `difficulty` | 3 | Clamped to 1–5 (gentle to rigorous). |
 | `maxTurns` | 30 | Questions in the whole exam, clamped to 1–200. |
-| `mode` | `"Text"` | `"Text"` or `"Voice"` (any case). Voice is stored; students type until voice mode is built. |
+| `mode` | `"Text"` | `"Text"` or `"Voice"` (any case). Kept for compatibility and stored, but it no longer changes anything: every exam is taken spoken, on camera. |
 | `instructions` | none | Shown to students. |
 
 The exam is **published immediately**, so its settings are frozen. Each concept gets up to six
@@ -602,8 +602,9 @@ A launch link takes a student from your app straight to the exam's get-ready pag
 5. When the attempt ends you receive `session.completed`, then read
    `GET /api/v1/sessions/{sessionId}/result`.
 
-The student still signs in with their Gadfly user name and password; one-click sign-in from the link
-needs trusted-launch support in MindAttic.Authentication and is not built yet.
+The student still signs in with their Gadfly user name and password; one-click sign-in from an API launch link
+needs trusted-launch support in MindAttic.Authentication and is not built. For one-click launch from an LMS, use the
+LTI 1.3 connection below, which signs the student in.
 
 ## LMS connection (LTI 1.3)
 

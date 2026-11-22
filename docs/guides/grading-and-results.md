@@ -31,9 +31,13 @@ your organization uses one), and **See the assessment report**. The report shows
 - each learning objective, its weight, and the AI, human and combined scores;
 - the examiner's comment, and what was missing from your answers;
 - the parts of your answers used as evidence;
+- what the next level asks for, and, after an earlier attempt, how each objective changed since;
 - knowledge gaps, the approval, and any appeal.
 
-**Download the report (Markdown)** saves a copy. If a result is later amended, it is marked "amended".
+**Download the report (Markdown)** or **Download the report (PDF)** saves a copy, and **Download your completion
+certificate (PDF)** a one-page certificate. The result page also offers your official **transcript**, and lists any
+**integrity notes** on the attempt with their plain explanation (never part of the grade; you can respond to them in an
+appeal). See [Transcript downloads](transcript-downloads.md). If a result is later amended, it is marked "amended".
 
 ## How long it takes
 

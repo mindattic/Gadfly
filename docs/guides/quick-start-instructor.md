@@ -11,8 +11,8 @@ From your course notes to a published result, in seven steps. Each links to the 
 3. **Build the assessment.** **Assessments > New course**, then **New assessment**, and work through the six steps:
    details, objectives (**Add N as objectives** from the suggestions), rubric, grading policy, then **Publish**.
 4. **Assign it.** In step **6. Assign**, choose students, an optional window, the attempts allowed and any extra
-   time. Students see it under **My exams** (they aren't emailed). Declare the **eye-contact accommodation** for any
-   student who needs it.
+   time. Students see it under **My exams** and are sent an **Exam assigned** email. Grant **typed answers** or declare
+   the **eye-contact accommodation** for any student who needs it.
 5. **Try it yourself.** Ask your admin for a test student account, sign in as it in a private window, and take the
    exam once. You'll see exactly what students see.
 6. **Review and grade.** When a session ends, **Review** shows the full conversation with the panel's judgments and
@@ -21,7 +21,10 @@ From your course notes to a published result, in seven steps. Each links to the 
 
 ## Good to know
 
-- Every exam is **spoken and on camera**. There is no typed answer mode for students.
+- Every exam is **spoken and on camera**. Students can't switch to typing; typed answers exist only as an
+  accommodation you grant.
+- **Show me around** at the top of the grading and review pages gives a short guided tour; the **?** beside a page's
+  title opens its help.
 - The AI never decides a grade or publishes anything. Blind grading (the default) hides its view, and all integrity
   notes, until the human scores are in.
 - The person who scored a grade can't also approve it; another instructor, an admin or the owner must.
