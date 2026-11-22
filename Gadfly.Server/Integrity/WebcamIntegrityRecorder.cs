@@ -121,7 +121,11 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         var days = await db.OrganizationSettings.AsNoTracking().Where(o => o.OrganizationId == organizationId)
             .Select(o => (int?)o.RetentionDays).FirstOrDefaultAsync(ct);
         var notice = ConsentNotice.For(name ?? "your organization", exam.Title, days ?? 90, exam.Mode, exam.IntegrityLevel);
-        var consented = string.Equals(notice.Sha256, s.ConsentTextSha256, StringComparison.OrdinalIgnoreCase);
+        // A student with the typed-answer accommodation (GAD-T260) accepted the typed wording; it may have been granted or withdrawn
+        // since, so either wording of this exam's notice is consent to the same camera use.
+        var typed = ConsentNotice.For(name ?? "your organization", exam.Title, days ?? 90, exam.Mode, exam.IntegrityLevel, typedAnswers: true);
+        var consented = string.Equals(notice.Sha256, s.ConsentTextSha256, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(typed.Sha256, s.ConsentTextSha256, StringComparison.OrdinalIgnoreCase);
         return new WebcamPlan(true, consented, consented ? null : "no-consent");
     }
 

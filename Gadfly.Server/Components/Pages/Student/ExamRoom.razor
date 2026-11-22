@@ -39,7 +39,7 @@
     @if (integrity is { Level: not IntegrityLevel.Off } watched && phase is Phase.Answering or Phase.Thinking)
     {
         <div class="integrity-notice" role="note">
-            <p>@IntegrityNotice(watched)</p>
+            <p>@IntegrityNotice(watched, typedAnswers)</p>
             @if (watched.Level == IntegrityLevel.Strict && !fullscreen)
             {
                 <button type="button" class="secondary small" @onclick="GoFullscreenAsync">Go full screen</button>
@@ -55,7 +55,7 @@
                the examiner persist from question to question. *@
             <VoiceRoom SessionId="SessionId" TurnIndex="step?.TurnIndex" Question="@step?.Question" Move="@step?.Move" Prompt="@VoicePrompt"
                        PromptId="step?.Verification?.ResponseId" CanAnswer="VoiceCanAnswer" Active="voiceOn" ActiveChanged="OnVoiceActive"
-                       OnAnswer="OnVoiceAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaksAsync" Pondering="VoicePondering" />
+                       OnAnswer="OnVoiceAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaksAsync" TypedAnswers="typedAnswers" @ref="voiceRoom" Pondering="VoicePondering" />
         }
         else
         {
@@ -102,9 +102,9 @@
                        is not shown until the examiner asks it, so time before the clock starts can't be spent reading it. *@
                     <p class="notice" role="status">@(examinerHasSpoken
                         ? (PauseStopsClock
-                            ? "The exam is paused until your microphone, camera and the examiner are working again. Follow the steps above. The clock is stopped while you do."
-                            : "The exam is paused until your microphone, camera and the examiner are working again. Follow the steps above.")
-                        : "The examiner will ask the first question as soon as your microphone and camera are working. Your time starts then.")</p>
+                            ? $"The exam is paused until {PausedDevices} working again. Follow the steps above. The clock is stopped while you do."
+                            : $"The exam is paused until {PausedDevices} working again. Follow the steps above.")
+                        : $"The examiner will ask the first question as soon as {StartDevices} working. Your time starts then.")</p>
                 }
                 else
                 {
@@ -170,6 +170,19 @@
                                     <button type="button" class="secondary" @onclick="() => verifyMode = VerifyMode.None">Back</button>
                                 </div>
                             }
+                            else if (typedAnswers)
+                            {
+                                @* Typed-answer accommodation (GAD-T260): the clarification is typed too. *@
+                                <label>
+                                    Your clarification
+                                    <textarea id="clarify-box" rows="4" @bind="extraText" @bind:event="oninput" placeholder="In your own words…"></textarea>
+                                </label>
+                                <div class="actions">
+                                    <button type="button" disabled="@(busy || string.IsNullOrWhiteSpace(extraText))" @onclick="() => ClarifyTypedAsync(v)">Send clarification</button>
+                                    <button type="button" class="secondary" @onclick="() => ClarifyAsync(v, null)">I'd rather not add anything</button>
+                                    <button type="button" class="link" @onclick="() => StartVerify(VerifyMode.Correct, v.RecordedText)">Fix a typo in my answer instead</button>
+                                </div>
+                            }
                             else
                             {
                                 @* Clarified out loud, never typed (GAD-T239). *@
@@ -180,6 +193,22 @@
                                 </div>
                             }
                         }
+                    </div>
+                }
+                else if (typedAnswers)
+                {
+                    @* Typed-answer accommodation (GAD-T260): granted by an instructor or admin for this student on this exam, never chosen
+                       by the student. The examiner still speaks the question and the camera and gaze check still run; only the answer is
+                       typed, stored as typed, and a paste into this box is noted for review (integrity.js, #answer-box). *@
+                    <label>
+                        Your answer
+                        <textarea id="answer-box" rows="7" @bind="typedAnswer" @bind:event="oninput" @bind:after="OnTyped" @onkeydown="OnTypedKeyDownAsync"
+                                  placeholder="Answer in your own words…" aria-describedby="answer-hint"></textarea>
+                    </label>
+                    <p id="answer-hint" class="hint">You have a typed-answer accommodation: type your answer, then press Submit answer (or Ctrl+Enter).</p>
+                    <div class="actions">
+                        <button type="button" @onclick="SubmitTypedAsync" disabled="@(busy || string.IsNullOrWhiteSpace(typedAnswer))">Submit answer</button>
+                        <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@busy">I don't know</button>
                     </div>
                 }
                 else
@@ -343,6 +372,7 @@
         }
         examTitle = s.ExamTitle;
         LoadVoice();   // every exam is spoken (GAD-T239)
+        await LoadTypedAnswersAsync(org, user);   // unless typing was granted as an accommodation (GAD-T260)
         switch (s.State)
         {
             case SessionState.Created:
@@ -390,8 +420,9 @@
             {
                 sessionId = SessionId,
                 level = settings.Level.ToString(),
-                // Answers are spoken (GAD-T239): there is no answer box to paste into.
-                recordPaste = false,
+                // Answers are spoken (GAD-T239): there is no answer box to paste into, except under the typed-answer accommodation
+                // (GAD-T260), where a paste is noted for review (never blocked: assistive tools often insert text this way).
+                recordPaste = typedAnswers,
             });
             fullscreen = await integrityModule.InvokeAsync<bool>("isFullscreen", stop.Token);
             await InvokeAsync(StateHasChanged);
@@ -441,9 +472,10 @@
     }
 
     /// <summary>What is noted, in the student's words: no surprise monitoring (matches the consent notice).</summary>
-    private static string IntegrityNotice(IntegritySettings s)
+    private static string IntegrityNotice(IntegritySettings s, bool typedAnswers = false)
     {
         var what = new List<string> { "switch to another tab or window" };
+        if (typedAnswers) what.Add("paste into the answer box");
         what.Add("copy the question");
         if (s.Level == IntegrityLevel.Strict) what.AddRange(["leave full screen", "have more than one screen connected"]);
         var list = what.Count == 1 ? what[0] : string.Join(", ", what.Take(what.Count - 1)) + " or " + what[^1];
@@ -513,6 +545,7 @@
         if (next.TurnIndex != shownTurn)
         {
             answerStartedAt = null;
+            typedAnswer = "";
             shownTurn = next.TurnIndex;
         }
         timeUpHandled = false;
@@ -626,6 +659,12 @@
     private async Task TimeUpAsync()
     {
         if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        // Under the typed-answer accommodation (GAD-T260) what is typed is handed in, as before GAD-T239 (the server then ends it).
+        if (typedAnswers && step?.Verification is null && !string.IsNullOrWhiteSpace(typedAnswer))
+        {
+            await SubmitTypedAsync();
+            return;
+        }
         // A request about the last answer still open: the server judges that answer as recorded and flags it for a human.
         await RunStepAsync(ThinkingAbout.Finish, () => Sessions.EndAsync(org, SessionId, user, EndReason.TimeUp));
     }

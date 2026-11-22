@@ -117,7 +117,8 @@ else
                     {
                         <blockquote class="answer">@answer</blockquote>
                         <p class="hint">
-                            @(t.AnswerMode ?? "answer")
+                            @* Typed answers (GAD-T260) are named as typed: exams are spoken, so a typed answer means an accommodation or "I don't know". *@
+                            @(t.AnswerMode switch { "text" => "typed", "voice" => "spoken", null => "answer", var m => m })
                             @if (t.LatencySeconds is { } lat) { <text> · started after @lat.ToString("0.#") s</text> }
                             @if (t.AnswerCompletedAt is { } done) { <text> · finished @done.UtcDateTime.ToString("HH:mm:ss")</text> }
                             @if (t.HasAudio) { <text> · audio recorded (playback arrives with media storage)</text> }

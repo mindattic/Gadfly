@@ -231,7 +231,7 @@ else
             </select>
         </label>
         <table class="grid">
-            <thead><tr><th>Student</th><th>Exam</th><th>Attempts</th><th>Status</th><th>Latest score</th><th>Transcript</th><th></th></tr></thead>
+            <thead><tr><th>Student</th><th>Exam</th><th>Attempts</th><th>Answers</th><th>Status</th><th>Latest score</th><th>Transcript</th><th></th></tr></thead>
             <tbody>
                 @foreach (var a in assignments.Where(x => string.IsNullOrEmpty(filterStudent) || x.StudentName == filterStudent))
                 {
@@ -251,6 +251,10 @@ else
                             {
                                 <button class="link" type="button" title="Change attempts allowed" @onclick="() => { attemptsFor = a.Id; attemptsValue = a.AttemptsAllowed; }">@a.AttemptsUsed of @a.AttemptsAllowed used</button>
                             }
+                        </td>
+                        <td title="GAD-T260: typed answers are an accommodation for one student on one exam (documented speech, hearing or anxiety need); camera, spoken questions and eye-contact check stay. Audited.">
+                            @(a.TypedAnswers ? "typed (accommodation)" : "spoken")
+                            <button class="link" type="button" disabled="@busy" @onclick="() => TypedAnswersAsync(a, !a.TypedAnswers)">@(a.TypedAnswers ? "Withdraw" : "Grant typed answers")</button>
                         </td>
                         <td>@a.Status</td>
                         <td>@(a.LatestScore ?? "—")</td>
@@ -280,7 +284,7 @@ else
                     @if (a.LatestSessionId is { } open && transcriptFor == open)
                     {
                         <tr class="desk-edit">
-                            <td colspan="7">
+                            <td colspan="8">
                                 <p class="hint"><Gadfly.Server.Transcripts.TranscriptLinks SessionId="open" Label="Official transcript, with its verification code:" /></p>
                                 @if (transcript is null || transcript.Count == 0)
                                 {
@@ -293,7 +297,7 @@ else
                                         {
                                             <li>
                                                 <p class="q"><strong>Examiner:</strong> @t.Question</p>
-                                                <p class="a"><strong>Student@(t.AnswerMode is { Length: > 0 } m ? $" ({m.ToLowerInvariant()})" : ""):</strong> @(t.Answer ?? "(no answer yet)")</p>
+                                                <p class="a"><strong>Student@(t.AnswerMode is { Length: > 0 } m ? $" ({(m == "text" ? "typed" : m.ToLowerInvariant())})" : ""):</strong> @(t.Answer ?? "(no answer yet)")</p>
                                             </li>
                                         }
                                     </ol>
@@ -510,6 +514,13 @@ else
         if (r.Ok) attemptsFor = null;
         return r;
     });
+
+    private async Task TypedAnswersAsync(DeskAssignment a, bool on)
+    {
+        if (on && !await JS.InvokeAsync<bool>("confirm",
+                $"Let {a.StudentName} type their answers in \"{a.ExamTitle}\" instead of speaking them? Only for a documented speech, hearing or anxiety need. The camera, the spoken questions and the eye-contact check stay on. This is recorded in the audit log.")) return;
+        await ActAsync(desk => desk.SetTypedAnswersAsync(a.Id, on));
+    }
 
     private async Task ResetAsync(DeskAssignment a)
     {

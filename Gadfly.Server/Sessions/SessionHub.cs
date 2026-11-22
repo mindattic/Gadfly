@@ -79,6 +79,11 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
         if (answer.Text.Length > 20_000) throw new HubException("That answer is too long.");
         if (answer.Words is { Count: > MaxWords } || answer.SpeechMetrics is { Count: > MaxSpeechMetrics })
             throw new HubException("That answer carries too much timing data.");
+        // Answers are spoken (GAD-T239): a typed answer is taken only from a student granted the typed-answer accommodation on this
+        // assignment by an instructor or admin (GAD-T260). "I don't know" is a button, not typing, so it is always allowed.
+        if (answer.Mode is not "voice" && !Gadfly.Sources.Verification.ResponseVerifier.IsAporiaWord(answer.Text)
+            && !await TypedAnswersAllowedAsync(org, user, sessionId))
+            throw new HubException("This exam is answered out loud. Typed answers are an accommodation only your instructor can grant.");
         // Only a connection that already proved ownership (Start/Current) may signal the session's channel (GAD-T74).
         if (Joined().Contains(sessionId)) await Clients.Group(Group(sessionId)).SendAsync("Thinking", sessionId);
         var sanitized = await ToAnswerAsync(org, sessionId, answer, DateTimeOffset.UtcNow);
@@ -170,11 +175,21 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
     }
 
     /// <summary>"I want to change my answer": a substantive revision of the last judged answer, recorded as a new response event.</summary>
-    public Task<SessionStep> ReviseAnswer(Guid sessionId, string text)
+    public async Task<SessionStep> ReviseAnswer(Guid sessionId, string text)
     {
         var (org, user) = Caller();
         if (text is null || text.Length > 20_000) throw new HubException("Your changed answer needs text.");
-        return Guard(() => orchestrator.ReviseAnswerAsync(org, sessionId, user, text, Context.ConnectionAborted));
+        // A changed answer is typed: only under the typed-answer accommodation (GAD-T239, GAD-T260).
+        if (!await TypedAnswersAllowedAsync(org, user, sessionId))
+            throw new HubException("This exam is answered out loud. Typed answers are an accommodation only your instructor can grant.");
+        return await Guard(() => orchestrator.ReviseAnswerAsync(org, sessionId, user, text, Context.ConnectionAborted));
+    }
+
+    /// <summary>The student's typed-answer accommodation on this session's assignment (GAD-T260); false when it isn't theirs.</summary>
+    private async Task<bool> TypedAnswersAllowedAsync(Guid org, Guid user, Guid sessionId)
+    {
+        using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(org));
+        return await Student.StudentExams.TypedAnswersAsync(scope.ServiceProvider.GetRequiredService<Data.GadflyDbContext>(), org, user, sessionId, Context.ConnectionAborted);
     }
 
     private async Task<SessionStep> SignalAndRun(Guid sessionId, Func<Task<SessionStep>> run)

@@ -44,7 +44,8 @@ public sealed record StudentOption(Guid UserId, string UserName, string? Email);
 
 public sealed record AssignmentRow(Guid Id, Guid StudentUserId, string StudentName, DateTimeOffset? OpensAt, DateTimeOffset? ClosesAt,
     int AttemptsAllowed, int AttemptsUsed, SessionState? LatestState, DateTimeOffset? LatestEndedAt, DateTimeOffset AssignedAt,
-    DateTimeOffset? ResultsReleasedAt, decimal TimeMultiplier = 1m, bool GazeAccommodation = false, bool StudentInEuropeanUnion = false);
+    DateTimeOffset? ResultsReleasedAt, decimal TimeMultiplier = 1m, bool GazeAccommodation = false, bool StudentInEuropeanUnion = false,
+    bool TypedAnswerAccommodation = false);
 
 /// <summary>
 /// Exam builder and assignments (GAD-T50): drafts, publishing (which freezes the policy), archiving,
@@ -322,6 +323,32 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
     }
 
     /// <summary>
+    /// Grants or withdraws the typed-answer accommodation on one assignment (GAD-T260): one named student may type their answers in
+    /// the voice interview room, for a documented speech, hearing or anxiety need. Only staff who may assign exams can change it, so
+    /// a student can never switch themselves to typing. The camera, the spoken questions and the gaze check stay; only the answer
+    /// channel changes. It takes effect the next time the student opens the exam room. Every grant and withdrawal is audited.
+    /// </summary>
+    public async Task<ExamResult> SetTypedAnswerAccommodationAsync(Guid assignmentId, bool on, CancellationToken ct = default)
+    {
+        var org = Org;
+        var a = await db.ExamAssignments.FirstOrDefaultAsync(x => x.Id == assignmentId && x.OrganizationId == org, ct);
+        if (await DeniedAsync(Permission.AssignExaminations, "Changing a typed-answer accommodation", "Exam", a?.ExamId, ct) is { } denied) return denied;
+        if (a is null) return new(false, "That assignment no longer exists.");
+        if (a.TypedAnswerAccommodation == on)
+            return new(true, on ? "The typed-answer accommodation is already on." : "The typed-answer accommodation is already off.", a.ExamId);
+        var was = a.TypedAnswerAccommodation;
+        a.TypedAnswerAccommodation = on;
+        Guard.Audit(on ? "assessment.accommodation.typed-answers.granted" : "assessment.accommodation.typed-answers.withdrawn",
+            "ExamAssignment", a.Id.ToString(),
+            before: new { TypedAnswerAccommodation = was }, after: new { TypedAnswerAccommodation = on, a.StudentUserId, a.ExamId });
+        await db.SaveChangesAsync(ct);
+        db.ChangeTracker.Clear();
+        return new(true, on
+            ? "Typed-answer accommodation on: this student types their answers; the camera, the spoken questions and the eye-contact check stay. It applies the next time they open the exam."
+            : "Typed-answer accommodation off: this student answers out loud again from the next time they open the exam.", a.ExamId);
+    }
+
+    /// <summary>
     /// Marks or unmarks one assignment's student as living in the EU/EEA (GAD-T259). Under the organization's default setting their
     /// voice is then not measured in voice exams (EU AI Act Art. 5(1)(f)); it takes effect from the next spoken answer. Audited.
     /// </summary>
@@ -363,7 +390,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
                 var list = sessions.GetValueOrDefault(a.Id) ?? [];
                 var latest = list.FirstOrDefault();
                 return new AssignmentRow(a.Id, a.StudentUserId, names.GetValueOrDefault(a.StudentUserId, "(unknown user)"), a.OpensAt, a.ClosesAt,
-                    a.AttemptsAllowed, list.Count(x => x.EndReason != nameof(Gadfly.Engine.EndReason.PromptSetChanged)), latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier, a.GazeAccommodation, a.StudentInEuropeanUnion);
+                    a.AttemptsAllowed, list.Count(x => x.EndReason != nameof(Gadfly.Engine.EndReason.PromptSetChanged)), latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier, a.GazeAccommodation, a.StudentInEuropeanUnion, a.TypedAnswerAccommodation);
             })
             .OrderBy(r => r.StudentName, StringComparer.OrdinalIgnoreCase).ToList();
     }

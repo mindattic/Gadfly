@@ -484,7 +484,7 @@ else
     @foreach (var r in w.Responses)
     {
         <div class="gr-response @(r.NeedsHuman ? "needs-human" : "")" id="response-@r.Response.Sequence">
-            <div><strong>#@r.Response.Sequence</strong> <span class="hint">Q@(r.TurnIndex + 1) · @r.ConceptKey · @r.Response.Modality · @r.Response.Kind · @r.Response.VerificationState@(r.Response.Assisted ? " · assisted" : "")</span></div>
+            <div><strong>#@r.Response.Sequence</strong> <span class="hint">Q@(r.TurnIndex + 1) · @r.ConceptKey · @(r.Response.Modality == "text" ? "typed" : r.Response.Modality) · @r.Response.Kind · @r.Response.VerificationState@(r.Response.Assisted ? " · assisted" : "")</span></div>
             <p class="q">@r.Question</p>
             <blockquote>@r.Response.VerifiedText</blockquote>
             @if (r.TextChanged)

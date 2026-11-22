@@ -20,6 +20,11 @@
 // a speaking style per kind of question, the portrait's moving mouth, frame-rate quality tiers, lost graphics, pausing with the tab,
 // and the browser's own speech when the voice provider fails). This file tells it when an utterance is prepared, starts and ends.
 
+// Typed answers (GAD-T260): for a student an instructor or admin granted the typed-answer accommodation, cfg.typed is set. The
+// examiner, her spoken questions and the camera run exactly as above, but no microphone or speech recognizer is opened: the answer
+// is typed in the exam room's own answer box. "Answering" still puts the avatar in its listening state, so the gaze check follows
+// typed answers the same way.
+
 import { VoiceAcoustics } from "./voice-acoustics.js";
 
 const LIB = "/lib/voice";
@@ -119,7 +124,8 @@ async function start() {
     s.running = true;
     s.dotnet.invokeMethodAsync("OnVoiceStarting").catch(() => { });   // shows the stage before the avatar is created in it
     status("Connecting you to the examiner…");
-    try {
+    // Typed answers (GAD-T260): no microphone at all.
+    if (!s.cfg.typed) try {
         // 1. The microphone first, inside the click that asked for it.
         const speechPkg = await import(`${LIB}/speech/index.js`);
         s.pcm16ToBase64 = speechPkg.pcm16ToBase64;
@@ -179,6 +185,8 @@ async function start() {
         // 2. The two hubs. Both need the signed-in student's cookie and the server's grant for this exam.
         await loadScript(`${LIB}/signalr/signalr.min.js`);
         if (S !== s || !s.running) return;
+        // Typed answers (GAD-T260) need no speech recognizer: only the examiner's own hub below.
+        if (!s.cfg.typed) {
         s.speechConn =new signalR.HubConnectionBuilder().withUrl(SPEECH_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
         s.speechConn.on("partial", (t) => {
             s.partial = t || "";
@@ -196,6 +204,7 @@ async function start() {
         s.speechConn.onclose(() => { if (s.running) problem("hub", "The connection to speech recognition was lost.", true); });
         await s.speechConn.start();
         await s.speechConn.invoke("StartSession", { language: "en", diarize: true });
+        }
     } catch (err) {
         if (S !== s || !s.running) return;
         return fail("hub", "Speech recognition could not be reached.", s);
@@ -250,7 +259,7 @@ async function start() {
 
     s.gate = true;
     status("The examiner is ready.");
-    await s.dotnet.invokeMethodAsync("OnVoiceStarted", s.mic.vadKind || "energy");
+    await s.dotnet.invokeMethodAsync("OnVoiceStarted", s.mic ? (s.mic.vadKind || "energy") : "typed");
 }
 
 function fail(kind, message, s) {
@@ -503,6 +512,13 @@ export function stop() {
 
 function openMic() {
     const s = S;
+    // Typed answers (GAD-T260): the answer box is the exam room's; the examiner listens (the gaze check follows that state).
+    if (s && s.cfg.typed && s.running) {
+        s.gate = false;
+        if (s.avatar) s.avatar.state = "listening";
+        status(listenText(s));
+        return;
+    }
     if (!s || !s.mic || !s.speechConn) return;
     s.gate = false;
     s.lastSpeechEndAt = null;   // the wait before an answer starts is thinking time, not a pause within it
@@ -510,7 +526,7 @@ function openMic() {
     startDelay(s);
     s.speechConn.send("MarkListening", s.listeningStartMs).catch(() => { });
     if (s.avatar) s.avatar.state = "listening";
-    status(s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.");
+    status(listenText(s));
 }
 
 /**
@@ -543,7 +559,7 @@ function remarkHold(s, active) {
         if (!closed || !s.running || !s.gate || !s.allowed || s.speaking) return;   // something else (a question, a send) took over the gate
         s.gate = false;
         if (s.avatar) s.avatar.state = "listening";
-        status(s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.");
+        status(listenText(s));
         if (s.segments.length && !s.inSpeech) {   // still talking: the next pause arms the cue as usual
             const ms = endCueMs(s);
             const cue = q("cue");
@@ -551,6 +567,12 @@ function remarkHold(s, active) {
             s.cueTimer = setTimeout(() => void submit(false), ms);
         }
     }
+}
+
+/** What the status line says while an answer is open. */
+function listenText(s) {
+    if (s.cfg.typed) return "Type your answer in the box below.";
+    return s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.";
 }
 
 function onFinal(seg) {
@@ -670,7 +692,7 @@ function toggleMode(button) {
     s.mic.setMode(s.mode);
     button.textContent = s.mode === "hands-free" ? "Switch to hold-to-talk" : "Switch to hands-free";
     document.querySelectorAll('[data-voice-action="ptt"]').forEach((b) => { b.hidden = s.mode !== "push-to-talk"; });
-    if (!s.gate) status(s.mode === "push-to-talk" ? "Hold the button and speak." : "Listening. Answer out loud.");
+    if (!s.gate) status(listenText(s));
 }
 
 // ------------------------------------------------------------------------------------------------------ response delay

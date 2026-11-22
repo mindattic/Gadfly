@@ -104,7 +104,16 @@ else
                 <p class="hint">Full references and how each was checked: "The science behind Gadfly" in Gadfly's documentation (docs/SCIENCE.md).</p>
             </details>
             <ul>
-                <li>The exam is spoken. The examiner talks to you and you answer out loud; there is no typing. Your microphone and camera must stay on for the whole exam. If either stops working, the exam pauses until you bring it back.</li>
+                @if (assignment.TypedAnswers)
+                {
+                    @* Typed-answer accommodation (GAD-T260): granted by an instructor or admin, never chosen here. *@
+                    <li>The examiner talks to you and asks each question out loud. Your instructor has given you an accommodation: you type your answers instead of speaking them, and your microphone isn't used. Your camera must stay on for the whole exam, and the eye-contact check applies as for everyone (unless you also have the eye-contact accommodation). If the camera stops working, the exam pauses until you bring it back.</li>
+                    <li>Type in your own words. Pasting text into the answer box is noted for your instructor to review.</li>
+                }
+                else
+                {
+                    <li>The exam is spoken. The examiner talks to you and you answer out loud. Typing your answers is only possible as an accommodation your instructor grants (for a documented speech, hearing or anxiety need); ask them if you need it. Your microphone and camera must stay on for the whole exam. If either stops working, the exam pauses until you bring it back.</li>
+                }
                 <li>Your time starts when the examiner asks the first question, not when you press Begin exam.</li>
                 <li>Answer in your own words. Short, honest answers are better than long copied ones.</li>
                 <li>If you genuinely don't know, say so or press <strong>I don't know</strong>. Admitting it is a real answer, not a failure, and the examiner moves on.</li>
@@ -116,13 +125,25 @@ else
                 <p class="question">@practiceQuestion</p>
                 @if (practiceFollowUp is null)
                 {
-                    @* Spoken, like the exam (GAD-T239): nothing is recorded; the button waits until the microphone has heard you. *@
-                    <p class="hint">Answer out loud in a sentence or two, then press the button. Nothing is recorded.</p>
+                    @if (assignment.TypedAnswers)
+                    {
+                        @* Typed, like this student's exam (GAD-T260): nothing is recorded or sent. *@
+                        <p class="hint">Type an answer in a sentence or two, then press the button. Nothing is recorded.</p>
+                        <label>
+                            Your practice answer
+                            <textarea rows="3" @bind="practiceText" @bind:event="oninput" placeholder="In your own words…"></textarea>
+                        </label>
+                    }
+                    else
+                    {
+                        @* Spoken, like the exam (GAD-T239): nothing is recorded; the button waits until the microphone has heard you. *@
+                        <p class="hint">Answer out loud in a sentence or two, then press the button. Nothing is recorded.</p>
+                    }
                     <div class="actions">
-                        <button type="button" @onclick="PracticeAnswer" disabled="@(microphone != "ok")">I've said my answer</button>
+                        <button type="button" @onclick="PracticeAnswer" disabled="@(assignment.TypedAnswers ? string.IsNullOrWhiteSpace(practiceText) : microphone != "ok")">@(assignment.TypedAnswers ? "I've typed my answer" : "I've said my answer")</button>
                         <button type="button" class="secondary" @onclick="PracticeDontKnow">I don't know</button>
                     </div>
-                    @if (microphone != "ok")
+                    @if (microphone != "ok" && !assignment.TypedAnswers)
                     {
                         <p class="hint">The button turns on once the system check above has heard your microphone.</p>
                     }
@@ -192,7 +213,14 @@ else
     /// <summary>Every check must pass (a warning is fine): a check still waiting, like a microphone not yet heard, keeps Begin exam off.</summary>
     private bool ChecksPass => checks is not null && AllChecks.All(c => c.Status is CheckStatus.Pass or CheckStatus.Warn);
 
-    private IEnumerable<Check> AllChecks => (checks ?? []).Concat([MicrophoneCheck, CameraCheck]);
+    /// <summary>The microphone is checked only for spoken answers: a student granted typed answers (GAD-T260) needs only the camera.</summary>
+    private IEnumerable<Check> AllChecks => (checks ?? []).Concat(TypedAnswers ? new[] { CameraCheck } : new[] { MicrophoneCheck, CameraCheck });
+
+    /// <summary>The typed-answer accommodation on this assignment (GAD-T260), granted by an instructor or admin.</summary>
+    private bool TypedAnswers => assignment?.TypedAnswers == true;
+
+    /// <summary>The typed practice answer (GAD-T260): never recorded or sent anywhere.</summary>
+    private string practiceText = "";
 
     private Check MicrophoneCheck => microphone switch
     {
@@ -238,7 +266,7 @@ else
             if (assignment is not null)
             {
                 var (orgName, retention) = await StudentExams.OrganizationAsync(Scopes, org);
-                notice = ConsentNotice.For(orgName, assignment.ExamTitle, retention, assignment.Mode, assignment.Integrity);
+                notice = ConsentNotice.For(orgName, assignment.ExamTitle, retention, assignment.Mode, assignment.Integrity, assignment.TypedAnswers);
             }
         }
         loading = false;
@@ -265,7 +293,8 @@ else
         try
         {
             self ??= DotNetObjectReference.Create(this);
-            await module!.InvokeVoidAsync("startMedia", self, preview, meter);
+            // Typed answers (GAD-T260): the camera only, no microphone.
+            await module!.InvokeVoidAsync("startMedia", self, preview, meter, new { microphone = !TypedAnswers });
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
         {
@@ -292,7 +321,7 @@ else
         var list = new List<Check>();
         try
         {
-            var reopen = module is not null && mediaStarted && (microphone != "ok" || camera != "ok");
+            var reopen = module is not null && mediaStarted && ((microphone != "ok" && !TypedAnswers) || camera != "ok");
             // The import can fail or hang when the circuit isn't ready yet (GAD-T288): bound it and retry once.
             if (module is null)
             {
@@ -422,6 +451,7 @@ else
     private void ResetPractice()
     {
         practiceFollowUp = practiceExplain = null;
+        practiceText = "";
     }
 
     private async Task BeginAsync()

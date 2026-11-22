@@ -68,7 +68,7 @@ else if (rows.Count == 0)
 else
 {
     <table class="grid">
-        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Eye contact</th><th>Lives in EU/EEA</th><th>Latest session</th><th>Results</th></tr></thead>
+        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Answers</th><th>Eye contact</th><th>Lives in EU/EEA</th><th>Latest session</th><th>Results</th></tr></thead>
         <tbody>
             @foreach (var r in rows)
             {
@@ -77,6 +77,13 @@ else
                     <td>@Window(r)</td>
                     <td>@r.AttemptsUsed / @r.AttemptsAllowed</td>
                     <td>@MultiplierLabel(r.TimeMultiplier)</td>
+                    <td>
+                        @(r.TypedAnswerAccommodation ? "typed (accommodation)" : "spoken")
+                        @if (CanAssign)
+                        {
+                            <button type="button" class="link" disabled="@busy" @onclick="() => TypedAnswersAsync(r, !r.TypedAnswerAccommodation)">@(r.TypedAnswerAccommodation ? "Withdraw" : "Grant typed answers")</button>
+                        }
+                    </td>
                     <td>
                         @(r.GazeAccommodation ? "not expected (accommodation)" : "expected")
                         @if (CanAssign)
@@ -110,6 +117,7 @@ else
             }
         </tbody>
     </table>
+    <p class="hint">Answers: exams are spoken. Grant typed answers only to a student with a documented speech, hearing or anxiety need: they then type each answer instead of speaking it. Their camera stays on, the examiner still speaks the questions and the eye-contact check still applies (unless you also declare the eye-contact accommodation). Their typed answers are marked as typed for reviewers, and pasting into the answer box is noted for review. Students can't turn this on themselves; every grant and withdrawal is recorded in the audit log. It applies the next time the student opens the exam.</p>
     <p class="hint">Eye contact: in the voice interview, looking away from the examiner while answering fades the screen and the examiner asks for eye contact. Declare the accommodation for a student who should not be held to eye contact (for example autism, low vision, nystagmus or a cultural norm): the screen won't fade and the examiner won't ask. It applies from their next answer.</p>
     <p class="hint">Results reach a student only through Grading: AI and human grades, reconciliation when they disagree, then an authorized approval and publication.</p>
     @if (!CanAssign && message is not null)
@@ -209,6 +217,25 @@ else
             ok = r.Ok;
             message = r.Message;
             if (r.Ok) picked.Clear();
+            await LoadLockedAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task TypedAnswersAsync(AssignmentRow row, bool on)
+    {
+        if (busy) return;   // one operation at a time on the shared DbContext (GAD-T189)
+        if (on && !await JS.InvokeAsync<bool>("confirm",
+                $"Let {row.StudentName} type their answers instead of speaking them? Only for a documented speech, hearing or anxiety need. The camera, the spoken questions and the eye-contact check stay on. This is recorded in the audit log.")) return;
+        busy = true;
+        try
+        {
+            ExamResult r;
+            if (Gate is { } g) await g.WaitAsync();
+            try { r = await Service.SetTypedAnswerAccommodationAsync(row.Id, on); }
+            finally { Gate?.Release(); }
+            ok = r.Ok;
+            message = r.Ok ? $"{row.StudentName}: {r.Message}" : r.Message;
             await LoadLockedAsync();
         }
         finally { busy = false; }

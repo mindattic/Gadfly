@@ -232,6 +232,13 @@ public sealed class ExamAssignment : ITenantOwned
     /// exams (EU AI Act Art. 5(1)(f)); nothing else changes.
     /// </summary>
     public bool StudentInEuropeanUnion { get; set; }
+    /// <summary>
+    /// Accommodation (GAD-T260): this student types their answers instead of speaking them, for a documented speech, hearing or
+    /// anxiety need. Granted only by an instructor or admin, for one student on one assignment, and audited; a student can never
+    /// switch to typing themselves. The camera, the examiner's spoken questions and the gaze check still run (the gaze check unless
+    /// <see cref="GazeAccommodation"/> is also on): only the answer channel changes, and each typed answer is stored as typed.
+    /// </summary>
+    public bool TypedAnswerAccommodation { get; set; }
 }
 
 public enum SessionState { Created, ConsentGiven, Running, Paused, Ended, Failed }

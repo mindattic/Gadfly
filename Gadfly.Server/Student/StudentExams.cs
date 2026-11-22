@@ -40,6 +40,11 @@ public sealed record StudentAssignmentView
     /// count as used, and any result shown before is withdrawn until it is graded and published again.
     /// </summary>
     public DateTimeOffset? ScoresClearedAt { get; init; }
+    /// <summary>
+    /// The typed-answer accommodation an instructor or admin granted on this assignment (GAD-T260): the student types their answers;
+    /// the camera, the spoken questions and the gaze check stay. The student can't change it.
+    /// </summary>
+    public bool TypedAnswers { get; init; }
 
     /// <summary>True when the attempt in progress already has consent, so "Resume" can go straight to the exam room.</summary>
     public bool CanResumeDirectly => ActiveSessionId is not null && ActiveSessionState is SessionState.ConsentGiven or SessionState.Running or SessionState.Paused;
@@ -142,6 +147,7 @@ public static class StudentExams
                 ScoresClearedAt = cleared.TryGetValue(a.Id.ToString(), out var clearedAt) && active is null
                                   && !mine.Any(s => s.EndedAt > clearedAt) ? clearedAt : null,
                 Standing = StandingOf(a, active is not null, used, now),
+                TypedAnswers = a.TypedAnswerAccommodation,
             });
         }
         return rows.OrderBy(r => r.Standing switch
@@ -271,6 +277,20 @@ public static class StudentExams
         return ((SessionState, Guid, string)?)(row.State, row.AssignmentId, title ?? "Exam");
     });
 
+    /// <summary>
+    /// Whether this student may type their answers in this session (GAD-T260): only when an instructor or admin granted the
+    /// typed-answer accommodation on the session's assignment. False when the session isn't the student's.
+    /// </summary>
+    public static Task<bool> TypedAnswersAsync(IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, Guid sessionId, CancellationToken ct = default) =>
+        WithDbAsync(scopes, organizationId, db => TypedAnswersAsync(db, organizationId, studentUserId, sessionId, ct));
+
+    /// <inheritdoc cref="TypedAnswersAsync(IServiceScopeFactory, Guid, Guid, Guid, CancellationToken)"/>
+    public static async Task<bool> TypedAnswersAsync(GadflyDbContext db, Guid organizationId, Guid studentUserId, Guid sessionId, CancellationToken ct = default) =>
+        await (from s in db.ExamSessions.AsNoTracking()
+               join a in db.ExamAssignments.AsNoTracking() on s.AssignmentId equals a.Id
+               where s.Id == sessionId && s.OrganizationId == organizationId && s.StudentUserId == studentUserId && a.OrganizationId == organizationId
+               select a.TypedAnswerAccommodation).FirstOrDefaultAsync(ct);
+
     /// <summary>How many days the organization keeps answers and transcripts (decision D7 default 90).</summary>
     public static Task<(string OrganizationName, int RetentionDays)> OrganizationAsync(IServiceScopeFactory scopes, Guid organizationId, CancellationToken ct = default) =>
         WithDbAsync(scopes, organizationId, async db =>
@@ -293,8 +313,12 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
     public const string Version = "2026-11-21.2";
 
     /// <remarks>Every exam is spoken with the camera on (GAD-T239), so <paramref name="mode"/> no longer changes the wording.</remarks>
+    /// <param name="typedAnswers">
+    /// The student has the typed-answer accommodation (GAD-T260): the notice says they type their answers, the microphone isn't used
+    /// and pasting into the answer box is noted. Without it the wording is unchanged.
+    /// </param>
     public static ConsentNotice For(string organizationName, string examTitle, int retentionDays, ExamMode mode,
-        IntegrityLevel integrity = IntegrityLevel.Standard)
+        IntegrityLevel integrity = IntegrityLevel.Standard, bool typedAnswers = false)
     {
         var paragraphs = new List<string>
         {
@@ -305,12 +329,22 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
             "Who decides: the AI only gives a preliminary assessment. People grade your answers, any large disagreement with the AI is reconciled by a reviewer, and an authorized person approves and publishes your result. You can appeal a published result.",
             "Your choice: you can leave the exam at any time with \"Finish\". Leaving early submits what you have answered so far and uses this attempt.",
         };
-        paragraphs.InsertRange(2, BrowserSignals(integrity));
+        if (typedAnswers)
+            paragraphs[1] = "What is recorded: every question and the answers you type (with any corrections you make), when each question was asked and answered, and integrity signals such as an answer that reads like copied text. These are notes for a person to review, never an automatic fail.";
+        paragraphs.InsertRange(2, BrowserSignals(integrity, typedAnswers));
         if (integrity == IntegrityLevel.Strict)
         {
             // The camera is on for this exam: say plainly what is and isn't collected (GAD-T57), instead of the voice-mode line.
             paragraphs.RemoveAll(p => p.StartsWith("What is not recorded:", StringComparison.Ordinal));
             paragraphs.InsertRange(paragraphs.FindIndex(p => p.StartsWith("How long it is kept:", StringComparison.Ordinal)), CameraNotice());
+        }
+        if (typedAnswers)
+        {
+            paragraphs.Add("Your instructor has given you an accommodation: you type your answers instead of speaking them. The examiner still speaks each question out loud and shows it on screen, "
+                + "and your camera must be on for the whole exam, with the same eye-contact check as everyone else unless you also have the eye-contact accommodation. Your microphone is not used. "
+                + "Each answer is kept as typed, and pasting text into the answer box is noted for your instructor to review (never blocked, never an automatic fail). "
+                + "If your camera stops working during the exam, the exam pauses until you bring it back, and the clock stops while it is paused (for up to 10 minutes in all, or half the exam time if that is shorter; after that it keeps running). Your time starts when the examiner asks the first question.");
+            return new ConsentNotice("Before you begin", paragraphs);
         }
         paragraphs.Add("This exam is spoken, and your microphone and camera must be on for the whole exam. The examiner speaks the questions and you answer out loud; there is no typed answer. "
             + "Your microphone audio is streamed to a speech-to-text service to make a transcript, and the audio itself is not recorded or kept. "
@@ -324,10 +358,11 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
     /// The browser integrity signals this exam notes (GAD-T56), in the same words the exam room shows;
     /// none when the exam's integrity level is Off.
     /// </summary>
-    private static IEnumerable<string> BrowserSignals(IntegrityLevel integrity)
+    private static IEnumerable<string> BrowserSignals(IntegrityLevel integrity, bool typedAnswers = false)
     {
         if (integrity == IntegrityLevel.Off) yield break;
         var what = "switching to another tab or window"
+            + (typedAnswers ? ", pasting into the answer box" : "")
             + (integrity == IntegrityLevel.Strict
                 ? ", copying the question, leaving full screen, and having more than one screen connected (your browser may ask to allow screen detection; you can decline)"
                 : ", and copying the question");

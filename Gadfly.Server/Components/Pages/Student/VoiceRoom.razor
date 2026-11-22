@@ -15,7 +15,9 @@
    The interview room (GAD-T231): the student's own camera beside the examiner, an on-screen transcript of every question and
    spoken answer, and each answer's response delay as it happens.
    Voice and camera are mandatory (GAD-T239): there is no typed answer mode. The examiner starts on its own when the page opens
-   (no separate click), and while the microphone or camera is missing or lost the exam is paused here until it is restored. *@
+   (no separate click), and while the microphone or camera is missing or lost the exam is paused here until it is restored.
+   Typed answers (GAD-T260): for a student granted the typed-answer accommodation (TypedAnswers) the examiner and the camera run
+   the same way, but no microphone is opened and the spoken-answer controls are hidden; the exam room shows the answer box. *@
 <HeadContent><link rel="stylesheet" href="voice.css" /></HeadContent>
 
 <section class="voice-room" aria-label="The examiner" data-state="@state.ToString().ToLowerInvariant()">
@@ -29,17 +31,17 @@
             @if (!supported)
             {
                 <p class="error" role="alert">@(notice ?? "This browser can't run the spoken exam.")</p>
-                <p class="hint">This exam is spoken and needs a microphone and a camera. Use a current Chrome, Edge, Firefox or Safari on a secure connection, then reload this page.</p>
+                <p class="hint">@(TypedAnswers ? "This exam needs a camera, and sound to hear the examiner." : "This exam is spoken and needs a microphone and a camera.") Use a current Chrome, Edge, Firefox or Safari on a secure connection, then reload this page.</p>
             }
             else if (state == VoiceState.Failed)
             {
                 <p class="error" role="alert"><strong>@(needsClick ? "One click to go." : "The exam is paused.")</strong> @notice</p>
                 <button type="button" data-voice-action="start">@(needsClick ? "Continue to the examiner" : "Try again")</button>
-                <p class="hint">Your microphone and camera must stay on for the whole exam: you answer the examiner out loud, and your camera shows you during the exam. Once the first question has been asked, the clock stops while the exam is paused, for up to 10 minutes in all.</p>
+                <p class="hint">@(TypedAnswers ? "Your camera must stay on for the whole exam: you type your answers, and your camera shows you during the exam." : "Your microphone and camera must stay on for the whole exam: you answer the examiner out loud, and your camera shows you during the exam.") Once the first question has been asked, the clock stops while the exam is paused, for up to 10 minutes in all.</p>
             }
             else
             {
-                <p class="hint" role="status">Connecting you to the examiner… Your browser may ask to use your microphone and camera: allow both.</p>
+                <p class="hint" role="status">@(TypedAnswers ? "Connecting you to the examiner… Your browser may ask to use your camera: allow it." : "Connecting you to the examiner… Your browser may ask to use your microphone and camera: allow both.")</p>
             }
         </div>
     }
@@ -66,7 +68,10 @@
         <div class="voice-body">
             <p class="voice-status" role="status" aria-live="polite" data-voice-status>Connecting you to the examiner…</p>
             <p class="voice-delay" data-voice-delay data-state="idle" aria-live="off"></p>
-            <div class="voice-level" data-voice-level aria-hidden="true"><i></i></div>
+            @if (!TypedAnswers)
+            {
+                <div class="voice-level" data-voice-level aria-hidden="true"><i></i></div>
+            }
             <p class="voice-caption" data-voice-caption aria-hidden="true"></p>
             @if (avatarNote is not null)
             {
@@ -76,7 +81,7 @@
                 <h2 id="voice-transcript-title" class="verify-label">Transcript</h2>
                 @if (transcript.Count == 0)
                 {
-                    <p class="hint">Each question and each answer you speak will appear here as the interview goes.</p>
+                    <p class="hint">Each question and each answer you @(TypedAnswers ? "give" : "speak") will appear here as the interview goes.</p>
                 }
                 else
                 {
@@ -100,6 +105,15 @@
                     </ol>
                 }
             </section>
+            @if (TypedAnswers)
+            {
+                @* Typed answers (GAD-T260): the answer box is the exam room's; only the question can be repeated here. *@
+                <div class="actions voice-actions">
+                    <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
+                </div>
+            }
+            else
+            {
             <div class="voice-answer">
                 <p class="verify-label">What I heard</p>
                 <p class="voice-draft" data-voice-draft aria-live="polite"></p>
@@ -113,6 +127,7 @@
                 <button type="button" class="secondary" data-voice-action="mode">Switch to hold-to-talk</button>
                 <button type="button" class="secondary" data-voice-action="ptt" hidden>Hold to talk</button>
             </div>
+            }
         </div>
     }
 </section>
@@ -139,6 +154,11 @@
     [Parameter] public EventCallback<VoiceAnswerPayload> OnAnswer { get; set; }
     /// <summary>The examiner is beginning to speak a question or request (the exam room starts the held clock on the first, GAD-T239).</summary>
     [Parameter] public EventCallback OnExaminerSpeaks { get; set; }
+    /// <summary>
+    /// The typed-answer accommodation (GAD-T260): no microphone, no spoken-answer controls; the examiner still speaks and the camera
+    /// still runs. Read once, when the room starts.
+    /// </summary>
+    [Parameter] public bool TypedAnswers { get; set; }
     /// <summary>
     /// True while the panel judges a confirmed answer and the next question is written (GAD-T290): the examiner fills the wait with a
     /// short neutral line (<see cref="ExaminerFiller"/>) unless the next question is ready first.
@@ -264,6 +284,8 @@
                 portraitUrl = Settings.PortraitUrl,
                 // Where the portrait's mouth is, so it can move while she speaks in portrait mode (GAD-T303).
                 portraitMouth = Settings.PortraitMouth,
+                // Typed answers (GAD-T260): the examiner and the camera without a microphone.
+                typed = TypedAnswers,
             });
             if (!caps.Microphone || !caps.AudioContext)
             {
@@ -491,6 +513,13 @@
         StateHasChanged();
         await OnAnswer.InvokeAsync(payload);
     });
+
+    /// <summary>A typed answer was handed in (GAD-T260): it joins the on-screen transcript like a spoken one.</summary>
+    public void NoteTypedAnswer(string text)
+    {
+        AddLine(false, text, null);
+        StateHasChanged();
+    }
 
     private sealed record Capabilities(bool Microphone, bool Webgl, bool AudioContext);
 

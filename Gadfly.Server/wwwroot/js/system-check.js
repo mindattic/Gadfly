@@ -47,7 +47,8 @@ function outcome(err) {
  * Opens the microphone and the camera and keeps checking them. States reported per device ("microphone", "camera"):
  * waiting, listening (microphone open, not heard yet), ok, denied, missing, busy, lost, unsupported, error.
  */
-export async function startMedia(dotnet, video, level) {
+export async function startMedia(dotnet, video, level, options) {
+    // options.microphone === false: the student has the typed-answer accommodation (GAD-T260), so only the camera is opened.
     stopMedia();
     const m = { dotnet, video, level, streams: [], ctx: null, timer: null, loud: 0, microphone: null, camera: null, onGesture: null };
     M = m;
@@ -56,9 +57,10 @@ export async function startMedia(dotnet, video, level) {
         report(m, "camera", "unsupported");
         return;
     }
-    report(m, "microphone", "waiting");
+    const microphone = !options || options.microphone !== false;
+    if (microphone) report(m, "microphone", "waiting");
     report(m, "camera", "waiting");
-    await openMicrophone(m);
+    if (microphone) await openMicrophone(m);
     if (M === m) await openCamera(m);
 }
 

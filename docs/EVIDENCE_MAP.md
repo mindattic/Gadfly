@@ -20,7 +20,7 @@ to the entries in them. Nothing here changes code.
 | 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273, GAD-T285 (done) |
 | 8 | Learning Mode hints | `HintLadders`, `QuestionGenerator`, `MoveKind.Hint` | Supported only as a fixed ladder, kept apart | GAD-T271 |
 | 9 | Text-style estimate | `Gadfly.Sources/TextStyleAssessor.cs` (GAD-T59) | Not supported (a detector in all but name); kept as unvalidated reviewer-only context | GAD-T284 (done), GAD-T285 (done) |
-| - | Owner decisions (a) to (d) | see below | Recorded, not overridden; (b) reversed by the owner 2026-11-21 | GAD-T260, GAD-T261, GAD-T258/T259, GAD-T262 |
+| - | Owner decisions (a) to (d) | see below | Recorded, not overridden; (b) reversed by the owner 2026-11-21; (a) narrowed by the owner 2026-11-22 (typed answers as a granted accommodation) | GAD-T260 (done), GAD-T261, GAD-T258/T259, GAD-T262 |
 
 ## 1. Follow-up moves
 
@@ -359,9 +359,17 @@ asks. Found by GAD-T282 (dissertation Appendix A, correction 37), it was missing
 The owner has decided these. This map records each one and does not override it. The tickets that would change them are
 proposed and wait for the owner, unless marked as approved. The owner reversed decision (b) on 2026-11-21 (GAD-T258).
 
-### (a) Voice and camera only, no typed answers
+### (a) Voice and camera only; typed answers only as a granted accommodation (narrowed 2026-11-22)
 
-**Decision:** exams are voice plus camera only, with no text mode ("there is no text only mode"), to stop cheating.
+**Decision:** exams are voice plus camera only, with no text mode ("there is no text only mode"), to stop cheating. **The
+owner narrowed this on 2026-11-22** by approving GAD-T260: typing is allowed only as an accommodation an instructor or admin
+grants to one named student on one assignment, the way GAD-T261's eye-contact accommodation works. Every grant and
+withdrawal is audited (`assessment.accommodation.typed-answers.granted` / `.withdrawn`). A student can never switch to
+typing: there is no student-facing switch, and the session hub refuses a typed answer (other than "I don't know") or a
+typed change of answer from anyone without the grant. With typing granted, the camera and the examiner avatar still run, the
+examiner still speaks every question, and the gaze check still applies unless GAD-T261's eye-contact accommodation is also
+granted. Only the answer channel changes: no microphone is opened, and the answer is typed in the exam room's answer box.
+Every other student's exam is unchanged.
 
 - **For:** unproctored remote exams are inflated (06). A spoken answer, built on by follow-ups from the student's own
   words, is harder to paste from another source than a typed one. Voice also brings the delivery and recitation context
@@ -371,7 +379,24 @@ proposed and wait for the owner, unless marked as approved. The owner reversed d
   dialects and for people who stutter (Koenecke2020, Mujtaba2024). The strongest integrity control the evidence supports
   is the Socratic follow-up itself (06), and that works on typed answers too. With the camera still on, an accommodation
   keeps most of the integrity design. Under the current rule, a student who cannot use the voice exam has no route.
-- **Ticket:** GAD-T260, proposed, conflicts with decision (a). The default would stay voice-only.
+- **Done (GAD-T260):**
+  - Granted on the instructor's assignments page (Answers column, "Grant typed answers") or the admin desk's Student
+    exams tab, both through `ExamService.SetTypedAnswerAccommodationAsync`, which needs the assign-exams permission, so a
+    desk admin who is a student cannot grant it to themselves (`ExamAssignment.TypedAnswerAccommodation`).
+  - The start page checks only the camera, offers a typed practice question, and shows the typed wording of the consent
+    notice. The exam room keeps the examiner and the camera, pauses the exam if the camera is lost, and shows a typed answer
+    box; a meaning clarification is typed too; at time-up what is typed is handed in.
+  - Typed answers are stored with mode `text` and shown to reviewers as **typed** (review page, grading ledger, admin desk
+    transcript). Voice-derived cues (delivery, recitation read-out pattern, voice measurements) never run on them; the
+    content-based cues, the text-style estimate and the Socratic follow-ups do.
+  - **Copy and paste:** pasting into the typed answer box is recorded, not blocked. When the exam's integrity level is not
+    Off, the browser integrity signals note each paste with its length (`paste`: Info, Low from 20 characters or three
+    pastes, Medium from 80 characters), the student is told so in the exam room, on the start page and in the consent
+    notice, and the reviewer explanation says to compare the pasted answer with the student's other answers. Blocking was
+    rejected: many assistive tools (dictation, AAC devices, word prediction) insert text the way a paste does, so a block
+    would fail the students the accommodation is for, and the evidence (06) puts the integrity weight on the follow-up
+    questions built from the student's own words, which a pasted answer still has to survive. Copying the question stays
+    noted as before.
 
 ### (b) Voice strain drives harder probing (reversed 2026-11-21)
 
@@ -425,7 +450,7 @@ All were filed by GAD-T257 as proposed and unapproved. None changes code until t
 |---|---|---|---|
 | GAD-T258 | 2, 5 | Adaptive probing from answer content, not voice strain (approved 2026-11-21, reversing (b); done) | Yes, (b) |
 | GAD-T259 | 5 | Voice strain off by default for the EU, relabelled as raw acoustic deltas, PRIVACY.md fixed | Yes, (b) |
-| GAD-T260 | (a) | Instructor-granted typed-answer accommodation | Yes, (a) |
+| GAD-T260 | (a) | Instructor-granted typed-answer accommodation (approved 2026-11-22, narrowing (a); done) | Yes, (a) |
 | GAD-T261 | 4 | Gaze fade: thinking grace, accommodation switch, rates by group | Touches (c) |
 | GAD-T262 | (d) | Clear scores archives grading records instead of deleting them | Touches (d) |
 | GAD-T263 | 6 | Exam clock stops while the exam is paused | No |

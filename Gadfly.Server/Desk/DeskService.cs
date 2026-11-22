@@ -99,7 +99,7 @@ public sealed record DeskExam(Guid Id, string Title, string Subject, string Topi
 public sealed record DeskStudent(Guid UserId, string UserName, string? DisplayName, string? Email, bool Active, int Assigned, DateTime? LastLogin);
 
 public sealed record DeskAssignment(Guid Id, Guid ExamId, string ExamTitle, bool Voice, Guid StudentUserId, string StudentName, int AttemptsAllowed,
-    int AttemptsUsed, string Status, Guid? LatestSessionId, string? LatestScore, DateTimeOffset AssignedAt);
+    int AttemptsUsed, string Status, Guid? LatestSessionId, string? LatestScore, DateTimeOffset AssignedAt, bool TypedAnswers = false);
 
 public sealed record DeskTurn(int Index, string ConceptKey, string Question, string? Answer, string? AnswerMode);
 
@@ -464,7 +464,8 @@ public sealed class DeskService(IServiceProvider sp)
                     score = $"AI {(overall * 100).ToString("0", CultureInfo.InvariantCulture)}%";
                 var exam = exams.GetValueOrDefault(a.ExamId);
                 return new DeskAssignment(a.Id, a.ExamId, exam?.Title ?? "(missing exam)", exam?.Mode == ExamMode.Voice, a.StudentUserId,
-                    names.GetValueOrDefault(a.StudentUserId, "(unknown user)"), a.AttemptsAllowed, used, status, latest?.Id, score, a.AssignedAt);
+                    names.GetValueOrDefault(a.StudentUserId, "(unknown user)"), a.AttemptsAllowed, used, status, latest?.Id, score, a.AssignedAt,
+                    a.TypedAnswerAccommodation);
             })
             .OrderBy(r => r.StudentName, StringComparer.OrdinalIgnoreCase).ThenBy(r => r.ExamTitle, StringComparer.OrdinalIgnoreCase).ToList();
     }
@@ -478,6 +479,17 @@ public sealed class DeskService(IServiceProvider sp)
             .FirstOrDefaultAsync(a => a.OrganizationId == org && a.ExamId == examId && a.StudentUserId == studentUserId, ct);
         if (existing is not null) return await SetAttemptsAsync(existing.Id, attemptsAllowed, ct);
         var r = await Assessments.Exams().AssignAsync(examId, [studentUserId], null, null, attemptsAllowed, 1m, ct);
+        return new(r.Ok, r.Message, r.Id);
+    }
+
+    /// <summary>
+    /// Grants or withdraws the typed-answer accommodation for one student on one exam (GAD-T260), through the exam service so the
+    /// same permission (assigning exams) and the same audit entry apply as on the instructor's assignments page: a desk admin who is
+    /// a student can't grant it to themselves.
+    /// </summary>
+    public async Task<DeskResult> SetTypedAnswersAsync(Guid assignmentId, bool on, CancellationToken ct = default)
+    {
+        var r = await Assessments.Exams().SetTypedAnswerAccommodationAsync(assignmentId, on, ct);
         return new(r.Ok, r.Message, r.Id);
     }
 
