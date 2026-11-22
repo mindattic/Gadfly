@@ -1,0 +1,210 @@
+@page "/grading/bias/{ExamId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Server.Grading
+@using Gadfly.Sources.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+
+<PageTitle>Bias probes · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<h1>Bias probes <span>Does wording, length or an instruction to the grader move the grade, for the panel and for people?</span> <HelpLink Topic="grading-guide" /></h1>
+<p><a href="grading/panel/@ExamId">← Panel calibration</a></p>
+
+@if (message is not null)
+{
+    <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+}
+
+@if (!loaded)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else if (plan is null && humanProbes is null)
+{
+    <p class="notice">That exam was not found, or your role does not include grading.</p>
+}
+else
+{
+    @if (plan is not null)
+    {
+        <section class="gr-section">
+            <h2>Panel probe</h2>
+            <p>The panel grades a sample of this exam's answers again: as they are, padded with restatement, made less fluent, and with a spoken instruction to the grader added. The content never changes, so a grade that moves is reacting to form. The run starts only when you start it, never on a schedule.</p>
+            <div class="gr-filters">
+                <label>Answers to probe <input type="number" min="1" max="@BiasProbeService.MaxItems" @bind="items" @bind:after="ReplanAsync" /></label>
+                @foreach (var p in PanelBiasCheck.AllProbes)
+                {
+                    var probe = p;
+                    <label class="check"><input type="checkbox" checked="@chosen.Contains(probe)" @onchange="e => ToggleAsync(probe, (bool)e.Value!)" /> @HumanProbes.Label(probe)</label>
+                }
+            </div>
+            @if (plan.Items.Count == 0)
+            {
+                <p class="notice">No answer of this exam has been graded by the panel with usable evidence yet, so there is nothing to probe.</p>
+            }
+            else
+            {
+                <div class="gr-summary">
+                    <div><span class="hint">Answers</span>@plan.Items.Count</div>
+                    <div><span class="hint">Grading calls per member</span>@plan.CallsPerMember</div>
+                    <div><span class="hint">Estimated provider cost</span>@(plan.IsMock ? "none (mock panel)" : $"${plan.EstimatedUsd:0.00}")</div>
+                </div>
+                @if (!plan.IsMock)
+                {
+                    <div class="gr-table-wrap">
+                        <table class="grid">
+                            <thead><tr><th>Member</th><th>Model</th><th>Input tokens (est.)</th><th>Output tokens (est.)</th><th>Cost (est.)</th></tr></thead>
+                            <tbody>@foreach (var c in plan.Cost) { <tr><td>@c.Provider</td><td>@c.Model</td><td>@c.InputTokens.ToString("N0")</td><td>@c.OutputTokens.ToString("N0")</td><td>$@c.Usd.ToString("0.00")</td></tr> }</tbody>
+                        </table>
+                    </div>
+                    <p class="hint">An estimate from the prompt sizes and the configured prices; the run's metered usage is recorded with its results.</p>
+                }
+                else
+                {
+                    <p class="gr-banner mock">The panel is in mock mode: a run costs nothing and shows the workflow, not a real panel's behaviour.</p>
+                }
+                <div class="gr-actions">
+                    <label class="check"><input type="checkbox" @bind="confirmCost" /> @(plan.IsMock ? "Start a mock run" : $"I accept an estimated cost of ${plan.EstimatedUsd:0.00}")</label>
+                    <button type="button" disabled="@(busy || !confirmCost || chosen.Count == 0)" @onclick="StartAsync">Start probe run</button>
+                </div>
+            }
+
+            @if (runs is { Count: > 0 })
+            {
+                <h3>Runs</h3>
+                @foreach (var r in runs)
+                {
+                    <details open="@(r == runs[0])">
+                        <summary>@r.RequestedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm") UTC · @r.Items answer(s) · @r.State@(r.IsMock ? " · mock" : $" · estimated ${r.EstimatedUsd:0.00}")@(r.MeteredUsd is { } m ? $", metered ${m:0.00}" : "")</summary>
+                        @if (r.Error is not null) { <p class="error">@r.Error</p> }
+                        @if (r.Reports.Count > 0)
+                        {
+                            <div class="gr-table-wrap">
+                                <table class="grid">
+                                    <thead><tr><th>Probe</th><th>Mean shift (% of maximum)</th><th>Answers past the tolerance</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var (probe, shift) in r.MeanShiftPercent)
+                                        {
+                                            <tr><td>@HumanProbes.Label(probe)</td><td>@shift.ToString("+0.0;-0.0;0")</td><td>@r.BiasedCount.GetValueOrDefault(probe) of @r.Reports.Count</td></tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <ul class="gr-flags">@foreach (var f in r.Reports.SelectMany(x => x.Probes).Where(p => p.Biased).Select(p => p.Finding).Distinct().Take(6)) { <li>@f</li> }</ul>
+                            <p class="hint">Models: @Gadfly.Socrates.PanelModelSet.Describe(r.Models)</p>
+                        }
+                    </details>
+                }
+            }
+        </section>
+    }
+
+    @if (humanProbes is not null)
+    {
+        <section class="gr-section">
+            <h2>Human paraphrase probe</h2>
+            <p>The same probe for people. Each examiner marks one form of each answer (the original, a less fluent version or a padded one) without knowing which, and no one sees two forms of the same answer. If examiners also mark less fluent answers lower, part of a fluency effect is human, not the panel's alone.</p>
+            @if (plan is not null)
+            {
+                <div class="gr-actions">
+                    <label>Answers <input type="number" min="3" max="@BiasProbeService.MaxItems" @bind="humanItems" /></label>
+                    <button type="button" disabled="@busy" @onclick="CreateHumanAsync">Create a human probe</button>
+                </div>
+            }
+            @if (humanProbes.Count == 0)
+            {
+                <p class="hint">No human probe for this exam yet.</p>
+            }
+            @foreach (var h in humanProbes)
+            {
+                <div class="gr-objective">
+                    <h3>Probe of @h.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd HH:mm") UTC · @h.Items.Count answers · @h.Marks.Select(m => m.By).Distinct().Count() examiner(s) so far</h3>
+                    <p><a href="grading/bias/@ExamId/human/@h.RunId">Mark this probe</a></p>
+                    @if (results.TryGetValue(h.RunId, out var res) && res is not null)
+                    {
+                        <div class="gr-table-wrap">
+                            <table class="grid">
+                                <thead><tr><th>Form</th><th>Marks</th><th>Mean level</th><th>Shift from original (levels)</th><th>Panel's shift (levels)</th></tr></thead>
+                                <tbody>
+                                    @foreach (var v in res.Variants)
+                                    {
+                                        <tr><td>@HumanProbes.Label(v.Variant)</td><td>@v.Marks</td><td>@Num(v.MeanLevel)</td><td>@Num(v.ShiftLevels)</td><td>@Num(v.PanelShiftLevels)</td></tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <ul>@foreach (var f in res.Findings) { <li>@f</li> }</ul>
+                    }
+                </div>
+            }
+        </section>
+    }
+}
+
+@code {
+    [Parameter] public Guid ExamId { get; set; }
+    private PanelProbePlan? plan;
+    private IReadOnlyList<PanelProbeRun>? runs;
+    private IReadOnlyList<HumanProbe>? humanProbes;
+    private Dictionary<Guid, HumanProbeResult?> results = [];
+    private List<string> chosen = [.. PanelBiasCheck.AllProbes];
+    private int items = 10, humanItems = 12;
+    private bool loaded, busy, ok, confirmCost;
+    private string? message;
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        (plan, runs, humanProbes, results) = await PanelDb.RunAsync(Scopes, Tenant, async sp =>
+        {
+            var s = sp.GetRequiredService<BiasProbeService>();
+            var p = await s.PlanAsync(ExamId, items, chosen);
+            var r = await s.RunsAsync(ExamId);
+            var h = await s.HumanProbesAsync(ExamId);
+            var res = new Dictionary<Guid, HumanProbeResult?>();
+            foreach (var probe in h ?? []) res[probe.RunId] = await s.HumanResultAsync(ExamId, probe.RunId);
+            return (p, r, h, res);
+        });
+        confirmCost = false;
+        loaded = true;
+    }
+
+    private Task ReplanAsync() => LoadAsync();
+
+    private Task ToggleAsync(string probe, bool on)
+    {
+        if (on && !chosen.Contains(probe)) chosen.Add(probe);
+        if (!on) chosen.Remove(probe);
+        return LoadAsync();
+    }
+
+    private async Task StartAsync()
+    {
+        if (busy || plan is null) return;
+        busy = true;
+        try
+        {
+            var accepted = plan.EstimatedUsd;
+            var r = await PanelDb.RunAsync(Scopes, Tenant, sp => sp.GetRequiredService<BiasProbeService>().StartAsync(ExamId, items, chosen, accepted));
+            (ok, message) = (r.Ok, r.Message);
+            await LoadAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task CreateHumanAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var r = await PanelDb.RunAsync(Scopes, Tenant, sp => sp.GetRequiredService<BiasProbeService>().CreateHumanProbeAsync(ExamId, humanItems));
+            (ok, message) = (r.Ok, r.Message);
+            await LoadAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private static string Num(double? x) => x is { } v ? v.ToString("0.00") : "n/a";
+}

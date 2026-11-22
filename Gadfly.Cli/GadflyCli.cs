@@ -27,6 +27,7 @@ public static class GadflyCli
             "contradiction-audit" => await ContradictionAuditCommand.RunAsync(rest),
             "coherence" => await CoherenceCommand.RunAsync(rest),
             "reliability" => await ReliabilityCommand.RunAsync(rest),
+            "bias-check" => await BiasCheckCommand.RunAsync(rest),
             "version" => PrintVersion(),
             _ => Unknown(command),
         };
@@ -68,6 +69,7 @@ public static class GadflyCli
         Console.WriteLine("  contradiction-audit <ledgers> Sample claim pairs to label; estimate the contradiction detector's false-flag and miss rates.");
         Console.WriteLine("  coherence <sessions> Pilot relay arm (H1): ledger-based coherence of saved sessions, by study condition.");
         Console.WriteLine("  reliability <grades.csv> From a double-marked pilot, the fewest objectives reaching a target reliability.");
+        Console.WriteLine("  bias-check <answers.json> The grading panel's padded, fluency and spoken-injection probes (mock unless --live and --approve-spend).");
         Console.WriteLine("  version              Print the gadfly version.");
         Console.WriteLine();
         Console.WriteLine("Run 'gadfly <command> --help' for command-specific options.");

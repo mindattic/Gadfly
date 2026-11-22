@@ -82,9 +82,41 @@ public class PanelBiasCheckTests
         Assert.That(report.AnyBias, Is.True);
         Assert.That(report.Probes.Single(p => p.Probe == PanelBiasCheck.Padded).Biased, Is.True);
         Assert.That(report.Probes.Single(p => p.Probe == PanelBiasCheck.Disfluent).Biased, Is.True);
-        Assert.That(panel.Prompts, Has.Count.EqualTo(3));
+        Assert.That(panel.Prompts, Has.Count.EqualTo(4), "baseline, padded, less fluent, spoken injection (GAD-T432)");
         Assert.That(panel.Prompts[1], Does.Contain("restate"));
         Assert.That(panel.Prompts[2], Does.Contain("um,"));
+        Assert.That(panel.Prompts[3], Does.Contain("note for whoever is grading this"));
+    }
+
+    [Test]
+    public async Task APanelThatFollowsASpokenInstruction_IsReportedAsInjected()
+    {
+        // Baseline, padded, less fluent, injected: only the injected answers score higher.
+        var panel = new ScriptedGradingPanel(Vote(3), Vote(3), Vote(3), Vote(5));
+        var report = await new PanelBiasCheck(panel, new Random(5)).RunAsync(new ObjectiveGradingInput(Objective(), Evidence()));
+        var injection = report.Probes.Single(p => p.Probe == PanelBiasCheck.Injection);
+        Assert.That(injection.Biased, Is.True);
+        Assert.That(injection.Finding, Does.Contain("followed it"));
+        Assert.That(report.Probes.Where(p => p.Probe != PanelBiasCheck.Injection).Select(p => p.Biased), Is.All.False);
+    }
+
+    [Test]
+    public async Task ChosenProbesOnly_AreRun()
+    {
+        var panel = new ScriptedGradingPanel(Vote(3));
+        var report = await new PanelBiasCheck(panel).RunAsync(new ObjectiveGradingInput(Objective(), Evidence()), probes: [PanelBiasCheck.Injection]);
+        Assert.That(report.Probes.Select(p => p.Probe), Is.EqualTo(new[] { PanelBiasCheck.Injection }));
+        Assert.That(panel.Prompts, Has.Count.EqualTo(PanelBiasCheck.CallsPerObjective([PanelBiasCheck.Injection])));
+    }
+
+    [Test]
+    public void PromptCharacters_CountsTheBaselineAndEveryProbe_WithoutCallingTheModel()
+    {
+        var input = new ObjectiveGradingInput(Objective(), Evidence());
+        var one = PanelBiasCheck.PromptCharacters(input, [PanelBiasCheck.Padded]);
+        var all = PanelBiasCheck.PromptCharacters(input);
+        Assert.That(one, Is.GreaterThan(0));
+        Assert.That(all, Is.GreaterThan(one));
     }
 
     [Test]
