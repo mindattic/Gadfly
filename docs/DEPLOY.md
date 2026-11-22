@@ -79,7 +79,27 @@ can also be run directly: `powershell -NoProfile -File tools\deploy-azure.ps1 [-
 4. publishes (Release), zips, and runs `az webapp deploy --type zip --async true`, then waits for Kudu to report
    the deployment (status 4 is success; Kudu sometimes answers a 500 timeout for a deploy that did succeed, so the
    script reads the deployment log rather than trusting that reply);
-5. polls `https://mindattic-gadfly.azurewebsites.net/healthz` until 200, then checks that `/login` is 200.
+5. polls `https://mindattic-gadfly.azurewebsites.net/healthz` until 200, then checks that `/login` is 200;
+6. tags the deployed commit `vN` and pushes the tag (see **Versions** below).
+
+### Versions
+
+Every deploy is one whole number higher than the last: V1, V2, V3, and so on, never V1.1 or V2.0.3 (GAD-T291). The
+number is the deploy count, not a semantic version.
+
+- The record is the git tags `v1`, `v2`, ... on origin. `deploy-azure.ps1` takes the highest `vN` tag (on origin, or
+  local and not yet pushed), so the deploy is N+1, and passes it to `dotnet publish` as `-p:GadflyVersion=N+1`
+  (the export has no `.git`, so the build cannot work it out itself). With no `vN` tag yet the first deploy is V1.
+- The app shows it as **V&lt;N&gt;** at the end of every browser tab title (`Admin · Gadfly Exams · V3`) and next to
+  "Gadfly Exams" in the header (`AppVersion.Label`, baked in as the assembly metadata `GadflyVersion`).
+- The tag is created and pushed **only after** the deploy is live and the health and login checks pass, so a failed
+  deploy uses up no number. A dry run builds with the number it would use and tags nothing.
+- Two deploys at once: the script checks again just before uploading and stops if the number was taken meanwhile;
+  `git tag` and `git push` of the tag both refuse an existing tag, so two deploys cannot both claim the same N.
+- A local or dev build (no `GadflyVersion`) shows the highest `vN` tag in the checkout plus `dev` (`V3 dev`), or just
+  `dev` before the first tag.
+- Never pass a non-whole number (the build refuses it), never create or move a `vN` tag by hand except to repair a
+  deploy the script reported as live but untagged.
 
 The manual GitHub workflow does the same on a runner: GitHub → mindattic/Gadfly → Actions → **Build and deploy
 Gadfly to Azure App Service** → Run workflow. The first sign-in is `admin` with the `gadfly-bootstrap-token`

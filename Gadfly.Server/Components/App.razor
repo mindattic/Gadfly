@@ -5,13 +5,16 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
-    <title>Gadfly Exams</title>
+    <title>Gadfly Exams · @AppVersion.Label</title>
     <link rel="stylesheet" href="app.css" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     @* Import map for the voice exam room's talking head (three.js, TalkingHead, MindAttic.Avatar), GAD-T53. Always present because
        Blazor navigates between pages without reloading the head. Carries the CSP nonce on the sign-in pages that send one. *@
     <script type="importmap" nonce="@CspNonce">{"imports":{"three":"/lib/voice/three/build/three.module.js","three/addons/":"/lib/voice/three/examples/jsm/","@@met4citizen/talkinghead":"/lib/voice/talkinghead/modules/talkinghead.mjs","@@mindattic/avatar":"/lib/voice/avatar/index.js"}}</script>
     <HeadOutlet @rendermode="PageRenderMode" />
+    @* The version ends every tab title (GAD-T291): each page's own <PageTitle> gets " · V<N>" appended here, also after
+       Blazor or an enhanced navigation sets a new title, so no page has to remember it. *@
+    <script nonce="@CspNonce">(function(){var s=" · @AppVersion.Label";function f(){var t=document.title;if(t&&t.slice(-s.length)!==s)document.title=t+s;}f();new MutationObserver(f).observe(document.head,{subtree:true,childList:true,characterData:true});})();</script>
 </head>
 <body>
     <Routes @rendermode="PageRenderMode" />

@@ -9,6 +9,8 @@
      If this fails the script stops: new code is never deployed onto an old database.
   3. dotnet publish (Release), zip, `az webapp deploy` (zip, async), wait for Kudu to report the deployment.
   4. Poll /healthz until 200, then smoke check that /login is 200.
+  5. Tag the deployed commit vN and push the tag. N is the highest vN tag (on origin or here) plus one, baked into
+     the build as /p:GadflyVersion=N so the app shows "VN" (GAD-T291). Only a successful deploy is tagged.
 
   Runs on Windows PowerShell 5.1 and PowerShell 7. It reads the app's AiMode setting to refuse a deploy onto a
   live-mode app by accident, but never changes an app setting, secret or Azure resource. Never calls an LLM.
@@ -81,6 +83,25 @@ if ($LASTEXITCODE -ne 0) {
 $subject = (& git -C $repo log -1 --format=%s $sha).Trim()
 Write-Host "   $($sha.Substring(0,7))  $subject"
 
+# --- version: every deploy is the next whole number after the highest vN tag (GAD-T291, docs/DEPLOY.md "Versions") ---
+# The tags on origin are the record; local ones count too so an unpushed tag is never reused.
+function Get-VersionTags {
+    $names = @()
+    $remote = & git -C $repo ls-remote --tags origin 'refs/tags/v*'
+    if ($LASTEXITCODE -ne 0) { Fail 'cannot list the tags on origin (git ls-remote)' }
+    foreach ($line in @($remote)) { if ($line -match 'refs/tags/(v[0-9]+)$') { $names += $Matches[1] } }
+    foreach ($t in @(& git -C $repo tag --list 'v*')) { $names += ([string]$t).Trim() }
+    return $names
+}
+function Get-HighestVersion {
+    $max = 0
+    foreach ($t in Get-VersionTags) { if ($t -match '^v([1-9][0-9]*)$' -and [int]$Matches[1] -gt $max) { $max = [int]$Matches[1] } }
+    return $max
+}
+$version = (Get-HighestVersion) + 1
+$versionTag = "v$version"
+Write-Host "   version: V$version (tag $versionTag after a successful deploy)"
+
 if (-not $DryRun) {
     $who = & az account show --query user.name -o tsv
     if ($LASTEXITCODE -ne 0 -or -not $who) { Fail "az is not signed in (az login)" }
@@ -125,8 +146,8 @@ try {
         }
 
         # --- 3. publish, zip, deploy -------------------------------------------------------------------------
-        Say 'dotnet publish (Release)'
-        Invoke-Native 'dotnet publish' { dotnet publish $project -c Release -o $out --nologo --no-restore -v q }
+        Say "dotnet publish (Release, V$version)"
+        Invoke-Native 'dotnet publish' { dotnet publish $project -c Release -o $out --nologo --no-restore -v q "-p:GadflyVersion=$version" }
         Say 'Zipping'
         Add-Type -AssemblyName System.IO.Compression.FileSystem
         [IO.Compression.ZipFile]::CreateFromDirectory($out, $zip, [IO.Compression.CompressionLevel]::Optimal, $false)
@@ -134,9 +155,12 @@ try {
     } finally { Pop-Location }
 
     if ($DryRun) {
-        Say "Dry run complete: exported, restored, published and zipped $($sha.Substring(0,7)); nothing migrated or deployed."
+        Say "Dry run complete: exported, restored, published and zipped $($sha.Substring(0,7)) as V$version; nothing migrated, deployed or tagged."
         return
     }
+
+    # Two deploys at once: if another one has claimed this number meanwhile, stop before anything goes live.
+    if ((Get-HighestVersion) -ge $version) { Fail "tag $versionTag (or a higher one) appeared while this deploy was building; another deploy took V$version. Run it again." }
 
     $startedUtc = [DateTime]::UtcNow
     Say "az webapp deploy -> $App"
@@ -190,7 +214,15 @@ try {
     }
     Write-Host "   /login   -> $login"
     if ($login -ne 200) { Fail "smoke check failed: /login is $login" }
-    Say "Deployed $($sha.Substring(0,7)) to $baseUrl (healthz 200, login 200)"
+
+    # --- 5. tag the deployed commit vN, only now that it is live (a failed deploy uses up no number) -----------
+    Say "Tagging $($sha.Substring(0,7)) $versionTag"
+    & git -C $repo tag -a $versionTag -m "Gadfly V$version deployed to $App" $sha
+    if ($LASTEXITCODE -ne 0) { Fail "V$version is live, but tag $versionTag already exists here (another deploy?); check git tag and tag $($sha.Substring(0,7)) by hand." }
+    # A plain push of a new tag is refused if origin already has it, so two racing deploys cannot both claim it.
+    & git -C $repo push origin "refs/tags/${versionTag}:refs/tags/$versionTag"
+    if ($LASTEXITCODE -ne 0) { Fail "V$version is live, but pushing tag $versionTag to origin failed (another deploy took it?); fix the tags by hand." }
+    Say "Deployed $($sha.Substring(0,7)) as V$version to $baseUrl (healthz 200, login 200, tagged $versionTag)"
 } finally {
     if ($KeepWork) { Write-Host "   scratch kept: $work" }
     else { Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue }

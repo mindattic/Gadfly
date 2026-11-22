@@ -64,4 +64,35 @@
     <Copy SourceFiles="$(MindAtticAvatarRoot)\web\assets\avatars\mpfb.glb" DestinationFolder="$(MSBuildThisFileDirectory)wwwroot\assets\avatars" />
   </Target>
 
+  <!-- App version shown in the tab title and header (GAD-T291, docs/DEPLOY.md "Versions"). Whole numbers only:
+       tools/deploy-azure.ps1 passes /p:GadflyVersion=N (the next one after the highest vN tag) and tags the deployed
+       commit vN, so the build shows "VN". Without it (a local build) the label is the highest vN tag plus " dev",
+       or just "dev" before the first tag. Read at run time by AppVersion.Label. -->
+  <PropertyGroup Condition="'$(GadflyVersion)' != ''">
+    <Version>$(GadflyVersion).0.0</Version>
+  </PropertyGroup>
+  <Target Name="GadflyVersionLabel" BeforeTargets="GetAssemblyAttributes">
+    <Error Condition="'$(GadflyVersion)' != '' And !$([System.Text.RegularExpressions.Regex]::IsMatch('$(GadflyVersion)', '^[1-9][0-9]*$'))"
+           Text="GadflyVersion must be a whole number (1, 2, 3...), not '$(GadflyVersion)'." />
+    <PropertyGroup Condition="'$(GadflyVersion)' != ''">
+      <GadflyVersionLabel>V$(GadflyVersion)</GadflyVersionLabel>
+    </PropertyGroup>
+    <Exec Condition="'$(GadflyVersion)' == '' And Exists('$(MSBuildThisFileDirectory)..\.git')"
+          Command="git tag --list &quot;v[0-9]*&quot; --sort=-version:refname" WorkingDirectory="$(MSBuildThisFileDirectory)"
+          ConsoleToMSBuild="true" IgnoreExitCode="true" ContinueOnError="true" StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_GadflyTags" />
+    </Exec>
+    <PropertyGroup Condition="'$(GadflyVersion)' == ''">
+      <_GadflyLastTag>$([System.Text.RegularExpressions.Regex]::Replace('$(_GadflyTags)', ';.*$', ''))</_GadflyLastTag>
+      <GadflyVersionLabel>dev</GadflyVersionLabel>
+      <GadflyVersionLabel Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('$(_GadflyLastTag)', '^v[1-9][0-9]*$'))">V$(_GadflyLastTag.Substring(1)) dev</GadflyVersionLabel>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>GadflyVersion</_Parameter1>
+        <_Parameter2>$(GadflyVersionLabel)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
 </Project>
