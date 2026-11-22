@@ -63,7 +63,9 @@ for summative exams).
 **What Gadfly does.** Before each question, `AnswerDelivery.Read` collects cues from the last answer: a long wait compared
 with the student's usual, many hesitations or long pauses, voice strain above the student's own baseline, hedging phrases,
 and a recitation flag. The number of cues sets the probing pressure (Steady, Some, Shaky, Recited). The prompt then asks
-the examiner to press harder.
+the examiner to press harder. When voice measurements are off for the organization or student (mechanic 5, GAD-T259),
+every voice-derived cue is skipped (GAD-T283): the wait before the first word, hesitations, long pauses, strain and the
+pause-and-rate proxy. Hedging phrases (from the transcript) and the source-overlap recitation flag still count.
 
 **Evidence for.**
 - Steering probes by **answer content** is supported: hedging words, vagueness and missing causal links are text, not
@@ -86,7 +88,8 @@ so harder probing does not silently lower a score).
 
 **What Gadfly does.** `RecitationCheck` (GAD-T242) flags an answer whose wording closely follows the source (six-word runs,
 overlap at least 0.6, or a copied stretch of 20 words), or that fits a read-out pattern: 60 or more words, fluent, started
-after a silent wait of at least 15 seconds and at least twice the student's usual. A flagged answer is left out of the
+after a silent wait of at least 15 seconds and at least twice the student's usual. The read-out pattern is voice-derived (timing and fluency), so it is not applied when voice measurements are off
+(GAD-T283); source overlap is. A flagged answer is left out of the
 evidence, the next question asks the student to say it differently, apply it or explain why, and a reviewer sees the flag.
 It is never a cheating verdict.
 
@@ -156,7 +159,8 @@ reviewers as low-confidence context. Only notes leave the device, never frames.
 student's first answers. Reviewers see the raw differences ("voice measurements against this student's first answers:
 pitch +2.1 semitones*, ..."), never a named state (GAD-T259). `strain.vsBaseline` of 0.5 or more is a probing cue
 (GAD-T233). Blind grading hides it, and it is never part of the grade. Since GAD-T259 it is off by default for EU/EEA
-organizations and students marked as living in the EU/EEA, and then nothing about the voice steers probing.
+organizations and students marked as living in the EU/EEA, and then nothing about the voice steers probing: GAD-T283
+fixed a gap where the wait before the first word and the hesitation count still did (so did the read-out pattern).
 
 **Owner decision (b):** voice strain and stress detection drives harder probing, as the owner asked. It stands.
 

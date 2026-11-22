@@ -109,6 +109,8 @@ public static class RecitationCheck
     internal static string? ReadOutReason(SocraticSession session, Turn turn, int wordCount)
     {
         if (turn.Answer is not { Mode: "voice" } || wordCount < ReadOutMinWords) return null;
+        // GAD-T283: timing and fluency are voice-derived, so with voice measurements off the pattern is not read at all.
+        if (AnswerDelivery.VoiceOff(turn.Answer)) return null;
         if (AnswerDelivery.Read(session, turn) is not { DelaySeconds: { } delay } d) return null;
         if (delay < ReadOutDelaySeconds || (d.BaselineDelaySeconds is { } usual && delay < ReadOutDelayFactor * Math.Max(usual, 1))) return null;
         if (d.LongPauses != 0 || (d.HesitationsPer100 ?? 0) > FluentHesitationsPer100) return null;

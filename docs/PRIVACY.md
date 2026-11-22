@@ -71,8 +71,11 @@ probe harder (GAD-T233), never change a grade. Erasure removes it with the rest 
 **Off by default in the EU (GAD-T259).** An organization marked as being in the EU or EEA (Organization
 settings), and any student marked as living in the EU or EEA when an exam is assigned, gets no voice
 measurements unless an admin turns them on for everyone. When they are off, the server discards the browser's
-voice numbers before the answer is stored, compares nothing, and nothing about the voice (not even the pause and
-speech-rate stand-in) steers how hard the examiner probes. An admin can also turn them off for everyone. Each
+voice numbers before the answer is stored, compares nothing, and nothing about the voice steers how hard the examiner
+probes: not the wait before the first word, hesitations, long pauses, speech rate, the voice comparison or its pause
+and speech-rate stand-in (GAD-T283). The read-out check, which looks at timing and fluency, is not applied to those
+answers either. What still steers probing comes from the words: hedging phrases in the transcript and how closely the
+answer follows the source material. An admin can also turn them off for everyone. Each
 change is recorded in the audit log.
 
 **What this does and does not claim.** Earlier versions of this page said "Nothing infers emotion". That was too

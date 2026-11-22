@@ -62,7 +62,8 @@ public sealed record AnswerDelivery
 
     /// <summary>
     /// GAD-T259: set on a spoken answer when voice measurements are off for the organization or student (off by default in the
-    /// EU/EEA). Then nothing about the voice is a cue: neither the comparison nor the pause-and-rate proxy.
+    /// EU/EEA). Then nothing about the voice is a cue (GAD-T283): not the wait before the first word, hesitations, long pauses,
+    /// speech rate, the comparison or the pause-and-rate proxy, and so not the read-out pattern either.
     /// </summary>
     public const string StrainOffKey = "strain.off";
 
@@ -82,12 +83,16 @@ public sealed record AnswerDelivery
         if (turn.Answer is not { } answer) return null;
         var earlier = session.Turns.Where(t => t.Index < turn.Index && t.Answer is not null && !string.IsNullOrWhiteSpace(t.Answer.Text)).ToList();
 
-        var delay = Delay(turn);
-        var baseDelay = Median(earlier.Select(Delay));
-        var hes = Hesitations(answer);
-        var baseHes = Median(earlier.Select(t => Hesitations(t.Answer!)));
-        var longPauses = (int)(Metric(answer, LongPauseCountKey) ?? 0);
-        var strain = Metric(answer, StrainOffKey) is > 0 ? null
+        // GAD-T283: with voice measurements off (GAD-T259) NOTHING voice-derived is read: not the wait before the first word, the
+        // hesitations, the long pauses, the strain or its pause-and-rate proxy. Hedging words and the recitation verdict stay: they
+        // come from the transcript text and the source, not from the voice.
+        var voiceOff = VoiceOff(answer);
+        var delay = voiceOff ? null : Delay(turn);
+        var baseDelay = voiceOff ? null : Median(earlier.Select(Delay));
+        var hes = voiceOff ? null : Hesitations(answer);
+        var baseHes = voiceOff ? null : Median(earlier.Select(t => Hesitations(t.Answer!)));
+        var longPauses = voiceOff ? 0 : (int)(Metric(answer, LongPauseCountKey) ?? 0);
+        var strain = voiceOff ? null
             : Metric(answer, StrainVsBaselineKey) ?? StrainProxy(answer, earlier.Select(t => t.Answer!).ToList());
         var hedges = HedgesIn(answer.Text);
 
@@ -143,6 +148,9 @@ public sealed record AnswerDelivery
         var verdict = Cues.Count == 0 ? "steady" : string.Join("; ", Cues);
         return $"- Answer {TurnIndex + 1}: {string.Join(", ", facts)}. Cues: {verdict}.";
     }
+
+    /// <summary>True when the answer was taken with voice measurements off (GAD-T259).</summary>
+    internal static bool VoiceOff(Answer a) => Metric(a, StrainOffKey) is > 0;
 
     private static double? Delay(Turn t)
     {
