@@ -159,7 +159,7 @@ else
                 <span class="value">@(data.Jobs.OldestPendingSince is { } since ? AdminDashboardService.Ago(data.GeneratedAt - since) : "none")</span>
             </div>
             <div class="stat">
-                <span class="label">Jobs failed, last 24h</span>
+                <span class="label">Jobs failed, last @AdminStatusService.FailedJobDays days</span>
                 <span class="value @(data.Jobs.FailedInWindow > 0 ? "error" : null)">@data.Jobs.FailedInWindow</span>
             </div>
         </div>
@@ -178,7 +178,7 @@ else
         <h3>Your organization's jobs</h3>
         @if (data.JobList.Count == 0)
         {
-            <p class="notice">Nothing waiting or running, and nothing failed or cancelled in the last 24 hours.</p>
+            <p class="notice">Nothing waiting or running, and nothing failed or cancelled in the last @AdminStatusService.FailedJobDays days.</p>
         }
         else
         {
@@ -188,7 +188,7 @@ else
                     @foreach (var j in data.JobList)
                     {
                         <tr>
-                            <td>@j.Kind</td>
+                            <td>@AdminDashboardService.JobLabel(j.Kind)</td>
                             <td class="@(j.State == JobState.Failed ? "error" : null)">@JobWord(j)</td>
                             <td>@j.Attempts of @j.MaxAttempts</td>
                             <td>@When(j.CreatedAt)</td>
@@ -207,7 +207,7 @@ else
                     }
                 </tbody>
             </table>
-            <p class="hint">Waiting and running jobs, and those that failed or were cancelled in the last 24 hours (up to @AdminStatusService.ListSize). A retry runs the job again from the start; both actions are recorded in the audit log.</p>
+            <p class="hint">Waiting and running jobs, and those that failed or were cancelled in the last @AdminStatusService.FailedJobDays days (up to @AdminStatusService.ListSize). A retry runs the job again from the start; both actions are recorded in the audit log.</p>
         }
     </section>
 

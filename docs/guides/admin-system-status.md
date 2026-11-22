@@ -14,7 +14,7 @@ A table of checks, each **OK**, **Needs a look** or **Failing**:
 | Database migrations | some are not applied (the database is behind the app) | the history could not be read |
 | AI panel | | it is the mock panel outside development, or providers are failing |
 | Voice | | voice is off, simulated outside development, or the latest speech call failed |
-| Background jobs | | a job failed in the last 24 hours, or one has waited more than 15 minutes to start |
+| Background jobs | | a job anywhere on the platform failed in the last 24 hours, or one has waited more than 15 minutes to start |
 | Webhook deliveries | | a delivery was given up in the last 24 hours |
 | Errors in the log | | this server logged an error in the last hour |
 
@@ -37,7 +37,9 @@ Whether the database answers, how many migrations are applied and the latest one
 platform admin also sees the database's size.
 
 Your organization's jobs (reading source material, AI grading, webhook deliveries, emails, retention): those waiting or
-running, and those that failed or were cancelled in the last 24 hours, with their attempts and error. **Retry** runs a
+running, and those that failed or were cancelled in the last 7 days (the same window as the dashboard's *Background
+work that failed*, so its link shows the jobs it counted), with their attempts and error. **Jobs failed** above the list
+counts the same 7 days. **Retry** runs a
 failed or cancelled job again from the start with a fresh set of attempts; **Cancel** stops a waiting job, or a running
 one at its next progress report. Both are recorded in the audit log (`admin.job.retried`, `admin.job.cancelled`).
 

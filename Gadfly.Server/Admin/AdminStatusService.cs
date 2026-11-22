@@ -70,6 +70,12 @@ public sealed class AdminStatusService(GadflyDbContext db, ITenantContext tenant
     /// <summary>Background job activity is summarized over this many hours back.</summary>
     public const int WindowHours = 24;
 
+    /// <summary>
+    /// Failed and cancelled jobs are counted and listed over this many days back, the same window as the admin dashboard's
+    /// "Background work that failed" (GAD-T320), so following that link shows the jobs it counted.
+    /// </summary>
+    public const int FailedJobDays = AdminDashboardService.FailedJobDays;
+
     /// <summary>At most this many jobs and deliveries are listed.</summary>
     public const int ListSize = 50;
 
@@ -92,7 +98,8 @@ public sealed class AdminStatusService(GadflyDbContext db, ITenantContext tenant
         var healthReport = await health.CheckHealthAsync(ct);
         var dbEntry = healthReport.Entries.TryGetValue("database", out var e) ? (HealthReportEntry?)e : null;
 
-        var jobs = await JobsAsync(org, since, ct);
+        var jobsSince = now - TimeSpan.FromDays(FailedJobDays);
+        var jobs = await JobsAsync(org, jobsSince, ct);
 
         var rows = await db.ApiCallTimings.AsNoTracking()
             .Where(t => t.OrganizationId == org && t.StartedAtUtc >= since)
@@ -107,7 +114,7 @@ public sealed class AdminStatusService(GadflyDbContext db, ITenantContext tenant
 
         return new SystemStatusReport(now, window, dbEntry?.Status == HealthStatus.Healthy, dbEntry?.Description, jobs, timings, rows.Count)
         {
-            JobList = await JobListAsync(org, since, ct),
+            JobList = await JobListAsync(org, jobsSince, ct),
             Webhooks = await WebhooksAsync(org, since, ct),
             Storage = await StorageAsync(org, ct),
         };
