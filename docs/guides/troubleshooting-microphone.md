@@ -98,7 +98,9 @@ If the browser is allowed but still hears nothing, the system may be blocking th
 - **The examiner's voice is being picked up**: use headphones or a headset, or turn the speaker volume down.
 - **A Bluetooth headset** can switch to a low-quality "headset" mode or fall asleep. A wired headset is more
   reliable. If it disconnects, the exam pauses: reconnect it and press **Try again**.
-- **Mis-heard words** aren't a microphone fault: correct them when the examiner reads your answer back.
+- **Mis-heard words** aren't a microphone fault. Answers are taken as heard (there is no read-back); the words the
+  recognizer was unsure of are marked for the person who reviews your exam. Speaking clearly, close to the microphone,
+  in a quiet room helps most.
 
 If the microphone stops during the exam, the exam pauses and says what happened. Fix it and press **Try again**.
 The clock stops while the exam is paused, for up to 10 minutes in all.

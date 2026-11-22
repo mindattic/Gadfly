@@ -31,8 +31,10 @@ look-aways are noted for a person to read in context, never scored.
 
 ### What if the examiner mis-hears me?
 
-After every answer the examiner reads back what it heard. Press **No, I want to correct it** to fix a word, or
-**Repeat my answer** to say it again (your first recording is kept, and repeating never lowers your score).
+Your answer is taken as heard: the examiner doesn't read it back, and you can't correct or redo it afterwards. You
+don't need to: a person reviewing your exam sees which words the speech recognizer was unsure of, and graders ignore
+recognition errors that don't change your meaning. If the next question shows you were misunderstood, say so and put
+it again in your own words.
 
 ### Can I pause the exam?
 

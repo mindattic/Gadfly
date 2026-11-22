@@ -10,8 +10,8 @@ Five steps from your invitation to a submitted exam.
    until every check shows ✓. Try the practice question out loud. Read the notice, tick the box, press **Begin exam**.
    (Nothing is recorded and no attempt is used until you press Begin exam.)
 4. **Talk with the examiner.** It asks one question at a time, out loud. Answer out loud in your own words while
-   looking at the examiner. Stop talking and your answer is sent after a short pause; check the read-back and fix
-   any mis-heard word. "I don't know" is an honest answer.
+   looking at the examiner. Stop talking and your answer is sent after a short pause, taken as heard: there is no
+   read-back or do-over, so say what you mean before it goes. "I don't know" is an honest answer.
 5. **Wait for your result.** People grade your answers. When the result is published, it appears on **My exams**
    with a full report. You can appeal it.
 

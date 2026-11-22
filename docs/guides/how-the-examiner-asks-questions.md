@@ -34,12 +34,12 @@ If you genuinely don't know, say so (or press **I don't know**). Socrates called
 puzzlement, the start of real learning. The examiner notes it and tries another angle or moves on. It is a much
 better answer than a confident guess, which leads to more follow-up questions on something you don't know.
 
-## The read-back
+## No read-back
 
-After each spoken answer, the examiner reads back what it heard and asks if that is what you said. It's about the
-**recording only**, not whether you are right. Fix a mis-heard word, or press **Repeat my answer** to say it again:
-your first recording is kept, and repeating never lowers your score. Sometimes the examiner asks a quick
-clarification about what you meant. Answer it, or decline.
+Your spoken answer is taken as heard, and the examiner goes straight on to the next question. It doesn't read your
+answer back or ask you to confirm, correct, repeat or change it: being able to rephrase after hearing it back would
+turn a real-time conversation into a second, considered try. Words the speech recognizer was unsure of are marked for
+the person who reviews your exam instead.
 
 ## What the examiner never does
 

@@ -143,20 +143,16 @@ under **What I heard** as you speak.
 - **I don't know** is a real answer. Socrates called that moment *aporia*: honest puzzlement, the start of real
   learning. The examiner notes it and tries another angle or moves on.
 
-### The read-back: checking how you were heard
+### Your answer is taken as heard
 
-After each spoken answer, the examiner reads back what it heard: *"I recorded your answer as: … Is this what you
-said?"* (a very long answer is shown on screen instead of read out). This is only about the recording, not about
-whether your answer is right.
+Once your answer is sent, it is taken as the examiner heard it and the exam moves on, like a conversation with a
+person. The examiner doesn't read your answer back, and there is no step to confirm, correct, repeat or change it
+afterwards: a real-time answer is what the exam is about. So say what you mean before the countdown sends it; until
+then you can keep talking, or use **Clear and answer again** to start over.
 
-- **Yes, this is what I said** carries on.
-- **No, I want to correct it** opens a box where you can fix how a word was heard, then **Save**.
-- **Repeat my answer** lets you say it again. Your original recording is kept, and repeating it never lowers your
-  score.
-
-Sometimes the examiner asks **A quick clarification** about what you meant; answer it out loud, or press **I'd
-rather not add anything**. After an answer you can also use **Correct a word in how my last answer was recorded**
-to fix a mis-heard word. These typed fixes are corrections to the transcript; your answers themselves are spoken.
+If a word was misheard, you don't need to do anything: a person reviewing your exam sees which words the speech
+recognizer was unsure of, and graders are told to ignore recognition errors that don't change your meaning. If the
+next question shows the examiner misunderstood you, say so in your next answer and put it again in your own words.
 
 After each answer the examiner takes a few seconds to think ("Thinking about your answer…"). Keep the page open.
 You won't see any scores during the exam.
@@ -200,7 +196,7 @@ When the exam ends you see **Your answers were submitted** and why it ended. Pre
 
 | Recorded | Not recorded |
 |---|---|
-| Every question, and a transcript of your spoken answers (with any corrections you made) | Video: no camera picture ever leaves your device |
+| Every question, and a transcript of your spoken answers, as they were heard | Video: no camera picture ever leaves your device |
 | When each question was asked and when you started and finished answering | Audio: your voice is sent to a speech-to-text service to make the transcript, and not kept |
 | How you spoke: pace, pauses, hesitations, how sure the speech recognizer was, and whether more than one voice was heard | Your screen |
 | Short notes about eye contact while you answered (when you looked away, how long, and whether the screen faded) | |
@@ -241,8 +237,9 @@ graded it and it has been approved and published."
 
 Once your result is published, the result page also offers **Your transcript**: the official record of your exam.
 It lists every question with its time and how far into the exam it came, each of your answers exactly as it was
-recorded, the read-back and what you replied, any question about what you meant and your reply, every correction
-you made (the original and the corrected text side by side), how long you waited before answering and your
+recorded, any question about what you meant and your reply, any correction you made (the original and the corrected
+text side by side; spoken answers taken since November 2026 have none, since they are kept as heard), how long you
+waited before answering and your
 pauses, and the words the speech recognizer found hard to hear, marked [like this?]. Download it as a PDF, a Word
 document, a page to print, plain text, captions (VTT or SRT) or JSON.
 

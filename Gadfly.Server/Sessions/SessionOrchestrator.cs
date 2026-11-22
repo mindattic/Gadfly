@@ -261,7 +261,7 @@ public sealed class SessionOrchestrator(
 
     /// <summary>
     /// Submits the answer to the waiting question. It is recorded as an immutable response (GAD-T86) and
-    /// verified (GAD-T87): a voice answer first asks the student to confirm the transcript, an unclear
+    /// verified (GAD-T87): a voice answer is taken as heard and judged at once (GAD-T405); an unclear typed
     /// one may get a neutral clarification question (the step then carries <see cref="SessionStep.Verification"/>
     /// and the same question). Otherwise the verified text is judged and the next question returned.
     /// </summary>

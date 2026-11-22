@@ -45,6 +45,6 @@ for you; nothing is saved).
 - Speak in your own words. Pausing to think is fine: start talking again and the answer continues.
 - Look at the examiner while you answer. If the screen fades, just look back.
 - "I don't know" is an honest answer, and a better one than a guess dressed up.
-- After each answer the examiner reads back what it heard. Correct it if a word was misheard.
+- Each answer is taken as heard: there is no read-back or do-over, so finish your thought before the countdown sends it.
 - If the exam pauses, fix what it says and press **Try again**. The clock stops for up to 10 minutes in all.
 - Don't close the page until you see **Your answers were submitted**.

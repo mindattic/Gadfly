@@ -1,9 +1,10 @@
 # Voice exam room and audio signals (GAD-T53, GAD-T58)
 
 A voice exam is taken out loud: the examiner (a talking head, `<ma-avatar>`) speaks each question with lip sync and
-captions, the student answers by voice with a live transcript, and the answer goes through the same response ledger,
-transcript read-back and judging. Since GAD-T239 every exam is taken this way: voice and camera are mandatory and there is
-no typed answer mode.
+captions, the student answers by voice with a live transcript, and the answer goes through the same response ledger and
+judging. Since GAD-T239 every exam is taken this way: voice and camera are mandatory and there is no typed answer mode
+(except the typed-answer accommodation, GAD-T260). Since GAD-T405 a spoken answer is taken as heard: it is not read back,
+confirmed, corrected, said again or changed (see step 5 under "How an answer flows").
 
 ## Who gets it
 
@@ -29,8 +30,10 @@ no typed answer mode.
   started, and any answer ends an open pause by the server's clock. No 3D graphics (or reduced motion)
   shows the 2D portrait, whose mouth moves as she speaks. If the avatar fails entirely, questions are read out by the
   browser's own speech and shown as text, and answers are still spoken (see "The examiner's delivery").
-- Only small transcript corrections are typed (fixing words the recognizer got wrong); "I want to change my answer"
-  (a typed substantive revision) is not offered in the exam room.
+- Nothing about a spoken answer is typed or redone (GAD-T405, GAD-T407; owner decision 2026-11-22): no transcript
+  correction, no "Repeat my answer", no "I want to change my answer". What the recognizer heard is what is judged, and the
+  exam moves on; a second, considered pass would change the Socratic exchange. Only a typed answer under the GAD-T260
+  accommodation can still get a small typo fix or a meaning clarification.
 
 ## The interview room (GAD-T231)
 
@@ -42,8 +45,8 @@ screens are untouched.
   are separate and unchanged). The one thing read from it, on the device, is where the student's face is, so the examiner
   can look at them (below). A refused or missing camera shows a short note and voice carries on; **Hide my camera**
   releases it and **Show my camera** asks again.
-- **Transcript.** Every question or request the examiner speaks (in full, even when a long read-back is spoken
-  shortened) and every answer the student speaks is added to an on-screen transcript, newest at the bottom. Turning voice
+- **Transcript.** Every question the examiner speaks and every answer the student speaks is added to an on-screen
+  transcript, newest at the bottom. Turning voice
   off and on doesn't repeat a question already listed.
 - **Response delay.** When the examiner finishes and the microphone opens, "Response delay" counts up live and freezes
   when the student starts speaking; the answer's transcript line keeps it. It is the browser's timing, sent with the
@@ -68,7 +71,7 @@ starts and ends.
 |---|---|
 | Lip sync | The library asks ElevenLabs for speech **with timestamps** (character alignment), turns the characters into word timings and streams PCM with them; TalkingHead shapes the mouth from each word's sounds over that word's provider-measured time. Per-character (phoneme) timing would be finer: filed as MAA-T9. |
 | Starting quickly | Speech is streamed: she starts on the first audio chunk. The examiner's voice model defaults to ElevenLabs' low-latency `eleven_flash_v2_5` unless `MindAttic:Avatar:ElevenLabs:ModelId` is set (`Gadfly:Voice:TtsModel` changes the default). Faster first audio options are MAA-T15. |
-| Prepared ahead | Fixed lines (the eye-contact remarks, the short read-back for a long answer, the wait fillers) are synthesized once per server into the library's phrase cache when the first exam room opens (`ExaminerSpeechWarmup`, off with `Gadfly:Voice:WarmPhrases=false`), so they start at once. Questions and read-backs are cached after their first playing, so **Repeat the question** and a reload replay instantly. The next question itself can't be prepared during the read-back: it is written only after the answer is confirmed and judged. A supported prefetch is MAA-T14. |
+| Prepared ahead | Fixed lines (the eye-contact remarks, the wait fillers) are synthesized once per server into the library's phrase cache when the first exam room opens (`ExaminerSpeechWarmup`, off with `Gadfly:Voice:WarmPhrases=false`), so they start at once. Questions are cached after their first playing, so **Repeat the question** and a reload replay instantly. The next question itself is written only after the answer is judged; with no read-back (GAD-T405) judging starts the moment the answer is in, and the wait fillers cover that wait after every answer. A supported prefetch is MAA-T14. |
 | Speaking style | A fixed server-side map from the kind of question to one of three styles (`Voice/ExaminerStyle.cs`): `open` (opening a topic or a new situation: brows lifted a little, a slight tilt), `probe` (following up: a small lean and the opposite tilt) and `neutral` (requests, closings, hints, fillers, remarks). All three keep the same mild, friendly baseline; none smiles more or frowns, and a counterexample or contradiction (which tend to follow a weak answer) looks exactly like any probe, so her face never hints at the grade. A public style API is MAA-T10. |
 | Captions | The whole question is shown at once, dimmed, and each word lights as she says it, counted from the moment her audio actually starts, on the provider's word timings. |
 | Portrait | With no 3D (reduced motion, no WebGL, model missing) the portrait is shown and a mouth drawn over its lips opens and closes once per syllable with the same word timings (`Gadfly:Voice:PortraitMouth`, "x,y,w" as fractions of the image; known for the default portrait, unset for a custom one, which then only brightens). In the library: MAA-T11. |
@@ -155,10 +158,14 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
    `TranscriptVerification.Assess` from the words (the browser's numbers are not trusted), and hands `ExamRoom` an
    `Answer { Mode = "voice" }` with word timings, flattened metrics (`SpeechMetricKeys`) and confidence.
 5. `SessionOrchestrator.AnswerAsync` captures a `StudentResponse` (`Modality = "voice"`, `SpeechRecognitionText`,
-   `SpeechRecognitionConfidence`), and asks the existing neutral question **"I recorded your answer as ... Is this what you
-   said?"**. Gadfly always asks this of a spoken answer (master plan 4.3, type A); the library's advice is recorded in the
-   request's reason. Confirming says only that the wording matches, never that the answer is right.
-   "Repeat my answer" can be spoken; a meaning clarification can be answered by voice.
+   `SpeechRecognitionConfidence`) and judges it at once, as heard (GAD-T405, owner decision 2026-11-22). Until then
+   Gadfly read every spoken answer back ("I recorded your answer as ... Is this what you said?", master plan 4.3 type A)
+   and let the student confirm, correct or repeat it; the owner removed that because a second, considered pass changes the
+   Socratic exchange. No meaning clarification is asked of a spoken answer either, and it can't be typo-fixed or changed
+   afterwards. The recognizer's doubts are kept for reviewers instead: an audit entry (`response.verification.checked`)
+   records that the answer was taken as heard, whether any words had low confidence and whether the library advised
+   checking, and the uncertain words stay marked on the capture (GAD-T265). A read-back request created before the change
+   is answered as heard by the exam room on its own, so an exam already in progress carries on.
 6. Confidence is stored only when the provider gives it for every word. The Simulated recognizer gives none, so its answers
    carry no confidence rather than a made-up one.
 

@@ -272,7 +272,11 @@ grammar, accent or fluency. The AI grade is never final.
   nothing; quote evidence before the score), self-preference (do not let the family that wrote the questions dominate),
   and language background (05: Zheng2023, Wang2024, Panickssery2024, Liang2023).
 - Speech recognition is the largest documented fairness risk. Word error rates differ by dialect and for people who
-  stutter (02: Koenecke2020, Mujtaba2024), and a transcription error can be scored as wrong content.
+  stutter (02: Koenecke2020, Mujtaba2024), and a transcription error can be scored as wrong content. Since GAD-T405
+  (owner decision 2026-11-22) a spoken answer is judged as heard, with no read-back for the student to confirm or correct
+  and no later fix or change, because a second, considered pass changes the Socratic exchange. That removes the student's
+  own check on a mishearing, so this risk now rests on the graders' instruction to ignore transcription errors and on the
+  human reviewer, who sees the recognizer's low-confidence words and its advice to check (recorded on each answer).
 - Without feedback, repeated attempts give about no benefit when students mostly fail (03: Rowland2014, Dunlosky2013).
   Gains transfer weakly to objectives that were not tested (03: PanRickard2018).
 

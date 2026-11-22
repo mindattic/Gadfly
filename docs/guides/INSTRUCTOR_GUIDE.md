@@ -39,7 +39,8 @@ Knowing this makes everything else make sense. Every exam is **spoken and on cam
    and a plain-language notice they must accept: what is recorded, that no video or audio is kept, how long answers
    are kept, and that people decide the grade. The exact wording they accept is fingerprinted and stored.
 3. In the exam room a talking examiner asks each question aloud (also shown as text). The student answers aloud;
-   each answer is read back for them to confirm or correct. They see the topic, a countdown and "Topics finished X
+   each answer is taken as heard, with no read-back, correction or do-over (the words the recognizer was unsure of are
+   marked for your review instead). They see the topic, a countdown and "Topics finished X
    of Y", never scores. They can say or press **I don't know**.
 4. While answering, they keep eye contact with the examiner; looking away for a while fades the screen (see
    [Eye contact and the screen fade](eye-contact-and-the-screen-fade.md)).
@@ -254,9 +255,10 @@ Blind-grading rules apply to the exports too.
 
 Every session has an official transcript, built from the answer record: each question with its clock time, how
 long into the exam it came and the examiner's move (opening question, probe, counterexample...), each answer
-exactly as it was recorded, the read-back ("I recorded your answer as... Is this what you said?") and what the
-student replied, any question about what they meant and their reply, every correction shown as the original and
-the corrected text, how long the student waited before answering and their pauses, and the words the speech
+exactly as it was recorded, any question about what they meant and their reply, every correction shown as the
+original and the corrected text (on sessions before November 2026 also the read-back, "I recorded your answer as...
+Is this what you said?", and what the student replied; spoken answers are now taken as heard, so new sessions have
+neither for them), how long the student waited before answering and their pauses, and the words the speech
 recognizer was unsure of, marked [like this?].
 
 Download it from the **Transcript** links on the session review page, the grading page or the admin desk, as a
