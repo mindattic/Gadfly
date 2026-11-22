@@ -280,6 +280,22 @@ switch organization first (the drop-down in the top bar).
 To have your exam records deleted, ask your organization's administrator. Deletion removes your exam records in
 that organization and can't be undone.
 
+## Research (optional)
+
+If your organization is running a study of these exams, the get-ready page asks, below the exam notice, whether your
+de-identified exam records may be included. It is entirely optional: you can skip it or say no, and your exam is the
+same, graded the same way, and the people grading you are not told what you chose. The study never gets your name,
+email, what you said or typed, audio or video; you appear under a study code. You can change your mind at any time on
+**My research choice** (linked from **My exams**): join, decline, or withdraw if you had agreed. Withdrawing stops your
+records going into any later copy for the study.
+
+## Email
+
+Gadfly can email you when an exam is assigned, as a reminder before it's due, when a result is released, and about
+your own appeals. Press **Email preferences** next to **Download my data** on **My exams** to turn off the
+before-it's-due reminder — the result-released email and the others still come through, since they matter. Your
+organization can also turn off Gadfly's emails entirely; if they have, your own choice here won't change anything.
+
 ## Getting help
 
 - Something not working? Start with the [FAQ](faq.md) and the troubleshooting pages under **Fixing problems** in

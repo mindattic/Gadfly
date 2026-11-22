@@ -439,6 +439,22 @@ Finish) or `Failed`, and `null` while running. An empty array when there are non
 | `report` | The full AI report (per-concept mastery and status, quoted evidence with source citations, disputed turns), or `null` until the attempt ends. Concept `status` is `NotStarted`, `Open`, `Mastered`, `Aporia` or `Exhausted`. |
 | `grade` | The latest decision of the older single-grader review, or `null`. The graded result comes from the grading workflow (see "Grading workflow" below): AI grades are preliminary, and a final grade exists only after human grading and approval. |
 
+#### When `recommendation` and `overallScore` go away
+
+Both fields are deprecated from **V2**, the first release that carries `objectiveLevels` (GAD-T425). Gadfly itself no
+longer uses them: since GAD-T460 the review pages' "(override)" flag and the student's released result compare with
+the objective levels too. They stay in this result, in the top-level fields and inside `report`, and in the
+`session.completed` webhook, unchanged until they are removed.
+
+**Proposed removal: V4**, two releases after V2. *Proposed, not yet confirmed by the product owner.* Release numbers
+count deployments (see [DEPLOY.md](DEPLOY.md#versions)), so the owner may instead set a date; this section will name
+whichever is agreed, and the release notes of the version before the removal will repeat it. Until then:
+
+- read `objectiveLevels` (and `insufficient` for Level 0) wherever you show an AI result;
+- treat `recommendation` and `overallScore` as optional now: after the removal they are simply absent from the JSON,
+  so code that ignores unknown or missing fields keeps working;
+- there is no replacement for `overallScore`: no average stands in for the per-objective levels.
+
 This endpoint returns the result whether or not the grade has been published to the student. Show
 students only what your own release rules allow.
 
@@ -602,7 +618,9 @@ addresses a platform calls. None takes an API key: each is checked on LTI's own 
 | `POST /lti/launch` | the platform (form post of `id_token` and `state`) | The redirect URI, target link URI and deep-linking URL. Validates the launch (below), then: a deep-linking request shows instructors the exam picker; a resource-link request signs a student in and opens `/my-exams/{assignmentId}/start` (inside a frame it offers an "open in a new window" button instead); an instructor is told the placement is linked and pointed at the normal MFA sign-in. |
 | `GET /lti/jwks.json` | the platform | Gadfly's public key set (`{"keys":[{"kty":"RSA","kid":…,"use":"sig","alg":"RS256","n":…,"e":…}]}`), for verifying the deep-linking response and the client assertion. Cached 5 minutes. |
 | `POST /lti/deep-link/submit` | the picker page | Turns the chosen exam(s) into a signed `LtiDeepLinkingResponse` and posts it to the platform's `deep_link_return_url`. Carries a protected 30-minute continuation token, never a session. |
-| `POST /lti/continue` | the "open in a new window" button | Exchanges a protected, single-use, two-minute hand-off token for the student's sign-in. |
+| `POST /lti/continue` | the "open in a new window" button | Exchanges a protected, single-use, two-minute hand-off token for the student's sign-in. Single use is recorded in the database, so it holds across server instances. |
+| `POST /lti/link/send` | the "Email me a link to connect it" button | Emails a single-use, 24-hour link to an existing account's verified address and sets a cookie binding that link to this browser (see People and roles). |
+| `GET`, `POST /lti/link` | the emailed link | `GET` only shows what will happen; the `POST` links the LMS identity to the account, when the token is valid and the browser has the matching cookie. |
 
 **Launch validation.** A launch is accepted only when all of these hold: the `state` is one Gadfly issued, unused
 and under 10 minutes old (it is consumed atomically, so a launch posts at most once); the browser presents the same
@@ -611,27 +629,36 @@ state in its cookie (so someone else's launch can't be posted into your browser)
 once when the `kid` is unknown); `iss` is the connection's issuer; `aud` contains its client id and `azp`, when present
 or when there are several audiences, equals it; `exp` and `iat` are present and current (60 seconds of skew); the
 `nonce` matches the one issued with this state; the LTI version is `1.3.0`; the `deployment_id` is the connection's;
-and a message type and `sub` are present.
+and a message type and `sub` are present. A launch that passes every check but arrives **without** the state cookie
+(browsers that block every cookie inside a frame) is not accepted in that browser context: Gadfly answers with an
+"Open in a new window" page whose button sends the platform's own `iss`, `client_id`, `lti_deployment_id`,
+`login_hint`, `lti_message_hint` and `target_link_uri` to `/lti/login` in a new top-level window, where the cookie works.
+A cookie that comes back with a different state is refused.
 
 **People and roles.** A platform user (`sub`, per connection) maps to one Gadfly account, created on first sight with
 the name and email the platform sent and a random password nobody is told. Course roles map as: Instructor, Teaching
 Assistant, Content Developer and course Administrator → **Instructor**; Learner → **Student**; anything else is refused.
 The LMS can move a student up to instructor, never down, never to Owner or Admin, and never restore a member an admin
 removed. New members take a seat under the organization's plan. An LTI sign-in (`amr=lti`) never satisfies MFA, so it
-only ever reaches student pages.
+only ever reaches student pages. When the platform's email equals exactly one active member's, no account is created
+and nothing is linked until it is confirmed, by an admin on the LMS connection page or by the person through a link
+emailed to that account's verified address (it works only in the browser that asked for it); never by the email alone.
 
 **Deep linking.** Each exam chosen becomes an `ltiResourceLink` content item with `custom.examId` and a `lineItem`
 (`scoreMaximum` 100, labelled with the exam title). The first launch of that placement records it.
 
-**Roster (NRPS).** An admin syncs a placement's course roster from the LMS connection page; Gadfly reads every page of
-the membership container (following `Link: rel="next"`), skips inactive and deleted members, and maps the rest exactly
-as a launch would.
+**Roster (NRPS).** An admin syncs a placement's course roster from the LMS connection page, and each connection also
+refreshes its rosters through the job queue every `RosterRefreshHours` (24 by default, 0 for on request only); Gadfly
+reads every page of the membership container (following `Link: rel="next"`), skips inactive and deleted members, and
+maps the rest exactly as a launch would.
 
 **Grades (AGS).** Within about two minutes of a result being released to the student (finalized and published with
 approval), Gadfly posts the latest attempt's final percentage to the placement's line item: `POST {lineitem}/scores`,
 `application/vnd.ims.lis.v1.score+json`, `scoreGiven` 0 to 100, `scoreMaximum` 100, `activityProgress` `Completed`,
 `gradingProgress` `FullyGraded`. If the launch gave only a line-items collection, Gadfly creates the line item first.
-An amended grade is sent again; an unchanged one never is. Integrity notes are never sent. Service tokens come from the
+An amended grade is sent again; an unchanged one never is. Integrity notes are never sent. A send the platform refuses
+or doesn't answer is retried after 2 minutes, then 4, 8 and so on (at most 12 hours apart), up to 8 tries; then it is
+marked failed on the LMS connection page until an admin retries it or the grade changes. Service tokens come from the
 platform's token endpoint with a signed RS256 client assertion (RFC 7523), audience the token URL or the connection's
 token audience (Brightspace).
 
@@ -658,6 +685,7 @@ Each delivery is a `POST` with a JSON body:
     "studentUserId": "9e3b6a1d-2c4f-4e58-b7a0-d1f6c8e2a934",
     "examId": "a4e2d5c8-0b3f-4d91-8e7a-5c6b1f2e3d40",
     "endReason": "Mastery",
+    "objectiveLevels": [{ "title": "Explain osmosis", "level": 4, "label": "Application", "insufficient": false }],
     "recommendation": "mastered",
     "overallScore": 0.86
   }
@@ -665,7 +693,7 @@ Each delivery is a `POST` with a JSON body:
 ```
 
 `session.completed` is sent once per attempt, when it ends for any reason. `objectiveLevels` is the AI's result
-per learning objective; `recommendation` and `overallScore` are deprecated steering values, not a score (see Result). The instructor's grade comes
+per learning objective; `recommendation` and `overallScore` are deprecated steering values, not a score, proposed for removal in V4 (see Result). The instructor's grade comes
 later; read it from the result endpoint.
 
 | Header | Value |
@@ -708,7 +736,6 @@ static bool VerifyGadflySignature(string secret, string header, string rawBody, 
     var expected = Convert.ToHexString(hmac.ComputeHash(Encoding.UTF8.GetBytes($"{t}.{rawBody}"))).ToLowerInvariant();
     return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(expected), Encoding.ASCII.GetBytes(v1));
 }
-    "objectiveLevels": [{ "title": "Explain osmosis", "level": 4, "label": "Application", "insufficient": false }],
 ```
 
 Node.js:
@@ -918,6 +945,24 @@ one of `scoreBoundaries`, default 50% of the objective's maximum, or the combine
 `boundaryMarginPoints`, default 2.5, of one). An objective already reconciled once is not sent again by these
 triggers. The `grade.disagreement.detected` audit event lists the triggers that fired (GAD-T270; research note 05).
 
+### Research export
+
+`GET /admin/research/export.zip[?exam={examId}]` (owners and admins, `GadflyPolicies.OrgAdmin`; GAD-T451) returns a
+ZIP of CSV files for a study of the organization's exams (docs/PILOT.md, "Research export", lists every file and
+column), with `README.txt` and `manifest.json` (counts, the smallest group used, what was held back). `404` with a
+plain reason when research has never been set up on **Research** (`/org/research`).
+
+- Only students whose current research choice is "agreed" are included (GAD-T452). Declined, never answered, withdrawn
+  and erased students are left out and only counted in the manifest.
+- No name, email, user name, answer or question text, audio, video, free-text comment, appeal text or database id.
+  Ids become keyed pseudonyms (`S-` student, `X-` session, `E-` exam, `O-` objective, `R-` rater, `A-` arm;
+  HMAC-SHA256 with the organization's research key, stable across exports until the key is replaced). Times are
+  relative to the session.
+- Voice measurements are blank wherever they were off, and always for an EU/EEA organization or student.
+- An exam with fewer consenting students than the organization's smallest group (default 5) is held back; a rarer
+  accommodation within an exam is written `suppressed`.
+- Each download is audited as `research.exported` (who, which exam, counts; no data).
+
 ### Panel calibration
 
 A grading panel is accepted for an exam only after a blind, double-marked calibration set meets the thresholds
@@ -936,7 +981,30 @@ comparison counts. Levels are the rubric's mastery levels 0..5.
                     "accepted": false, "failures": [ "..." ], "thresholds": { "minQwk": 0.7, "maxDegradation": 0.1, "maxAbsSmd": 0.15, "minItems": 30 } } }
 ```
 
+`panel` is optional: it defaults to the configured members and their models. The model id of every member is stored
+with the evaluation (GAD-T429). A calibration of the mock panel is never accepted.
+
 Every evaluation, passing or failing, is recorded as an audit event (`panel.calibration.evaluated`), and the latest
 one is the exam's status: `GET /grading/calibration/{examId}` (ViewTranscripts) returns it, or `404` when none is
-recorded. When AI grading of a session starts, the status is frozen into its policy snapshot (`panel`), and the
-grading page shows whether the panel's grades are calibrated or provisional. The AI grade is never final either way.
+recorded:
+
+```json
+{ "examId": "…", "panel": "claude: claude-sonnet-5, openai: gpt-5", "accepted": true, "report": { … }, "at": "…",
+  "models": { "claude": "claude-sonnet-5", "openai": "gpt-5" }, "source": "double-marking",
+  "expired": false, "expiryReasons": [], "recheckDue": false, "effective": true }
+```
+
+`expired` is true when any panel member's model id now differs from those the calibration covered (a member swapped,
+added or removed, or a calibration recorded before model ids were kept); `expiryReasons` says which. `effective` is
+`accepted && !expired`. `recheckDue` is true once the calibration is older than `Gadfly:Grading:RecalibrateAfterDays`
+(default 180): a prompt to re-run it and the bias probes; nothing re-runs by itself. `source` is `api` (posted here) or
+`double-marking` (built in the app from blind second marks, GAD-T428).
+
+When AI grading of a session starts, the status is frozen into its policy snapshot (`panel`, with `expired`). An exam
+set to **human-only until calibrated** (GAD-T427) also freezes `gate`: `{ "applied": true, "reason": "…" }` when the
+session is graded with AI weight 0 and human weight 1 because the calibration is missing, not accepted or expired. The
+grading page describes what the calibration measured, never just "calibrated". The AI grade is never final either way.
+Double marking, the gate setting, bias probes and the self-preference check are pages, not API endpoints
+(`/grading/panel`, `/grading/second-mark/{examId}`, `/grading/bias/{examId}`, `/grading/self-preference/{examId}`);
+their records are audit events (`panel.settings.updated`, `grade.second-mark.recorded`, `panel.bias-probe.*`,
+`bias.human-probe.*`) readable through the audit log.

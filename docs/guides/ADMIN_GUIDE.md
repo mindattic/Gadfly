@@ -155,10 +155,15 @@ also shows in the student's history.
 
 The **admin desk** (`/admin/desk`, **Desk** in the admin navigation) puts the everyday work on one page, in three
 tabs. It is on when the server setting `Gadfly:AdminDesk:Enabled` is `true` — **off by default in Production**
-(GAD-T247); a pilot that wants it turns the setting on explicitly. Owners and admins of the organization can use
-it, and so can accounts listed by user name in `Gadfly:AdminDesk:Admins` (for a pilot, so a non-admin account
-such as the owner's own can also sit exams and reset them). Every desk admin needs two-step verification to sign
-in, listed accounts included (GAD-T247); there is no exception any more.
+(GAD-T247); a pilot that wants it turns the setting on explicitly. The organization's **Owners** and **Admins** can
+use it, and nobody else: no special account is needed (GAD-T459). To let someone use the desk, give them the Owner or
+Admin role on the members page. Every desk admin needs two-step verification to sign in (GAD-T247).
+
+> **Retiring `Gadfly:AdminDesk:Admins`.** Earlier versions also let accounts listed by user name in
+> `Gadfly:AdminDesk:Admins` use the desk whatever their role. That list is deprecated: it is still honoured through
+> release V2, in one organization only and behind two-step verification, and the server logs a warning at start-up
+> naming the listed accounts. From V3 it is ignored. Before then, give each listed account the Owner or Admin role
+> (or use an account that has it), then delete the setting.
 
 **Exams.** **New exam** creates an exam straight from notes: a **Subject** and **Topic** (the title defaults to
 "Subject: Topic"), the source notes pasted in or uploaded as files, a **Duration** (default 20 minutes), whether
@@ -414,6 +419,67 @@ platform since the server started, not only your organization).
 Today only AI panel (LLM) calls are metered; the costs are estimates from configured prices. Speech-to-text and
 text-to-speech are not yet counted.
 
+## Analytics
+
+**Analytics** (`/analytics`) has what instructors see (see the instructor guide, section 8) plus views that only owners
+and admins get. Those use the AI panel's levels and the integrity notes, which a grader who is still grading blind must not
+see, and instructors, examiners and second reviewers can all be such a grader. Every view below works on the scope picked at
+the top (all assessments, a course or one assessment), names no student, and withholds a group with fewer than 5 students
+(its size is still shown). Groups are the accommodations each assignment declared ("No accommodation", "Typed answers",
+"Eye-contact accommodation", "Extra time", or a combination), or a grouping you paste in: one line per student with their
+email or user name, a comma and a group label (first language, or a self-described group from a voluntary survey). A pasted
+grouping is used for that comparison only and never stored; lines that match no member are counted, never shown.
+
+- **Speech recognition accuracy by group** (everyone with analytics). Word error rate needs a reference: what was actually
+  said. Spoken answers are no longer read back to the student, so newer answers have one only once a person has transcribed
+  them. **Mark reference transcripts** (owners and admins) opens a sampler: **Draw a sample** offers 10, 20 or 50 spoken
+  answers without a reference, spread across students and across how many fillers and repetitions the recognizer heard.
+  For each, the person who heard the answer types every word the student said, picks how they heard it (present while it
+  was given, or from a recording the student agreed to that your institution keeps; Gadfly stores no audio) and confirms the
+  student agreed. **Start from the recognizer's text** copies what the recognizer wrote, to correct it. A reference never
+  changes the answer or the grade, is recorded in the audit log (`response.reference-transcribed`, with who and when), can
+  be changed or withdrawn later under **Answers with a reference**, and is removed with the answer's words at the end of the
+  retention period or on erasure. The "With a reference" column counts all references, the human ones in brackets.
+- **Eye-contact flag rates by group.** Owners and admins also see **Camera episodes and tracking quality by group**: no
+  face, a second face and a changed face (Strict exams only) per 10 answering minutes, and each group's eye-tracking
+  quality (sessions with a score, median, share poor, share calibrated to the screen). **Group by tracking quality** groups
+  the rates by each session's quality band instead. Face detection fails more often for some people than others, so a
+  group with more face episodes or lower quality is a warning about the camera, not about the students.
+- **What the screen fade costs** (with the eye-contact rates). For each student with both, the judged score (0 to 1) and
+  length of answers during which the screen faded, minus their other answers, and the answer right after a fade minus
+  their clean answers; overall and by group, each with a rough 95% range. A drop of 0.05 or more with a range clear of zero
+  is flagged. It cannot tell the fade's cost from a hard question drawing both a look away and a weaker answer.
+- **Fairness by group**, at the bottom of the page, with one grouping box for its three tables:
+  - **Panel and human levels by group.** On objectives graded by both: mean panel and human levels, panel minus human,
+    that gap in standard deviations, how often they gave the same level or within one, and how often each gave level 0.
+    Groups differing in level is not a warning (groups can differ in what they learned); a panel-human gap of 0.15
+    standard deviations or more in one group, or gaps a quarter of a level apart between groups, is.
+  - **What made the examiner press harder, by group.** Per answer: how often the examiner pressed harder, and how often
+    each cue fired (hedging, vague wording, no reason or example, not convincing, evidence against, unclear meaning,
+    recited), with long pauses per spoken minute and exam time paused for a lost device. The hedging, vague-wording and
+    reason checks are English word lists, so paste a first-language grouping to see whether they fire more for
+    second-language speakers. A cue firing more than a quarter more often for one group (at 20 or more answers each) is
+    flagged. **Cut off** is how often the student went on speaking within 3 seconds of the end-of-answer silence handing
+    a spoken answer in, out of the spoken answers watched for it (hover the figure for how many); a group cut off more
+    often than another by more than a quarter (20 or more watched answers each) is flagged, since the silence may be too
+    short for it. It is not recorded where voice measurements are off (by default in the EU) or for answers given before
+    it existed. The review page marks each such answer "The student may have been cut off"; it never changes the
+    questions or the grade.
+  - **Typed answers against spoken answers.** Students with the typed-answers accommodation against everyone else (this
+    table ignores the grouping box): levels, panel-human agreement and integrity notes per 10 answering minutes, overall
+    and by objective, and the typed-minus-spoken human level at the same objective. The typed group chose itself through a
+    documented need, so a difference is not the effect of typing.
+
+**Export CSV** at the top of the page downloads the scope's analytics. For owners and admins it also carries these
+fairness tables, after the usual sections (GAD-T463): `fairness_score_gaps`, `fairness_path_drivers` (with the cut-off
+rate), `fairness_typed_vs_spoken` (and its by-objective rows), `fairness_camera_episodes` (the eye-contact rates, face
+episodes and tracking quality) and `fairness_fade_cost`. Each starts with its caveat and any warnings follow its rows. The
+export groups by the accommodations each assignment declared; a pasted grouping is never stored, so it is not in the file.
+A group under 5 students keeps its name and size and every other cell reads `withheld`. Instructors and other roles get
+the export without these sections.
+
+The thresholds and their reasons are in docs/EVIDENCE_MAP.md (mechanics 2, 4 and 7).
+
 ## Data export and erasure
 
 | Request | Where | What it does | Who |
@@ -483,7 +549,8 @@ genuine AI evaluations and must not be used to grade anyone." It is set by the s
 | Setting | Effect |
 |---|---|
 | `Gadfly:OpenExams` | When `true`, every published exam is offered to every student who opens **My exams** (with 50 attempts), without assigning it. Useful for a demo; turn it off for real classes. |
-| `Gadfly:AdminDesk:Enabled`, `Gadfly:AdminDesk:Admins`, `Gadfly:AdminDesk:Organization` | The admin desk and who may use it (see above). Off in Production unless set to `true`. |
+| `Gadfly:AdminDesk:Enabled` | The admin desk, for the organization's Owners and Admins (see above). Off in Production unless set to `true`. |
+| `Gadfly:AdminDesk:Admins`, `Gadfly:AdminDesk:Organization` | **Deprecated** (GAD-T459): the old list of extra desk accounts and the organization it applied in. Honoured through V2 with a start-up warning; ignored from V3. |
 | `Gadfly:Notifications:SendInMockMode` | `true` lets a mock-mode server send notification emails, for a developer whose SMTP points at a local test inbox. Off by default. |
 | `Gadfly:Voice:Mode` | `live`, `mock` or `off`. With `off`, the get-ready page's **Spoken examiner** check fails and no exam can begin. |
 | `Gadfly:RequireMfaInDevelopment` | Two-step verification on a development machine. |
