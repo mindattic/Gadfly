@@ -726,6 +726,13 @@ namespace Gadfly.Server.Data.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<string>("Languages")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasDefaultValue("en,ko");
+
                     b.Property<string>("Mode")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -840,6 +847,58 @@ namespace Gadfly.Server.Data.Migrations
                     b.ToTable("ExamAssignments", "gadfly");
                 });
 
+            modelBuilder.Entity("Gadfly.Server.Data.ExamLocalization", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ExamId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Instructions")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("ObjectiveTitlesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamId", "Language")
+                        .IsUnique();
+
+                    b.ToTable("ExamLocalizations", "gadfly");
+                });
+
             modelBuilder.Entity("Gadfly.Server.Data.ExamSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -879,8 +938,18 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<Guid>("ExamId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasDefaultValue("en");
+
                     b.Property<string>("LedgerJson")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("NeedsInstructorReview")
+                        .HasColumnType("bit");
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier");
@@ -889,6 +958,10 @@ namespace Gadfly.Server.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PrimaryLanguage")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
                     b.Property<string>("PromptSetSha256")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -896,6 +969,13 @@ namespace Gadfly.Server.Data.Migrations
 
                     b.Property<DateTimeOffset?>("RedactedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("ReviewFlaggedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ReviewReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -2557,6 +2637,39 @@ namespace Gadfly.Server.Data.Migrations
                     b.ToTable("SourceDocuments", "gadfly");
                 });
 
+            modelBuilder.Entity("Gadfly.Server.Data.StudentLanguageProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("LanguagesSpoken")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PrimaryLanguage")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("StudentLanguageProfiles", "gadfly");
+                });
+
             modelBuilder.Entity("Gadfly.Server.Data.StudentNotificationPreference", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3536,6 +3649,15 @@ namespace Gadfly.Server.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Exam");
+                });
+
+            modelBuilder.Entity("Gadfly.Server.Data.ExamLocalization", b =>
+                {
+                    b.HasOne("Gadfly.Server.Data.Exam", null)
+                        .WithMany()
+                        .HasForeignKey("ExamId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Gadfly.Server.Data.ExamSession", b =>

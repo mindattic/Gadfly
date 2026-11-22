@@ -86,6 +86,8 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     public DbSet<ApiCallTiming> ApiCallTimings => Set<ApiCallTiming>();   // outside-call durations on live exams (GAD-T413)
     public DbSet<StudentNotificationPreference> StudentNotificationPreferences => Set<StudentNotificationPreference>();   // reminder opt-out (GAD-T310)
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();   // every notification email queued or sent (GAD-T310)
+    public DbSet<ExamLocalization> ExamLocalizations => Set<ExamLocalization>();   // per-language exam texts (GAD-T534, GAD-T540)
+    public DbSet<StudentLanguageProfile> StudentLanguageProfiles => Set<StudentLanguageProfile>();   // a student's languages (GAD-T534, GAD-T552)
 
     // LTI 1.3 (GAD-T312): a platform registration per LMS connection, Gadfly's own signing key, OIDC login state,
     // the placement-to-exam mapping deep linking creates, the LTI-subject-to-user map, and the assignment-to-placement
@@ -564,6 +566,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
 
         ResearchModel.Configure(b);   // GAD-T451/T452
         StripeEventModel.Configure(b);   // GAD-T482
+        LanguageModel.Configure(b);   // GAD-T534
 
         // Never cascade in Gadfly's schema: deletions are explicit, audited jobs (retention, data-subject
         // deletion). The library's own auth-schema relationships keep the behavior it configured.

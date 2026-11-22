@@ -261,6 +261,11 @@ public sealed class Exam : ITenantOwned
     public Guid CreatedByUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? PublishedAt { get; set; }
+    /// <summary>
+    /// The languages a student may take this exam in (GAD-T539), comma-separated BCP-47 tags (Gadfly.Engine.ExamLanguage); English and
+    /// Korean by default. The source material and rubric stay in their own language; LanguageEntities.cs holds the per-language texts.
+    /// </summary>
+    public string Languages { get; set; } = Gadfly.Engine.ExamLanguage.DefaultOffered;
 }
 
 public sealed class ExamAssignment : ITenantOwned
@@ -337,6 +342,25 @@ public sealed class ExamSession : ITenantOwned
     public DateTimeOffset? RedactedAt { get; set; }
     /// <summary>Optimistic-concurrency token: two servers can't both advance one session.</summary>
     public byte[]? RowVersion { get; set; }
+    /// <summary>
+    /// The language this attempt is conducted in (GAD-T534): a BCP-47 tag (Gadfly.Engine.ExamLanguage), chosen before Begin and fixed
+    /// for the attempt. The examiner asks and the student answers in it; the rubric stays in the source language.
+    /// </summary>
+    public string Language { get; set; } = Gadfly.Engine.ExamLanguage.English;
+    /// <summary>
+    /// The student's primary language when the attempt started, copied from their StudentLanguageProfile (GAD-T552), so a later edit
+    /// of the profile never changes how a finished attempt was conducted. Null when the student had no profile (treated as the exam
+    /// language). When it differs from <see cref="Language"/> the examiner and judges make allowances for a non-native speaker (GAD-T555).
+    /// </summary>
+    public string? PrimaryLanguage { get; set; }
+    /// <summary>
+    /// A person must look at this attempt before its result stands (GAD-T511: repeated or long absences from the exam window, and any
+    /// other reason the system will not decide alone). The results are kept; nothing is cancelled automatically (GDPR Art. 22).
+    /// </summary>
+    public bool NeedsInstructorReview { get; set; }
+    /// <summary>Why <see cref="NeedsInstructorReview"/> was set, in plain words for the instructor.</summary>
+    public string? ReviewReason { get; set; }
+    public DateTimeOffset? ReviewFlaggedAt { get; set; }
     public List<SessionTurn> Turns { get; set; } = [];
 }
 
