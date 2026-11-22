@@ -19,12 +19,17 @@ public sealed class TranscriptTests
 {
     private static readonly DateTimeOffset T0 = new(2026, 11, 20, 14, 0, 0, TimeSpan.Zero);
     private static readonly Guid Org = Guid.NewGuid();
+    // Fixed so two calls to Source() describe the same record: every entity's Id defaults to Guid.NewGuid(), and
+    // TranscriptDocument.SessionId carries the session's actual Id into the hashed content (GAD-T333).
+    private static readonly Guid SessionId = Guid.NewGuid();
+    private static readonly Guid ExamId = Guid.NewGuid();
+    private static readonly Guid StudentUserId = Guid.NewGuid();
 
     private static TranscriptSource Source()
     {
         var session = new ExamSession
         {
-            OrganizationId = Org, ExamId = Guid.NewGuid(), StudentUserId = Guid.NewGuid(), Attempt = 2, State = SessionState.Ended,
+            Id = SessionId, OrganizationId = Org, ExamId = ExamId, StudentUserId = StudentUserId, Attempt = 2, State = SessionState.Ended,
             EndReason = nameof(EndReason.TimeUp), StartedAt = T0, EndedAt = T0.AddMinutes(12), CreatedAt = T0.AddMinutes(-1),
         };
         var t1 = new SessionTurn
