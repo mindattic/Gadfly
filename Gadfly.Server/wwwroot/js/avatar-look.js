@@ -1,8 +1,13 @@
 // The examiner's luminous blue look (GAD-T503). The 3D examiner (<ma-avatar>, MindAttic.Avatar on TalkingHead and three.js) is
 // shown as a smooth, stylized figure lit from within: soft electric-blue skin with an inner glow and a gentle bright rim at her
-// silhouette, hair and clothing in deeper blues of the same family, and striking green eyes. Powerful and serene, never eerie: no
-// transparency, no glow strong enough to wash out her features, and the eyes, brows, lips and mouth stay readable, so lip sync
-// shows and the student can look her in the eye (the eye-contact check depends on it).
+// silhouette, hair and clothing in deeper blues of the same family, and green eyes. Warm and attentive rather than mighty
+// (GAD-T558, docs/research/attention-and-gaze.md 4.6): no transparency, no glow strong enough to wash out her features, and the
+// eyes, brows, lips and mouth stay readable, so lip sync shows and the student can look her in the eye.
+// Uncanniness comes from mismatched realism, worst in the eyes (MacDorman et al. 2009; Seyama & Nagayama 2007), so every part of
+// the face is stylized to the same degree: the sclera is a clean, unglowed white with no veins, outside every glow, with a clear
+// iris-sclera edge (Kobayashi & Kohshima 2001), and the iris is a smooth stylized green with a darker limbal ring, not a
+// photographic texture on a glowing face. Her eyes are never enlarged: the listening expression's eye-widening is left out
+// (useExaminerLook). No study shows green or bright irises draw longer looks, so they are not made to glow.
 //
 // The vendored avatar library under /lib/voice is copied in by tools/sync-voice-assets.ps1 and is never edited here: this module
 // restyles the loaded model's materials from the outside, through the element's public `head` (the TalkingHead instance) and its
@@ -18,8 +23,10 @@ export const LOOK_CLOTHING = 0x1c4bb0;
 export const LOOK_HAIR = 0x142f7a;
 /** Eyebrows and lashes: deep navy, so the eyes and expression read on the bright face. */
 export const LOOK_BROWS = 0x0b1736;
-/** The irises: a vivid emerald/jade green, the complement of her blue skin, so the eye goes to hers. */
-export const LOOK_IRIS = 0x14d47c;
+/** The irises: an emerald/jade green, the complement of her blue skin. */
+export const LOOK_IRIS = 0x14b874;
+/** The sclera (eye whites): a clean, soft white, unglowed and outside the skin's glow (GAD-T558). */
+export const LOOK_SCLERA = 0xf2f4f7;
 /** Teeth and tongue: kept natural-ish and darker than the skin so the open mouth (lip sync) reads. */
 export const LOOK_TEETH = 0xeef3ff;
 export const LOOK_TONGUE = 0x8a4f73;
@@ -28,22 +35,22 @@ export const LOOK_GLOW = 0x1f6dff;
 /** The soft bright rim around her silhouette (fresnel). */
 export const LOOK_RIM = 0xb8ecff;
 
-/** Emissive intensity of the skin's inner glow (clothing and hair take a share of it). */
-export const LOOK_GLOW_STRENGTH = 0.24;
+/** Emissive intensity of the skin's inner glow (clothing and hair take a share of it): gentle, warm rather than luminous-mighty. */
+export const LOOK_GLOW_STRENGTH = 0.2;
 /** How bright the silhouette rim is (0 turns it off) and how tightly it hugs the edge (higher is tighter). */
-export const LOOK_RIM_STRENGTH = 0.55;
+export const LOOK_RIM_STRENGTH = 0.42;
 export const LOOK_RIM_POWER = 2.4;
 /** How much of the original skin texture's light and shade shows through the blue (lips, brows, creases): 0 is flat color. */
 export const LOOK_SKIN_DETAIL = 0.45;
-/** A faint glow on the irises only, so they read in any light (not a sci-fi glow). */
-export const LOOK_IRIS_GLOW = 0.12;
+/** Glow on the irises: none (GAD-T558). The eyes stay outside every glow, so her gaze reads like a person's. */
+export const LOOK_IRIS_GLOW = 0;
 /** How much of the room's reflected light reaches skin, hair and clothing: below 1 keeps the blue saturated, not washed out. */
 export const LOOK_ENV_LIGHT = 0.5;
 /** Eye surface roughness: low, so the light catches them (a catchlight) and they look alive. */
 export const LOOK_EYE_ROUGHNESS = 0.08;
 
 const DEFAULTS = {
-    skin: LOOK_SKIN, clothing: LOOK_CLOTHING, hair: LOOK_HAIR, brows: LOOK_BROWS, iris: LOOK_IRIS,
+    skin: LOOK_SKIN, clothing: LOOK_CLOTHING, hair: LOOK_HAIR, brows: LOOK_BROWS, iris: LOOK_IRIS, sclera: LOOK_SCLERA,
     teeth: LOOK_TEETH, tongue: LOOK_TONGUE, glow: LOOK_GLOW, rim: LOOK_RIM,
     glowStrength: LOOK_GLOW_STRENGTH, rimStrength: LOOK_RIM_STRENGTH, rimPower: LOOK_RIM_POWER,
     skinDetail: LOOK_SKIN_DETAIL, envLight: LOOK_ENV_LIGHT, irisGlow: LOOK_IRIS_GLOW, eyeRoughness: LOOK_EYE_ROUGHNESS,
@@ -108,9 +115,25 @@ export function applyExaminerLook(target, options = {}) {
 export function useExaminerLook(el, options) {
     if (!el || el.gadflyLookWatch) return;
     el.gadflyLookWatch = true;
+    keepEyesNatural(el);
     const apply = () => { try { if (el.mode === "3d") applyExaminerLook(el, options); } catch { /* the default look is fine */ } };
     el.addEventListener("ready", apply);
     apply();
+}
+
+/**
+ * No enlarged eyes (GAD-T558): the avatar's listening expression widens the eyes a little (eyeWideLeft/Right), which reads as
+ * staring. This element's own expression keeps the raised brows and the small smile and leaves the eyes their natural size. The
+ * vendored library is not edited; only this one element's method is wrapped.
+ */
+function keepEyesNatural(el) {
+    if (typeof el.express !== "function") return;
+    const original = el.express;
+    el.express = function (kind, engaged = false) {
+        if (kind !== "attentive" || typeof this.animate !== "function") return original.call(this, kind, engaged);
+        const k = engaged ? 1 : 0.6;
+        this.animate("ma-expression", [400, 3200, 600], { browInnerUp: [0.22 * k, 0.22 * k, 0], mouthSmile: [0.14 * k, 0.14 * k, 0] });
+    };
 }
 
 function restyle(m, part, o) {
@@ -145,7 +168,8 @@ function restyle(m, part, o) {
             glow(0x000000, 0);
             break;
         case "eyes":
-            m.color.setHex(0xffffff);   // the eye texture stays as it is, apart from the irises
+            m.color.setHex(0xffffff);   // stylized in the shader below: clean sclera, smooth iris; never glowing
+            glow(0x000000, 0);
             if (standard) { m.roughness = o.eyeRoughness; m.metalness = 0; }
             if (m.map) shade(m, o, { iris: true });
             break;
@@ -173,7 +197,7 @@ function shade(m, o, { tint = 0, flat = false, rim = false, iris = false }) {
     const u = {
         lookRimColor: { value: new Color(o.rim) }, lookRimStrength: { value: rim ? o.rimStrength : 0 }, lookRimPower: { value: o.rimPower },
         lookTint: { value: tint }, lookTintRef: { value: 0.45 },
-        lookIris: { value: new Color(o.iris) }, lookIrisGlow: { value: o.irisGlow },
+        lookIris: { value: new Color(o.iris) }, lookIrisGlow: { value: o.irisGlow }, lookSclera: { value: new Color(o.sclera) },
     };
     if (tint > 0) averageBrightness(m.map).then((v) => { if (v > 0.02) u.lookTintRef.value = v; });
 
@@ -192,18 +216,24 @@ function shade(m, o, { tint = 0, flat = false, rim = false, iris = false }) {
     float lookRed = lookTex.r - max( lookTex.g, lookTex.b );
     float lookIrisW = ( 1.0 - smoothstep( ${(IRIS_RADIUS - 0.012).toFixed(4)}, ${IRIS_RADIUS.toFixed(4)}, lookIrisR ) ) * smoothstep( 0.01, 0.08, lookRed );
     float lookVal = max( lookTex.r, max( lookTex.g, lookTex.b ) );
-    vec3 lookGreen = lookIris * clamp( lookVal / 0.22, 0.0, 1.6 );
-    vec3 lookIrisRgb = mix( lookTex.rgb, lookGreen, lookIrisW );
-    diffuseColor *= vec4( lookIrisRgb, lookTex.a );
+    // A smooth stylized iris (GAD-T558): brighter toward the pupil, a darker limbal ring at its edge, no photographic detail.
+    float lookIrisN = clamp( lookIrisR / ${IRIS_RADIUS.toFixed(4)}, 0.0, 1.0 );
+    vec3 lookGreen = lookIris * ( 0.8 + 0.3 * ( 1.0 - lookIrisN ) ) * ( 1.0 - 0.5 * smoothstep( 0.8, 1.0, lookIrisN ) );
+    // A clean sclera: the light, unsaturated texels outside the irises (the whites and their veins) become one soft white.
+    float lookSat = lookVal - min( lookTex.r, min( lookTex.g, lookTex.b ) );
+    float lookScleraW = ( 1.0 - lookIrisW ) * smoothstep( 0.45, 0.65, lookVal ) * step( ${(IRIS_RADIUS + 0.004).toFixed(4)}, lookIrisR )
+        * ( 1.0 - smoothstep( 0.35, 0.6, lookSat ) );
+    vec3 lookEyeRgb = mix( mix( lookTex.rgb, lookSclera, lookScleraW ), lookGreen, lookIrisW );
+    diffuseColor *= vec4( lookEyeRgb, lookTex.a );
 #endif`;
 
-    const needsIrisGlow = iris;
+    const needsIrisGlow = iris && o.irisGlow > 0;
     m.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, u);
         let frag = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 uniform vec3 lookRimColor; uniform float lookRimStrength; uniform float lookRimPower;
-uniform float lookTint; uniform float lookTintRef; uniform vec3 lookIris; uniform float lookIrisGlow;`)
+uniform float lookTint; uniform float lookTintRef; uniform vec3 lookIris; uniform float lookIrisGlow; uniform vec3 lookSclera;`)
             .replace("#include <map_fragment>", map);
         let extra = "";
         if (rim) extra += `
