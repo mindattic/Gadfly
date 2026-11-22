@@ -38,9 +38,12 @@ public static class VoiceServices
         if (mock) services.AddSingleton<ISpeechRecognizer>(_ => new SimulatedSpeechRecognizer());   // TryAdd in the library keeps this one
         services.AddMindAtticSpeechRecognition(o =>
         {
-            // Live never falls back to the Simulated recognizer: its words are placeholders.
+            // Live defaults to the library's own fallback chain (ElevenLabs Scribe, then OpenAI Whisper, GAD-T357): the best
+            // available streaming provider with an automatic backup if it fails mid-session, rather than pinning to one
+            // provider. Live never falls back to the Simulated recognizer: its words are placeholders. An operator who wants
+            // a single provider still sets MindAttic:SpeechRecognition:Provider explicitly (ElevenLabs or OpenAI alone).
             if (!mock && (string.IsNullOrWhiteSpace(o.Provider) || o.Provider.Equals("Simulated", StringComparison.OrdinalIgnoreCase)))
-                o.Provider = "ElevenLabs";
+                o.Provider = "Fallback";
             // Gadfly asks Scribe to label speakers (the second-speaker signal), which only scribe_v3_live supports; the library's
             // default model refuses the session with "diarize is only supported by scribe_v3_live" (GAD-T228).
             var scribeModel = builder.Configuration["Gadfly:Voice:ScribeModel"] is { Length: > 0 } m ? m : "scribe_v3_live";
@@ -66,13 +69,29 @@ public static class VoiceServices
         return settings;
     }
 
-    /// <summary>Static file options that also serve the avatar model (.glb) and ES modules (.mjs), which the default content types leave out.</summary>
+    /// <summary>Paths under wwwroot that never change without a new deploy also changing other things: vendored libraries, the
+    /// avatar model and portrait, sounds, and the webcam helper, so a long, immutable cache is safe (GAD-T317). Unfingerprinted
+    /// feature CSS/JS is left to the default (short, revalidated) caching.</summary>
+    private static readonly string[] LongCachePrefixes = ["/lib/", "/assets/", "/sounds/", "/webcam/"];
+
+    /// <summary>Static file options that also serve the avatar model (.glb) and ES modules (.mjs), which the default content types
+    /// leave out, and cache the vendored/binary paths above for a week instead of the framework's default no-cache (GAD-T317):
+    /// the avatar model alone is 36+ MB, so a returning student's browser should never re-fetch it on every visit.</summary>
     public static StaticFileOptions StaticFiles()
     {
         var types = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
         types.Mappings[".glb"] = "model/gltf-binary";
         types.Mappings[".mjs"] = "text/javascript";
-        return new StaticFileOptions { ContentTypeProvider = types };
+        return new StaticFileOptions
+        {
+            ContentTypeProvider = types,
+            OnPrepareResponse = ctx =>
+            {
+                var path = ctx.Context.Request.Path.Value ?? "";
+                if (LongCachePrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                    ctx.Context.Response.Headers.CacheControl = "public, max-age=604800, immutable";
+            },
+        };
     }
 
     public static void MapVoiceExam(this WebApplication app)

@@ -40,6 +40,8 @@ export function preload(cfg) {
             import(`${LIB}/avatar/index.js`),   // brings three.js and TalkingHead through the import map
             import(`${LIB}/talkinghead/modules/lipsync-en.mjs`),
             script(`${LIB}/signalr/signalr.min.js`),
+            import("/js/voice-room.js"),   // the exam room's own module (GAD-T317): its dependencies above were already
+                                            // preloaded, but the module itself was not, so the exam room still paid for it
         ]);
         const saveData = !!(navigator.connection && navigator.connection.saveData);
         if (!cfg || !cfg.modelUrl || saveData || reducedMotion() || !webgl()) return;

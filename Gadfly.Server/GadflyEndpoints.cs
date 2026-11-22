@@ -33,6 +33,7 @@ public static class GadflyEndpoints
     {
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode()
+            .WithStaticAssets()   // fingerprinted, long-cached asset URLs for any @Assets[...] reference (GAD-T317)
             .Add(endpoint =>
             {
                 if (endpoint is RouteEndpointBuilder route
@@ -56,6 +57,8 @@ public static class GadflyEndpoints
             .RequireAuthorization(GadflyPolicies.SuperAdmin);
         // Outside-call durations on live exams (GAD-T413): /healthz/call-timings?session=<id>&limit=200, staff-only.
         Diagnostics.ApiCallTimingServices.MapCallTimings(app).RequireAuthorization(GadflyPolicies.SuperAdmin);
+        // Recognizer latency and unsure-word rate, in memory (GAD-T361), staff-only.
+        Diagnostics.VoiceRecognitionTimingsServices.MapVoiceRecognitionTimings(app).RequireAuthorization(GadflyPolicies.SuperAdmin);
 
         // Where Program.cs's production exception handler re-executes (GAD-T190): an anonymous, data-free page, whatever the verb of the
         // failed request. Without this endpoint the handler found nothing, the fallback policy would have redirected it to sign-in, and the
@@ -74,6 +77,7 @@ public static class GadflyEndpoints
         Platform.ApiEndpoints.Map(app);
         Review.ReviewExportEndpoints.Map(app);
         Transcripts.TranscriptEndpoints.Map(app);   // downloads and the anonymous /transcripts/verify page (GAD-T295)
+        Reports.CertificateEndpoints.Map(app);   // completion certificate PDF, verified at /transcripts/verify too (GAD-T311)
         app.MapAnalytics();
         Admin.PeopleExportEndpoints.MapPeopleExports(app);   // students / assignments CSV (GAD-T296, GAD-T298)
         Admin.ExamAuditEndpoints.Map(app);   // exam definition JSON (GAD-T297), audit log CSV/JSON (GAD-T301)

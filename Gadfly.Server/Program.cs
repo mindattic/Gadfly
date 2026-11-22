@@ -19,6 +19,7 @@ using Gadfly.Sources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MindAttic.Authentication.Services;
@@ -59,6 +60,9 @@ builder.Services.AddScoped<TenantScope>();
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
 // A circuit pins its tenant when it opens and never falls back to the (often absent) HttpContext (GAD-T73).
 builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, TenantCircuitHandler>());
+// A live page re-syncs from the server once its own dropped connection comes back, rather than carrying on stale (GAD-T306).
+builder.Services.AddScoped<CircuitReconnectSignal>();
+builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, ReconnectCircuitHandler>());
 
 // One SQL Server database: Gadfly's "gadfly" schema plus MindAttic.Authentication's "auth" schema.
 var connectionString = GadflyDatabase.Resolve(builder.Configuration);
@@ -101,9 +105,14 @@ builder.Services.AddMindAtticOrganizations<GadflyDbContext>(builder.Configuratio
     o.MfaRequiredRoles = OrgRoleHandler.MfaRequired ? [.. OrgRoles.All.Where(OrgRoles.RequiresMfa)] : [];
 });
 builder.Services.AddScoped<IOrganizationDirectory, OrganizationDirectory>();
+// Plans, seats and the exam allowance (GAD-T309).
+builder.Services.AddSingleton<Gadfly.Server.Platform.PlanEnforcement>();
 
 // Background work (ingestion, concept extraction, reports) on the SQL job table (GAD-T43).
 builder.Services.AddGadflyJobs();
+builder.Services.AddJobHandler<Gadfly.Server.Notifications.EmailDeliveryJob>();
+builder.Services.AddJobHandler<Gadfly.Server.Notifications.ReminderSweepJob>();
+builder.Services.AddHostedService<Gadfly.Server.Notifications.ReminderScheduler>();
 
 // The AI panel: live Legion or the clearly labelled mock (Gadfly:AiMode = live | mock | auto) (GAD-T100).
 builder.Services.AddGadflyPanel(builder.Configuration, builder.Environment.IsDevelopment());
@@ -126,6 +135,8 @@ builder.Services.AddHostedService<StaleSessionScheduler>();
 builder.Services.AddSignalR(o => o.MaximumReceiveMessageSize = 256 * 1024);
 // Voice exam room (GAD-T53): speech recognition relay and the examiner avatar, behind Gadfly:Voice:Mode (mock | live | off).
 builder.AddVoiceExam();
+// Recognizer latency and unsure-word rate, in memory, for the status page (GAD-T361).
+Gadfly.Server.Diagnostics.VoiceRecognitionTimingsServices.AddVoiceRecognitionTimings(builder.Services);
 
 // Platform API (GAD-T46): organization API keys, webhooks with signed deliveries.
 builder.Services.AddScoped<ApiKeyService>();
@@ -160,6 +171,16 @@ Gadfly.Server.Help.HelpEndpoints.AddHelpCenter(builder.Services);
 
 // The Gadfly Exams web app (GAD-T48): Blazor Server.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+// Brotli (preferred) then gzip for every compressible response, including over HTTPS: admin pages, the public
+// site and the per-feature stylesheets are all plain text that shrinks well, and none of it is per-request secret
+// content reflected back to an attacker, so the BREACH-style risk response compression otherwise carries does not
+// apply here (GAD-T317). Fingerprinted static assets (below) carry their own precompressed files instead.
+builder.Services.AddResponseCompression(o =>
+{
+    o.EnableForHttps = true;
+    o.Providers.Add<BrotliCompressionProvider>();
+    o.Providers.Add<GzipCompressionProvider>();
+});
 
 var app = builder.Build();
 
@@ -201,7 +222,9 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 app.UseHttpsRedirection();
+app.UseResponseCompression();   // brotli/gzip every compressible response (GAD-T317); must run before static files
 app.UseStaticFiles(VoiceServices.StaticFiles());   // adds .glb (the examiner avatar) and .mjs (GAD-T53)
+app.MapStaticAssets();   // fingerprinted, precompressed, long-cached URLs for assets referenced via @Assets[...] (GAD-T317)
 app.UseMindAtticAuthentication();   // authn + authz + forced steps (change password, enroll MFA) + CSP
 app.UseGadflySecurityHeaders();   // CSP and the rest of the security headers for every other page (GAD-T385)
 app.UseRateLimiter();
