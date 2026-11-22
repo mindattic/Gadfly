@@ -1601,6 +1601,23 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("PassbackAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PassbackError")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset?>("PassbackFailedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal?>("PassbackPendingPercent")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<DateTimeOffset?>("PassbackRetryAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset?>("PassbackSentAt")
                         .HasColumnType("datetimeoffset");
 
@@ -1614,6 +1631,85 @@ namespace Gadfly.Server.Data.Migrations
                     b.ToTable("LtiAssignmentLinks", "gadfly");
                 });
 
+            modelBuilder.Entity("Gadfly.Server.Data.LtiLinkRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BrowserTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("CandidateUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("EmailSentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("EmailTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("EmailTokenExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LmsEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("nvarchar(320)");
+
+                    b.Property<string>("LmsName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("LtiSubject")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RegistrationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmailTokenHash");
+
+                    b.HasIndex("OrganizationId", "Status");
+
+                    b.HasIndex("RegistrationId", "LtiSubject")
+                        .IsUnique();
+
+                    b.ToTable("LtiLinkRequests", "gadfly");
+                });
+
             modelBuilder.Entity("Gadfly.Server.Data.LtiLoginState", b =>
                 {
                     b.Property<string>("State")
@@ -1625,6 +1721,14 @@ namespace Gadfly.Server.Data.Migrations
 
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LoginHint")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("LtiMessageHint")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
                     b.Property<string>("Nonce")
                         .IsRequired()
@@ -1704,6 +1808,9 @@ namespace Gadfly.Server.Data.Migrations
 
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RosterRefreshHours")
+                        .HasColumnType("int");
 
                     b.Property<string>("TokenAudience")
                         .HasMaxLength(1000)

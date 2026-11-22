@@ -96,6 +96,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     public DbSet<LtiResourceLink> LtiResourceLinks => Set<LtiResourceLink>();
     public DbSet<LtiUserMapping> LtiUserMappings => Set<LtiUserMapping>();
     public DbSet<LtiAssignmentLink> LtiAssignmentLinks => Set<LtiAssignmentLink>();
+    public DbSet<LtiLinkRequest> LtiLinkRequests => Set<LtiLinkRequest>();
 
     // Research use of exam records (GAD-T451/T452): settings, study arms and research consent. Configured in ResearchEntities.cs.
     public DbSet<ResearchSettings> ResearchSettings => Set<ResearchSettings>();
@@ -375,6 +376,8 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.Property(x => x.State).HasMaxLength(100);
             e.Property(x => x.Nonce).HasMaxLength(100);
             e.Property(x => x.TargetLinkUri).HasMaxLength(2000);
+            e.Property(x => x.LoginHint).HasMaxLength(1000);
+            e.Property(x => x.LtiMessageHint).HasMaxLength(4000);
             e.HasIndex(x => x.ExpiresAt);
         });
         b.Entity<LtiResourceLink>(e =>
@@ -398,6 +401,22 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.Property(x => x.LtiSubject).HasMaxLength(255);
             e.HasOne<ExamAssignment>().WithOne().HasForeignKey<LtiAssignmentLink>(x => x.AssignmentId);
             e.HasIndex(x => x.ResourceLinkId);
+            e.Property(x => x.PassbackPendingPercent).HasPrecision(18, 6);
+            e.Property(x => x.PassbackError).HasMaxLength(500);
+        });
+        b.Entity<LtiLinkRequest>(e =>   // GAD-T458
+        {
+            e.Property(x => x.LtiSubject).HasMaxLength(255);
+            e.Property(x => x.LmsEmail).HasMaxLength(320);
+            e.Property(x => x.LmsName).HasMaxLength(200);
+            e.Property(x => x.Role).HasMaxLength(40);
+            e.Property(x => x.Source).HasMaxLength(20);
+            e.Property(x => x.Status).HasMaxLength(20);
+            e.Property(x => x.EmailTokenHash).HasMaxLength(64);
+            e.Property(x => x.BrowserTokenHash).HasMaxLength(64);
+            e.HasIndex(x => new { x.RegistrationId, x.LtiSubject }).IsUnique();
+            e.HasIndex(x => new { x.OrganizationId, x.Status });
+            e.HasIndex(x => x.EmailTokenHash);
         });
 
         // ---- master-plan assessment model

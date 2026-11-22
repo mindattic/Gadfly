@@ -52,8 +52,15 @@ public sealed class LtiRegistration : ITenantOwned
     [System.ComponentModel.DataAnnotations.MaxLength(1000)]
     public string? TokenAudience { get; set; }
     public bool Enabled { get; set; } = true;
+    /// <summary>
+    /// How often each placement's course roster is refreshed from the LMS on a schedule, in hours (GAD-T458): 24 by default,
+    /// 0 for only when an admin presses "Sync roster". Run through the job queue (<c>Lti.LtiRosterRefreshJob</c>).
+    /// </summary>
+    public int RosterRefreshHours { get; set; } = DefaultRosterRefreshHours;
     public Guid CreatedByUserId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+
+    public const int DefaultRosterRefreshHours = 24;
 }
 
 /// <summary>
@@ -71,6 +78,11 @@ public sealed class LtiLoginState
     public string Nonce { get; set; } = "";
     /// <summary>The platform's <c>target_link_uri</c>, carried through so the launch can tell what was being opened.</summary>
     public string TargetLinkUri { get; set; } = "";
+    /// <summary>The platform's <c>login_hint</c>, kept so a launch whose state cookie the browser blocked inside a frame can be
+    /// started again in a new window (GAD-T458). Null when it was too long to keep.</summary>
+    public string? LoginHint { get; set; }
+    /// <summary>The platform's <c>lti_message_hint</c>, kept for the same new-window restart (GAD-T458); null when absent or too long.</summary>
+    public string? LtiMessageHint { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
     public bool Used { get; set; }
@@ -138,4 +150,56 @@ public sealed class LtiAssignmentLink : ITenantOwned
     /// score goes out too.</summary>
     public DateTimeOffset? PassbackSentAt { get; set; }
     public decimal? LastPassbackPercent { get; set; }
+
+    // GAD-T458: retries with exponential backoff, and a failed state an admin sees on /org/lti.
+    /// <summary>The percentage being sent and not yet accepted; a different released percentage starts the retries afresh.</summary>
+    public decimal? PassbackPendingPercent { get; set; }
+    /// <summary>Failed sends of <see cref="PassbackPendingPercent"/> so far.</summary>
+    public int PassbackAttempts { get; set; }
+    /// <summary>Not before this time: the next retry, after the backoff.</summary>
+    public DateTimeOffset? PassbackRetryAt { get; set; }
+    /// <summary>The last failure, in words an admin can act on.</summary>
+    public string? PassbackError { get; set; }
+    /// <summary>Set when the retries ran out: no further automatic attempts until an admin presses Retry (or the grade changes).</summary>
+    public DateTimeOffset? PassbackFailedAt { get; set; }
+}
+
+/// <summary>
+/// An LMS identity that looks like a person who already has a Gadfly account in the organization (the LMS sent the same
+/// email address as an existing member's), waiting for a decision (GAD-T458). Gadfly never links by a matching email alone:
+/// the link is made only when an admin confirms it on <c>/org/lti</c>, or when the person proves they own that account's
+/// verified email address by opening a single-use link sent to it, in the same browser that asked for it. Until then
+/// nothing is created for them; "keep separate" gives them a new account of their own.
+/// </summary>
+public sealed class LtiLinkRequest : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid OrganizationId { get; set; }
+    public Guid RegistrationId { get; set; }
+    public string LtiSubject { get; set; } = "";
+    /// <summary>What the LMS said about the person, for the admin's decision.</summary>
+    public string? LmsEmail { get; set; }
+    public string LmsName { get; set; } = "";
+    /// <summary>The Gadfly role the LMS gives them (Student or Instructor).</summary>
+    public string Role { get; set; } = "";
+    /// <summary>The existing account whose email matched.</summary>
+    public Guid CandidateUserId { get; set; }
+    /// <summary>"launch" or "roster": how Gadfly first saw them.</summary>
+    public string Source { get; set; } = "";
+    /// <summary><see cref="Pending"/>, <see cref="Linked"/> or <see cref="Separate"/>.</summary>
+    public string Status { get; set; } = Pending;
+    /// <summary>SHA-256 (hex) of the single-use token in the emailed link; null until one is sent.</summary>
+    public string? EmailTokenHash { get; set; }
+    /// <summary>SHA-256 (hex) of the secret in the cookie of the browser that asked for the email: the link works only there.</summary>
+    public string? BrowserTokenHash { get; set; }
+    public DateTimeOffset? EmailSentAt { get; set; }
+    public DateTimeOffset? EmailTokenExpiresAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? ResolvedAt { get; set; }
+    /// <summary>The admin who decided, or null when the person confirmed by email.</summary>
+    public Guid? ResolvedByUserId { get; set; }
+
+    public const string Pending = "pending";
+    public const string Linked = "linked";
+    public const string Separate = "separate";
 }
