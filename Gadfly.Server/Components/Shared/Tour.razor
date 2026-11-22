@@ -1,0 +1,68 @@
+@* A page's guided tour (GAD-T293): <Tour Id="@TourIds.AdminDashboard" /> renders the "Show me around" button and, once
+   per account and tour version, starts the tour by itself after the page has rendered. The steps live in
+   Tours/TourCatalog.cs; wwwroot/js/tour.js draws them. A page address ending in ?tour=<id> starts it straight away (the
+   help topic's replay links). An unknown id renders nothing. Never place it in the exam room: tour.js refuses to run there. *@
+@using Gadfly.Server.Tours
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject ITenantContext Tenant
+
+@if (tour is not null)
+{
+    <button type="button" class="tour-launch@(Float ? " tour-launch-float" : "")" @onclick="StartAsync" disabled="@(module is null)"
+            title="A short guided tour of this page">Show me around</button>
+}
+
+@code {
+    /// <summary>One of <see cref="TourIds"/>.</summary>
+    [Parameter, EditorRequired] public string Id { get; set; } = "";
+    /// <summary>Start the tour by itself the first time this account sees the page (the default).</summary>
+    [Parameter] public bool AutoStart { get; set; } = true;
+    /// <summary>Float the button to the right of the page title, for a page with no header row to put it in.</summary>
+    [Parameter] public bool Float { get; set; }
+
+    private TourDefinition? tour;
+    private IJSObjectReference? module;
+    private bool disposed;
+
+    protected override void OnParametersSet() => tour = TourCatalog.Find(Id);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || tour is null) return;
+        try
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/tour.js");
+            if (disposed) { await module.DisposeAsync(); module = null; return; }
+            var userKey = Tenant.UserId?.ToString("N") ?? "anonymous";
+            await module.InvokeVoidAsync("register", TourCatalog.ToClient(tour, userKey, AutoStart));
+            StateHasChanged();
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (JSException) { module = null; }   // a tour is a convenience: the page works without it
+    }
+
+    private async Task StartAsync()
+    {
+        if (module is null || tour is null) return;
+        try { await module.InvokeVoidAsync("start", tour.Id); }
+        catch (JSDisconnectedException) { }
+        catch (JSException) { }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true;
+        if (module is null) return;
+        try
+        {
+            await module.InvokeVoidAsync("unregister", Id);
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (JSException) { }
+        module = null;
+    }
+}
