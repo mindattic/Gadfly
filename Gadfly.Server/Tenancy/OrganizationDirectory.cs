@@ -141,6 +141,10 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
 
         // Plans, seats and licences (GAD-T309): only a genuinely new membership spends a seat, not a role change
         // for someone already here; platform staff and system callers (actingRole null) can always fix a seat problem.
+        // The organization's seat lock is held from the count to the saved membership, so two adds at once can't both
+        // take the last seat (GAD-T481).
+        await using var seats = actingRole is null ? null : await Gadfly.Server.Platform.SeatLock.AcquireAsync(db, organizationId, ct);
+        if (seats is { Acquired: false }) return new(false, Gadfly.Server.Platform.SeatLock.BusyMessage);
         var alreadyMember = await db.OrganizationMembers.AsNoTracking().AnyAsync(m => m.OrganizationId == organizationId && m.UserId == userId && m.IsActive, ct);
         if (actingRole is not null && !alreadyMember)
         {
@@ -173,7 +177,8 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
         if (actingRole is not null)
         {
             // Plans, seats and licences (GAD-T309): a best-effort check at invite time (the real seat is spent only once
-            // the invitation is accepted, which MindAttic.Authentication's own flow does not call back into Gadfly for).
+            // the invitation is accepted, where Platform/SeatLock.cs's InvitationSeatInterceptor checks it again under the
+            // organization's seat lock, GAD-T481; the same holds for every row of a CSV of invitations).
             var (seatOk, seatMessage) = await plans.CheckSeatAsync(db, organizationId, role, ct);
             if (!seatOk) return new(false, seatMessage!);
         }

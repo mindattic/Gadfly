@@ -452,7 +452,9 @@ one attempt started (an attempt replaced by an update to the examiner doesn't co
 
 - At **80%** of a limit the page says so.
 - At a **seat limit**, adding or inviting another member of that kind is refused until someone is removed or the plan
-  is upgraded.
+  is upgraded. The limit holds even when several people join at the same moment (two LMS launches, a roster sync,
+  invitations accepted together). An invitation sent while a seat was free can't be accepted once the seats have run
+  out; it stays open and works again as soon as a seat is free.
 - At the **exam allowance**, or when a **trial has ended**, no new attempt can start (attempts already running
   finish). Students are told to contact their instructor; the trial message asks the owner to choose a plan.
 

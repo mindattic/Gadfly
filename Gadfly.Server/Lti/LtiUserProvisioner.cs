@@ -72,10 +72,14 @@ public sealed class LtiUserProvisioner(GadflyDbContext db, IUserAdminService use
         if (request is null && await links.CandidateAsync(reg, claims.Email, ct) is { } match)
             return LtiProvisionResult.WaitingForLink(await links.RequestAsync(reg, claims, role, match, source, ct), match.EmailVerified);
 
+        // The seat lock is held from the count until the membership is saved (GAD-T481): two first launches, or a launch and a
+        // roster sync, can't both take the last free seat.
+        await using var seats = await SeatLock.AcquireAsync(db, reg.OrganizationId, ct);
+        if (!seats.Acquired) return LtiProvisionResult.Fail(SeatLock.BusyMessage);
         var (seatOk, seatMessage) = await plans.CheckSeatAsync(db, reg.OrganizationId, role, ct);
         if (!seatOk) return LtiProvisionResult.Fail(seatMessage!);
 
-        var email = claims.Email is { } e && OrganizationDirectory.IsValidEmail(e.Trim()) ? e.Trim() : null;
+        var email =claims.Email is { } e && OrganizationDirectory.IsValidEmail(e.Trim()) ? e.Trim() : null;
         var baseName = Sanitize(email is not null ? email.Split('@')[0] : claims.Name ?? claims.GivenName ?? "lms-user");
         var candidate = baseName;
         for (var suffix = 2; await db.AuthUsers.AsNoTracking().AnyAsync(u => u.NormalizedUserName == IUserStore.Normalize(candidate), ct); suffix++)
@@ -128,6 +132,8 @@ public sealed class LtiUserProvisioner(GadflyDbContext db, IUserAdminService use
         var member = await db.OrganizationMembers.AsNoTracking().FirstOrDefaultAsync(m => m.OrganizationId == reg.OrganizationId && m.UserId == userId, ct);
         if (member is null)
         {
+            await using var seats = await SeatLock.AcquireAsync(db, reg.OrganizationId, ct);
+            if (!seats.Acquired) return LtiProvisionResult.Fail(SeatLock.BusyMessage);
             var (seatOk, seatMessage) = await plans.CheckSeatAsync(db, reg.OrganizationId, ltiRole, ct);
             if (!seatOk) return LtiProvisionResult.Fail(seatMessage!);
             var added = await orgs.AddMemberAsync(reg.OrganizationId, userId, ltiRole, actingRole: null, actorUserId: null, ct);
@@ -137,6 +143,8 @@ public sealed class LtiUserProvisioner(GadflyDbContext db, IUserAdminService use
             return LtiProvisionResult.Fail("Your access to this organization in Gadfly has been removed. Ask your instructor to contact the organization's Gadfly admin.");
         if (member.Role == OrgRoles.Student && ltiRole == OrgRoles.Instructor)
         {
+            await using var seats = await SeatLock.AcquireAsync(db, reg.OrganizationId, ct);
+            if (!seats.Acquired) return new(userId, null, Role: member.Role);   // stays a student this time; the next launch tries again
             var (seatOk, seatMessage) = await plans.CheckSeatAsync(db, reg.OrganizationId, ltiRole, ct);
             if (!seatOk) return new(userId, null, Role: member.Role);   // stays a student until a staff seat is free
             var changed = await orgs.AddMemberAsync(reg.OrganizationId, userId, ltiRole, actingRole: null, actorUserId: null, ct);

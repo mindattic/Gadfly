@@ -642,7 +642,7 @@ public static class GadflyDatabase
         {
             sql.MigrationsHistoryTable("__EFMigrationsHistory", GadflyDbContext.Schema);
             sql.EnableRetryOnFailure();
-        });
+        }).AddInterceptors(Platform.InvitationSeatInterceptor.Instance);   // an accepted invitation spends a seat (GAD-T481)
 }
 
 /// <summary>Design-time factory so <c>dotnet ef migrations add … --project Gadfly.Server</c> works without starting the host.</summary>
