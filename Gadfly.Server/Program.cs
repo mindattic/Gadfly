@@ -133,7 +133,9 @@ builder.Services.AddSingleton<SessionOrchestrator>();
 builder.Services.AddScoped<HubIntegrityRecorder>();
 builder.Services.AddScoped<Gadfly.Server.Integrity.IntegrityRecorder>();
 // A session a student abandons outright (no pause, never comes back) is closed once well past its own deadline (GAD-T306).
-builder.Services.AddScoped<StaleSessionSweep>();
+// Singleton: it holds no scoped state (it opens its own system and organization scopes), and like the singleton
+// SessionOrchestrator it depends on, it can be resolved from the root provider (GAD-T422).
+builder.Services.AddSingleton<StaleSessionSweep>();
 builder.Services.AddJobHandler<StaleSessionJob>();
 builder.Services.AddHostedService<StaleSessionScheduler>();
 builder.Services.AddSignalR(o => o.MaximumReceiveMessageSize = 256 * 1024);
