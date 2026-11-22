@@ -154,6 +154,14 @@ new attempts; a student part-way through can still finish, and results are kept.
 > eye-contact check). Older exams built with the earlier concept-only builder are listed under **Exams**, where their
 > integrity level (Off, Standard, Strict) can still be set. Strict adds camera checks for a missing or second face.
 
+Your organization's owners and admins also see every exam in the [exams manager](admin-exams.md) (`/admin/exams`).
+There they can **duplicate** an assessment (a new draft with the same objectives, rubric, hint ladders, settings and
+grading policy, but none of its assignments or attempts: the way to change a published assessment's duration), set
+its integrity level, read-out check and examiner, open or close its window for everyone at once, see how many attempts
+examined each objective, **export** it as a JSON file or **import** one, and **preview it as a student** (the real
+examiner logic on the practice panel; nothing is saved and it never counts as an attempt). Ask them if you need any of
+these.
+
 ### 6. Assign
 
 A published assessment's last step is **Assign to students**:
