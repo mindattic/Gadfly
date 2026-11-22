@@ -244,8 +244,9 @@ two spoken answers in the session and stores the differences as `strain.*` metri
 | `strain.loudnessDb` | loudness change | +/-4 dB |
 | `strain.speechRatePercent` | words per minute change | 25% slower |
 | `strain.pauseRatioDelta` | share of the answer spent pausing | +0.10 |
-| `strain.vsBaseline` | mean of the rises, each scaled so its notable point is 1: 0 at baseline, 1 clearly above | read by `AnswerDelivery` (GAD-T233), cue at 0.5 |
+| `strain.vsBaseline` | mean of the rises, each scaled so its notable point is 1: 0 at baseline, 1 clearly above | recorded for reviewers; not a probing cue since GAD-T258 (it was one at 0.5 under GAD-T233) |
 
 The review transcript shows one descriptive line per spoken answer ("possible vocal strain / hesitation compared with this
 student's first answers: ...") with its caveat, hidden from blinded graders; the student's live interview transcript shows a
-short form. These describe the voice, never emotion, honesty or deception; they are not integrity events and never change a grade.
+short form. These describe the voice, never emotion, honesty or deception; they are not integrity events, never change a grade,
+and since GAD-T258 never change how hard the examiner probes (that comes from what the answer says, `AnswerDelivery`).

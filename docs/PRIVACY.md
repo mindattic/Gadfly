@@ -102,22 +102,25 @@ nerves, a hard question, tiredness or the room change the voice. Since GAD-T259 
 not say "strain", "stress" or "hesitation". It is never a lie, deception or emotion verdict, never an integrity
 event, never part of the grade, hidden from blinded graders, and the student sees the same differences in short
 on their own live transcript. The owner lifted the earlier blanket drop of audio stress signals for this
-descriptive use (2026-11-21, decision (b)). The one score it yields (`strain.vsBaseline`) may make the examiner
-probe harder (GAD-T233), never change a grade. Erasure removes it with the rest of the speech metrics.
+descriptive use (2026-11-21, decision (b)). Since GAD-T258 (the owner reversed decision (b) the same day) none of
+it steers how hard the examiner probes: the one score it yields (`strain.vsBaseline`) is recorded for the reviewer
+only, and so are the wait before the first word and the hesitation count. Probing comes from what the answer says
+(hedging, vague wording, a missing reason or example), the judges' score and evidence, and recitation. None of it
+ever changes a grade. Erasure removes it with the rest of the speech metrics.
 
 **Off by default in the EU (GAD-T259).** An organization marked as being in the EU or EEA (Organization
 settings), and any student marked as living in the EU or EEA when an exam is assigned, gets no voice
 measurements unless an admin turns them on for everyone. When they are off, the server discards the browser's
-voice numbers before the answer is stored, compares nothing, and nothing about the voice steers how hard the examiner
-probes: not the wait before the first word, hesitations, long pauses, speech rate, the voice comparison or its pause
-and speech-rate stand-in (GAD-T283). The read-out check, which looks at timing and fluency, is not applied to those
-answers either. What still steers probing comes from the words: hedging phrases in the transcript and how closely the
-answer follows the source material. An admin can also turn them off for everyone. Each
+voice numbers before the answer is stored, compares nothing, and does not read the wait before the first word,
+hesitations, long pauses or speech rate either (GAD-T283). The read-out check, which looks at timing and fluency, is
+not applied to those answers. Probing works the same as everywhere else, from the words and the judges' reading
+(GAD-T258). An admin can also turn them off for everyone. Each
 change is recorded in the audit log.
 
 **What this does and does not claim.** Earlier versions of this page said "Nothing infers emotion". That was too
 broad while the voice comparison exists: pitch, jitter and loudness are standard features of vocal stress and
-arousal, and the comparison may steer the questions. Gadfly does not label a student's emotional state, but it
+arousal. Since GAD-T258 the comparison no longer steers the questions, but it is still measured where it is on.
+Gadfly does not label a student's emotional state, but it
 does process features that the EU AI Act guidelines treat as emotion recognition when used in education
 (research note 06, docs/EVIDENCE_MAP.md mechanic 5). That is why it is off by default in the EU.
 
@@ -125,8 +128,8 @@ does process features that the EU AI Act guidelines treat as emotion recognition
 
 - **EU AI Act.** Emotion recognition in education is prohibited (Art. 5(1)(f)), and the Commission's 2025
   guidelines read detecting emotional arousal or anxiety during online exams as that. Gadfly names no emotion and
-  makes no deception finding, but the voice measurements (GAD-T232) use stress-related acoustic features and may
-  steer probing, so they are off by default for EU/EEA organizations and EU/EEA-resident students (GAD-T259).
+  makes no deception finding, but the voice measurements (GAD-T232) use stress-related acoustic features (they no
+  longer steer probing since GAD-T258, but are still measured and shown to reviewers), so they are off by default for EU/EEA organizations and EU/EEA-resident students (GAD-T259).
   Turning them on for EU students ("On for everyone") needs counsel's confirmation first. AI that evaluates learning outcomes or monitors students during tests is
   high-risk (Annex III, point 3): selling into the EU requires risk management, data governance,
   logging (the session record and prompt-set hash), human oversight (human grading and approval), accuracy

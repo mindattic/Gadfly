@@ -63,15 +63,16 @@ public sealed class QuestionGenerator(ISocraticVotingClient panel, PromptSet? pr
     /// <summary>Turns of dialogue included in the prompt.</summary>
     public int DialogueTurns { get; init; } = 8;
 
-    /// <summary>How the last answer was delivered, as the last question's prompt saw it (GAD-T233); null before any answer.</summary>
+    /// <summary>What the last answer showed, as the last question's prompt saw it (GAD-T233, GAD-T258); null before any answer.</summary>
     public AnswerDelivery? LastDelivery { get; private set; }
 
     public async Task<string> GenerateAsync(QuestionRequest r, CancellationToken ct = default)
     {
         var dialogue = Dialogue(r.Session);
         if (MoveProfiles.IsAssistance(r.Decision.Move)) return Assist(r);
-        // Adaptive probing (GAD-T233): each recent answer's delay, hesitations, strain against the student's baseline and
-        // hedging go into the prompt, and the last one sets how hard the question presses.
+        // Adaptive probing (GAD-T233, GAD-T258): what each recent answer said (hedging, vague wording, a missing reason or
+        // example) and how the judges read it go into the prompt, and the last one sets how hard the question presses. Nothing
+        // from the voice or its timing does.
         var recent = r.Session.Turns.TakeLast(DialogueTurns).ToList();
         LastDelivery = recent.LastOrDefault(t => t.Answer is not null) is { } answered ? AnswerDelivery.Read(r.Session, answered) : null;
         var targets = string.Join("\n", r.Decision.TargetClaimIds.Select(id => r.Ledger.Find(id))

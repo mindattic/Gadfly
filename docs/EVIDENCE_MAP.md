@@ -12,15 +12,15 @@ to the entries in them. Nothing here changes code.
 | # | Mechanic | Where it lives | Verdict | Proposed tickets |
 |---|---|---|---|---|
 | 1 | Follow-up moves | `Gadfly/Engine/Moves.cs`, `QuestionPlanner.cs`, `ExamPrompts.cs` | Supported, with changes | GAD-T266, GAD-T267, GAD-T268 |
-| 2 | Probing on hesitation | `AnswerDelivery.cs`, `QuestionGenerator.cs` (GAD-T233) | Content cues supported; strain cue not | GAD-T258, GAD-T267 |
+| 2 | Probing on hesitation | `AnswerDelivery.cs`, `QuestionGenerator.cs` (GAD-T233) | Content cues supported; strain cue not | GAD-T258 (done), GAD-T267 |
 | 3 | Recitation check | `RecitationCheck.cs` (GAD-T242) | Source-overlap supported; read-out pattern weak | GAD-T272 |
 | 4 | Gaze fade and "look at me" | `wwwroot/js/examiner-gaze.js` (GAD-T240) | Legal, weak as evidence; owner decision (c) | GAD-T261, GAD-T305 |
-| 5 | Voice strain | `Gadfly.Server/Voice/VoiceStrain.cs` | Not supported; legal risk; owner decision (b) | GAD-T258, GAD-T259 |
+| 5 | Voice strain | `Gadfly.Server/Voice/VoiceStrain.cs` | Not supported; legal risk; owner decision (b) reversed 2026-11-21 | GAD-T258 (done), GAD-T259 (done) |
 | 6 | Time limits and the end-of-answer cue | `SessionPolicy.cs`, `voice-room.js`, `StudentExams.cs` | Time budget supported; two choices questioned | GAD-T263, GAD-T264 |
 | 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273, GAD-T285 (done) |
 | 8 | Learning Mode hints | `HintLadders`, `QuestionGenerator`, `MoveKind.Hint` | Supported only as a fixed ladder, kept apart | GAD-T271 |
 | 9 | Text-style estimate | `Gadfly.Sources/TextStyleAssessor.cs` (GAD-T59) | Not supported (a detector in all but name); kept as unvalidated reviewer-only context | GAD-T284 (done), GAD-T285 (done) |
-| - | Owner decisions (a) to (d) | see below | Recorded, not overridden | GAD-T260, GAD-T261, GAD-T258/T259, GAD-T262 |
+| - | Owner decisions (a) to (d) | see below | Recorded, not overridden; (b) reversed by the owner 2026-11-21 | GAD-T260, GAD-T261, GAD-T258/T259, GAD-T262 |
 
 ## 1. Follow-up moves
 
@@ -61,12 +61,22 @@ for summative exams).
 
 ## 2. Probing on hesitation
 
-**What Gadfly does.** Before each question, `AnswerDelivery.Read` collects cues from the last answer: a long wait compared
-with the student's usual, many hesitations or long pauses, voice strain above the student's own baseline, hedging phrases,
-and a recitation flag. The number of cues sets the probing pressure (Steady, Some, Shaky, Recited). The prompt then asks
-the examiner to press harder. When voice measurements are off for the organization or student (mechanic 5, GAD-T259),
-every voice-derived cue is skipped (GAD-T283): the wait before the first word, hesitations, long pauses, strain and the
-pause-and-rate proxy. Hedging phrases (from the transcript) and the source-overlap recitation flag still count.
+**What Gadfly does.** Before each question, `AnswerDelivery.Read` collects cues from what the last answer said and how
+it was judged (GAD-T258): two or more hedging phrases, two or more vague phrases ("stuff", "somehow", "and so on"), no
+reason or example where the move asked for one (Probe, CausalReasoning, ScenarioVariation, AssumptionTesting,
+IndependentExplanation, Apply, Synthesize, Counterexample, Contradiction), a judged overall score below 0.6 (not yet
+positive evidence), the response analysis's evidence against understanding (a misconception, or contradicting evidence)
+or unclear meaning, and the recitation flag. One cue sets the probing pressure to Some, two or more to Shaky, and a
+recitation flag to Recited. The prompt (prompt set version 8) then asks the examiner to press harder.
+
+Nothing from the voice steers it: not the voice comparison (pitch, jitter, loudness, `strain.vsBaseline`), and not the
+wait before the first word, the hesitation count or long pauses. The owner reversed decision (b) on 2026-11-21 (mechanic
+5). The wait and the hesitations are timing, not emotion, but they were dropped as cues too: the evidence below calls them
+weak, they move with anxiety, accent, second-language use, stuttering and accommodations, and keeping them would leave a
+voice-derived steer that EU students (GAD-T283) do not get. They stay recorded with the answer, and reviewers see them as
+raw numbers where voice measurements are on; they never reach the question prompt. The read-out pattern (mechanic 3) still
+uses timing, but only to decide whether an answer is accepted as the student's own, under its own switch and
+accommodation rule (GAD-T272); the Recited probe follows from that decision.
 
 **Evidence for.**
 - Steering probes by **answer content** is supported: hedging words, vagueness and missing causal links are text, not
@@ -81,9 +91,12 @@ pause-and-rate proxy. Hedging phrases (from the transcript) and the source-overl
 - The baseline comes from the first two answers, and warm-up nerves and easier opening questions confound it (02, 06).
   If a student is most nervous at the start, later answers look calmer than they are.
 - The voice-strain cue: see mechanic 5. Note 06 says not to let `strain.vsBaseline` decide who gets harder questions.
+- Content cues are not neutral either: a second-language speaker may hedge or use plainer words, and the vague-phrase and
+  reason checks are English word lists. They only steer the next question, never the score.
 
-**Proposed.** GAD-T258 (drive probing from content, not strain), GAD-T267 (report how many probes each objective got,
-so harder probing does not silently lower a score).
+**Done.** GAD-T258 (approved by the owner on 2026-11-21): probing driven by content and the judges' reading, not by the
+voice or its timing. **Proposed.** GAD-T267 (report how many probes each objective got, so harder probing does not
+silently lower a score).
 
 ## 3. Recitation check
 
@@ -174,16 +187,19 @@ measures better and says how far to trust it:
 - **Still to do.** The thresholds (quality bands, margins, the 6 degree cut-off) are reasoned from the literature and a
   synthetic face, not validated on real students; compare flag rates by quality band and by group once pilot data exists.
 
-## 5. Voice strain (owner decision (b))
+## 5. Voice strain (owner decision (b), reversed 2026-11-21)
 
 **What Gadfly does.** `VoiceStrain` compares pitch, jitter, loudness, pitch variability, rate and pauses with the
 student's first answers. Reviewers see the raw differences ("voice measurements against this student's first answers:
-pitch +2.1 semitones*, ..."), never a named state (GAD-T259). `strain.vsBaseline` of 0.5 or more is a probing cue
-(GAD-T233). Blind grading hides it, and it is never part of the grade. Since GAD-T259 it is off by default for EU/EEA
-organizations and students marked as living in the EU/EEA, and then nothing about the voice steers probing: GAD-T283
-fixed a gap where the wait before the first word and the hesitation count still did (so did the read-out pattern).
+pitch +2.1 semitones*, ..."), never a named state (GAD-T259). Since GAD-T258 none of it steers probing, anywhere:
+`strain.vsBaseline` is recorded but is no longer a cue, and probing comes from the answer's content (mechanic 2). Blind
+grading hides it, and it is never part of the grade. Since GAD-T259 it is off by default for EU/EEA organizations and
+students marked as living in the EU/EEA, and then nothing about the voice is measured or read (GAD-T283, which also stops
+the read-out pattern there).
 
-**Owner decision (b):** voice strain and stress detection drives harder probing, as the owner asked. It stands.
+**Owner decision (b):** originally, voice strain and stress detection drives harder probing, as the owner asked. **The
+owner reversed it on 2026-11-21** by approving GAD-T258: the measurements stay (where on) as raw numbers for reviewers,
+and probing comes from what the answer says.
 
 **Evidence for.**
 - None found for validity. The only support is procedural: showing strain to reviewers, not graders, as low-confidence
@@ -204,9 +220,10 @@ fixed a gap where the wait before the first word and the hesitation count still 
 - `docs/PRIVACY.md` said "Nothing infers emotion". Note 06 flagged that statement as exposed while the strain readout exists;
   GAD-T259 corrected it.
 
-**Proposed.** GAD-T258 (probing driven by content, not strain) conflicts with decision (b) and waits for the owner.
 **Done.** GAD-T259 (approved by the owner): off by default for EU tenants and EU-resident students, raw acoustic deltas
-instead of "strain", and the PRIVACY.md wording fixed. Outside the EU, strain still drives probing as decision (b) says.
+instead of "strain", and the PRIVACY.md wording fixed. GAD-T258 (approved by the owner on 2026-11-21, reversing decision
+(b)): the voice comparison no longer drives probing anywhere, nor do the wait before the first word or the hesitation
+count; they are recorded and shown to reviewers as raw numbers where voice measurements are on.
 
 ## 6. Time limits and the end-of-answer cue
 
@@ -340,7 +357,7 @@ asks. Found by GAD-T282 (dissertation Appendix A, correction 37), it was missing
 ## Owner decisions the research questions
 
 The owner has decided these. This map records each one and does not override it. The tickets that would change them are
-proposed and wait for the owner.
+proposed and wait for the owner, unless marked as approved. The owner reversed decision (b) on 2026-11-21 (GAD-T258).
 
 ### (a) Voice and camera only, no typed answers
 
@@ -356,9 +373,13 @@ proposed and wait for the owner.
   keeps most of the integrity design. Under the current rule, a student who cannot use the voice exam has no route.
 - **Ticket:** GAD-T260, proposed, conflicts with decision (a). The default would stay voice-only.
 
-### (b) Voice strain drives harder probing
+### (b) Voice strain drives harder probing (reversed 2026-11-21)
 
-**Decision:** voice strain and stress detection drives harder probing, as the owner asked.
+**Decision:** voice strain and stress detection drives harder probing, as the owner asked. **The owner reversed this
+decision on 2026-11-21** by approving GAD-T258: how hard the examiner presses now comes from what the answer says
+(hedging, vague wording, a missing reason or example), the judges' score and evidence, and recitation, never from the
+voice comparison, the wait before the first word or the hesitation count. The voice measurements stay where they are on
+(outside the EU by default), recorded and shown to reviewers as raw numbers.
 
 - **For:** pressing a student whose answer comes out shaky can bring out whether the concept is really understood
   (mechanic 2). Comparing with the student's own baseline is the least unfair way to read any delivery signal.
@@ -367,8 +388,8 @@ proposed and wait for the owner.
   education (para 255). Jitter and pitch are stress features of a biometric signal. Anxious, accented and disfluent
   students are the ones most likely to be pressed (02). The same aim can be met from answer content, which is outside
   the ban.
-- **Tickets:** GAD-T258, proposed, conflicts with decision (b). GAD-T259, approved and done: off by default in the EU,
-  relabelled as raw differences; decision (b) stands elsewhere.
+- **Tickets:** GAD-T259, approved and done: off by default in the EU, relabelled as raw differences. GAD-T258, approved
+  on 2026-11-21 and done: probing from content, reversing decision (b) everywhere.
 
 ### (c) Gaze fade and "look at me"
 
@@ -402,7 +423,7 @@ All were filed by GAD-T257 as proposed and unapproved. None changes code until t
 
 | Ticket | Mechanic | Change | Conflicts with an owner decision |
 |---|---|---|---|
-| GAD-T258 | 2, 5 | Adaptive probing from answer content, not voice strain | Yes, (b) |
+| GAD-T258 | 2, 5 | Adaptive probing from answer content, not voice strain (approved 2026-11-21, reversing (b); done) | Yes, (b) |
 | GAD-T259 | 5 | Voice strain off by default for the EU, relabelled as raw acoustic deltas, PRIVACY.md fixed | Yes, (b) |
 | GAD-T260 | (a) | Instructor-granted typed-answer accommodation | Yes, (a) |
 | GAD-T261 | 4 | Gaze fade: thinking grace, accommodation switch, rates by group | Touches (c) |

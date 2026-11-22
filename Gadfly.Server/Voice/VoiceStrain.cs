@@ -53,14 +53,15 @@ public sealed record VoiceStrainReading(bool IsBaseline, int BaselineAnswers, do
 /// <para>
 /// Descriptive only. A raised pitch, an unsteady or louder voice, slower speech or more pausing describe how the voice changed;
 /// they can come from effort, nerves, a hard question, tiredness, a cold or the room. They are never read as emotion, honesty or
-/// deception, never scored, never an integrity event; the student sees a short form on their own live transcript. <see cref="VsBaselineKey"/> may steer how
-/// hard the examiner probes (GAD-T233), never the grade.
+/// deception, never scored, never an integrity event; the student sees a short form on their own live transcript. Since GAD-T258 (the
+/// owner reversed decision (b) on 2026-11-21) none of it steers how hard the examiner probes either: that comes from what the
+/// answer says (AnswerDelivery). Reviewers still see the raw differences.
 /// </para>
 /// <para>
 /// GAD-T259: shown as raw acoustic differences, never labelled as a state, and off by default for an EU/EEA organization and for
 /// a student marked as living in the EU/EEA (<see cref="IsEnabled"/>; EU AI Act Art. 5(1)(f), docs/PRIVACY.md). When off, the
-/// browser's voice measurements are dropped from the answer, nothing is compared, and <see cref="OffKey"/> tells the examiner's
-/// probing (AnswerDelivery) not to stand in its own pause-and-rate proxy.
+/// browser's voice measurements are dropped from the answer, nothing is compared, and <see cref="OffKey"/> tells AnswerDelivery
+/// and the read-out check not to read the answer's timing either (GAD-T283).
 /// </para>
 /// </summary>
 public static class VoiceStrain
@@ -77,7 +78,8 @@ public static class VoiceStrain
 
     /// <summary>
     /// 0 at the student's baseline, 1 = clearly above it: the mean of the measured rises (higher pitch, more jitter, a louder or
-    /// quieter voice, slower speech, more pausing), each scaled so its notable threshold is 1. Read by GAD-T233's AnswerDelivery.
+    /// quieter voice, slower speech, more pausing), each scaled so its notable threshold is 1. Recorded for the reviewer;
+    /// AnswerDelivery keeps it on its record but, since GAD-T258, never as a probing cue.
     /// </summary>
     public const string VsBaselineKey = "strain.vsBaseline";
 

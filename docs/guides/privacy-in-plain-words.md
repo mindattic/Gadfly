@@ -36,12 +36,11 @@ or ever fails you on its own. They are hidden from an examiner grading blind unt
 During each spoken answer the browser measures a few things about your voice (pitch, its steadiness, loudness, how
 much of the time you were speaking) and sends only those numbers, never the sound. They are compared with your own
 first answers. You see a short line about it in your own transcript. Reviewers see the raw differences, always with
-the reminder that nerves, effort, a hard question or the room change a voice. The comparison may make the examiner
-ask a further question; it never changes a grade.
+the reminder that nerves, effort, a hard question or the room change a voice. They never change which questions the
+examiner asks or how hard it presses (that comes only from what you say), and never change a grade.
 
 **They are off by default in the EU and EEA**: for organizations there, and for students marked as living there.
-When they are off, the numbers are thrown away before anything is stored, and nothing about your voice steers the
-questions.
+When they are off, the numbers are thrown away before anything is stored.
 
 ## How long things are kept
 

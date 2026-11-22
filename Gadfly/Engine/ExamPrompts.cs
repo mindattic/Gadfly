@@ -15,14 +15,18 @@ public static partial class ExamPrompts
     /// 4: objective-driven examination: the question prompt names the objective and all eight strategies,
     /// plus the Learning Mode and response-analysis prompts (GAD-T89..T93, merged from ExamPromptsV3 in GAD-T120).
     /// 5: adaptive Socratic probing: the question prompt carries how each recent answer was delivered (delay, hesitations,
-    /// strain against the student's baseline, hedging) and presses harder where understanding looks shaky (GAD-T233).
+    /// strain against the student's baseline, hedging) and presses harder where understanding looks shaky (GAD-T233;
+    /// delivery replaced by content in 8).
     /// 6: a Contradiction answer is judged on how well the student resolves the conflict, never on which claim they keep;
     /// which claim is wrong is decided from the rubric and source alone; and the no-hint rule, the leak guard and the
     /// analysis's revealed-answer flag also catch a question whose form presupposes an answer point (GAD-T266).
     /// 7: only Apply, a situation new to the student, probes transfer: ScenarioVariation is named extrapolation, each Apply
     /// question is told how its situation must differ from the source (its transfer label), and the analysis gives
-    /// knowledge-transfer only for an Apply question (GAD-T268).</summary>
-    public const int Version = 7;
+    /// knowledge-transfer only for an Apply question (GAD-T268).
+    /// 8: probing pressure comes from what the answers said and how the judges read them (hedging, vague wording, no reason
+    /// or example, a score not yet convincing, evidence against, unclear meaning, recitation), never from the voice, the wait
+    /// before answering or hesitations, which no longer reach the prompt (GAD-T258).</summary>
+    public const int Version = 8;
 
     /// <summary>Delimits text the student wrote or said; <see cref="Student"/> strips forged copies of these tags from the text it wraps.</summary>
     public const string StudentOpen = "<student_text>", StudentClose = "</student_text>";
@@ -88,10 +92,11 @@ public static partial class ExamPrompts
         - Never let the form of the question presuppose an answer the student has not given: "what makes X
           happen?" presupposes an outside cause, "why does X raise Y?" presupposes that it does. Ask about
           what the student said ("what happens to Y when X changes, and why?") instead.
-        - Adapt to how the answers were delivered (listed below): where understanding looks shaky, probe
+        - Adapt to what the recent answers said (listed below): where understanding looks shaky, probe
           harder within the move (ask for a concrete example, challenge an assumption, ask why again, or pose
-          a counterfactual) until it is clear whether the concept is understood. Delivery is only a reason to
-          press, never evidence of understanding, and never mention it: no remark on pauses, nerves or tone.
+          a counterfactual) until it is clear whether the concept is understood. These cues are only a reason
+          to press, never a verdict on the student, and never mention them: no remark on hedging, vagueness,
+          scores, nerves or tone.
         - Output only the question text.
 
         {{ExamPrompts.StudentTextRule}}
@@ -103,7 +108,7 @@ public static partial class ExamPrompts
         Difficulty (1 gentle - 5 rigorous): {difficulty}
         Claims to confront (Contradiction only): {target_claims}
 
-        How the recent answers were delivered (against the student's own earlier answers):
+        What the recent answers showed (from their words and the judges' reading of them):
         {delivery}
         Probing: {probing}
 
