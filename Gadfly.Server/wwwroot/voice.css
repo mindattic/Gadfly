@@ -8,7 +8,8 @@
    sized by its own width and aspect ratio only, never by its neighbours: the transcript (to her left on a wide screen, below her
    otherwise) scrolls inside its own panel and takes no part in the height of the row, and the answer panel, controls and notices
    sit beside or below her. The corner keeps the self-view away from her face, where the eye-contact check looks for the student's
-   gaze (examiner-gaze.js faceAnchorY, measured on the stage element itself, so calibration follows the stage wherever it is). */
+   gaze (examiner-gaze.js faceShare: the point between her eyes as rendered, 3D or portrait, so calibration follows her wherever
+   she is drawn; GAD-T509). */
 .voice-interview {
     --stage-max-h: 70vh;
     display: grid; gap: .75rem; align-items: start;

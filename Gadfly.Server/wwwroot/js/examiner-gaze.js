@@ -104,8 +104,15 @@ export const GAZE = Object.freeze({
     maxPxPerCm: 200,
     /** The corner dots sit this share of the page in from each edge. */
     calibEdge: 0.08,
-    /** The examiner's face is this share of her stage's height down from its top: the anchor dot and the drift reference. */
+    /**
+     * Where the examiner's eyes are when they can't be measured (no avatar yet, an unknown portrait): this share of her stage's
+     * height down from its top, centred. Normally the point between her eyes is taken from what is drawn (GAD-T509, faceShare).
+     */
     faceAnchorY: 0.4,
+    /** The point between her eyes is re-measured this often (and at once when the stage changes size)... */
+    faceRefreshMs: 400,
+    /** ...and eased toward by this share each time, so the 3D head's small idle movements don't jitter the target. */
+    faceSmoothing: 0.5,
     /**
      * A fit whose leave-one-out accuracy is worse than this (degrees) is poor: it is tried once more (calibAttempts in all, with
      * calibRetryPauseMs between), then not used. Webcam gaze is good to about 4 degrees at best (Papoutsaki et al. 2016).
@@ -432,9 +439,132 @@ function stageRect() {
     return r && r.width > 0 && r.height > 0 ? r : null;
 }
 
-/** Where the examiner's face is on the page (CSS px), from her stage's rectangle. */
-function faceOf(r) {
-    return r ? { x: r.left + r.width / 2, y: r.top + r.height * GAZE.faceAnchorY } : null;
+/**
+ * Where the examiner's eyes are on the page (CSS px): the point between them as drawn right now (faceShare), placed on her stage's
+ * rectangle. This is the anchor dot, the first look's reference and the drift reference.
+ */
+function faceOf(g, r) {
+    if (!r) return null;
+    const f = faceShare(g, r);
+    return { x: r.left + r.width * f.x, y: r.top + r.height * f.y };
+}
+
+/**
+ * The point between the examiner's eyes as shares of her stage (0..1 each way), measured from what is actually rendered
+ * (GAD-T509): the 3D examiner's eye bones projected through her three.js camera, or the portrait's known eye point mapped through
+ * its object-fit. Cached for GAZE.faceRefreshMs (a resize re-measures at once) and eased by GAZE.faceSmoothing; the old fixed
+ * fraction when neither can be measured. Kept as shares so scrolling moves it with the stage for free.
+ */
+function faceShare(g, r) {
+    const now = performance.now();
+    const c = g && g.faceCache;
+    const same = !!c && Math.abs(c.w - r.width) < 1 && Math.abs(c.h - r.height) < 1;
+    if (same && now - c.at < GAZE.faceRefreshMs) return c;
+    const m = measureFace(r) || { x: 0.5, y: GAZE.faceAnchorY, source: "stage" };
+    // Eased only within one source at one size: a swap (portrait to 3D) or a resize takes the new point at once.
+    const ease = same && c.source === m.source;
+    const k = GAZE.faceSmoothing;
+    const next = {
+        x: ease ? c.x + (m.x - c.x) * k : m.x,
+        y: ease ? c.y + (m.y - c.y) * k : m.y,
+        source: m.source, at: now, w: r.width, h: r.height,
+    };
+    if (g) g.faceCache = next;
+    return next;
+}
+
+/** The examiner the student sees: the one in charge (voice-room.js marks it), not a 3D model still loading out of sight. */
+function shownAvatar() {
+    const stage = document.querySelector("[data-voice-stage]");
+    if (!stage) return null;
+    const all = Array.from(stage.querySelectorAll("ma-avatar"));
+    return all.find((a) => a.gadflyRole === "examiner") || all.find((a) => a.gadflyRole !== "loading") || all[0] || null;
+}
+
+/** The point between her eyes as shares of the stage `r`, or null when it can't be measured (it is then the fixed fraction). */
+function measureFace(r) {
+    try {
+        const a = shownAvatar();
+        if (!a) return null;
+        const p = a.mode === "3d" ? eyes3d(a) : a.mode === "portrait" ? eyesPortrait(a) : null;
+        if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return null;
+        const x = (p.x - r.left) / r.width, y = (p.y - r.top) / r.height;
+        // Off her stage (a camera mid-reframe, a model not yet posed) is no measurement, and neither is the student's own inset:
+        // the eye-contact target is never the self-view in the stage's corner.
+        if (x < 0 || x > 1 || y < 0 || y > 1 || inSelfView(p.x, p.y)) return null;
+        return { x, y, source: p.source };
+    } catch { return null; }
+}
+
+/** The 3D examiner: the midpoint of her eye bones (TalkingHead's own LeftEye/RightEye) through her camera, in page px. */
+function eyes3d(a) {
+    const h = a.head;
+    const L = h && h.objectLeftEye, R = h && h.objectRightEye, cam = h && h.camera, node = h && h.nodeAvatar;
+    if (!L || !R || !cam || !node || !L.matrixWorld || !R.matrixWorld) return null;
+    const V = L.position.constructor;   // three.js Vector3, without importing three here
+    const p = new V().setFromMatrixPosition(L.matrixWorld).add(new V().setFromMatrixPosition(R.matrixWorld)).multiplyScalar(0.5);
+    p.project(cam);
+    if (!(p.z > -1 && p.z < 1)) return null;   // behind the camera or beyond its far plane
+    const nr = node.getBoundingClientRect();
+    if (!nr.width || !nr.height) return null;
+    return { x: nr.left + ((p.x + 1) / 2) * nr.width, y: nr.top + ((1 - p.y) / 2) * nr.height, source: "3d" };
+}
+
+/**
+ * The point between the examiner's eyes on each known portrait, as shares of the image, measured once from the asset: the iris
+ * centres of /assets/portrait.png (480 x 600) are near (230, 328) and (350, 338). A portrait not listed has no eye point.
+ */
+const PORTRAIT_EYES = Object.freeze({ "/assets/portrait.png": Object.freeze({ x: 0.6, y: 0.555 }) });
+
+function portraitEyesFor(src) {
+    if (!src) return null;
+    let path = "";
+    try { path = new URL(src, document.baseURI).pathname; } catch { return null; }
+    const key = Object.keys(PORTRAIT_EYES).find((k) => path === k || path.endsWith(k));
+    return key ? PORTRAIT_EYES[key] : null;
+}
+
+/** The portrait (stand-in or fallback): its known eye point mapped through the image's object-fit and object-position, in page px. */
+function eyesPortrait(a) {
+    const img = a.img || (a.shadowRoot && a.shadowRoot.querySelector(".portrait"));
+    if (!img || !img.naturalWidth || !img.naturalHeight) return null;
+    const eyes = portraitEyesFor(img.currentSrc || img.src || a.getAttribute("portrait"));
+    if (!eyes) return null;
+    const box = img.getBoundingClientRect();
+    if (!box.width || !box.height) return null;
+    const st = getComputedStyle(img);
+    const w = img.naturalWidth, h = img.naturalHeight;
+    let sx, sy;
+    switch (st.objectFit) {
+        case "contain": sx = sy = Math.min(box.width / w, box.height / h); break;
+        case "cover": sx = sy = Math.max(box.width / w, box.height / h); break;
+        case "none": sx = sy = 1; break;
+        case "scale-down": sx = sy = Math.min(1, box.width / w, box.height / h); break;
+        default: sx = box.width / w; sy = box.height / h;   // fill
+    }
+    const [px, py] = objectPosition(st.objectPosition);
+    return { x: box.left + px(box.width - w * sx) + eyes.x * w * sx, y: box.top + py(box.height - h * sy) + eyes.y * h * sy, source: "portrait" };
+}
+
+/** object-position as two functions of the free space (computed style gives lengths or percentages; centred otherwise). */
+function objectPosition(value) {
+    const centre = (free) => free / 2;
+    const one = (t) => {
+        const v = parseFloat(t);
+        if (!t || !Number.isFinite(v)) return centre;
+        if (t.endsWith("%")) return (free) => (free * v) / 100;
+        if (t.endsWith("px")) return () => v;
+        return centre;
+    };
+    const parts = String(value || "").trim().split(/\s+/);
+    return [one(parts[0]), one(parts[1])];
+}
+
+/** Whether a page point lies on the student's own camera inset (the self-view in the stage's corner). */
+function inSelfView(x, y) {
+    const v = document.querySelector("[data-voice-self]");
+    const box = v && (v.closest(".voice-self") || v).getBoundingClientRect();
+    return !!box && box.width > 0 && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
 }
 
 /** How much of the stage is inside the window (0..1). */
@@ -519,7 +649,7 @@ function finishAnchor(g) {
     g.mode = "head";
     g.cal = null;
     if (!g.fit || !g.calib || !a || a.pts.length < GAZE.anchorMinSamples) return;
-    const face = faceOf(stageRect());
+    const face = faceOf(g, stageRect());
     if (!face) return;
     const dist = median(a.pts.map((p) => p.dist));
     const p = toPage(g.fit, median(a.pts.map((q) => q.x)), median(a.pts.map((q) => q.y)));
@@ -550,7 +680,7 @@ async function setupDots(g) {
     let r = null;
     try {
         r = await runSetup(g.lib, g.core, {
-            targets: () => dotTargets(faceOf(stageRect())),
+            targets: () => dotTargets(faceOf(g, stageRect())),
             captions: [TEXT.setupCaption, TEXT.setupRetry],
             control,
         });
@@ -617,7 +747,7 @@ function classify(g, p, t) {
     // Drift: while the examiner speaks, people look at her. A steady small offset from her face then is the fit's, not theirs.
     const a = g.avatar;
     if (!g.answering && a && a.dataset && a.dataset.state === "speaking") {
-        const face = faceOf(r);
+        const face = faceOf(g, r);
         const ox = pt.x - face.x, oy = pt.y - face.y;
         if (pxToDeg(fit, ox, oy, p.dist) <= GAZE.driftWindowDeg) {
             g.drift.push({ x: ox, y: oy, d: p.dist });

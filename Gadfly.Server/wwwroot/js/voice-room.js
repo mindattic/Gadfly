@@ -339,7 +339,8 @@ function createAvatar(s, src) {
     if (src) useExaminerLook(el);   // the examiner's luminous blue look, once her 3D model is up (GAD-T503)
     if (s.cfg.portraitUrl) el.setAttribute("portrait", s.cfg.portraitUrl);
     el.setAttribute("view", "upper");
-    // Centred in the 16:9 stage (GAD-T501): her face is the middle of the screen, where the eye-contact check anchors (faceAnchorY).
+    // Centred in the 16:9 stage (GAD-T501). The eye-contact check reads where her eyes are actually drawn (examiner-gaze.js
+    // faceShare, GAD-T509), so a framing change here moves its target with her.
     el.setAttribute("camera-x", "0");
     el.setAttribute("aria-hidden", "true");
     el.addEventListener("fallback", (e) => {
