@@ -13,7 +13,28 @@ const HEARTBEAT_MS = 15000;   // asks whether the exam is still running; the cam
 const PARTIAL_MS = 60000;       // an episode still going is reported about once a minute (D21, GAD-T171)
 const PARTIAL_TICK_MS = 5000;   // how often to look for an episode that is due an update
 
+/** What this checker asks of the camera (GAD-T305): enough for faces and head direction, light enough for a slow device. */
+const CAMERA = Object.freeze({ width: 640, height: 480, frameRate: 15 });
+/**
+ * The "looking off-screen" limits follow the student's real screen (GAD-T305): its size in CSS px (taken as 1/96 inch) seen from
+ * viewingDistanceCm, plus slackDeg for the estimate's error, kept within these bounds (degrees either side). A large monitor's
+ * corner is then not "off-screen"; the library's default (18 by 11 degrees) is a laptop's.
+ */
+const SCREEN = Object.freeze({ viewingDistanceCm: 60, slackDeg: 4, minHalfWidthDeg: 14, maxHalfWidthDeg: 30, minHalfHeightDeg: 9, maxHalfHeightDeg: 20 });
+
 let state = null;
+
+function screenLimits(lib) {
+    const w = window.screen && window.screen.width, h = window.screen && window.screen.height;
+    if (!(w > 0 && h > 0) || typeof lib.regionLimitsFor !== "function") return {};
+    const cm = (px) => (px / 96) * 2.54;
+    const l = lib.regionLimitsFor(cm(w), cm(h), SCREEN.viewingDistanceCm, SCREEN.slackDeg);
+    const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+    return {
+        halfWidthDeg: clamp(l.halfWidthDeg, SCREEN.minHalfWidthDeg, SCREEN.maxHalfWidthDeg),
+        halfHeightDeg: clamp(l.halfHeightDeg, SCREEN.minHalfHeightDeg, SCREEN.maxHalfHeightDeg),
+    };
+}
 
 /** A stable id for one episode: its type and start, so the server keeps ONE record that grows. */
 function episodeId(type, startMs) { return type + "@" + Math.round(startMs); }
@@ -63,13 +84,15 @@ export async function start(dotnet, video, options) {
         }
         await dotnet.invokeMethodAsync("OnStatus", "starting", null);
         const lib = await import(new URL("webcam.browser.js", base).href);
+        // GAD-T305: presence and the coarse screen check need neither 720p nor 30 frames a second. The interview room's eye-contact
+        // check runs its own face model beside this one, so this one asks for less and leaves a slow device room for both.
         s.core = new lib.WebcamCore({
-            numFaces: 2, measureLight: true, video,
+            numFaces: 2, measureLight: true, video, width: CAMERA.width, height: CAMERA.height, frameRate: CAMERA.frameRate,
             wasmBaseUrl: new URL(".", base).href.replace(/\/$/, ""),
             modelUrl: new URL("face_landmarker.bin", base).href,
         });
         // Quality hints (lighting, framing) are for the student only: includeQuality stays off, so they are never sent.
-        s.monitor = new lib.IntegrityMonitor({ includeQuality: false, includeAnnotations: true });
+        s.monitor = new lib.IntegrityMonitor({ includeQuality: false, includeAnnotations: true, headpose: screenLimits(lib) });
         // Episodes that have started and not ended (the library's "begin" hook). Each gets a partial note every PARTIAL_MS.
         s.open = new Map();
         s.monitor.on("begin", (b) => {

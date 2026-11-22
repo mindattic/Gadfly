@@ -272,7 +272,7 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
                 OrganizationId = organizationId, SessionId = sessionId, Source = Source, Type = c.Type,
                 StartedAt = c.Start, EndedAt = c.End, TurnId = turn,
                 Confidence = c.Confidence, Severity = c.Severity, Summary = c.Summary,
-                DataJson = c.EpisodeKey is { } key ? EpisodeData.Json(key, c.Ongoing) : null,
+                DataJson = c.EpisodeKey is { } key ? EpisodeData.Json(key, c.Ongoing) : c.Data,
             };
             db.IntegrityEvents.Add(row);
             if (c.EpisodeKey is { } rk) byKey[rk] = row;
@@ -318,6 +318,7 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         row.Confidence = c.Confidence;
         row.Severity = c.Severity;
         if (key is not null) row.DataJson = EpisodeData.Json(key, false);
+        else if (c.Data is not null) row.DataJson = c.Data;
         return true;
     }
 
@@ -400,17 +401,17 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         };
     }
 
-    /// <summary>The fade episode's peak (GAD-T240): the browser sends only the code "peak:NN", NN a whole percent 0..100.</summary>
-    public static int? FadePeakOf(string? summary)
-    {
-        var s = ReasonOf(summary);
-        return s.StartsWith("peak:", StringComparison.Ordinal) && int.TryParse(s.AsSpan(5), System.Globalization.NumberStyles.None,
+    /// <summary>
+    /// The fade episode's peak (GAD-T240): the browser sends only the code "peak:NN", NN a whole percent 0..100 (since GAD-T305
+    /// among other codes separated by ';').
+    /// </summary>
+    public static int? FadePeakOf(string? summary) =>
+        int.TryParse(GazeQuality.Value(summary, "peak"), System.Globalization.NumberStyles.None,
             System.Globalization.CultureInfo.InvariantCulture, out var n) ? Math.Clamp(n, 0, 100) : null;
-    }
 
     /// <summary>An event after validation: allow-listed type, bounded text and times, server-decided confidence and severity.</summary>
     public sealed record Clean(string Type, DateTimeOffset Start, DateTimeOffset? End, double Confidence, IntegritySeverity Severity, string Summary,
-        string? EpisodeKey = null, bool Ongoing = false)
+        string? EpisodeKey = null, bool Ongoing = false, string? Data = null)
     {
         public static Clean? From(HubIntegrityEvent? e, DateTimeOffset windowStart, DateTimeOffset windowEnd)
         {
@@ -446,10 +447,23 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
                 ? UnavailableReasons.GetValueOrDefault(ReasonOf(e.Summary), UnavailableReasons["error"])
                 : Text(e.Summary, MaxSummary);
             if (ongoing) summary = PartialSummary(type, span);
-            if (ExaminerTypes.Contains(type)) summary = ExaminerSummary(type, span, ReasonOf(e.Summary) == "remarked", FadePeakOf(e.Summary));
+            var severity = SeverityOf(type, span);
+            string? data = null;
+            if (ExaminerTypes.Contains(type))
+            {
+                summary = ExaminerSummary(type, span, GazeQuality.Has(e.Summary, "remarked"), FadePeakOf(e.Summary));
+                // The session's eye-tracking quality (GAD-T305): a sentence beside the note, the numbers in DataJson. With poor
+                // tracking a look-away or reading note is kept at Info: it says too little to list for review.
+                if (GazeQuality.Parse(e.Summary) is { } q)
+                {
+                    summary += q.Sentence();
+                    data = q.Json();
+                    if (q.Poor && type is "examiner-look-away" or "examiner-reading") severity = IntegritySeverity.Info;
+                }
+            }
             if (summary.Length == 0) summary = IntegrityExplanationsFallback(type);
             var key = PartialTypes.Contains(type) ? KeyOf(type, sentStart, e.EpisodeId) : null;
-            return new Clean(type, start, type == UnavailableType ? null : end, confidence, SeverityOf(type, span), summary, key, ongoing);
+            return new Clean(type, start, type == UnavailableType ? null : end, confidence, severity, summary, key, ongoing, data);
         }
     }
 

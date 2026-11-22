@@ -122,7 +122,7 @@ async function openCamera(m) {
     const started = performance.now();
     const wait = () => {
         if (M !== m) return;
-        if (video.videoWidth > 0 && video.readyState >= 2) report(m, "camera", "ok");
+        if (video.videoWidth > 0 && video.readyState >= 2) { report(m, "camera", "ok"); void startGaze(m); }
         else if (performance.now() - started > 8000) report(m, "camera", "error");
         else setTimeout(wait, 200);
     };
@@ -134,11 +134,29 @@ function watch(m, stream, device) {
     stream.getTracks().forEach((t) => t.addEventListener("ended", () => { if (M === m) report(m, device, "lost"); }));
 }
 
+/**
+ * The eye-tracking setup check (GAD-T305), in the page's [data-gaze-quality] panel when it has one: lighting, camera angle,
+ * distance, how steadily the eyes can be followed, and the five-dot calibration the exam room reuses. Advice only: it never
+ * blocks Begin exam, sends nothing, and a failure to load just leaves the panel empty.
+ */
+async function startGaze(m) {
+    const panel = document.querySelector("[data-gaze-quality]");
+    if (!panel || !m.video || m.gaze) return;
+    m.gaze = true;
+    try {
+        const gq = await import("./gaze-quality.js");
+        if (M !== m) return;
+        m.gaze = gq;
+        void gq.start(m.video, panel);
+    } catch { /* optional: the exam carries on without it */ }
+}
+
 /** Releases the microphone and the camera. */
 export function stopMedia() {
     const m = M;
     M = null;
     if (!m) return;
+    try { if (m.gaze && m.gaze.stop) m.gaze.stop(); } catch { }
     if (m.timer) clearInterval(m.timer);
     if (m.onGesture) {
         document.removeEventListener("pointerdown", m.onGesture);

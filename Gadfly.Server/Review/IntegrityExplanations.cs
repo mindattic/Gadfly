@@ -33,7 +33,7 @@ public static class IntegrityExplanations
         ["reading-pattern"] = new("Reading pattern off-screen",
             "Repeated sweeps and returns of the eyes toward one off-screen spot, the movement of reading text placed there. It can have other explanations; check it against the answers given. Evidence to weigh, never proof."),
         ["examiner-look-away"] = new("Looked away from the examiner while answering",
-            "In the voice interview the student's head and eyes turned away from the examiner's face for a while during an answer (the summary says how long, and whether the examiner asked out loud for eye contact). Looking away is often thinking; read it against the answer. Low confidence: it comes from head and eye direction, not an exact point on the screen."),
+            "In the voice interview the student's head and eyes turned away from the examiner's face for a while during an answer (the summary says how long, and whether the examiner asked out loud for eye contact). Looking away is often thinking; read it against the answer. Low confidence: webcam gaze is good to a few degrees at best, never an exact point on the screen. The summary also gives the session's eye-tracking quality (good, fair or poor, and whether it was set up to the student's screen or used head direction only); weigh a fair or poor note even less."),
         ["examiner-reading"] = new("Reading-like eyes while answering",
             "During an answer the eyes swept and jumped back away from the examiner, the movement of reading. The student may have been re-reading the question or transcript on screen; check it against the answer. Evidence to weigh, never proof."),
         ["examiner-face-absent"] = new("Face out of view while answering",

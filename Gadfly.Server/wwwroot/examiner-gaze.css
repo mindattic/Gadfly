@@ -4,7 +4,8 @@
 .examiner-gaze-dot { width: .6rem; height: .6rem; border-radius: 50%; background: var(--line); flex: none; }
 .examiner-gaze[data-state="on"] { color: var(--ink); }
 .examiner-gaze[data-state="on"] .examiner-gaze-dot { background: var(--ok); }
-.examiner-gaze[data-state="calibrating"] .examiner-gaze-dot { background: var(--accent); }
+.examiner-gaze:is([data-state="calibrating"], [data-state="calibrating-simple"], [data-state="setup"]) .examiner-gaze-dot { background: var(--accent); }
+.examiner-gaze:is([data-state="calibrating"], [data-state="calibrating-simple"], [data-state="setup"]) { color: var(--ink); }
 .examiner-gaze[data-state="accommodated"] { color: var(--ink); }
 .examiner-gaze[data-state="accommodated"] .examiner-gaze-dot { background: var(--ok); }
 .examiner-gaze:is([data-state="away"], [data-state="reading"], [data-state="no-face"], [data-state="two-faces"]) { color: var(--error); border-color: var(--error); }
@@ -26,3 +27,33 @@
 @media (prefers-reduced-motion: reduce) { .examiner-fade { transition: none; } }
 
 .examiner-gaze-note { flex-basis: 100%; margin: .25rem 0 0; font-size: .85em; opacity: .8; }
+
+/* The five-dot eye-tracking setup (GAD-T305, js/gaze-quality.js): a dot to follow over a light dim of the whole page; the examiner
+   stays visible behind it. The caption moves (data-alt) when a dot would sit under it. */
+.gaze-calib { position: fixed; inset: 0; z-index: 1100; background: rgba(10, 12, 16, .35); pointer-events: none; }
+.gaze-calib-dot {
+    position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; box-sizing: border-box;
+    border: 3px solid #7fd4ff; background: rgba(127, 212, 255, .18); box-shadow: 0 0 0 2px rgba(0, 0, 0, .55);
+    transition: left .3s ease, top .3s ease, transform .9s linear;
+}
+.gaze-calib-dot::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #fff; }
+.gaze-calib-dot[data-phase="collect"] { border-color: #fff; transform: scale(.65); }
+.gaze-calib-bar {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: max-content; max-width: min(34rem, calc(100% - 2rem));
+    display: flex; flex-wrap: wrap; gap: .5rem .9rem; align-items: center; padding: .6rem .9rem; border-radius: var(--radius, 8px);
+    background: rgba(16, 21, 29, .92); color: #f3f4f6; font-size: .95rem; pointer-events: auto;
+}
+.gaze-calib-bar[data-alt="1"] { top: 28%; }
+.gaze-calib-bar p { margin: 0; flex: 1 1 14rem; }
+.gaze-calib-bar button { flex: none; }
+@media (prefers-reduced-motion: reduce) {
+    .gaze-calib-dot, .gaze-calib-dot[data-phase="collect"] { transition: none; transform: none; }
+}
+
+/* The get-ready page's eye-tracking panel (GAD-T305): filled by js/gaze-quality.js, styled like the system checks around it. */
+.gaze-quality:empty { display: none; }
+.gaze-quality { margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--line); display: grid; gap: .5rem; }
+.gaze-quality-title { margin: 0; font-size: 1rem; }
+.gaze-quality .hint { margin: 0; }
+.gaze-quality-actions { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
+.gaze-quality-result { margin: 0; }
