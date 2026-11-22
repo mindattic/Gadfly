@@ -262,7 +262,7 @@ else
             self ??= DotNetObjectReference.Create(this);
             await module!.InvokeVoidAsync("startMedia", self, preview, meter);
         }
-        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException)
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
         {
             microphone = camera = "error";
             StateHasChanged();
@@ -282,20 +282,36 @@ else
 
     private async Task RunChecksAsync()
     {
+        if (checking) return;
         checking = true;
         var list = new List<Check>();
         try
         {
             var reopen = module is not null && mediaStarted && (microphone != "ok" || camera != "ok");
-            module ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/system-check.js");
+            // The import can fail or hang when the circuit isn't ready yet (GAD-T288): bound it and retry once.
+            if (module is null)
+            {
+                for (var attempt = 0; module is null; attempt++)
+                {
+                    try
+                    {
+                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                        module = await JS.InvokeAsync<IJSObjectReference>("import", cts.Token, "./js/system-check.js");
+                    }
+                    catch (Exception ex) when (attempt == 0 && ex is JSException or TaskCanceledException or InvalidOperationException)
+                    {
+                        await Task.Delay(500);
+                    }
+                }
+            }
             // "Check again" reopens a microphone or camera that failed (the click also lets the page's audio run).
             if (reopen) await StartMediaAsync();
-            var r = await module.InvokeAsync<BrowserReport>("check");
+            var r = await InvokeBoundedAsync<BrowserReport>("check");
             clientInfo = r.UserAgent;
 
             // Round trip through the live connection the exam uses.
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            for (var i = 0; i < 3; i++) await module.InvokeAsync<bool>("ping");
+            for (var i = 0; i < 3; i++) await InvokeBoundedAsync<bool>("ping");
             var ms = sw.Elapsed.TotalMilliseconds / 3;
 
             list.Add(r.WebSocket
@@ -328,13 +344,31 @@ else
             list.Add(new Check("Browser", CheckStatus.Fail, "the check couldn't run",
                 $"Reload the page; if it keeps failing, try another browser. ({ex.Message})"));
         }
-        catch (TaskCanceledException)
+        catch (JSDisconnectedException)
+        {
+            list.Add(new Check("Connection", CheckStatus.Fail, "the connection to the server was lost",
+                "Reload the page, then check again."));
+        }
+        catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
         {
             list.Add(new Check("Connection", CheckStatus.Fail, "no response from your browser",
                 "Reload the page and check again; if it keeps failing, check your internet connection."));
         }
+        catch (Exception ex)
+        {
+            // Never leave the page on "Checking your browser…": any other failure becomes a visible result with a way to retry.
+            list.Add(new Check("Browser", CheckStatus.Fail, "the check couldn't run",
+                $"Press \"Check again\"; if it keeps failing, reload the page or try another browser. ({ex.GetType().Name})"));
+        }
         checks = list;
         checking = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<T> InvokeBoundedAsync<T>(string identifier)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        return await module!.InvokeAsync<T>(identifier, cts.Token);
     }
 
     private static string Mark(CheckStatus s) => s switch
