@@ -11,7 +11,7 @@
 
 <div class="review-filters">
     <label>Exam
-        <select @bind="ExamFilter" @bind:after="LoadAsync">
+        <select @bind="ExamFilter" @bind:after="ApplyFiltersAsync">
             <option value="">All exams</option>
             @foreach (var e in exams)
             {
@@ -19,8 +19,8 @@
             }
         </select>
     </label>
-    <label class="check"><input type="checkbox" @bind="needsGrade" @bind:after="LoadAsync" /> Needs a grade</label>
-    <label class="check"><input type="checkbox" @bind="needsReview" @bind:after="LoadAsync" /> Judges disagreed</label>
+    <label class="check"><input type="checkbox" @bind="needsGrade" @bind:after="ApplyFiltersAsync" /> Needs a grade</label>
+    <label class="check"><input type="checkbox" @bind="needsReview" @bind:after="ApplyFiltersAsync" /> Judges disagreed</label>
 </div>
 
 @if (rows is null)
@@ -51,7 +51,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var r in rows)
+            @foreach (var r in PagedRows)
             {
                 <tr>
                     <td><a href="review/@r.SessionId">@r.StudentName</a></td>
@@ -92,14 +92,30 @@ else
             }
         </tbody>
     </table>
+    @if (TotalPages > 1)
+    {
+        <nav class="pager" aria-label="Pages">
+            <button type="button" class="link" disabled="@(currentPage <= 1)" @onclick="() => GoToPage(currentPage - 1)">← Previous</button>
+            <span>Page @currentPage of @TotalPages</span>
+            <button type="button" class="link" disabled="@(currentPage >= TotalPages)" @onclick="() => GoToPage(currentPage + 1)">Next →</button>
+        </nav>
+    }
     <p class="hint">@rows.Count session@(rows.Count == 1 ? "" : "s").</p>
 }
 
 @code {
+    /// <summary>Rows per page (GAD-T390): the list can otherwise render hundreds of rows in one table.</summary>
+    private const int RowsPerPage = 50;
+
     private IReadOnlyList<(Guid Id, string Title)> exams = [];
     private IReadOnlyList<ReviewListRow>? rows;
     private string ExamFilter { get; set; } = "";
     private bool needsGrade, needsReview;
+    // Not named with a "page" prefix: a bare "@page..." reference in the markup above is parsed as the @page directive.
+    private int currentPage = 1;
+
+    private int TotalPages => rows is null or { Count: 0 } ? 1 : (rows.Count + RowsPerPage - 1) / RowsPerPage;
+    private IReadOnlyList<ReviewListRow> PagedRows => rows is null ? [] : rows.Skip((currentPage - 1) * RowsPerPage).Take(RowsPerPage).ToList();
 
     /// <summary>
     /// Each query runs in its own scope (never the circuit's shared DbContext, which allows one operation at a time), and only the
@@ -116,12 +132,23 @@ else
         await LoadAsync();
     }
 
+    /// <summary>A filter changed: back to page 1, since the rows it used to show may no longer match.</summary>
+    private Task ApplyFiltersAsync()
+    {
+        currentPage = 1;
+        return LoadAsync();
+    }
+
+    private void GoToPage(int n) => currentPage = Math.Clamp(n, 1, TotalPages);
+
     private async Task LoadAsync()
     {
         var mine = ++loadSequence;
         var filter = new ReviewListFilter(Guid.TryParse(ExamFilter, out var id) ? id : null, needsGrade, needsReview);
         var result = await InScopeAsync(s => s.ListAsync(filter));
-        if (mine == loadSequence) rows = result;
+        if (mine != loadSequence) return;
+        rows = result;
+        currentPage = Math.Clamp(currentPage, 1, TotalPages);
     }
 
     private static string Pct(double? v) => v is { } x ? $"{x * 100:0}%" : "";

@@ -34,6 +34,8 @@
 .gr-hidden { padding: .75rem 1rem; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); }
 .gr-report .gr-objective { break-inside: avoid; }
 .gr-table-wrap { overflow-x: auto; }
+/* The queue's pager (GAD-T390), same pattern as the admin-people pages' .pager. */
+.pager { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin: .5rem 0 1.5rem; font-size: .92rem; }
 @media (max-width: 640px) {
     .gr-summary { grid-template-columns: 1fr 1fr; }
 }
