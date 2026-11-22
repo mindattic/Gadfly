@@ -136,12 +136,12 @@ copyleft (GPL, LGPL, AGPL, MPL, SSPL) or non-commercial licence was found anywhe
 |---|---|---|---|
 | Avatar model `assets/avatars/mpfb.glb` and `portrait.png` | wwwroot, MindAttic.Avatar | CC0 1.0 (the TalkingHead v1.8.2 sample made with MPFB; `assets/avatars/LICENSE.md` records the source and hash) | **Safe.** The other TalkingHead sample avatars are non-commercial and must never be added (the notice says so) |
 | Page-turn sounds `sounds/page-turn-1.mp3`, `page-turn-2.mp3` | wwwroot | CC0 1.0 (Freesound 177867 by mmaruska and 511402 by KikeVilaplana; `sounds/NOTICE.md`) | **Safe** |
-| Webcam WASM runtime `webcam/vision_wasm_internal.*` and the bundled `@mediapipe/tasks-vision` 1.2.3 | wwwroot, served to the browser | Apache-2.0 (Google) | **Needs a notice.** Apache-2.0 §4 asks for a copy of the licence and any NOTICE with each redistribution; Gadfly serves these files to every browser, which is redistribution. Only `webcam/README.txt` names the licence |
-| Face model `webcam/face_landmarker.bin` (MediaPipe `face_landmarker.task`, float16 v1) | wwwroot | Apache-2.0 per MediaPipe; no model card kept locally | **Needs a notice and the model card** (the card states intended uses and known limits, which Art. 13 instructions should reflect) |
+| Webcam WASM runtime `webcam/vision_wasm_internal.*` and the bundled `@mediapipe/tasks-vision` 1.2.3 | wwwroot, served to the browser | Apache-2.0 (Google) | **Done (GAD-T465).** Apache-2.0 §4 asks for a copy of the licence and any NOTICE with each redistribution; Gadfly serves these files to every browser, which is redistribution. `wwwroot/THIRD-PARTY-NOTICES.txt` carries the full licence text (the npm package ships no NOTICE file) |
+| Face model `webcam/face_landmarker.bin` (MediaPipe `face_landmarker.task`, float16 v1) | wwwroot | Apache-2.0 per MediaPipe; no model card kept locally | Notice **done (GAD-T465)**; **the model card is still needed** (the card states intended uses and known limits, which Art. 13 instructions should reflect) |
 | MediaPipe usage-logging call in the bundle (`odml.pa.googleapis.com`) | `webcam.browser.js` | — | **Check.** README.txt says the browser contacts no third party; whether this call ever fires was not verified |
 | three.js r186, fflate 0.8.2, meshoptimizer decoder 1.1 | wwwroot/lib/voice | MIT (LICENSE and headers present) | Safe |
 | @met4citizen/talkinghead 1.8.2 | wwwroot/lib/voice | MIT (LICENSE present) | Safe |
-| @microsoft/signalr 11.0.0 browser client | wwwroot/lib/voice/signalr | MIT upstream | Safe; add its licence line to the notices file (none ships with the file) |
+| @microsoft/signalr 11.0.0 browser client | wwwroot/lib/voice/signalr | MIT (.NET Foundation; LICENSE.txt in the npm package) | Safe; licence in the notices file (GAD-T465) |
 | MindAttic.Avatar, MindAttic.SpeechRecognition, MindAttic.Legion, MindAttic.Vault, MindAttic.Log | NuGet | MIT (MindAttic) | Safe (MindAttic's own) |
 | MindAttic.Webcam, MindAttic.Authentication, Tutor.Ingestion | NuGet / bundle | **No licence declared** (no LICENSE file; the last two have none in the package either) | MindAttic's own code, so no third-party risk, but each should declare its licence; MindAttic.Webcam must carry the MediaPipe notice it bundles |
 | Microsoft ASP.NET Core, EF Core, Azure SDKs, System.*, IdentityModel, MailKit/MimeKit, BouncyCastle, OpenXml, Newtonsoft.Json, AngleSharp, Argon2, Humanizer and the rest | NuGet (server) | MIT | Safe |
@@ -157,8 +157,10 @@ and three .csproj files declare MIT. **Open, owner decision:** whether the produ
 source at all, since a sellable hosted product often is not. Either add a LICENSE that matches the intent or remove
 the MIT declarations.
 
-**Open:** add `wwwroot/THIRD-PARTY-NOTICES.txt` (served with the site and linked from the legal pages) carrying the
-Apache-2.0 text and the MIT notices for everything sent to the browser.
+**Done (GAD-T465):** `wwwroot/THIRD-PARTY-NOTICES.txt` is served at `/THIRD-PARTY-NOTICES.txt` and linked from the
+public site footer and the security page. It carries the full Apache-2.0 text, every MIT notice and the CC0 provenance
+for everything sent to the browser. Whenever a file under `wwwroot/webcam`, `wwwroot/lib` or `wwwroot/assets` is
+added or upgraded, update that file in the same change.
 
 ## 7. The quotations in the product copy and the public site
 
@@ -186,7 +188,7 @@ All of this is **[counsel]**.
    figures from the pilot (GAD-T66) and the research export (GAD-T451).
 5. QMS, incident procedure, post-market monitoring plan, conformity assessment, declaration, CE marking and EU
    database registration, all before 2 December 2027 if the Digital Omnibus dates are confirmed.
-6. `THIRD-PARTY-NOTICES.txt` for the browser-delivered Apache-2.0 and MIT files; the MediaPipe model card; whether the
-   bundled MediaPipe logging call fires.
+6. The MediaPipe model card; whether the bundled MediaPipe logging call fires. (`THIRD-PARTY-NOTICES.txt` is done,
+   GAD-T465.)
 7. A LICENSE decision for Gadfly itself, and LICENSE files for MindAttic.Webcam, MindAttic.Authentication and Tutor.
 8. Recalibrate a panel when its provider changes the model behind a name (dissertation 6.6).

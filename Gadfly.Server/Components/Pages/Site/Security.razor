@@ -48,6 +48,9 @@
         <li>Hosted on Microsoft Azure. Traffic is encrypted with HTTPS, and browsers are told to use it every time.</li>
         <li>Secrets and provider keys are kept in the hosting settings and Azure Key Vault, not in the code. The keys that protect sign-in cookies are stored encrypted by a Key Vault key.</li>
         <li>Video never leaves the student's device. Only short descriptions of camera events are sent.</li>
+        <li>Everything the exam room needs, including the face-tracking model and the 3D examiner, is served from our own
+            site, not a third-party CDN. The open-source parts and their licences are listed in the
+            <a href="THIRD-PARTY-NOTICES.txt">third-party notices</a>.</li>
         <li>Logs carry record identifiers only, never answers, keys, tokens or passwords.</li>
         <li>Institutions set their own retention period, and can export or erase a student's records.</li>
     </ul>
