@@ -84,10 +84,12 @@ public class AdminDashboardTests : ServerTest
             var s4 = Session(other, SessionState.Ended, now.AddHours(-8), now.AddHours(-7), "Mastery", attempt: 5);
             db.ExamSessions.AddRange(s1, s2, s3, s4);
             (ungraded, reconcile, approve, appeal) = (s1.Id, s2.Id, s3.Id, s4.Id);
+            var objective = new LearningObjective { OrganizationId = other.Org, ExamId = other.ExamId, Key = "obj", Title = "Objective", MaxScore = 100, Weight = 1 };
+            db.LearningObjectives.Add(objective);
             db.FinalGrades.Add(new FinalGrade { OrganizationId = w.Org, SessionId = s2.Id, Status = GradeStatus.ReconciliationRequired, UpdatedAt = now });
             db.GradeDisagreements.Add(new GradeDisagreement
             {
-                OrganizationId = w.Org, SessionId = s2.Id, ObjectiveId = Guid.NewGuid(), AiScore = 1, HumanScore = 3, DifferencePoints = 50,
+                OrganizationId = w.Org, SessionId = s2.Id, ObjectiveId = objective.Id, AiScore = 1, HumanScore = 3, DifferencePoints = 50,
                 Band = DisagreementBand.MandatoryReconciliation, DetectedAt = now.AddHours(-1),
             });
             db.FinalGrades.Add(new FinalGrade { OrganizationId = w.Org, SessionId = s3.Id, Status = GradeStatus.AwaitingFinalApproval, FinalPercent = 72, UpdatedAt = now });
