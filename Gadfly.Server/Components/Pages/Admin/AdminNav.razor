@@ -1,9 +1,45 @@
-@* Org admin console sub-navigation (GAD-T55), shown at the top of every admin page. *@
-<HeadContent><link rel="stylesheet" href="admin.css" /></HeadContent>
-<nav class="admin-nav" aria-label="Organization administration">
-    <NavLink href="org/members" Match="NavLinkMatch.All">Members</NavLink>
-    <NavLink href="org/settings" Match="NavLinkMatch.All">Settings</NavLink>
-    <NavLink href="org/api-keys" Match="NavLinkMatch.All">API keys</NavLink>
-    <NavLink href="org/webhooks" Match="NavLinkMatch.All">Webhooks</NavLink>
-    <NavLink href="org/usage" Match="NavLinkMatch.All">Usage</NavLink>
-</nav>
+@* The one admin navigation (GAD-T300, replacing the organization console's own, GAD-T55). MainLayout renders it once, above
+   every admin page (see AdminArea), so a page never has to. Each entry is shown only to the roles that may open it.
+   A page that still writes <AdminNav /> itself gets the stylesheet and no second copy of the links. *@
+@using Gadfly.Server.Admin
+@using Gadfly.Server.Desk
+@inject ITenantContext Tenant
+@inject IConfiguration Config
+
+@if (!FromLayout)
+{
+    <HeadContent><link rel="stylesheet" href="admin.css" /></HeadContent>
+}
+else if (groups.Count > 0)
+{
+    @* In the body on purpose: a second HeadContent would replace the page's own. *@
+    <link rel="stylesheet" href="admin.css" />
+    <nav class="admin-nav" aria-label="Administration">
+        @foreach (var g in groups)
+        {
+            <div class="admin-nav-group" role="group" aria-label="@g.Name">
+                <span class="admin-nav-label" aria-hidden="true">@g.Name</span>
+                @foreach (var l in g.Links)
+                {
+                    <NavLink href="@l.Href" Match="@(l.Exact ? NavLinkMatch.All : NavLinkMatch.Prefix)">@l.Label</NavLink>
+                }
+            </div>
+        }
+    </nav>
+}
+
+@code {
+    /// <summary>Set by MainLayout only. Anywhere else the component adds the admin stylesheet and nothing visible.</summary>
+    [Parameter] public bool FromLayout { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private IReadOnlyList<AdminArea.Group> groups = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!FromLayout) return;
+        var user = AuthState is null ? null : (await AuthState).User;
+        groups = AdminArea.GroupsFor(Tenant.Role, Tenant.IsSuperAdmin, DeskAccess.IsDeskAdmin(user, Tenant, Config));
+    }
+}

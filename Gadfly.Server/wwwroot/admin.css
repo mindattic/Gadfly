@@ -1,7 +1,14 @@
 /* Org admin console (GAD-T55) */
-.admin-nav { display: flex; flex-wrap: wrap; gap: .25rem; margin: -.25rem 0 1.25rem; padding-bottom: .5rem; border-bottom: 1px solid var(--line); }
-.admin-nav a { padding: .3rem .65rem; border-radius: 6px; text-decoration: none; color: var(--ink); font-size: .92rem; }
-.admin-nav a.active { background: var(--panel); border: 1px solid var(--line); color: var(--accent); font-weight: 600; }
+/* The one admin navigation (GAD-T300): labelled groups of links, wrapping on narrow screens. */
+.admin-nav { display: flex; flex-wrap: wrap; gap: .35rem 1.25rem; margin: -.25rem 0 1.25rem; padding-bottom: .6rem; border-bottom: 1px solid var(--line); }
+.admin-nav-group { display: flex; flex-wrap: wrap; align-items: center; gap: .15rem; }
+.admin-nav-label { margin-right: .2rem; color: var(--muted); font-size: .72rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.admin-nav a { padding: .3rem .6rem; border: 1px solid transparent; border-radius: 6px; text-decoration: none; color: var(--ink); font-size: .92rem; white-space: nowrap; }
+.admin-nav a:hover { background: var(--panel); }
+.admin-nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.admin-nav a.active { background: var(--panel); border-color: var(--line); color: var(--accent); font-weight: 600; }
+.admin-soon { max-width: 640px; }
+@media print { .admin-nav { display: none; } }
 h2.section { font-size: 1.15rem; margin: 1.75rem 0 .75rem; }
 .secret-once { max-width: 760px; border-left: 4px solid var(--error); }
 .secret-once .warn { color: var(--error); font-weight: 600; margin: 0; }

@@ -2,6 +2,7 @@
 @inject ITenantContext Tenant
 @inject IServiceScopeFactory Scopes
 @inject IConfiguration Config
+@inject NavigationManager Nav
 
 <div class="shell">
     <Gadfly.Server.Components.Shared.MockBanner />
@@ -11,20 +12,17 @@
             <Authorized>
                 <nav class="nav">
                     @{ var desk = Gadfly.Server.Desk.DeskAccess.IsDeskAdmin(context.User, Tenant, Config); }
-                    @if (desk)
+                    @if (OrgAdmin)
                     {
-                        <NavLink href="admin">Admin</NavLink>
-                    }
-                    @if (desk && Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor or OrgRoles.Examiner or OrgRoles.SecondReviewer)
-                    {
-                        @* The admin desk covers the everyday work; the organization, course and instructor screens stay, out of the way (GAD-T246). *@
-                        <details class="nav-more">
-                            <summary>More</summary>
-                            <div>@StaffLinks</div>
-                        </details>
+                        @* Owners and admins get one Admin entry; every admin page is in the admin navigation below the top bar (GAD-T300). *@
+                        <a href="admin" class="@(InAdminArea ? "active" : null)" aria-current="@(InAdminArea ? "page" : null)">Admin</a>
                     }
                     else
                     {
+                        @if (desk)
+                        {
+                            <NavLink href="admin/desk">Admin desk</NavLink>
+                        }
                         @StaffLinks
                     }
                     @if (Tenant.Role == OrgRoles.Student)
@@ -63,12 +61,19 @@
         </AuthorizeView>
     </header>
     <main>
+        @if (OrgAdmin && InAdminArea)
+        {
+            <Gadfly.Server.Components.Pages.Admin.AdminNav FromLayout="true" />
+        }
         @Body
     </main>
 </div>
 
 @code {
     private List<(Guid Id, string Name, string Role)> orgNames = [];
+
+    private bool OrgAdmin => Gadfly.Server.Admin.AdminArea.IsOrgAdmin(Tenant.Role);
+    private bool InAdminArea => Gadfly.Server.Admin.AdminArea.Contains(Nav.ToBaseRelativePath(Nav.Uri));
 
     /// <summary>The staff screens (sources, assessments, review, analytics, grading, members) by role.</summary>
     private RenderFragment StaffLinks => @<text>

@@ -1,9 +1,15 @@
 @page "/"
 @inject ITenantContext Tenant
+@inject NavigationManager Nav
+@inject IAuthorizationService Authz
 
 <PageTitle>Gadfly Exams</PageTitle>
 
-@if (Tenant.OrganizationId is null && !Tenant.IsSuperAdmin)
+@if (toDashboard)
+{
+    <p class="hint">Opening your dashboard…</p>
+}
+else if (Tenant.OrganizationId is null && !Tenant.IsSuperAdmin)
 {
     <h1>Welcome</h1>
     <p class="notice">Your account isn't a member of any organization yet. Ask your organization's administrator to add you.</p>
@@ -13,7 +19,7 @@ else
     <h1>@Greeting</h1>
     <div class="cards">
         <AuthorizeView Policy="@Gadfly.Server.Desk.DeskAccess.Policy">
-            <a class="card" href="admin"><h2>Admin</h2><p>Exams, students and who sits what: create, assign, and reset an attempt in one click.</p></a>
+            <a class="card" href="admin/desk"><h2>Admin desk</h2><p>Exams, students and who sits what: create, assign, and reset an attempt in one click.</p></a>
         </AuthorizeView>
         @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor)
         {
@@ -23,6 +29,7 @@ else
         }
         @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin)
         {
+            <a class="card" href="admin"><h2>Dashboard</h2><p>What needs attention today, and the last 7 and 30 days in numbers.</p></a>
             <a class="card" href="org/members"><h2>Members</h2><p>Add instructors and students.</p></a>
         }
         @if (Tenant.Role == OrgRoles.Student)
@@ -37,10 +44,27 @@ else
 }
 
 @code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private bool toDashboard;
+
     private string Greeting => Tenant.Role switch
     {
         OrgRoles.Student => "Your exams",
         null => "MindAttic platform",
         _ => "Your organization",
     };
+
+    /// <summary>
+    /// Owners and admins land on the dashboard (GAD-T300). Only when they may actually open it: an owner whose sign-in
+    /// lacks the second step stays here with the cards rather than being sent to a page that refuses them.
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState is null || !Gadfly.Server.Admin.AdminArea.IsOrgAdmin(Tenant.Role)) return;
+        var user = (await AuthState).User;
+        if (!(await Authz.AuthorizeAsync(user, GadflyPolicies.OrgAdmin)).Succeeded) return;
+        toDashboard = true;
+        Nav.NavigateTo("admin", replace: true);
+    }
 }

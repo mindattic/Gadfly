@@ -1,4 +1,4 @@
-@page "/admin"
+@page "/admin/desk"
 @attribute [Authorize(Policy = DeskAccess.Policy)]
 @implements IDisposable
 @using Gadfly.Server.Data
@@ -11,14 +11,14 @@
 @inject IJSRuntime JS
 
 @* The admin desk (GAD-T246): exams, students and the assignments between them on one page, for the owner to set up, test and reset. *@
-<PageTitle>Admin · Gadfly Exams</PageTitle>
+<PageTitle>Admin desk · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-desk.css" /></HeadContent>
-<h1>Admin</h1>
+<h1>Admin desk <span>exams, students and resets on one page</span></h1>
 
 <nav class="desk-tabs" role="tablist" aria-label="Admin desk">
-    <a href="admin?tab=exams" role="tab" aria-selected="@(CurrentTab == "exams")" class="@(CurrentTab == "exams" ? "active" : null)">Exams</a>
-    <a href="admin?tab=students" role="tab" aria-selected="@(CurrentTab == "students")" class="@(CurrentTab == "students" ? "active" : null)">Students</a>
-    <a href="admin?tab=student-exams" role="tab" aria-selected="@(CurrentTab == "student-exams")" class="@(CurrentTab == "student-exams" ? "active" : null)">Student exams</a>
+    <a href="admin/desk?tab=exams" role="tab" aria-selected="@(CurrentTab == "exams")" class="@(CurrentTab == "exams" ? "active" : null)">Exams</a>
+    <a href="admin/desk?tab=students" role="tab" aria-selected="@(CurrentTab == "students")" class="@(CurrentTab == "students" ? "active" : null)">Students</a>
+    <a href="admin/desk?tab=student-exams" role="tab" aria-selected="@(CurrentTab == "student-exams")" class="@(CurrentTab == "student-exams" ? "active" : null)">Student exams</a>
 </nav>
 
 @if (message is not null)

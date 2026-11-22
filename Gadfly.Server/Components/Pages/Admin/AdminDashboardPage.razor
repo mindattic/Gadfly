@@ -1,0 +1,174 @@
+@page "/admin"
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Admin
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject ILogger<AdminDashboardPage> Log
+
+@* The admin dashboard (GAD-T300): what needs attention now, the last 7 and 30 days in numbers, and quick actions. *@
+<PageTitle>Dashboard · Gadfly Exams</PageTitle>
+<HeadContent><link rel="stylesheet" href="admin-dashboard.css" /></HeadContent>
+
+<div class="dash-head">
+    <h1>Dashboard</h1>
+    <div class="row-actions">
+        @if (data is not null)
+        {
+            <span class="hint">Updated @data.GeneratedAt.UtcDateTime.ToString("HH:mm") UTC</span>
+        }
+        <button type="button" class="link" @onclick="LoadAsync" disabled="@loading">Refresh</button>
+    </div>
+</div>
+
+@if (error is not null)
+{
+    <div class="notice dash-error" role="alert">
+        <p><strong>The dashboard could not load.</strong> @error</p>
+        <button type="button" @onclick="LoadAsync" disabled="@loading">Try again</button>
+    </div>
+}
+else if (data is null)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else
+{
+    @if (data.IsNew)
+    {
+        var done = data.Setup.Count(s => s.Done);
+        <section class="panel dash-setup" aria-labelledby="setup-h">
+            <h2 id="setup-h">Getting started <span class="hint">@done of @data.Setup.Count done</span></h2>
+            <ol class="dash-steps">
+                @foreach (var s in data.Setup)
+                {
+                    <li class="@(s.Done ? "done" : null)">
+                        <span class="dash-check" aria-hidden="true">@(s.Done ? "✓" : "")</span>
+                        <div>
+                            @if (s.Done)
+                            {
+                                <strong>@s.Title</strong> <span class="hint">done</span>
+                            }
+                            else
+                            {
+                                <a href="@s.Href"><strong>@s.Title</strong></a>
+                                <p class="hint">@s.Hint</p>
+                            }
+                        </div>
+                    </li>
+                }
+            </ol>
+        </section>
+    }
+
+    <section aria-labelledby="attention-h">
+        <h2 id="attention-h" class="section">Needs attention
+            @if (data.AttentionTotal > 0)
+            {
+                <span class="dash-badge">@data.AttentionTotal</span>
+            }
+        </h2>
+        @if (data.AttentionTotal == 0)
+        {
+            <p class="notice">Nothing is waiting on you. @(data.IsNew ? "Once students start sitting exams, grading, appeals and anything else to act on shows up here." : "New grading, appeals and problems show up here as they happen.")</p>
+        }
+        else
+        {
+            <div class="dash-attention">
+                @foreach (var g in data.Attention.Where(g => g.Count > 0))
+                {
+                    <article class="panel dash-group k-@g.Kind">
+                        <h3><span class="dash-count">@g.Count</span> @g.Heading</h3>
+                        <ul>
+                            @foreach (var i in g.Items)
+                            {
+                                <li><a href="@i.Href">@i.Title</a> <span class="hint">@i.Detail</span></li>
+                            }
+                        </ul>
+                        <a class="dash-more" href="@g.ListHref">@g.ListLabel@(g.Count > g.Items.Count ? $" ({g.Count - g.Items.Count} more)" : "") →</a>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+
+    <section aria-labelledby="numbers-h">
+        <h2 id="numbers-h" class="section">The last 7 and 30 days</h2>
+        <table class="grid dash-numbers">
+            <thead><tr><th scope="col"></th><th scope="col" class="num">Last 7 days</th><th scope="col" class="num">Last 30 days</th></tr></thead>
+            <tbody>
+                <tr>
+                    <th scope="row">Exams taken <span class="hint">interviews that ended</span></th>
+                    <td class="num">@data.Last7.ExamsTaken</td>
+                    <td class="num">@data.Last30.ExamsTaken</td>
+                </tr>
+                <tr>
+                    <th scope="row">Completion rate <span class="hint">started and reached a proper end</span></th>
+                    <td class="num" title="@Of(data.Last7)">@Pct(data.Last7.CompletionRate)</td>
+                    <td class="num" title="@Of(data.Last30)">@Pct(data.Last30.CompletionRate)</td>
+                </tr>
+                <tr>
+                    <th scope="row">Median interview length</th>
+                    <td class="num">@AdminDashboardService.Duration(data.Last7.MedianDuration)</td>
+                    <td class="num">@AdminDashboardService.Duration(data.Last30.MedianDuration)</td>
+                </tr>
+                <tr>
+                    <th scope="row">Grading turnaround <span class="hint">median, interview end to final approval</span></th>
+                    <td class="num" title="@data.Last7.GradesApproved approved">@AdminDashboardService.Duration(data.Last7.MedianTurnaround)</td>
+                    <td class="num" title="@data.Last30.GradesApproved approved">@AdminDashboardService.Duration(data.Last30.MedianTurnaround)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="hint">
+            @data.PublishedExams published exam@(data.PublishedExams == 1 ? "" : "s") of @data.Exams,
+            @data.Students student@(data.Students == 1 ? "" : "s"), @data.Assignments assignment@(data.Assignments == 1 ? "" : "s").
+            More detail in <a href="analytics">Analytics</a> and <a href="org/usage">Usage</a>.
+        </p>
+    </section>
+
+    <section aria-labelledby="actions-h">
+        <h2 id="actions-h" class="section">Quick actions</h2>
+        <div class="cards dash-actions">
+            <a class="card" href="admin/exams"><h3>Create an exam</h3><p>From pasted or uploaded notes.</p></a>
+            <a class="card" href="admin/students"><h3>Add students</h3><p>One at a time, or invite by email.</p></a>
+            <a class="card" href="admin/assignments"><h3>Assign an exam</h3><p>Who sits it, attempts and closing date.</p></a>
+            <a class="card" href="admin/live"><h3>Watch live</h3><p>The interviews happening right now.</p></a>
+            <a class="card" href="grading"><h3>Grade</h3><p>The grading queue, oldest first.</p></a>
+            <a class="card" href="org/members"><h3>Invite staff</h3><p>Instructors, examiners and admins.</p></a>
+        </div>
+    </section>
+}
+
+@code {
+    private AdminDashboard? data;
+    private string? error;
+    private bool loading;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (loading) return;
+        loading = true;
+        error = null;
+        try
+        {
+            // Its own scope, so the dashboard never shares the circuit's DbContext with the layout.
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+            data = await ActivatorUtilities.CreateInstance<AdminDashboardService>(scope.ServiceProvider).LoadAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            error = "The dashboard is for the organization's owners and admins.";
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "The admin dashboard failed to load for organization {Org}", Tenant.OrganizationId);
+            error = "Something went wrong reading the numbers. Try again in a moment; if it keeps happening, check System status.";
+        }
+        finally { loading = false; }
+    }
+
+    private static string Pct(double? rate) => rate is { } r ? $"{r:P0}" : "—";
+
+    private static string Of(DashboardWindow w) => w.Started == 0 ? "none started" : $"{w.Completed} of {w.Started}";
+}

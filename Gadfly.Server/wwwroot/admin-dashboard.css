@@ -1,0 +1,34 @@
+/* Admin dashboard (GAD-T300) */
+.dash-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem; }
+.dash-error { max-width: 640px; }
+.dash-error p { margin: 0 0 .5rem; }
+.dash-badge { display: inline-block; min-width: 1.6rem; margin-left: .35rem; padding: 0 .45rem; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: .85rem; text-align: center; vertical-align: middle; }
+
+.dash-setup { display: block; max-width: 760px; border-left: 4px solid var(--accent); }
+.dash-setup h2 { margin-bottom: .75rem; }
+.dash-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: .65rem; }
+.dash-steps li { display: flex; gap: .65rem; align-items: flex-start; }
+.dash-steps li p { margin: .1rem 0 0; }
+.dash-steps li.done strong { color: var(--muted); }
+.dash-check { flex: 0 0 1.35rem; height: 1.35rem; border: 2px solid var(--line); border-radius: 50%; display: grid; place-items: center; font-size: .8rem; line-height: 1; }
+.dash-steps li.done .dash-check { border-color: var(--ok); background: var(--ok); color: var(--panel); }
+
+.dash-attention { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
+.dash-group { display: flex; flex-direction: column; gap: .5rem; margin: 0; border-left: 4px solid var(--line); }
+.dash-group h3 { font-size: 1rem; margin: 0; }
+.dash-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
+.dash-group li { font-size: .92rem; overflow-wrap: anywhere; }
+.dash-group li .hint { display: block; }
+.dash-count { font-variant-numeric: tabular-nums; color: var(--accent); }
+.dash-more { margin-top: auto; font-size: .9rem; }
+.dash-group.k-Reconciliation, .dash-group.k-Appeal, .dash-group.k-FailedJob { border-left-color: var(--error); }
+.dash-group.k-NotStartedNearDue, .dash-group.k-Approval { border-left-color: var(--accent); }
+.dash-group.k-InProgress { border-left-color: var(--ok); }
+
+.dash-numbers { max-width: 760px; }
+.dash-numbers th[scope="row"] { color: var(--ink); font-weight: 500; }
+.dash-numbers th[scope="row"] .hint { display: block; font-weight: 400; font-size: .82rem; }
+.dash-numbers td.num { font-size: 1.1rem; font-weight: 600; }
+
+.dash-actions .card h3 { font-size: 1.05rem; margin: 0 0 .35rem; }
+.dash-actions { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
