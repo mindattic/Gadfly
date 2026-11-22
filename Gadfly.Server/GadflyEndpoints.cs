@@ -20,7 +20,7 @@ public static class GadflyEndpoints
 
     /// <summary>Every route a signed-out visitor may reach.</summary>
     public static readonly IReadOnlyList<string> AnonymousRoutes =
-        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "launch", "error", "openapi/{documentName}.json", "transcripts/verify", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p),
+        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "healthz/ready", "launch", "error", "openapi/{documentName}.json", "transcripts/verify", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p),
          .. Help.HelpEndpoints.AnonymousRoutes,   // the help center: a student with a broken microphone may never get past sign-in (GAD-T292)
          .. Site.PublicSite.AnonymousRoutes];   // the public site: landing, product and legal pages, robots, sitemap, the 404 catch-all (GAD-T308)
 
@@ -53,6 +53,8 @@ public static class GadflyEndpoints
 
         // Health: anonymous and data-free. Provider health is staff-only (it names providers and errors).
         app.MapHealthChecks("/healthz").AllowAnonymous();
+        // Readiness (GAD-T356): the system status page's checks; 503 when one fails. Names and states only, so anonymous.
+        Admin.SystemReadinessService.MapReady(app).AllowAnonymous();
         app.MapGet("/healthz/providers", (Gadfly.Socrates.LegionVotingClient panel) => Results.Json(panel.Health.Snapshot()))
             .RequireAuthorization(GadflyPolicies.SuperAdmin);
         // Outside-call durations on live exams (GAD-T413): /healthz/call-timings?session=<id>&limit=200, staff-only.

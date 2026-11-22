@@ -1,13 +1,15 @@
 @page "/admin/status"
 @attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
 @using Gadfly.Server.Admin
+@using Gadfly.Server.Data
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
 @inject ILogger<SystemStatus> Log
 
-@* Whether the examiner, speech and background work are healthy (GAD-T300, GAD-T302), and how long a live exam's outside
-   calls take (GAD-T413, GAD-T317/GAD-T392): the panel's own steps and the examiner's voice, which together make up most of
-   the pause a student sees between answering and the next question. *@
+@* Whether the examiner, speech and background work are healthy (GAD-T300, GAD-T302): the platform's checks, version, AI and
+   voice mode, providers, database and migrations (GAD-T353); the organization's jobs with retry and cancel, and its webhook
+   deliveries (GAD-T354); storage and, for the platform admin, the server's recent log errors (GAD-T355); and how long a live
+   exam's outside calls take (GAD-T413, GAD-T317/GAD-T392). The same checks answer /healthz/ready (GAD-T356). *@
 <PageTitle>System status · Gadfly Exams</PageTitle>
 
 <div class="dash-head">
@@ -21,6 +23,11 @@
     </div>
 </div>
 
+@if (message is not null)
+{
+    <p class="notice" role="status">@message</p>
+}
+
 @if (error is not null)
 {
     <div class="notice dash-error" role="alert">
@@ -28,18 +35,120 @@
         <button type="button" @onclick="LoadAsync" disabled="@loading">Try again</button>
     </div>
 }
-else if (data is null)
+else if (data is null || platform is null)
 {
     <p class="hint" role="status">Loading…</p>
 }
 else
 {
+    <section aria-labelledby="checks-h">
+        <h2 id="checks-h" class="section">Checks</h2>
+        <p class="hint">
+            @(platform.Ready ? "Ready: everything an exam needs is working." : "Not ready: a check below is failing, so exams may not start or save.")
+            The same checks answer <code>/healthz/ready</code> for monitoring (names and states only).
+        </p>
+        <table class="grid">
+            <thead><tr><th>Check</th><th>State</th><th>What was found</th></tr></thead>
+            <tbody>
+                @foreach (var c in platform.Checks)
+                {
+                    <tr>
+                        <td>@c.Title</td>
+                        <td class="@StateClass(c.State)">@StateWord(c.State)</td>
+                        <td>@c.Summary</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </section>
+
+    <section aria-labelledby="app-h">
+        <h2 id="app-h" class="section">App, AI and voice</h2>
+        <div class="stat-tiles">
+            <div class="stat"><span class="label">Version</span><span class="value">@platform.Version</span></div>
+            <div class="stat"><span class="label">Environment</span><span class="value">@platform.Environment</span></div>
+            <div class="stat">
+                <span class="label">AI panel</span>
+                <span class="value @(platform.AiMode == "mock" ? "error" : "ok")">@(platform.AiMode == "mock" ? "Mock" : "Live")</span>
+            </div>
+            <div class="stat">
+                <span class="label">Voice</span>
+                <span class="value @(platform.VoiceMode == "live" ? "ok" : "error")">@VoiceWord(platform.VoiceMode)</span>
+            </div>
+        </div>
+        <p class="hint">AI mode setting: @(string.IsNullOrEmpty(platform.ConfiguredAiMode) ? "default" : platform.ConfiguredAiMode). @platform.AiModeReason</p>
+
+        <h3>AI panel providers</h3>
+        @if (platform.Providers.Count == 0)
+        {
+            <p class="notice">@(platform.AiMode == "mock" ? "The mock panel calls no provider." : "No provider call recorded since the server started.")</p>
+        }
+        else
+        {
+            <table class="grid">
+                <thead><tr><th>Provider</th><th>Model</th><th>State</th><th>Calls</th><th>Failed</th><th>Last answered</th><th>Last failed</th></tr></thead>
+                <tbody>
+                    @foreach (var p in platform.Providers)
+                    {
+                        <tr>
+                            <td>@p.ProviderId</td>
+                            <td>@(p.Model.Length == 0 ? "(default)" : p.Model)</td>
+                            <td class="@(p.Failing ? "error" : null)">@(p.Failing ? $"Failing ({p.ConsecutiveFailures} in a row)" : "Answering")</td>
+                            <td>@p.TotalCalls</td>
+                            <td>@p.TotalFailures</td>
+                            <td>@When(p.LastSuccessAt)</td>
+                            <td>
+                                @When(p.LastFailureAt)
+                                @if (p.LastError is { Length: > 0 } err)
+                                {
+                                    <div class="hint">@err</div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <p class="hint">Since this server started. No provider is called to fill this table: it is what the panel recorded on real calls.</p>
+        }
+
+        <h3>Speech</h3>
+        <ul>
+            <li>Speech to text: @platform.SpeechToText</li>
+            <li>Text to speech (the examiner's voice): @platform.TextToSpeech</li>
+        </ul>
+        @if (platform.VoiceCalls.Count > 0)
+        {
+            <table class="grid">
+                <thead><tr><th>Latest call</th><th>When</th><th>Took</th><th>Outcome</th></tr></thead>
+                <tbody>
+                    @foreach (var v in platform.VoiceCalls)
+                    {
+                        <tr>
+                            <td>@v.CallName</td>
+                            <td>@When(v.At)</td>
+                            <td>@AdminDashboardService.Duration(TimeSpan.FromMilliseconds(v.DurationMs))</td>
+                            <td class="@(v.Succeeded ? null : "error")">@(v.Succeeded ? "Succeeded" : "Failed")@(v.Error is { Length: > 0 } ve ? $": {ve}" : "")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (platform.VoiceMode != "off")
+        {
+            <p class="hint">No speech call in the last 24 hours.</p>
+        }
+    </section>
+
     <section aria-labelledby="health-h">
-        <h2 id="health-h" class="section">Health</h2>
+        <h2 id="health-h" class="section">Database and background jobs</h2>
         <div class="stat-tiles">
             <div class="stat">
                 <span class="label">Database</span>
                 <span class="value @(data.DatabaseHealthy ? "ok" : "error")">@(data.DatabaseHealthy ? "Healthy" : "Unhealthy")</span>
+            </div>
+            <div class="stat">
+                <span class="label">Migrations</span>
+                <span class="value @(platform.PendingMigrations.Count > 0 ? "error" : "ok")">@(platform.PendingMigrations.Count > 0 ? $"{platform.PendingMigrations.Count} pending" : "Up to date")</span>
             </div>
             <div class="stat">
                 <span class="label">Background jobs waiting or running</span>
@@ -54,7 +163,104 @@ else
                 <span class="value @(data.Jobs.FailedInWindow > 0 ? "error" : null)">@data.Jobs.FailedInWindow</span>
             </div>
         </div>
+        <p class="hint">
+            @platform.MigrationsApplied migration(s) applied@(platform.LatestMigration is { } latest ? $", the latest {latest}" : "").
+            @if (platform.PendingMigrations.Count > 0)
+            {
+                <span>Not applied yet: @string.Join(", ", platform.PendingMigrations).</span>
+            }
+            @if (Tenant.IsSuperAdmin && platform.DatabaseBytes is { } size)
+            {
+                <span> The database uses @Bytes(size) in all.</span>
+            }
+        </p>
+
+        <h3>Your organization's jobs</h3>
+        @if (data.JobList.Count == 0)
+        {
+            <p class="notice">Nothing waiting or running, and nothing failed or cancelled in the last 24 hours.</p>
+        }
+        else
+        {
+            <table class="grid">
+                <thead><tr><th>Job</th><th>State</th><th>Attempts</th><th>Queued</th><th>Details</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var j in data.JobList)
+                    {
+                        <tr>
+                            <td>@j.Kind</td>
+                            <td class="@(j.State == JobState.Failed ? "error" : null)">@JobWord(j)</td>
+                            <td>@j.Attempts of @j.MaxAttempts</td>
+                            <td>@When(j.CreatedAt)</td>
+                            <td>@(j.State == JobState.Failed ? j.Error : j.ProgressMessage)</td>
+                            <td>
+                                @if (j.CanRetry)
+                                {
+                                    <button type="button" class="link" disabled="@loading" @onclick="() => ActAsync(j, retry: true)">Retry</button>
+                                }
+                                @if (j.CanCancel)
+                                {
+                                    <button type="button" class="link" disabled="@loading" @onclick="() => ActAsync(j, retry: false)">Cancel</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <p class="hint">Waiting and running jobs, and those that failed or were cancelled in the last 24 hours (up to @AdminStatusService.ListSize). A retry runs the job again from the start; both actions are recorded in the audit log.</p>
+        }
     </section>
+
+    @if (data.Webhooks is { } wh)
+    {
+        <section aria-labelledby="webhooks-h">
+            <h2 id="webhooks-h" class="section">Webhooks</h2>
+            <div class="stat-tiles">
+                <div class="stat"><span class="label">Active endpoints</span><span class="value">@wh.ActiveEndpoints</span></div>
+                <div class="stat"><span class="label">Waiting to send</span><span class="value">@wh.Pending</span></div>
+                <div class="stat"><span class="label">Waiting to retry</span><span class="value @(wh.Retrying > 0 ? "error" : null)">@wh.Retrying</span></div>
+                <div class="stat"><span class="label">Delivered, last 24h</span><span class="value">@wh.DeliveredInWindow</span></div>
+                <div class="stat"><span class="label">Given up, last 24h</span><span class="value @(wh.GaveUpInWindow > 0 ? "error" : null)">@wh.GaveUpInWindow</span></div>
+            </div>
+            @if (wh.Problems.Count > 0)
+            {
+                <table class="grid">
+                    <thead><tr><th>Event</th><th>Endpoint</th><th>State</th><th>Attempt</th><th>Response</th><th>Created</th><th>Next try</th></tr></thead>
+                    <tbody>
+                        @foreach (var d in wh.Problems)
+                        {
+                            <tr>
+                                <td>@d.EventType</td>
+                                <td>@d.Url</td>
+                                <td class="error">@(d.Status == DeliveryStatus.GaveUp ? "Given up" : "Failed, will retry")</td>
+                                <td>@d.Attempt</td>
+                                <td>@(d.ResponseCode?.ToString() ?? "no answer")</td>
+                                <td>@When(d.CreatedAt)</td>
+                                <td>@When(d.NextAttemptAt)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            <p class="hint">Endpoints and every delivery are managed on <a href="org/webhooks">Webhooks</a>.</p>
+        </section>
+    }
+
+    @if (data.Storage is { } st)
+    {
+        <section aria-labelledby="storage-h">
+            <h2 id="storage-h" class="section">Storage</h2>
+            <div class="stat-tiles">
+                <div class="stat"><span class="label">Source documents</span><span class="value">@st.Documents</span></div>
+                <div class="stat"><span class="label">Their size</span><span class="value">@Bytes(st.DocumentBytes)</span></div>
+                <div class="stat"><span class="label">Source passages</span><span class="value">@st.Chunks.ToString("N0")</span></div>
+                <div class="stat"><span class="label">Exam sessions</span><span class="value">@st.Sessions.ToString("N0")</span></div>
+                <div class="stat"><span class="label">Transcript text</span><span class="value">@Bytes(st.TranscriptCharacters)</span></div>
+                <div class="stat"><span class="label">Audit entries</span><span class="value">@st.AuditEvents.ToString("N0")</span></div>
+            </div>
+            <p class="hint">Your organization's share. No exam audio or video is stored (docs/PRIVACY.md).</p>
+        </section>
+    }
 
     <section aria-labelledby="timings-h">
         <h2 id="timings-h" class="section">Time to the next question (outside calls, last 24h)</h2>
@@ -90,11 +296,46 @@ else
             <p class="hint">Sampled over the most recent @data.CallSampleSize.ToString("N0") call(s) in the window, whichever comes first.</p>
         }
     </section>
+
+    @if (Tenant.IsSuperAdmin)
+    {
+        <section aria-labelledby="errors-h">
+            <h2 id="errors-h" class="section">Recent errors on this server</h2>
+            @if (platform.RecentErrors.Count == 0)
+            {
+                <p class="notice">No errors logged on this server since it started.</p>
+            }
+            else
+            {
+                <table class="grid">
+                    <thead><tr><th>When</th><th>Where</th><th>Message</th></tr></thead>
+                    <tbody>
+                        @foreach (var e in platform.RecentErrors)
+                        {
+                            <tr>
+                                <td>@When(e.At)</td>
+                                <td>@e.Category</td>
+                                <td>
+                                    @e.Message
+                                    @if (e.Exception is { Length: > 0 } ex)
+                                    {
+                                        <div class="hint">@ex</div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            <p class="hint">The last @Gadfly.Server.Diagnostics.RecentErrorLog.Capacity errors this server logged, kept in memory only. Shown to the platform admin alone: it covers every organization. The full log is in the App Service log stream.</p>
+        </section>
+    }
 }
 
 @code {
     private SystemStatusReport? data;
-    private string? error;
+    private PlatformStatus? platform;
+    private string? error, message;
     private bool loading;
 
     protected override Task OnInitializedAsync() => LoadAsync();
@@ -109,6 +350,7 @@ else
             // Its own scope, so this page never shares the circuit's DbContext with the layout (same pattern as the dashboard).
             await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
             data = await ActivatorUtilities.CreateInstance<AdminStatusService>(scope.ServiceProvider).LoadAsync();
+            platform = await ActivatorUtilities.CreateInstance<SystemReadinessService>(scope.ServiceProvider).LoadAsync(includeErrorText: Tenant.IsSuperAdmin);
         }
         catch (UnauthorizedAccessException)
         {
@@ -121,4 +363,48 @@ else
         }
         finally { loading = false; }
     }
+
+    private async Task ActAsync(JobLine job, bool retry)
+    {
+        if (loading) return;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+            var svc = ActivatorUtilities.CreateInstance<AdminStatusService>(scope.ServiceProvider);
+            message = $"{job.Kind}: " + (retry ? await svc.RetryJobAsync(job.Id) : await svc.CancelJobAsync(job.Id));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            message = "Only the organization's owners and admins can retry or cancel jobs.";
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Job action failed for job {Job}", job.Id);
+            message = "That did not work. Refresh and try again.";
+        }
+        await LoadAsync();
+    }
+
+    private static string StateWord(CheckState s) => s switch { CheckState.Ok => "OK", CheckState.Warning => "Needs a look", _ => "Failing" };
+    private static string? StateClass(CheckState s) => s switch { CheckState.Ok => "ok", CheckState.Warning => null, _ => "error" };
+    private static string VoiceWord(string mode) => mode switch { "live" => "Live", "mock" => "Simulated", _ => "Off" };
+
+    private static string JobWord(JobLine j) => j.State switch
+    {
+        JobState.Queued => j.Attempts > 0 ? "Waiting to retry" : "Waiting",
+        JobState.Running => j.Progress > 0 ? $"Running ({j.Progress:P0})" : "Running",
+        JobState.Failed => "Failed",
+        JobState.Cancelled => "Cancelled",
+        _ => j.State.ToString(),
+    };
+
+    private static string When(DateTimeOffset? at) => at is { } t ? t.UtcDateTime.ToString("yyyy-MM-dd HH:mm") + " UTC" : "never";
+
+    private static string Bytes(long n) => n switch
+    {
+        < 1024 => $"{n} bytes",
+        < 1024L * 1024 => $"{n / 1024.0:0.#} KB",
+        < 1024L * 1024 * 1024 => $"{n / (1024.0 * 1024):0.#} MB",
+        _ => $"{n / (1024.0 * 1024 * 1024):0.##} GB",
+    };
 }

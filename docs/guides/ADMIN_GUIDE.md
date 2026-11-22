@@ -565,6 +565,7 @@ genuine AI evaluations and must not be used to grade anyone." It is set by the s
 | Endpoint | What |
 |---|---|
 | `/healthz` | Anonymous: the app and its database are up. |
+| `/healthz/ready` | Anonymous: the system status page's checks (database, migrations, AI panel, voice, jobs, webhooks, errors) as names and states only. 200 when ready, 503 when the database does not answer or migrations are not applied; the rest only warn. |
 | `/healthz/providers` | SuperAdmin only: the state of each AI provider on the panel. A provider that fails several calls in a row is logged as an error and the panel carries on without it. |
 
 Application logs go to MindAttic.Log's database for Gadfly.Server; every exam step is logged with its session and

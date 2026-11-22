@@ -57,6 +57,26 @@ public sealed class JobQueue(GadflyDbContext db, TimeProvider clock)
         return n > 0;
     }
 
+    /// <summary>
+    /// Puts a failed or cancelled job back in the queue to run again from the start, with a fresh set of attempts (GAD-T354).
+    /// Handlers are idempotent, so a retry is safe. Returns false when the job is not failed or cancelled.
+    /// </summary>
+    public async Task<bool> RetryAsync(Guid jobId, CancellationToken ct = default)
+    {
+        var now = clock.GetUtcNow();
+        var n = await db.Jobs
+            .Where(j => j.Id == jobId && (j.State == JobState.Failed || j.State == JobState.Cancelled))
+            .ExecuteUpdateAsync(s => s.SetProperty(j => j.State, JobState.Queued)
+                                      .SetProperty(j => j.Attempts, 0)
+                                      .SetProperty(j => j.RunAfter, now)
+                                      .SetProperty(j => j.CompletedAt, (DateTimeOffset?)null)
+                                      .SetProperty(j => j.LockedBy, (string?)null)
+                                      .SetProperty(j => j.LockedUntil, (DateTimeOffset?)null)
+                                      .SetProperty(j => j.Progress, 0)
+                                      .SetProperty(j => j.Error, (string?)null), ct);
+        return n > 0;
+    }
+
     public static TPayload ReadPayload<TPayload>(Job job) =>
         JsonSerializer.Deserialize<TPayload>(job.PayloadJson)
         ?? throw new InvalidOperationException($"Job {job.Id} ({job.Kind}) has an empty payload.");

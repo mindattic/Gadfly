@@ -124,6 +124,7 @@ public class RouteAuthorizationTests : ServerTest
     }
 
     [TestCase("/healthz")]
+    [TestCase("/healthz/ready")]   // GAD-T356: 200 while no check fails (the test database is up and migrated)
     [TestCase("/login")]
     [TestCase("/forgot-password")]
     [TestCase("/openapi/v1.json")]

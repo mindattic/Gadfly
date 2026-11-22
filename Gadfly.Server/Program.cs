@@ -31,6 +31,10 @@ using MindAttic.Vault.Configuration;
 var builder = WebApplication.CreateBuilder(args);
 // On Azure App Service, application logs go to LogFiles/Application and the log stream (no-op elsewhere).
 builder.Logging.AddAzureWebAppDiagnostics();
+// The last errors this server logged, in memory, for the platform admin on the system status page (GAD-T355).
+var recentErrors = new Gadfly.Server.Diagnostics.RecentErrorLog();
+builder.Logging.AddProvider(recentErrors);
+builder.Services.AddSingleton(recentErrors);
 // The provider's own defaults (10MB per file, 2 files retained) cap out fast once a live exam is running and then look
 // like logging "stopped" (GAD-T411, a recurrence of the GAD-T225 go-live logging gap): a bigger, longer-rolling budget
 // keeps it flowing. MindAttic.Log's own SQLite log (GAD-T62) has no such cap; this only widens the Azure file mirror.
