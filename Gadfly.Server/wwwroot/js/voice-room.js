@@ -27,6 +27,7 @@
 
 import { VoiceAcoustics } from "./voice-acoustics.js";
 import * as VoiceDraft from "./voice-draft.js";
+import { useExaminerLook } from "./avatar-look.js";
 
 const LIB = "/lib/voice";
 const SPEECH_HUB = "/hubs/speech";
@@ -335,6 +336,7 @@ function createAvatar(s, src) {
     const el = document.createElement("ma-avatar");
     el.gadflyRole = src ? "examiner" : "stand-in";
     if (src) el.setAttribute("src", src);
+    if (src) useExaminerLook(el);   // the examiner's luminous blue look, once her 3D model is up (GAD-T503)
     if (s.cfg.portraitUrl) el.setAttribute("portrait", s.cfg.portraitUrl);
     el.setAttribute("view", "upper");
     el.setAttribute("camera-x", "-0.2");
