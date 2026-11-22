@@ -46,6 +46,9 @@ public interface IOrganizationDirectory
     /// <summary>Invites every row of a CSV (<c>email[,role]</c>, header optional); rows without a role get <paramref name="defaultRole"/>.</summary>
     Task<BulkInviteResult> InviteBulkAsync(Guid organizationId, string csv, string defaultRole, string? actingRole, Guid? actorUserId, CancellationToken ct = default);
 
+    /// <summary>Before sending a CSV of invitations: which rows can't be accepted until seats free up (GAD-T487). Sends nothing.</summary>
+    Task<BulkInvitePreview> PreviewBulkInviteAsync(Guid organizationId, string csv, string defaultRole, string? actingRole, CancellationToken ct = default);
+
     Task<IReadOnlyList<InvitationSummary>> InvitationsAsync(Guid organizationId, CancellationToken ct = default);
     Task<DirectoryResult> ResendInvitationAsync(Guid organizationId, Guid invitationId, Guid? actorUserId, CancellationToken ct = default);
     Task<DirectoryResult> RevokeInvitationAsync(Guid organizationId, Guid invitationId, Guid? actorUserId, CancellationToken ct = default);
@@ -163,9 +166,23 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
     {
         var m = await db.OrganizationMembers.AsNoTracking().FirstOrDefaultAsync(x => x.Id == memberId && x.OrganizationId == organizationId, ct);
         if (m is null) return new(false, "That member was not found.");
-        var r = active
-            ? await orgs.RestoreMemberAsync(organizationId, m.UserId, actingRole, actorUserId, ct)
-            : await orgs.RemoveMemberAsync(organizationId, m.UserId, actingRole, actorUserId, ct);
+        if (!active)
+        {
+            var removed = await orgs.RemoveMemberAsync(organizationId, m.UserId, actingRole, actorUserId, ct);
+            return new(removed.Ok, removed.Message);
+        }
+
+        // Restoring a removed member spends a seat again, exactly like adding one (GAD-T487): the check and the restore share
+        // the organization's seat lock (GAD-T481), so a restore and a join at the same moment can't both take the last seat.
+        // Platform staff and system callers (actingRole null) can always fix a seat problem, as with an add.
+        await using var seats = actingRole is null || m.IsActive ? null : await Gadfly.Server.Platform.SeatLock.AcquireAsync(db, organizationId, ct);
+        if (seats is { Acquired: false }) return new(false, Gadfly.Server.Platform.SeatLock.BusyMessage);
+        if (seats is not null && await db.OrganizationMembers.AsNoTracking().AnyAsync(x => x.Id == memberId && !x.IsActive, ct))
+        {
+            var (seatOk, seatMessage) = await plans.CheckSeatAsync(db, organizationId, m.Role, ct);
+            if (!seatOk) return new(false, "This member can't be restored. " + seatMessage);
+        }
+        var r = await orgs.RestoreMemberAsync(organizationId, m.UserId, actingRole, actorUserId, ct);
         return new(r.Ok, r.Message);
     }
 
@@ -188,6 +205,9 @@ public sealed partial class OrganizationDirectory(GadflyDbContext db, IUserAdmin
 
     public Task<BulkInviteResult> InviteBulkAsync(Guid organizationId, string csv, string defaultRole, string? actingRole, Guid? actorUserId, CancellationToken ct = default) =>
         invitations.InviteBulkCsvAsync(organizationId, csv, defaultRole, actorUserId, actingRole, ct);
+
+    public Task<BulkInvitePreview> PreviewBulkInviteAsync(Guid organizationId, string csv, string defaultRole, string? actingRole, CancellationToken ct = default) =>
+        BulkInvitePreview.ForAsync(db, plans, organizationId, csv, defaultRole, actingRole, ct);
 
     public Task<IReadOnlyList<InvitationSummary>> InvitationsAsync(Guid organizationId, CancellationToken ct = default) =>
         invitations.ListAsync(organizationId, ct);

@@ -237,7 +237,8 @@ Owners and admins manage people at **Members** (`/org/members`).
 **Invite by email**: an **Email** and a **Role**, then **Send invitation**. **Invite many (CSV)**: paste rows of
 `email` or `email,role`, one per line (a header row starting `email` is fine, blank lines and lines starting `#`
 are ignored, at most 200 rows), choose the **Role for rows without one**, and press **Send invitations**. The page
-reports how many were invited and the reason for each row that wasn't.
+reports how many were invited and the reason for each row that wasn't. When some rows would go past the plan's free
+seats, it first lists them and asks before sending (see [Plan and usage](#plan-and-usage)).
 
 The person gets a single-use link, valid for 72 hours. On **Join your organization** a new person chooses a
 password (at least 12 characters) and, optionally, a user name (it defaults to their email); someone who already
@@ -262,7 +263,8 @@ server log.
 - An account that belongs to another organization can't be added this way: invite them by email instead.
 
 In the members table, **Remove** deactivates a membership and signs the person out everywhere within about a minute
-(changing an active member's role does the same, so the new role applies at once). **Restore** brings them back.
+(changing an active member's role does the same, so the new role applies at once). **Restore** brings them back
+(it needs a free seat of their kind, see [Plan and usage](#plan-and-usage)).
 Their records are kept either way. Students can also be managed on **Students** (above).
 
 ### Forgotten passwords
@@ -455,6 +457,13 @@ one attempt started (an attempt replaced by an update to the examiner doesn't co
   is upgraded. The limit holds even when several people join at the same moment (two LMS launches, a roster sync,
   invitations accepted together). An invitation sent while a seat was free can't be accepted once the seats have run
   out; it stays open and works again as soon as a seat is free.
+- **Restoring** a removed member takes a seat again, so at the limit **Restore** is refused with the same message
+  until a seat is free.
+- **Invite many (CSV)** checks the rows against the free seats before sending. When some rows go past them, the page
+  says how many and lists exactly which rows (line, email and role, in the order they would take the free seats) can't
+  be accepted until seats free up. **Send all anyway** sends every invitation (those people can accept once you remove
+  someone or upgrade); **Cancel** lets you edit the list first. Rows for people already in the organization are left out
+  of the count.
 - At the **exam allowance**, or when a **trial has ended**, no new attempt can start (attempts already running
   finish). Students are told to contact their instructor; the trial message asks the owner to choose a plan.
 

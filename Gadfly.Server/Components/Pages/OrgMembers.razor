@@ -45,7 +45,34 @@
             }
         </InputSelect>
     </label>
-    <button type="submit" disabled="@busy">Send invitations</button>
+    @if (bulkPreview is { } preview && PreviewIsCurrent)
+    {
+        <div role="alert" class="notice">
+            <p>
+                @preview.Over.Count of the @preview.Rows.Count invitation@(preview.Rows.Count == 1 ? "" : "s") would exceed the free seats
+                (@SeatsFree(preview.FreeStaffSeats, "staff"), @SeatsFree(preview.FreeStudentSeats, "student")).
+                They can still be sent, but the people on these rows can't accept until seats free up (remove someone or upgrade the plan):
+            </p>
+            <ul>
+                @foreach (var row in preview.Over)
+                {
+                    <li>Line @row.Line: @row.Email (@row.Role)</li>
+                }
+            </ul>
+            @if (preview.AlreadyMembers > 0)
+            {
+                <p class="hint">@preview.AlreadyMembers row@(preview.AlreadyMembers == 1 ? " is" : "s are") already a member and won't be invited.</p>
+            }
+            <div class="row-actions">
+                <button type="button" disabled="@busy" @onclick="SendBulkAnywayAsync">Send all anyway</button>
+                <button type="button" class="link" disabled="@busy" @onclick="() => bulkPreview = null">Cancel</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <button type="submit" disabled="@busy">Send invitations</button>
+    }
     @if (bulkResult is not null)
     {
         <p role="status" class="@(bulkResult.Invited == bulkResult.Rows.Count ? "ok" : "error")">@bulkResult.Invited of @bulkResult.Rows.Count invited.</p>
@@ -169,6 +196,8 @@
     private InviteForm invite = new();
     private BulkForm bulk = new();
     private BulkInviteResult? bulkResult;
+    private BulkInvitePreview? bulkPreview;
+    private string? previewedCsv, previewedRole;
     private IReadOnlyList<InvitationSummary> invitations = [];
     private IReadOnlyList<(MindAttic.Authentication.Entities.AuthMembership Member, string UserName, string? Email)> members = [];
     private string? message, inviteMessage;
@@ -205,12 +234,39 @@
         await LoadAsync();
     });
 
+    /// <summary>
+    /// Sending a CSV first checks it against the free seats (GAD-T487): when some rows would exceed them, the admin sees exactly
+    /// which and chooses to send anyway (acceptance is still refused at the limit, GAD-T481) or to edit the list first.
+    /// </summary>
     private Task InviteBulkAsync() => GuardedAsync(async () =>
     {
+        bulkResult = null;
+        var preview = await Directory.PreviewBulkInviteAsync(Tenant.OrganizationId!.Value, bulk.Csv, bulk.DefaultRole, Tenant.Role);
+        if (preview.Over.Count > 0)
+        {
+            bulkPreview = preview;
+            previewedCsv = bulk.Csv;
+            previewedRole = bulk.DefaultRole;
+            return;
+        }
+        await SendBulkCoreAsync();
+    });
+
+    private Task SendBulkAnywayAsync() => GuardedAsync(SendBulkCoreAsync);
+
+    private async Task SendBulkCoreAsync()
+    {
+        bulkPreview = null;
         bulkResult = await Directory.InviteBulkAsync(Tenant.OrganizationId!.Value, bulk.Csv, bulk.DefaultRole, Tenant.Role, Tenant.UserId);
         if (bulkResult.Rows.All(x => x.Ok)) bulk = new() { DefaultRole = bulk.DefaultRole };
         await LoadAsync();
-    });
+    }
+
+    /// <summary>The warning belongs to the list it was made for: editing the rows or the default role asks again on the next send.</summary>
+    private bool PreviewIsCurrent => bulk.Csv == previewedCsv && bulk.DefaultRole == previewedRole;
+
+    private static string SeatsFree(int? free, string kind) =>
+        free is { } n ? $"{n} {kind} seat{(n == 1 ? "" : "s")} free" : $"{kind} seats unlimited";
 
     private Task ResendAsync(Guid id) => GuardedAsync(async () =>
     {
