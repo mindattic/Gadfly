@@ -23,12 +23,15 @@ public static class SecurityHeadersMiddleware
 {
     private const string Policy =
         "default-src 'self'; " +
-        "script-src 'self' 'wasm-unsafe-eval' 'nonce-{0}'; " +
+        // blob: in script-src: an AudioWorklet module is checked against script-src, not worker-src, and the microphone
+        // capture loads its worklet from a blob: URL, so without it the exam room's microphone never opens (GAD-T493).
+        "script-src 'self' 'wasm-unsafe-eval' blob: 'nonce-{0}'; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: blob:; " +
         "font-src 'self'; " +
         "media-src 'self' blob:; " +
-        "connect-src 'self' wss:; " +
+        // {1}: the examiner avatar's storage origin when Gadfly:Voice:AvatarModelUrl points off-site (GAD-T493).
+        "connect-src 'self' wss:{1}; " +
         "worker-src 'self' blob:; " +
         "object-src 'none'; " +
         "base-uri 'self'; " +
@@ -39,7 +42,16 @@ public static class SecurityHeadersMiddleware
         "camera=(self), microphone=(self), window-management=(self), " +
         "geolocation=(), payment=(), usb=(), bluetooth=(), interest-cohort=()";
 
-    public static IApplicationBuilder UseGadflySecurityHeaders(this IApplicationBuilder app) => app.Use(async (ctx, next) =>
+    /// <summary>" https://host" for an absolute off-site avatar model URL, else empty, for connect-src.</summary>
+    internal static string AvatarOrigin(string? avatarModelUrl) =>
+        Uri.TryCreate(avatarModelUrl, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps
+            ? " " + u.GetLeftPart(UriPartial.Authority) : "";
+
+    public static IApplicationBuilder UseGadflySecurityHeaders(this IApplicationBuilder app)
+    {
+        var config = app.ApplicationServices.GetRequiredService<Microsoft.Extensions.Configuration.IConfiguration>();
+        var avatarOrigin = AvatarOrigin(config["Gadfly:Voice:AvatarModelUrl"]);
+        return app.Use(async (ctx, next) =>
     {
         // The auth surface already set its own stricter CSP (with its own nonce) before reaching here; never
         // overwrite it. Every other path gets this one, with a nonce the Razor host page (App.razor) also reads
@@ -48,7 +60,7 @@ public static class SecurityHeadersMiddleware
         {
             var nonce = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
             ctx.Items[MindAtticAuthAppExtensions.CspNonceItem] = nonce;
-            ctx.Response.Headers["Content-Security-Policy"] = string.Format(Policy, nonce);
+            ctx.Response.Headers["Content-Security-Policy"] = string.Format(Policy, nonce, avatarOrigin);
         }
         ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
         ctx.Response.Headers["X-Frame-Options"] = "DENY";
@@ -57,4 +69,5 @@ public static class SecurityHeadersMiddleware
         ctx.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin";
         await next();
     });
+    }
 }

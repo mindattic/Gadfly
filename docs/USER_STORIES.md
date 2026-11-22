@@ -551,4 +551,5 @@ _Nothing recorded yet._
 | GAD-T489 | 2026-11-22 | chore | closed | 2026-11-22 morning | — |
 | GAD-T490 | 2026-11-22 | chore | closed | Owner request: a voice exam for each of the seven Harry Potter books (source notes per book), alongside the existing whole-series exam | c8678cf |
 | GAD-T491 | 2026-11-22 | fix | closed | Deploy blocked: GadflyDbContext has model changes with no migration (dotnet ef database update fails with PendingModelChangesWarning) | 4a99f3c |
-| GAD-T492 | 2026-11-22 | fix | open | V2 on mindattic-gadfly serves no CSS or images: MapStaticAssets endpoints fall under the default-deny fallback policy, so every asset redirects to the login page | — |
+| GAD-T492 | 2026-11-22 | fix | closed | V2 on mindattic-gadfly serves no CSS or images: MapStaticAssets endpoints fall under the default-deny fallback policy, so every asset redirects to the login page | d347d83 |
+| GAD-T493 | 2026-11-22 | fix | open | Live exam room pauses with 'microphone couldn't be opened': the CSP blocks the mic AudioWorklet (blob: module checked against script-src) and the avatar .glb fetch from blob storage (connect-src) | — |
