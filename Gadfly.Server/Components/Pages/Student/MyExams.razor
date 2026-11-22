@@ -12,7 +12,7 @@
 <h1>My exams <HelpLink Topic="student-guide" Anchor="finding-your-exam-my-exams" /></h1>
 @if (Tenant.UserId is { } me)
 {
-    <p class="hint"><a href="privacy/export/@me" download="gadfly-data-@(me.ToString("N")).json">Download my data</a> (everything this organization keeps about you, as a JSON file)</p>
+    <p class="hint"><a href="privacy/export/@me" download="gadfly-data-@(me.ToString("N")).json">Download my data</a> (everything this organization keeps about you, as a JSON file) &middot; <a href="my-notifications">Email preferences</a></p>
 }
 
 @* The ungraded practice interview (GAD-T294): always offered, even with no exam assigned yet. *@

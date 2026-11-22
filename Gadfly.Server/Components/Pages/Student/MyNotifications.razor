@@ -1,0 +1,78 @@
+@page "/my-notifications"
+@attribute [Authorize(Policy = GadflyPolicies.Student)]
+@using Gadfly.Server.Data
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+
+@* A student's own notification choice (GAD-T310/GAD-T375): opting out of exam-due reminders only. *@
+
+<PageTitle>Email preferences · Gadfly Exams</PageTitle>
+<h1>Email preferences</h1>
+
+@if (loaded)
+{
+    <EditForm Model="this" OnValidSubmit="SaveAsync" FormName="my-notifications" class="panel">
+        <label class="check">
+            <InputCheckbox @bind-Value="optedOut" />
+            Don't email me reminders before an exam is due
+        </label>
+        <p class="hint">
+            This only affects the reminder email sent a couple of days before an exam closes. You'll still be emailed
+            when an exam is assigned to you and when your result is released — those don't stop, since they matter
+            operationally. Your organization can also turn off Gadfly's emails entirely; if they have, this choice
+            won't change anything either way.
+        </p>
+        <button type="submit" disabled="@busy">Save</button>
+        @if (message is not null)
+        {
+            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+        }
+    </EditForm>
+}
+else
+{
+    <p class="hint">Loading&hellip;</p>
+}
+
+@code {
+    private bool optedOut;
+    private bool loaded, ok, busy;
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me) return;
+        await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
+        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+        optedOut = await db.Set<StudentNotificationPreference>().AsNoTracking()
+            .Where(p => p.OrganizationId == org && p.UserId == me).Select(p => (bool?)p.RemindersOptedOut).FirstOrDefaultAsync() ?? false;
+        loaded = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me || busy) return;
+        busy = true;
+        message = null;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            var row = await db.Set<StudentNotificationPreference>().FirstOrDefaultAsync(p => p.OrganizationId == org && p.UserId == me);
+            if (row is null) db.Set<StudentNotificationPreference>().Add(row = new StudentNotificationPreference { OrganizationId = org, UserId = me });
+            row.RemindersOptedOut = optedOut;
+            row.UpdatedAt = Clock.GetUtcNow();
+            await db.SaveChangesAsync();
+            ok = true;
+            message = "Saved.";
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            message = "That could not be saved: " + ex.Message;
+        }
+        finally { busy = false; }
+    }
+}
