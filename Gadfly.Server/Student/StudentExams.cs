@@ -256,6 +256,18 @@ public static class StudentExams
         _ => "Not available yet",
     };
 
+    /// <summary>The standing in the page's language (GAD-T544); <see cref="Describe(AssignmentStanding)"/> is the English.</summary>
+    public static string Describe(AssignmentStanding s, Gadfly.Server.Localization.UiText t) => t[s switch
+    {
+        AssignmentStanding.NotOpenYet => "standing.notOpenYet",
+        AssignmentStanding.Open => "standing.open",
+        AssignmentStanding.InProgress => "standing.inProgress",
+        AssignmentStanding.Completed => "standing.completed",
+        AssignmentStanding.Closed => "standing.closed",
+        AssignmentStanding.Archived => "standing.archived",
+        _ => "standing.unavailable",
+    }].Value;
+
     /// <summary>
     /// A student-readable line for one objective's level (GAD-T460; the instructor decides the grade). Level 0 is worded as
     /// not enough evidence, never as no understanding.
@@ -319,9 +331,15 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
     /// The student has the typed-answer accommodation (GAD-T260): the notice says they type their answers, the microphone isn't used
     /// and pasting into the answer box is noted. Without it the wording is unchanged.
     /// </param>
+    /// <param name="language">
+    /// The page's language (GAD-T544): "ko" gives the Korean notice, the same terms in natural formal Korean; anything else the
+    /// English, unchanged. The hash covers the exact words shown, so the record says which language the student read.
+    /// </param>
     public static ConsentNotice For(string organizationName, string examTitle, int retentionDays, ExamMode mode,
-        IntegrityLevel integrity = IntegrityLevel.Standard, bool typedAnswers = false)
+        IntegrityLevel integrity = IntegrityLevel.Standard, bool typedAnswers = false, string? language = null)
     {
+        if (Gadfly.Server.Localization.UiCatalog.Normalize(language) == Gadfly.Server.Localization.UiCatalog.Korean)
+            return KoreanFor(organizationName, examTitle, retentionDays, integrity, typedAnswers);
         var paragraphs = new List<string>
         {
             $"This is an oral-style exam for {organizationName}: \"{examTitle}\". An AI examiner asks you questions and follows up on your own answers to see how well you understand the material.",
@@ -380,6 +398,56 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
         yield return "Camera: this exam uses your camera. Your browser will ask you to allow it. The camera is analysed on your own device only. No video, photo, screenshot, audio or image of your face is recorded, stored or sent anywhere, and the face data used for the checks is held in your browser's memory and discarded when the exam ends.";
         yield return "What is sent and kept from the camera: only short event notes, each with a type, a start and end time, a confidence and one plain sentence, for example \"no face in view for 12 seconds\", \"a second face appeared\", \"looked to the left for 8 seconds\", \"eye movements like reading something off-screen\", or \"the camera was not used\". The device also checks that the same face stays in front of the camera; if it may have changed, a note saying so is sent like the others, but the face data used for the check never leaves your device.Short glances away while you think are noted as normal. Nothing is made of your emotions, mood or honesty: the camera is not used to judge any of that.";
         yield return "Camera notes are for your instructor to read alongside your answers, as low-confidence evidence, never an automatic fail. The camera must be on to take this exam: without it the exam can't start, and it pauses if the camera stops.";
+    }
+
+    /// <summary>
+    /// The Korean notice (GAD-T544): the same terms, paragraph for paragraph, in the formal 합쇼체 a consent notice calls for.
+    /// Wording follows docs/LOCALIZATION.md's glossary (시험관, 응시, 대화 기록, 담당 교수자).
+    /// </summary>
+    private static ConsentNotice KoreanFor(string organizationName, string examTitle, int retentionDays, IntegrityLevel integrity, bool typedAnswers)
+    {
+        const string pause = "시험 중 {0}가 멈추면 다시 켤 때까지 시험이 일시 정지되고, 일시 정지된 동안에는 시간이 멈춥니다(모두 합해 최대 10분 또는 시험 시간의 절반 중 더 짧은 시간까지이며, 그 뒤에는 시간이 계속 흐릅니다). 시험 시간은 시험관이 첫 질문을 할 때부터 시작됩니다.";
+        var paragraphs = new List<string>
+        {
+            $"{organizationName}의 구술형 시험 \"{examTitle}\"입니다. AI 시험관이 질문을 하고 학생의 답변을 바탕으로 후속 질문을 하며, 학습 내용을 얼마나 잘 이해하고 있는지 확인합니다.",
+            typedAnswers
+                ? "기록되는 내용: 모든 질문과 입력한 답변(직접 수정한 내용 포함), 각 질문을 한 시각과 답변한 시각, 그리고 복사한 글처럼 보이는 답변 같은 부정행위 방지 신호. 이는 사람이 검토하기 위한 참고 기록이며, 자동으로 불합격 처리되지 않습니다."
+                : "기록되는 내용: 모든 질문과 말로 한 답변의 대화 기록(직접 수정한 내용 포함), 각 질문을 한 시각과 답변한 시각, 그리고 복사한 글처럼 보이는 답변 같은 부정행위 방지 신호. 이는 사람이 검토하기 위한 참고 기록이며, 자동으로 불합격 처리되지 않습니다.",
+            "기록되지 않는 내용: 영상과 음성은 저장되지 않습니다. 카메라 화면은 학생 본인의 화면에만 보이며, 녹화되거나 전송되지 않습니다.",
+            $"보관 기간: {organizationName}은(는) 답변과 대화 기록을 {retentionDays}일 동안 보관한 뒤 삭제합니다.",
+            "결정하는 주체: AI는 예비 평가만 합니다. 답변은 사람이 채점하고, AI와 크게 다른 부분은 검토자가 조정하며, 권한 있는 담당자가 결과를 승인하고 공개합니다. 공개된 결과에는 이의 신청을 할 수 있습니다.",
+            "선택권: 언제든지 \"시험 마치기\"를 눌러 시험을 끝낼 수 있습니다. 일찍 끝내면 그때까지 답한 내용이 제출되고, 이번 응시 기회가 사용됩니다.",
+        };
+        if (integrity != IntegrityLevel.Off)
+        {
+            var what = "다른 탭이나 창으로 전환한 것"
+                + (typedAnswers ? ", 답변 칸에 붙여 넣은 것" : "")
+                + (integrity == IntegrityLevel.Strict
+                    ? ", 질문을 복사한 것, 전체 화면에서 나간 것, 화면이 두 개 이상 연결된 것(브라우저가 화면 감지 허용 여부를 물을 수 있으며, 거부해도 됩니다)"
+                    : ", 질문을 복사한 것");
+            paragraphs.Insert(2, $"시험 중에는 브라우저가 {what}을(를) 언제, 얼마 동안이었는지 함께 기록합니다. 아무것도 차단되지 않으며, 담당 교수자가 검토하기 위한 참고 기록일 뿐 자동으로 불합격 처리되지 않습니다.");
+        }
+        if (integrity == IntegrityLevel.Strict)
+        {
+            paragraphs.RemoveAll(p => p.StartsWith("기록되지 않는 내용:", StringComparison.Ordinal));
+            paragraphs.InsertRange(paragraphs.FindIndex(p => p.StartsWith("보관 기간:", StringComparison.Ordinal)),
+            [
+                "카메라: 이 시험은 카메라를 사용합니다. 브라우저가 카메라 사용 허용 여부를 물을 것입니다. 카메라 영상은 학생의 기기 안에서만 분석됩니다. 영상, 사진, 화면 캡처, 음성, 얼굴 이미지는 어디에도 기록·저장·전송되지 않으며, 확인에 쓰이는 얼굴 데이터는 브라우저 메모리에만 있다가 시험이 끝나면 삭제됩니다.",
+                "카메라에서 전송되고 보관되는 것: 짧은 이벤트 기록만 전송됩니다. 각 기록에는 종류, 시작 및 종료 시각, 신뢰도, 그리고 \"12초 동안 얼굴이 보이지 않음\", \"두 번째 얼굴이 나타남\", \"8초 동안 왼쪽을 봄\", \"화면 밖의 무언가를 읽는 듯한 눈의 움직임\", \"카메라가 사용되지 않음\" 같은 한 문장 설명이 들어 있습니다. 기기는 같은 얼굴이 계속 카메라 앞에 있는지도 확인합니다. 얼굴이 바뀌었을 가능성이 있으면 그 사실을 알리는 기록이 다른 기록처럼 전송되지만, 확인에 쓰인 얼굴 데이터는 기기 밖으로 나가지 않습니다. 생각하는 동안 잠깐 시선을 돌리는 것은 정상적인 일로 기록됩니다. 감정, 기분, 정직성은 판단하지 않으며, 카메라는 그런 판단에 전혀 쓰이지 않습니다.",
+                "카메라 기록은 담당 교수자가 답변과 함께 참고하는 신뢰도 낮은 자료일 뿐, 자동으로 불합격 처리되지 않습니다. 이 시험을 보려면 카메라가 켜져 있어야 합니다. 카메라가 없으면 시험을 시작할 수 없고, 카메라가 멈추면 시험이 일시 정지됩니다.",
+            ]);
+        }
+        paragraphs.Add(typedAnswers
+            ? "담당 교수자가 편의 지원을 제공했습니다. 답변을 말하는 대신 입력합니다. 시험관은 여전히 각 질문을 소리 내어 말하고 화면에도 보여 줍니다. "
+              + "카메라는 시험 내내 켜져 있어야 하며, 시선 맞추기 편의 지원을 따로 받지 않았다면 다른 학생과 같은 시선 확인이 적용됩니다. 마이크는 사용하지 않습니다. "
+              + "각 답변은 입력한 그대로 보관되며, 답변 칸에 글을 붙여 넣으면 담당 교수자가 검토할 수 있도록 기록됩니다(차단되거나 자동으로 불합격 처리되지 않습니다). "
+              + string.Format(pause, "카메라")
+            : "이 시험은 말로 진행되며, 시험 내내 마이크와 카메라가 켜져 있어야 합니다. 시험관이 질문을 말하면 소리 내어 답합니다. 입력 답변은 없습니다. "
+              + "대화 기록을 만들기 위해 마이크 음성이 음성 인식 서비스로 전송되지만, 음성 자체는 녹음되거나 보관되지 않습니다. "
+              + "보관되는 것은 대화 기록(인식 신뢰도 포함), 말하는 방식(속도, 쉼, 머뭇거림, 두 사람 이상의 목소리가 들렸는지 여부), 그리고 학생이 확인한 내용입니다. "
+              + "\"두 번째 목소리가 들림\" 같은 기록은 담당 교수자가 약한 증거로 참고할 뿐, 자동으로 불합격 처리되지 않습니다. "
+              + string.Format(pause, "마이크나 카메라"));
+        return new ConsentNotice("시작하기 전에", paragraphs);
     }
 
     /// <summary>The exact text the student accepted, as hashed.</summary>

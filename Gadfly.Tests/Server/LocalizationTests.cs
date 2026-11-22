@@ -111,6 +111,23 @@ public class LocalizationTests
         Assert.That(missing, Is.Empty);
     }
 
+    /// <summary>GAD-T544: the Korean notice says the same things, paragraph for paragraph, and its hash records the language read.</summary>
+    [Test]
+    public void KoreanConsentNotice_MirrorsTheEnglish_AndHashesDifferently()
+    {
+        foreach (var level in Enum.GetValues<Gadfly.Server.Data.IntegrityLevel>())
+            foreach (var typed in new[] { false, true })
+            {
+                var en = Gadfly.Server.Student.ConsentNotice.For("Org", "Exam", 90, Gadfly.Server.Data.ExamMode.Text, level, typed);
+                var ko = Gadfly.Server.Student.ConsentNotice.For("Org", "Exam", 90, Gadfly.Server.Data.ExamMode.Text, level, typed, "ko");
+                Assert.That(ko.Paragraphs, Has.Count.EqualTo(en.Paragraphs.Count), $"{level} typed={typed}");
+                Assert.That(ko.Sha256, Is.Not.EqualTo(en.Sha256));
+                Assert.That(string.Join("", ko.Paragraphs), Does.Contain("90일"));
+            }
+        Assert.That(Gadfly.Server.Student.ConsentNotice.For("Org", "Exam", 90, Gadfly.Server.Data.ExamMode.Text, language: "en").Sha256,
+            Is.EqualTo(Gadfly.Server.Student.ConsentNotice.For("Org", "Exam", 90, Gadfly.Server.Data.ExamMode.Text).Sha256), "English is unchanged");
+    }
+
     [Test]
     public void CookieValue_NamesTheFullCulture() =>
         Assert.That(LocalizationSetup.CookieValue("ko"), Is.EqualTo("c=ko-KR|uic=ko-KR"));
