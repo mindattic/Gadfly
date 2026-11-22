@@ -312,7 +312,7 @@ async function start() {
         dropLoading3d(s);
         // Without the talking head the questions are still read out by the browser's own speech, with the caption lit word by word.
         try { s.presenter?.dispose(); } catch { }
-        try { s.presenter = (await import("./examiner-voice.js")).createPresenter(null, null, q("caption"), {}, () => { }); } catch { s.presenter = null; }
+        try { s.presenter = (await import("./examiner-voice.js")).createPresenter(null, null, q("caption"), { language: s.cfg.examLanguage }, () => { }); } catch { s.presenter = null; }
         s.dotnet.invokeMethodAsync("OnAvatarMode", "none", "The examiner's picture could not start; questions are read out by your browser and shown as text.").catch(() => { });
     }
 
@@ -392,7 +392,8 @@ async function createPresenter(s, el) {
 
 /** As createPresenter, once examiner-voice.js is loaded: at once, so a swap never leaves a moment with no presenter. */
 function presenterFor(s, el) {
-    return s.delivery.createPresenter(el, q("stage"), q("caption"), { portraitMouth: s.cfg.portraitMouth },
+    // examLanguage (GAD-T531): her lip-sync language and the browser-speech fallback's voice.
+    return s.delivery.createPresenter(el, q("stage"), q("caption"), { portraitMouth: s.cfg.portraitMouth, language: s.cfg.examLanguage },
         (reason) => s.dotnet.invokeMethodAsync("OnAvatarMode", "portrait", reason).catch(() => { }));
 }
 
@@ -1303,7 +1304,9 @@ function cancelBackchannel(s, silence) {
 function endCueMs(s) {
     const full = s.cfg.endCueMs || 4000;
     const ceiling = Math.max(full, s.cfg.endCueMaxMs || full);
-    const short = s.cfg.endCueCompleteMs > 0 ? Math.min(full, s.cfg.endCueCompleteMs + (s.cutOffBackoffMs || 0)) : full;
+    // ESL mode (GAD-T554): the short cue only after endCueCompleteAfter answers in a row that were not cut off (0, the default: at once).
+    const settled = (s.uncutAnswers || 0) >= (s.cfg.endCueCompleteAfter || 0);
+    const short = s.cfg.endCueCompleteMs > 0 && settled ? Math.min(full, s.cfg.endCueCompleteMs + (s.cutOffBackoffMs || 0)) : full;
     const floor = short < full && finishedSentence(s) && !awaitingFinal(s) ? short : full;
     if (s.pauses.length < PAUSE.minSamples) return floor;
     const sorted = [...s.pauses].sort((a, b) => a - b);
@@ -1362,7 +1365,10 @@ function noteCutOff(s) {
     if (Number.isFinite(ms) && ms >= 0 && ms <= CUT_OFF_MS && (s.speaking || s.fillPlaying || s.remarkHold)) return;
     s.cutWatch = null;
     if (!Number.isFinite(ms) || ms < 0 || ms > CUT_OFF_MS) return;
-    s.cutOffBackoffMs = Math.min(CUT_OFF_BACKOFF_MS * 4, (s.cutOffBackoffMs || 0) + CUT_OFF_BACKOFF_MS);   // GAD-T498
+    // GAD-T498; ESL mode doubles the step (cutOffBackoffFactor, GAD-T554), 1 otherwise.
+    const step = CUT_OFF_BACKOFF_MS * (s.cfg.cutOffBackoffFactor > 0 ? s.cfg.cutOffBackoffFactor : 1);
+    s.cutOffBackoffMs = Math.min(step * 4, (s.cutOffBackoffMs || 0) + step);
+    s.uncutAnswers = 0;
     s.dotnet.invokeMethodAsync("OnAnswerCutOff", Math.round(ms)).catch(() => { });
 }
 
@@ -1537,6 +1543,7 @@ async function submit(immediate, resend) {
     status("Sending your answer…");
     // Sent by the silence, not by "Done answering": watch the next few seconds for the student going on (GAD-T462).
     s.cutWatch = immediate ? null : performance.now();
+    s.uncutAnswers = (s.uncutAnswers || 0) + 1;   // reset by a cut-off (noteCutOff)
     // She acknowledges the answer at once (GAD-T496), not after the round trip; a kept answer sent again was acknowledged already.
     if (!resend) sayAck(s);
     s.sending = true;

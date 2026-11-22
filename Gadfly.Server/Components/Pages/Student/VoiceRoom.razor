@@ -13,6 +13,7 @@
 @inject Gadfly.Server.Diagnostics.VoiceRecognitionTimingRecorder RecognitionTimings
 @inject Gadfly.Server.Sessions.SessionOrchestrator Sessions
 @inject QuestionVoiceStreams QuestionStreams
+@inject ExaminerTts Tts
 
 @* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
@@ -234,6 +235,8 @@
     private string? lastFiller;
     /// <summary>The last acknowledgement handed to the browser (GAD-T496); the next one differs.</summary>
     private string? lastAck;
+    /// <summary>The attempt's exam and primary language (GAD-T528, GAD-T555); the default (English, English) until the room has read it.</summary>
+    private SessionSpeech speech = SessionSpeech.Default;
     /// <summary>The camera self-view, as voice-room.js reports it: starting, on, hidden, denied or unavailable.</summary>
     private string selfState = "starting";
     /// <summary>The interview so far: every question or request the examiner spoke and every answer spoken back (GAD-T231).</summary>
@@ -302,12 +305,7 @@
     /// once (GAD-T303): the acknowledgements first, since one is said the moment every answer is in (GAD-T496), then the wait
     /// fillers (GAD-T329), then the eye-contact remarks.
     /// </summary>
-    private IEnumerable<string> FixedLines() =>
-        ExaminerFiller.Acknowledgements
-            .Concat(Settings.BackchannelMs > 0 ? ExaminerFiller.Backchannels : [])
-            .Concat(ExaminerFiller.First)
-            .Concat(ExaminerFiller.Again)
-            .Concat(Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks.Values);
+    private IEnumerable<string> FixedLines() => ExaminerFiller.FixedLines(speech.Language, Settings.BackchannelMs > 0);   // per exam language (GAD-T532)
 
     /// <summary>Her speaking style for what is being said: requests about an answer are always neutral, questions by their move.</summary>
     private string SpeakingStyle => Prompt is { Length: > 0 } ? ExaminerStyle.Neutral : ExaminerStyle.For(Move);
@@ -340,26 +338,34 @@
         try
         {
             var timeMultiplier = await TimeMultiplierAsync();
-            var (cueFloorMs, cueCeilingMs) = Settings.EndCue(timeMultiplier);
-            var (language, vocabulary) = await VocabularyAsync();
+            // The attempt's languages (GAD-T528, GAD-T554, GAD-T555): the recognizer's language, the end-of-answer silences, the
+            // examiner's voice and lines. An English exam by an English speaker gets exactly what it always did.
+            speech = await SpeechAsync();
+            Grants.SetSpeech(user, SessionId, speech);
+            var cues = Settings.EndCuesFor(timeMultiplier, speech);
+            var (policyLanguage, vocabulary) = await VocabularyAsync();
+            var language = speech.RecognizerLanguage(policyLanguage);
             Grants.SetVocabulary(user, SessionId, language, vocabulary);
             // The exam's voice, else the organization's default, else the platform's (GAD-T475): chosen here, enforced by VoiceHubFilter.
-            if (await ExaminerVoiceAsync() is { } voice)
-            {
-                Grants.SetVoice(user, SessionId, voice);
-                Warmup.Warm(FixedLines(), voice);
-            }
+            var voice = await ExaminerVoiceAsync();
+            if (voice is not null) Grants.SetVoice(user, SessionId, voice);
+            if (voice is not null || !speech.IsDefault) Warmup.Warm(FixedLines(), voice, Tts.For(speech));
             module = await JS.InvokeAsync<IJSObjectReference>("import", startupBound.Token, "./js/voice-room.js");
             self = DotNetObjectReference.Create(this);
             var caps = await module.InvokeAsync<Capabilities>("init", startupBound.Token, self, new
             {
                 // The end-of-answer silence (GAD-T264): starts at the floor and adapts to the student's own pauses, up to the
                 // ceiling; both are lengthened by the extra-time accommodation.
-                endCueMs = cueFloorMs,
-                endCueMaxMs = cueCeilingMs,
+                endCueMs = cues.FloorMs,
+                endCueMaxMs = cues.CeilingMs,
                 // Endpointing (GAD-T498): the shorter silence after a finished sentence, and the speech detector's hangover (how
                 // long a silence closes one stretch of speech and commits it to the recognizer).
-                endCueCompleteMs = Settings.EndCueCompleteMs(timeMultiplier),
+                endCueCompleteMs = cues.CompleteMs,
+                // ESL mode (GAD-T554): the short cue only after this many answers in a row not cut off, and a larger cut-off backoff.
+                endCueCompleteAfter = cues.CompleteAfterAnswers,
+                cutOffBackoffFactor = cues.BackoffFactor,
+                // The exam language (GAD-T531): her lip-sync and the browser-speech fallback.
+                examLanguage = speech.Language,
                 hangoverMs = Settings.SpeechHangoverMs,
                 // The listening "Mm-hm." after a finished sentence (GAD-T496); 0 is off.
                 backchannelMs = Settings.BackchannelMs,
@@ -458,6 +464,21 @@
         }
     }
 
+    /// <summary>The attempt's exam and primary language (GAD-T528); the default when they can't be read (today's behavior).</summary>
+    private async Task<SessionSpeech> SpeechAsync()
+    {
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
+            return await SessionSpeech.ForSessionAsync(scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>(), org, SessionId, stop.Token);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.LogDebug(ex, "The attempt's languages could not be read for session {SessionId}.", SessionId);
+            return SessionSpeech.Default;
+        }
+    }
+
     /// <summary>This session's examiner voice id (GAD-T475), or null for the platform voice (always null outside live mode, or when
     /// it can't be read).</summary>
     private async Task<string?> ExaminerVoiceAsync()
@@ -467,7 +488,7 @@
         {
             await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
             var db = scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>();
-            return await ExaminerVoice.ForSessionAsync(db, Settings.Mode, org, SessionId, Log, stop.Token);
+            return await ExaminerVoice.ForSessionAsync(db, Settings.Mode, org, SessionId, Log, stop.Token, Settings.VoiceIdFor(speech.Language));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -541,7 +562,7 @@
     /// </summary>
     private async Task FillWaitAsync()
     {
-        var (first, again) = ExaminerFiller.Pick(Random.Shared, lastFiller);
+        var (first, again) = ExaminerFiller.Pick(Random.Shared, lastFiller, speech.Language);
         if (!Grants.Offer(user, SessionId, first)) return;
         lastFiller = first;
         var longWait = Grants.Offer(user, SessionId, again) ? again : null;
@@ -555,12 +576,12 @@
     /// </summary>
     private async Task OfferAcknowledgementAsync()
     {
-        var ack = ExaminerFiller.PickAcknowledgement(Random.Shared, lastAck);
+        var ack = ExaminerFiller.PickAcknowledgement(Random.Shared, lastAck, speech.Language);
         if (!Grants.Offer(user, SessionId, ack)) return;
         lastAck = ack;
         await module!.InvokeVoidAsync("nextAcknowledgement", stop.Token, ack);
         if (Settings.BackchannelMs > 0)
-            await module!.InvokeVoidAsync("backchannels", stop.Token, ExaminerFiller.Backchannels.Where(t => Grants.Offer(user, SessionId, t)).ToArray());
+            await module!.InvokeVoidAsync("backchannels", stop.Token, ExaminerFiller.For(speech.Language).Backchannels.Where(t => Grants.Offer(user, SessionId, t)).ToArray());
     }
 
     /// <summary>
@@ -574,7 +595,7 @@
     {
         if (module is null || state != VoiceState.On || noTalkingHead || !armed || Prompt is { Length: > 0 } || QuestionStreams.SampleRate is null)
             return null;
-        var stream = QuestionStreams.Open(user, org, SessionId, Grants.VoiceOf(user, SessionId), committedAt, committedAtUtc);
+        var stream = QuestionStreams.Open(user, org, SessionId, Grants.VoiceOf(user, SessionId), committedAt, committedAtUtc, Tts.For(speech));
         var nextTurn = answeredTurn is { } t ? t + 1 : (int?)null;
         questionStream = stream;
         stream.Started += started => _ = InvokeAsync(async () =>
