@@ -35,7 +35,7 @@ else
             <NotAuthorized>
                 @if (Gadfly.Server.Desk.DeskAccess.NeedsMfaForDesk(context.User, Tenant, Config))
                 {
-                    @* GAD-T247: every desk admin needs two-step verification, a listed account included. *@
+                    @* GAD-T247: every desk admin (an Owner or Admin, GAD-T459) needs two-step verification. *@
                     <a class="card" href="account/mfa/setup"><h2>Admin desk</h2><p>Set up two-step verification first: the admin desk opens only after a sign-in with it.</p></a>
                 }
             </NotAuthorized>

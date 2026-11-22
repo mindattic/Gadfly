@@ -317,7 +317,7 @@ else
 
     private string CurrentTab => Tab is "students" or "student-exams" ? Tab : "exams";
 
-    /// <summary>The caller's own role reaches the staff pages (full editor, review); a listed desk admin who is a student does not.</summary>
+    /// <summary>The caller's own role reaches the staff pages (full editor, review); a deprecated listed desk admin (GAD-T459) who is a student does not.</summary>
     private bool IsStaff => Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor;
 
     private sealed class NewStudentForm

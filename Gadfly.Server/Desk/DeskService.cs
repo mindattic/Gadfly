@@ -15,24 +15,33 @@ using MindAttic.Authentication.Services;
 namespace Gadfly.Server.Desk;
 
 /// <summary>
-/// Who may open the admin desk (GAD-T246, hardened GAD-T247): the desk is on (<see cref="EnabledSetting"/>), the caller
-/// has signed in with MFA (the same rule as every staff policy, with no exception), and holds the desk's Admin role in
-/// the active organization, either as that organization's Owner or Admin or as an account named in
-/// <see cref="AdminsSetting"/>, which holds the desk Admin role alongside whatever membership role it has (the owner's
-/// 'ryan' account is a Student there, so it can sit exams and reset them from the app).
+/// Who may open the admin desk (GAD-T246, hardened GAD-T247, GAD-T459): the desk is on (<see cref="EnabledSetting"/>), the
+/// caller has signed in with MFA (the same rule as every staff policy, with no exception), and is an Owner or Admin of the
+/// active organization: the real roles, so the desk needs no special account.
+/// <para>
+/// Transition (GAD-T459): the old configured list <see cref="AdminsSetting"/> is deprecated. While it is set, its accounts
+/// still hold the desk Admin role (in one organization only) for one more release, through <see cref="ListHonouredUntil"/>,
+/// and the server logs a warning at start-up naming them. It is removed in the release after that.
+/// </para>
 /// </summary>
 public static class DeskAccess
 {
     public const string Policy = "gadfly:admin-desk";
     public const string EnabledSetting = "Gadfly:AdminDesk:Enabled";
+    /// <summary>Deprecated (GAD-T459): user names given the desk Admin role regardless of their membership role.</summary>
     public const string AdminsSetting = "Gadfly:AdminDesk:Admins";
+    /// <summary>The last release that still honours <see cref="AdminsSetting"/> (GAD-T459); the next one ignores it.</summary>
+    public const string ListHonouredUntil = "V2";
     /// <summary>The organization id where <see cref="AdminsSetting"/> accounts hold the desk Admin role.</summary>
     public const string OrganizationSetting = "Gadfly:AdminDesk:Organization";
 
     public static bool IsEnabled(IConfiguration config) =>
         string.Equals(config[EnabledSetting], "true", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>User names granted the desk Admin role (in one organization only: see <see cref="IsDeskAdmin"/>).</summary>
+    /// <summary>
+    /// User names granted the desk Admin role by the deprecated <see cref="AdminsSetting"/> (in one organization only: see
+    /// <see cref="IsDeskAdmin"/>). Empty when the list isn't set, which is the default.
+    /// </summary>
     public static IReadOnlyList<string> ListedAdmins(IConfiguration config) =>
         config.GetSection(AdminsSetting).GetChildren().Select(c => c.Value).Where(v => !string.IsNullOrWhiteSpace(v)).Select(v => v!.Trim()).ToList();
 
@@ -60,6 +69,7 @@ public static class DeskAccess
         // /account/mfa/setup, and simply can't open the desk until it has.
         if (requireMfa && OrgRoleHandler.MfaRequired && !user.HasClaim(MaClaims.Amr, "mfa")) return false;
         if (tenant.Role is OrgRoles.Owner or OrgRoles.Admin) return true;
+        // GAD-T459 transition: a deprecated listed account, for one more release (the start-up warning names it).
         var name = user.Identity?.Name;
         return name is { Length: > 0 } && ListedAdmins(config).Contains(name, StringComparer.OrdinalIgnoreCase)
             && IsListedAdminOrganization(tenant, config);
@@ -80,9 +90,22 @@ public static class DeskAccess
     /// <summary>The tenant the desk acts as: the caller, in the same organization, with the Admin role.</summary>
     public static TenantSnapshot Elevated(ITenantContext tenant) => TenantSnapshot.Of(tenant) with { Role = OrgRoles.Admin };
 
+    /// <summary>
+    /// The start-up warning while the deprecated <see cref="AdminsSetting"/> is set (GAD-T459), or null when it isn't. Names the
+    /// accounts so whoever runs the server knows whom to make an Owner or Admin before the list stops working.
+    /// </summary>
+    public static string? DeprecatedListWarning(IConfiguration config)
+    {
+        var listed = ListedAdmins(config);
+        if (listed.Count == 0) return null;
+        return $"{AdminsSetting} is deprecated (GAD-T459) and is honoured only through {ListHonouredUntil}: the admin desk is for the " +
+               $"organization's Owners and Admins. Give these accounts the Owner or Admin role, then remove the setting: {string.Join(", ", listed)}.";
+    }
+
     /// <summary>Registers the desk's policy and its handler.</summary>
     public static IServiceCollection AddAdminDesk(this IServiceCollection services)
     {
+        services.AddHostedService<DeskAdminsListWarning>();
         services.AddScoped<IAuthorizationHandler, DeskAdminHandler>();
         services.Configure<AuthorizationOptions>(o =>
             o.AddPolicy(Policy, p => p.RequireAuthenticatedUser().AddRequirements(new DeskAdminRequirement())));
@@ -91,6 +114,18 @@ public static class DeskAccess
 }
 
 public sealed class DeskAdminRequirement : IAuthorizationRequirement;
+
+/// <summary>Logs, once at start-up, that the deprecated <see cref="DeskAccess.AdminsSetting"/> list is still set (GAD-T459).</summary>
+public sealed class DeskAdminsListWarning(IConfiguration config, ILogger<DeskAdminsListWarning> log) : IHostedService
+{
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        if (DeskAccess.DeprecatedListWarning(config) is { } warning) log.LogWarning("{Warning}", warning);
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+}
 
 public sealed class DeskAdminHandler(ITenantContext tenant, IConfiguration config) : AuthorizationHandler<DeskAdminRequirement>
 {
