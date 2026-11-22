@@ -31,6 +31,7 @@ public static class VoiceServices
             settings = VoiceSettings.Disabled;
         }
         services.AddSingleton(settings);
+        services.AddSingleton<ExaminerSpeechWarmup>();   // a no-op while voice is off
         if (!settings.Available) return settings;
 
         var mock = settings.Mode == VoiceMode.Mock;
@@ -45,8 +46,11 @@ public static class VoiceServices
             var scribeModel = builder.Configuration["Gadfly:Voice:ScribeModel"] is { Length: > 0 } m ? m : "scribe_v3_live";
             o.ConfigureElevenLabs = e => e.ModelId = scribeModel;
         });
+        var modelConfigured = !string.IsNullOrWhiteSpace(builder.Configuration["MindAttic:Avatar:ElevenLabs:ModelId"]);
         services.AddMindAtticAvatar(builder.Configuration, o =>
         {
+            // The low-latency voice model unless one is configured, so speech starts within about a second (GAD-T303).
+            if (!modelConfigured) o.ModelId = settings.TtsModel;
             if (!mock) return;
             o.ApiKey = "mock-key-not-real";
             o.VoiceId ??= "mock-voice";

@@ -8,7 +8,10 @@ namespace Gadfly.Server.Voice;
 /// An in-process stand-in for ElevenLabs' <c>with-timestamps</c> text-to-speech, used in <see cref="VoiceMode.Mock"/> (GAD-T53).
 /// It is the primary HTTP handler of the avatar library's client, so no request ever leaves the process, whatever the
 /// configuration says. The reply has the documented shape (newline-delimited JSON, base64 PCM 22.05 kHz mono with per-character
-/// alignment) with a quiet synthetic voice: a short tone burst per word, timed so the avatar's lip sync follows the words.
+/// alignment, chunks that may end mid-word) with a quiet synthetic voice, so mock mode runs exactly the live lip-sync path
+/// (GAD-T303): the library turns the character alignment into word timings, the avatar shapes the mouth from them, and the
+/// captions follow them. Each word is one soft burst per syllable (so the mouth visibly opens and closes on long words), and
+/// commas and full stops leave the pauses a speaker would.
 /// </summary>
 public sealed class MockTextToSpeech : HttpMessageHandler
 {
@@ -29,6 +32,28 @@ public sealed class MockTextToSpeech : HttpMessageHandler
         };
     }
 
+    /// <summary>The pause after a word: longer after a comma, longest after the end of a sentence.</summary>
+    private static double PauseAfter(string word) => word.Length == 0 ? 0.07 : word[^1] switch
+    {
+        ',' or ';' or ':' => 0.2,
+        '.' or '?' or '!' => 0.34,
+        _ => 0.07,
+    };
+
+    /// <summary>A rough syllable count (groups of vowels), at least one.</summary>
+    public static int Syllables(string word)
+    {
+        var count = 0;
+        var inVowel = false;
+        foreach (var c in word.ToLowerInvariant())
+        {
+            var vowel = "aeiouy".Contains(c);
+            if (vowel && !inVowel) count++;
+            inVowel = vowel;
+        }
+        return Math.Max(1, count);
+    }
+
     /// <summary>The newline-delimited JSON chunks for <paramref name="text"/>.</summary>
     public static string Synthesize(string text)
     {
@@ -39,19 +64,23 @@ public sealed class MockTextToSpeech : HttpMessageHandler
         double t = 0;
         void Silence(double seconds) { for (var i = 0; i < (int)(seconds * SampleRate); i++) pcm.Add(0); t += seconds; }
 
-        foreach (var (word, index) in text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select((w, i) => (w, i)))
+        var all = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var (word, index) in all.Select((w, i) => (w, i)))
         {
             if (index > 0)
             {
-                chars.Add(" "); starts.Add(t); ends.Add(t + 0.07);
-                Silence(0.07);
+                var gap = PauseAfter(all[index - 1]);
+                chars.Add(" "); starts.Add(t); ends.Add(t + gap);
+                Silence(gap);
             }
             var seconds = 0.14 + 0.045 * word.Length;
             var samples = (int)(seconds * SampleRate);
             var pitch = 150 + (word.Length * 13 % 60);
+            var syllables = Syllables(word);
             for (var i = 0; i < samples; i++)
             {
-                var envelope = Math.Sin(Math.PI * i / samples);
+                // One rise and fall per syllable inside the word's overall envelope.
+                var envelope = Math.Sin(Math.PI * i / samples) * (0.35 + 0.65 * Math.Abs(Math.Sin(Math.PI * syllables * i / samples)));
                 var v = 0.07 * envelope * (Math.Sin(2 * Math.PI * pitch * i / SampleRate) + 0.5 * Math.Sin(2 * Math.PI * pitch * 3 * i / SampleRate));
                 pcm.Add((short)(v * short.MaxValue));
             }

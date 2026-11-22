@@ -7,7 +7,7 @@
 .voice-interview[hidden] { display: none; }
 .voice-party { margin: 0; display: grid; gap: .3rem; }
 .voice-party figcaption { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .75rem; color: var(--muted); font-size: .85rem; }
-.voice-stage { height: min(46vh, 380px); border-radius: var(--radius); overflow: hidden; background: #10151d; }
+.voice-stage { position: relative; height: min(46vh, 380px); border-radius: var(--radius); overflow: hidden; background: #10151d; }
 .voice-stage ma-avatar { display: block; width: 100%; height: 100%; }
 .voice-self-frame { position: relative; height: min(46vh, 380px); border-radius: var(--radius); overflow: hidden; background: #10151d; }
 /* A mirror: the student sees themselves the way they expect to. */
@@ -44,3 +44,13 @@
 .voice-cue[data-active="false"] i { transition: none; width: 0; }
 .voice-actions button[hidden], .voice-self button[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .voice-level i, .voice-cue[data-active="true"] i { transition: none; } }
+
+/* The examiner's delivery (GAD-T303, js/examiner-voice.js). Captions: the whole question dimmed, each word lit as she says it. */
+.voice-caption[data-timed="true"] .voice-word { color: var(--muted); transition: color 120ms linear; }
+.voice-caption[data-timed="true"] .voice-word-said { color: var(--ink); }
+/* The 2D portrait's mouth: drawn over the lips and opened with her word timings. Hidden while closed. */
+.voice-mouth { --open: 0; position: absolute; pointer-events: none; border-radius: 50%; opacity: 0;
+  background: radial-gradient(ellipse at 50% 45%, rgba(46, 14, 16, .92) 0 38%, rgba(92, 34, 36, .55) 58%, rgba(120, 60, 60, 0) 72%);
+  transform: scaleY(calc(.12 + .88 * var(--open))) scaleX(calc(.82 + .18 * var(--open))); transform-origin: 50% 35%; }
+.voice-mouth[data-open="true"] { opacity: calc(.35 + .65 * var(--open)); }
+@media (prefers-reduced-motion: reduce) { .voice-caption[data-timed="true"] .voice-word { transition: none; } }
