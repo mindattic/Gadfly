@@ -165,5 +165,8 @@
   "getReady.language.why": "We ask so the examiner can be fair to students taking the exam in a language that isn't their first. Your answers are never used to grade you, and nothing about where you come from is ever worked out from them.",
   "getReady.language.spoken": "Which languages do you speak?",
   "getReady.language.primary": "Which language do you speak best?",
-  "getReady.language.editable": "Your answers are saved when you begin and filled in for you next time; you can change them here before any exam."
+  "getReady.language.editable": "Your answers are saved when you begin and filled in for you next time; you can change them here before any exam.",
+  "getReady.language.exam": "Which language do you want to take this exam in?",
+  "getReady.language.lock": "This page, the rules and the examiner switch to it straight away. You can change it until you press Begin exam; then it stays for this attempt.",
+  "getReady.language.only": "This exam is in:"
 }

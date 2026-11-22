@@ -88,6 +88,28 @@ else
                 </select>
             </label>
             <p class="hint">@T["getReady.language.editable"]</p>
+            @* The exam language (GAD-T546): only languages this exam is offered in. Choosing one switches this page, the rules, the
+               notice and the examiner's preview to it at once; it is fixed for the attempt when the exam begins. *@
+            @if (offered.Count > 1)
+            {
+                <fieldset class="exam-language">
+                    <legend>@T["getReady.language.exam"]</legend>
+                    <div class="language-options">
+                        @foreach (var l in offered)
+                        {
+                            <label lang="@l">
+                                <input type="radio" name="exam-language" value="@l" checked="@(l == examLanguage)" @onchange="() => ChooseExamLanguageAsync(l)" />
+                                @StudentLanguages.NativeName(l)
+                            </label>
+                        }
+                    </div>
+                </fieldset>
+                <p class="hint exam-language-lock">@T["getReady.language.lock"]</p>
+            }
+            else
+            {
+                <p class="exam-language-lock">@T["getReady.language.only"] <span lang="@examLanguage">@StudentLanguages.NativeName(examLanguage)</span></p>
+            }
         </section>
 
         <section class="panel wide" data-tour="ready-check" aria-labelledby="ready-check-title">
@@ -416,6 +438,25 @@ else
     private List<string> spoken = [];
     private string primary = "en";
 
+    /// <summary>The languages this exam is offered in, and the one chosen for this attempt (GAD-T546).</summary>
+    private IReadOnlyList<string> offered = ["en"];
+    private string examLanguage = "en";
+    private bool rememberLanguage;
+
+    /// <summary>The student chose the exam language: the page, the rules, the notice and the preview switch to it now.</summary>
+    private async Task ChooseExamLanguageAsync(string language)
+    {
+        if (!offered.Contains(language)) return;
+        examLanguage = language;
+        if (previewModule is not null)
+        {
+            try { await previewModule.InvokeVoidAsync("stop"); }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
+        }
+        T.Use(language);
+        await LanguageSwitch.RememberAsync(JS, T.Language);
+    }
+
     private void ToggleSpoken(string tag, ChangeEventArgs e)
     {
         if (e.Value is true) { if (!spoken.Contains(tag)) spoken.Add(tag); }
@@ -432,6 +473,14 @@ else
     private async Task LoadLanguagesAsync(Guid org, Guid user)
     {
         var saved = await StudentLanguages.LoadAsync(Scopes, org, user);
+        offered = await StudentLanguages.OfferedAsync(Scopes, org, AssignmentId);
+        examLanguage = StudentLanguages.DefaultExamLanguage(offered, saved?.Primary, T.Language);
+        // The page speaks the exam language from the start, so what the student reads is what the exam will be in.
+        if (examLanguage != T.Language && UiCatalog.Languages.Contains(examLanguage))
+        {
+            T.Use(examLanguage);
+            rememberLanguage = true;
+        }
         if (saved is not null)
         {
             spoken = saved.Spoken.ToList();
@@ -525,6 +574,7 @@ else
     {
         if (firstRender && assignment is { CanStart: true, CanResumeDirectly: false })
         {
+            if (rememberLanguage) await LanguageSwitch.RememberAsync(JS, T.Language);
             await LoadExaminerChoiceAsync();
             await RunChecksAsync();
             StateHasChanged();
@@ -765,8 +815,15 @@ else
             // archiving blocks only new attempts); otherwise the orchestrator starts the next attempt.
             // The language answers first: the attempt copies the primary language from the profile (GAD-T552).
             await SaveLanguagesAsync(org, user);
-            var sessionId = assignment.ActiveSessionId
-                            ?? await Sessions.CreateOrResumeAsync(org, assignment.AssignmentId, user, clientInfo);
+            // The exam language is fixed here for the attempt (GAD-T546): a new attempt starts in it; one created but not yet begun
+            // (a reload before the first question) takes it too.
+            Guid sessionId;
+            if (assignment.ActiveSessionId is { } existing)
+            {
+                sessionId = existing;
+                await Sessions.ChooseLanguageAsync(org, sessionId, user, examLanguage);
+            }
+            else sessionId = await Sessions.CreateOrResumeAsync(org, assignment.AssignmentId, user, clientInfo, examLanguage);
             await Sessions.RecordConsentAsync(org, sessionId, user, notice.Sha256);
             if (research is not null) await research.RecordAsync(sessionId);   // optional; never blocks the exam (GAD-T452)
             // Hand the microphone and camera over to the exam room, which opens them again straight away (GAD-T239).
