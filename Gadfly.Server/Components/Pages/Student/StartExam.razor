@@ -2,6 +2,7 @@
 @attribute [Authorize(Policy = GadflyPolicies.Student)]
 @implements IAsyncDisposable
 @using Gadfly.Server.Data
+@using Gadfly.Server.Localization
 @using Gadfly.Server.Sessions
 @using Gadfly.Server.Student
 @inject IServiceScopeFactory Scopes
@@ -11,19 +12,26 @@
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject Gadfly.Server.Voice.VoiceSettings VoiceConfig
+@inject UiText T
 
-<HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
-<PageTitle>Get ready · Gadfly Exams</PageTitle>
+@* The get-ready studio (GAD-T506): one screen with everything a student needs before the first question, in their language
+   (GAD-T544): the camera, microphone and eye-tracking checks, a plain statement of what the camera is for, the eye-contact
+   rules, the examiner's preview, a link to a free practice run, how the exam works, and the notice to agree to. Nothing on
+   this page is graded or recorded. *@
+<HeadContent><link rel="stylesheet" href="student.css" /><link rel="stylesheet" href="get-ready.css" /></HeadContent>
+<PageTitle>@T["getReady.pageTitle"]</PageTitle>
+@* The text the page's scripts write (the microphone test, the eye-tracking setup, the examiner preview), in this language. *@
+<UiTextData Prefix="getReady.js." />
 
 @if (loading)
 {
-    <h1>Get ready</h1>
-    <p class="hint" role="status">Loading…</p>
+    <h1>@T["getReady.heading"]</h1>
+    <p class="hint" role="status">@T["common.loading"]</p>
 }
 else if (assignment is null)
 {
-    <h1>Get ready</h1>
-    <p class="notice">That exam isn't assigned to you in this organization. <a href="my-exams">Back to my exams</a></p>
+    <h1>@T["getReady.heading"]</h1>
+    <p class="notice">@T["getReady.notAssigned"] <a href="my-exams">@T["getReady.backToMyExams"]</a></p>
 }
 else
 {
@@ -32,35 +40,38 @@ else
         @* The tour only points at the page: it never opens or touches the camera, microphone or system check (GAD-T341). *@
         <Tour Id="@Tours.TourIds.GetReady" Float="true" />
     }
-    <h1>@assignment.ExamTitle <span>· get ready</span> <HelpLink Topic="student-guide" Anchor="the-get-ready-page" /></h1>
+    <h1>@assignment.ExamTitle <span>· @T["getReady.titleSuffix"]</span> <HelpLink Topic="student-guide" Anchor="the-get-ready-page" /></h1>
 
     @if (assignment.CanResumeDirectly)
     {
-        <p class="notice">You already have this exam in progress. <a class="button" href="exam/@assignment.ActiveSessionId">Resume where you left off</a></p>
+        <p class="notice">@T["getReady.inProgress"] <a class="button" href="exam/@assignment.ActiveSessionId">@T["getReady.resume"]</a></p>
     }
     else if (!assignment.CanStart)
     {
-        <p class="notice">This exam can't be started right now: @StudentExams.Describe(assignment.Standing).ToLowerInvariant(). <a href="my-exams">Back to my exams</a></p>
+        <p class="notice">@T["getReady.cantStart", T.IsEnglish ? StudentExams.Describe(assignment.Standing, T).ToLowerInvariant() : StudentExams.Describe(assignment.Standing, T)] <a href="my-exams">@T["getReady.backToMyExams"]</a></p>
     }
     else
     {
+        <p class="hint ready-intro">@T["getReady.intro"]</p>
         <ol class="steps" data-tour="ready-steps">
-            <li class="@(Done(1) ? "done" : "")">System check</li>
-            <li class="@(Done(2) ? "done" : "")">How it works</li>
-            <li class="@(Done(3) ? "done" : "")">Notice and consent</li>
+            <li class="@(Done(1) ? "done" : "")">@T["getReady.step.check"]</li>
+            <li class="@(Done(2) ? "done" : "")">@T["getReady.step.examiner"]</li>
+            <li class="@(Done(3) ? "done" : "")">@T["getReady.step.how"]</li>
+            <li class="@(Done(4) ? "done" : "")">@T["getReady.step.consent"]</li>
         </ol>
 
-        <section class="panel wide" data-tour="ready-check">
-            <h2>1. System check</h2>
+        <section class="panel wide" data-tour="ready-check" aria-labelledby="ready-check-title">
+            <h2 id="ready-check-title">@T["getReady.check.title"]</h2>
             @if (checks is null)
             {
-                <p class="hint">Checking your browser…</p>
+                <p class="hint">@T["getReady.check.checking"]</p>
             }
             else
             {
-                @* Voice and camera are mandatory (GAD-T239): the camera preview and the microphone meter prove both work. *@
+                @* Voice and camera are mandatory (GAD-T239): the camera preview and the microphone meter prove both work. The preview
+                   is also where the student checks their framing and lighting: the exam room itself doesn't show it (GAD-T510). *@
                 <div class="syscheck-media">
-                    <video @ref="preview" class="syscheck-camera" muted playsinline autoplay aria-label="Your camera"></video>
+                    <video @ref="preview" class="syscheck-camera" muted playsinline autoplay aria-label="@T["getReady.check.cameraPreview"]"></video>
                     <div class="syscheck-level" @ref="meter" aria-hidden="true"><i></i></div>
                 </div>
                 @* Microphone test (GAD-T359): noise floor, clipping and an echo hint, filled by js/mic-check.js once the
@@ -84,11 +95,18 @@ else
                         </li>
                     }
                 </ul>
-                <button type="button" class="secondary" @onclick="RunChecksAsync" disabled="@checking">Check again</button>
+                <button type="button" class="secondary" @onclick="RunChecksAsync" disabled="@checking">@T["getReady.check.again"]</button>
                 @if (!ChecksPass)
                 {
-                    <p class="error" role="status">Begin exam stays off until every check above is ✓: fix the items marked ✗ (or finish the ones marked …), then press "Check again" if needed.</p>
+                    <p class="error" role="status">@T["getReady.check.blocked"]</p>
                 }
+                @* What the camera is for, in plain words (GAD-T506, research note attention-and-gaze 3.5 and 4.3): being watched is the
+                   larger stressor, so the page says what the camera checks and that it never grades or decides. *@
+                <div class="camera-promise" role="note">
+                    <h3>@T["getReady.camera.title"]</h3>
+                    <p>@T["getReady.camera.checks"]</p>
+                    <p><strong>@T["getReady.camera.never"]</strong></p>
+                </div>
                 @* Eye-tracking setup advice and calibration (GAD-T305): filled by js/gaze-quality.js once the camera shows a picture; never blocks Begin exam. *@
                 @if (assignment.Integrity != IntegrityLevel.Off)
                 {
@@ -97,91 +115,128 @@ else
             }
         </section>
 
-        <section class="panel wide">
-            <h2>2. How Socratic questioning works</h2>
-            <p>This isn't a multiple-choice test. The examiner asks one question at a time and builds the next question from <em>your own answer</em>: it may ask you to clarify a word you used, give an example, test your idea against a tricky case, or point out when two of your answers seem to disagree.</p>
+        <section class="panel wide" aria-labelledby="ready-eyes-title">
+            @* The eye-contact rules, warmly (GAD-T506; research note attention-and-gaze 4.1 and 4.2): looking away to think is normal
+               and helps; reminders only on a long look away from the screen while answering, from the examiner first, never on the grade. *@
+            <h2 id="ready-eyes-title">@T["getReady.eyes.title"]</h2>
+            <ul class="ready-rules">
+                <li>@T["getReady.eyes.look"]</li>
+                <li><strong>@T["getReady.eyes.thinkingOk"]</strong> @T["getReady.eyes.thinkingWhy"]</li>
+                <li>@T["getReady.eyes.reminder"]</li>
+                <li>@T["getReady.eyes.neverGrade"]</li>
+            </ul>
+            @if (assignment.Integrity == IntegrityLevel.Off)
+            {
+                <p class="hint">@T["getReady.eyes.off"]</p>
+            }
+        </section>
+
+        <section class="panel wide examiner-preview" data-tour="ready-examiner" aria-labelledby="ready-examiner-title">
+            <h2 id="ready-examiner-title">@T["getReady.examiner.title"]</h2>
+            <div class="examiner-preview-row">
+                <img class="examiner-preview-portrait" src="@VoiceConfig.PortraitUrl" alt="@T["getReady.examiner.portraitAlt"]" />
+                <div class="examiner-preview-body">
+                    <p>@T["getReady.examiner.intro"]</p>
+                    <p class="examiner-preview-caption" @ref="previewCaption" aria-live="polite">@T["getReady.examiner.line"]</p>
+                    <div class="actions">
+                        <button type="button" class="secondary" @onclick="PlayPreviewAsync">@T["getReady.examiner.play"]</button>
+                    </div>
+                    @if (previewSilent)
+                    {
+                        <p class="hint" role="status">@T["getReady.examiner.noSpeech"]</p>
+                    }
+                    <p class="hint">@T["getReady.examiner.voiceNote"]</p>
+                </div>
+            </div>
+            @* A full practice run with the same examiner (GAD-T560): the best-supported way to feel calm on the day. *@
+            <p class="practice-link">@T["getReady.practiceRun.lead"] <a href="my-exams/practice">@T["getReady.practiceRun.link"]</a></p>
+        </section>
+
+        <section class="panel wide" aria-labelledby="ready-how-title">
+            <h2 id="ready-how-title">@T["getReady.how.title"]</h2>
+            <p>@T["getReady.how.intro"]</p>
             <details class="science">
-                <summary>Why it works this way (the science behind it)</summary>
-                <p>This is the method Socrates used, called the <em>elenchus</em>: he questioned people who were sure they knew something and found that one of them "thinks he knows something when he does not" (Plato, <cite>Apology</cite> 21d). The questions only ever use what you yourself said, and they check whether your answers fit together.</p>
-                <p><strong>Why follow-up questions show real understanding.</strong> A single right answer can be remembered or guessed. Explaining <em>why</em> it is true, handling a case that doesn't fit and using the idea in a new situation is much harder without understanding it. Psychologists use the same approach to find out how people think: vary the questions, try a counter-suggestion, and never put the answer in the person's mouth (Piaget, 1929). Being asked to explain also tends to help people learn (Bisra et al., 2018), so the exam can teach you something too.</p>
-                <p><strong>Its limits, and what Gadfly does about them.</strong></p>
+                <summary>@T["getReady.science.summary"]</summary>
+                <p>@T["getReady.science.p1"]</p>
+                <p><strong>@T["getReady.science.whyTitle"]</strong> @T["getReady.science.why"]</p>
+                <p><strong>@T["getReady.science.limitsTitle"]</strong></p>
                 <ul>
-                    <li>If two of your answers disagree, that shows something isn't settled yet, not which answer is wrong (Vlastos, 1983; Benson, 1995). You can fix either one; your course material and the grading rubric decide what is right.</li>
-                    <li>Explaining out loud slows everyone down (Fox, Ericsson &amp; Best, 2011). Pauses, "um"s, an accent and how fast you speak are not graded.</li>
-                    <li>Speech recognition can mishear some accents and stuttered speech (Koenecke et al., 2020; Mujtaba et al., 2024). If the next question shows the examiner misheard you, say so and put it again in your own words.</li>
-                    <li>One exam can't measure everything, and AI graders make mistakes (van der Vleuten et al., 2010; Zheng et al., 2023). Several AI models score each topic separately, a human examiner grades too, and a person approves your result before you see it.</li>
-                    <li>A webcam can't tell reading from thinking (Papoutsaki et al., 2016), and voice measures can't detect stress or lying (Harnsberger et al., 2009). Camera notes and the comparison of your voice with your first answers are shown to a reviewer only as low-confidence notes, never as a verdict and never as part of your grade. The voice comparison can lead the examiner to ask an extra follow-up question.</li>
+                    <li>@T["getReady.science.limit1"]</li>
+                    <li>@T["getReady.science.limit2"]</li>
+                    <li>@T["getReady.science.limit3"]</li>
+                    <li>@T["getReady.science.limit4"]</li>
+                    <li>@T["getReady.science.limit5"]</li>
                 </ul>
-                <p class="hint">Full references and how each was checked: "The science behind Gadfly" in Gadfly's documentation (docs/SCIENCE.md).</p>
+                <p class="hint">@T["getReady.science.refs"]</p>
             </details>
             <ul>
                 @if (assignment.TypedAnswers)
                 {
                     @* Typed-answer accommodation (GAD-T260): granted by an instructor or admin, never chosen here. *@
-                    <li>The examiner talks to you and asks each question out loud. Your instructor has given you an accommodation: you type your answers instead of speaking them, and your microphone isn't used. Your camera must stay on for the whole exam, and the eye-contact check applies as for everyone (unless you also have the eye-contact accommodation). If the camera stops working, the exam pauses until you bring it back.</li>
-                    <li>Type in your own words. Pasting text into the answer box is noted for your instructor to review.</li>
+                    <li>@T["getReady.rules.typed"]</li>
+                    <li>@T["getReady.rules.typedOwnWords"]</li>
                 }
                 else
                 {
-                    <li>The exam is spoken. The examiner talks to you and you answer out loud. Typing your answers is only possible as an accommodation your instructor grants (for a documented speech, hearing or anxiety need); ask them if you need it. Your microphone and camera must stay on for the whole exam. If either stops working, the exam pauses until you bring it back.</li>
+                    <li>@T["getReady.rules.spoken"]</li>
                 }
-                <li>Your time starts when the examiner asks the first question, not when you press Begin exam.</li>
-                <li>Answer in your own words. Short, honest answers are better than long copied ones.</li>
-                <li>If you genuinely don't know, say so or press <strong>I don't know</strong>. Admitting it is a real answer, not a failure, and the examiner moves on.</li>
-                <li>The clock is kept on the server; if you reload the page, you return to the same question.</li>
-                <li>You won't see scores during the exam. Your result is published once it has been graded and approved.</li>
+                <li>@T["getReady.rules.clock"]</li>
+                <li>@T["getReady.rules.ownWords"]</li>
+                <li>@T["getReady.rules.dontKnow"]</li>
+                <li>@T["getReady.rules.reload"]</li>
+                <li>@T["getReady.rules.scores"]</li>
             </ul>
             <div class="practice" data-tour="ready-practice">
-                <h3>Try one (practice, not recorded)</h3>
-                <p class="question">@practiceQuestion</p>
+                <h3>@T["getReady.try.title"]</h3>
+                <p class="question">@T["getReady.try.question"]</p>
                 @if (practiceFollowUp is null)
                 {
                     @if (assignment.TypedAnswers)
                     {
                         @* Typed, like this student's exam (GAD-T260): nothing is recorded or sent. *@
-                        <p class="hint">Type an answer in a sentence or two, then press the button. Nothing is recorded.</p>
+                        <p class="hint">@T["getReady.try.typedHint"]</p>
                         <label>
-                            Your practice answer
-                            <textarea rows="3" @bind="practiceText" @bind:event="oninput" placeholder="In your own words…"></textarea>
+                            @T["getReady.try.typedLabel"]
+                            <textarea rows="3" @bind="practiceText" @bind:event="oninput" placeholder="@T["getReady.try.placeholder"]"></textarea>
                         </label>
                     }
                     else
                     {
                         @* Spoken, like the exam (GAD-T239): nothing is recorded; the button waits until the microphone has heard you. *@
-                        <p class="hint">Answer out loud in a sentence or two, then press the button. Nothing is recorded.</p>
+                        <p class="hint">@T["getReady.try.spokenHint"]</p>
                     }
                     <div class="actions">
-                        <button type="button" @onclick="PracticeAnswer" disabled="@(assignment.TypedAnswers ? string.IsNullOrWhiteSpace(practiceText) : microphone != "ok")">@(assignment.TypedAnswers ? "I've typed my answer" : "I've said my answer")</button>
-                        <button type="button" class="secondary" @onclick="PracticeDontKnow">I don't know</button>
+                        <button type="button" @onclick="PracticeAnswer" disabled="@(assignment.TypedAnswers ? string.IsNullOrWhiteSpace(practiceText) : microphone != "ok")">@(assignment.TypedAnswers ? T["getReady.try.typedDone"] : T["getReady.try.spokenDone"])</button>
+                        <button type="button" class="secondary" @onclick="PracticeDontKnow">@T["getReady.try.dontKnow"]</button>
                     </div>
                     @if (microphone != "ok" && !assignment.TypedAnswers)
                     {
-                        <p class="hint">The button turns on once the system check above has heard your microphone.</p>
+                        <p class="hint">@T["getReady.try.waitMic"]</p>
                     }
                 }
                 else
                 {
-                    <p class="question">@practiceFollowUp</p>
-                    <p class="hint">@practiceExplain</p>
-                    <button type="button" class="link" @onclick="ResetPractice">Try again</button>
+                    <p class="question">@T[practiceFollowUp]</p>
+                    <p class="hint">@T[practiceExplain!]</p>
+                    <button type="button" class="link" @onclick="ResetPractice">@T["getReady.try.again"]</button>
                 }
             </div>
         </section>
 
-        <section class="panel wide" data-tour="ready-consent">
-            <h2>3. @notice!.Title</h2>
+        <section class="panel wide" data-tour="ready-consent" aria-labelledby="ready-consent-title">
+            <h2 id="ready-consent-title">@notice!.Title</h2>
             @foreach (var p in notice.Paragraphs)
             {
                 <p>@p</p>
             }
             <label class="inline">
                 <input type="checkbox" @bind="agreed" />
-                I have read this notice and agree to take the exam on these terms.
+                @T["getReady.consent.agree"]
             </label>
             @* The optional research question (GAD-T452): separate from the notice above and never needed to begin. *@
             <ResearchConsentPanel @ref="research" AssignmentId="AssignmentId" />
             <button type="button" @onclick="BeginAsync" disabled="@(!agreed || !ChecksPass || starting)">
-                @(starting ? "Starting…" : assignment.ActiveSessionId is null ? "Begin exam" : "Continue to the exam")
+                @(starting ? T["getReady.begin.starting"] : assignment.ActiveSessionId is null ? T["getReady.begin.begin"] : T["getReady.begin.continue"])
             </button>
             @if (error is not null)
             {
@@ -209,26 +264,35 @@ else
         public int ScreenWidth { get; set; }
     }
 
-    private bool loading = true, checking, agreed, starting, mediaStarted;
-    private ElementReference preview, meter;
+    /// <summary>One browser check's outcome, as keys: rendered in the page's language each time, so a language switch relabels it.</summary>
+    private sealed record CheckKeys(string Name, CheckStatus Status, string Result, string? Fix = null, object[]? Args = null);
+
+    private bool loading = true, checking, agreed, starting, mediaStarted, previewSilent;
+    private ElementReference preview, meter, previewCaption;
     private DotNetObjectReference<StartExam>? self;
     /// <summary>The microphone and camera as system-check.js reports them: waiting, listening, ok, denied, missing, busy, lost, unsupported or error.</summary>
     private string microphone = "waiting", camera = "waiting";
     private StudentAssignmentView? assignment;
     private ConsentNotice? notice;
+    private string? orgName;
+    private int retentionDays;
     private ResearchConsentPanel? research;
-    private List<Check>? checks;
+    private List<CheckKeys>? checks;
     private string? clientInfo, error;
-    private IJSObjectReference? module;
+    private IJSObjectReference? module, previewModule;
 
-    private const string practiceQuestion = "Practice: in your own words, what is a habit?";
+    /// <summary>The practice exchange's follow-up and explanation, as keys.</summary>
     private string? practiceFollowUp, practiceExplain;
 
     /// <summary>Every check must pass (a warning is fine): a check still waiting, like a microphone not yet heard, keeps Begin exam off.</summary>
     private bool ChecksPass => checks is not null && AllChecks.All(c => c.Status is CheckStatus.Pass or CheckStatus.Warn);
 
     /// <summary>The microphone is checked only for spoken answers: a student granted typed answers (GAD-T260) needs only the camera.</summary>
-    private IEnumerable<Check> AllChecks => (checks ?? []).Concat(TypedAnswers ? new[] { CameraCheck } : new[] { MicrophoneCheck, CameraCheck });
+    private IEnumerable<Check> AllChecks => (checks ?? []).Select(Render)
+        .Concat(TypedAnswers ? new[] { CameraCheck } : new[] { MicrophoneCheck, CameraCheck });
+
+    private Check Render(CheckKeys k) => new(T[k.Name].Value, k.Status,
+        (k.Args is null ? T[k.Result] : T[k.Result, k.Args]).Value, k.Fix is null ? null : (k.Args is null ? T[k.Fix] : T[k.Fix, k.Args]).Value);
 
     /// <summary>The typed-answer accommodation on this assignment (GAD-T260), granted by an instructor or admin.</summary>
     private bool TypedAnswers => assignment?.TypedAnswers == true;
@@ -236,55 +300,74 @@ else
     /// <summary>The typed practice answer (GAD-T260): never recorded or sent anywhere.</summary>
     private string practiceText = "";
 
+    private Check Device(string device, CheckStatus status, string result, string? fix = null) =>
+        new(T[$"getReady.check.{device}"].Value, status, T[$"getReady.check.{result}"].Value, fix is null ? null : T[$"getReady.check.{device}.fix.{fix}"].Value);
+
     private Check MicrophoneCheck => microphone switch
     {
-        "ok" => new Check("Microphone", CheckStatus.Pass, "working: we heard you"),
-        "listening" => new Check("Microphone", CheckStatus.Later, "say a few words out loud",
-            "The meter above should move when you speak. If it doesn't, click anywhere on this page and speak again."),
-        "denied" => new Check("Microphone", CheckStatus.Fail, "not allowed",
-            "Allow the microphone for this site (the icon in your browser's address bar), then press \"Check again\"."),
-        "missing" => new Check("Microphone", CheckStatus.Fail, "none found", "Connect a microphone or headset, then press \"Check again\"."),
-        "busy" => new Check("Microphone", CheckStatus.Fail, "in use by another app", "Close other apps that use the microphone, then press \"Check again\"."),
-        "lost" => new Check("Microphone", CheckStatus.Fail, "stopped working", "Plug it back in or allow it again, then press \"Check again\"."),
-        "unsupported" => new Check("Microphone", CheckStatus.Fail, "this browser can't use it",
-            "Use a current Chrome, Edge, Firefox or Safari over a secure (https) connection."),
-        "error" => new Check("Microphone", CheckStatus.Fail, "couldn't be opened", "Check your microphone, then press \"Check again\"."),
-        _ => new Check("Microphone", CheckStatus.Later, "waiting for your browser", "Allow the microphone when your browser asks."),
+        "ok" => Device("microphone", CheckStatus.Pass, "micHeard"),
+        "listening" => Device("microphone", CheckStatus.Later, "saySomething", "listening"),
+        "denied" => Device("microphone", CheckStatus.Fail, "notAllowed", "denied"),
+        "missing" => Device("microphone", CheckStatus.Fail, "noneFound", "missing"),
+        "busy" => Device("microphone", CheckStatus.Fail, "inUse", "busy"),
+        "lost" => Device("microphone", CheckStatus.Fail, "stopped", "lost"),
+        "unsupported" => Device("microphone", CheckStatus.Fail, "unsupported", "unsupported"),
+        "error" => Device("microphone", CheckStatus.Fail, "couldntOpen", "error"),
+        _ => Device("microphone", CheckStatus.Later, "waitingBrowser", "waiting"),
     };
 
     private Check CameraCheck => camera switch
     {
-        "ok" => new Check("Camera", CheckStatus.Pass, "working"),
-        "denied" => new Check("Camera", CheckStatus.Fail, "not allowed",
-            "Allow the camera for this site (the icon in your browser's address bar), then press \"Check again\"."),
-        "missing" => new Check("Camera", CheckStatus.Fail, "none found", "Connect a webcam, then press \"Check again\"."),
-        "busy" => new Check("Camera", CheckStatus.Fail, "in use by another app", "Close other apps that use the camera, then press \"Check again\"."),
-        "lost" => new Check("Camera", CheckStatus.Fail, "stopped working", "Plug it back in or allow it again, then press \"Check again\"."),
-        "unsupported" => new Check("Camera", CheckStatus.Fail, "this browser can't use it",
-            "Use a current Chrome, Edge, Firefox or Safari over a secure (https) connection."),
-        "error" => new Check("Camera", CheckStatus.Fail, "shows no picture", "Check that the camera is uncovered and not used by another app, then press \"Check again\"."),
-        _ => new Check("Camera", CheckStatus.Later, "waiting for your browser", "Allow the camera when your browser asks."),
+        "ok" => Device("camera", CheckStatus.Pass, "working"),
+        "denied" => Device("camera", CheckStatus.Fail, "notAllowed", "denied"),
+        "missing" => Device("camera", CheckStatus.Fail, "noneFound", "missing"),
+        "busy" => Device("camera", CheckStatus.Fail, "inUse", "busy"),
+        "lost" => Device("camera", CheckStatus.Fail, "stopped", "lost"),
+        "unsupported" => Device("camera", CheckStatus.Fail, "unsupported", "unsupported"),
+        "error" => Device("camera", CheckStatus.Fail, "noPicture", "error"),
+        _ => Device("camera", CheckStatus.Later, "waitingBrowser", "waiting"),
     };
+
     private bool Done(int step) => step switch
     {
         1 => ChecksPass,
-        2 => practiceFollowUp is not null,
+        2 => previewPlayed,
+        3 => practiceFollowUp is not null,
         _ => agreed,
     };
 
+    private bool previewPlayed;
+
     protected override async Task OnInitializedAsync()
     {
+        T.Changed += OnLanguageChanged;
         if (Tenant.OrganizationId is { } org && Tenant.UserId is { } user)
         {
             assignment = await StudentExams.FindAsync(Scopes, org, user, AssignmentId, Clock.GetUtcNow());
             if (assignment is not null)
             {
-                var (orgName, retention) = await StudentExams.OrganizationAsync(Scopes, org);
-                notice = ConsentNotice.For(orgName, assignment.ExamTitle, retention, assignment.Mode, assignment.Integrity, assignment.TypedAnswers);
+                (orgName, retentionDays) = await StudentExams.OrganizationAsync(Scopes, org);
+                BuildNotice();
             }
         }
         loading = false;
     }
+
+    /// <summary>The notice in the page's language; its hash records exactly what the student read (GAD-T51).</summary>
+    private void BuildNotice()
+    {
+        if (assignment is null || orgName is null) return;
+        notice = ConsentNotice.For(orgName, assignment.ExamTitle, retentionDays, assignment.Mode, assignment.Integrity, assignment.TypedAnswers, T.Language);
+    }
+
+    /// <summary>The page's language changed: the notice is rebuilt in it, and the agreement to the old wording is withdrawn.</summary>
+    private void OnLanguageChanged() => _ = InvokeAsync(() =>
+    {
+        var before = notice?.Sha256;
+        BuildNotice();
+        if (notice?.Sha256 != before) agreed = false;
+        StateHasChanged();
+    });
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -332,7 +415,7 @@ else
     {
         if (checking) return;
         checking = true;
-        var list = new List<Check>();
+        var list = new List<CheckKeys>();
         try
         {
             var reopen = module is not null && mediaStarted && ((microphone != "ok" && !TypedAnswers) || camera != "ok");
@@ -360,53 +443,45 @@ else
             // Round trip through the live connection the exam uses.
             var sw = System.Diagnostics.Stopwatch.StartNew();
             for (var i = 0; i < 3; i++) await InvokeBoundedAsync<bool>("ping");
-            var ms = sw.Elapsed.TotalMilliseconds / 3;
+            var ms = Math.Round(sw.Elapsed.TotalMilliseconds / 3);
 
             list.Add(r.WebSocket
-                ? new Check("Browser", CheckStatus.Pass, "supported")
-                : new Check("Browser", CheckStatus.Fail, "this browser can't keep a live connection",
-                    "Use a current version of Chrome, Edge, Firefox or Safari."));
+                ? new CheckKeys("getReady.check.browser", CheckStatus.Pass, "getReady.check.browser.ok")
+                : new CheckKeys("getReady.check.browser", CheckStatus.Fail, "getReady.check.browser.noLive", "getReady.check.browser.fix.noLive"));
             list.Add(r.Cookies
-                ? new Check("Cookies", CheckStatus.Pass, "enabled")
-                : new Check("Cookies", CheckStatus.Fail, "blocked", "Allow cookies for this site in your browser settings, then reload."));
+                ? new CheckKeys("getReady.check.cookies", CheckStatus.Pass, "getReady.check.cookies.ok")
+                : new CheckKeys("getReady.check.cookies", CheckStatus.Fail, "getReady.check.cookies.blocked", "getReady.check.cookies.fix"));
             list.Add(r.Online
                 ? ms switch
                 {
-                    < 400 => new Check("Connection", CheckStatus.Pass, $"good ({ms:0} ms round trip)"),
-                    < 1500 => new Check("Connection", CheckStatus.Warn, $"slow ({ms:0} ms round trip)",
-                        "The examiner may be slow to respond. Move closer to your Wi-Fi router or close other downloads if pages feel sluggish."),
-                    _ => new Check("Connection", CheckStatus.Fail, $"too slow ({ms:0} ms round trip)",
-                        "Move closer to your Wi-Fi router, use a wired connection, or stop other downloads and streams, then check again."),
+                    < 400 => new CheckKeys("getReady.check.connection", CheckStatus.Pass, "getReady.check.connection.good", Args: [ms]),
+                    < 1500 => new CheckKeys("getReady.check.connection", CheckStatus.Warn, "getReady.check.connection.slow", "getReady.check.connection.fix.slow", [ms]),
+                    _ => new CheckKeys("getReady.check.connection", CheckStatus.Fail, "getReady.check.connection.tooSlow", "getReady.check.connection.fix.tooSlow", [ms]),
                 }
-                : new Check("Connection", CheckStatus.Fail, "offline", "Reconnect to the internet, then check again."));
+                : new CheckKeys("getReady.check.connection", CheckStatus.Fail, "getReady.check.connection.offline", "getReady.check.connection.fix.offline"));
             list.Add(r.ScreenWidth is > 0 and < 360
-                ? new Check("Screen", CheckStatus.Warn, "very narrow", "A larger window or a tablet or computer shows the examiner and your camera better.")
-                : new Check("Screen", CheckStatus.Pass, "fine"));
+                ? new CheckKeys("getReady.check.screen", CheckStatus.Warn, "getReady.check.screen.narrow", "getReady.check.screen.fix")
+                : new CheckKeys("getReady.check.screen", CheckStatus.Pass, "getReady.check.screen.ok"));
             list.Add(VoiceConfig.Available
-                ? new Check("Spoken examiner", CheckStatus.Pass, "available")
-                : new Check("Spoken examiner", CheckStatus.Fail, "not turned on for this site",
-                    "Exams are spoken, and the talking examiner is switched off here. Tell your instructor; you can't take the exam until it is on."));
+                ? new CheckKeys("getReady.check.voice", CheckStatus.Pass, "getReady.check.voice.ok")
+                : new CheckKeys("getReady.check.voice", CheckStatus.Fail, "getReady.check.voice.off", "getReady.check.voice.fix"));
         }
         catch (JSException ex)
         {
-            list.Add(new Check("Browser", CheckStatus.Fail, "the check couldn't run",
-                $"Reload the page; if it keeps failing, try another browser. ({ex.Message})"));
+            list.Add(new CheckKeys("getReady.check.browser", CheckStatus.Fail, "getReady.check.browser.couldntRun", "getReady.check.browser.fix.reload", [ex.Message]));
         }
         catch (JSDisconnectedException)
         {
-            list.Add(new Check("Connection", CheckStatus.Fail, "the connection to the server was lost",
-                "Reload the page, then check again."));
+            list.Add(new CheckKeys("getReady.check.connection", CheckStatus.Fail, "getReady.check.connection.lost", "getReady.check.connection.fix.lost"));
         }
         catch (Exception ex) when (ex is TaskCanceledException or OperationCanceledException)
         {
-            list.Add(new Check("Connection", CheckStatus.Fail, "no response from your browser",
-                "Reload the page and check again; if it keeps failing, check your internet connection."));
+            list.Add(new CheckKeys("getReady.check.connection", CheckStatus.Fail, "getReady.check.connection.noResponse", "getReady.check.connection.fix.noResponse"));
         }
         catch (Exception ex)
         {
             // Never leave the page on "Checking your browser…": any other failure becomes a visible result with a way to retry.
-            list.Add(new Check("Browser", CheckStatus.Fail, "the check couldn't run",
-                $"Press \"Check again\"; if it keeps failing, reload the page or try another browser. ({ex.GetType().Name})"));
+            list.Add(new CheckKeys("getReady.check.browser", CheckStatus.Fail, "getReady.check.browser.couldntRun", "getReady.check.browser.fix.again", [ex.GetType().Name]));
         }
         checks = list;
         checking = false;
@@ -436,10 +511,29 @@ else
         }
     }
 
-    private async Task<T> InvokeBoundedAsync<T>(string identifier)
+    /// <summary>
+    /// The examiner says hello in the page's language (GAD-T506): the browser's own speech reads the line and the caption lights
+    /// word by word. Free and local: no voice provider is called before the exam. With no browser speech the line stays as text.
+    /// </summary>
+    private async Task PlayPreviewAsync()
+    {
+        previewPlayed = true;
+        try
+        {
+            previewModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/examiner-preview.js");
+            var spoke = await previewModule.InvokeAsync<bool>("say", previewCaption, T["getReady.examiner.line"].Value, UiCatalog.CultureFor(T.Language).Name);
+            previewSilent = !spoke;
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
+        {
+            previewSilent = true;
+        }
+    }
+
+    private async Task<TResult> InvokeBoundedAsync<TResult>(string identifier)
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
-        return await module!.InvokeAsync<T>(identifier, cts.Token);
+        return await module!.InvokeAsync<TResult>(identifier, cts.Token);
     }
 
     private static string Mark(CheckStatus s) => s switch
@@ -452,14 +546,14 @@ else
 
     private void PracticeAnswer()
     {
-        practiceFollowUp = "Can you think of something that fits your description, but that you wouldn't call a habit?";
-        practiceExplain = "That's a counterexample move: the examiner tests your definition against a case built from your own words. In the real exam the follow-ups are written live from what you say.";
+        practiceFollowUp = "getReady.try.followUp";
+        practiceExplain = "getReady.try.followUpWhy";
     }
 
     private void PracticeDontKnow()
     {
-        practiceFollowUp = "That's fine. Let's come at it from another side: can you name one thing you do almost every day without thinking about it?";
-        practiceExplain = "\"I don't know\" is an honest answer. The examiner records it and either tries an easier angle or moves on to the next topic.";
+        practiceFollowUp = "getReady.try.dontKnowFollowUp";
+        practiceExplain = "getReady.try.dontKnowWhy";
     }
 
     private void ResetPractice()
@@ -502,11 +596,17 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        T.Changed -= OnLanguageChanged;
         if (module is not null)
         {
             await StopMediaAsync();
             try { await module.DisposeAsync(); }
             catch (JSDisconnectedException) { }
+        }
+        if (previewModule is not null)
+        {
+            try { await previewModule.InvokeVoidAsync("stop"); await previewModule.DisposeAsync(); }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
         }
         self?.Dispose();
     }
