@@ -466,23 +466,38 @@ function unwatchVisibility(s) {
 
 /**
  * The examiner says <paramref name="what"/> (the server only allows texts it offered for this student), in the speaking style the
- * server picked for this kind of question (GAD-T303: neutral, open or probe; never a hint of the grade).
+ * server picked for this kind of question (GAD-T303: neutral, open or probe; never a hint of the grade). <repeat> is true when the
+ * student pressed Repeat the question (GAD-T474).
  */
-export function speak(what, cacheable, style, turn) {
+export function speak(what, cacheable, style, turn, repeat) {
     const s = S;
     if (!s || !s.running) return;
     cancelFill(s);   // the next question is here: no more filler for this wait (GAD-T290)
     clearCue();
     s.cutWatch = null;   // the next question: speech from here on is not a cut-off of the last answer (GAD-T462)
+    const wasListening = !s.gate;
     s.gate = true;
-    s.remarkCommitPending = false;   // a remark's late final belongs to the last answer, not to this question's
     // An answer the page could not take yet (GAD-T473) is kept through the same question asked again (Repeat the question, or Try
     // again after a lost device) and sent once she has finished. A different question means the exam moved on without it: it is
     // dropped, never sent as this question's answer, and the student is told so plainly.
     const nextTurn = turn ?? s.turn;
     const keep = !!s.kept && s.segments.length > 0 && s.kept.turn === nextTurn;
     const dropped = !!s.kept && !keep && s.segments.length > 0;
-    if (!keep) {
+    // Repeat the question pressed mid-answer (GAD-T474): the words already said are not thrown away. They stay in "What I heard" and
+    // in the reload draft, words still being spoken are finalized now (the closed gate would swallow their speech-end commit), and
+    // once she has finished the microphone opens again on the same answer, so the student carries on or clears them. Nothing is sent
+    // on its own: the end-of-answer cue is not armed until the student speaks again (or presses Done answering).
+    const carry = !keep && !!repeat && !s.sending && nextTurn === s.turn && (s.segments.length > 0 || s.startedAtUnixMs !== null);
+    s.carryFinals = carry;   // finals for speech before the repeat still join this answer while the gate is closed (onFinal)
+    // A remark's late final belongs to the last answer, not to this question's; carried, the last answer is this one.
+    if (!carry) s.remarkCommitPending = false;
+    if (carry) {
+        s.lastSpeechEndAt = null;   // listening to the question again is not a pause within the answer
+        s.displayPartial = "";
+        talking(s, false);
+        stopDelayTimer(s);
+        if (wasListening && s.inSpeech && s.speechConn) sendCommit(s);
+    } else if (!keep) {
         s.kept = null;
         s.segments = [];
         s.startedAtUnixMs = null;
@@ -495,9 +510,11 @@ export function speak(what, cacheable, style, turn) {
     // opened to restore it, so recovery never happened (GAD-T316). Until that restore is tried, a draft for another turn is
     // simply not loaded (VoiceDraft.load matches the turn) and the next save replaces it.
     s.turn = nextTurn;
-    s.recovered = false;
-    text("recovered", dropped ? DROPPED_TEXT : "");
-    if (s.draftChecked && !keep) VoiceDraft.clear(s.sessionId);
+    if (!carry) {
+        s.recovered = false;
+        text("recovered", dropped ? DROPPED_TEXT : "");
+    }
+    if (s.draftChecked && !keep && !carry) VoiceDraft.clear(s.sessionId);
     drawTranscript();
     status("The examiner is speaking…");
     const token = s.speakToken = {};
@@ -843,6 +860,7 @@ function openMic() {
     const resuming = s.segments.length > 0 || s.startedAtUnixMs !== null;
     s.gate = false;
     s.held = false;
+    s.carryFinals = false;   // the gate is open again: finals join the answer the usual way (GAD-T474)
     s.lastSpeechEndAt = null;   // the wait before an answer starts is thinking time, not a pause within it
     if (!resuming) {
         s.listeningStartMs = s.mic.currentTimeMs;
@@ -850,7 +868,10 @@ function openMic() {
         s.speechConn.send("MarkListening", s.listeningStartMs).catch(() => { });
     }
     if (s.avatar) s.avatar.state = "listening";
-    status(resuming && !s.recovered ? "You can carry on answering. What you'd already said is kept: keep talking, or press Done answering." : listenText(s));
+    // After a staff pause (GAD-T471) or Repeat the question (GAD-T474) the words already said are still in "What I heard".
+    status(resuming && s.segments.length > 0 && !s.recovered
+        ? "You can carry on answering. What you'd already said is kept: keep talking, press Done answering, or Clear and answer again to start over."
+        : listenText(s));
     if (!s.draftChecked) { s.draftChecked = true; tryRestoreDraft(s); }
 }
 
@@ -957,7 +978,10 @@ function onFinal(seg) {
     }
     const remarkFinal = s.remarkCommitPending;   // the next final answers the remark's commit, whatever the gate says
     s.remarkCommitPending = false;
-    if ((s.gate && !remarkFinal) || !seg || !seg.text || !seg.text.trim()) return;
+    // Repeat the question pressed mid-answer (GAD-T474): no audio is sent while the gate is closed, so a final arriving meanwhile is
+    // for words said before she began again, and joins the answer they belong to.
+    const carried = !!s.carryFinals;
+    if ((s.gate && !remarkFinal && !carried) || !seg || !seg.text || !seg.text.trim()) return;
     s.partial = "";
     s.displayPartial = "";
     // The same final delivered twice (a recognizer fallback or a commit racing the provider's own) is one segment (GAD-T286).
@@ -1173,6 +1197,7 @@ function discard() {
     S.latenciesMs = [];
     S.recovered = false;
     S.kept = null;   // an answer waiting to be sent again (GAD-T473) was cleared by the student
+    S.carryFinals = false;   // nor do words said before a repeated question join it any more (GAD-T474)
     text("recovered", "");
     VoiceDraft.clear(S.sessionId);
     drawTranscript();

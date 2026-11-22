@@ -187,7 +187,7 @@
                     <p id="answer-hint" class="hint">You have a typed-answer accommodation: type your answer, then press Submit answer (or Ctrl+Enter).</p>
                     <div class="actions">
                         <button type="button" @onclick="SubmitTypedAsync" disabled="@(busy || string.IsNullOrWhiteSpace(typedAnswer))">Submit answer</button>
-                        <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@busy">I don't know</button>
+                        <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@(!CanSayDontKnow)" title="@DontKnowTitle">I don't know</button>
                     </div>
                 }
                 else
@@ -195,7 +195,7 @@
                     @* Spoken answers only (GAD-T239): there is no typed answer box. *@
                     <div class="actions">
                         <p class="hint" role="status">Answer the examiner out loud.</p>
-                        <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@busy">I don't know</button>
+                        <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@(!CanSayDontKnow)" title="@DontKnowTitle">I don't know</button>
                     </div>
                 }
                 }
@@ -616,7 +616,7 @@
     private Task CorrectLastAsync() =>
         VerifyStepAsync(ThinkingAbout.Saving, (org, user) => Sessions.CorrectAnswerAsync(org, SessionId, user, extraText.Trim()));
 
-    private Task DontKnowAsync() => SendAsync(SourceExamEngine.AporiaWord);
+    private Task DontKnowAsync() => CanSayDontKnow ? SendAsync(SourceExamEngine.AporiaWord) : Task.CompletedTask;
 
     private async Task SendAsync(string text)
     {

@@ -112,6 +112,15 @@ public partial class ExamRoom
     private void OnStaffHeld(bool held) => staffHeld = held;
 
     /// <summary>
+    /// "I don't know" may be pressed: nothing is being judged and staff are not holding the exam (GAD-T474). The server refuses any
+    /// answer during a staff pause, so the button is off until they resume rather than inviting a press that would only be turned away.
+    /// </summary>
+    private bool CanSayDontKnow => !busy && !staffHeld;
+
+    /// <summary>Why "I don't know" is off during a staff pause (GAD-T474); no tooltip otherwise.</summary>
+    private string? DontKnowTitle => staffHeld ? "Your instructor paused the exam. You can use this again once they resume it." : null;
+
+    /// <summary>
     /// Takes only the server's clock state from <paramref name="next"/>: keep whatever this page shows now (a newer step may have
     /// arrived meanwhile), whichever turn the step names.
     /// </summary>

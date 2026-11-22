@@ -79,6 +79,12 @@ their attempt or leave them staring at a frozen page.
   GAD-T321), so a kept answer can never become the next question's answer: if the exam moves to another question first, the
   words are dropped with a plain note ("Your last answer came in after the exam had already moved on…"). Its transcript line
   is only kept once the answer is taken, so it never appears twice.
+- **Repeat the question keeps what was already said (GAD-T474).** Pressed mid-answer (or during a staff pause), the words
+  already spoken for that question stay in "What I heard" and in the reload draft instead of being wiped; speech still in progress
+  is committed and its late final joins them while she speaks. When she finishes, the microphone opens on the same answer
+  (listening start and response delay unchanged) and nothing is sent until the student carries on and pauses, presses **Done
+  answering**, or clears them with **Clear and answer again**. **I don't know** is disabled while staff hold the exam (with a
+  tooltip saying why) and comes back when they resume.
 - **Bounded waits, with a plain retry.** Every hub connect and its first call (`voice-room.js`, `CONNECT_TIMEOUT_MS`,
   15 s) and the exam room's own JS startup (`VoiceRoom.OnAfterRenderAsync`, 20 s) are bounded, the same house style as
   the get-ready page's checks (`StartExam.razor`, GAD-T288): past the bound, the student sees "That's taking too

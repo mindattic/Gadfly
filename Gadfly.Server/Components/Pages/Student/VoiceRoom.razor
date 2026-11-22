@@ -487,18 +487,22 @@
             ExaminerFiller.FirstAfter.TotalMilliseconds, ExaminerFiller.AgainAfter.TotalMilliseconds);
     }
 
-    private async Task SpeakAsync(string text)
+    private async Task SpeakAsync(string text, bool repeat = false)
     {
         // The hub speaks only what the server offered for this student's own session.
         if (!Grants.Offer(user, SessionId, text)) return;
         // Cached by the avatar hub after its first playing, so "Repeat the question" and a reload replay at once (GAD-T303).
         // The turn index keys the words-already-spoken draft (GAD-T306): a new question starts a fresh one.
-        await module!.InvokeVoidAsync("speak", stop.Token, text, true, SpeakingStyle, TurnIndex);
+        await module!.InvokeVoidAsync("speak", stop.Token, text, true, SpeakingStyle, TurnIndex, repeat);
     }
 
+    /// <summary>
+    /// Says the question again. Pressed mid-answer, the words already said are kept as the draft for the same question and the
+    /// microphone opens again on them once she has finished (GAD-T474).
+    /// </summary>
     private async Task RepeatAsync()
     {
-        if (SpokenText is { Length: > 0 } text && module is not null) await SpeakAsync(text);
+        if (SpokenText is { Length: > 0 } text && module is not null) await SpeakAsync(text, repeat: true);
     }
 
     private async Task StopVoiceAsync()
