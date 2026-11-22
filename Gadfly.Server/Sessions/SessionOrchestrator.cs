@@ -68,7 +68,8 @@ public sealed class SessionOrchestrator(
     ISocraticVotingClient panel,
     TimeProvider clock,
     ILogger<SessionOrchestrator> log,
-    Platform.UsageMeter meter)
+    Platform.UsageMeter meter,
+    Evidence.EvidenceSyncQueue evidenceQueue)
 {
     private sealed class Live(SourceExamEngine engine, Guid organizationId, Guid studentUserId, AssessmentMode mode)
     {
@@ -1053,26 +1054,9 @@ public sealed class SessionOrchestrator(
         // An ended session leaves the cache only once its end is saved: dropped earlier, a reload in that window rebuilt the engine
         // from the not-yet-ended row and could ask on. Every ended session leaves it, also one only reloaded to be viewed (GAD-T314).
         if (s.IsEnded) _live.TryRemove(new KeyValuePair<Guid, Live>(s.Id, live));
-        await PersistEvidenceAsync(live, row.ExamId, now, ct);
-    }
-
-    /// <summary>
-    /// Per-objective evidence (GAD-T91, GAD-T120): AssessmentEvidence rows linked to the exam's objectives and the
-    /// verified responses, in their own save after the transcript is stored, so a problem here never costs the
-    /// resume point. Idempotent: items not written now (a turn or response not stored yet) are written by a later step.
-    /// </summary>
-    private async Task PersistEvidenceAsync(Live live, Guid examId, DateTimeOffset now, CancellationToken ct)
-    {
-        try
-        {
-            using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
-            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
-            await Evidence.EvidenceWriter.SyncAsync(db, live.OrganizationId, live.Engine.Session.Id, examId, live.Engine.CollectEvidence(), now, ct);
-            await db.SaveChangesAsync(ct);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            log.LogWarning(ex, "Evidence for session {SessionId} was not stored this step; the next step retries.", live.Engine.Session.Id);
-        }
+        // Per-objective evidence (GAD-T91, GAD-T120) used to be synced here with its own DB round trip, awaited before the student
+        // got the next question; EvidenceWriter.SyncAsync re-scans the whole session's turns/responses/evidence every time, so that
+        // round trip got slower turn by turn as the session grew. It is idempotent either way, so it now queues instead (GAD-T404).
+        evidenceQueue.Enqueue(new Evidence.EvidenceSyncRequest(org, s.Id, row.ExamId, live.Engine.CollectEvidence(), now));
     }
 }
