@@ -6,7 +6,11 @@ If you believe a published result is wrong, you can ask for it to be reviewed.
 
 1. Open **My exams** and press **See the assessment report** under your result.
 2. On that page (**Your result**), write in **Your reason** why you think the grade is wrong (up to 4,000 characters).
-3. Press **Submit appeal**.
+3. If the page lists **Integrity notes on this attempt**, you can also write in **Your response to the integrity
+   notes** what happened at those moments. It is optional, and you can send it on its own, without a reason. It
+   reaches your instructor inside the appeal, under the heading "About the integrity notes on this attempt:". The
+   reason and response together can be up to 4,000 characters.
+4. Press **Submit appeal**.
 
 You see "Your appeal was submitted. Your instructor will review it; your published result stays visible
 meanwhile." **My exams** then shows "appeal under review" next to your grade.

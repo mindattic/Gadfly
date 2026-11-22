@@ -12,6 +12,9 @@ important, how little each one proves on its own.
   until that grader's scores are in, so a flag can't colour their reading of the answers.
 - **Gadfly never infers dishonesty or emotion.** Each note says what was measured, not what it means about the person.
 - **Most notes are low confidence.** Camera and eye-contact notes are capped at low confidence and low severity.
+- **The student sees them too**, once their result is published: the same notes with the same explanations, on
+  their result page. They can respond in an appeal; a response arrives inside the appeal's reason under "About the
+  integrity notes on this attempt:".
 ## The notes
 
 | Note | Where it comes from | What it can mean |

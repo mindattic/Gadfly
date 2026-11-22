@@ -244,7 +244,14 @@ and its own verification code, checked the same way as your transcript's code be
 Until then, a submitted exam shows: "Your answers were submitted. Your result appears here once examiners have
 graded it and it has been approved and published."
 
-**Disagree with your result?** You can appeal it from the result page. See [Appeals](appeals.md).
+The result page also shows **Integrity notes on this attempt**: anything the checks noted during your exam (for
+example a long look away from the examiner, a second face in view, or the exam tab hidden), when it happened, during
+which question, and the same plain explanation your instructor reads. Brief, ordinary moments are only counted. These
+notes are context for a person, never a finding of cheating, and none of them is part of your grade. They appear only
+once your result is published.
+
+**Disagree with your result, or with an integrity note?** You can appeal from the result page, and respond to the
+integrity notes in the same appeal. See [Appeals](appeals.md).
 
 ## Your transcript
 

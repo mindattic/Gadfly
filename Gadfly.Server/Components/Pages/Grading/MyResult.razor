@@ -32,6 +32,46 @@ else
     <p class="hint no-print"><Gadfly.Server.Transcripts.TranscriptLinks SessionId="SessionId" Label="Your transcript, with its verification code:" ShowVerify="true" /></p>
     <AssessmentReportView Report="report" />
 
+    @* GAD-T450: the integrity notes recorded on this attempt, with the same plain explanations a reviewer reads. Shown only once
+       the result is published to the student (StudentIntegrityRecord checks), never a verdict and never part of the grade. *@
+    <section class="student-integrity" aria-labelledby="integrity-heading">
+        <h2 class="gr-section" id="integrity-heading">Integrity notes on this attempt</h2>
+        @if (integrity is null || integrity.IsEmpty)
+        {
+            <p class="hint">Nothing was noted about how this exam was taken.</p>
+        }
+        else
+        {
+            <p class="hint">
+                During the exam, checks on your device and the answers noted a few moments for a person to look at. You see here exactly
+                what your instructor sees, with the same explanation. These notes are context, never a finding of cheating, and none of
+                them is part of your grade: the grade comes from your answers. If something here is wrong or has an explanation, you
+                can say so in an appeal below.
+            </p>
+            @if (integrity.Notes.Count > 0)
+            {
+                <ul class="student-integrity-notes">
+                    @foreach (var n in integrity.Notes)
+                    {
+                        <li>
+                            <strong>@n.Label</strong>
+                            <span class="hint"> · @n.When@(n.Question is { } q ? $", during question {q}" : "")</span>
+                            <div>@n.Explanation</div>
+                            @if (!string.IsNullOrWhiteSpace(n.Summary) && n.Summary != n.Explanation)
+                            {
+                                <div class="hint">@n.Summary</div>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+            @if (integrity.Ordinary.Count > 0)
+            {
+                <p class="hint">Ordinary, not counted: @string.Join("; ", integrity.Ordinary.Select(o => $"{o.Label} ({o.Count}×)")).</p>
+            }
+        }
+    </section>
+
     <div class="no-print">
         <h2 class="gr-section">Appeal</h2>
         @if (w.OpenAppeal is { } open)
@@ -42,6 +82,11 @@ else
         {
             <p class="hint">If you believe the grade is wrong, explain why. A teacher reviews it and either confirms the grade or amends it; you'll see the outcome here.</p>
             <label class="gr-wide">Your reason <textarea rows="4" @bind="reason" maxlength="4000"></textarea></label>
+            @if (integrity is { Notes.Count: > 0 })
+            {
+                <label class="gr-wide">Your response to the integrity notes (optional) <textarea rows="3" @bind="integrityResponse" maxlength="3000"></textarea></label>
+                <p class="hint">Say what happened at those moments, if you want to. It goes to the teacher with your appeal. You can send a response on its own, without a reason above.</p>
+            }
             <button type="button" disabled="@busy" @onclick="AppealAsync">Submit appeal</button>
         }
         @if (message is not null)
@@ -56,8 +101,9 @@ else
     private GradingWorkspace? w;
     private AssessmentReport? report;
     private bool loading = true, busy, ok;
-    private string reason = "";
+    private string reason = "", integrityResponse = "";
     private string? message;
+    private Gadfly.Server.Integrity.StudentIntegrityView? integrity;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -70,18 +116,27 @@ else
     {
         w = await GradingDb.RunAsync(Scopes, Tenant, g => g.StudentWorkspaceAsync(SessionId));
         report = w is null ? null : AssessmentReport.Build(w, forStudent: true);
+        // Read only when the student's own published result loaded; the loader re-checks ownership and publication itself.
+        integrity = w is null ? null : await Gadfly.Server.Integrity.StudentIntegrityRecord.LoadForCallerAsync(Scopes, Tenant, SessionId);
     }
 
     private async Task AppealAsync()
     {
         if (busy) return;
+        var text = Gadfly.Server.Integrity.StudentIntegrityRecord.AppealText(reason, integrity is { Notes.Count: > 0 } ? integrityResponse : null);
+        if (text.Length > 4000)
+        {
+            ok = false;
+            message = $"Your reason and response together are {text.Length:N0} characters; please keep them to 4,000.";
+            return;
+        }
         busy = true;
         try
         {
-            var r = await GradingDb.RunAsync(Scopes, Tenant, g => g.AppealAsync(SessionId, reason));
+            var r = await GradingDb.RunAsync(Scopes, Tenant, g => g.AppealAsync(SessionId, text));
             ok = r.Ok;
             message = r.Message;
-            if (r.Ok) { reason = ""; await LoadAsync(); }
+            if (r.Ok) { reason = ""; integrityResponse = ""; await LoadAsync(); }
         }
         finally { busy = false; }
     }
