@@ -1,0 +1,79 @@
+@* The eye-contact check in the practice interview (GAD-T294): the exam room's own check (wwwroot/js/examiner-gaze.js, the same
+   indicator, fade and spoken remarks as ExaminerGaze) run against the practice. The camera is analysed on the student's device
+   only, as in an exam. The difference: every episode the browser reports is dropped (PracticeInterview.DropGazeEpisodes), so
+   nothing about a practice is stored, and it always runs, whatever any exam's integrity level or accommodation is. *@
+@implements IAsyncDisposable
+@using Gadfly.Server.Sessions
+@using Gadfly.Server.Student
+@using Gadfly.Server.Voice
+@inject ITenantContext Tenant
+@inject VoiceGrants Grants
+@inject IJSRuntime JS
+@inject ILogger<PracticeGaze> Log
+
+<HeadContent><link rel="stylesheet" href="examiner-gaze.css" /></HeadContent>
+
+<div class="examiner-gaze" data-examiner-gaze data-state="off" role="status" aria-live="polite">
+    <span class="examiner-gaze-dot" aria-hidden="true"></span>
+    <span class="examiner-gaze-label" data-examiner-gaze-label></span>
+    <button type="button" class="link" data-examiner-gaze-action="calibrate" hidden>Set up eye contact again</button>
+    <details class="examiner-gaze-more">
+        <summary>How this works</summary>
+        <p class="examiner-gaze-note">Your camera checks, on your device only, that you are looking at the examiner while you answer, exactly as in an exam. Looking away to think is fine: at the start of an answer you have several seconds, later a couple of seconds, before the screen starts to fade, and it clears as soon as you look back. "Set up eye contact again" has you follow a dot for about 10 seconds so the camera learns your screen. In an exam a short note of when it happened is kept for a person to review; in this practice nothing is kept.</p>
+    </details>
+</div>
+<div class="examiner-fade" data-examiner-fade data-active="false" aria-hidden="true">
+    <p class="examiner-fade-warning">Please look at the examiner.</p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PracticeInterview Practice { get; set; } = default!;
+
+    private bool started;
+    private Guid user;
+    private IJSObjectReference? module;
+    private DotNetObjectReference<PracticeGaze>? self;
+    private readonly CancellationTokenSource stop = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || started) return;
+        started = true;
+        if (Tenant.UserId is not { } u) return;
+        user = u;
+        try
+        {
+            self = DotNetObjectReference.Create(this);
+            module = await JS.InvokeAsync<IJSObjectReference>("import", stop.Token, "./js/examiner-gaze.js");
+            await module.InvokeVoidAsync("start", stop.Token, self, new { basePath = "webcam/", accommodation = false });
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
+        {
+            Log.LogDebug(ex, "The practice eye-contact check did not start.");
+        }
+    }
+
+    /// <summary>Called by examiner-gaze.js with finished episodes. In a practice they are dropped; true keeps the check running.</summary>
+    [JSInvokable]
+    public Task<bool> Record(HubIntegrityEvent[]? events) => Task.FromResult(PracticeInterview.DropGazeEpisodes(events));
+
+    /// <summary>The examiner's fixed eye-contact remark for <paramref name="kind"/>, offered to the avatar hub for this practice.</summary>
+    [JSInvokable]
+    public Task<string?> Remark(string? kind) => Task.FromResult(Practice.Remark(Grants, user, kind));
+
+    public async ValueTask DisposeAsync()
+    {
+        stop.Cancel();
+        if (module is not null)
+        {
+            try
+            {
+                await module.InvokeVoidAsync("stop");
+                await module.DisposeAsync();
+            }
+            catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
+        }
+        self?.Dispose();
+        stop.Dispose();
+    }
+}

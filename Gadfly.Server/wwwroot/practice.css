@@ -1,0 +1,18 @@
+/* "Meet your examiner" practice interview (GAD-T294). The room itself is the exam room's (student.css, voice.css,
+   examiner-gaze.css); these are only the practice's own bits. Tokens come from app.css. */
+.practice-tag {
+    display: inline-block; vertical-align: middle; margin-left: .4rem; padding: .1rem .55rem; border-radius: 999px;
+    border: 1px solid var(--accent); color: var(--accent); font-size: .8rem; font-weight: 600; letter-spacing: .02em;
+}
+.practice-intro { max-width: 760px; }
+/* The practice card on My exams, above the exam list. */
+.practice-offer { margin-bottom: 1rem; }
+.practice-offer .actions { margin-top: .25rem; }
+.practice-steps { margin: .25rem 0 .75rem; padding-left: 1.4rem; }
+.practice-steps li { margin: .15rem 0; }
+.practice-points { margin: .25rem 0 0; padding-left: 1.2rem; }
+.practice-points li { margin: .2rem 0; }
+.practice-credit { white-space: nowrap; }
+.practice-done { margin-top: .5rem; padding-top: .6rem; border-top: 1px solid var(--line); }
+.practice-done p { margin: 0 0 .5rem; }
+.exam-status .row-actions { display: inline-flex; flex-wrap: wrap; gap: .25rem .8rem; align-items: center; }

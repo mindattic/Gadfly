@@ -9,6 +9,7 @@ for you; nothing is saved).
 - [ ] I can see the exam under **My exams**, and I know when its window opens and closes.
 - [ ] I know how long the exam is and how many attempts I have.
 - [ ] I have practised explaining each topic **out loud**, in my own words, including *why* things are true.
+- [ ] I have taken the [practice interview](practice-interview.md) (**Meet your examiner** on **My exams**) once, on the device and in the room I'll use. Nothing from it is kept or counted.
 - [ ] If I need an accommodation (extra time, or not being held to eye contact), I have asked my instructor and it is set up. See [Accommodations](accommodations.md).
 
 ## Your equipment

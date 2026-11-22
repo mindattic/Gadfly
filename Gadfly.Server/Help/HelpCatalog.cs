@@ -168,7 +168,8 @@ public static class HelpCatalog
             "Accommodations", "Typed answers, eye-contact changes and other adjustments, and how to ask for them.",
             "accessibility disability typing typed extra time adjustment speech hearing"),
         new(HelpTopics.PracticeInterview, "practice-interview.md", HelpAudience.Student, HelpSectionId.TakingAnExam,
-            "Practice interview", "An ungraded practice with the examiner.", "practice rehearsal meet your examiner try", "GAD-T294"),
+            "Practice interview: meet your examiner", "A five-minute ungraded practice with the talking examiner, from My exams: nothing is kept or counted.",
+            "practice rehearsal meet your examiner try warm up first time nervous not graded attempt"),
 
         // Fixing problems
         new(HelpTopics.Microphone, "troubleshooting-microphone.md", HelpAudience.Public, HelpSectionId.FixingProblems,

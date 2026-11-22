@@ -69,6 +69,15 @@ exam shows:
 You also see the window when the exam is open (times are shown in UTC), **Attempts used X of Y**, and any
 instructions from your instructor. If your instructor closes an exam to new attempts while you are part-way
 through one, the exam says so and you can still finish the attempt you started (but not after its window closes).
+Each exam also says how you answer it: **Spoken exam, on camera**, or, if your instructor granted typed answers,
+**Spoken questions, typed answers (your accommodation)**.
+
+### Practise first: meet your examiner
+
+At the top of **My exams** is **Meet your examiner (practice)**, a five-minute run-through with the talking examiner,
+open at any time, even before you have an exam. She has you try answering out loud, saying "I don't know", keeping eye
+contact (and seeing the screen fade), and what happens if your microphone or camera stops. Nothing from it is kept,
+graded or counted as an attempt. See [Practice interview](practice-interview.md).
 
 ## The get-ready page
 
@@ -226,7 +235,11 @@ between the two are reconciled by a reviewer, and an authorized person approves 
 When your result is published, **My exams** shows **Your result**: your grade as a percentage (with its label, if
 your organization uses one), a note if it was amended or an appeal is under review, and **See the assessment
 report**. The report shows, for each learning objective, the scores, the examiner's comment, what was missing, and
-the parts of your answers used as evidence. **Download the report (Markdown)** saves a copy.
+the parts of your answers used as evidence. **Download the report (Markdown)** or **Download the report (PDF)** saves
+a copy.
+
+**Download your completion certificate (PDF)** saves a one-page certificate with your name, the exam, your result
+and its own verification code, checked the same way as your transcript's code below.
 
 Until then, a submitted exam shows: "Your answers were submitted. Your result appears here once examiners have
 graded it and it has been approved and published."

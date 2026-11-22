@@ -7,13 +7,24 @@
 @inject TimeProvider Clock
 @inject IConfiguration Config
 
-<HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
+<HeadContent><link rel="stylesheet" href="student.css" /><link rel="stylesheet" href="practice.css" /></HeadContent>
 <PageTitle>My exams · Gadfly Exams</PageTitle>
 <h1>My exams <HelpLink Topic="student-guide" Anchor="finding-your-exam-my-exams" /></h1>
 @if (Tenant.UserId is { } me)
 {
     <p class="hint"><a href="privacy/export/@me" download="gadfly-data-@(me.ToString("N")).json">Download my data</a> (everything this organization keeps about you, as a JSON file)</p>
 }
+
+@* The ungraded practice interview (GAD-T294): always offered, even with no exam assigned yet. *@
+<section class="panel exam-item practice-offer">
+    <div class="exam-item-head">
+        <h2>Meet your examiner (practice)</h2>
+        <span class="badge">Not graded</span>
+    </div>
+    <p class="hint">A five-minute practice with the talking examiner: answering out loud, saying "I don't know", eye contact, and what happens if your microphone or camera stops.
+        Nothing is kept or counted as an attempt. Take it as often as you like.</p>
+    <div class="actions"><a class="button secondary" href="my-exams/practice">Start the practice</a></div>
+</section>
 
 @if (rows is null)
 {
@@ -35,10 +46,8 @@ else
                 </div>
                 <p class="hint">
                     @Window(r) · Attempts used @r.AttemptsUsed of @r.AttemptsAllowed
-                    @if (r.Mode == ExamMode.Voice)
-                    {
-                        <span> · Voice exam@(r.TypedAnswers ? " (you can type instead)" : "")</span>
-                    }
+                    @* Every exam is spoken on camera (GAD-T239); typing is only an accommodation the instructor grants (GAD-T260). *@
+                    <span> · @(r.TypedAnswers ? "Spoken questions, typed answers (your accommodation)" : "Spoken exam, on camera")</span>
                 </p>
                 @if (!string.IsNullOrWhiteSpace(r.Instructions))
                 {

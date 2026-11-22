@@ -1,0 +1,194 @@
+@page "/my-exams/practice"
+@attribute [Authorize(Policy = GadflyPolicies.Student)]
+@implements IDisposable
+@using Gadfly.Server.Student
+@using Gadfly.Server.Voice
+@inject VoiceSettings Settings
+@inject TimeProvider Clock
+@inject ILogger<PracticePage> Log
+
+@* "Meet your examiner" (GAD-T294): an ungraded practice interview any student can take from My exams at any time. It runs the
+   real exam room's pieces (VoiceRoom: the talking examiner, captions, microphone, self-view, transcript, the judging-wait filler
+   and page-turn sound, the pause on a lost device; and the eye-contact check with its fade, PracticeGaze) against fixed, built-in
+   practice lines (Student/PracticeInterview.cs). Nothing is stored: no session, attempt, turn, grade, report, integrity note or
+   audit row; the practice lives in this page's memory and is gone when it closes. The examiner's lines are fixed text, so a
+   practice never calls the AI panel; in live mode it costs only her voice and the speech recognizer. *@
+<HeadContent>
+    <link rel="stylesheet" href="student.css" />
+    <link rel="stylesheet" href="practice.css" />
+</HeadContent>
+<PageTitle>Meet your examiner (practice) · Gadfly Exams</PageTitle>
+
+<div class="exam-room practice-room @(started ? "exam-live" : null)">
+    <header class="exam-head">
+        <h1>Meet your examiner <span class="practice-tag">Practice</span></h1>
+        @if (started)
+        {
+            <div class="exam-bar">
+                <PracticeGaze Practice="practice" />
+            </div>
+            <div class="exam-status">
+                <span class="timer" role="timer" aria-live="off" title="Practice clock: it stops while the practice is paused">@Format(practice.Clock.Remaining(Clock.GetUtcNow()))</span>
+                @if (practice.Clock.GivenBack(Clock.GetUtcNow()) is { } back && back >= TimeSpan.FromSeconds(1))
+                {
+                    <span class="hint practice-credit">Paused time given back: @Format(back)</span>
+                }
+                <span class="progress-line">
+                    Step @(practice.StepIndex + 1) of @PracticeInterview.Steps.Count
+                    <progress max="@PracticeInterview.Steps.Count" value="@(practice.StepIndex + 1)" aria-hidden="true"></progress>
+                </span>
+                <span class="row-actions">
+                    @if (!practice.IsFinished)
+                    {
+                        <button type="button" class="link" @onclick="Skip" disabled="@pondering">Skip this step</button>
+                    }
+                    <button type="button" class="link" @onclick="Restart">Start again</button>
+                    <a href="my-exams">Leave the practice</a>
+                </span>
+            </div>
+        }
+    </header>
+
+    @if (!Settings.Available)
+    {
+        <p class="error" role="alert">The talking examiner isn't turned on on this server, so the practice can't run (and spoken exams can't either). Please tell your instructor.</p>
+        <p><a href="my-exams">Back to my exams</a></p>
+    }
+    else if (!started)
+    {
+        <section class="panel wide practice-intro">
+            <p>A short, friendly run-through with the examiner who will give your exams. She explains each part of a real exam and has you try it:</p>
+            <ol class="practice-steps">
+                @foreach (var s in PracticeInterview.Steps)
+                {
+                    <li>@s.Title</li>
+                }
+            </ol>
+            <p><strong>Nothing from this practice is kept.</strong> It isn't graded, reported or counted as an attempt, and none of your exams are affected.
+                It takes about five minutes, and you can leave, skip a step or start again at any time.</p>
+            <p class="hint">You need a working microphone and camera, and your sound on (a headset works best). Your browser will ask to use the microphone and camera: allow both.
+                As in an exam, your camera picture stays on your device; no video or sound is recorded.</p>
+            @if (Settings.Mode == VoiceMode.Mock)
+            {
+                <p class="notice" role="note">Practice voice: speech recognition is simulated on this server, so your words will appear as the placeholder "speech".</p>
+            }
+            <div class="actions">
+                <button type="button" @onclick="Start">Start the practice</button>
+                <a href="my-exams">Back to my exams</a>
+                <HelpLink Topic="practice-interview" Label="About this practice" />
+            </div>
+        </section>
+    }
+    else
+    {
+        <VoiceRoom SessionId="practice.Id" TurnIndex="practice.Turn" Question="@practice.Line" CanAnswer="CanAnswer"
+                   Active="voiceOn" ActiveChanged="OnVoiceActive" OnAnswer="OnAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaks" Pondering="pondering" />
+
+        <section class="panel wide exam-card practice-card" aria-labelledby="practice-step-title">
+            @if (!voiceOn && !practice.IsFinished)
+            {
+                <p class="notice" role="status">@(practice.Clock.IsStarted
+                    ? "The practice is paused until your microphone and camera are working again. Follow the steps above. The clock is stopped while you do, just as in an exam."
+                    : "The examiner will start as soon as your microphone and camera are working.")</p>
+            }
+            <p class="concept" id="practice-step-title">Step @(practice.StepIndex + 1): @practice.Current.Title</p>
+            @if (pondering)
+            {
+                <div class="thinking" role="status">
+                    <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                    Thinking about your answer…
+                    <span class="hint">In an exam this is when the examiner judges your answer and writes the next question.</span>
+                </div>
+            }
+            else
+            {
+                <ul class="practice-points">
+                    @foreach (var point in practice.Current.Points)
+                    {
+                        <li>@point</li>
+                    }
+                </ul>
+            }
+            @if (practice.IsFinished)
+            {
+                <div class="practice-done" role="status">
+                    <p><strong>You're ready.</strong> Nothing from this practice was kept, graded or counted.</p>
+                    <div class="actions">
+                        <a class="button" href="my-exams">Go to My exams</a>
+                        <button type="button" class="secondary" @onclick="Restart">Practice again</button>
+                        <HelpLink Topic="student-guide" Label="Student guide" />
+                    </div>
+                </div>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private readonly PracticeInterview practice = new();
+    private bool started, voiceOn, pondering;
+    private Timer? ticker;
+    private readonly CancellationTokenSource stop = new();
+
+    /// <summary>The microphone opens only while the examiner waits for an answer to this step and isn't "thinking".</summary>
+    private bool CanAnswer => voiceOn && practice.WantsAnswer && !pondering;
+
+    // The click is the browser's user activation, so the examiner can speak at once (VoiceRoom's autoStart).
+    private void Start()
+    {
+        started = true;
+        ticker ??= new Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private void Skip()
+    {
+        if (pondering) return;
+        practice.Next();
+    }
+
+    private void Restart()
+    {
+        pondering = false;
+        practice.Restart();
+        if (voiceOn) practice.Clock.Start(Clock.GetUtcNow());
+    }
+
+    private void OnExaminerSpeaks() => practice.Clock.Start(Clock.GetUtcNow());
+
+    /// <summary>VoiceRoom reports the microphone, camera and connection working (true) or lost (false): the practice clock follows.</summary>
+    private void OnVoiceActive(bool on)
+    {
+        voiceOn = on;
+        var now = Clock.GetUtcNow();
+        if (on) practice.Clock.Resume(now);
+        else practice.Clock.Pause(now);
+    }
+
+    /// <summary>
+    /// A spoken answer, taken as heard as in an exam (GAD-T405): the examiner "thinks" for a moment (her filler line and the
+    /// page-turn sound, GAD-T290/GAD-T409), then moves to the next step. The words are only checked for "I don't know", then dropped.
+    /// </summary>
+    private async Task OnAnswerAsync(VoiceAnswerPayload payload)
+    {
+        if (pondering || !practice.WantsAnswer) return;
+        var turn = practice.Turn;
+        if (payload?.Turn is { } t && t != turn) return;   // an answer to a step the practice already left
+        var said = string.Join(' ', (payload?.Segments ?? []).Select(s => (s.Text ?? "").Trim()).Where(x => x.Length > 0));
+        pondering = true;
+        StateHasChanged();
+        try { await Task.Delay(PracticeInterview.ThinkingPause, stop.Token); }
+        catch (OperationCanceledException) { return; }
+        if (practice.Turn == turn) practice.Answer(turn, said);   // unless "Skip" or "Start again" moved on meanwhile
+        pondering = false;
+        StateHasChanged();
+    }
+
+    private static string Format(TimeSpan t) => $"{(int)t.TotalMinutes}:{t.Seconds:00}";
+
+    public void Dispose()
+    {
+        stop.Cancel();
+        ticker?.Dispose();
+        stop.Dispose();
+    }
+}

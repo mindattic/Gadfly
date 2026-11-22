@@ -17,6 +17,8 @@ Five steps from your invitation to a submitted exam.
 
 ## Before the day
 
+- Take the [practice interview](practice-interview.md) (**Meet your examiner** on **My exams**): five minutes with
+  the examiner, nothing kept or counted.
 - Work through the [checklist](before-your-exam.md): headset, quiet room, light in front of you, other call apps
   closed.
 - Practise explaining each topic **out loud**, including the *why*.
