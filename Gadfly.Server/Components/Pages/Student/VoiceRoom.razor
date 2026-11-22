@@ -322,7 +322,8 @@
         startupBound.CancelAfter(TimeSpan.FromSeconds(20));
         try
         {
-            var (cueFloorMs, cueCeilingMs) = Settings.EndCue(await TimeMultiplierAsync());
+            var timeMultiplier = await TimeMultiplierAsync();
+            var (cueFloorMs, cueCeilingMs) = Settings.EndCue(timeMultiplier);
             var (language, vocabulary) = await VocabularyAsync();
             Grants.SetVocabulary(user, SessionId, language, vocabulary);
             // The exam's voice, else the organization's default, else the platform's (GAD-T475): chosen here, enforced by VoiceHubFilter.
@@ -339,6 +340,10 @@
                 // ceiling; both are lengthened by the extra-time accommodation.
                 endCueMs = cueFloorMs,
                 endCueMaxMs = cueCeilingMs,
+                // Endpointing (GAD-T498): the shorter silence after a finished sentence, and the speech detector's hangover (how
+                // long a silence closes one stretch of speech and commits it to the recognizer).
+                endCueCompleteMs = Settings.EndCueCompleteMs(timeMultiplier),
+                hangoverMs = Settings.SpeechHangoverMs,
                 modelUrl = Settings.AvatarModelUrl,
                 portraitUrl = Settings.PortraitUrl,
                 // Where the portrait's mouth is, so it can move while she speaks in portrait mode (GAD-T303).

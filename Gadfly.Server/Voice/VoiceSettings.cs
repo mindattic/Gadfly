@@ -23,7 +23,9 @@ public enum VoiceMode
 /// <c>Mode</c> (<c>off</c> | <c>mock</c> | <c>live</c>; default <c>mock</c> in Development, otherwise <c>off</c>),
 /// <c>AvatarModelUrl</c> (the GLB; default <c>/assets/avatars/mpfb.glb</c> when that file is present, else the 2D portrait),
 /// <c>PortraitUrl</c>, <c>EndOfAnswerSeconds</c> (the shortest silence that ends an answer, default 4),
-/// <c>EndOfAnswerMaxSeconds</c> (the longest it may grow to as it adapts to the student's own pauses, default 12; GAD-T264).
+/// <c>EndOfAnswerMaxSeconds</c> (the longest it may grow to as it adapts to the student's own pauses, default 12; GAD-T264),
+/// <c>EndOfAnswerCompleteSeconds</c> (the shorter silence after an answer that ends in a finished sentence, default 2; GAD-T498),
+/// <c>SpeechHangoverMs</c> (the silence after which the browser closes one stretch of speech and commits it, default 700; GAD-T498).
 /// Provider choice and keys are the libraries' own settings: <c>MindAttic:SpeechRecognition:Provider</c> and
 /// <c>MindAttic:Avatar:ElevenLabs:VoiceId</c>; the ElevenLabs key is read from Vault on the server only.
 /// </summary>
@@ -37,6 +39,24 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
     /// <see cref="EndOfAnswerSeconds"/>.
     /// </summary>
     public double EndOfAnswerMaxSeconds { get; init; } = 12;
+
+    /// <summary>
+    /// The end-of-answer silence when what was heard last ends in a finished sentence (GAD-T498): the recognizer's final ends in
+    /// a full stop, question mark or exclamation mark and its last word is not one that leads into more ("and", "because", "the",
+    /// "um"...). A finished answer then goes in after this much silence instead of <see cref="EndOfAnswerSeconds"/>; a student
+    /// who stops mid-sentence still gets the full floor. It adapts upward with the student's own pauses like the floor does, and
+    /// lengthens after each answer that turned out to be cut off (GAD-T462), never past the floor. <c>Gadfly:Voice:EndOfAnswerCompleteSeconds</c>,
+    /// 1 to <see cref="EndOfAnswerSeconds"/>, default 2.
+    /// </summary>
+    public double EndOfAnswerCompleteSeconds { get; init; } = 2;
+
+    /// <summary>
+    /// How long the browser's voice activity detection waits in silence before it closes a stretch of speech and commits it to the
+    /// recognizer (GAD-T498; the speech library's <c>hangoverMs</c>, whose own default is 800). Shorter commits sooner, so the
+    /// final transcript, and with it the end-of-answer countdown, starts sooner; a commit is not the end of the answer (speaking
+    /// again simply starts the next stretch). <c>Gadfly:Voice:SpeechHangoverMs</c>, 300 to 2000, default 700.
+    /// </summary>
+    public int SpeechHangoverMs { get; init; } = 700;
 
     /// <summary>
     /// Prepare the examiner's fixed lines ahead in the avatar's phrase cache (GAD-T303, <see cref="ExaminerSpeechWarmup"/>), so the
@@ -77,6 +97,17 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
         return ((int)Math.Round(floor * 1000), (int)Math.Round(ceiling * 1000));
     }
 
+    /// <summary>
+    /// The end-of-answer silence after a finished sentence for one student (GAD-T498), in milliseconds: lengthened by the
+    /// extra-time accommodation like the floor, and never longer than the floor (<see cref="EndCue"/>).
+    /// </summary>
+    public int EndCueCompleteMs(double timeMultiplier)
+    {
+        var m = double.IsFinite(timeMultiplier) ? Math.Clamp(timeMultiplier, 1, 4) : 1;
+        var (floorMs, _) = EndCue(timeMultiplier);
+        return Math.Min(floorMs, (int)Math.Round(Math.Min(EndOfAnswerCompleteSeconds * m, EndOfAnswerHardCapSeconds) * 1000));
+    }
+
     /// <summary>"x,y,w" with each a fraction in (0, 1), normalized; anything else is null (no mouth drawn).</summary>
     public static string? ParseMouth(string value)
     {
@@ -107,11 +138,15 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
             model = "/assets/avatars/mpfb.glb";
         var cue = double.TryParse(section["EndOfAnswerSeconds"], System.Globalization.CultureInfo.InvariantCulture, out var c) && double.IsFinite(c) ? Math.Clamp(c, 2, 15) : 4;
         var max = double.TryParse(section["EndOfAnswerMaxSeconds"], System.Globalization.CultureInfo.InvariantCulture, out var x) && double.IsFinite(x) ? Math.Clamp(x, cue, 30) : Math.Max(12, cue);
+        var complete = double.TryParse(section["EndOfAnswerCompleteSeconds"], System.Globalization.CultureInfo.InvariantCulture, out var d) && double.IsFinite(d) ? Math.Clamp(d, 1, cue) : Math.Min(2, cue);
+        var hangover = int.TryParse(section["SpeechHangoverMs"], System.Globalization.CultureInfo.InvariantCulture, out var h) ? Math.Clamp(h, 300, 2000) : 700;
         var portrait = section["PortraitUrl"] ?? "/assets/portrait.png";
         var mouth = section["PortraitMouth"] is { Length: > 0 } m ? ParseMouth(m) : portrait == "/assets/portrait.png" ? DefaultPortraitMouth : null;
         return new VoiceSettings(mode, string.IsNullOrWhiteSpace(model) ? null : model, portrait, cue)
         {
             EndOfAnswerMaxSeconds = max,
+            EndOfAnswerCompleteSeconds = complete,
+            SpeechHangoverMs = hangover,
             WarmPhrases = !bool.TryParse(section["WarmPhrases"], out var warm) || warm,
             PortraitMouth = mouth,
             TtsModel = section["TtsModel"] is { Length: > 0 } tts ? tts.Trim() : "eleven_flash_v2_5",

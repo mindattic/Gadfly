@@ -151,6 +151,9 @@ async function start() {
         s.pcm16ToBase64 = speechPkg.pcm16ToBase64;
         s.mic = new speechPkg.MicCapture({
             mode: "hands-free",
+            // The silence that closes one stretch of speech and commits it (GAD-T498, Gadfly:Voice:SpeechHangoverMs): a commit is
+            // not the end of the answer, it only lets the recognizer's final, and so the end-of-answer countdown, start sooner.
+            ...(s.cfg.hangoverMs > 0 ? { hangoverMs: s.cfg.hangoverMs } : {}),
             onChunk: (c) => {
                 if (s.gate || !s.speechConn) return;
                 try { s.acoustics.push(c.pcm); } catch { }
@@ -1019,14 +1022,44 @@ function armCue(s) {
  * extra-time accommodation) and adapts to the student's own pattern: once a few pauses within answers have been seen (silence
  * after which the student went on speaking), it becomes half again the student's longer pauses (the 80th percentile of the
  * last 20), never below the floor and never above the ceiling. It only ever lengthens the cue: a quick speaker keeps the floor.
+ *
+ * Endpointing (GAD-T498): when what was heard last is a finished sentence (finishedSentence) and no committed speech is still
+ * waiting for its final, the floor is the shorter endCueCompleteMs instead, so a finished answer goes in after about two seconds
+ * rather than four, the way a conversation turns. A student who stops mid-sentence ("...because", "and um") keeps the full floor.
+ * Each answer that turned out to be cut off (the student went on within CUT_OFF_MS, GAD-T462) lengthens the short floor by
+ * CUT_OFF_BACKOFF_MS for the rest of the exam, never past the full floor, so the shorter wait backs off for a student it cuts short.
  */
 function endCueMs(s) {
-    const floor = s.cfg.endCueMs || 4000;
-    const ceiling = Math.max(floor, s.cfg.endCueMaxMs || floor);
+    const full = s.cfg.endCueMs || 4000;
+    const ceiling = Math.max(full, s.cfg.endCueMaxMs || full);
+    const short = s.cfg.endCueCompleteMs > 0 ? Math.min(full, s.cfg.endCueCompleteMs + (s.cutOffBackoffMs || 0)) : full;
+    const floor = short < full && finishedSentence(s) && !awaitingFinal(s) ? short : full;
     if (s.pauses.length < PAUSE.minSamples) return floor;
     const sorted = [...s.pauses].sort((a, b) => a - b);
     const p80 = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.8))];
     return Math.round(Math.min(ceiling, Math.max(floor, p80 * PAUSE.factor)));
+}
+
+/** Words that lead into more: a final ending on one is mid-thought even if the recognizer put a full stop after it (GAD-T498). */
+const LEADS_ON = new Set(("and but or so because since although though while if when whereas unless until than then like as "
+    + "the a an of to for with in on at by from about into that which who whom whose what where why how this these those "
+    + "my your his her its our their is are was were be been being has have had do does did can could would should will "
+    + "um uh er erm hmm mm well also plus not very more most just").split(" "));
+
+/** The last thing heard ends a sentence: a final stop, question or exclamation mark, and no word that leads into more after it. */
+function finishedSentence(s) {
+    if (s.partial && s.partial.trim()) return false;   // words still arriving
+    const last = s.segments.length ? String(s.segments[s.segments.length - 1].text || "").trim() : "";
+    if (!/[.?!]["'”’)]*$/.test(last)) return false;
+    const words = last.toLowerCase().replace(/[^a-z' -]+/g, " ").trim().split(/\s+/);
+    return !LEADS_ON.has(words[words.length - 1] || "");
+}
+
+/** A commit sent in the last few seconds has no final yet: speech the recognizer hasn't returned, so the answer isn't whole. */
+const FINAL_WAIT_MS = 3000;
+function awaitingFinal(s) {
+    const newest = s.commitSentAt.length ? s.commitSentAt[s.commitSentAt.length - 1] : null;
+    return newest !== null && performance.now() - newest < FINAL_WAIT_MS;
 }
 
 const PAUSE = { minMs: 300, minSamples: 3, keep: 20, factor: 1.5 };
@@ -1047,6 +1080,8 @@ function notePause(s, ms) {
  * talking (a wait filler or the next question) is not counted, since the microphone may be hearing her.
  */
 const CUT_OFF_MS = 3000;
+/** How much each cut-off lengthens the short end-of-answer silence after a finished sentence (GAD-T498). */
+const CUT_OFF_BACKOFF_MS = 750;
 
 function noteCutOff(s) {
     if (!s || s.cutWatch == null) return;
@@ -1054,6 +1089,7 @@ function noteCutOff(s) {
     s.cutWatch = null;
     // An eye-contact remark is the examiner talking too (GAD-T316): the microphone may be hearing her, not the student.
     if (!Number.isFinite(ms) || ms < 0 || ms > CUT_OFF_MS || s.speaking || s.fillPlaying || s.remarkHold) return;
+    s.cutOffBackoffMs = Math.min(CUT_OFF_BACKOFF_MS * 4, (s.cutOffBackoffMs || 0) + CUT_OFF_BACKOFF_MS);   // GAD-T498
     s.dotnet.invokeMethodAsync("OnAnswerCutOff", Math.round(ms)).catch(() => { });
 }
 

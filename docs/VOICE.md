@@ -235,6 +235,16 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
    within answers have been seen, it becomes 1.5 times the student's longer pauses (80th percentile of the last 20), never
    below that floor and never above `Gadfly:Voice:EndOfAnswerMaxSeconds` (default 12). An extra-time accommodation
    multiplies both the floor and the ceiling (capped at 45 s), so a student with 1.5x time waits 6 s at least.
+   **Endpointing (GAD-T498).** A finished answer goes in sooner. When the last final ends a sentence (a full stop, question
+   or exclamation mark, and its last word is not one that leads into more, such as "and", "because", "the" or "um") and no
+   committed speech is still waiting for its final, the floor is `Gadfly:Voice:EndOfAnswerCompleteSeconds` (default 2,
+   1 to the floor, also multiplied by the accommodation) instead of the full floor; a student who stops mid-sentence keeps
+   the full floor. The pause adaptation above applies to both. Each cut-off (below) lengthens the short floor by 0.75 s for
+   the rest of the exam (`CUT_OFF_BACKOFF_MS`, up to 3 s, never past the full floor), so it backs off for a student it cuts
+   short. The browser's voice activity detection closes a stretch of speech and commits it to the recognizer after
+   `Gadfly:Voice:SpeechHangoverMs` of silence (default 700, 300 to 2000; the library's own default is 800): a commit is not
+   the end of the answer, it only lets the final, and so the countdown, start sooner. Speaking again at any point cancels the
+   countdown, as before.
    **Cut-offs (GAD-T462).** When the silence (not **Done answering**) hands the answer in, the next 3 seconds are watched
    (`CUT_OFF_MS` in `voice-room.js`): if the student starts speaking again, the browser calls `OnAnswerCutOff` with the
    delay in milliseconds, once per answer, and nothing else (no audio, no words). Speech while the examiner is talking (a
@@ -368,6 +378,8 @@ pending that library change.
 | `Gadfly:Voice:WarmPhrases` | Prepare the fixed examiner lines in the phrase cache when the first exam room opens (default true). |
 | `Gadfly:Voice:EndOfAnswerSeconds` | Shortest silence that ends an answer (2 to 15, default 4). |
 | `Gadfly:Voice:EndOfAnswerMaxSeconds` | Longest the silence may adapt to for a student who pauses long (up to 30, default 12). Both are multiplied by the extra-time accommodation. |
+| `Gadfly:Voice:EndOfAnswerCompleteSeconds` | The shorter silence that ends an answer whose last words are a finished sentence (1 to the floor, default 2; GAD-T498). Multiplied by the extra-time accommodation. |
+| `Gadfly:Voice:SpeechHangoverMs` | Silence after which the browser commits one stretch of speech to the recognizer (300 to 2000, default 700; GAD-T498). |
 | `MindAttic:SpeechRecognition:Provider` | Live only: `Fallback` (default in live since GAD-T357: ElevenLabs Scribe, then OpenAI Whisper), or pin to `ElevenLabs` or `OpenAI` alone. |
 | `MindAttic:Avatar:ElevenLabs:VoiceId` | Live only, required (without it voice stays off). |
 

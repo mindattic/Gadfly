@@ -38,6 +38,20 @@ public class VoiceTests
     }
 
     [Test]
+    public void A_finished_sentence_has_a_shorter_end_of_answer_silence_that_never_passes_the_floor()
+    {
+        var settings = VoiceSettings.From(Config(), true, null);
+        Assert.That(settings.EndCueCompleteMs(1), Is.EqualTo(2000));
+        Assert.That(settings.EndCueCompleteMs(1.5), Is.EqualTo(3000), "extra time lengthens it too");
+        Assert.That(settings.SpeechHangoverMs, Is.EqualTo(700));
+
+        var custom = VoiceSettings.From(Config(("Gadfly:Voice:EndOfAnswerSeconds", "3"), ("Gadfly:Voice:EndOfAnswerCompleteSeconds", "9"),
+            ("Gadfly:Voice:SpeechHangoverMs", "50")), true, null);
+        Assert.That(custom.EndCueCompleteMs(1), Is.EqualTo(3000), "never longer than the floor");
+        Assert.That(custom.SpeechHangoverMs, Is.EqualTo(300), "clamped");
+    }
+
+    [Test]
     public void Grants_allow_only_texts_the_server_offered_to_an_armed_student()
     {
         var clock = new FakeClock(DateTimeOffset.Parse("2026-11-20T10:00:00Z"));
