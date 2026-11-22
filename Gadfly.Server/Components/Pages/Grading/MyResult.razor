@@ -21,7 +21,14 @@ else if (report is null || w is null)
 else
 {
     <h1>Your result <span>· @report.ExamTitle</span> <HelpLink Topic="grading-and-results" /></h1>
-    <p class="hint"><a href="@GradingSetup.StudentReportMarkdownPath(SessionId)" download data-enhance-nav="false">Download the report (Markdown)</a></p>
+    <p class="hint">
+        <a href="@GradingSetup.StudentReportMarkdownPath(SessionId)" download data-enhance-nav="false">Download the report (Markdown)</a> ·
+        <a href="@GradingSetup.StudentReportPdfPath(SessionId)" download data-enhance-nav="false">Download the report (PDF)</a>
+    </p>
+    <p class="hint">
+        <a href="@($"certificates/{SessionId:D}/pdf")" download data-enhance-nav="false">Download your completion certificate (PDF)</a>,
+        with its own verification code · <a href="transcripts/verify" target="_blank" rel="noopener" data-enhance-nav="false">check a copy</a>
+    </p>
     <p class="hint"><Gadfly.Server.Transcripts.TranscriptLinks SessionId="SessionId" Label="Your transcript, with its verification code:" ShowVerify="true" /></p>
     <AssessmentReportView Report="report" />
 

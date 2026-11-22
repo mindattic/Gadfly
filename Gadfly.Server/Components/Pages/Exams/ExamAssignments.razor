@@ -67,6 +67,7 @@ else if (rows.Count == 0)
 }
 else
 {
+    <p class="hint"><a href="@($"grading/exam/{ExamId:D}/class-summary.pdf")" download data-enhance-nav="false">Download class summary (PDF)</a>: score distribution, per-objective average and who hasn't completed, over this exam's released results.</p>
     <table class="grid">
         <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Answers</th><th>Eye contact</th><th>Lives in EU/EEA</th><th>Latest session</th><th>Results</th></tr></thead>
         <tbody>

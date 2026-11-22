@@ -22,7 +22,8 @@ else
     <h1>Assessment report <span>· reviewer view</span></h1>
     <p class="hint">
         <a href="@GradingSetup.ReportMarkdownPath(SessionId)" download data-enhance-nav="false">Download Markdown</a> ·
-        <a href="@GradingSetup.ReportCsvPath(SessionId)" download data-enhance-nav="false">Download CSV</a>
+        <a href="@GradingSetup.ReportCsvPath(SessionId)" download data-enhance-nav="false">Download CSV</a> ·
+        <a href="@GradingSetup.ReportPdfPath(SessionId)" download data-enhance-nav="false">Download PDF</a>
     </p>
     <AssessmentReportView Report="report" />
 }
