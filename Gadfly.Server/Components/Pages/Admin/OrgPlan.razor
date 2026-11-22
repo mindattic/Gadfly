@@ -6,6 +6,7 @@
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
 @inject PlanEnforcement Plans
+@inject PaymentSettings Payments
 
 @* Plan and usage for the organization's own owners and admins (GAD-T309/GAD-T371): what plan they're on, how close they
    are to its limits, and an invoice-ready usage export. Changing the plan itself is a platform-admin action (PlatformPlan.razor). *@
@@ -78,6 +79,26 @@ else
     @if (status.StaffSeatsBlocked || status.StudentSeatsBlocked)
     {
         <p class="notice error">You're at your seat limit: adding another @(status.StaffSeatsBlocked ? "staff" : "student") member will be refused until you remove someone or upgrade.</p>
+    }
+
+    @if (Payments.Available)
+    {
+        var upgradable = Payments.CheckoutablePlans.Where(p => p != status.Plan).ToList();
+        @if (upgradable.Count > 0)
+        {
+            <h2 class="section">Upgrade</h2>
+            <p class="hint">Pay by card; your plan changes as soon as payment completes.</p>
+            <div class="row-actions">
+                @foreach (var p in upgradable)
+                {
+                    <form method="post" action="org/plan/checkout" data-enhance="false">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="plan" value="@p" />
+                        <button type="submit">Switch to @p</button>
+                    </form>
+                }
+            </div>
+        }
     }
 
     <h2 class="section">Usage export</h2>

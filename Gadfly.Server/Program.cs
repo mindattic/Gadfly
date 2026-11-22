@@ -107,6 +107,10 @@ builder.Services.AddMindAtticOrganizations<GadflyDbContext>(builder.Configuratio
 builder.Services.AddScoped<IOrganizationDirectory, OrganizationDirectory>();
 // Plans, seats and the exam allowance (GAD-T309).
 builder.Services.AddSingleton<Gadfly.Server.Platform.PlanEnforcement>();
+// Optional card checkout (GAD-T372): stays off (PaymentSettings.Available false) unless Stripe keys are configured in Vault.
+builder.Services.AddSingleton<Gadfly.Server.Platform.PaymentSettings>();
+builder.Services.AddScoped<Gadfly.Server.Platform.CheckoutService>();
+builder.Services.AddHttpClient("StripeCheckout");
 
 // Background work (ingestion, concept extraction, reports) on the SQL job table (GAD-T43).
 builder.Services.AddGadflyJobs();
