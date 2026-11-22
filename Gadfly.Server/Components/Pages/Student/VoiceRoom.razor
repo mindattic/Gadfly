@@ -14,6 +14,7 @@
 @inject Gadfly.Server.Sessions.SessionOrchestrator Sessions
 @inject QuestionVoiceStreams QuestionStreams
 @inject ExaminerTts Tts
+@inject Gadfly.Server.Localization.UiText Ui
 
 @* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
@@ -153,6 +154,10 @@
                     @* Typed answers (GAD-T260): the answer box is the exam room's; only the question can be repeated here. *@
                     <div class="actions voice-actions">
                         <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
+                        @if (OnSayAnotherWay.HasDelegate)
+                        {
+                            <button type="button" class="secondary" @onclick="OnSayAnotherWay" disabled="@(!CanRepeat || !CanSayAnotherWay)" title="@UiFor["examRoom.sayAnotherWay.hint"]">@UiFor["examRoom.sayAnotherWay"]</button>
+                        }
                     </div>
                 }
                 else
@@ -170,6 +175,11 @@
                         <button type="button" data-voice-action="done" data-voice-needs-draft disabled>Done answering</button>
                         <button type="button" class="secondary" data-voice-action="clear" data-voice-needs-draft disabled>Clear and answer again</button>
                         <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
+                        @* "Say it another way" (GAD-T602, GAD-T555): the same question reworded through the leak guard; free, for every student. *@
+                        @if (OnSayAnotherWay.HasDelegate)
+                        {
+                            <button type="button" class="secondary" @onclick="OnSayAnotherWay" disabled="@(!CanRepeat || !CanSayAnotherWay)" title="@UiFor["examRoom.sayAnotherWay.hint"]">@UiFor["examRoom.sayAnotherWay"]</button>
+                        }
                         <button type="button" class="secondary" data-voice-action="mode">Switch to hold-to-talk</button>
                         <button type="button" class="secondary" data-voice-action="ptt" hidden aria-describedby="voice-ptt-hint">Hold to talk</button>
                     </div>
@@ -240,6 +250,30 @@
     /// prefetch only; not an EventCallback, so it never re-renders the exam room.
     /// </summary>
     [Parameter] public Func<int, string, Task>? OnPartialAnswer { get; set; }
+    /// <summary>"Say it another way" was pressed (GAD-T602): the exam room asks the engine for a reworded question and hands it back
+    /// through <see cref="SpeakAnotherWayAsync"/>. No button without it (the practice).</summary>
+    [Parameter] public EventCallback OnSayAnotherWay { get; set; }
+    /// <summary>False while a rewording is being prepared.</summary>
+    [Parameter] public bool CanSayAnotherWay { get; set; } = true;
+
+    /// <summary>The exam room's strings in the attempt's language (GAD-T543/T544).</summary>
+    private Gadfly.Server.Localization.UiText UiFor => Ui.For(speech.Language);
+
+    /// <summary>
+    /// The question said another way (GAD-T602): she says it like a question (captions, lip sync), the words already said are kept and
+    /// the microphone opens again after, and it joins the transcript. The question as first asked stays the record.
+    /// </summary>
+    public async Task SpeakAnotherWayAsync(string text)
+    {
+        if (module is null || state != VoiceState.On || string.IsNullOrWhiteSpace(text)) return;
+        AddLine(true, text, null);
+        StateHasChanged();
+        try { await SpeakAsync(text.Trim(), repeat: true); }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
+        {
+            Log.LogDebug(ex, "The reworded question could not be spoken for session {SessionId}.", SessionId);
+        }
+    }
 
     private VoiceState state;
     private bool supported = true, armed, needsClick;
