@@ -52,7 +52,7 @@
         {
             @* The talking examiner (GAD-T53, mandatory since GAD-T239): kept outside the phase switch so the microphone, the camera and
                the examiner persist from question to question. *@
-            <VoiceRoom SessionId="SessionId" TurnIndex="step?.TurnIndex" Question="@step?.Question" Prompt="@VoicePrompt"
+            <VoiceRoom SessionId="SessionId" TurnIndex="step?.TurnIndex" Question="@step?.Question" Move="@step?.Move" Prompt="@VoicePrompt"
                        PromptId="step?.Verification?.ResponseId" CanAnswer="VoiceCanAnswer" Active="voiceOn" ActiveChanged="OnVoiceActive"
                        OnAnswer="OnVoiceAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaksAsync" Pondering="VoicePondering" />
         }

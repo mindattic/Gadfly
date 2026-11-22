@@ -15,6 +15,10 @@
 // no frame is recorded or sent from here (camera checks, when the exam uses them, are webcam-integrity.js). While the
 // microphone is open the response delay (examiner finished, student starts speaking) counts up live and freezes when the student
 // speaks; it rides along with the answer so the on-screen transcript can show it. It is display only and never scored.
+//
+// Delivery (GAD-T303): how she looks and sounds while speaking is examiner-voice.js (word-lit captions on the provider's own timings,
+// a speaking style per kind of question, the portrait's moving mouth, frame-rate quality tiers, lost graphics, pausing with the tab,
+// and the browser's own speech when the voice provider fails). This file tells it when an utterance is prepared, starts and ends.
 
 import { VoiceAcoustics } from "./voice-acoustics.js";
 
@@ -62,6 +66,7 @@ export function init(dotnet, cfg) {
         dotnet, cfg, running: false, allowed: false, gate: true, speaking: false, mode: "hands-free",
         segments: [], partial: "", listeningStartMs: null, startedAtUnixMs: null, cueTimer: null, captionTimers: [],
         mic: null, pcm16ToBase64: null, speechConn: null, avatarConn: null, avatar: null, speech: null, avatarOk: false,
+        presenter: null, utterId: null, ours: null,   // the delivery helpers (GAD-T303); the hub id and record of this room's own utterance
         selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null, face: null,
         pauses: [], lastSpeechEndAt: null,   // the student's own mid-answer pauses, which the end-of-answer cue adapts to (GAD-T264)
         fill: null, fillPlaying: null,       // filling the wait while an answer is judged (GAD-T290): pending lines, the one being said
@@ -78,7 +83,11 @@ export function init(dotnet, cfg) {
         else if (action === "clear") discard();
         else if (action === "mode") toggleMode(el);
     };
-    S.onDown = (e) => { if (e.target.closest?.('[data-voice-action="ptt"]') && S?.mic && S.mode === "push-to-talk" && !S.gate) S.mic.pttDown(); };
+    S.onDown = (e) => {
+        if (!e.target.closest?.('[data-voice-action="ptt"]') || !S?.mic || S.mode !== "push-to-talk") return;
+        if (S.speaking && S.speakToken && S.allowed) interrupt(S);   // pressing Hold to talk while she asks: she stops and listens
+        if (!S.gate) S.mic.pttDown();
+    };
     S.onUp = () => { if (S?.mic && S.mode === "push-to-talk") S.mic.pttUp(); };
     document.addEventListener("click", S.onClick);
     document.addEventListener("pointerdown", S.onDown);
@@ -209,14 +218,21 @@ async function start() {
         // never set here, so it can't stay set and keep the microphone from reopening (GAD-T245).
         // Only while one of this room's own speak() calls is still waiting: a late start after its allowance ran out, or a remark's
         // start, must not set the flag after the call has cleared it (nothing would clear it again).
-        el.addEventListener("speaking-start", () => { if (!s.remarkHold && s.speakToken) s.speaking = true; });
+        el.addEventListener("speaking-start", () => {
+            if (!s.remarkHold && s.speakToken) s.speaking = true;
+            // This room's own utterance has started playing (not a gaze remark, which speaks through another connection): the
+            // caption and mouth clock starts with her audio, so the words light as she says them.
+            if (s.ours && !s.ours.started && !s.remarkHold) { s.ours.started = true; s.presenter && s.presenter.started(); }
+        });
+        el.addEventListener("speech-error", (e) => { if (s.ours && e.detail && e.detail.id === s.utterId) s.ours.failed = true; });
         stage.appendChild(el);
         s.avatar = el;
+        s.presenter = (await import("./examiner-voice.js")).createPresenter(el, stage, q("caption"), { portraitMouth: s.cfg.portraitMouth },
+            (reason) => s.dotnet.invokeMethodAsync("OnAvatarMode", "portrait", reason).catch(() => { }));
         s.avatarConn = new signalR.HubConnectionBuilder().withUrl(AVATAR_HUB).build();
         s.speech = pkg.attachSpeechHub(el, s.avatarConn);
-        s.avatarConn.on("speechStart", () => { clearCaptions(); });
-        s.avatarConn.on("speechChunk", (chunk) => scheduleCaptions(chunk && chunk.words));
-        s.avatarConn.on("speechEnd", () => { showFullCaption(); });
+        s.avatarConn.on("speechStart", (m) => { s.utterId = m && m.id; });
+        s.avatarConn.on("speechChunk", (m) => { if (m && m.id === s.utterId && s.ours) s.presenter && s.presenter.words(m.words); });
         await s.avatarConn.start();
         await Promise.race([el.ready, new Promise((r) => setTimeout(r, 90000))]);
         if (S !== s || !s.running) return;
@@ -226,7 +242,10 @@ async function start() {
     } catch (err) {
         if (S !== s || !s.running) return;
         s.avatarOk = false;
-        s.dotnet.invokeMethodAsync("OnAvatarMode", "none", "The examiner's picture could not start; questions are shown as text.").catch(() => { });
+        // Without the talking head the questions are still read out by the browser's own speech, with the caption lit word by word.
+        try { s.presenter?.dispose(); } catch { }
+        try { s.presenter = (await import("./examiner-voice.js")).createPresenter(null, null, q("caption"), {}, () => { }); } catch { s.presenter = null; }
+        s.dotnet.invokeMethodAsync("OnAvatarMode", "none", "The examiner's picture could not start; questions are read out by your browser and shown as text.").catch(() => { });
     }
 
     s.gate = true;
@@ -239,8 +258,11 @@ function fail(kind, message, s) {
     stop();
 }
 
-/** The examiner says <paramref name="what"/> (the server only allows texts it offered for this student). */
-export function speak(what, cacheable) {
+/**
+ * The examiner says <paramref name="what"/> (the server only allows texts it offered for this student), in the speaking style the
+ * server picked for this kind of question (GAD-T303: neutral, open or probe; never a hint of the grade).
+ */
+export function speak(what, cacheable, style) {
     const s = S;
     if (!s || !s.running) return;
     cancelFill(s);   // the next question is here: no more filler for this wait (GAD-T290)
@@ -253,11 +275,16 @@ export function speak(what, cacheable) {
     s.acoustics.reset();
     resetDelay(s);
     drawTranscript();
-    showCaption(what);
     status("The examiner is speaking…");
     const token = s.speakToken = {};
-    const done = () => { if (s.speakToken === token) s.speakToken = null; s.speaking = false; if (S === s && s.allowed) openMic(); else if (S === s) status("Waiting."); };
-    if (!s.avatarOk || !s.speech) { done(); return; }
+    // Only the newest utterance finishes the turn: one replaced by a later speak() (Repeat the question) must not open the microphone.
+    const done = () => {
+        if (S !== s || s.speakToken !== token) return;
+        s.speakToken = null;
+        s.speaking = false;
+        s.ours = null;
+        if (s.allowed) openMic(); else status("Waiting.");
+    };
     s.speaking = true;
     // A filler line still being said (GAD-T290) finishes first, so the two never overlap and its end isn't taken for this one's.
     // The line is short and stops itself if it stalls; the extra bound here is only a backstop.
@@ -265,16 +292,78 @@ export function speak(what, cacheable) {
     const ready = filler ? Promise.race([filler, new Promise((r) => setTimeout(r, FILL.timeoutMs + 1000))]) : Promise.resolve();
     ready.then(() => {
         if (S !== s || s.speakToken !== token) return;   // replaced meanwhile: the newer call finishes the turn
-        if (!s.running || !s.speech || !s.avatar) { done(); return; }
-        s.avatar.state = "idle";
-        // A stalled synthesis or playback must never leave the student waiting for ever: after a generous allowance, listen anyway.
-        const allowance = new Promise((resolve) => setTimeout(resolve, 20000 + 120 * (what || "").length));
-        Promise.race([s.speech.speak(what, undefined, !!cacheable), allowance])
-            .catch(() => { showCaption(what); })
-            .finally(done);
+        if (!s.running) { done(); return; }
+        if (s.presenter) { s.presenter.idle(); s.presenter.prepare(what, style); } else showCaption(what);
+        void deliver(s, token, what, !!cacheable).finally(done);
     });
 }
 
+/**
+ * Plays one utterance and resolves when it is over. Through the avatar hub when the talking head is up; if the voice provider fails
+ * (an error from the hub, a refused request, or no sound within a few seconds) the browser's own speech reads it instead, and with no
+ * browser speech the text simply stays on screen. A stalled playback can never hold the exam: every path is bounded.
+ */
+async function deliver(s, token, what, cacheable) {
+    const mine = () => S === s && s.speakToken === token;
+    let viaBrowser = !s.avatarOk || !s.speech;
+    if (!viaBrowser) {
+        const ours = s.ours = { started: false, failed: false };
+        if (s.avatar) s.avatar.state = "idle";
+        try {
+            const finished = s.speech.speak(what, undefined, cacheable).catch(() => { ours.failed = true; });   // refused or the hub call failed
+            // No sound at all within this long means the provider is not answering: fall back rather than sit in silence.
+            await visibleWait(9000, () => ours.started || ours.failed || !mine());
+            if (mine() && !ours.started && !ours.failed) { ours.failed = true; try { await s.speech.stop(); } catch { } }
+            if (!ours.failed) {
+                let over = false;
+                void finished.then(() => { over = true; });
+                await visibleWait(20000 + 120 * (what || "").length, () => over || !mine());
+            }
+        } catch {
+            ours.failed = true;   // refused or the hub call failed
+        }
+        if (s.ours === ours) s.ours = null;
+        if (!mine()) return;
+        if (!ours.failed) { s.presenter && s.presenter.ended(); return; }
+        viaBrowser = true;
+    }
+    if (!mine()) return;
+    const spoke = s.presenter ? await s.presenter.speakWithBrowser(what) : false;
+    if (!mine()) return;
+    if (!spoke) {
+        if (s.presenter) s.presenter.plain(what); else showCaption(what);
+        status("The examiner's voice isn't available right now. The question is on the screen.");
+    } else s.presenter && s.presenter.ended();
+}
+
+/**
+ * Resolves once <paramref name="ms"/> of time with the page visible has passed, or as soon as <paramref name="done"/> is true. Time
+ * with the tab hidden doesn't count: she is paused then (examiner-voice.js), so a bound must not run out behind her back.
+ */
+function visibleWait(ms, done) {
+    return new Promise((resolve) => {
+        let left = ms, last = performance.now();
+        const tick = () => {
+            const now = performance.now();
+            if (!document.hidden) left -= now - last;
+            last = now;
+            if (done() || left <= 0) resolve(); else setTimeout(tick, 150);
+        };
+        tick();
+    });
+}
+
+/** Push-to-talk pressed while she is asking (GAD-T303): she stops at once and the microphone opens for the answer. */
+function interrupt(s) {
+    const token = s.speakToken;
+    if (!token) return;
+    s.speakToken = null;
+    s.ours = null;
+    try { s.speech && s.speech.stop().catch(() => { }); } catch { }
+    try { s.presenter && (s.presenter.stopBrowser(), s.presenter.ended()); } catch { }
+    s.speaking = false;
+    if (s.allowed) openMic();
+}
 // ---------------------------------------------------------------------------------------------------- filling the wait
 
 /** Filler timings (GAD-T290): a line stops itself after timeoutMs; a blocked attempt retries every retryMs; lines are gapMs apart. */
@@ -347,6 +436,7 @@ function sayFiller(s, what) {
 /** Barge-in: the student starts talking over a question, or leaves. */
 export function stopSpeaking() {
     if (S && S.speech) S.speech.stop().catch(() => { });
+    if (S && S.presenter) S.presenter.stopBrowser();
 }
 
 /** Whether an answer may be given right now (a question or a clarification is waiting, nothing is being judged). */
@@ -388,8 +478,13 @@ export function stop() {
     s.gate = true;
     cancelFill(s);
     s.fillPlaying = null;
+    s.speakToken = null;
+    s.ours = null;
+    s.speaking = false;
     clearCue();
     clearCaptions();
+    try { s.presenter && s.presenter.dispose(); } catch { }
+    s.presenter = null;
     resetDelay(s);
     stopSelfView(s, null);
     try { s.mic && s.mic.stop(); } catch { }
@@ -778,20 +873,10 @@ function clearCaptions() {
     text("caption", "");
 }
 
-function showCaption(what) { text("caption", what || ""); S && (S.caption = what || ""); }
-function showFullCaption() { if (S && S.caption) text("caption", S.caption); }
-
-/** Reveals the spoken words as their timings come, so the caption follows the voice. */
-function scheduleCaptions(words) {
-    const s = S;
-    if (!s || !Array.isArray(words)) return;
+/** The whole caption at once (no delivery helpers loaded); word-by-word captions are examiner-voice.js. */
+function showCaption(what) {
     const el = q("caption");
     if (!el) return;
-    for (const w of words) {
-        const wait = Math.max(0, (w.startMs || 0) - (performance.now() - (s.captionAt ?? performance.now())));
-        s.captionTimers.push(setTimeout(() => {
-            s.captionBuilt = (s.captionBuilt ? s.captionBuilt + " " : "") + w.word;
-            el.textContent = s.captionBuilt;
-        }, wait));
-    }
+    el.dataset.timed = "false";
+    el.textContent = what || "";
 }

@@ -8,6 +8,7 @@
 @inject ILogger<VoiceRoom> Log
 @inject IServiceScopeFactory Scopes
 @inject TimeProvider Clock
+@inject ExaminerSpeechWarmup Warmup
 
 @* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
@@ -124,6 +125,8 @@
     /// <summary>Identifies the question being asked (a new value means a new question to speak).</summary>
     [Parameter] public int? TurnIndex { get; set; }
     [Parameter] public string? Question { get; set; }
+    /// <summary>The kind of question (the planner's move): picks her speaking style from a fixed map that never hints at the grade (GAD-T303).</summary>
+    [Parameter] public string? Move { get; set; }
     /// <summary>A pending request about the last answer (transcript read-back or clarification); spoken instead of the question.</summary>
     [Parameter] public string? Prompt { get; set; }
     /// <summary>Stable identity of the pending request, so a changed prompt is spoken once.</summary>
@@ -207,8 +210,24 @@
 
     /// <summary>The prompt for a request, else the question. A long recorded answer is not read back in full (it is shown on screen).</summary>
     private string? SpokenText => Prompt is { Length: > 0 } p
-        ? (p.Length <= 700 ? p : "I've put your recorded answer on the screen. Is this what you said?")
+        ? (p.Length <= 700 ? p : LongReadBack)
         : Question;
+
+    /// <summary>Said instead of reading a long recorded answer back in full (it is on the screen).</summary>
+    private const string LongReadBack = "I've put your recorded answer on the screen. Is this what you said?";
+
+    /// <summary>
+    /// The examiner's fixed lines, prepared once per server in the avatar's phrase cache so the first one a student hears starts at
+    /// once (GAD-T303): the eye-contact remarks, the short read-back and the wait fillers.
+    /// </summary>
+    private static IEnumerable<string> FixedLines() =>
+        Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks.Values
+            .Append(LongReadBack)
+            .Concat(ExaminerFiller.First)
+            .Concat(ExaminerFiller.Again);
+
+    /// <summary>Her speaking style for what is being said: requests about an answer are always neutral, questions by their move.</summary>
+    private string SpeakingStyle => Prompt is { Length: > 0 } ? ExaminerStyle.Neutral : ExaminerStyle.For(Move);
 
     protected override void OnInitialized()
     {
@@ -217,6 +236,7 @@
             org = o;
             user = u;
             Grants.Arm(user, org, SessionId);
+            Warmup.Warm(FixedLines());
             armed = true;
         }
     }
@@ -242,6 +262,8 @@
                 endCueMaxMs = cueCeilingMs,
                 modelUrl = Settings.AvatarModelUrl,
                 portraitUrl = Settings.PortraitUrl,
+                // Where the portrait's mouth is, so it can move while she speaks in portrait mode (GAD-T303).
+                portraitMouth = Settings.PortraitMouth,
             });
             if (!caps.Microphone || !caps.AudioContext)
             {
@@ -358,7 +380,8 @@
     {
         // The hub speaks only what the server offered for this student's own session.
         if (!Grants.Offer(user, SessionId, text)) return;
-        await module!.InvokeVoidAsync("speak", stop.Token, text, false);
+        // Cached by the avatar hub after its first playing, so "Repeat the question" and a reload replay at once (GAD-T303).
+        await module!.InvokeVoidAsync("speak", stop.Token, text, true, SpeakingStyle);
     }
 
     private async Task RepeatAsync()
@@ -413,6 +436,9 @@
                 "no-webgl" => " because this browser has no 3D graphics.",
                 "reduced-motion" => " because your device asks for reduced motion.",
                 "no-src" => ".",
+                "load-failed" => " because the 3D examiner could not load.",
+                "slow-device" => " because this device can't draw the 3D examiner smoothly.",
+                "graphics-lost" => " because the browser's 3D graphics stopped working.",
                 _ => ".",
             }) + " Questions are still spoken and shown as text.",
             "none" => reason.Length > 0 ? reason : "The examiner's picture could not start; questions are shown as text.",

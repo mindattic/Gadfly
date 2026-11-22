@@ -363,6 +363,29 @@ else
         checks = list;
         checking = false;
         await InvokeAsync(StateHasChanged);
+        _ = PreloadExaminerAsync();
+    }
+
+    private bool preloading;
+
+    /// <summary>
+    /// Starts loading the talking examiner (scripts and avatar model) in the background while the student is still here (GAD-T303),
+    /// so the exam room shows her without a long first load. Best effort: any failure just leaves the loading to the exam room.
+    /// </summary>
+    private async Task PreloadExaminerAsync()
+    {
+        if (preloading || !VoiceConfig.Available) return;
+        preloading = true;
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await using var preload = await JS.InvokeAsync<IJSObjectReference>("import", cts.Token, "./js/voice-preload.js");
+            await preload.InvokeAsync<bool>("preload", cts.Token, new { modelUrl = VoiceConfig.AvatarModelUrl, portraitUrl = VoiceConfig.PortraitUrl });
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
+        {
+            preloading = false;
+        }
     }
 
     private async Task<T> InvokeBoundedAsync<T>(string identifier)

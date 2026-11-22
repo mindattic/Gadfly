@@ -27,8 +27,8 @@ no typed answer mode.
   time is added back to `Remaining`. A pause is reported by the student's browser, so the time added back is capped per
   exam (`SocraticSession.PauseAllowance`: 10 minutes, or half the budget if shorter), it only counts after the clock
   started, and any answer ends an open pause by the server's clock. No 3D graphics (or reduced motion)
-  shows the 2D portrait and the examiner still speaks. If the avatar fails entirely, questions are shown as text and
-  answers are still spoken.
+  shows the 2D portrait, whose mouth moves as she speaks. If the avatar fails entirely, questions are read out by the
+  browser's own speech and shown as text, and answers are still spoken (see "The examiner's delivery").
 - Only small transcript corrections are typed (fixing words the recognizer got wrong); "I want to change my answer"
   (a typed substantive revision) is not offered in the exam room.
 
@@ -57,6 +57,27 @@ screens are untouched.
   talks (the microphone's voice activity, `setStudentTalking`) she listens visibly: an attentive expression, small nods
   while they talk and at their pauses, the odd extra blink. Only after the answer is in does she take one brief
   (about a second) thinking look up and aside, then looks back at the student.
+
+## The examiner's delivery (GAD-T303)
+
+How she looks and sounds while she speaks. The avatar library (`<ma-avatar>`, MindAttic.Avatar) does the 3D head, streaming and
+word-timed lip sync; `wwwroot/js/examiner-voice.js` adds the rest, and `voice-room.js` tells it when each utterance is prepared,
+starts and ends.
+
+| What | How |
+|---|---|
+| Lip sync | The library asks ElevenLabs for speech **with timestamps** (character alignment), turns the characters into word timings and streams PCM with them; TalkingHead shapes the mouth from each word's sounds over that word's provider-measured time. Per-character (phoneme) timing would be finer: filed as MAA-T9. |
+| Starting quickly | Speech is streamed: she starts on the first audio chunk. The examiner's voice model defaults to ElevenLabs' low-latency `eleven_flash_v2_5` unless `MindAttic:Avatar:ElevenLabs:ModelId` is set (`Gadfly:Voice:TtsModel` changes the default). Faster first audio options are MAA-T15. |
+| Prepared ahead | Fixed lines (the eye-contact remarks, the short read-back for a long answer, the wait fillers) are synthesized once per server into the library's phrase cache when the first exam room opens (`ExaminerSpeechWarmup`, off with `Gadfly:Voice:WarmPhrases=false`), so they start at once. Questions and read-backs are cached after their first playing, so **Repeat the question** and a reload replay instantly. The next question itself can't be prepared during the read-back: it is written only after the answer is confirmed and judged. A supported prefetch is MAA-T14. |
+| Speaking style | A fixed server-side map from the kind of question to one of three styles (`Voice/ExaminerStyle.cs`): `open` (opening a topic or a new situation: brows lifted a little, a slight tilt), `probe` (following up: a small lean and the opposite tilt) and `neutral` (requests, closings, hints, fillers, remarks). All three keep the same mild, friendly baseline; none smiles more or frowns, and a counterexample or contradiction (which tend to follow a weak answer) looks exactly like any probe, so her face never hints at the grade. A public style API is MAA-T10. |
+| Captions | The whole question is shown at once, dimmed, and each word lights as she says it, counted from the moment her audio actually starts, on the provider's word timings. |
+| Portrait | With no 3D (reduced motion, no WebGL, model missing) the portrait is shown and a mouth drawn over its lips opens and closes once per syllable with the same word timings (`Gadfly:Voice:PortraitMouth`, "x,y,w" as fractions of the image; known for the default portrait, unset for a custom one, which then only brightens). In the library: MAA-T11. |
+| Quality | The 3D examiner's frame rate is watched: below about 22 fps for two 3-second windows her render resolution and animation rate step down (high, medium, low); still under 12 fps at the lowest, she becomes the portrait, between sentences, never mid-sentence. The tier is kept for the browser tab, so a reload starts where it ended. In the library: MAA-T12. |
+| Lost graphics | A lost WebGL context shows the portrait at once; her voice carries on and the 3D head is released when she next stops speaking. A model that fails to load (404, bad file) is the library's portrait fallback. |
+| Pause and resume | Hiding the tab mid-sentence pauses her voice, mouth and captions together; showing it resumes them where they were. A lost microphone, camera or connection pauses the exam (above): she stops, and on **Try again** she asks the question again from the start. In **hold-to-talk** mode, pressing **Hold to talk** while she is asking interrupts her and opens the microphone; hands-free mode does not interrupt on the student's voice, because her own voice from the speakers could trigger it. Library pause/resume: MAA-T13. |
+| Voice failure | If the voice provider fails (an error from the hub, a refused request, or no sound within 9 seconds), the browser's own speech reads the question, with the caption lit and the portrait mouth moving on its word boundaries; a browser with no speech leaves the question on screen as text and says so. If the talking head itself can't start, questions are read by the browser's speech the same way. |
+| Preloading | The get-ready page loads the examiner's scripts and, on a device that will show 3D (no reduced motion, WebGL, no data saver), downloads the avatar model in the background (`wwwroot/js/voice-preload.js`), so the exam room shows her without a long first load. |
+| Mock mode | `MockTextToSpeech` answers in the provider's own with-timestamps shape (chunked NDJSON, base64 PCM 22.05 kHz, character alignment, chunks ending mid-word), with one soft burst per syllable and pauses at commas and full stops, so mock mode runs the same lip-sync, caption and portrait-mouth path as live. |
 
 ## Eye contact with the examiner (GAD-T240)
 
@@ -120,6 +141,9 @@ MindAttic.Webcam (presence, head-and-eye direction, reading pattern); no frame, 
 | `Gadfly:Voice:Mode` | `off`, `mock` or `live`. Default `mock` in Development, `off` elsewhere. |
 | `Gadfly:Voice:AvatarModelUrl` | The avatar GLB. Default `/assets/avatars/mpfb.glb` when the file exists, otherwise the 2D portrait. |
 | `Gadfly:Voice:PortraitUrl` | 2D fallback image (default `/assets/portrait.png`). |
+| `Gadfly:Voice:PortraitMouth` | Where the portrait's mouth is, "x,y,w" as fractions of the image (set for the default portrait; unset for a custom one means no drawn mouth). |
+| `Gadfly:Voice:TtsModel` | The examiner's ElevenLabs voice model when `MindAttic:Avatar:ElevenLabs:ModelId` isn't set (default `eleven_flash_v2_5`, low latency). |
+| `Gadfly:Voice:WarmPhrases` | Prepare the fixed examiner lines in the phrase cache when the first exam room opens (default true). |
 | `Gadfly:Voice:EndOfAnswerSeconds` | Shortest silence that ends an answer (2 to 15, default 4). |
 | `Gadfly:Voice:EndOfAnswerMaxSeconds` | Longest the silence may adapt to for a student who pauses long (up to 30, default 12). Both are multiplied by the extra-time accommodation. |
 | `MindAttic:SpeechRecognition:Provider` | Live only: `ElevenLabs` (default in live), `OpenAI` or `Fallback`. |
