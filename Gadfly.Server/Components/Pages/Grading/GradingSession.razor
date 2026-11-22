@@ -25,6 +25,7 @@ else if (w is null)
 else
 {
     var status = w.Status;
+    <Tour Id="@Tours.TourIds.GradingSession" Float="true" />
     <h1>@w.StudentName <span>· @w.ExamTitle · attempt @w.Session.Attempt</span> <HelpLink Topic="grading-guide" /></h1>
     @if (w.StudentAnonymous)
     {
@@ -37,7 +38,7 @@ else
         <p class="gr-banner mock"><span class="gr-mock">MOCK</span> The AI grades on this page come from the mock panel. They are not a genuine AI evaluation.</p>
     }
 
-    <div class="gr-summary">
+    <div class="gr-summary" data-tour="grading-summary">
         <div><span class="hint">Status</span>@if (status is { } st) { <span class="gr-status s-@st">@GradeStatusMachine.Label(st)</span> } else { <span>Not started</span> }</div>
         <div><span class="hint">Combined grade</span>@(w.AiVisible && w.Grade?.FinalPercent is { } fp ? AssessmentReport.Pct(fp) : "—")@(w.AiVisible && w.Grade?.LetterOrLabel is { } lbl ? $" ({lbl})" : "")</div>
         <div><span class="hint">Policy</span>AI @Pct(w.Policy.Rules.AiWeight) · human @Pct(w.Policy.Rules.HumanWeight) · reconcile at @w.Policy.Rules.MandatoryReconciliationAt.ToString("0.##") pts@(w.Policy.Rules.BlindHumanGrading ? " · blind" : "")@(w.Policy.Rules.AnonymousMarking ? " · anonymous" : "")</div>
@@ -90,7 +91,7 @@ else
             </div>
             break;
         case GradeStatus.HumanReviewPending:
-            <div class="panel">
+            <div class="panel" data-tour="grading-evaluate">
                 <h2>Your evaluation</h2>
                 @if (!w.AiVisible)
                 {
@@ -133,7 +134,7 @@ else
 
     @if (status is GradeStatus.ReconciliationRequired or GradeStatus.AwaitingFinalApproval or GradeStatus.Finalized or GradeStatus.Published or GradeStatus.UnderAppeal or GradeStatus.Amended)
     {
-        <h2 class="gr-section">Score comparison</h2>
+        <h2 class="gr-section" data-tour="grading-compare">Score comparison</h2>
         <div class="gr-table-wrap">
             <table class="grid">
                 <thead><tr><th>Objective</th><th>Max</th><th>Weight</th><th>AI</th><th>Human</th><th>Difference</th><th>Combined</th></tr></thead>
@@ -275,7 +276,7 @@ else
 
     @if (status is GradeStatus.AwaitingFinalApproval or GradeStatus.ReconciliationRequired)
     {
-        <div class="panel">
+        <div class="panel" data-tour="grading-approve">
             <h2>Final approval</h2>
             @if (status == GradeStatus.ReconciliationRequired)
             {
@@ -318,7 +319,7 @@ else
 
     @if (status == GradeStatus.Finalized)
     {
-        <div class="panel">
+        <div class="panel" data-tour="grading-approve">
             <h2>Publish to the student</h2>
             <p>The final grade is approved. Publishing releases it and the assessment report to the student.</p>
             <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.PublishAsync(SessionId, null))">Publish</button>
@@ -373,7 +374,7 @@ else
     }
 
     @* ------------------------------------------------------------ objectives, rubrics, evidence, AI grades *@
-    <h2 class="gr-section">Learning objectives, rubrics and evidence</h2>
+    <h2 class="gr-section" data-tour="grading-objectives">Learning objectives, rubrics and evidence</h2>
     @if (w.Objectives.Count == 0)
     {
         <p class="notice">This exam has no learning objectives yet; AI grading derives one per concept when it runs.</p>
@@ -490,7 +491,7 @@ else
     }
 
     @* ------------------------------------------------------------ transcript *@
-    <h2 class="gr-section">Transcript and verified responses</h2>
+    <h2 class="gr-section" data-tour="grading-transcript">Transcript and verified responses</h2>
     @if (w.Responses.Count == 0)
     {
         <p class="notice">No response records yet (they are built when AI grading starts).</p>

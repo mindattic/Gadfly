@@ -21,6 +21,7 @@ else if (view is null)
 else
 {
     var s = view.Session;
+    <Tour Id="@Tours.TourIds.ReviewSession" Float="true" />
     <h1>@view.StudentName <span>· @view.ExamTitle · attempt @s.Attempt</span> <HelpLink Topic="integrity-notes" /></h1>
 
     <div class="review-summary">
