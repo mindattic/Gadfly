@@ -90,3 +90,35 @@ button.link { background: none; color: var(--accent); padding: 0; text-decoratio
 /* A plain data table scrolls sideways rather than squeezing illegibly or forcing the whole page to scroll (GAD-T367):
    a tablet in portrait (commonly 768-820px) is as cramped as a phone for a many-column grid. */
 @media (max-width: 900px) { .grid { display: block; overflow-x: auto; } }
+
+/* A type scale beyond h1 (GAD-T318): most pages already pick their own h2/h3 size per section, which still wins (a class
+   selector beats a bare element one), so this is only the default for a heading that doesn't set its own. */
+h2 { font-size: 1.25rem; margin: 1.5rem 0 .75rem; }
+h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
+
+/* Badges (GAD-T318): a small label on a pill, for a status word next to a title or in a table cell. Plain by default;
+   the three variants read like .ok/.error already do. */
+.badge { display: inline-block; font-size: .8rem; padding: .1rem .55rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.badge-accent { border-color: var(--accent); color: var(--accent); }
+.badge-ok { border-color: var(--ok); color: var(--ok); }
+.badge-error { border-color: var(--error); color: var(--error); }
+
+/* A dialog (GAD-T318): a focused decision or confirmation over the page, dismissed by its own buttons or Escape.
+   Markup: a backdrop with class dialog-backdrop containing one .dialog-box (role="dialog" aria-modal="true" on the box). */
+.dialog-backdrop { position: fixed; inset: 0; z-index: 1500; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .45); }
+.dialog-box { width: min(32rem, 100%); max-height: calc(100vh - 2rem); overflow: auto; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem 1.5rem; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+.dialog-box h2 { margin-top: 0; }
+.dialog-actions { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; margin-top: 1rem; }
+
+/* A toast (GAD-T318): a brief, dismissable confirmation or warning that doesn't block the page. Markup: an element with
+   class toast (plus a variant) inside a fixed-position container the page supplies once near its root. */
+.toast { display: flex; gap: .6rem; align-items: start; max-width: 26rem; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; padding: .75rem 1rem; box-shadow: 0 6px 20px rgba(0, 0, 0, .18); }
+.toast-ok { border-left-color: var(--ok); }
+.toast-error { border-left-color: var(--error); }
+.toast-close { margin-left: auto; background: none; padding: 0; color: var(--muted); }
+
+/* An empty state (GAD-T318): nothing to show yet, with what to do about it. Most list pages already say this plainly in
+   a sentence or two (kept as-is where that already reads well); this is for a page that wants the quieter, centred look. */
+.empty-state { display: grid; justify-items: center; gap: .4rem; text-align: center; padding: 3rem 1rem; color: var(--muted); }
+.empty-state h2 { margin: 0; color: var(--ink); font-size: 1.1rem; }
+.empty-state p { margin: 0; max-width: 32rem; }
