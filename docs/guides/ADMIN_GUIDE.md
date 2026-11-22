@@ -19,7 +19,7 @@ entries their role can open.
 | People | **Students** (`/admin/students`, and one student at `/admin/students/{id}`), **Members** (`/org/members`) |
 | Exams | **Exams** (`/admin/exams`), **Assignments** (`/admin/assignments`), **Desk** (`/admin/desk`, when the admin desk is turned on), **Source material**, **Assessments**, **Exam builder** |
 | Results | **Grading** (`/grading`), **Review** (`/review`), **Analytics** (`/analytics`) |
-| Organization | **Settings**, **Usage**, **API keys**, **Webhooks** (all under `/org/...`), **Audit log** (`/admin/audit`), **System status** (`/admin/status`) |
+| Organization | **Settings**, **Usage**, **API keys**, **Webhooks**, **Research** (all under `/org/...`), **Audit log** (`/admin/audit`), **System status** (`/admin/status`) |
 | Platform | **Organizations** (`/platform/organizations`), MindAttic staff only |
 
 Instructors keep their own links in the top bar (source material, assessments, review, analytics, grading);
@@ -423,7 +423,40 @@ text-to-speech are not yet counted.
 
 Students can't erase their own data; they ask you. The sign-in account itself is not deleted, because the person may
 belong to other organizations. Only an owner can erase an owner, and never the last one. Export first if the data
-may be needed: erasure can't be undone.
+may be needed: erasure can't be undone. Erasure also removes the person's research choices and study arms, so they
+are never in a later research export.
+
+## Research
+
+**Research** (`/org/research`, owners and admins) is for an organization running a study of its Gadfly exams, such as
+the pilot in docs/PILOT.md. Nothing here is on until you turn it on.
+
+- **Research consent.** Tick **Ask students the optional research question**, give the study a name students will
+  recognize, and say who runs it and how to reach them (and the ethics approval reference, if there is one). Each
+  student is then asked on the get-ready page, below the exam notice, whether their de-identified exam records may be
+  used. It is optional: a student who says no, or doesn't answer, takes the same exam, graded the same way, and the
+  people grading them are not told what they chose. Students change their mind on **My research choice** (linked from
+  **My exams**), where a student who agreed can withdraw at any time. Each choice is recorded with the time and a
+  fingerprint (SHA-256) of the exact wording the student saw; changing the study's name, contact or ethics reference
+  changes that wording. The page shows only how many students agreed, declined or withdrew, never who.
+- **Smallest group** (default 5, 3 to 50). An exam with fewer consenting students is left out of the export, and an
+  accommodation shared by fewer students than this in an exam (or missing for fewer) is blanked, so no one can be
+  picked out.
+- **Study arms.** Pick an exam, add its arms ("control", "relay", "feedback withheld"...), then put each student in
+  one, or press **Put students without an arm into one at random** (keeps the arms even). An arm is a label carried
+  into the export: it doesn't change how Gadfly runs the exam. What the participants in an arm do differently, and
+  whether their results are released, is arranged by the study team with the normal assignment and release controls.
+  A condition that would switch off one of Gadfly's own exam rules (for example the eye-contact fade) is not offered and
+  needs the product owner's approval first. A student's arm is fixed once they start an attempt; **Close** an arm to
+  stop new students going into it.
+- **Research export.** A ZIP of CSV files for the analysis, for every exam or the chosen one. Only students who
+  currently agree are included; names, emails, what students said or typed, audio and video never are; everyone
+  appears under a study code. docs/PILOT.md ("Research export") lists the files and columns. **Replace the study
+  codes** gives every later export new codes that can't be linked to earlier ones.
+
+Every change on this page and every download is recorded in the audit log (`research.settings.changed`,
+`research.arm.*`, `research.key.replaced`, `research.exported`). A student's own research choice is not, so that it
+stays out of the log the graders' administrators read; it is kept in the research consent record instead.
 
 ## Audit
 

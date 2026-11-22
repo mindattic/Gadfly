@@ -18,6 +18,8 @@ human grades and an authorized person approves before a student sees a result (D
 | Integrity events (derived only: face count, gaze region, focus loss, second speaker) | Evidence for a human reviewer | With the session; raw detail redacted with the transcript |
 | Video frames | — | **Never leave the student's device; never stored** |
 | Consent record (time + SHA-256 of the exact text shown) | Proof of consent | With the session |
+| Research choice (agreed, declined or withdrew; time; notice version; SHA-256 of the exact text shown) | Proof of the separate, optional research consent (GAD-T452) | Until the student is erased; every choice is kept, the latest counts |
+| Study arm of an assignment | The study's condition label (GAD-T452) | With the assignment |
 
 Redaction (`privacy.retention`, daily) keeps the outcome and removes what the student said. Export
 (`GET /privacy/export/{userId}`, the student or an org admin) returns everything held about a student in
@@ -51,6 +53,26 @@ Shown before every attempt, in plain language: what is recorded, that video is p
 only, how long data is kept, that integrity signals are evidence for a person and never an automatic
 result, and that an instructor decides the grade. The SHA-256 of the exact text is stored with the
 session, so changing the wording is visible in the record.
+
+### Research use (GAD-T451, GAD-T452)
+
+Research is a second, separate consent. It is asked only when the organization runs a study (off by default), shown
+below the exam notice on the get-ready page with the study's name, who runs it, the ethics reference if any, what the
+study gets and how to withdraw, and is never a condition of taking or finishing an exam. Saying no, or not answering,
+changes nothing, and the people grading the student are not shown the choice (it is kept in its own record, not the
+audit log). Each choice is stored append-only with the time, the notice version and the SHA-256 of the exact text
+shown; the student can join, decline or withdraw at any time on **My research choice**. The data-subject export
+includes every choice; erasure deletes them and the student's study arms.
+
+Only students whose current choice is "agreed" go into the research export (`GET /admin/research/export.zip`, owners
+and admins, each download audited as `research.exported`). The export is de-identified, not anonymous: ids are
+replaced by keyed pseudonyms (HMAC-SHA256 with a per-organization key that never leaves Gadfly), times are relative,
+and no name, email, user name, answer or question text, audio, video, free-text comment or appeal text is included.
+Voice measurements are left out wherever they were off and always for an EU/EEA organization or student, whatever the
+organization's voice setting. Exams with fewer consenting students than the organization's smallest group (default
+5) are held back, and rarer accommodations within an exam are blanked. A copy already handed to researchers is outside
+Gadfly's retention, withdrawal and erasure; the organization (as controller) and its study team are responsible for
+it, and its own retention belongs in the study's ethics approval.
 
 ### Camera checks (Strict exams, GAD-T57)
 

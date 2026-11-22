@@ -1,0 +1,89 @@
+@using Gadfly.Server.Data
+@using Gadfly.Server.Research
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+
+@* The optional research question on the get-ready page (GAD-T452). Shown only when the organization runs research and the
+   student has not answered yet; never required to begin the exam. The choice is recorded when the student begins, against the
+   hash of the exact text shown here. *@
+
+@if (status is { Enabled: true, Invitation: { } invitation } && status.Current is null)
+{
+    <div class="research-consent" role="group" aria-labelledby="research-consent-title">
+        <h3 id="research-consent-title">@invitation.Title</h3>
+        @foreach (var p in invitation.Paragraphs)
+        {
+            <p>@p</p>
+        }
+        <fieldset>
+            <legend>Your choice (you can skip this; the exam is the same either way)</legend>
+            <label class="inline">
+                <input type="radio" name="research-choice" checked="@(choice == ResearchConsentDecision.Agreed)" @onchange="() => choice = ResearchConsentDecision.Agreed" />
+                Yes, include my de-identified exam records in the research
+            </label>
+            <label class="inline">
+                <input type="radio" name="research-choice" checked="@(choice == ResearchConsentDecision.Declined)" @onchange="() => choice = ResearchConsentDecision.Declined" />
+                No, don't use my records for research
+            </label>
+        </fieldset>
+        @if (error is not null)
+        {
+            <p class="error" role="alert">@error</p>
+        }
+    </div>
+}
+else if (status is { Enabled: true, Current: { } current })
+{
+    <p class="hint">@Said(current) You can change this on <a href="my-research">My research choice</a>; it doesn't affect your exam.</p>
+}
+
+@code {
+    [Parameter] public Guid AssignmentId { get; set; }
+
+    private ResearchStatus? status;
+    private ResearchConsentDecision? choice;
+    private string? error;
+
+    private static string Said(ResearchConsentDecision d) => d switch
+    {
+        ResearchConsentDecision.Agreed => "Research: you have agreed to take part.",
+        ResearchConsentDecision.Declined => "Research: you chose not to take part.",
+        _ => "Research: you have withdrawn.",
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me) return;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
+            status = await new ResearchService(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), Clock).StatusAsync(org, me);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            status = null;   // the research question is optional: if it can't be loaded, the exam goes ahead without it
+        }
+    }
+
+    /// <summary>
+    /// Records the choice made here, if any, against the attempt about to begin. Best effort: a failure is shown on this panel
+    /// and never stops the exam.
+    /// </summary>
+    public async Task RecordAsync(Guid sessionId)
+    {
+        if (choice is not { } decision || status?.Invitation is not { } invitation || status.Current is not null) return;
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me) return;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
+            var r = await new ResearchService(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), Clock)
+                .RecordAsync(org, me, decision, invitation.Sha256, "start-exam", sessionId, AssignmentId);
+            error = r.Ok ? null : r.Message;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            error = "Your research choice could not be saved; you can make it later on My research choice.";
+        }
+    }
+}

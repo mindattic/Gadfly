@@ -1,0 +1,123 @@
+@page "/my-research"
+@attribute [Authorize(Policy = GadflyPolicies.Student)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Research
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+
+@* A student's own research choice (GAD-T452): join, decline, or withdraw at any time. Never affects an exam. *@
+
+<HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
+<PageTitle>My research choice · Gadfly Exams</PageTitle>
+<h1>My research choice</h1>
+
+@if (!loaded)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else if (status is null || (!status.Enabled && status.Current != ResearchConsentDecision.Agreed))
+{
+    <p class="panel">Your organization isn't running any research with Gadfly at the moment, so there is nothing to choose. Your exams are not used for research.</p>
+}
+else
+{
+    <section class="panel wide">
+        @if (status.Current == ResearchConsentDecision.Agreed)
+        {
+            <p><strong>You are taking part</strong> (since @When(status.Since)). Your de-identified exam records are included in copies made for the study.</p>
+            @if (status.StudyCode is not null)
+            {
+                <p>Your study code is <strong>@status.StudyCode</strong>. If the study team sends you a separate questionnaire, it may ask for this code so your answers can be matched to your exam records without your name.</p>
+            }
+            <h2>@withdrawal!.Title</h2>
+            @foreach (var p in withdrawal.Paragraphs)
+            {
+                <p>@p</p>
+            }
+            <button type="button" @onclick="() => DecideAsync(ResearchConsentDecision.Withdrawn)" disabled="@busy">Withdraw from the research</button>
+        }
+        else
+        {
+            <p>
+                @(status.Current switch
+                {
+                    ResearchConsentDecision.Declined => "You chose not to take part. ",
+                    ResearchConsentDecision.Withdrawn => "You withdrew from the research. ",
+                    _ => "You haven't answered yet. ",
+                })
+                Your exam records are not used for research. You can change your mind below; it doesn't affect any exam.
+            </p>
+            @if (status.Enabled && status.Invitation is { } invitation)
+            {
+                <h2>@invitation.Title</h2>
+                @foreach (var p in invitation.Paragraphs)
+                {
+                    <p>@p</p>
+                }
+                <div class="actions">
+                    <button type="button" @onclick="() => DecideAsync(ResearchConsentDecision.Agreed)" disabled="@busy">Yes, include my records</button>
+                    @if (status.Current is null)
+                    {
+                        <button type="button" class="secondary" @onclick="() => DecideAsync(ResearchConsentDecision.Declined)" disabled="@busy">No, don't use my records</button>
+                    }
+                </div>
+            }
+        }
+        @if (message is not null)
+        {
+            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+        }
+    </section>
+    <p><a href="my-exams">Back to my exams</a></p>
+}
+
+@code {
+    private ResearchStatus? status;
+    private ResearchConsentNotice? withdrawal;
+    private bool loaded, busy, ok;
+    private string? message;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        loaded = true;
+    }
+
+    private async Task LoadAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me) return;
+        await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
+        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+        status = await new ResearchService(db, Clock).StatusAsync(org, me);
+        var name = await db.Organizations.AsNoTracking().Where(o => o.Id == org).Select(o => o.Name).FirstOrDefaultAsync() ?? "Your organization";
+        withdrawal = ResearchConsentNotice.Withdrawal(name);
+    }
+
+    private async Task DecideAsync(ResearchConsentDecision decision)
+    {
+        if (busy || status is null || Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me) return;
+        var shown = decision == ResearchConsentDecision.Withdrawn ? withdrawal?.Sha256 : status.Invitation?.Sha256;
+        if (shown is null) return;
+        busy = true;
+        message = null;
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
+            var r = await new ResearchService(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), Clock)
+                .RecordAsync(org, me, decision, shown, "my-research");
+            ok = r.Ok;
+            message = r.Message;
+            await LoadAsync();
+        }
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException)
+        {
+            ok = false;
+            message = "That could not be saved. Please try again.";
+        }
+        finally { busy = false; }
+    }
+
+    private static string When(DateTimeOffset? at) => at is { } t ? t.UtcDateTime.ToString("d MMMM yyyy") : "";
+}

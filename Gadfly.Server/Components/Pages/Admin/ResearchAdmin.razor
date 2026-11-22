@@ -1,0 +1,285 @@
+@page "/org/research"
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Research
+@using Gadfly.Server.Tenancy
+@using Microsoft.EntityFrameworkCore
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+
+@* Research (GAD-T451, GAD-T452): the optional research question, study arms per exam, and the de-identified export. *@
+
+<PageTitle>Research · Gadfly Exams</PageTitle>
+<h1>Research <HelpLink Topic="admin-guide" Anchor="research" /></h1>
+<AdminNav />
+
+@if (!loaded)
+{
+    <p class="hint" role="status">Loading…</p>
+}
+else
+{
+    <section class="panel">
+        <h2>Research consent</h2>
+        <p class="hint">
+            When this is on, each student is asked, before an exam, whether their de-identified exam records may be used for your
+            study. The question is separate from the exam notice and optional: saying no, or not answering, never stops anyone
+            taking an exam and is never shown to the people grading them. Students can change their mind at any time on their own
+            "My research choice" page. Only students who currently agree are ever exported.
+        </p>
+        <label class="check">
+            <input type="checkbox" @bind="enabled" />
+            Ask students the optional research question
+        </label>
+        <label>Study name (students see it)
+            <input type="text" @bind="studyTitle" maxlength="200" placeholder="for example: Spoken exams pilot, autumn term" />
+        </label>
+        <label>Who runs the study and how to contact them
+            <input type="text" @bind="contact" maxlength="400" placeholder="for example: Dr A. Researcher, research-office@example.edu" />
+        </label>
+        <label>Ethics approval reference (optional)
+            <input type="text" @bind="ethics" maxlength="200" />
+        </label>
+        <label>Smallest group shown in an export (students)
+            <input type="number" @bind="minimumGroup" min="@ResearchService.MinGroupSizeFloor" max="@ResearchService.MinGroupSizeCeiling" />
+        </label>
+        <p class="hint">An exam with fewer consenting students than this is left out of the export, and an accommodation shared by fewer than this many students in an exam is blanked, so no one can be picked out.</p>
+        <button type="button" @onclick="SaveSettingsAsync" disabled="@busy">Save</button>
+        @if (summary is not null)
+        {
+            <p>Current choices: <strong>@summary.Agreed</strong> agreed, @summary.Declined declined, @summary.Withdrawn withdrew. Students who have not answered are not included.</p>
+        }
+        <p class="hint">Changing the study's name, contact or ethics reference changes the wording students agree to; earlier answers stay recorded against the wording they saw.</p>
+    </section>
+
+    <section class="panel">
+        <h2>Study arms</h2>
+        <p class="hint">
+            An arm is a study condition, for example "control", "relay" or "feedback withheld". Arms are labels: they record which
+            condition each student was in and are carried into the export. They don't change how Gadfly runs the exam; what
+            participants in each arm are told or do, and whether results are released to them, is arranged by the study team
+            through the normal assignment and release controls. A condition that would switch off one of Gadfly's own exam rules
+            (for example the eye-contact fade) is not offered here and needs the product owner's approval first. A student's arm is
+            fixed once they start an attempt.
+        </p>
+        @if (exams.Count == 0)
+        {
+            <p class="hint">There are no exams yet.</p>
+        }
+        else
+        {
+            <label>Exam
+                <select @bind="examId" @bind:after="LoadExamAsync">
+                    <option value="">Choose an exam…</option>
+                    @foreach (var e in exams)
+                    {
+                        <option value="@e.Id">@e.Title</option>
+                    }
+                </select>
+            </label>
+        }
+        @if (selectedExam is not null)
+        {
+            @if (arms.Count == 0)
+            {
+                <p class="hint">This exam has no arms yet.</p>
+            }
+            else
+            {
+                <table class="grid">
+                    <thead><tr><th>Arm</th><th>What differs</th><th>Students</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var a in arms)
+                        {
+                            <tr>
+                                <td>@a.Name @(a.Archived ? "(closed)" : "")</td>
+                                <td>@a.Description</td>
+                                <td>@a.Members</td>
+                                <td>
+                                    @if (!a.Archived)
+                                    {
+                                        <button type="button" class="secondary" @onclick="() => ArchiveAsync(a.Id)" disabled="@busy">Close</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            <div>
+                <label>New arm name <input type="text" @bind="newArmName" maxlength="80" /></label>
+                <label>What differs (for the study team) <input type="text" @bind="newArmDescription" maxlength="1000" /></label>
+                <button type="button" @onclick="AddArmAsync" disabled="@busy">Add arm</button>
+            </div>
+
+            <h3>Students on this exam</h3>
+            @if (rows.Count == 0)
+            {
+                <p class="hint">No students are assigned this exam yet.</p>
+            }
+            else
+            {
+                <button type="button" class="secondary" @onclick="RandomizeAsync" disabled="@(busy || arms.Count(a => !a.Archived) < 2)">Put students without an arm into one at random</button>
+                <table class="grid">
+                    <thead><tr><th>Student</th><th>Arm</th></tr></thead>
+                    <tbody>
+                        @foreach (var r in rows)
+                        {
+                            <tr>
+                                <td>@r.Student</td>
+                                <td>
+                                    @if (r.Locked)
+                                    {
+                                        <span>@(ArmName(r.ArmId)) <span class="hint">(fixed: attempt started)</span></span>
+                                    }
+                                    else
+                                    {
+                                        <select value="@(r.ArmId?.ToString() ?? "")" @onchange="e => SetArmAsync(r.AssignmentId, e.Value?.ToString())" disabled="@busy"
+                                                aria-label="@($"Arm for {r.Student}")">
+                                            <option value="">No arm</option>
+                                            @foreach (var a in arms.Where(a => !a.Archived || a.Id == r.ArmId))
+                                            {
+                                                <option value="@a.Id">@a.Name</option>
+                                            }
+                                        </select>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+    </section>
+
+    <section class="panel">
+        <h2>Research export</h2>
+        <p class="hint">
+            A ZIP of CSV files for the study's analysis: sessions, questions and their timing, the AI panel's and every human
+            grader's level per objective (double marks included), disagreements with their cause, probing cues, integrity notes
+            and accommodations. Only students who currently agree are included. Names, emails, what students said or typed,
+            audio and video are never in it; everyone appears under a study code. Voice measurements are left out wherever
+            they are off and always for EU/EEA students. Each download is recorded in the audit log.
+        </p>
+        @if (settings is null)
+        {
+            <p class="hint">Save the research settings above first.</p>
+        }
+        else
+        {
+            <p>
+                <a href="@ResearchEndpoints.ExportHref(null)" download>Download the export for every exam (.zip)</a>
+                @if (selectedExam is not null)
+                {
+                    <br /><a href="@ResearchEndpoints.ExportHref(selectedExam.Id)" download>Download the export for @selectedExam.Title only (.zip)</a>
+                }
+            </p>
+            <details>
+                <summary>Replace the study codes</summary>
+                <p class="hint">Every later export will use new codes that cannot be linked to earlier exports. Do this only when starting a new, separate study.</p>
+                <button type="button" class="secondary" @onclick="ReplaceKeyAsync" disabled="@busy">Replace the study codes</button>
+            </details>
+        }
+    </section>
+
+    @if (message is not null)
+    {
+        <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+    }
+}
+
+@code {
+    private sealed record ExamOption(Guid Id, string Title);
+
+    private bool loaded, busy, ok, enabled;
+    private string? message, studyTitle, contact, ethics, newArmName, newArmDescription;
+    private int minimumGroup = 5;
+    private ResearchSettings? settings;
+    private ResearchConsentSummary? summary;
+    private List<ExamOption> exams = [];
+    private string? examId;
+    private ExamOption? selectedExam;
+    private List<StudyArmView> arms = [];
+    private List<ArmAssignmentRow> rows = [];
+
+    private TenantSnapshot Actor => TenantSnapshot.Of(Tenant);
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.OrganizationId is not { } org) return;
+        await LoadAsync(org);
+        loaded = true;
+    }
+
+    private async Task LoadAsync(Guid org)
+    {
+        await AdminDb.RunAsync(Scopes, Tenant, async (_, db) =>
+        {
+            var svc = new ResearchService(db, Clock);
+            settings = await svc.SettingsAsync(org);
+            summary = await svc.SummaryAsync(org);
+            exams = await db.Exams.AsNoTracking().Where(e => e.OrganizationId == org && e.Status != ExamStatus.Archived)
+                .OrderBy(e => e.Title).Select(e => new ExamOption(e.Id, e.Title)).ToListAsync();
+            return true;
+        });
+        enabled = settings?.Enabled ?? false;
+        studyTitle = settings?.StudyTitle;
+        contact = settings?.StudyContact;
+        ethics = settings?.EthicsReference;
+        minimumGroup = settings?.MinimumGroupSize ?? 5;
+    }
+
+    private async Task LoadExamAsync()
+    {
+        selectedExam = Guid.TryParse(examId, out var id) ? exams.FirstOrDefault(e => e.Id == id) : null;
+        arms = [];
+        rows = [];
+        if (selectedExam is null || Tenant.OrganizationId is not { } org) return;
+        await AdminDb.RunAsync(Scopes, Tenant, async (_, db) =>
+        {
+            var svc = new ResearchService(db, Clock);
+            arms = await svc.ArmsAsync(org, selectedExam.Id);
+            rows = await svc.AssignmentsAsync(org, selectedExam.Id);
+            return true;
+        });
+    }
+
+    private string ArmName(Guid? id) => id is { } a ? arms.FirstOrDefault(x => x.Id == a)?.Name ?? "an arm" : "No arm";
+
+    private async Task RunAsync(Func<ResearchService, Task<ResearchResult>> action, bool reloadExam = true)
+    {
+        if (busy) return;
+        busy = true;
+        message = null;
+        try
+        {
+            var r = await AdminDb.RunAsync(Scopes, Tenant, (_, db) => action(new ResearchService(db, Clock)));
+            ok = r.Ok;
+            message = r.Message;
+            if (Tenant.OrganizationId is { } org) await LoadAsync(org);
+            if (reloadExam) await LoadExamAsync();
+        }
+        catch (Exception ex) when (ex is DbUpdateException or InvalidOperationException)
+        {
+            ok = false;
+            message = "That could not be saved: " + ex.Message;
+        }
+        finally { busy = false; }
+    }
+
+    private Task SaveSettingsAsync() => RunAsync(s => s.SaveSettingsAsync(Actor, enabled, studyTitle, contact, ethics, minimumGroup), reloadExam: false);
+    private Task ReplaceKeyAsync() => RunAsync(s => s.ReplaceKeyAsync(Actor), reloadExam: false);
+    private Task ArchiveAsync(Guid armId) => RunAsync(s => s.ArchiveArmAsync(Actor, armId));
+    private Task RandomizeAsync() => selectedExam is null ? Task.CompletedTask : RunAsync(s => s.RandomizeAsync(Actor, selectedExam.Id));
+
+    private async Task AddArmAsync()
+    {
+        if (selectedExam is null) return;
+        await RunAsync(s => s.AddArmAsync(Actor, selectedExam.Id, newArmName, newArmDescription));
+        if (ok) newArmName = newArmDescription = null;
+    }
+
+    private Task SetArmAsync(Guid assignmentId, string? value) =>
+        RunAsync(s => s.SetArmAsync(Actor, assignmentId, Guid.TryParse(value, out var a) ? a : null));
+}

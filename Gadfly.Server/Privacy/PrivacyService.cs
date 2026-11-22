@@ -222,6 +222,10 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
                 .Select(g => new { g.SessionId, status = g.Status.ToString(), g.FinalPercent, g.LetterOrLabel, g.UpdatedAt }).ToListAsync(ct),
             appeals = await db.GradeAppeals.AsNoTracking().Where(a => ids.Contains(a.SessionId)).OrderBy(a => a.OpenedAt)
                 .Select(a => new { a.SessionId, a.Reason, state = a.State.ToString(), a.Resolution, a.OpenedAt, a.ResolvedAt }).ToListAsync(ct),
+            // The student's research choices (GAD-T452), each with the hash of the text they were shown.
+            researchConsents = await db.ResearchConsents.AsNoTracking().Where(c => c.OrganizationId == organizationId && c.StudentUserId == studentUserId)
+                .OrderBy(c => c.RecordedAt)
+                .Select(c => new { decision = c.Decision.ToString(), c.NoticeVersion, c.ConsentTextSha256, c.Source, c.SessionId, c.RecordedAt }).ToListAsync(ct),
         };
         return JsonSerializer.Serialize(export, Json);
     }
@@ -273,6 +277,10 @@ public sealed class PrivacyService(GadflyDbContext db, TimeProvider clock, ILogg
             await db.WebhookDeliveries.Where(d => d.OrganizationId == organizationId && d.PayloadJson.Contains(studentKey)).ExecuteDeleteAsync(ct);
             await db.SessionTurns.Where(t => ids.Contains(t.SessionId)).ExecuteDeleteAsync(ct);
             await db.ExamSessions.Where(s => ids.Contains(s.Id)).ExecuteDeleteAsync(ct);
+            // Research (GAD-T451/T452): the student's study arms and research choices go too, so no later export can include them.
+            var assignmentIds = db.ExamAssignments.Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId).Select(a => a.Id);
+            await db.StudyArmMembers.Where(m => m.OrganizationId == organizationId && assignmentIds.Contains(m.AssignmentId)).ExecuteDeleteAsync(ct);
+            await db.ResearchConsents.Where(c => c.OrganizationId == organizationId && c.StudentUserId == studentUserId).ExecuteDeleteAsync(ct);
             await db.ExamAssignments.Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId).ExecuteDeleteAsync(ct);
             await db.OrganizationMembers.Where(m => m.OrganizationId == organizationId && m.UserId == studentUserId)
                 .ExecuteUpdateAsync(u => u.SetProperty(m => m.IsActive, false), ct);

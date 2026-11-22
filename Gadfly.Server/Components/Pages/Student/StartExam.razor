@@ -178,6 +178,8 @@ else
                 <input type="checkbox" @bind="agreed" />
                 I have read this notice and agree to take the exam on these terms.
             </label>
+            @* The optional research question (GAD-T452): separate from the notice above and never needed to begin. *@
+            <ResearchConsentPanel @ref="research" AssignmentId="AssignmentId" />
             <button type="button" @onclick="BeginAsync" disabled="@(!agreed || !ChecksPass || starting)">
                 @(starting ? "Starting…" : assignment.ActiveSessionId is null ? "Begin exam" : "Continue to the exam")
             </button>
@@ -214,6 +216,7 @@ else
     private string microphone = "waiting", camera = "waiting";
     private StudentAssignmentView? assignment;
     private ConsentNotice? notice;
+    private ResearchConsentPanel? research;
     private List<Check>? checks;
     private string? clientInfo, error;
     private IJSObjectReference? module;
@@ -478,6 +481,7 @@ else
             var sessionId = assignment.ActiveSessionId
                             ?? await Sessions.CreateOrResumeAsync(org, assignment.AssignmentId, user, clientInfo);
             await Sessions.RecordConsentAsync(org, sessionId, user, notice.Sha256);
+            if (research is not null) await research.RecordAsync(sessionId);   // optional; never blocks the exam (GAD-T452)
             // Hand the microphone and camera over to the exam room, which opens them again straight away (GAD-T239).
             await StopMediaAsync();
             Nav.NavigateTo($"exam/{sessionId}");
