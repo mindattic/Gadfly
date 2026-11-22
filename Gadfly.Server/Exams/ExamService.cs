@@ -44,7 +44,7 @@ public sealed record StudentOption(Guid UserId, string UserName, string? Email);
 
 public sealed record AssignmentRow(Guid Id, Guid StudentUserId, string StudentName, DateTimeOffset? OpensAt, DateTimeOffset? ClosesAt,
     int AttemptsAllowed, int AttemptsUsed, SessionState? LatestState, DateTimeOffset? LatestEndedAt, DateTimeOffset AssignedAt,
-    DateTimeOffset? ResultsReleasedAt, decimal TimeMultiplier = 1m, bool GazeAccommodation = false);
+    DateTimeOffset? ResultsReleasedAt, decimal TimeMultiplier = 1m, bool GazeAccommodation = false, bool StudentInEuropeanUnion = false);
 
 /// <summary>
 /// Exam builder and assignments (GAD-T50): drafts, publishing (which freezes the policy), archiving,
@@ -321,6 +321,28 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
             : "Eye-contact accommodation off.", a.ExamId);
     }
 
+    /// <summary>
+    /// Marks or unmarks one assignment's student as living in the EU/EEA (GAD-T259). Under the organization's default setting their
+    /// voice is then not measured in voice exams (EU AI Act Art. 5(1)(f)); it takes effect from the next spoken answer. Audited.
+    /// </summary>
+    public async Task<ExamResult> SetStudentInEuropeanUnionAsync(Guid assignmentId, bool on, CancellationToken ct = default)
+    {
+        var org = Org;
+        var a = await db.ExamAssignments.FirstOrDefaultAsync(x => x.Id == assignmentId && x.OrganizationId == org, ct);
+        if (await DeniedAsync(Permission.AssignExaminations, "Changing where a student lives", "Exam", a?.ExamId, ct) is { } denied) return denied;
+        if (a is null) return new(false, "That assignment no longer exists.");
+        if (a.StudentInEuropeanUnion == on) return new(true, on ? "Already marked as living in the EU/EEA." : "Already marked as living outside the EU/EEA.", a.ExamId);
+        var was = a.StudentInEuropeanUnion;
+        a.StudentInEuropeanUnion = on;
+        Guard.Audit("assessment.student.eu-residence", "ExamAssignment", a.Id.ToString(),
+            before: new { StudentInEuropeanUnion = was }, after: new { StudentInEuropeanUnion = on, a.StudentUserId, a.ExamId });
+        await db.SaveChangesAsync(ct);
+        db.ChangeTracker.Clear();
+        return new(true, on
+            ? "Marked as living in the EU/EEA: unless an admin turned voice measurements on for everyone, their voice is not measured."
+            : "Marked as living outside the EU/EEA.", a.ExamId);
+    }
+
     /// <summary>The extra-time accommodations offered when assigning (Part 13 accessibility): none, 1.25x, 1.5x, 2x.</summary>
     public static readonly IReadOnlyList<decimal> TimeMultipliers = [1m, 1.25m, 1.5m, 2m];
 
@@ -341,7 +363,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
                 var list = sessions.GetValueOrDefault(a.Id) ?? [];
                 var latest = list.FirstOrDefault();
                 return new AssignmentRow(a.Id, a.StudentUserId, names.GetValueOrDefault(a.StudentUserId, "(unknown user)"), a.OpensAt, a.ClosesAt,
-                    a.AttemptsAllowed, list.Count(x => x.EndReason != nameof(Gadfly.Engine.EndReason.PromptSetChanged)), latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier, a.GazeAccommodation);
+                    a.AttemptsAllowed, list.Count(x => x.EndReason != nameof(Gadfly.Engine.EndReason.PromptSetChanged)), latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier, a.GazeAccommodation, a.StudentInEuropeanUnion);
             })
             .OrderBy(r => r.StudentName, StringComparer.OrdinalIgnoreCase).ToList();
     }

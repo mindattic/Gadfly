@@ -111,6 +111,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
         c.Properties<ExamStatus>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<ExamMode>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<IntegrityLevel>().HaveConversion<string>().HaveMaxLength(32);
+        c.Properties<VoiceMeasuresSetting>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<SessionState>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<IntegritySeverity>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<DeliveryStatus>().HaveConversion<string>().HaveMaxLength(32);

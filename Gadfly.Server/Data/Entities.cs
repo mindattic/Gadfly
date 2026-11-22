@@ -36,8 +36,18 @@ public sealed class OrganizationSettings
     /// the whole organization. False restores the earlier behavior where every Instructor sees everything.
     /// </summary>
     public bool InstructorsSeeOnlyOwn { get; set; } = true;
+    /// <summary>GAD-T259: the organization is in the EU/EEA or examines students there; voice measurements then default to off.</summary>
+    public bool InEuropeanUnion { get; set; }
+    /// <summary>GAD-T259: whether voice measurements (VoiceStrain) run in voice exams. See <see cref="VoiceMeasuresSetting"/>.</summary>
+    public VoiceMeasuresSetting VoiceMeasures { get; set; } = VoiceMeasuresSetting.RegionDefault;
     public DateTimeOffset UpdatedAt { get; set; }
 }
+
+/// <summary>
+/// GAD-T259: voice measurements in voice exams. RegionDefault (the default): off for an EU/EEA organization and for a student
+/// marked as living in the EU/EEA (EU AI Act Art. 5(1)(f)), on elsewhere. Off and On apply to every student.
+/// </summary>
+public enum VoiceMeasuresSetting { RegionDefault, Off, On }
 
 // ---------------------------------------------------------------- source material
 
@@ -211,6 +221,11 @@ public sealed class ExamAssignment : ITenantOwned
     /// eye contact or remarks on reading-like eyes; the episodes are still noted, marked as accommodated and kept at Info.
     /// </summary>
     public bool GazeAccommodation { get; set; }
+    /// <summary>
+    /// GAD-T259: the student lives in the EU/EEA. Under the organization's default setting their voice is not measured in voice
+    /// exams (EU AI Act Art. 5(1)(f)); nothing else changes.
+    /// </summary>
+    public bool StudentInEuropeanUnion { get; set; }
 }
 
 public enum SessionState { Created, ConsentGiven, Running, Paused, Ended, Failed }

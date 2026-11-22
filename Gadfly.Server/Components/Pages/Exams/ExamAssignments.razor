@@ -68,7 +68,7 @@ else if (rows.Count == 0)
 else
 {
     <table class="grid">
-        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Eye contact</th><th>Latest session</th><th>Results</th></tr></thead>
+        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Eye contact</th><th>Lives in EU/EEA</th><th>Latest session</th><th>Results</th></tr></thead>
         <tbody>
             @foreach (var r in rows)
             {
@@ -82,6 +82,13 @@ else
                         @if (CanAssign)
                         {
                             <button type="button" class="link" disabled="@busy" @onclick="() => GazeAccommodationAsync(r, !r.GazeAccommodation)">@(r.GazeAccommodation ? "Withdraw" : "Declare accommodation")</button>
+                        }
+                    </td>
+                    <td title="GAD-T259: by default a student living in the EU/EEA gets no voice measurements in voice exams (EU AI Act Art. 5(1)(f)).">
+                        @(r.StudentInEuropeanUnion ? "yes (voice not measured by default)" : "no")
+                        @if (CanAssign)
+                        {
+                            <button type="button" class="link" disabled="@busy" @onclick="() => StudentInEuAsync(r, !r.StudentInEuropeanUnion)">@(r.StudentInEuropeanUnion ? "Unmark" : "Mark as EU/EEA")</button>
                         }
                     </td>
                     <td>@(r.LatestState is { } st ? StateLabel(st) + (r.LatestEndedAt is { } end ? $" {Local(end)}" : "") : "not started")</td>
@@ -216,6 +223,23 @@ else
             ExamResult r;
             if (Gate is { } g) await g.WaitAsync();
             try { r = await Service.SetGazeAccommodationAsync(row.Id, on); }
+            finally { Gate?.Release(); }
+            ok = r.Ok;
+            message = r.Ok ? $"{row.StudentName}: {r.Message}" : r.Message;
+            await LoadLockedAsync();
+        }
+        finally { busy = false; }
+    }
+
+    private async Task StudentInEuAsync(AssignmentRow row, bool on)
+    {
+        if (busy) return;   // one operation at a time on the shared DbContext (GAD-T189)
+        busy = true;
+        try
+        {
+            ExamResult r;
+            if (Gate is { } g) await g.WaitAsync();
+            try { r = await Service.SetStudentInEuropeanUnionAsync(row.Id, on); }
             finally { Gate?.Release(); }
             ok = r.Ok;
             message = r.Ok ? $"{row.StudentName}: {r.Message}" : r.Message;

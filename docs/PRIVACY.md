@@ -49,29 +49,45 @@ when the exam ended. Nothing else is added: still no frame, image, landmark or f
 Server side only an allow-list of those types is stored (`WebcamIntegrityRecorder`), text and times are
 bounded, volume is rate-limited and capped, confidence is capped at 0.4, and severity is decided by the server
 and never above Low: reviewers see them as low-confidence annotations, never a penalty. If the student declines
-the camera, the exam continues. Nothing infers emotion or deception.
+the camera, the exam continues. The webcam modules do not infer emotion or deception.
 
-### Voice strain indicators (voice exams, GAD-T232)
+### Voice measurements (voice exams, GAD-T232, GAD-T259)
 
 During each spoken answer the exam room's browser measures the student's own voice from the same audio it
 streams to the speech service: pitch level and variability, frame-to-frame jitter, loudness and how much of
 the audio was voiced. Only those summary numbers are sent, with the answer; no audio, frame, pitch contour or
 voice print is kept or sent for them. The server compares each answer with the student's own first two spoken
 answers in that session (with the speech rate and pause ratio it already computes from the words) and stores
-the differences with the answer's speech metrics. Reviewers see one descriptive line per answer on the review
-transcript ("possible vocal strain / hesitation compared with this student's first answers: pitch +2.1
-semitones, speech 30% slower ..."), always with the caveat that effort, nerves, a hard question, tiredness or
-the room change the voice. It is never a lie, deception or emotion verdict, never an integrity event, never
-part of the grade, hidden from blinded graders, and the student sees the same comparison in short on their own live transcript. The owner lifted the earlier
-blanket drop of audio stress signals for this descriptive use (2026-11-21). The one score it yields (`strain.vsBaseline`) may make the examiner probe harder (GAD-T233), never change a grade; the EU note below still applies.
-Erasure removes it with the rest of the speech metrics.
+the differences with the answer's speech metrics. Reviewers see one line per answer on the review transcript
+with the raw differences ("voice measurements against this student's first answers: pitch +2.1 semitones*,
+speech 30% slower* ...", * marking a difference beyond the usual range), always with the caveat that effort,
+nerves, a hard question, tiredness or the room change the voice. Since GAD-T259 the line names no state: it does
+not say "strain", "stress" or "hesitation". It is never a lie, deception or emotion verdict, never an integrity
+event, never part of the grade, hidden from blinded graders, and the student sees the same differences in short
+on their own live transcript. The owner lifted the earlier blanket drop of audio stress signals for this
+descriptive use (2026-11-21, decision (b)). The one score it yields (`strain.vsBaseline`) may make the examiner
+probe harder (GAD-T233), never change a grade. Erasure removes it with the rest of the speech metrics.
+
+**Off by default in the EU (GAD-T259).** An organization marked as being in the EU or EEA (Organization
+settings), and any student marked as living in the EU or EEA when an exam is assigned, gets no voice
+measurements unless an admin turns them on for everyone. When they are off, the server discards the browser's
+voice numbers before the answer is stored, compares nothing, and nothing about the voice (not even the pause and
+speech-rate stand-in) steers how hard the examiner probes. An admin can also turn them off for everyone. Each
+change is recorded in the audit log.
+
+**What this does and does not claim.** Earlier versions of this page said "Nothing infers emotion". That was too
+broad while the voice comparison exists: pitch, jitter and loudness are standard features of vocal stress and
+arousal, and the comparison may steer the questions. Gadfly does not label a student's emotional state, but it
+does process features that the EU AI Act guidelines treat as emotion recognition when used in education
+(research note 06, docs/EVIDENCE_MAP.md mechanic 5). That is why it is off by default in the EU.
 
 ## Regulatory notes
 
-- **EU AI Act.** Emotion recognition in education is prohibited (Art. 5(1)(f)); Gadfly infers no
-  emotion and no deception. The voice strain indicators (GAD-T232) describe acoustic change against the
-  student's own baseline and name no emotion, but they are derived from voice data: before selling into the EU,
-  have counsel confirm they stay outside Art. 5(1)(f), or switch them off for EU tenants. AI that evaluates learning outcomes or monitors students during tests is
+- **EU AI Act.** Emotion recognition in education is prohibited (Art. 5(1)(f)), and the Commission's 2025
+  guidelines read detecting emotional arousal or anxiety during online exams as that. Gadfly names no emotion and
+  makes no deception finding, but the voice measurements (GAD-T232) use stress-related acoustic features and may
+  steer probing, so they are off by default for EU/EEA organizations and EU/EEA-resident students (GAD-T259).
+  Turning them on for EU students ("On for everyone") needs counsel's confirmation first. AI that evaluates learning outcomes or monitors students during tests is
   high-risk (Annex III, point 3): selling into the EU requires risk management, data governance,
   logging (the session record and prompt-set hash), human oversight (human grading and approval), accuracy
   documentation and registration before deployment.

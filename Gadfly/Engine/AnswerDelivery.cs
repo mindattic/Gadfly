@@ -60,6 +60,12 @@ public sealed record AnswerDelivery
     /// </summary>
     public const string StrainVsBaselineKey = "strain.vsBaseline";
 
+    /// <summary>
+    /// GAD-T259: set on a spoken answer when voice measurements are off for the organization or student (off by default in the
+    /// EU/EEA). Then nothing about the voice is a cue: neither the comparison nor the pause-and-rate proxy.
+    /// </summary>
+    public const string StrainOffKey = "strain.off";
+
     /// <summary>A wait at least this long, and at least <see cref="DelayFactor"/> times the student's usual, is a cue.</summary>
     public const double LongDelaySeconds = 8, DelayFactor = 2;
     /// <summary>Hesitations per 100 words at least this many, and at least <see cref="HesitationFactor"/> times the usual, is a cue.</summary>
@@ -81,7 +87,8 @@ public sealed record AnswerDelivery
         var hes = Hesitations(answer);
         var baseHes = Median(earlier.Select(t => Hesitations(t.Answer!)));
         var longPauses = (int)(Metric(answer, LongPauseCountKey) ?? 0);
-        var strain = Metric(answer, StrainVsBaselineKey) ?? StrainProxy(answer, earlier.Select(t => t.Answer!).ToList());
+        var strain = Metric(answer, StrainOffKey) is > 0 ? null
+            : Metric(answer, StrainVsBaselineKey) ?? StrainProxy(answer, earlier.Select(t => t.Answer!).ToList());
         var hedges = HedgesIn(answer.Text);
 
         var cues = new List<string>();
@@ -91,7 +98,7 @@ public sealed record AnswerDelivery
             cues.Add($"many hesitations ({(hes is { } h2 ? $"{Num(h2)} per 100 words" + (baseHes is { } b2 ? $", usually {Num(b2)}" : "") : "")}"
                 + (longPauses >= 2 ? $"{(hes is null ? "" : "; ")}{longPauses} long pauses" : "") + ")");
         if (strain is { } s && s >= StrainCue)
-            cues.Add($"voice strain above the student's own baseline ({Num(s)})");
+            cues.Add($"voice measurements away from the student's own baseline ({Num(s)})");
         if (hedges.Count >= HedgesCue)
             cues.Add($"hedging ({string.Join(", ", hedges.Select(x => $"\"{x}\""))})");
         var recited = turn.Judgment?.Recitation;
@@ -131,7 +138,7 @@ public sealed record AnswerDelivery
         var facts = new List<string>();
         if (DelaySeconds is { } d) facts.Add($"started after {Num(d)}s");
         if (HesitationsPer100 is { } h) facts.Add($"{Num(h)} hesitations per 100 words");
-        if (StrainVsBaseline is { } s) facts.Add($"strain vs baseline {Num(s)}");
+        if (StrainVsBaseline is { } s) facts.Add($"voice vs baseline {Num(s)}");
         facts.Add(Hedges.Count == 0 ? "no hedging" : $"{Hedges.Count} hedge(s)");
         var verdict = Cues.Count == 0 ? "steady" : string.Join("; ", Cues);
         return $"- Answer {TurnIndex + 1}: {string.Join(", ", facts)}. Cues: {verdict}.";

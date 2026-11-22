@@ -653,6 +653,9 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<DateTimeOffset?>("ResultsReleasedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("StudentInEuropeanUnion")
+                        .HasColumnType("bit");
+
                     b.Property<Guid>("StudentUserId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1389,6 +1392,9 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<string>("DefaultVoiceId")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("InEuropeanUnion")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("InstructorsSeeOnlyOwn")
                         .HasColumnType("bit");
 
@@ -1401,6 +1407,11 @@ namespace Gadfly.Server.Data.Migrations
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("VoiceMeasures")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.HasKey("OrganizationId");
 

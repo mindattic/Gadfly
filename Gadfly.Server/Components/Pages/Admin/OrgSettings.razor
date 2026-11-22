@@ -8,7 +8,7 @@
 @inject ITenantContext Tenant
 @inject TimeProvider Clock
 
-@* Organization settings (GAD-T55): retention (GAD-T61, decision D7), cost quota, voice/avatar defaults. *@
+@* Organization settings (GAD-T55): retention (GAD-T61, decision D7), cost quota, voice/avatar defaults, EU voice measurements (GAD-T259). *@
 
 <PageTitle>Settings · Gadfly Exams</PageTitle>
 <h1>Organization settings</h1>
@@ -66,6 +66,28 @@ else
             either way, because grading is not assigned to individual examiners. Applies within about 15 seconds.
         </p>
 
+        <h2>Voice measurements and the EU</h2>
+        <label class="check">
+            <InputCheckbox @bind-Value="form.InEuropeanUnion" />
+            This organization is in the EU or EEA, or examines students there
+        </label>
+        <label>Voice measurements in voice exams
+            <InputSelect @bind-Value="form.VoiceMeasures">
+                <option value="@VoiceMeasuresSetting.RegionDefault">Default: off in the EU/EEA, on elsewhere</option>
+                <option value="@VoiceMeasuresSetting.Off">Off for everyone</option>
+                <option value="@VoiceMeasuresSetting.On">On for everyone, EU included</option>
+            </InputSelect>
+        </label>
+        <p class="hint">
+            When on, each spoken answer's pitch, jitter, loudness, speech rate and pausing are compared with the student's own
+            first answers. Reviewers see the raw differences (never "strain" or "stress"), and they may make the examiner press
+            harder; they never change a grade. The EU AI Act prohibits emotion recognition in education (Art. 5(1)(f)), and the
+            Commission reads voice-based arousal or anxiety detection in exams as that, so by default these measurements are off
+            for an EU/EEA organization and for any student marked as living in the EU/EEA when assigned. When off, the voice
+            numbers are discarded and nothing about the voice steers the questions. Choose "On for everyone" only after counsel
+            has confirmed it is lawful for you.
+        </p>
+
         <button type="submit" disabled="@busy">Save settings</button>
         @if (message is not null)
         {
@@ -94,6 +116,10 @@ else
         public string? DefaultAvatarId { get; set; }
 
         public bool InstructorsSeeOnlyOwn { get; set; } = true;
+
+        public bool InEuropeanUnion { get; set; }
+
+        public VoiceMeasuresSetting VoiceMeasures { get; set; } = VoiceMeasuresSetting.RegionDefault;
     }
 
     private Form? form;
@@ -113,6 +139,8 @@ else
             DefaultVoiceId = row?.DefaultVoiceId,
             DefaultAvatarId = row?.DefaultAvatarId,
             InstructorsSeeOnlyOwn = row?.InstructorsSeeOnlyOwn ?? true,
+            InEuropeanUnion = row?.InEuropeanUnion ?? false,
+            VoiceMeasures = row?.VoiceMeasures ?? VoiceMeasuresSetting.RegionDefault,
         };
         updatedAt = row is null || row.UpdatedAt == default ? null : row.UpdatedAt;
     }
@@ -134,6 +162,20 @@ else
                 row.DefaultVoiceId = Clean(form.DefaultVoiceId);
                 row.DefaultAvatarId = Clean(form.DefaultAvatarId);
                 row.UpdatedAt = now;
+                if (row.InEuropeanUnion != form.InEuropeanUnion || row.VoiceMeasures != form.VoiceMeasures)
+                {
+                    // GAD-T259: whether voice measurements run is a privacy decision, so who changed it is recorded.
+                    db.AuditEvents.Add(new AuditEvent
+                    {
+                        OrganizationId = org, ActorUserId = Tenant.UserId, ActorRole = Tenant.Role, Action = "settings.voice-measures.changed",
+                        EntityType = "OrganizationSettings", EntityId = org.ToString(),
+                        BeforeJson = $"{{\"inEuropeanUnion\":{(row.InEuropeanUnion ? "true" : "false")},\"voiceMeasures\":\"{row.VoiceMeasures}\"}}",
+                        AfterJson = $"{{\"inEuropeanUnion\":{(form.InEuropeanUnion ? "true" : "false")},\"voiceMeasures\":\"{form.VoiceMeasures}\"}}",
+                        Reason = "GAD-T259: voice measurements, off by default in the EU/EEA.", At = now,
+                    });
+                    row.InEuropeanUnion = form.InEuropeanUnion;
+                    row.VoiceMeasures = Enum.IsDefined(form.VoiceMeasures) ? form.VoiceMeasures : VoiceMeasuresSetting.RegionDefault;
+                }
                 if (row.InstructorsSeeOnlyOwn != form.InstructorsSeeOnlyOwn)
                 {
                     db.AuditEvents.Add(new AuditEvent

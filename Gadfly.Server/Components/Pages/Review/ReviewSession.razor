@@ -114,7 +114,7 @@ else
                         </p>
                         @if (t.Strain is { } strain)
                         {
-                            <p class="hint voice-strain" title="Voice strain indicators (descriptive only): pitch, pitch variability, jitter, loudness, speech rate and pausing, compared with this student's first spoken answers.">Voice: @strain.Summary</p>
+                            <p class="hint voice-strain" title="Voice measurements (descriptive only, GAD-T259): pitch, pitch variability, jitter, loudness, speech rate and pausing, compared with this student's first spoken answers. They name no state and say nothing about emotion or honesty.">@(strain.IsBaseline ? "Voice: " : "")@strain.Summary</p>
                         }
                         @if (t.Recitation is { } rec)
                         {

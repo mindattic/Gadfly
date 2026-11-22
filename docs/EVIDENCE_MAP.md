@@ -153,8 +153,10 @@ reviewers as low-confidence context. Only notes leave the device, never frames.
 ## 5. Voice strain (owner decision (b))
 
 **What Gadfly does.** `VoiceStrain` compares pitch, jitter, loudness, pitch variability, rate and pauses with the
-student's first answers. Reviewers see "Possible vocal strain and hesitation". `strain.vsBaseline` of 0.5 or more is a
-probing cue (GAD-T233). Blind grading hides strain, and it is never part of the grade.
+student's first answers. Reviewers see the raw differences ("voice measurements against this student's first answers:
+pitch +2.1 semitones*, ..."), never a named state (GAD-T259). `strain.vsBaseline` of 0.5 or more is a probing cue
+(GAD-T233). Blind grading hides it, and it is never part of the grade. Since GAD-T259 it is off by default for EU/EEA
+organizations and students marked as living in the EU/EEA, and then nothing about the voice steers probing.
 
 **Owner decision (b):** voice strain and stress detection drives harder probing, as the owner asked. It stands.
 
@@ -174,11 +176,12 @@ probing cue (GAD-T233). Blind grading hides strain, and it is never part of the 
   inferring an inner state (06).
 - Anxiety, accent and stuttering change these features (02). Making anxious students face harder questions adds pressure
   where the evidence says to reduce it.
-- `docs/PRIVACY.md` says "Nothing infers emotion". Note 06 flags that statement as exposed while the strain readout exists.
+- `docs/PRIVACY.md` said "Nothing infers emotion". Note 06 flagged that statement as exposed while the strain readout exists;
+  GAD-T259 corrected it.
 
-**Proposed.** GAD-T258 (probing driven by content, not strain) and GAD-T259 (off by default for EU tenants and
-EU-resident students, raw acoustic deltas instead of "strain", and the PRIVACY.md wording fixed). Both conflict with
-decision (b) and wait for the owner.
+**Proposed.** GAD-T258 (probing driven by content, not strain) conflicts with decision (b) and waits for the owner.
+**Done.** GAD-T259 (approved by the owner): off by default for EU tenants and EU-resident students, raw acoustic deltas
+instead of "strain", and the PRIVACY.md wording fixed. Outside the EU, strain still drives probing as decision (b) says.
 
 ## 6. Time limits and the end-of-answer cue
 
@@ -287,7 +290,8 @@ proposed and wait for the owner.
   education (para 255). Jitter and pitch are stress features of a biometric signal. Anxious, accented and disfluent
   students are the ones most likely to be pressed (02). The same aim can be met from answer content, which is outside
   the ban.
-- **Tickets:** GAD-T258 and GAD-T259, proposed, both conflict with decision (b).
+- **Tickets:** GAD-T258, proposed, conflicts with decision (b). GAD-T259, approved and done: off by default in the EU,
+  relabelled as raw differences; decision (b) stands elsewhere.
 
 ### (c) Gaze fade and "look at me"
 
