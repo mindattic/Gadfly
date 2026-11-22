@@ -8,7 +8,7 @@
 @inject ITenantContext Tenant
 @inject TimeProvider Clock
 
-@* Organization settings (GAD-T55): retention (GAD-T61, decision D7), cost quota, voice/avatar defaults, EU voice measurements (GAD-T259). *@
+@* Organization settings (GAD-T55): retention (GAD-T61, decision D7), cost quota, voice/avatar defaults, EU voice measurements (GAD-T259), single grader (GAD-T285). *@
 
 <PageTitle>Settings · Gadfly Exams</PageTitle>
 <h1>Organization settings</h1>
@@ -66,6 +66,19 @@ else
             either way, because grading is not assigned to individual examiners. Applies within about 15 seconds.
         </p>
 
+        <h2>Separation of duties in grading</h2>
+        <label class="check">
+            <InputCheckbox @bind-Value="form.AllowSingleGrader" />
+            Allow a single grader (small organization)
+        </label>
+        <p class="hint">
+            Off (the default): whoever entered a grade's human score cannot also reconcile its AI-human disagreements or approve
+            it; someone else in the organization (another instructor, an admin, or a second reviewer for reconciliation) must.
+            Turn this on only when one person does all the grading, for example a one-person organization or while trying Gadfly
+            out alone. Every reconciliation or approval it lets through is recorded in the audit log as a waiver, and turning
+            this setting on or off is recorded too.
+        </p>
+
         <h2>Voice measurements and the EU</h2>
         <label class="check">
             <InputCheckbox @bind-Value="form.InEuropeanUnion" />
@@ -120,6 +133,8 @@ else
         public bool InEuropeanUnion { get; set; }
 
         public VoiceMeasuresSetting VoiceMeasures { get; set; } = VoiceMeasuresSetting.RegionDefault;
+
+        public bool AllowSingleGrader { get; set; }
     }
 
     private Form? form;
@@ -141,6 +156,7 @@ else
             InstructorsSeeOnlyOwn = row?.InstructorsSeeOnlyOwn ?? true,
             InEuropeanUnion = row?.InEuropeanUnion ?? false,
             VoiceMeasures = row?.VoiceMeasures ?? VoiceMeasuresSetting.RegionDefault,
+            AllowSingleGrader = row?.AllowSingleGrader ?? false,
         };
         updatedAt = row is null || row.UpdatedAt == default ? null : row.UpdatedAt;
     }
@@ -187,6 +203,19 @@ else
                         Reason = "Decision D18: whether instructors see only what they own.", At = now,
                     });
                     row.InstructorsSeeOnlyOwn = form.InstructorsSeeOnlyOwn;
+                }
+                if (row.AllowSingleGrader != form.AllowSingleGrader)
+                {
+                    // GAD-T285: relaxing separation of duties in grading is recorded with who did it.
+                    db.AuditEvents.Add(new AuditEvent
+                    {
+                        OrganizationId = org, ActorUserId = Tenant.UserId, ActorRole = Tenant.Role, Action = "settings.single-grader.changed",
+                        EntityType = "OrganizationSettings", EntityId = org.ToString(),
+                        BeforeJson = $"{{\"allowSingleGrader\":{(row.AllowSingleGrader ? "true" : "false")}}}",
+                        AfterJson = $"{{\"allowSingleGrader\":{(form.AllowSingleGrader ? "true" : "false")}}}",
+                        Reason = "GAD-T285: whether the person who scored a grade may also reconcile and approve it (single-grader organization).", At = now,
+                    });
+                    row.AllowSingleGrader = form.AllowSingleGrader;
                 }
                 var saved = await db.SaveChangesAsync();
                 OwnershipPolicy.Invalidate(org);

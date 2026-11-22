@@ -78,6 +78,12 @@ public sealed record GradingWorkspace
     public required GradingActor Viewer { get; init; }
     /// <summary>Earlier graded attempts on the same assignment, latest first (GAD-T273).</summary>
     public IReadOnlyList<PriorAttempt> PriorAttempts { get; init; } = [];
+    /// <summary>GAD-T285: the viewer entered a human score on this grade, so they may not reconcile or approve it themselves...</summary>
+    public bool ViewerScoredHuman { get; init; }
+    /// <summary>...unless the organization allows a single grader (off by default; each use is audited).</summary>
+    public bool SingleGraderAllowed { get; init; }
+    /// <summary>True when separation of duties stops the viewer from reconciling or approving this grade.</summary>
+    public bool SeparationBlocksViewer => ViewerScoredHuman && !SingleGraderAllowed;
 
     public GradeStatus? Status => Grade?.Status;
     public bool AnyMock => Objectives.Any(o => o.Ai?.Row.IsMock == true);

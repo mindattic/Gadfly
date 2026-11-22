@@ -191,8 +191,10 @@ Every question in order, with:
   passage was removed since (its document was re-processed), the page says so;
 - **each judge's verdict**: every provider on the panel, its score and its reasoning. A judge whose score
   is 25 points or more away from the panel's is marked **dissents**;
-- the **text style** reading (how much the answer reads like written text compared with the student's
-  other answers), which never affects the score;
+- the **text style** estimate (how much the answer reads like written text compared with the student's
+  other answers). It is an unvalidated estimate: tools that guess whether text was machine-written misfire
+  often, especially on non-native speakers, and this one's false-flag rate has not been measured. It never
+  affects the score and is never a finding;
 - mastery of the concept after the answer;
 - integrity notes that happened during that answer.
 
@@ -223,7 +225,7 @@ What is recorded today:
 | Extra screen connected | the browser | On Strict, only if the student allowed screen detection. |
 | Left full screen | the browser | Strict, only after the student chose **Go full screen**. |
 | Developer tools may be open | the browser | A guess; information only, never counted as a flag. |
-| Answer reads like written text | the server | Raised when an answer reads noticeably more like written text than the student's other answers. Weak evidence on its own. |
+| Text style estimate (unvalidated) | the server | Raised when the panel's estimate that an answer reads more like written text than the student's other answers is 70% or more. An unvalidated estimate with an unmeasured false-flag rate: context only, never a finding, never part of the score. |
 
 Browser signals are sent every few seconds and survive a page reload; nothing is blocked, and no signal
 is ever rated High. The browser's clock is corrected against the server's, and repeated identical signals
@@ -249,8 +251,9 @@ grading workspace). Results reach students only through this workflow.
    locked grading policy (AI and human weights). Large differences are flagged by the policy's thresholds.
 4. **Reconciliation.** When the difference needs it, the grade is held at Reconciliation required: request a second
    review, and the second reviewer records the cause, the resolution and a resolved score. The score is recalculated.
-5. **Final approval.** An authorized person (Teacher, Admin or Owner, never the Examiner) approves the final grade, or
-   reopens human grading with a reason.
+   The person who entered the human score cannot reconcile it themselves.
+5. **Final approval.** An authorized person (Teacher, Admin or Owner, never the Examiner, and never the person who
+   entered this grade's human score) approves the final grade, or reopens human grading with a reason.
 6. **Publish.** Publishing releases the final grade and the assessment report to the student on **My exams**.
    Republish after a change; nothing is shown to the student before this step.
 7. **Appeals and amendments.** A student can appeal a published result; the teacher resolves the appeal as upheld or
@@ -260,6 +263,12 @@ grading workspace). Results reach students only through this workflow.
 Every step is audited, and a refused attempt (for example an examiner trying to approve) is recorded as an access
 refusal. The AI never publishes anything.
 
+**A different person reconciles and approves (separation of duties).** If you entered a grade's human score, the
+grading page tells you that someone else must reconcile and approve it, and the Approve button is off for you; you
+can still request a second review. A teacher who scores a session needs another teacher, an admin or the owner to
+approve it. An organization where one person does all the grading can ask its admin to turn on **Allow a single
+grader** in Organization settings; each reconciliation or approval it lets through is recorded in the audit log.
+
 ### Grading as the blind examiner
 
 When the exam's grading policy is blind (the default), the examiner grades before seeing anything the AI
@@ -267,7 +276,10 @@ concluded. Until you submit your own grades for a session, Gadfly hides the AI e
 exam-time judge's per-answer evidence: the stance (supports, contradicts, misconception, uncertain), its
 dimension and its notes (the "Recorded evidence" line on the grading page), plus, on the session review page,
 the per-answer judging scores, summaries, votes, contradictions, mastery estimates and the AI report, in the
-page, the CSV and Markdown exports and the status endpoint. You still see the student's original and verified
+page, the CSV and Markdown exports and the status endpoint. The **integrity notes are hidden too**: gaze and
+camera episodes, browser signals, the recitation check's finding, the text-style estimate and the flag count on
+the review list (shown as "hidden") appear only after your grades are in, so that a flag cannot colour your
+reading of the answers. You still see the student's original and verified
 answers, clarifications, corrections and the full transcript, which is the evidence you grade. Once you submit,
 everything shows as before. Owners and Admins, who do not enter scores, keep the full review view.
 

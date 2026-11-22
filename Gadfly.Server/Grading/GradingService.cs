@@ -45,6 +45,48 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
 
     private static string Denied(Permission p) => $"Your role in this organization does not allow this ({p}). The attempt was recorded.";
 
+    // ================================================================== separation of duties (GAD-T285)
+
+    /// <summary>The audit action recorded when the single-grader organization setting lets a grade's scorer reconcile or approve it.</summary>
+    public const string SeparationWaivedAction = "grade.separation-of-duties.waived";
+
+    /// <summary>
+    /// True when the organization has turned on "allow a single grader" (OrganizationSettings.AllowSingleGrader, off by default):
+    /// a one-person organization may then reconcile and approve grades it scored itself, each time audited.
+    /// </summary>
+    public async Task<bool> SingleGraderAllowedAsync(CancellationToken ct = default)
+    {
+        var org = Org;
+        return await db.OrganizationSettings.AsNoTracking().Where(s => s.OrganizationId == org).Select(s => s.AllowSingleGrader).FirstOrDefaultAsync(ct);
+    }
+
+    /// <summary>
+    /// GAD-T285: reconciliation and final approval are done by someone other than the person who entered the grade's human
+    /// score (any human objective grade of the session, superseded ones included). When the caller did score it, the act is
+    /// refused and audited, unless the organization allows a single grader, in which case it goes ahead and a waiver is
+    /// audited with it (saved with the act). Null means go ahead.
+    /// </summary>
+    private async Task<GradingResult?> SeparationOfDutiesAsync(Guid sessionId, string acting, CancellationToken ct)
+    {
+        if (Actor.UserId is not { } me) return null;
+        var org = Org;
+        if (!await db.HumanObjectiveGrades.AsNoTracking().AnyAsync(h => h.SessionId == sessionId && h.OrganizationId == org && h.ReviewerUserId == me, ct))
+            return null;
+        if (await SingleGraderAllowedAsync(ct))
+        {
+            GradingAudit.Add(db, org, Actor, SeparationWaivedAction, "FinalGrade", sessionId.ToString(), sessionId, Now,
+                after: new { acting, setting = "allowSingleGrader" },
+                reason: $"{acting} by the person who entered this grade's human score, allowed by the organization's single-grader setting.");
+            return null;
+        }
+        db.ChangeTracker.Clear();
+        GradingAudit.Add(db, org, Actor, "grade.separation-of-duties.refused", "FinalGrade", sessionId.ToString(), sessionId, Now,
+            after: new { acting }, reason: $"{acting} needs someone other than the person who entered this grade's human score.");
+        await db.SaveChangesAsync(ct);
+        return GradingResult.Fail($"Refused: you entered this grade's human score, so {acting.ToLowerInvariant()} must be done by someone else "
+            + "(separation of duties). Ask another instructor, admin or second reviewer. The attempt was recorded.");
+    }
+
     // ================================================================== queue
 
     /// <summary>Sessions with a grade record, plus ended sessions not yet started, newest first.</summary>
@@ -241,6 +283,8 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             Names = names, SecondReviewers = secondReviewers.Select(s => (s.UserId, s.UserName)).ToList(), RequestedSecondReviews = requested,
             JobState = jobs.GetValueOrDefault(sessionId).State, JobError = jobs.GetValueOrDefault(sessionId).Error, Viewer = Actor,
             PriorAttempts = prior,
+            ViewerScoredHuman = Actor.UserId is { } viewer && humans.Any(h => h.ReviewerUserId == viewer),
+            SingleGraderAllowed = await SingleGraderAllowedAsync(ct),
         };
     }
 
@@ -529,6 +573,8 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (second is { } sid && sid != Actor.UserId
             && !await db.OrganizationMembers.AnyAsync(m => m.OrganizationId == Org && m.UserId == sid && m.IsActive && m.Role == OrgRoles.SecondReviewer, ct))
             return GradingResult.Fail("The second reviewer must hold the Second Reviewer role.");
+        // Last check before anything is written, so a single-grader waiver is only audited with an act that goes ahead.
+        if (await SeparationOfDutiesAsync(sessionId, "Reconciling a grade disagreement", ct) is { } separated) return separated;
 
         var rec = new GradeReconciliation
         {
@@ -575,6 +621,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var (result, excluded, _) = await ComputeAsync(session, policy, ct);
         if (result.FinalPercent is null) return GradingResult.Fail("Every objective needs both evaluations before approval.");
         if (label is { Length: > 40 }) return GradingResult.Fail("Keep the grade label under 40 characters.");
+        if (await SeparationOfDutiesAsync(sessionId, "Approving a final grade", ct) is { } separated) return separated;
         StoreResult(grade, result, excluded);
         grade.LetterOrLabel = Blank(label);
         var refused = await TryMoveAsync(grade, GradeStatus.Finalized, Blank(note) ?? "Final grade approved.", ct);

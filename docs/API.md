@@ -670,12 +670,18 @@ Every path below starts with `/grading/actions/{sessionId}`. Bodies are JSON. Ea
 | `POST .../human-grades` | Examiner, Teacher (EnterHumanScore) | `{ "grades": [ { "objectiveKey" or "objectiveId", "level", "score", "comment"?, "evidenceNote"? } ] }` | Human Review Pending → Reconciliation Required or Awaiting Final Approval. One grade per objective, every objective required; earlier grades are kept and superseded |
 | `POST .../human-grades/reopen` | Examiner, Teacher | `{ "reason" }` | Back to Human Review Pending, to adjust the human grades |
 | `POST .../second-review` | Teacher, Admin, Owner, Second Reviewer (ReconcileDisagreement) | `{ "disagreementId", "reviewerUserId" }` | Asks a member holding the Second Reviewer role to reconcile |
-| `POST .../reconciliations` | ReconcileDisagreement or ActAsSecondReviewer | `{ "disagreementId", "cause", "resolution", "resolvedAiScore"?, "resolvedHumanScore"?, "secondReviewerUserId"? }` | Documents the resolution and recalculates; Awaiting Final Approval once no mandatory disagreement is open. `cause` is one of `error-in-ai`, `error-in-human`, `transcript-ambiguity`, `rubric-interpretation`, `both-defensible`. A second reviewer who acts is recorded as the second reviewer |
-| `POST .../approve` | Teacher, Admin, Owner (ApproveFinalGrade) | `{ "label"?, "note"? }` | Awaiting Final Approval → Finalized, with a Finalize approval record. Refused (`409`) while a mandatory disagreement is open |
+| `POST .../reconciliations` | ReconcileDisagreement or ActAsSecondReviewer | `{ "disagreementId", "cause", "resolution", "resolvedAiScore"?, "resolvedHumanScore"?, "secondReviewerUserId"? }` | Documents the resolution and recalculates; Awaiting Final Approval once no mandatory disagreement is open. `cause` is one of `error-in-ai`, `error-in-human`, `transcript-ambiguity`, `rubric-interpretation`, `both-defensible`. A second reviewer who acts is recorded as the second reviewer. Refused (`409`) for the person who entered this grade's human score (separation of duties) |
+| `POST .../approve` | Teacher, Admin, Owner (ApproveFinalGrade) | `{ "label"?, "note"? }` | Awaiting Final Approval → Finalized, with a Finalize approval record. Refused (`409`) while a mandatory disagreement is open, and for the person who entered this grade's human score (separation of duties) |
 | `POST .../publish` | Teacher, Admin, Owner (PublishGrade) | `{ "note"? }` | Finalized → Published, with a Publish record. Refused (`409`) without a Finalize record |
 | `POST .../appeals` | The student whose published result it is (AppealOwnResult) | `{ "reason" }` | Published or Amended → Under Appeal |
 | `POST .../appeals/{appealId}/resolve` | Teacher, Admin, Owner (ResolveAppeal) | `{ "outcome": "Upheld" or "Dismissed", "resolution" }` | The grade stands: back to Published |
 | `POST .../amend` | Teacher, Admin, Owner (AmendGrade, plus ResolveAppeal with `appealId`) | `{ "grades": [ changed objectives ], "reason", "appealId"? }` | Published or Under Appeal → Amended: new human grades supersede the old ones, the combined score is recalculated under the frozen policy, and the appeal (if given) is resolved as Amended |
+
+**Separation of duties (GAD-T285).** Reconciliation and approval are refused (`409`, `"Refused: you entered this
+grade's human score, ..."`, audited as `grade.separation-of-duties.refused`) when the caller entered any human
+score of that session's grade. An organization that has turned on **Allow a single grader** in its settings (off
+by default) lets them through, and each one is audited as `grade.separation-of-duties.waived`. The status read
+says where the caller stands in `separationOfDuties`.
 
 `level` is a mastery level by name or number: `InsufficientEvidence` (0), `Recognition` (1), `BasicExplanation` (2),
 `ConceptualUnderstanding` (3), `Application` (4), `TransferAndCriticalReasoning` (5). `score` is on the objective's
@@ -687,7 +693,7 @@ own scale (0 to its `maxScore`).
 | `400` | A missing or invalid field, an unknown objective or level, a missing antiforgery token, or another rule of the action (the message says which) |
 | `403` | The caller's role lacks the permission (audited as `access.denied`), or a student appeals a result that isn't their own published one |
 | `404` | (status read) The session isn't in the organization, or a student's result isn't published yet |
-| `409` | The grade-status machine refused the move (`"Refused: ..."`, audited as `grade.transition.refused`) |
+| `409` | The grade-status machine refused the move (`"Refused: ..."`, audited as `grade.transition.refused`), or separation of duties did (audited as `grade.separation-of-duties.refused`) |
 
 Example: the examiner submits blind grades.
 
@@ -714,6 +720,7 @@ Content-Type: application/json
   "sessionId": "6b72ef45-...", "examTitle": "Demo: Understanding multiplication", "student": "demo.student", "attempt": 1,
   "status": "ReconciliationRequired", "statusLabel": "Reconciliation Required",
   "aiVisible": true, "isMock": true, "finalPercent": 46.67, "label": null,
+  "separationOfDuties": { "youScoredThisGrade": false, "singleGraderAllowed": false, "blocksYou": false },
   "policy": { "aiWeight": 0.4, "humanWeight": 0.6, "additionalReviewAt": 10, "mandatoryReconciliationAt": 20, "blindHumanGrading": true, "source": "exam-policy" },
   "aiGradingJob": { "state": "Succeeded", "error": null },
   "responsesNeedingHuman": 0,

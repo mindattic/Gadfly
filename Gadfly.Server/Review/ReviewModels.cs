@@ -21,6 +21,8 @@ public sealed record ReviewListRow(
     int IntegrityFlags,
     GradeDecision? LatestGrade)
 {
+    /// <summary>GAD-T285: true when blind grading hides this session's integrity flags from the viewer (IntegrityFlags is then 0).</summary>
+    public bool FlagsHidden { get; init; }
     public bool IsGraded => LatestGrade is not null;
     public bool NeedsGrade => State == SessionState.Ended && LatestGrade is null;
 }

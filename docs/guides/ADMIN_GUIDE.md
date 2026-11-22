@@ -117,6 +117,20 @@ they created**, on by default (including for existing organizations when this wa
   `gadfly.OrganizationSettings.InstructorsSeeOnlyOwn`, default on). No ownership data is backfilled: courses,
   collections and assessments already record their creator.
 
+### Separation of duties in grading
+
+GAD-T285. Whoever entered a grade's human score cannot also reconcile its AI-human disagreements or approve it:
+someone else in the organization must (another instructor, an admin or owner, or a second reviewer for
+reconciliation). A refused attempt is written to the audit log (`grade.separation-of-duties.refused`), from the
+grading page and the grading endpoints alike.
+
+**Settings > Separation of duties in grading** has one switch, **Allow a single grader (small organization)**, off
+by default. Turn it on only when one person does all the grading (a one-person organization, or while trying
+Gadfly out alone). While it is on, the person who scored a grade may reconcile and approve it, and each time they
+do the audit log records a waiver (`grade.separation-of-duties.waived`) beside the reconciliation or approval.
+Turning the switch on or off is audited too (`settings.single-grader.changed`). Deploy note: this needs the
+`AllowSingleGrader` database migration (one new column, `gadfly.OrganizationSettings.AllowSingleGrader`, default off).
+
 Settings also holds the **monthly cost quota** (see Usage) and the **default voice and avatar** ids for
 voice-mode exams (voice exams aren't built yet; students of a voice exam answer by typing).
 

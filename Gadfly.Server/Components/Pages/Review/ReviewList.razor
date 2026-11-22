@@ -71,7 +71,7 @@ else
                         }
                     </td>
                     <td>@if (r.JudgesDisagreed > 0) { <span class="tag warn">@r.JudgesDisagreed</span> } else { <span class="hint">0</span> }</td>
-                    <td>@if (r.IntegrityFlags > 0) { <span class="tag warn">@r.IntegrityFlags</span> } else { <span class="hint">0</span> }</td>
+                    <td>@if (r.FlagsHidden) { <span class="hint" title="Hidden until your blind human score is submitted">hidden</span> } else if (r.IntegrityFlags > 0) { <span class="tag warn">@r.IntegrityFlags</span> } else { <span class="hint">0</span> }</td>
                     <td>
                         @if (r.LatestGrade is { } g)
                         {

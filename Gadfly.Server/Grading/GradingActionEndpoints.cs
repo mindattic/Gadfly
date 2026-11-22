@@ -178,6 +178,8 @@ public static class GradingActionEndpoints
             sessionId = w.Session.Id, examTitle = w.ExamTitle, student = w.StudentName, attempt = w.Session.Attempt,
             status = w.Status?.ToString(), statusLabel = w.Status is { } s ? GradeStatusMachine.Label(s) : "Not started",
             aiVisible = visible, isMock = visible && w.AnyMock,
+            // GAD-T285: whether the caller entered this grade's human score, and so may not reconcile or approve it.
+            separationOfDuties = new { youScoredThisGrade = w.ViewerScoredHuman, singleGraderAllowed = w.SingleGraderAllowed, blocksYou = w.SeparationBlocksViewer },
             finalPercent = visible ? w.Grade?.FinalPercent : null, label = visible ? w.Grade?.LetterOrLabel : null,
             policy = new { aiWeight = p.AiWeight, humanWeight = p.HumanWeight, additionalReviewAt = p.AdditionalReviewAt,
                 mandatoryReconciliationAt = p.MandatoryReconciliationAt, blindHumanGrading = p.BlindHumanGrading, source = w.Policy.Source },

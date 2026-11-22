@@ -209,8 +209,31 @@ else
                 {
                     <p class="hint">Second review requested from @w.Name(requested).</p>
                 }
-                @if (Can(Permission.ReconcileDisagreement) || Can(Permission.ActAsSecondReviewer))
+                @if ((Can(Permission.ReconcileDisagreement) || Can(Permission.ActAsSecondReviewer)) && w.SeparationBlocksViewer)
                 {
+                    <p class="hint">You entered this grade's human score, so someone else must reconcile it (separation of duties). Request a second review below, or ask another instructor or admin.</p>
+                    @if (Can(Permission.ReconcileDisagreement) && w.SecondReviewers.Count > 0)
+                    {
+                        <div class="gr-form-row">
+                            <label>Second reviewer
+                                <select @bind="rf.Second">
+                                    <option value="">Choose…</option>
+                                    @foreach (var (uid, name) in w.SecondReviewers) { <option value="@uid">@name</option> }
+                                </select>
+                            </label>
+                            @if (Guid.TryParse(rf.Second, out var srOnly))
+                            {
+                                <button type="button" class="link" disabled="@busy" @onclick="() => RunAsync(g => g.RequestSecondReviewAsync(SessionId, d.Id, srOnly))">Request a second review</button>
+                            }
+                        </div>
+                    }
+                }
+                else if (Can(Permission.ReconcileDisagreement) || Can(Permission.ActAsSecondReviewer))
+                {
+                    @if (w.ViewerScoredHuman)
+                    {
+                        <p class="hint">You entered this grade's human score; the organization's single-grader setting lets you reconcile it, and the audit log records that.</p>
+                    }
                     <div class="gr-form-row">
                         <label>Cause
                             <select @bind="rf.Cause">
@@ -256,8 +279,19 @@ else
                 <label>Approval note <input @bind="approveNote" /></label>
             </div>
             <div class="gr-actions">
-                <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.ApproveAsync(SessionId, approveLabel, approveNote))">Approve final grade</button>
-                <span class="hint">Needs the ApproveFinalGrade permission (Teacher, Admin, Owner).</span>
+                <button type="button" disabled="@(busy || w.SeparationBlocksViewer)" @onclick="() => RunAsync(g => g.ApproveAsync(SessionId, approveLabel, approveNote))">Approve final grade</button>
+                @if (w.SeparationBlocksViewer)
+                {
+                    <span class="hint">You entered this grade's human score, so another instructor or admin must approve it (separation of duties). A one-person organization can turn on "Allow a single grader" in Organization settings.</span>
+                }
+                else if (w.ViewerScoredHuman)
+                {
+                    <span class="hint">You entered this grade's human score; the single-grader setting allows you to approve it, and the audit log records that.</span>
+                }
+                else
+                {
+                    <span class="hint">Needs the ApproveFinalGrade permission (Teacher, Admin, Owner), held by someone other than whoever entered the human score.</span>
+                }
             </div>
             <details>
                 <summary>Adjust the human grades instead</summary>

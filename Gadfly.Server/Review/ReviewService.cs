@@ -68,8 +68,8 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                 s.Attempt, s.State, s.EndedAt,
                 !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r) ? r.Recommendation : null,
                 !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r2) ? r2.OverallScore : null,
-                blind.Contains(s.Id) ? 0 : disagreed.GetValueOrDefault(s.Id), flagCounts.GetValueOrDefault(s.Id),
-                grades.GetValueOrDefault(s.Id)))
+                blind.Contains(s.Id) ? 0 : disagreed.GetValueOrDefault(s.Id), blind.Contains(s.Id) ? 0 : flagCounts.GetValueOrDefault(s.Id),
+                grades.GetValueOrDefault(s.Id)) { FlagsHidden = blind.Contains(s.Id) })
             .Where(r => !filter.NeedsGradeOnly || r.NeedsGrade)
             .Where(r => !filter.NeedsHumanReviewOnly || r.JudgesDisagreed > 0)
             .ToList();
@@ -109,7 +109,9 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                 .Select(c => new { c.Id, c.Text, c.Location, Document = c.Document!.FileName }).ToListAsync(ct))
             .ToDictionary(c => c.Id, c => (c.Text, c.Location, (string?)c.Document));
 
-        var integrityRows = await db.IntegrityEvents.AsNoTracking().Where(e => e.SessionId == sessionId && e.OrganizationId == organizationId)
+        // GAD-T285: integrity flags (gaze, reading, recitation, the text-style estimate and every other integrity event) stay
+        // hidden from a blind grader until their human score is submitted, so they cannot prime the grade.
+        var integrityRows = blinded ? [] : await db.IntegrityEvents.AsNoTracking().Where(e => e.SessionId == sessionId && e.OrganizationId == organizationId)
             .OrderBy(e => e.StartedAt).ToListAsync(ct);
         // The recitation check's finding on each turn (GAD-T248), from its "possibly-recited" integrity event.
         var recitations = integrityRows.Where(e => e.Type == RecitationView.EventType && e.TurnId is not null)
