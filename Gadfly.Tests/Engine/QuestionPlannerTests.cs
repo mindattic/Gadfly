@@ -219,15 +219,28 @@ public class QuestionPlannerTests
     }
 
     [Test]
-    public void AClaimAlreadyConfronted_IsNotConfrontedAgain()
+    public void AContradictionPairAlreadyConfronted_IsNotConfrontedAgain()
     {
         var s = Session();
         s.Judged("a", MoveKind.Elicit, 0.5, 0.5);
         s.Judged("a", MoveKind.Contradiction, 0.5, 0.5, targets: ["c1", "c2"]);
         s.Judged("a", MoveKind.Probe, 0.5, 0.5);
-        var d = Planner("a").Next(s, T0, [new ContradictionCandidate("a", "c2", "c5"), new ContradictionCandidate("a", "c6", "c7")]);
+        var d = Planner("a").Next(s, T0, [new ContradictionCandidate("a", "c1", "c2"), new ContradictionCandidate("a", "c6", "c7")]);
         Assert.That(d.Move, Is.EqualTo(MoveKind.Contradiction));
         Assert.That(d.TargetClaimIds, Is.EqualTo(new[] { "c6", "c7" }));
+    }
+
+    [Test]
+    public void ANewPairSharingAConfrontedClaim_IsStillConfronted()
+    {
+        // Confrontation is per pair, as ObjectiveAssessor counts it; skipping (c2, c5) would leave it unconfronted forever.
+        var s = Session();
+        s.Judged("a", MoveKind.Elicit, 0.5, 0.5);
+        s.Judged("a", MoveKind.Contradiction, 0.5, 0.5, targets: ["c1", "c2"]);
+        s.Judged("a", MoveKind.Probe, 0.5, 0.5);
+        var d = Planner("a").Next(s, T0, [new ContradictionCandidate("a", "c2", "c5")]);
+        Assert.That(d.Move, Is.EqualTo(MoveKind.Contradiction));
+        Assert.That(d.TargetClaimIds, Is.EqualTo(new[] { "c2", "c5" }));
     }
 
     [Test]
