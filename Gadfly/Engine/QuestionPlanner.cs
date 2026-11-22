@@ -158,7 +158,10 @@ public sealed class QuestionPlanner
         var p = session.Policy;
         var byTurns = p.MaxTurns - session.Turns.Count;
         var asked = session.Turns.Count;
-        var pace = asked == 0 ? DefaultTurnDuration : TimeSpan.FromTicks(Math.Max(TimeSpan.FromSeconds(15).Ticks, (now - session.StartedAt).Ticks / asked));
+        // Pace over the time the clock actually ran: paused time that was added back (GAD-T263) is not exam time (GAD-T322).
+        var active = now - session.StartedAt - session.PausedCredit(now);
+        if (active < TimeSpan.Zero) active = TimeSpan.Zero;
+        var pace = asked == 0 ? DefaultTurnDuration : TimeSpan.FromTicks(Math.Max(TimeSpan.FromSeconds(15).Ticks, active.Ticks / asked));
         var byTime = (int)Math.Floor(session.Remaining(now) / pace);
         return Math.Max(0, Math.Min(byTurns, byTime));
     }

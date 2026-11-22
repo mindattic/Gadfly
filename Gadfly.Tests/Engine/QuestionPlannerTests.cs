@@ -359,6 +359,17 @@ public class QuestionPlannerTests
     }
 
     [Test]
+    public void Capacity_PaceLeavesOutPausedTime()
+    {
+        // GAD-T322: a three-minute pause is added back to the clock and must not slow the pace either.
+        var s = Session(new SessionPolicy { TimeBudget = TimeSpan.FromMinutes(20), MaxTurns = 40 });
+        s.Judged("a", MoveKind.Elicit, 0.5, 0.5);
+        Assert.That(s.PauseClock(T0.AddMinutes(1)), Is.True);
+        Assert.That(s.ResumeClock(T0.AddMinutes(4)), Is.True);
+        Assert.That(QuestionPlanner.Capacity(s, T0.AddMinutes(5)), Is.EqualTo(9), "18 minutes left at 2 minutes of running clock a turn");
+    }
+
+    [Test]
     public void TwoSufficientRelatedObjectives_AreSynthesizedOnce()
     {
         var s = Session();
