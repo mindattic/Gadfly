@@ -146,8 +146,8 @@ Gadfly Exams, the web platform (`Gadfly.Server`):
   read the answer's content without fillers, repeats and false starts (they are never told why). Fairness views,
   calibration and speech-recognition accuracy can be grouped by exam language and by stated primary language.
 - **The get-ready studio.** One screen in the student's language: choose the exam language, your languages, your
-  camera and microphone (with checks and a microphone test), and your examiner (a male examiner is coming, GAD-T504);
-  an optional voice calibration (reading a short sentence three times, keeping only timing and confidence numbers,
+  camera and microphone (with checks and a microphone test), and your examiner, a woman or a man, each with their
+  own voice and lip-sync (unless the exam or organization fixes one); an optional voice calibration (reading a short sentence three times, keeping only timing and confidence numbers,
   never audio); a plain statement that the camera checks presence and never grades or decides; and a free practice run
   with the same examiner and room, which stores nothing.
 - **Attention, from the evidence.** No reminder in the thinking gap before the first word; anywhere on the screen
@@ -156,7 +156,9 @@ Gadfly Exams, the web platform (`Gadfly.Server`):
   most), and reminders never touch the grade. The student's self-view is hidden during the exam (a camera-on
   indicator, and a preview on request). Leaving the exam window pauses the exam and keeps the words already said;
   repeated or long absences mark the attempt for an instructor to review, with the student's own explanation. Nothing
-  is ever cancelled or deleted automatically, and staff can grant a window-absence accommodation per student.
+  is ever cancelled or deleted automatically, and staff can grant a window-absence accommodation per student. A marked
+  attempt shows its reason, each absence and the explanation on the review and grading pages; its result is held
+  until a person who approves grades clears the mark or approves the grade, with a note, both audited.
 - **Integrity notes, never verdicts.** Eye contact, camera presence and a second face, browser focus and copying, a
   second voice and answers that sound read out are low-confidence notes for a reviewer: hidden from a blind grader,
   never part of a grade, and shown to the student with their result. Video never leaves the student's device. See
@@ -282,6 +284,7 @@ server with the matching seeder (`-Password` chooses the account password). The 
 | `Gadfly:Voice:BackchannelMs` | A soft "Mm-hm." after a finished sentence and this much silence, without ending the turn (0 = off, the default; else 300 to 3000). |
 | `Gadfly:Voice:WaitTypingShare` | Share of sessions given the old typing sound instead of the thinking gesture during the judging wait, for an A/B test (0, the default, turns it off). |
 | `Gadfly:Voice:TtsModels:<lang>`, `Gadfly:Voice:VoiceIds:<lang>` | The examiner's ElevenLabs model and platform voice for one exam language (for example `TtsModels:ko`); unset uses the usual model and voice, which speak Korean. |
+| `Gadfly:Voice:Examiners:<id>` | Overrides part of an examiner in the catalog (`examiner-f`, `examiner-m`): model, portrait, portrait mouth or voice. |
 | `Gadfly:Voice:PlainSpeechSpeed` | The examiner's speed for a second-language speaker (0.7 to 1.2, default 0.9; 1 turns it off). |
 | `Gadfly:Voice:Esl:EndOfAnswerSeconds`, `:EndOfAnswerMaxSeconds`, `:EndOfAnswerCompleteSeconds`, `:CompleteAfterAnswers`, `:CutOffBackoffFactor` | End-of-answer silences for a second-language speaker (defaults 6 s, 15 s, 3.5 s after 3 uncut answers, cut-off backoff doubled). |
 | `Gadfly:Demo:Password`, `Gadfly:Demo:ApiKey` | Chosen password and API key for the seeded demo accounts. |
@@ -539,10 +542,6 @@ and `Gadfly.Server` are two hosts. The full plan is in [docs/SOCRATIC_PLATFORM.m
   and the recitation check does not yet compare across languages (GAD-T600).
 - The ESL adaptations' numbers (longer silences, slower speech) are reasoned from research, not yet tuned on a pilot
   of Korean-L1 speakers.
-- One examiner (female) is available; the male examiner is listed as coming soon on the get-ready page (GAD-T504).
-  The exam's or organization's voice id is used, but the avatar id is saved and not used yet (GAD-T475).
-- Attempts marked for instructor review (window absences, Korean scores the panel has not been calibrated on) are
-  held for a person; the dedicated review queue for them is being built (GAD-T603).
 - LTI sends one grade per placement (the final percentage), not one per objective; LTI 1.1 isn't supported. There is
   no institutional single sign-on (SAML or OpenID Connect) apart from the LMS launch.
 - Webhooks offer one event, `session.completed`.
