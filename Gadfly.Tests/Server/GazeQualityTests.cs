@@ -43,7 +43,7 @@ public class GazeQualityTests
     public void The_reviewer_sees_the_quality_beside_the_note_and_DataJson_keeps_it()
     {
         var c = Clean("examiner-look-away", "remarked;q:82;m:cal;a:3.1");
-        Assert.That(c.Summary, Does.Contain("asked out loud"));
+        Assert.That(c.Summary, Does.Contain(WebcamIntegrityRecorder.SpokenReminderSaid), "GAD-T557/T561: a gentle spoken reminder, not \"asked out loud\"");
         Assert.That(c.Summary, Does.Contain("Eye-tracking quality this session: good (82/100; set up to the student's screen, about 3.1° accuracy)."));
         Assert.That(c.Severity, Is.EqualTo(IntegritySeverity.Low), "12 s look-away with good tracking stays Low");
         Assert.That(GazeQuality.FromJson(c.Data), Is.EqualTo(new GazeQuality(82, true, 3.1)));
