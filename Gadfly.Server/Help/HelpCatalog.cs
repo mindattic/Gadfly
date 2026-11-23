@@ -79,6 +79,8 @@ public static class HelpTopics
     public const string QuickStartStudent = "quick-start-student";
     /// <summary>The student essentials in Korean (GAD-T544).</summary>
     public const string QuickStartStudentKorean = "quick-start-student-ko";
+    /// <summary>The student essentials in Spanish (GAD-T613).</summary>
+    public const string QuickStartStudentSpanish = "quick-start-student-es";
     public const string QuickStartInstructor = "quick-start-instructor";
     public const string QuickStartGrader = "quick-start-grader";
     public const string QuickStartAdmin = "quick-start-admin";
@@ -94,11 +96,15 @@ public static class HelpTopics
     /// <summary>The get-ready page and the student's languages (GAD-T592), and its Korean version.</summary>
     public const string GetReady = "get-ready-and-languages";
     public const string GetReadyKorean = "get-ready-and-languages-ko";
+    public const string GetReadySpanish = "get-ready-and-languages-es";
     /// <summary>Eye contact and gentle reminders in Korean (GAD-T592).</summary>
     public const string EyeContactKorean = "eye-contact-ko";
+    /// <summary>Eye contact and gentle reminders in Spanish (GAD-T613).</summary>
+    public const string EyeContactSpanish = "eye-contact-es";
     /// <summary>What happens when a student leaves the exam window (GAD-T592), and its Korean version.</summary>
     public const string LeavingTheWindow = "leaving-the-exam-window";
     public const string LeavingTheWindowKorean = "leaving-the-exam-window-ko";
+    public const string LeavingTheWindowSpanish = "leaving-the-exam-window-es";
     /// <summary>For staff: exam languages, translated texts, second-language speakers, grading and fairness by language (GAD-T592).</summary>
     public const string ExamLanguages = "exams-in-other-languages";
     /// <summary>For staff: attempts marked Needs instructor review and how to decide them (GAD-T592).</summary>
@@ -155,6 +161,10 @@ public static class HelpCatalog
         new(HelpTopics.QuickStartStudentKorean, "quick-start-student-ko.md", HelpAudience.Student, HelpSectionId.StartHere,
             "학생 빠른 시작(한국어)", "로그인부터 결과까지 다섯 단계, 시험 준비, 시선 맞추기, 문제가 생겼을 때 (Quick start for students, in Korean).",
             "korean 한국어 학생 시작 quick start getting started"),
+        // The student essentials in Spanish (GAD-T613), the same as the Korean.
+        new(HelpTopics.QuickStartStudentSpanish, "quick-start-student-es.md", HelpAudience.Student, HelpSectionId.StartHere,
+            "Inicio rápido para estudiantes (español)", "Cinco pasos del inicio de sesión al resultado, la preparación, el contacto visual y qué hacer si algo falla (Quick start for students, in Spanish).",
+            "spanish español estudiante inicio comenzar quick start getting started"),
         new(HelpTopics.QuickStartInstructor, "quick-start-instructor.md", HelpAudience.Instructor, HelpSectionId.StartHere,
             "Quick start for instructors", "From your notes to a graded exam: upload, build, assign, review, grade.",
             "getting started begin first time teacher"),
@@ -186,18 +196,27 @@ public static class HelpCatalog
         new(HelpTopics.GetReadyKorean, "get-ready-and-languages-ko.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
             "시험 준비와 언어(한국어)", "사용 언어, 카메라와 마이크, 목소리 맞추기, 시험관 고르기, 무료 연습 시험 (Getting ready, in Korean).",
             "korean 한국어 시험 준비 언어 카메라 마이크 목소리 맞추기 시험관 연습 get ready"),
+        new(HelpTopics.GetReadySpanish, "get-ready-and-languages-es.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
+            "Prepararse para el examen y sus idiomas (español)", "Sus idiomas, cámara y micrófono, ajuste de voz, elegir la IA examinadora y el examen de práctica gratuito (Getting ready, in Spanish).",
+            "spanish español preparación idioma cámara micrófono ajuste de voz examinadora práctica get ready"),
         new(HelpTopics.EyeContact, "eye-contact-and-the-screen-fade.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
             "Eye contact and gentle reminders", "Looking away to think is normal; only a long look off the screen while you speak gets a gentle reminder, never part of your grade.",
             "gaze looking away thinking dim fade screen examiner eyes camera reminder self-view"),
         new(HelpTopics.EyeContactKorean, "eye-contact-ko.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
             "시선 맞추기와 부드러운 알림(한국어)", "생각하느라 시선을 돌려도 괜찮아요. 알림은 언제 나오고 무엇을 뜻하지 않는지 (Eye contact, in Korean).",
             "korean 한국어 시선 맞추기 알림 카메라 eye contact gaze"),
+        new(HelpTopics.EyeContactSpanish, "eye-contact-es.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
+            "Contacto visual y recordatorios amables (español)", "Apartar la mirada para pensar es normal: cuándo aparece un recordatorio y qué no significa (Eye contact, in Spanish).",
+            "spanish español contacto visual mirada recordatorio cámara eye contact gaze"),
         new(HelpTopics.LeavingTheWindow, "leaving-the-exam-window.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
             "Leaving the exam window", "The exam pauses and your words are kept; a person, never the computer, decides whether anything needs following up.",
             "window tab focus switch leave away pause absence review cancel explanation accommodation"),
         new(HelpTopics.LeavingTheWindowKorean, "leaving-the-exam-window-ko.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
             "시험 창을 벗어나면(한국어)", "시험이 일시 정지되고 하던 말은 남아요. 판단은 컴퓨터가 아니라 사람이 해요 (Leaving the exam window, in Korean).",
             "korean 한국어 시험 창 탭 일시 정지 검토 window focus"),
+        new(HelpTopics.LeavingTheWindowSpanish, "leaving-the-exam-window-es.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
+            "Si sale de la ventana del examen (español)", "El examen se pausa y lo que dijo se conserva; una persona, nunca la computadora, decide si algo necesita seguimiento (Leaving the exam window, in Spanish).",
+            "spanish español ventana pestaña pausa revisión window focus"),
         new(HelpTopics.Accommodations, "accommodations.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
             "Accommodations", "Typed answers, eye-contact changes and other adjustments, and how to ask for them.",
             "accessibility disability typing typed extra time adjustment speech hearing"),

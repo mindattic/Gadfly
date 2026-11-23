@@ -19,8 +19,8 @@ authorized person approves it. Integrity signals (focus loss, a second voice, re
 shown to the reviewer as evidence, never as an automatic verdict.
 
 The exam is a conversation, not a form. A talking examiner asks each question aloud and starts speaking the
-next one within moments of the answer, while it is still being written. Students can take an exam in English
-or Korean, with recognition, voice and lip-sync in that language, and a student answering in a second language
+next one within moments of the answer, while it is still being written. Students can take an exam in English,
+Korean or Spanish, with recognition, voice and lip-sync in that language, and a student answering in a second language
 is heard and graded for what they understand, not for accent, grammar or fluency. Looking away to think is
 never penalized: the exam room follows the research on attention, and anything it notices goes to a person,
 never to an automatic decision.
@@ -130,15 +130,18 @@ Gadfly Exams, the web platform (`Gadfly.Server`):
   non-judging line, and fills a longer wait with a thinking gesture and a spoken filler instead of a sound. A finished
   sentence ends the answer after about two seconds of silence instead of four. The full multi-model panel still judges
   every answer, in the background, and only its judgment is graded.
-- **Exams in English and Korean.** An exam lists the languages it is offered in (English and Korean by default), and
+- **Exams in English, Korean and Spanish.** An exam lists the languages it is offered in (all three by default), and
   the student picks one before beginning. A Korean attempt is heard by a Korean recognizer, spoken in Korean, lip-synced
   with Gadfly's own Hangul-to-viseme module, and examined with Korean prompts and Korean text rules. The exam's title,
   instructions and objective titles get a machine-translated draft that an instructor edits and approves (students
   are told when a text is still an unchecked draft); the course material, concept map and rubric stay as written, so
   every language is the same exam. Graders read the original words, which are the record, with a labelled machine
   translation into English on request. The student pages, emails, consent notice and student help essentials are in
-  Korean too, and so is the exam room: its on-screen text follows the attempt's language (GAD-T606). See
-  [docs/LOCALIZATION.md](docs/LOCALIZATION.md). Spanish is planned next (GAD-T596).
+  Korean too, and so is the exam room: its on-screen text follows the attempt's language (GAD-T606). Spanish works the
+  same way (GAD-T596): heard as `es`, spoken by the same multilingual voice, lip-synced by Gadfly's own Spanish module,
+  examined in neutral Latin American Spanish with usted and Spanish text rules, with every student page, the exam room,
+  the practice and the emails in Spanish. Every score on a Korean or Spanish attempt is approved by a person until a
+  bilingual calibration shows the panel agrees with human graders. See [docs/LOCALIZATION.md](docs/LOCALIZATION.md).
 - **Second-language speakers.** The student states the languages they speak and the one they speak best; nothing is
   inferred from voice or name. When that differs from the exam language, the recognizer is pinned to the exam
   language, end-of-answer silences are longer (`Gadfly:Voice:Esl:*`), the examiner speaks slightly slower and in
@@ -194,8 +197,8 @@ Gadfly Exams, the web platform (`Gadfly.Server`):
   science, pricing (Trial, Standard, Institution, Custom; plan numbers in `Site/SitePlans.cs`), a request-a-demo form,
   terms, privacy notice, accessibility statement, security page, a branded 404 and an offline page, with `robots.txt`
   and `sitemap.xml`. These pages render as static HTML with no Blazor circuit and load nothing from other sites.
-  The landing, how-it-works, science, pricing and FAQ, security and accessibility pages are in English and Korean
-  (an English / 한국어 switch in the header, text in `Localization/Strings/site.<lang>.json`); contact, terms, the
+  The landing, how-it-works, science, pricing and FAQ, security and accessibility pages are in English, Korean and
+  Spanish (an English / 한국어 / Español switch in the header, text in `Localization/Strings/site.<lang>.json`); contact, terms, the
   privacy notice and the 404 page are in English.
   Requests from the form are stored for the platform admin at `/platform/requests` (spam held off by a honeypot, a
   signed render time and a rate limit). Set `Gadfly:Site:ContactNotifyEmail` to have each one emailed too; that only
@@ -286,7 +289,7 @@ server with the matching seeder (`-Password` chooses the account password). The 
 | `Gadfly:Voice:EndOfAnswerCompleteSeconds` | The silence that ends an answer whose last words are a finished sentence (1 to the floor, default 2). |
 | `Gadfly:Voice:BackchannelMs` | A soft "Mm-hm." after a finished sentence and this much silence, without ending the turn (0 = off, the default; else 300 to 3000). |
 | `Gadfly:Voice:WaitTypingShare` | Share of sessions given the old typing sound instead of the thinking gesture during the judging wait, for an A/B test (0, the default, turns it off). |
-| `Gadfly:Voice:TtsModels:<lang>`, `Gadfly:Voice:VoiceIds:<lang>` | The examiner's ElevenLabs model and platform voice for one exam language (for example `TtsModels:ko`); unset uses the usual model and voice, which speak Korean. |
+| `Gadfly:Voice:TtsModels:<lang>`, `Gadfly:Voice:VoiceIds:<lang>` | The examiner's ElevenLabs model and platform voice for one exam language (for example `TtsModels:ko`, `TtsModels:es`); unset uses the usual model and voice, which speak Korean and Spanish. |
 | `Gadfly:Voice:Examiners:<id>` | Overrides part of an examiner in the catalog (`examiner-f`, `examiner-m`): model, portrait, portrait mouth or voice. |
 | `Gadfly:Voice:PlainSpeechSpeed` | The examiner's speed for a second-language speaker (0.7 to 1.2, default 0.9; 1 turns it off). |
 | `Gadfly:Voice:Esl:EndOfAnswerSeconds`, `:EndOfAnswerMaxSeconds`, `:EndOfAnswerCompleteSeconds`, `:CompleteAfterAnswers`, `:CutOffBackoffFactor` | End-of-answer silences for a second-language speaker (defaults 6 s, 15 s, 3.5 s after 3 uncut answers, cut-off backoff doubled). |
@@ -539,7 +542,8 @@ and `Gadfly.Server` are two hosts. The full plan is in [docs/SOCRATIC_PLATFORM.m
   plan's validity studies (Part 15.3) happen with real institutions. How well the AI panel grades spoken,
   transcribed answers, whether follow-ups resist a relayed answer, and fairness across groups have measurement tools
   built in but no results yet.
-- Exams run in English and Korean only. Spanish is planned (GAD-T596), waiting for a native-speaking tester. Exams already live before localization need their Korean texts drafted (GAD-T541),
+- Exams run in English, Korean and Spanish only. Spanish has not yet been checked by a native-speaking tester
+  (GAD-T614), so its wording, voice accent and lip-sync are unvalidated. Exams already live before localization need their Korean texts drafted (GAD-T541),
   and the recitation check does not yet compare across languages (GAD-T600).
 - The ESL adaptations' numbers (longer silences, slower speech) are reasoned from research, not yet tuned on a pilot
   of Korean-L1 speakers.

@@ -1,6 +1,7 @@
 # Getting ready: the get-ready page and your languages
 
 > 한국어로 읽기: [시험 준비와 언어](get-ready-and-languages-ko.md)
+> Leer en español: [La página de preparación y sus idiomas](get-ready-and-languages-es.md)
 
 When you press **Start** on an exam in **My exams**, you land on the get-ready page. Everything for your exam is on this one
 screen: your languages, your camera and microphone, the examiner, how the exam works and the notice. **Nothing on this page is
@@ -9,8 +10,7 @@ later.
 
 ## Your languages
 
-Gadfly exams can be taken in **English or Korean**, whichever your instructor offers for that exam. (Spanish is planned for
-later; it is not available yet.)
+Gadfly exams can be taken in **English, Korean or Spanish**, whichever your instructor offers for that exam.
 
 The page asks three things:
 
@@ -44,7 +44,12 @@ your instructor wrote them, and your answers are judged against the same standar
 hasn't checked the Korean title and instructions yet, the page says they were machine-translated. The exam room is in Korean
 too: its buttons, status lines and notices, the examiner and the questions.
 
-You can also switch the language of the student pages at any time with the language switch in the top bar (English / 한국어).
+**An exam in Spanish** works the same way, in Spanish. The examiner asks in neutral Latin American Spanish and addresses you
+as *usted*; "No lo sé" is an honest answer. The exam room and the student pages are in Spanish too. As with Korean, every
+score on an exam taken in Spanish is approved by a person before it is released to you.
+
+You can also switch the language of the student pages at any time with the language switch in the top bar (English / 한국어 /
+Español).
 
 ## Camera and microphone
 
@@ -68,6 +73,7 @@ Under **Help the examiner hear you** you can read one short sentence aloud three
 
 - English: *The quick brown fox jumps over the lazy dog.*
 - Korean: *다람쥐 헌 쳇바퀴에 타고파.*
+- Spanish: *El veloz murciélago hindú comía feliz cardillo y kiwi.*
 
 It takes about a minute and helps the speech recognizer get used to your pace, so it waits for you and mishears you less. Only a
 few numbers are kept on your language profile (how fast you read, how long your pauses were, how sure the recognizer was):
@@ -80,7 +86,7 @@ Your examiner is an AI. The examiner speaks each question, listens to your answe
 words.
 
 - **Choose your examiner.** There are two examiners, a female one and a male one. They ask questions in exactly the same way,
-  with the same rules; only the look and the voice differ, and both speak English and Korean. Pick the one you prefer; your
+  with the same rules; only the look and the voice differ, and both speak English, Korean and Spanish. Pick the one you prefer; your
   choice is remembered on this device for the exam room. If your instructor or organization has set the examiner for this
   exam, the page shows only that one.
 - **Hear a hello.** The preview uses your browser's own voice, with the words lighting up as they are said. In the exam the

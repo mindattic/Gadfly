@@ -91,8 +91,7 @@ is used until you press **Begin exam**: if you leave now, you can come back late
 
 ### Your languages
 
-Gadfly exams can be taken in **English or Korean**, whichever your instructor offers for the exam (Spanish is planned, not
-available yet). The page asks which languages you speak, which one you speak best, and which language to take this exam in.
+Gadfly exams can be taken in **English, Korean or Spanish**, whichever your instructor offers for the exam. The page asks which languages you speak, which one you speak best, and which language to take this exam in.
 Choosing the exam language switches the page, the rules, the notice and the examiner to it at once; it is fixed when you press
 **Begin exam**. Your answers are never used to grade you and nothing is worked out about you from your voice or name. If you
 take the exam in a language that isn't your best, the examiner speaks a little more slowly and plainly and waits longer for you
@@ -131,8 +130,8 @@ it, stop it or redo it.
 
 ### Meet your examiner
 
-Choose your examiner: a female or a male examiner, who ask questions in exactly the same way and both speak English and
-Korean (if your instructor or organization set the examiner for this exam, only that one is shown). Press **Hear her say
+Choose your examiner: a female or a male examiner, who ask questions in exactly the same way and both speak English, Korean
+and Spanish (if your instructor or organization set the examiner for this exam, only that one is shown). Press **Hear her say
 hello** for a preview in your browser's voice, and, if you like, open a **free practice run** with this exam's own examiner:
 ungraded, unlimited, nothing kept. See [Practice interview](practice-interview.md).
 
@@ -171,6 +170,10 @@ What you see:
 
 **In Korean.** If you chose Korean, the examiner asks, listens and lip-syncs in Korean, and the exam room's buttons, status
 lines and notices are in Korean too.
+
+**In Spanish.** If you chose Spanish, the examiner asks in neutral Latin American Spanish (addressing you as *usted*),
+listens and lip-syncs in Spanish, and the exam room's buttons, status lines and notices are in Spanish too. "No lo sé" is an
+honest answer. As with Korean, every score on an exam taken in Spanish is approved by a person before it is released.
 
 If your device has no 3D graphics, or asks for reduced motion, you see the examiner's picture instead of the moving
 head. The questions are still spoken and shown as text.

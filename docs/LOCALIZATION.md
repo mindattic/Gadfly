@@ -260,6 +260,9 @@ primary language is Spanish gets Spanish emails. The voice calibration reads "El
 kiwi." three times (9 words, 20 syllables). `Gadfly.Tests/Server/SpanishLocalizationTests.cs` checks key parity across en, ko
 and es, placeholders, usted, the notice, the practice, the emails and the culture.
 
+The public site (`site.es.json`, GAD-T613) and the student help essentials are in Spanish too: `quick-start-student-es`,
+`get-ready-and-languages-es`, `eye-contact-es` and `leaving-the-exam-window-es` in `docs/guides/`, listed in the help center.
+
 **Spanish style.** Neutral Latin American Spanish understood in every Spanish-speaking country: no vosotros, no regional slang,
 computadora not ordenador. The student is always usted, never tú. Short, warm sentences; buttons are infinitives or noun
 phrases ("Comenzar el examen", "Repetir la pregunta"). Opening ¿ and ¡. The student is never gendered (estudiante is epicene;

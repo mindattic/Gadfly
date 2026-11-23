@@ -14,9 +14,6 @@ public class SpanishLocalizationTests
 {
     private static readonly UiCatalog Catalog = new();
 
-    /// <summary>Areas not yet in Spanish: none once the public site's site.es.json exists (GAD-T613).</summary>
-    private static bool Covered(string key) => !key.StartsWith("site.", StringComparison.Ordinal) || Catalog.Table("es").ContainsKey("site.skip");
-
     [Test]
     public void Spanish_is_a_ui_language_with_latin_american_dates()
     {
@@ -32,7 +29,7 @@ public class SpanishLocalizationTests
     public void Every_spanish_key_exists_in_english_and_every_english_key_is_in_spanish_and_korean()
     {
         Assert.That(Catalog.Table("es").Keys.Except(Catalog.Keys), Is.Empty, "a Spanish key with no English source is orphaned");
-        Assert.That(Catalog.Keys.Where(Covered).Except(Catalog.Table("es").Keys), Is.Empty, "the student flow is fully translated into Spanish");
+        Assert.That(Catalog.Keys.Except(Catalog.Table("es").Keys), Is.Empty, "the student flow and the public site are fully translated into Spanish (GAD-T612, GAD-T613)");
         Assert.That(Catalog.Keys.Except(Catalog.Table("ko").Keys), Is.Empty, "and into Korean");
     }
 

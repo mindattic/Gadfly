@@ -1,8 +1,9 @@
-# Exams in English and Korean (for staff)
+# Exams in English, Korean and Spanish (for staff)
 
-Students can take a Gadfly exam in **English or Korean**. This page is for instructors, examiners and admins: how to offer a
-language, how to check the translated texts, what changes for students who speak a second language, how to grade an attempt
-taken in Korean, and how to check fairness by language. (Spanish is planned as a third language; it is not available yet.)
+Students can take a Gadfly exam in **English, Korean or Spanish**. This page is for instructors, examiners and admins: how to
+offer a language, how to check the translated texts, what changes for students who speak a second language, how to grade an
+attempt taken in Korean or Spanish, and how to check fairness by language. Spanish is asked and translated in neutral Latin
+American Spanish, addressing the student as *usted*.
 
 The one rule behind all of it: **a student whose best language is English, taking an exam in English, gets exactly the exam
 they always got.** Every adaptation below switches on only from the exam language and the primary language the student stated
@@ -15,14 +16,14 @@ themselves. Nothing is ever inferred from a voice, an accent, a name or the brow
 | Source material, concept map, rubric, grading policy | As you wrote them. They are the standard every answer is judged against, so each language is the same exam. |
 | Exam title, instructions, objective titles | Per language, checked and approved by you (below). |
 | The examiner's questions and fixed lines | The exam language. Questions are worded live from the English material. |
-| The student pages (My exams, get-ready, results, emails) | The student's chosen language (English or 한국어). The exam room follows the attempt's language: its buttons, status lines and notices, the examiner and the questions. |
-| Staff pages | English, with machine translation of a Korean attempt on demand. |
+| The student pages (My exams, get-ready, results, emails) | The student's chosen language (English, 한국어 or Español). The exam room follows the attempt's language: its buttons, status lines and notices, the examiner and the questions. |
+| Staff pages | English, with machine translation of a Korean or Spanish attempt on demand. |
 
 ## Offering an exam in a language
 
 The **Languages** panel is in the assessment editor's **Details** step and under **Edit** on the admin desk's Exams tab. New
-exams are offered in English and Korean; untick a language and press **Save languages** to stop offering it. At least one stays
-on. You can change the list after publishing: an attempt keeps the language it began in. Every change is in the audit log
+exams are offered in English, Korean and Spanish; untick a language and press **Save languages** to stop offering it. At least
+one stays on. You can change the list after publishing: an attempt keeps the language it began in. Every change is in the audit log
 (`exam.languages.changed`). Students only ever see the languages you offer.
 
 ## The translated texts: draft, check, approve
@@ -61,7 +62,7 @@ Every student, whatever their language, can press **Say it another way** in the 
 The rewording passes the same leak check as any question, is free and outside scoring, and the question as first asked stays the
 record.
 
-## Grading an attempt taken in Korean
+## Grading an attempt taken in Korean or Spanish
 
 - **The original is the record.** The grading page, the review page and the blind second-mark sheet show the questions and
   answers exactly as given, marked with their language.
@@ -70,9 +71,9 @@ record.
   reads the language. Translations are never saved with the session or put in any download.
 - **You are not shown the student's primary language.** It is not evidence of understanding and could prime a grade. It is used
   only in aggregate, for the fairness views.
-- **Korean attempts are held for a person.** Until a bilingual calibration shows the AI panel agrees with human graders on Korean
-  answers, every non-English attempt is marked **Needs instructor review**, and its AI objective grades are marked cross-lingual
-  and uncalibrated. See [Attempts marked for instructor review](attempts-marked-for-review.md).
+- **Korean and Spanish attempts are held for a person.** Until a bilingual calibration shows the AI panel agrees with human
+  graders on answers in that language, every non-English attempt is marked **Needs instructor review**, and its AI objective
+  grades are marked cross-lingual and uncalibrated. See [Attempts marked for instructor review](attempts-marked-for-review.md).
 
 ## Fairness by language
 
