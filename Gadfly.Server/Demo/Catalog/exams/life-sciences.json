@@ -8,6 +8,7 @@
     "category": "life-sciences",
     "subject": "Biology",
     "topic": "Cells",
+    "instructions": "The examiner will talk with you about cells: cell theory, the two kinds of cells, what organelles do and how substances cross the membrane. Answer in your own words and explain why, not only what.",
     "passage": [
       "All living things are made of cells, the smallest units that carry out the processes of life. Cell theory holds that every organism is made of one or more cells, that the cell is the basic unit of structure and function, and that new cells arise only from existing cells by division.",
       "Prokaryotic cells, such as bacteria and archaea, have no nucleus: their DNA lies in a region of the cytoplasm called the nucleoid, and they lack membrane-bound organelles. Eukaryotic cells, found in plants, animals, fungi and protists, keep their DNA inside a nucleus and contain membrane-bound organelles. Eukaryotic cells are usually much larger.",
@@ -31,13 +32,36 @@
         "concept": "Membrane transport", "definition": "The selectively permeable membrane lets substances move down gradients passively, or against them by active transport using ATP.",
         "facts": ["The membrane is a phospholipid bilayer with proteins.", "Diffusion and osmosis move substances down a gradient without energy.", "Active transport moves substances against a gradient and uses ATP."],
         "misconceptions": ["Osmosis is the movement of solute rather than water.", "Diffusion needs energy from the cell."] }
-    ]
+    ],
+    "translations": {
+      "ko": {
+        "title": "세포의 구조와 기능",
+        "instructions": "시험관이 세포에 대해 이야기를 나눕니다. 세포설, 두 종류의 세포, 세포 소기관이 하는 일, 그리고 물질이 막을 통과하는 방식을 다룹니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요.",
+        "objectives": {
+          "cell-theory": "세포설 설명하기",
+          "prokaryote-eukaryote": "원핵세포와 진핵세포 비교하기",
+          "organelles": "주요 세포 소기관의 역할 설명하기",
+          "membrane-transport": "물질이 세포막을 통과하는 방식 설명하기"
+        }
+      },
+      "es": {
+        "title": "Estructura y función de la célula",
+        "instructions": "El examinador conversará con usted sobre las células: la teoría celular, los dos tipos de células, la función de los organelos y cómo las sustancias atraviesan la membrana. Responda con sus propias palabras y explique por qué, no solo qué.",
+        "objectives": {
+          "cell-theory": "Explicar la teoría celular",
+          "prokaryote-eukaryote": "Comparar las células procariotas y eucariotas",
+          "organelles": "Explicar la función de los principales organelos",
+          "membrane-transport": "Explicar cómo las sustancias atraviesan la membrana celular"
+        }
+      }
+    }
   },
   {
     "title": "Mendelian Genetics",
     "category": "life-sciences",
     "subject": "Biology",
     "topic": "Heredity",
+    "instructions": "The examiner will talk with you about how traits are inherited: alleles, genotype and phenotype, Mendel's two laws and how to predict the offspring of a cross. Answer in your own words and explain why, not only what.",
     "passage": [
       "Gregor Mendel studied pea plants in the 1860s and found that traits are passed on as discrete units, now called genes. Each organism carries two copies, or alleles, of each gene, one from each parent. Different alleles produce different versions of a trait, such as purple or white flowers.",
       "When the two alleles differ, one may be dominant and mask the other, which is recessive. An organism's genotype is its pair of alleles, for example PP, Pp or pp; its phenotype is the trait it shows. PP and Pp plants both have purple flowers, so the same phenotype can come from different genotypes.",
@@ -61,13 +85,36 @@
         "concept": "Punnett squares and ratios", "definition": "A Punnett square gives the probabilities of offspring genotypes and phenotypes from a cross.",
         "facts": ["Pp x Pp gives a 1:2:1 genotype ratio.", "Pp x Pp gives a 3:1 phenotype ratio.", "Ratios are probabilities, not guarantees for a small family."],
         "misconceptions": ["Four offspring of Pp x Pp must be exactly three dominant and one recessive."] }
-    ]
+    ],
+    "translations": {
+      "ko": {
+        "title": "멘델 유전학",
+        "instructions": "시험관이 형질의 유전에 대해 이야기를 나눕니다. 대립유전자, 유전자형과 표현형, 멘델의 두 법칙, 그리고 교배에서 자손을 예측하는 방법을 다룹니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요.",
+        "objectives": {
+          "alleles": "유전자, 대립유전자, 유전자형, 표현형 설명하기",
+          "segregation": "분리의 법칙 설명하기",
+          "independent-assortment": "독립의 법칙 설명하기",
+          "punnett": "교배 비율 예측하고 해석하기"
+        }
+      },
+      "es": {
+        "title": "Genética mendeliana",
+        "instructions": "El examinador conversará con usted sobre cómo se heredan los rasgos: los alelos, el genotipo y el fenotipo, las dos leyes de Mendel y cómo predecir la descendencia de un cruce. Responda con sus propias palabras y explique por qué, no solo qué.",
+        "objectives": {
+          "alleles": "Explicar genes, alelos, genotipo y fenotipo",
+          "segregation": "Explicar la ley de la segregación",
+          "independent-assortment": "Explicar la ley de la distribución independiente",
+          "punnett": "Predecir e interpretar las proporciones de un cruce"
+        }
+      }
+    }
   },
   {
     "title": "Evolution by Natural Selection",
     "category": "life-sciences",
     "subject": "Biology",
     "topic": "Evolution",
+    "instructions": "The examiner will talk with you about evolution: how natural selection works, where variation comes from and what evidence supports it. Answer in your own words and explain why, not only what.",
     "passage": [
       "Charles Darwin and Alfred Russel Wallace proposed natural selection as the main mechanism of evolution, published in 1858; Darwin's On the Origin of Species followed in 1859. Evolution is a change in the inherited characteristics of a population over generations.",
       "Natural selection rests on observable facts. Individuals in a population vary; much of that variation is inherited; more offspring are produced than can survive; and individuals with traits better suited to their environment tend to survive and reproduce more. Over generations those traits become more common.",
@@ -87,6 +134,391 @@
         "concept": "Evidence for evolution", "definition": "Fossils, homologous structures, DNA comparisons and observed change support common descent and selection.",
         "facts": ["The fossil record shows change over time.", "Homologous structures point to common ancestry.", "Antibiotic resistance is evolution observed directly."],
         "misconceptions": ["Evolution is just a guess because it is called a theory."] }
-    ]
+    ],
+    "translations": {
+      "ko": {
+        "title": "자연선택에 의한 진화",
+        "instructions": "시험관이 진화에 대해 이야기를 나눕니다. 자연선택이 작동하는 방식, 변이가 생기는 원인, 그리고 진화를 뒷받침하는 증거를 다룹니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요.",
+        "objectives": {
+          "mechanism": "자연선택의 작동 방식 설명하기",
+          "variation": "변이가 생기는 원인 설명하기",
+          "evidence": "진화의 증거 활용하기"
+        }
+      },
+      "es": {
+        "title": "Evolución por selección natural",
+        "instructions": "El examinador conversará con usted sobre la evolución: cómo funciona la selección natural, de dónde proviene la variación y qué evidencia la respalda. Responda con sus propias palabras y explique por qué, no solo qué.",
+        "objectives": {
+          "mechanism": "Explicar cómo funciona la selección natural",
+          "variation": "Explicar de dónde proviene la variación",
+          "evidence": "Usar la evidencia de la evolución"
+        }
+      }
+    }
+  },
+  {
+    "title": "DNA Replication and Protein Synthesis",
+    "category": "life-sciences",
+    "subject": "Biology",
+    "topic": "Molecular biology",
+    "instructions": "The examiner will talk with you about DNA: its structure, how it is copied, and how a gene's information is turned into a protein. Answer in your own words and explain why, not only what.",
+    "passage": [
+      "DNA is a double helix of two strands of nucleotides. Each nucleotide has a deoxyribose sugar, a phosphate group and one of four bases: adenine (A), thymine (T), guanine (G) and cytosine (C). The strands are held together by hydrogen bonds between complementary bases, A with T and G with C, and they run in opposite directions, which is called antiparallel.",
+      "Before a cell divides it copies its DNA. The enzyme helicase unwinds the helix, and each strand serves as a template for a new one, built by DNA polymerase according to base pairing. Replication is semiconservative: each new double helix keeps one original strand and gains one new strand, as Matthew Meselson and Franklin Stahl showed in 1958.",
+      "A gene is a stretch of DNA that codes for a product, usually a protein. In transcription, RNA polymerase copies a gene into messenger RNA (mRNA), which uses the base uracil (U) in place of thymine. In eukaryotes transcription happens in the nucleus, and the mRNA is processed before it moves out to the cytoplasm.",
+      "In translation, ribosomes read the mRNA three bases at a time. Each three-base codon specifies an amino acid or a stop signal, and transfer RNA (tRNA) molecules with matching anticodons deliver the amino acids, which are joined into a polypeptide chain. The genetic code is nearly universal and is redundant: most amino acids are coded by more than one codon, so a mutation that changes one base may change the protein or may have no effect at all."
+    ],
+    "objectives": [
+      { "key": "dna-structure", "title": "Describe the structure of DNA", "description": "Explains nucleotides, complementary base pairing and the double helix.",
+        "concept": "DNA structure", "definition": "DNA is a double helix of two antiparallel nucleotide strands joined by complementary base pairs, A with T and G with C.",
+        "facts": ["Each nucleotide has a sugar, a phosphate and a base.", "A pairs with T and G pairs with C.", "The two strands run in opposite directions."],
+        "misconceptions": ["A pairs with G and T pairs with C.", "The two strands are held together by the sugar-phosphate backbone."] },
+      { "key": "replication", "title": "Explain how DNA is replicated", "description": "Explains template copying and why replication is called semiconservative.",
+        "concept": "Semiconservative replication", "definition": "Each strand of the unwound helix is the template for a new complementary strand, so every copy keeps one old strand.",
+        "facts": ["Helicase unwinds the double helix.", "DNA polymerase builds new strands by base pairing.", "Each new molecule has one original and one new strand."],
+        "misconceptions": ["Replication builds an entirely new molecule and leaves the original helix intact."] },
+      { "key": "transcription", "title": "Explain transcription", "description": "Says how a gene is copied into mRNA, and where it happens.",
+        "concept": "Transcription", "definition": "RNA polymerase copies a gene's DNA sequence into a complementary messenger RNA.",
+        "facts": ["RNA polymerase makes mRNA from a DNA template.", "RNA uses uracil instead of thymine.", "In eukaryotes transcription happens in the nucleus."],
+        "misconceptions": ["Transcription makes protein directly.", "A whole chromosome is copied into a single mRNA."] },
+      { "key": "translation", "title": "Explain translation and the genetic code", "description": "Explains codons and tRNA, and how a mutation can change a protein or not.",
+        "concept": "Translation and the genetic code", "definition": "Ribosomes read mRNA codons, and tRNAs bring the matching amino acids to build a polypeptide.",
+        "facts": ["A codon is three bases that specify one amino acid or a stop.", "tRNA anticodons pair with mRNA codons.", "Most amino acids have more than one codon, so some mutations change nothing."],
+        "misconceptions": ["Every mutation changes the protein.", "Each single base codes for one amino acid."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "DNA 복제와 단백질 합성",
+        "instructions": "시험관이 DNA에 대해 이야기를 나눕니다. DNA의 구조, 복제되는 방식, 그리고 유전자의 정보가 단백질로 바뀌는 과정을 다룹니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요.",
+        "objectives": {
+          "dna-structure": "DNA의 구조 설명하기",
+          "replication": "DNA 복제 과정 설명하기",
+          "transcription": "전사 설명하기",
+          "translation": "번역과 유전 암호 설명하기"
+        }
+      },
+      "es": {
+        "title": "Replicación del ADN y síntesis de proteínas",
+        "instructions": "El examinador conversará con usted sobre el ADN: su estructura, cómo se copia y cómo la información de un gen se convierte en una proteína. Responda con sus propias palabras y explique por qué, no solo qué.",
+        "objectives": {
+          "dna-structure": "Describir la estructura del ADN",
+          "replication": "Explicar cómo se replica el ADN",
+          "transcription": "Explicar la transcripción",
+          "translation": "Explicar la traducción y el código genético"
+        }
+      }
+    }
+  },
+  {
+    "title": "Photosynthesis and Cellular Respiration",
+    "category": "life-sciences",
+    "subject": "Biology",
+    "topic": "Bioenergetics",
+    "instructions": "The examiner will talk with you about how living things capture and use energy: ATP, photosynthesis, aerobic respiration and fermentation. Answer in your own words and explain why, not only what.",
+    "passage": [
+      "Cells need a steady supply of usable energy, which they hold in the molecule ATP (adenosine triphosphate). Photosynthesis captures light energy and stores it in sugar; cellular respiration releases the energy in sugar and uses it to make ATP. Plants and algae do both; animals and fungi only respire.",
+      "Photosynthesis takes place in chloroplasts. Its overall equation is 6CO2 + 6H2O + light energy -> C6H12O6 + 6O2. In the light-dependent reactions, in the thylakoid membranes, chlorophyll absorbs light and water is split, releasing oxygen and producing ATP and NADPH. In the Calvin cycle, in the stroma, that ATP and NADPH are used to fix carbon dioxide into sugar.",
+      "Aerobic respiration is roughly the reverse overall: C6H12O6 + 6O2 -> 6CO2 + 6H2O + energy. Glycolysis splits glucose into pyruvate in the cytoplasm; the Krebs (citric acid) cycle and the electron transport chain in the mitochondria complete the breakdown, with oxygen as the final electron acceptor. One glucose molecule yields about 30 to 32 ATP.",
+      "Without oxygen, many cells rely on fermentation, which follows glycolysis and yields only 2 ATP per glucose. Human muscle cells make lactate; yeast makes ethanol and carbon dioxide. Plants respire all the time, day and night, while they photosynthesize only in the light."
+    ],
+    "objectives": [
+      { "key": "atp-role", "title": "Explain the role of ATP", "description": "Explains why cells need ATP and how photosynthesis and respiration connect through it.",
+        "concept": "ATP and energy in cells", "definition": "ATP is the cell's usable energy carrier; photosynthesis stores light energy in sugar and respiration turns sugar's energy into ATP.",
+        "facts": ["Cells use ATP to power their work.", "Photosynthesis stores light energy in sugar.", "Respiration releases the energy in sugar to make ATP."],
+        "misconceptions": ["Cellular respiration is the same thing as breathing.", "Mitochondria create energy from nothing."] },
+      { "key": "photosynthesis", "title": "Explain photosynthesis", "description": "Gives the inputs and outputs and the job of each of the two stages.",
+        "concept": "Photosynthesis", "definition": "In chloroplasts, light energy drives the conversion of carbon dioxide and water into sugar and oxygen.",
+        "facts": ["Photosynthesis happens in chloroplasts.", "The light-dependent reactions split water and release oxygen.", "The Calvin cycle fixes carbon dioxide into sugar using ATP and NADPH."],
+        "misconceptions": ["The oxygen released comes from carbon dioxide.", "Plants get most of their mass from the soil."] },
+      { "key": "respiration", "title": "Explain aerobic respiration", "description": "Names the stages, where they happen and the role of oxygen.",
+        "concept": "Aerobic respiration", "definition": "Glucose is broken down through glycolysis, the Krebs cycle and the electron transport chain, with oxygen as the final electron acceptor, to make ATP.",
+        "facts": ["Glycolysis happens in the cytoplasm.", "The Krebs cycle and electron transport chain happen in the mitochondria.", "Oxygen is the final electron acceptor.", "One glucose yields about 30 to 32 ATP."],
+        "misconceptions": ["Plants do not respire; they only photosynthesize."] },
+      { "key": "fermentation", "title": "Compare aerobic respiration and fermentation", "description": "Explains what cells do without oxygen and why it yields less ATP.",
+        "concept": "Fermentation", "definition": "Without oxygen, cells keep glycolysis running by fermentation, making lactate or ethanol and only 2 ATP per glucose.",
+        "facts": ["Fermentation yields only 2 ATP per glucose.", "Human muscle cells make lactate.", "Yeast makes ethanol and carbon dioxide."],
+        "misconceptions": ["Fermentation produces more ATP than aerobic respiration."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "광합성과 세포 호흡",
+        "instructions": "시험관이 생물이 에너지를 얻고 사용하는 방식에 대해 이야기를 나눕니다. ATP, 광합성, 유산소 호흡, 발효를 다룹니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요.",
+        "objectives": {
+          "atp-role": "ATP의 역할 설명하기",
+          "photosynthesis": "광합성 설명하기",
+          "respiration": "유산소 호흡 설명하기",
+          "fermentation": "유산소 호흡과 발효 비교하기"
+        }
+      },
+      "es": {
+        "title": "Fotosíntesis y respiración celular",
+        "instructions": "El examinador conversará con usted sobre cómo los seres vivos obtienen y usan la energía: el ATP, la fotosíntesis, la respiración aeróbica y la fermentación. Responda con sus propias palabras y explique por qué, no solo qué.",
+        "objectives": {
+          "atp-role": "Explicar la función del ATP",
+          "photosynthesis": "Explicar la fotosíntesis",
+          "respiration": "Explicar la respiración aeróbica",
+          "fermentation": "Comparar la respiración aeróbica y la fermentación"
+        }
+      }
+    }
+  },
+  {
+    "title": "Mitosis and Meiosis",
+    "category": "life-sciences",
+    "subject": "Biology",
+    "topic": "Cell division",
+    "instructions": "The examiner will talk with you about cell division: chromosomes, mitosis, meiosis and how meiosis makes every gamete different. Answer in your own words and explain why, not only what.",
+    "passage": [
+      "Cells reproduce by dividing. Before division, the cell copies its DNA during interphase, so each chromosome then consists of two identical sister chromatids joined at a centromere. Human body cells are diploid: they have 46 chromosomes in 23 homologous pairs, one chromosome of each pair from each parent.",
+      "Mitosis divides the nucleus to make two genetically identical diploid cells. In prophase the chromosomes condense; in metaphase they line up across the middle of the cell; in anaphase the sister chromatids are pulled to opposite poles; in telophase new nuclei form. Cytokinesis then divides the cytoplasm. Mitosis serves growth, repair and asexual reproduction.",
+      "Meiosis makes gametes. It has two divisions and produces four haploid cells, each with one chromosome from every homologous pair: 23 in humans. In meiosis I the homologous chromosomes pair up and separate; in meiosis II the sister chromatids separate. Fertilization joins two haploid gametes and restores the diploid number.",
+      "Meiosis makes each gamete genetically different. During prophase I, homologous chromosomes exchange segments in crossing over, and the way each pair lines up at metaphase I is random, so in humans independent assortment alone allows over 8 million (2 to the 23rd power) combinations. Errors in separation, called nondisjunction, can leave a gamete with an extra or a missing chromosome, as in Down syndrome (trisomy 21)."
+    ],
+    "objectives": [
+      { "key": "chromosomes", "title": "Explain chromosomes, chromatids and ploidy", "description": "Uses diploid, haploid, homologous pair and sister chromatid correctly.",
+        "concept": "Chromosome number", "definition": "Diploid cells carry two sets of chromosomes in homologous pairs, haploid cells carry one set, and a replicated chromosome has two sister chromatids.",
+        "facts": ["Human body cells have 46 chromosomes in 23 pairs.", "Of each homologous pair, one comes from each parent.", "Sister chromatids are identical copies made in interphase."],
+        "misconceptions": ["Sister chromatids and homologous chromosomes are the same thing."] },
+      { "key": "mitosis", "title": "Explain mitosis and its purpose", "description": "Describes the phases and why the daughter cells are identical.",
+        "concept": "Mitosis", "definition": "Mitosis separates sister chromatids to give two genetically identical diploid daughter cells.",
+        "facts": ["Chromosomes line up across the middle in metaphase.", "Sister chromatids separate in anaphase.", "Mitosis is used for growth, repair and asexual reproduction."],
+        "misconceptions": ["Mitosis halves the chromosome number.", "DNA is copied during mitosis itself."] },
+      { "key": "meiosis", "title": "Explain meiosis and fertilization", "description": "Explains how two divisions halve the chromosome number and why that matters.",
+        "concept": "Meiosis", "definition": "Meiosis makes four haploid gametes in two divisions; fertilization restores the diploid number.",
+        "facts": ["Meiosis has two divisions.", "Homologous chromosomes separate in meiosis I.", "Meiosis gives four haploid cells.", "Fertilization restores the diploid number."],
+        "misconceptions": ["Meiosis produces two identical cells, as mitosis does."] },
+      { "key": "meiotic-variation", "title": "Explain how meiosis creates variation", "description": "Explains crossing over and independent assortment, and what nondisjunction causes.",
+        "concept": "Genetic variation from meiosis", "definition": "Crossing over and the random alignment of homologous pairs make each gamete genetically unique.",
+        "facts": ["Crossing over exchanges segments between homologous chromosomes.", "Random alignment gives over 8 million combinations in humans.", "Nondisjunction can cause an extra chromosome, as in trisomy 21."],
+        "misconceptions": ["All the gametes one person makes are genetically identical."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "체세포 분열과 감수 분열",
+        "instructions": "시험관이 세포 분열에 대해 이야기를 나눕니다. 염색체, 체세포 분열, 감수 분열, 그리고 감수 분열이 생식세포를 저마다 다르게 만드는 방식을 다룹니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요.",
+        "objectives": {
+          "chromosomes": "염색체, 염색분체, 배수성 설명하기",
+          "mitosis": "체세포 분열과 그 목적 설명하기",
+          "meiosis": "감수 분열과 수정 설명하기",
+          "meiotic-variation": "감수 분열이 변이를 만드는 방식 설명하기"
+        }
+      },
+      "es": {
+        "title": "Mitosis y meiosis",
+        "instructions": "El examinador conversará con usted sobre la división celular: los cromosomas, la mitosis, la meiosis y cómo la meiosis hace que cada gameto sea distinto. Responda con sus propias palabras y explique por qué, no solo qué.",
+        "objectives": {
+          "chromosomes": "Explicar cromosomas, cromátidas y ploidía",
+          "mitosis": "Explicar la mitosis y su propósito",
+          "meiosis": "Explicar la meiosis y la fecundación",
+          "meiotic-variation": "Explicar cómo la meiosis genera variación"
+        }
+      }
+    }
+  },
+  {
+    "title": "Ecosystems and Energy Flow",
+    "category": "life-sciences",
+    "subject": "Biology",
+    "topic": "Ecology",
+    "instructions": "The examiner will talk with you about ecosystems: how they are organized, who eats whom, how energy moves between feeding levels and what limits a population. Answer in your own words and explain why, not only what.",
+    "passage": [
+      "An ecosystem is a community of living things together with the nonliving parts of its environment, such as water, soil, light and temperature. Ecologists study life at several levels: a population is the members of one species living in an area, and a community is all the populations living there together.",
+      "Energy enters most ecosystems as sunlight, captured by producers such as plants, algae and some bacteria. Primary consumers, the herbivores, eat producers; secondary and tertiary consumers eat other consumers; decomposers such as fungi and bacteria break down dead matter and wastes. Each feeding step is a trophic level, and the interlinked feeding relationships in an ecosystem form a food web.",
+      "Energy flows one way through an ecosystem and is not recycled. At each trophic level most of the energy is used for life processes and lost as heat, or is never eaten or digested, so on average only about 10 percent passes to the next level. That is why food chains rarely have more than four or five levels, and why there are far fewer top predators than plants.",
+      "Matter, unlike energy, is recycled: decomposers return nutrients such as nitrogen and phosphorus to the soil, where producers take them up again. Populations cannot grow without limit. Limiting factors such as food, space, predators and disease set a carrying capacity, the largest population an environment can sustain over time, and a growing population tends to level off near it."
+    ],
+    "objectives": [
+      { "key": "organization", "title": "Explain the levels of ecological organization", "description": "Distinguishes population, community and ecosystem and names biotic and abiotic parts.",
+        "concept": "Ecological organization", "definition": "A population is one species in an area, a community is all the populations there, and an ecosystem adds the nonliving environment.",
+        "facts": ["A population is the members of one species in an area.", "A community is all the populations in an area.", "An ecosystem includes nonliving factors such as water, light and soil."],
+        "misconceptions": ["An ecosystem includes only living things."] },
+      { "key": "trophic-levels", "title": "Explain trophic levels and food webs", "description": "Places producers, consumers and decomposers and explains each role.",
+        "concept": "Trophic levels", "definition": "Producers capture energy, consumers eat other organisms and decomposers break down dead matter; the feeding links form a food web.",
+        "facts": ["Producers capture energy from sunlight.", "Herbivores are primary consumers.", "Decomposers break down dead matter and return nutrients."],
+        "misconceptions": ["Decomposers are unimportant to an ecosystem.", "Plants get their energy from the soil."] },
+      { "key": "energy-transfer", "title": "Explain why energy flow limits food chains", "description": "Uses the roughly 10 percent rule and says where the rest of the energy goes.",
+        "concept": "Energy transfer between trophic levels", "definition": "Only about 10 percent of the energy at one trophic level passes to the next; the rest is lost, mostly as heat.",
+        "facts": ["Energy flows one way and is not recycled.", "About 10 percent of the energy passes to the next level.", "Most energy is lost as heat from life processes.", "Food chains rarely exceed four or five levels."],
+        "misconceptions": ["Energy is recycled through an ecosystem just as nutrients are.", "A predator receives all the energy its prey ever ate."] },
+      { "key": "carrying-capacity", "title": "Explain carrying capacity", "description": "Names limiting factors and explains why populations stop growing.",
+        "concept": "Carrying capacity", "definition": "Carrying capacity is the largest population an environment can sustain, set by limiting factors such as food, space, predators and disease.",
+        "facts": ["Limiting factors include food, space, predators and disease.", "A growing population tends to level off near the carrying capacity."],
+        "misconceptions": ["A population with enough food will grow forever."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "생태계와 에너지 흐름",
+        "instructions": "시험관이 생태계에 대해 이야기를 나눕니다. 생태계의 구성, 먹고 먹히는 관계, 영양 단계 사이에서 에너지가 이동하는 방식, 그리고 개체군을 제한하는 요인을 다룹니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요.",
+        "objectives": {
+          "organization": "생태학적 조직 수준 설명하기",
+          "trophic-levels": "영양 단계와 먹이 그물 설명하기",
+          "energy-transfer": "에너지 흐름이 먹이 사슬을 제한하는 이유 설명하기",
+          "carrying-capacity": "환경 수용력 설명하기"
+        }
+      },
+      "es": {
+        "title": "Ecosistemas y flujo de energía",
+        "instructions": "El examinador conversará con usted sobre los ecosistemas: cómo se organizan, quién se alimenta de quién, cómo se transfiere la energía entre los niveles tróficos y qué limita a una población. Responda con sus propias palabras y explique por qué, no solo qué.",
+        "objectives": {
+          "organization": "Explicar los niveles de organización ecológica",
+          "trophic-levels": "Explicar los niveles tróficos y las redes alimentarias",
+          "energy-transfer": "Explicar por qué el flujo de energía limita las cadenas alimentarias",
+          "carrying-capacity": "Explicar la capacidad de carga"
+        }
+      }
+    }
+  },
+  {
+    "title": "The Immune System",
+    "category": "life-sciences",
+    "subject": "Biology",
+    "topic": "Immunology",
+    "instructions": "The examiner will talk with you about how the body defends itself: barriers, the innate response, the adaptive response and immune memory. Answer in your own words and explain why, not only what.",
+    "passage": [
+      "The immune system defends the body against pathogens: disease-causing bacteria, viruses, fungi and parasites. Its first line of defence is a set of barriers: the skin, mucus that traps microbes in the airways, and chemicals such as stomach acid and the enzyme lysozyme in tears and saliva.",
+      "If pathogens get past the barriers, the innate immune response acts within minutes to hours. Damaged tissue releases chemical signals that cause inflammation, bringing more blood and white blood cells to the site. Phagocytes such as neutrophils and macrophages engulf and digest invaders. The innate response is fast but nonspecific: it reacts in much the same way to many different pathogens.",
+      "The adaptive immune response is slower to start but specific. Lymphocytes recognize particular antigens, molecules such as proteins on the surface of a pathogen. B cells make antibodies that bind to antigens and mark pathogens for destruction; helper T cells coordinate the response; cytotoxic T cells kill the body's own cells that have been infected by a virus.",
+      "After an infection, memory B and T cells remain, so a second exposure to the same antigen brings a faster and stronger response: this is immunity. Vaccines produce it without the disease by presenting a harmless form or part of a pathogen. Antibiotics kill bacteria but have no effect on viruses."
+    ],
+    "objectives": [
+      { "key": "innate", "title": "Explain the first and second lines of defence", "description": "Describes barriers, inflammation and phagocytes and why they are nonspecific.",
+        "concept": "Innate immunity", "definition": "Barriers and the innate response act quickly against any pathogen without targeting a particular one.",
+        "facts": ["Skin, mucus and stomach acid are barriers.", "Inflammation brings white blood cells to the site.", "Phagocytes engulf and digest pathogens.", "The innate response is fast and nonspecific."],
+        "misconceptions": ["Inflammation is only harmful and serves no purpose."] },
+      { "key": "adaptive", "title": "Explain the adaptive immune response", "description": "Explains antigens and the roles of B cells and T cells.",
+        "concept": "Adaptive immunity", "definition": "Lymphocytes recognize specific antigens: B cells make antibodies, helper T cells coordinate and cytotoxic T cells kill infected cells.",
+        "facts": ["An antigen is a molecule the immune system recognizes.", "B cells make antibodies.", "Helper T cells coordinate the response.", "Cytotoxic T cells kill infected body cells."],
+        "misconceptions": ["One kind of antibody works against every pathogen.", "Antibodies and antigens are the same thing."] },
+      { "key": "memory-vaccines", "title": "Explain immune memory and vaccination", "description": "Explains why a second exposure is milder and how vaccines use that.",
+        "concept": "Immunological memory", "definition": "Memory cells left from a first exposure give a faster, stronger response the next time; vaccines create them without causing the disease.",
+        "facts": ["Memory B and T cells persist after an infection.", "A second exposure triggers a faster, stronger response.", "Vaccines present a harmless form or part of a pathogen."],
+        "misconceptions": ["Vaccines work by giving you the disease.", "Antibiotics cure viral infections."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "면역 체계",
+        "instructions": "시험관이 몸이 스스로를 방어하는 방식에 대해 이야기를 나눕니다. 물리적 장벽, 선천 면역 반응, 적응 면역 반응, 면역 기억을 다룹니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요.",
+        "objectives": {
+          "innate": "1차 및 2차 방어선 설명하기",
+          "adaptive": "적응 면역 반응 설명하기",
+          "memory-vaccines": "면역 기억과 백신 접종 설명하기"
+        }
+      },
+      "es": {
+        "title": "El sistema inmunitario",
+        "instructions": "El examinador conversará con usted sobre cómo se defiende el cuerpo: las barreras, la respuesta innata, la respuesta adaptativa y la memoria inmunitaria. Responda con sus propias palabras y explique por qué, no solo qué.",
+        "objectives": {
+          "innate": "Explicar la primera y la segunda línea de defensa",
+          "adaptive": "Explicar la respuesta inmunitaria adaptativa",
+          "memory-vaccines": "Explicar la memoria inmunitaria y la vacunación"
+        }
+      }
+    }
+  },
+  {
+    "title": "Homeostasis and Feedback",
+    "category": "life-sciences",
+    "subject": "Biology",
+    "topic": "Physiology",
+    "instructions": "The examiner will talk with you about how the body keeps its internal conditions stable: negative feedback, temperature control, blood glucose and positive feedback. Answer in your own words and explain why, not only what.",
+    "passage": [
+      "Homeostasis is the maintenance of a stable internal environment despite changes outside. The human body keeps its core temperature near 37 degrees Celsius, its blood glucose within a narrow range, and the water and salt levels of its blood steady, because enzymes and cells work properly only within limits.",
+      "Most homeostasis uses negative feedback. A receptor detects a change, a control center such as the brain compares it with a set point, and an effector responds to reverse the change. When body temperature rises, the hypothalamus triggers sweating and widens blood vessels in the skin so more heat is lost; when it falls, shivering produces heat and skin blood vessels narrow.",
+      "Blood glucose is regulated by two hormones from the pancreas. After a meal, rising glucose triggers the release of insulin, which makes cells take up glucose and the liver store it as glycogen. When glucose falls, glucagon makes the liver break glycogen down and release glucose. In type 1 diabetes the pancreas makes little or no insulin; in type 2 diabetes the body's cells respond poorly to it.",
+      "Positive feedback, by contrast, amplifies a change instead of reversing it, driving a process to completion. During childbirth, the hormone oxytocin strengthens contractions, which press the baby against the cervix, which causes more oxytocin to be released, until birth ends the loop. Blood clotting is another example."
+    ],
+    "objectives": [
+      { "key": "homeostasis", "title": "Explain what homeostasis is and why it matters", "description": "Defines homeostasis and gives examples of variables the body regulates.",
+        "concept": "Homeostasis", "definition": "Homeostasis keeps internal conditions such as temperature and blood glucose within the limits in which cells work.",
+        "facts": ["Core body temperature is kept near 37 degrees Celsius.", "Blood glucose is kept within a narrow range.", "Enzymes and cells work properly only within limits."],
+        "misconceptions": ["Homeostasis means internal conditions never change at all."] },
+      { "key": "negative-feedback", "title": "Explain negative feedback using temperature control", "description": "Names receptor, control center and effector and shows how the change is reversed.",
+        "concept": "Negative feedback", "definition": "A receptor detects a change, a control center compares it with a set point, and effectors act to reverse the change.",
+        "facts": ["Negative feedback reverses a change.", "The hypothalamus controls body temperature.", "Sweating and widened skin blood vessels lose heat; shivering produces heat."],
+        "misconceptions": ["Negative feedback means a harmful response.", "Sweat cools the body because it comes out cold."] },
+      { "key": "glucose", "title": "Explain how blood glucose is regulated", "description": "Explains the opposing roles of insulin and glucagon and what goes wrong in diabetes.",
+        "concept": "Blood glucose regulation", "definition": "Insulin lowers blood glucose by uptake and storage as glycogen; glucagon raises it by releasing stored glucose.",
+        "facts": ["The pancreas releases insulin and glucagon.", "Insulin makes cells take up glucose and the liver store glycogen.", "Glucagon makes the liver release glucose.", "Type 1 diabetes is a lack of insulin; type 2 is a poor response to it."],
+        "misconceptions": ["Glucagon and glycogen are the same thing.", "Insulin is a kind of sugar."] },
+      { "key": "positive-feedback", "title": "Contrast positive and negative feedback", "description": "Explains how positive feedback amplifies a change and gives an example.",
+        "concept": "Positive feedback", "definition": "Positive feedback amplifies a change until an outside event ends the loop, as in childbirth and blood clotting.",
+        "facts": ["Positive feedback amplifies a change instead of reversing it.", "Oxytocin in childbirth forms a positive feedback loop.", "Blood clotting uses positive feedback."],
+        "misconceptions": ["Positive feedback means a good or healthy response."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "항상성과 되먹임",
+        "instructions": "시험관이 몸이 내부 환경을 안정적으로 유지하는 방식에 대해 이야기를 나눕니다. 음성 되먹임, 체온 조절, 혈당 조절, 양성 되먹임을 다룹니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요.",
+        "objectives": {
+          "homeostasis": "항상성의 의미와 중요성 설명하기",
+          "negative-feedback": "체온 조절을 예로 음성 되먹임 설명하기",
+          "glucose": "혈당이 조절되는 방식 설명하기",
+          "positive-feedback": "양성 되먹임과 음성 되먹임 대조하기"
+        }
+      },
+      "es": {
+        "title": "Homeostasis y retroalimentación",
+        "instructions": "El examinador conversará con usted sobre cómo el cuerpo mantiene estables sus condiciones internas: la retroalimentación negativa, el control de la temperatura, la glucosa en sangre y la retroalimentación positiva. Responda con sus propias palabras y explique por qué, no solo qué.",
+        "objectives": {
+          "homeostasis": "Explicar qué es la homeostasis y por qué es importante",
+          "negative-feedback": "Explicar la retroalimentación negativa con el control de la temperatura",
+          "glucose": "Explicar cómo se regula la glucosa en sangre",
+          "positive-feedback": "Contrastar la retroalimentación positiva y la negativa"
+        }
+      }
+    }
+  },
+  {
+    "title": "Classification and the Tree of Life",
+    "category": "life-sciences",
+    "subject": "Biology",
+    "topic": "Systematics",
+    "instructions": "The examiner will talk with you about how living things are named and classified: species names, the ranks, the three domains and how to read a phylogenetic tree. Answer in your own words and explain why, not only what.",
+    "passage": [
+      "Biologists name and classify the millions of species on Earth so they can be studied and compared. Carl Linnaeus introduced binomial nomenclature in the 18th century: each species has a two-part Latin name made of its genus and a specific epithet, such as Homo sapiens, written in italics with the genus capitalized.",
+      "Species are grouped into a hierarchy of ranks: domain, kingdom, phylum, class, order, family, genus and species. Organisms that share more ranks are more closely related. Following the work of Carl Woese in 1977, life is divided into three domains: Bacteria, Archaea and Eukarya. Archaea are prokaryotes like bacteria, yet in some ways, such as how they copy and read their DNA, they are closer to eukaryotes.",
+      "Modern classification aims to reflect evolutionary history. A phylogenetic tree shows how species are related through common ancestors: each branch point, or node, represents a common ancestor, and a clade is an ancestor together with all of its descendants. Species that share a more recent common ancestor are more closely related, however alike or unlike they look.",
+      "Trees are built from shared derived characteristics, traits that arose in a common ancestor and were passed to its descendants, and increasingly from DNA sequences. Similarity can mislead: the wings of birds and bats evolved separately, as analogous structures produced by convergent evolution, so they do not show a close relationship. Humans did not evolve from chimpanzees; the two share a common ancestor that lived roughly 6 to 7 million years ago."
+    ],
+    "objectives": [
+      { "key": "naming", "title": "Explain binomial nomenclature and the ranks of classification", "description": "Explains two-part species names and the hierarchy from domain to species.",
+        "concept": "Linnaean classification", "definition": "Each species has a two-part name of genus and specific epithet and is placed in nested ranks from domain to species.",
+        "facts": ["A species name has two parts: the genus and the specific epithet.", "The ranks run domain, kingdom, phylum, class, order, family, genus, species.", "Organisms that share more ranks are more closely related."],
+        "misconceptions": ["The genus name alone identifies a species."] },
+      { "key": "domains", "title": "Explain the three domains of life", "description": "Names the domains and explains why archaea are separated from bacteria.",
+        "concept": "The three domains", "definition": "Life is divided into Bacteria, Archaea and Eukarya; archaea are prokaryotes distinct from bacteria.",
+        "facts": ["The three domains are Bacteria, Archaea and Eukarya.", "Bacteria and archaea are both prokaryotes.", "In some ways archaea are closer to eukaryotes than to bacteria."],
+        "misconceptions": ["Archaea are just a kind of bacteria."] },
+      { "key": "phylogeny", "title": "Read a phylogenetic tree", "description": "Explains nodes and clades and how relatedness is judged from a tree.",
+        "concept": "Phylogenetic trees", "definition": "A phylogenetic tree shows common ancestry: nodes are common ancestors and a clade is an ancestor with all its descendants.",
+        "facts": ["Each node represents a common ancestor.", "A clade includes an ancestor and all its descendants.", "Relatedness depends on how recent the shared ancestor is."],
+        "misconceptions": ["Species at the tips on one side of the tree are more advanced.", "Humans evolved from chimpanzees."] },
+      { "key": "tree-evidence", "title": "Explain what evidence trees are built from", "description": "Distinguishes shared derived traits and DNA from misleading similarity.",
+        "concept": "Homology and analogy", "definition": "Trees rest on shared derived traits and DNA, not on similarity produced by convergent evolution.",
+        "facts": ["Shared derived characteristics come from a common ancestor.", "DNA sequences are a major source of evidence.", "Bird and bat wings are analogous: they evolved separately."],
+        "misconceptions": ["Organisms that look alike must be closely related."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "분류와 생명의 나무",
+        "instructions": "시험관이 생물의 이름을 짓고 분류하는 방식에 대해 이야기를 나눕니다. 종의 학명, 분류 계급, 생명의 세 역, 그리고 계통수를 읽는 방법을 다룹니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요.",
+        "objectives": {
+          "naming": "이명법과 분류 계급 설명하기",
+          "domains": "생명의 세 역 설명하기",
+          "phylogeny": "계통수 읽기",
+          "tree-evidence": "계통수를 만드는 근거 설명하기"
+        }
+      },
+      "es": {
+        "title": "La clasificación y el árbol de la vida",
+        "instructions": "El examinador conversará con usted sobre cómo se nombran y clasifican los seres vivos: los nombres de las especies, las categorías taxonómicas, los tres dominios y cómo interpretar un árbol filogenético. Responda con sus propias palabras y explique por qué, no solo qué.",
+        "objectives": {
+          "naming": "Explicar la nomenclatura binomial y las categorías taxonómicas",
+          "domains": "Explicar los tres dominios de la vida",
+          "phylogeny": "Interpretar un árbol filogenético",
+          "tree-evidence": "Explicar en qué evidencia se basan los árboles filogenéticos"
+        }
+      }
+    }
   }
 ]
