@@ -18,6 +18,13 @@ at the answer. A panel of AI models scores each objective, a human examiner grad
 authorized person approves it. Integrity signals (focus loss, a second voice, reading from elsewhere) are
 shown to the reviewer as evidence, never as an automatic verdict.
 
+The exam is a conversation, not a form. A talking examiner asks each question aloud and starts speaking the
+next one within moments of the answer, while it is still being written. Students can take an exam in English
+or Korean, with recognition, voice and lip-sync in that language, and a student answering in a second language
+is heard and graded for what they understand, not for accent, grammar or fluency. Looking away to think is
+never penalized: the exam room follows the research on attention, and anything it notices goes to a person,
+never to an automatic decision.
+
 It's a multi-tenant web platform for schools, universities, certification bodies and corporate training:
 organizations, teachers, examiners, reviewers and students, a full audit trail, privacy controls, and an
 API for other applications. Built on Blazor Server, SQL Server and Azure, with
@@ -38,7 +45,10 @@ claude.ai export. It is documented further down.
 - Keep the evidence intact: each answer as it was heard, with the words the recognizer was unsure of, and every
   clarification stay on the record, with an audit trail whose rows are never deleted.
 - Protect students: integrity signals are low-confidence notes for a reviewer, never a verdict, and video
-  never leaves the student's device ([docs/PRIVACY.md](docs/PRIVACY.md)).
+  never leaves the student's device ([docs/PRIVACY.md](docs/PRIVACY.md)). Nothing is cancelled or deleted
+  automatically; a human decides.
+- Be fair to students who think, speak or hear differently: looking away to think is normal and never costs
+  anything, second-language speakers are graded on content, and fairness is measured by group and by language.
 - Try it without spending anything: the default development setup runs a clearly labelled mock panel, so
   no provider key or credit is needed.
 
@@ -66,10 +76,26 @@ The research also sets limits, and Gadfly is built around them:
   use in the EU (AI Act, Annex III point 3).
 - **Speech recognition errs more on some dialects and on stuttered speech** (Koenecke et al. 2020; Mujtaba
   et al. 2024): judges ignore transcription slips and never penalize accent or fluency.
+- **Second-language speakers pause longer and are misheard more** ([ESL and Korean research](docs/research/esl-and-korean.md)):
+  Gadfly asks for the student's primary language (never infers it), and only when it differs from the exam
+  language pins the recognizer, waits longer before taking an answer, slows the examiner slightly, asks about a
+  word it was unsure of instead of misjudging it, and gives the judges the answer's content without fillers and
+  false starts. An English speaker taking an English exam gets exactly the same exam as before.
+- **Looking away while thinking is normal and helps** (Glenberg et al. 1998; Doherty-Sneddon & Phelps 2005;
+  [attention research](docs/research/attention-and-gaze.md)): nothing reacts in the thinking gap before the first
+  word, anywhere on the screen counts as looking at the screen, and only a long look off the screen while answering
+  gets a gentle reminder from the examiner herself. The self-view is hidden during the exam, since watching yourself
+  raises appearance anxiety (Tien et al. 2023). Leaving the window pauses the exam; an automatic cancellation would
+  be a solely automated decision (GDPR Art. 22; CNIL 2023), so a person reviews instead.
 - **Webcam gaze is too coarse to tell reading from thinking** (Papoutsaki et al. 2016; Rayner 2009), and
   **voice-stress analysis performs at chance** (Harnsberger et al. 2009; NRC 2003): both are low-confidence
   reviewer notes, never a verdict and never part of the grade. The research recommends going further on voice
   strain than Gadfly does today; that gap is stated on the full page.
+- **Waiting in silence feels longer than it is**: a natural spoken filler with a thinking gesture shortened
+  perceived waits where a "processing" sound did not (Maslych et al. 2025), so the examiner thinks visibly instead
+  of playing a sound. A realtime speech-to-speech model was not adopted: it would not shorten the wait for a
+  grounded, leak-checked question and would break the voice, lip-sync and integrity checks
+  ([speech-to-speech note](docs/research/speech-to-speech.md)).
 
 Gadfly makes no validity claims until its own pilot measures them. The full explanation, with the
 verification level of every source, is in [docs/SCIENCE.md](docs/SCIENCE.md); the research notes and
@@ -94,12 +120,52 @@ Gadfly Exams, the web platform (`Gadfly.Server`):
   grant. Each question is written from the previous answer; unclear answers get a neutral clarifying question;
   "I don't know" is recorded as honest aporia; answers are taken as heard, with the words the recognizer was unsure
   of marked for graders. The server keeps time, a lost device pauses the exam and stops the clock, and a reload or
-  dropped connection resumes the same question. A get-ready page checks the browser, camera and microphone, and an
-  ungraded five-minute practice interview lets students meet the examiner first. See [docs/VOICE.md](docs/VOICE.md).
-- **Integrity notes, never verdicts.** Eye contact (with a gentle screen fade), camera presence and a second face,
-  browser focus and copying, a second voice and answers that sound read out are low-confidence notes for a reviewer:
-  hidden from a blind grader, never part of a grade, and shown to the student with their result. Video never leaves
-  the student's device. See [docs/PRIVACY.md](docs/PRIVACY.md).
+  dropped connection resumes the same question. The room is laid out like a video call (the examiner centred, the
+  transcript as a conversation beside her), and the student can ask her to repeat a question or **say it another
+  way** (a leak-checked rewording that never counts against them). See [docs/VOICE.md](docs/VOICE.md).
+- **A conversational examiner.** One fast model (Claude Sonnet 5 by default, never Opus; `Gadfly:LiveTurn:*`) words
+  the next question and checks it for leaks; its reply streams sentence by sentence, each sentence leak-checked
+  before she says it, so she starts speaking while the question is still being written. The next step can be
+  prepared from the student's words while they are still speaking. She acknowledges each answer at once with a short,
+  non-judging line, and fills a longer wait with a thinking gesture and a spoken filler instead of a sound. A finished
+  sentence ends the answer after about two seconds of silence instead of four. The full multi-model panel still judges
+  every answer, in the background, and only its judgment is graded.
+- **Exams in English and Korean.** An exam lists the languages it is offered in (English and Korean by default), and
+  the student picks one before beginning. A Korean attempt is heard by a Korean recognizer, spoken in Korean, lip-synced
+  with Gadfly's own Hangul-to-viseme module, and examined with Korean prompts and Korean text rules. The exam's title,
+  instructions and objective titles get a machine-translated draft that an instructor edits and approves (students
+  are told when a text is still an unchecked draft); the course material, concept map and rubric stay as written, so
+  every language is the same exam. Graders read the original words, which are the record, with a labelled machine
+  translation into English on request. The student pages, emails, consent notice and student help essentials are in
+  Korean too; the exam room's own on-screen text in Korean is being finished (GAD-T606). See
+  [docs/LOCALIZATION.md](docs/LOCALIZATION.md). Spanish is planned next (GAD-T596).
+- **Second-language speakers.** The student states the languages they speak and the one they speak best; nothing is
+  inferred from voice or name. When that differs from the exam language, the recognizer is pinned to the exam
+  language, end-of-answer silences are longer (`Gadfly:Voice:Esl:*`), the examiner speaks slightly slower and in
+  plainer questions, a word the recognizer was unsure of is asked about briefly instead of misjudged, and the judges
+  read the answer's content without fillers, repeats and false starts (they are never told why). Fairness views,
+  calibration and speech-recognition accuracy can be grouped by exam language and by stated primary language.
+- **The get-ready studio.** One screen in the student's language: choose the exam language, your languages, your
+  camera and microphone (with checks and a microphone test), and your examiner (a male examiner is coming, GAD-T504);
+  an optional voice calibration (reading a short sentence three times, keeping only timing and confidence numbers,
+  never audio); a plain statement that the camera checks presence and never grades or decides; and a free practice run
+  with the same examiner and room, which stores nothing.
+- **Attention, from the evidence.** No reminder in the thinking gap before the first word; anywhere on the screen
+  counts as looking at it; only a long look off the screen while answering starts a gentle ladder (her head tilt and
+  raised brows, then a soft dim of everything but her, then one warm spoken line at a pause, a few times per exam at
+  most), and reminders never touch the grade. The student's self-view is hidden during the exam (a camera-on
+  indicator, and a preview on request). Leaving the exam window pauses the exam and keeps the words already said;
+  repeated or long absences mark the attempt for an instructor to review, with the student's own explanation. Nothing
+  is ever cancelled or deleted automatically, and staff can grant a window-absence accommodation per student.
+- **Integrity notes, never verdicts.** Eye contact, camera presence and a second face, browser focus and copying, a
+  second voice and answers that sound read out are low-confidence notes for a reviewer: hidden from a blind grader,
+  never part of a grade, and shown to the student with their result. Video never leaves the student's device. See
+  [docs/PRIVACY.md](docs/PRIVACY.md).
+- **Accessibility.** Built toward WCAG 2.2 AA and checked with axe in light and dark themes at desktop and phone
+  widths: one spacing scale, 24px targets, keyboard-operable exam controls (Hold to talk with Space or Enter), a
+  choice of how long a silence waits before an answer goes in, one screen-reader announcement per question, and
+  `<html lang>` following the interface language. Conformance is not claimed until assistive-technology testing is
+  done; see [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md).
 - **Grading with people accountable.** AI preliminary grades per objective from a multi-model panel, blind human
   grading, combined scoring, reconciliation, separation of duties (scorer, reconciler and approver), final approval,
   publication, appeals and amendments. Reviewers see the path each objective took. Reports as Markdown, CSV and
@@ -208,6 +274,16 @@ server with the matching seeder (`-Password` chooses the account password). The 
 | `Gadfly:AiMode` | `live`, `mock` or `auto`, as above. |
 | `Gadfly:RequireMfaInDevelopment` | Staff are not asked for MFA in Development unless this is `true`. |
 | `Gadfly:Voice:Mode` | `off`, `mock` or `live`; the other voice settings are in docs/VOICE.md. |
+| `Gadfly:LiveTurn:Provider`, `Gadfly:LiveTurn:Model` | The one fast model that words the next question and runs its leak guard: `claude` and Claude Sonnet 5 by default; an Opus id is refused. |
+| `Gadfly:LiveTurn:Stream` | `false` speaks each question whole instead of sentence by sentence as it is written (default on). |
+| `Gadfly:LiveTurn:DeferJudging` | `false` puts the panel's full judgment back on the live turn instead of in the background (default on when the live turn has its fast model). |
+| `Gadfly:LiveTurn:Prefetch`, `Gadfly:LiveTurn:Prefetch:*` | Prepare the next step from the student's words while they are still speaking (`false` turns it off; `DebounceMs` and the other limits in docs/VOICE.md). |
+| `Gadfly:Voice:EndOfAnswerCompleteSeconds` | The silence that ends an answer whose last words are a finished sentence (1 to the floor, default 2). |
+| `Gadfly:Voice:BackchannelMs` | A soft "Mm-hm." after a finished sentence and this much silence, without ending the turn (0 = off, the default; else 300 to 3000). |
+| `Gadfly:Voice:WaitTypingShare` | Share of sessions given the old typing sound instead of the thinking gesture during the judging wait, for an A/B test (0, the default, turns it off). |
+| `Gadfly:Voice:TtsModels:<lang>`, `Gadfly:Voice:VoiceIds:<lang>` | The examiner's ElevenLabs model and platform voice for one exam language (for example `TtsModels:ko`); unset uses the usual model and voice, which speak Korean. |
+| `Gadfly:Voice:PlainSpeechSpeed` | The examiner's speed for a second-language speaker (0.7 to 1.2, default 0.9; 1 turns it off). |
+| `Gadfly:Voice:Esl:EndOfAnswerSeconds`, `:EndOfAnswerMaxSeconds`, `:EndOfAnswerCompleteSeconds`, `:CompleteAfterAnswers`, `:CutOffBackoffFactor` | End-of-answer silences for a second-language speaker (defaults 6 s, 15 s, 3.5 s after 3 uncut answers, cut-off backoff doubled). |
 | `Gadfly:Demo:Password`, `Gadfly:Demo:ApiKey` | Chosen password and API key for the seeded demo accounts. |
 | `Gadfly:AdminDesk:Enabled` | The admin desk (`/admin/desk`) for Owners and Admins; off by default in Production. |
 | `Gadfly:Logs:CallTimingDays` | How long outside-call timings are kept: a year by default, never under 184 days. |
@@ -457,15 +533,22 @@ and `Gadfly.Server` are two hosts. The full plan is in [docs/SOCRATIC_PLATFORM.m
   plan's validity studies (Part 15.3) happen with real institutions. How well the AI panel grades spoken,
   transcribed answers, whether follow-ups resist a relayed answer, and fairness across groups have measurement tools
   built in but no results yet.
-- The examiner's prompts and the answer-content cues (hedging, vague wording) are written for English.
-- The organization's and each exam's examiner voice and avatar ids are saved but not used: every exam uses the
-  deployment's voice and avatar (GAD-T475).
+- Exams run in English and Korean only. Spanish is planned (GAD-T596), waiting for a native-speaking tester. The
+  exam room's on-screen text is still English in a Korean attempt until GAD-T606 lands (the examiner already speaks,
+  listens and lip-syncs in Korean). Exams already live before localization need their Korean texts drafted (GAD-T541),
+  and the recitation check does not yet compare across languages (GAD-T600).
+- The ESL adaptations' numbers (longer silences, slower speech) are reasoned from research, not yet tuned on a pilot
+  of Korean-L1 speakers.
+- One examiner (female) is available; the male examiner is listed as coming soon on the get-ready page (GAD-T504).
+  The exam's or organization's voice id is used, but the avatar id is saved and not used yet (GAD-T475).
+- Attempts marked for instructor review (window absences, Korean scores the panel has not been calibrated on) are
+  held for a person; the dedicated review queue for them is being built (GAD-T603).
 - LTI sends one grade per placement (the final percentage), not one per objective; LTI 1.1 isn't supported. There is
   no institutional single sign-on (SAML or OpenID Connect) apart from the LMS launch.
 - Webhooks offer one event, `session.completed`.
 - Only AI panel (LLM) calls are metered for cost; speech-to-text and text-to-speech are not yet counted.
-- No accessibility conformance is claimed: the app was checked toward WCAG 2.2 AA but has not had screen-reader
-  testing or a formal audit (see `/accessibility`).
+- No accessibility conformance is claimed: the app meets the WCAG 2.2 AA checks axe can make but has not had
+  screen-reader, switch or voice-control testing or a formal audit (see `/accessibility`).
 - The hosted instance runs in mock mode, so its questions and scores are templates, not AI judgments.
 
 ### Where the build departs from the dissertation
@@ -476,8 +559,11 @@ Gadfly follows the *Elenchus at Scale* dissertation, with owner decisions that d
 - Spoken answers are judged as heard: the student isn't asked to confirm or correct the transcript, so recognizer
   doubts are flagged to graders instead.
 - Voice and camera are mandatory; typing is only an accommodation staff grant.
-- A long look away from the examiner fades the screen and the examiner asks the student to look back, softened by a
-  grace period and the eye-contact accommodation, with its rate and cost measured by group.
+- A long look off the screen while answering gets a gentle reminder from the examiner (a gesture, a light dim around
+  her, one warm line), never in the thinking gap, softened further by the eye-contact accommodation, with its rate and
+  cost measured by group.
+- The next question is worded by one fast model with its own leak guard instead of a panel vote, for conversational
+  speed; the panel still judges every answer and only its judgment is graded.
 - Clearing an attempt's scores holds it out of grading, and the attempt still counts against the student's limit.
 - The answer text-style estimate is switched off (the dissertation agrees it shouldn't be used), but kept so it could
   return behind a setting; the dissertation says not before its false-flag rate by group is measured.
@@ -503,7 +589,10 @@ Gadfly follows the *Elenchus at Scale* dissertation, with owner decisions that d
 | The Socratic exam platform: plan, milestones, open decisions | [Socratic platform](docs/SOCRATIC_PLATFORM.md) |
 | What is collected, for how long, and the regulatory notes | [Privacy](docs/PRIVACY.md), [Compliance](docs/COMPLIANCE.md) |
 | Each exam-room mechanic against the research for and against it, and the owner's decisions | [Evidence map](docs/EVIDENCE_MAP.md), [blueprint gap analysis](docs/research/blueprint-gap-analysis.md) |
-| Voice exam room, avatar and audio signals | [Voice](docs/VOICE.md) |
+| Voice exam room, avatar and audio signals, the live turn's speed, second-language speakers | [Voice](docs/VOICE.md) |
+| Exams in English and Korean: what is translated, grading across languages, the Korean glossary | [Localization](docs/LOCALIZATION.md) |
+| Accessibility: the WCAG 2.2 AA target, what was checked and fixed, known gaps | [Accessibility](docs/ACCESSIBILITY.md) |
+| The research behind the exam room: attention and gaze, second-language speakers and Korean, speech-to-speech | [Attention](docs/research/attention-and-gaze.md), [ESL and Korean](docs/research/esl-and-korean.md), [Speech-to-speech](docs/research/speech-to-speech.md) |
 | The demo tour and mock mode | [Tour](docs/TOUR.md) |
 | Deploying to Azure | [Deploy](docs/DEPLOY.md) |
 | The pilot with Erin: steps, what to watch for, feedback form | [Pilot](docs/PILOT.md) |
