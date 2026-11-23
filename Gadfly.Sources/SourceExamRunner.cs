@@ -223,6 +223,23 @@ public sealed class SourceExamEngine
             await FinishFullJudgmentsAsync(ct);
             decision = _planner.Next(Session.ForPlanning(), _clock.GetUtcNow(), Ledger.ForPlanner());
         }
+        else if (!decision.EndsSession && LeavesSettledObjectiveWithPending(decision))
+        {
+            // Leaving an objective its provisional judgments call settled (GAD-T515): a misconception or contradiction the panel
+            // finds in its last answers would otherwise arrive after the examiner left, and the objective would turn Inconclusive
+            // with no chance to probe it. Its pending full judgments come in first (one wait per objective) and the move is planned
+            // again. A panel failure keeps the move as planned; a speculative copy leaves the wait to the live session.
+            if (Speculative) throw new InvalidOperationException("A speculative step does not leave an objective before the panel has judged it.");
+            try
+            {
+                await FinishFullJudgmentsAsync(ct);
+                decision = _planner.Next(Session.ForPlanning(), _clock.GetUtcNow(), Ledger.ForPlanner());
+            }
+            catch (InvalidOperationException ex)
+            {
+                Diagnostics?.Report($"[Leaving the objective on its provisional judgments: {ex.Message}]");
+            }
+        }
         if (decision.EndsSession)
         {
             Diagnostics?.Report($"[End: {decision.Reason}]");
@@ -281,6 +298,18 @@ public sealed class SourceExamEngine
         Diagnostics?.Report($"[{decision.Move} on {decision.ObjectiveKey ?? concept.Key}{(decision.IsReplacement ? " (replacement)" : "")}: {reason} Question {_generator.LastOutcome}.]");
         return Session.Ask(concept.Key, decision.Move, question, _clock.GetUtcNow(), decision.TargetClaimIds, reason,
             decision.ObjectiveKey, decision.IsReplacement, novelty, _generator.LastAuthor);
+    }
+
+    /// <summary>
+    /// True when <paramref name="decision"/> moves off the objective of the last turn while that objective is Sufficient only on the
+    /// planning view and some of its answers still wait for the panel's full judgment (GAD-T515).
+    /// </summary>
+    private bool LeavesSettledObjectiveWithPending(PlanDecision decision)
+    {
+        if (Session.Turns.Count == 0 || Session.PendingFullJudgments.Count == 0) return false;
+        var current = ExamObjectives.KeyOf(Session.Turns[^1]);
+        if (decision.ObjectiveKey == current || !Session.PendingFullJudgments.Any(t => ExamObjectives.KeyOf(t) == current)) return false;
+        return _planner.Assess(Session.ForPlanning(), Ledger.ForPlanner()).FirstOrDefault(a => a.ObjectiveKey == current)?.Status == ObjectiveStatus.Sufficient;
     }
 
     /// <summary>

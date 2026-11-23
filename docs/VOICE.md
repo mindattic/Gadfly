@@ -414,6 +414,27 @@ earlier pending ones, as before. Recovery: the provisional and pending state is 
 restart the pending judgments resume as soon as the session loads, every step starts the next one, and a judgment that
 failed is retried on the student's next step. `Gadfly:LiveTurn:DeferJudging=false` puts the panel judgment back on the turn.
 
+**The one-turn steering lag (GAD-T515).** Everything the panel's analysis finds (misconceptions, uncertainties, claims and
+the contradictions between them) reaches the planner one turn late: the next move after answer N is planned from N's
+provisional score alone, and N's analysis is in by the move after N+1. Measured on the planner's rules (local, no calls):
+- *Clarification fired far more often.* The "no analysis, score under 0.35: ask a neutral clarification" rule read a pending
+  analysis as a missing one, so under deferred judging every weak answer (not an "I don't know", not right after a
+  clarification or assist) was asked to clarify, up to twice per objective, where the panel's analysis would usually have
+  let the examiner probe instead. Fixed: that rule now skips answers whose full judgment is pending.
+- *Misconceptions and contradictions are probed one turn later, not lost,* while the examiner stays on the objective: the
+  counterexample / assumption-testing rule and the elenchus read every turn on the objective, not just the last.
+- *Leaving an objective early lost them.* When the provisional scores made an objective Sufficient, the examiner moved on,
+  and a misconception or contradiction the panel then found turned it Inconclusive with nothing asked about it. Fixed: before
+  leaving an objective that is Sufficient only on the planning view with answers still pending, the engine waits for those
+  full judgments (one wait per objective, like the end of the exam) and plans again; a panel failure keeps the move.
+- *Still lost:* an uncertainty about meaning (asked only about the latest answer) and Learning Mode's hint after a
+  misconception the score did not show, when the analysis arrives after the next answer. Accepted: a clarification of an
+  answer two turns back reads oddly, and the misconception is still tested by the rule above.
+
+Decision: no fast-model misconception pass for now. It would add a second fast-model call on every turn, and its
+misconceptions would not carry the panel's quote checks; revisit if the `judgment.provisional.disagreed` rate (GAD-T514)
+or reviewer reports show the examiner steering past misconceptions.
+
 **Prefetching the next step (GAD-T497).** While the student is still speaking, the exam room can send the answer so far
 (the recognizer's finished segments plus its current partial) to `SessionOrchestrator.NotePartialAnswerAsync`. Once those
 words have stood still for `Gadfly:LiveTurn:Prefetch:DebounceMs` (default 700 ms) and are at least `MinWords` long

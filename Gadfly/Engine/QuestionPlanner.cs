@@ -236,7 +236,10 @@ public sealed class QuestionPlanner
             // Only when the meaning could change the judgment: a clearly wrong answer needs no clarification, nor a strong one.
             if (last.Analysis is { IsValid: true } an && an.Uncertainties.Count > 0 && lastScore >= ObjectiveAssessor.NegativeBelow && lastScore < PushAbove)
                 return Decide(MoveKind.Clarify, $"The answer's meaning is uncertain ({an.Uncertainties[0]}); asking a neutral clarification before judging further.");
-            if (last.Analysis is not { IsValid: true } && lastScore < ClarifyBelow && last.Judgment is { } j && !ObjectiveAssessor.IsUnjudged(j))
+            // A provisionally judged answer (GAD-T508) has no analysis yet because the panel's is still coming, not because the
+            // answer was unclear: without this, every weak answer was asked for clarification under deferred judging (GAD-T515).
+            var analysisPending = last.Provisional is { FullScore: null };
+            if (!analysisPending && last.Analysis is not { IsValid: true } && lastScore < ClarifyBelow && last.Judgment is { } j && !ObjectiveAssessor.IsUnjudged(j))
                 return Decide(MoveKind.Clarify, "The last answer was unclear or off target; asking a neutral clarification.");
         }
 
