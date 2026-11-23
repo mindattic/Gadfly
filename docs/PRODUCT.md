@@ -238,8 +238,9 @@ dissertation, with a few recorded owner decisions that differ from it
 1. Spoken answers are judged as heard; the student is not asked to confirm or correct the transcript, so recognition
    errors are flagged to graders instead.
 2. Voice and camera are mandatory; typing is a granted accommodation, so it reaches only students who declare a need.
-3. The screen gently fades, and the examiner asks the student to look back, after a long look away. This is softened
-   by a grace period and the eye-contact accommodation, and its rate and cost by group are measured.
+3. After a long look away from the screen while speaking (never while thinking), the examiner gives gentle reminders: a head
+   tilt, then a light dim around her that clears at once, then at most one warm spoken line (GAD-T513, GAD-T557/T561). The
+   eye-contact accommodation switches them off, and their rate and cost by group are measured.
 4. Cleared scores hold an attempt out of grading, and the attempt still counts against the student's limit.
 
 The full plan and what is built against it: [MASTER-PLAN.md](MASTER-PLAN.md), [MASTER-PLAN-STATUS.md](MASTER-PLAN-STATUS.md).

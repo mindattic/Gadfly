@@ -17,7 +17,7 @@ Nothing here changes code.
 | 1 | Follow-up moves | `Gadfly/Engine/Moves.cs`, `QuestionPlanner.cs`, `ExamPrompts.cs` | Supported, with changes | GAD-T266, GAD-T267, GAD-T268 |
 | 2 | Probing on hesitation | `AnswerDelivery.cs`, `QuestionGenerator.cs` (GAD-T233) | Content cues supported; strain cue not | GAD-T258, GAD-T267 |
 | 3 | Recitation check | `RecitationCheck.cs` (GAD-T242) | Source-overlap supported; read-out pattern weak | GAD-T272 |
-| 4 | Gaze fade and "look at me" | `wwwroot/js/examiner-gaze.js` (GAD-T240) | Legal, weak as evidence; owner decision (c) | GAD-T261, GAD-T305 |
+| 4 | Gaze reminders (was: gaze fade and "look at me") | `wwwroot/js/examiner-gaze.js` (GAD-T240, rebuilt GAD-T557/T561) | Legal, weak as evidence; owner decision (c), superseded by GAD-T513 research | GAD-T261, GAD-T305, GAD-T557, GAD-T561 |
 | 5 | Voice strain | `Gadfly.Server/Voice/VoiceStrain.cs` | Not supported; legal risk; owner decision (b) reversed 2026-11-21 | GAD-T258, GAD-T259 |
 | 6 | Time limits, the end-of-answer cue and the judging wait | `SessionPolicy.cs`, `SocraticSession.cs`, `voice-room.js`, `ExaminerFiller.cs` | Time budget supported; the two questioned choices changed | GAD-T263, GAD-T264, GAD-T290, GAD-T409 |
 | 7 | Grading panel, blind human, reconciliation, release | `Gadfly.Server/Grading/`, `BlindGrading.cs` | Supported, with calibration and bias controls | GAD-T265, GAD-T269, GAD-T270, GAD-T273, GAD-T285, GAD-T405 |
@@ -193,16 +193,34 @@ above 1), and an exam can switch it off (`SessionPolicy.ReadOutCheck`). `Recitat
 over sessions from honest students every fire is a false flag. The rate stays unknown until it is run on pilot data. The
 source-overlap check is kept as is.
 
-## 4. Gaze fade and "look at me" (owner decision (c))
+## 4. Gaze reminders (was: gaze fade and "look at me"; owner decision (c), superseded)
 
-**What Gadfly does.** During an answer, in any exam whose integrity level is not Off, if the student looks away from the
+**Superseded (GAD-T513, built as GAD-T557/T561, 2026-11-22).** The text under "What Gadfly did before" describes the
+original mechanic (a heavy dim, about 85% and 12 px of blur, after 2 seconds, and a spoken "Please look at me"). The research
+in [attention-and-gaze.md](research/attention-and-gaze.md) found that looking away to think is normal and helps answers, so
+that mechanic no longer exists. What is true now:
+- **Nothing fires while the student is thinking.** The gap from the examiner's last word to the student's first word (20
+  seconds at most) never triggers anything. While speaking, gaze anywhere on the screen counts as on screen; only gaze held
+  off the screen for 8 seconds, with over half of the last 30 seconds off it, starts the ladder (half as long again when
+  tracking quality is under fair).
+- **A reminder ladder, gentlest first:** (1) the examiner's small head tilt and raised brows; (2) 4 seconds later, if still off
+  screen, a light dim of at most 35% and blur of at most 4 px around her (her stage stays sharp), restored in 350 ms the
+  moment the gaze returns, with a 5 second cooldown; (3) 6 seconds after that, at a pause of 700 ms or more, at most one warm
+  spoken line, never repeated in a session, once per question, three per exam. No white-out, no warning text, never "look at me".
+- **Unchanged:** episodes still go to reviewers as low-confidence context, the accommodation switches the reminders off, face
+  absent or a second face is still said aloud (never in the thinking gap), and gaze never enters the score.
+- **Owner decision (c)** (keep a lawful deterrent that acts during the answer) is therefore met by a much softer mechanic. The
+  dissertation's objection to the old fade (5.6.1, 5.7.3) is largely answered; its remaining point, that any visual reminder
+  acts on the student during the answer, is why the cost measurement (GAD-T448) is kept (see below).
+
+**What Gadfly did before GAD-T557/T561 (historical).** During an answer, in any exam whose integrity level is not Off, if the student looks away from the
 examiner for 2 seconds (`GAZE.fadeStartMs`; 6 seconds early in an answer, see GAD-T261 below), the screen fades toward a
 heavy dim and blur over 3 seconds, with a prompt to look back. A longer look away, a reading-like pattern, no face or a
 second face makes the examiner say so out loud ("Please look at me while you answer", and a variant for each). Each
 episode goes to reviewers as low-confidence context (confidence at most 0.4, severity at most Low), hidden from a blind
 grader until their score is in (GAD-T285). Only notes and numbers leave the device, never frames.
 
-**Owner decision (c):** looking away fades the screen and the examiner says "look at me". It stands.
+**Owner decision (c) as first made:** looking away fades the screen and the examiner says "look at me". Superseded by the softened ladder above (GAD-T513).
 
 **Evidence for.**
 - Unproctored remote exams produce inflated scores (06: Alessio2017, DendirMaxwell2020), so some integrity design is
@@ -277,6 +295,13 @@ after a faded one against their clean answers, overall and by group, with approx
 whose interval is clear of zero is warned, and so is a difference of 0.05 between groups. Within-student comparison cancels
 out who the student is, not the question (a hard question can both draw a look away and get a weaker answer), so a drop is a
 reason to look at the fade, not proof of a cost. The fade itself is unchanged.
+
+**What "fade" means in these analytics now (GAD-T557/T561).** The `examiner-fade` event is recorded only at ladder step 2, the
+light dim of at most 35% and 4 px (with its peak), not at the head tilt or the spoken line and never in the thinking gap. So
+"fades", "time faded" and "faded answers" count answers in which the student was still looking off screen after the examiner's
+tilt and the dim actually appeared, and time faded is how long the dim lasted. They no longer measure the old heavy fade, and
+data from before GAD-T557 (2 seconds, heavy dim) is not comparable with data after it. The fade-cost comparison is otherwise
+unchanged; a drop is still a reason to look, not proof, and it now tests the gentler reminder.
 
 ## 5. Voice strain (owner decision (b), reversed 2026-11-21)
 
@@ -590,9 +615,13 @@ voice comparison, the wait before the first word or the hesitation count. The vo
 - **Tickets:** GAD-T259, approved and done: off by default in the EU, relabelled as raw differences. GAD-T258, approved
   on 2026-11-21 and done: probing from content, reversing decision (b) everywhere.
 
-### (c) Gaze fade and "look at me"
+### (c) Gaze fade and "look at me" (superseded by GAD-T513)
 
-**Decision:** looking away fades the screen and the examiner says "look at me".
+**Decision (as first made):** looking away fades the screen and the examiner says "look at me".
+
+**Superseded (GAD-T513 research, built GAD-T557/T561).** Reminders never fire while the student is thinking; the examiner's
+head tilt and brows come first, then a light 35% / 4 px dim around her that clears at once with a cooldown, then at most one warm
+spoken line; no white-out, no "look at me". See mechanic 4.
 
 - **For** and **against:** see mechanic 4. The use is legal, but the signal is coarse, cannot tell reading from any other
   reason for looking away, will often fire on honest students, and may differ by group.
@@ -630,6 +659,7 @@ approved every one, and all are done.
 | GAD-T259 | 5 | Voice strain off by default for the EU, relabelled as raw acoustic deltas, PRIVACY.md fixed | Yes, (b) |
 | GAD-T260 | (a) | Instructor-granted typed-answer accommodation (approved 2026-11-22, narrowing (a); done) | Yes, (a) |
 | GAD-T261 | 4 | Gaze fade: thinking grace, accommodation switch, rates by group | Touches (c) |
+| GAD-T557, GAD-T561 | 4 | Gentle reminder ladder replaces the heavy fade and "look at me" (GAD-T513 research) | Supersedes (c) as first made |
 | GAD-T262 | (d) | Clear scores archives grading records before removing them | Touches (d) |
 | GAD-T263 | 6 | Exam clock stops while the exam is paused | No |
 | GAD-T264 | 6 | End-of-answer silence adapts to the student's own pauses | No |

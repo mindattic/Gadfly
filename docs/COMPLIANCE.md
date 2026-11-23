@@ -18,8 +18,9 @@ Gadfly is a high-risk AI system under Regulation (EU) 2024/1689 (the AI Act), An
 
 The Art. 6(3) exception (a system that does not materially influence the outcome, for example a narrow procedural or
 purely preparatory task) is unlikely to apply: the panel's grade enters the score and steers the questions, and four
-integrity signals act on the exam (the gaze fade, the "look at me" remark, the camera pause, the recitation check
-that excludes evidence). Gadfly should be treated as high-risk.
+integrity signals act on the exam (the gentle gaze reminders: head tilt, a light 35% dim around the examiner, one warm spoken line,
+never while the student is thinking; the camera pause; the recitation check that excludes evidence). The heavy fade and the
+"look at me" remark of earlier versions were superseded by the GAD-T513 research (GAD-T557/T561). Gadfly should be treated as high-risk.
 
 MindAttic is the **provider** (it places the system on the market under its own name). Each customer organization
 that uses it is a **deployer**. A university that changes the intended purpose or puts its own name on the system

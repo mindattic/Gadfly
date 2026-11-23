@@ -535,8 +535,12 @@ examiner, the recognizer, the judges and the graders, not a finding about the st
   quality (sessions with a score, median, share poor, share calibrated to the screen). **Group by tracking quality** groups
   the rates by each session's quality band instead. Face detection fails more often for some people than others, so a
   group with more face episodes or lower quality is a warning about the camera, not about the students.
-- **What the screen fade costs** (with the eye-contact rates). For each student with both, the judged score (0 to 1) and
-  length of answers during which the screen faded, minus their other answers, and the answer right after a fade minus
+- **What the screen fade costs** (with the eye-contact rates). The "fade" is now the examiner's gentle second reminder: a
+  light dim (at most 35%, 4 px of blur) around her that clears at once, shown only when a student is still looking off the
+  screen after her head tilt, and never while they are thinking (it replaced the old heavy fade, GAD-T557/T561). Counts and
+  "time faded" cover only that dim; the head tilt and the spoken line are not counted, and older data is not comparable. For
+  each student with both, the judged score (0 to 1) and
+  length of answers during which the screen dimmed, minus their other answers, and the answer right after a fade minus
   their clean answers; overall and by group, each with a rough 95% range. A drop of 0.05 or more with a range clear of zero
   is flagged. It cannot tell the fade's cost from a hard question drawing both a look away and a weaker answer.
 - **Fairness by group**, at the bottom of the page, with one grouping box for its three tables:

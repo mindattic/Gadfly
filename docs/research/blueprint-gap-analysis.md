@@ -101,7 +101,7 @@ Where two dissertation items ask for the same change they share one row.
 | E8 | Monitor panel and human score gaps by group | 5.4.3 | Not built | `AnalyticsService` reports agreement overall only | GAD-T433 |
 | E9 | A student relaying answers through an earpiece | 5.5, 6.8 | Not built | No control besides the follow-up. bottleneck: webcam resolution and audio pickup cannot detect an in-ear device | GAD-T449 |
 | E10 | Absent-face, second-face and changed-face episode rates by group; tracking quality by group | 5.6.1, corr. 50, A.10 | Partly | `GazeFlagRates.cs` covers look-aways, reading, fades only. bottleneck: webcam resolution | GAD-T447 |
-| E11 | The gaze fade acts on the student during the answer | 5.6.1, 5.6.2, 5.7.3 | Owner decision | Decision (c), softened by grace, accommodation and rates (`fc365e0`). Listed below | - |
+| E11 | The gaze fade acts on the student during the answer | 5.6.1, 5.6.2, 5.7.3 | Owner decision, softened further | Decision (c), softened by grace, accommodation and rates (`fc365e0`), then superseded by the GAD-T513 research: gentle reminder ladder, 35% / 4 px, nothing while thinking (GAD-T557/T561). Listed below | - |
 | E12 | Compare, within students, answers given while the screen faded with those it did not | 5.7.3 | Not built | No such analysis | GAD-T448 |
 | E13 | Compare typed and spoken answers at the same level | 5.7.1, A.10 | Not built | Typed answers stored with mode `text` (GAD-T260), never compared | GAD-T438 |
 | E14 | Decision (b): voice strain drives probing | 5.7.2 | Built (resolved) | Reversed by the owner (GAD-T258, `83739f7`), as the dissertation's evidence argued | - |
@@ -242,6 +242,10 @@ No ticket was filed for any of these. Each is the owner's to make; the dissertat
    "cannot tell thinking from reading" (5.6.1), adds pressure where anxiety does harm (Woldeab & Brothen 2019), may fire
    unequally across groups (Yoder-Himes et al. 2022), and so changes the conditions of the examination (5.7.3, 5.6.2).
    GAD-T447 and GAD-T448 measure it without changing it.
+   **Update (GAD-T513 research, GAD-T557/T561):** the heavy fade and "Please look at me" no longer exist. Reminders never fire
+   while the student is thinking; the ladder is the examiner's head tilt, then a light 35% / 4 px dim around her that clears at
+   once with a cooldown, then at most one warm line; no white-out. This answers most of the objection above; the dim still acts
+   during the answer, so GAD-T448 keeps measuring it (it now counts only that dim).
 6. **Cleared scores hold the attempt out of grading, and the attempt still counts (decision (d)).** GAD-T262 answered
    two of the three objections. The dissertation's remaining objection is that the cleared attempt counts against the
    student's limit while the feedback that makes a further attempt worthwhile is withdrawn (5.7.4; Rowland 2014).
