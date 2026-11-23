@@ -7,6 +7,7 @@
 @inject TimeProvider Clock
 @inject NavigationManager Nav
 @inject ILogger<StaffNoticeBanner> Log
+@inject Gadfly.Server.Localization.UiText T
 
 @*
     What staff do from the live monitor, shown in the student's exam room (GAD-T299): a short notice, a pause (the exam waits, the clock
@@ -20,11 +21,11 @@
     {
         <div class="staff-hold" role="alertdialog" aria-modal="true" aria-labelledby="staff-hold-h">
             <div class="staff-hold-box">
-                <h2 id="staff-hold-h">Your exam is paused</h2>
-                <p>Your instructor paused your exam. Your time is stopped and nothing you say counts until they resume it. Please stay here.</p>
+                <h2 id="staff-hold-h">@T["notice.hold.title"]</h2>
+                <p>@T["notice.hold.text"]</p>
                 @if (notice is { } n)
                 {
-                    <p class="staff-hold-note">Message from your instructor: “@n.Text”</p>
+                    <p class="staff-hold-note">@T["notice.messageQuoted", n.Text]</p>
                 }
             </div>
         </div>
@@ -35,7 +36,7 @@
             <div>
                 @if (notice is { } n)
                 {
-                    <p><strong>Message from your instructor:</strong> @n.Text</p>
+                    <p><strong>@T["notice.message"]</strong> @n.Text</p>
                 }
                 @if (message is not null)
                 {
@@ -44,7 +45,7 @@
             </div>
             @if (!ended)
             {
-                <button type="button" class="link" @onclick="Dismiss">OK</button>
+                <button type="button" class="link" @onclick="Dismiss">@T["notice.ok"]</button>
             }
         </div>
     }

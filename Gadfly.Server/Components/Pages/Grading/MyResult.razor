@@ -4,50 +4,45 @@
 @using Gadfly.Server.Grading
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
+@inject Gadfly.Server.Localization.UiText T
 
-<PageTitle>My result · Gadfly Exams</PageTitle>
+<PageTitle>@T["result.pageTitle"]</PageTitle>
 <HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
-<p class="hint no-print"><a href="my-exams">← My exams</a></p>
+<p class="hint no-print"><a href="my-exams">← @T["layout.myExams"]</a></p>
 
 @if (loading)
 {
-    <p class="hint" role="status">Loading…</p>
+    <p class="hint" role="status">@T["common.loading"]</p>
 }
 else if (report is null || w is null)
 {
-    <h1>Result not available</h1>
-    <p class="notice">This result hasn't been published to you.</p>
+    <h1>@T["result.unavailable"]</h1>
+    <p class="notice">@T["result.notPublished"]</p>
 }
 else
 {
-    <h1>Your result <span>· @report.ExamTitle</span> <HelpLink Topic="grading-and-results" /></h1>
+    <h1>@T["myExams.result"] <span>· @report.ExamTitle</span> <HelpLink Topic="grading-and-results" /></h1>
     <p class="hint no-print">
-        <a href="@GradingSetup.StudentReportMarkdownPath(SessionId)" download data-enhance-nav="false">Download the report (Markdown)</a> ·
-        <a href="@GradingSetup.StudentReportPdfPath(SessionId)" download data-enhance-nav="false">Download the report (PDF)</a>
+        <a href="@GradingSetup.StudentReportMarkdownPath(SessionId)" download data-enhance-nav="false">@T["result.downloadMarkdown"]</a> ·
+        <a href="@GradingSetup.StudentReportPdfPath(SessionId)" download data-enhance-nav="false">@T["result.downloadPdf"]</a>
     </p>
     <p class="hint no-print">
-        <a href="@($"certificates/{SessionId:D}/pdf")" download data-enhance-nav="false">Download your completion certificate (PDF)</a>,
-        with its own verification code · <a href="transcripts/verify" target="_blank" rel="noopener" data-enhance-nav="false">check a copy</a>
+        <a href="@($"certificates/{SessionId:D}/pdf")" download data-enhance-nav="false">@T["result.certificate"]</a>@T["result.certificateCode"] · <a href="transcripts/verify" target="_blank" rel="noopener" data-enhance-nav="false">@T["result.checkCopy"]</a>
     </p>
-    <p class="hint no-print"><Gadfly.Server.Transcripts.TranscriptLinks SessionId="SessionId" Label="Your transcript, with its verification code:" ShowVerify="true" /></p>
+    <p class="hint no-print"><Gadfly.Server.Transcripts.TranscriptLinks SessionId="SessionId" Label="@T["result.transcript"]" ShowVerify="true" /></p>
     <AssessmentReportView Report="report" />
 
     @* GAD-T450: the integrity notes recorded on this attempt, with the same plain explanations a reviewer reads. Shown only once
        the result is published to the student (StudentIntegrityRecord checks), never a verdict and never part of the grade. *@
     <section class="student-integrity" aria-labelledby="integrity-heading">
-        <h2 class="gr-section" id="integrity-heading">Integrity notes on this attempt</h2>
+        <h2 class="gr-section" id="integrity-heading">@T["result.integrity.title"]</h2>
         @if (integrity is null || integrity.IsEmpty)
         {
-            <p class="hint">Nothing was noted about how this exam was taken.</p>
+            <p class="hint">@T["result.integrity.none"]</p>
         }
         else
         {
-            <p class="hint">
-                During the exam, checks on your device and the answers noted a few moments for a person to look at. You see here exactly
-                what your instructor sees, with the same explanation. These notes are context, never a finding of cheating, and none of
-                them is part of your grade: the grade comes from your answers. If something here is wrong or has an explanation, you
-                can say so in an appeal below.
-            </p>
+            <p class="hint">@T["result.integrity.intro"]</p>
             @if (integrity.Notes.Count > 0)
             {
                 <ul class="student-integrity-notes">
@@ -55,7 +50,7 @@ else
                     {
                         <li>
                             <strong>@n.Label</strong>
-                            <span class="hint"> · @n.When@(n.Question is { } q ? $", during question {q}" : "")</span>
+                            <span class="hint"> · @n.When@(n.Question is { } q ? T["result.integrity.duringQuestion", q].Value : "")</span>
                             <div>@n.Explanation</div>
                             @if (!string.IsNullOrWhiteSpace(n.Summary) && n.Summary != n.Explanation)
                             {
@@ -67,27 +62,27 @@ else
             }
             @if (integrity.Ordinary.Count > 0)
             {
-                <p class="hint">Ordinary, not counted: @string.Join("; ", integrity.Ordinary.Select(o => $"{o.Label} ({o.Count}×)")).</p>
+                <p class="hint">@T["result.integrity.ordinary"] @string.Join("; ", integrity.Ordinary.Select(o => $"{o.Label} ({o.Count}×)")).</p>
             }
         }
     </section>
 
     <div class="no-print">
-        <h2 class="gr-section">Appeal</h2>
+        <h2 class="gr-section">@T["result.appeal.title"]</h2>
         @if (w.OpenAppeal is { } open)
         {
-            <p>Your appeal of @open.OpenedAt.UtcDateTime.ToString("yyyy-MM-dd") is being reviewed. Your published result stays visible meanwhile.</p>
+            <p>@T["result.appeal.open", T.Date(open.OpenedAt)]</p>
         }
         else if (w.Status is GradeStatus.Published or GradeStatus.Amended)
         {
-            <p class="hint">If you believe the grade is wrong, explain why. A teacher reviews it and either confirms the grade or amends it; you'll see the outcome here.</p>
-            <label class="gr-wide">Your reason <textarea rows="4" @bind="reason" maxlength="4000"></textarea></label>
+            <p class="hint">@T["result.appeal.how"]</p>
+            <label class="gr-wide">@T["result.appeal.reason"] <textarea rows="4" @bind="reason" maxlength="4000"></textarea></label>
             @if (integrity is { Notes.Count: > 0 })
             {
-                <label class="gr-wide">Your response to the integrity notes (optional) <textarea rows="3" @bind="integrityResponse" maxlength="3000"></textarea></label>
-                <p class="hint">Say what happened at those moments, if you want to. It goes to the teacher with your appeal. You can send a response on its own, without a reason above.</p>
+                <label class="gr-wide">@T["result.appeal.response"] <textarea rows="3" @bind="integrityResponse" maxlength="3000"></textarea></label>
+                <p class="hint">@T["result.appeal.responseHint"]</p>
             }
-            <button type="button" disabled="@busy" @onclick="AppealAsync">Submit appeal</button>
+            <button type="button" disabled="@busy" @onclick="AppealAsync">@T["result.appeal.submit"]</button>
         }
         @if (message is not null)
         {
@@ -127,7 +122,7 @@ else
         if (text.Length > 4000)
         {
             ok = false;
-            message = $"Your reason and response together are {text.Length:N0} characters; please keep them to 4,000.";
+            message = T["result.appeal.tooLong", text.Length].Value;
             return;
         }
         busy = true;
