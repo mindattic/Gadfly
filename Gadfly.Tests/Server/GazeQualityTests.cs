@@ -73,7 +73,10 @@ public class GazeQualityTests
     public void Older_pages_codes_still_work()
     {
         var c = Clean("examiner-look-away", "remarked");
-        Assert.That(c.Summary, Does.Contain("asked out loud"));
+        // GAD-T557/T561: a look-away reminder is a short, gentle spoken one at a pause, no longer "asked out loud for eye contact".
+        Assert.That(c.Summary, Does.Contain(WebcamIntegrityRecorder.SpokenReminderSaid));
+        Assert.That(WebcamIntegrityRecorder.SaysExaminerSpoke(c.Summary), Is.True, "the gaze analytics still count it as a remark");
+        Assert.That(WebcamIntegrityRecorder.SaysExaminerSpoke("Looked off the screen for 9 s while answering. The examiner asked out loud for eye contact."), Is.True, "rows stored before GAD-T557 still count");
         Assert.That(c.Summary, Does.Not.Contain("Eye-tracking quality"));
         Assert.That(c.Data, Is.Null);
     }

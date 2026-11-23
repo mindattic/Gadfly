@@ -466,6 +466,16 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
         };
     }
 
+    /// <summary>What a look-away summary says when the examiner spoke a reminder (GAD-T557/T561: a short, gentle reminder at a pause).</summary>
+    public const string SpokenReminderSaid = "The examiner gave a short, gentle spoken reminder at a pause.";
+
+    /// <summary>What the other examiner summaries say when the examiner spoke up, and what look-away summaries said before GAD-T557.</summary>
+    public const string AskedOutLoudSaid = "The examiner asked out loud for eye contact.";
+
+    /// <summary>The summary records that the examiner spoke up, in today's wording or the older one stored rows still carry.</summary>
+    public static bool SaysExaminerSpoke(string? summary) =>
+        summary is not null && (summary.Contains(SpokenReminderSaid, StringComparison.Ordinal) || summary.Contains("asked out loud", StringComparison.Ordinal));
+
     /// <summary>
     /// Plain words for an eye-contact episode in the voice interview room (GAD-T240), written by the server from the type, how
     /// long it lasted and whether the examiner spoke up (the browser sends only the code "remarked"). Never a verdict.
@@ -475,9 +485,7 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
     public static string ExaminerSummary(string type, TimeSpan span, bool remarked, int? fadePeakPercent = null, bool thinkingGap = false, int reminderStep = 0)
     {
         var so = span.TotalMinutes >= 1 ? $"{(int)span.TotalMinutes} min {span.Seconds} s" : $"{Math.Max(0, (int)Math.Round(span.TotalSeconds))} s";
-        var said = type == "examiner-look-away"
-            ? (remarked ? " The examiner gave a short, gentle spoken reminder at a pause." : "")
-            : (remarked ? " The examiner asked out loud for eye contact." : "");
+        var said = !remarked ? "" : type == "examiner-look-away" ? " " + SpokenReminderSaid : " " + AskedOutLoudSaid;
         var step = type == "examiner-look-away" && reminderStep is 1 or 2 && !remarked
             ? reminderStep == 1 ? " The examiner gave a small non-verbal cue." : " The examiner gave a small non-verbal cue and the screen around her dimmed a little."
             : "";

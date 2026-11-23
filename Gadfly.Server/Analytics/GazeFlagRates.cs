@@ -153,7 +153,7 @@ public sealed class GazeFlagRates(GadflyDbContext db, Guid organizationId)
                 Readings = ev.Count(e => e.Type == "examiner-reading"),
                 Fades = fades.Count,
                 FadeSeconds = fades.Sum(e => e.EndedAt is { } end ? Math.Max(0, (end - e.StartedAt).TotalSeconds) : 0),
-                Remarks = ev.Count(e => e.Summary.Contains("asked out loud", StringComparison.Ordinal)),
+                Remarks = ev.Count(e => WebcamIntegrityRecorder.SaysExaminerSpoke(e.Summary)),
                 AbsentFaces = ev.Count(e => AbsentFaceTypes.Contains(e.Type)),
                 SecondFaces = ev.Count(e => SecondFaceTypes.Contains(e.Type)),
                 ChangedFaces = ev.Count(e => ChangedFaceTypes.Contains(e.Type)),
