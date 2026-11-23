@@ -7,7 +7,7 @@ namespace Gadfly.Server.Student;
 
 /// <summary>One examiner a student can choose on the get-ready page (GAD-T595), and an exam or organization can fix (GAD-T504).</summary>
 /// <param name="Id">Stable id, also what an exam's AvatarId and an organization's DefaultAvatarId name.</param>
-/// <param name="NameKey">UI string key of the examiner's description ("getReady.examiner.choice.female").</param>
+/// <param name="NameKey">UI string key of the examiner's description ("getReady.examiner.choiceFemale").</param>
 /// <param name="ModelUrl">The 3D model, or null for the portrait only.</param>
 /// <param name="PortraitUrl">The 2D portrait (always shown first, and on devices without 3D).</param>
 /// <param name="Available">False while the examiner's model or portrait isn't installed: listed as coming soon, not choosable.</param>
@@ -72,13 +72,13 @@ public static class ExaminerCatalog
         var malePortrait = m?.PortraitUrl ?? Local(MalePortraitPath);
         return
         [
-            new(Female, "getReady.examiner.choice.female", f?.ModelUrl ?? voice.AvatarModelUrl, f?.PortraitUrl ?? voice.PortraitUrl, true)
+            new(Female, "getReady.examiner.choiceFemale", f?.ModelUrl ?? voice.AvatarModelUrl, f?.PortraitUrl ?? voice.PortraitUrl, true)
             {
                 PortraitMouth = f?.PortraitMouth ?? voice.PortraitMouth,
                 VoiceId = f?.VoiceId,
                 VoiceIds = f?.VoiceIds ?? new Dictionary<string, string>(),
             },
-            new(Male, "getReady.examiner.choice.male", m?.ModelUrl ?? Local(MaleModelPath), malePortrait ?? "/" + MalePortraitPath, malePortrait is not null)
+            new(Male, "getReady.examiner.choiceMale", m?.ModelUrl ?? Local(MaleModelPath), malePortrait ?? "/" + MalePortraitPath, malePortrait is not null)
             {
                 PortraitMouth = m?.PortraitMouth ?? (m?.PortraitUrl is null ? MalePortraitMouth : null),
                 VoiceId = m?.VoiceId ?? MaleDefaultVoiceId,
