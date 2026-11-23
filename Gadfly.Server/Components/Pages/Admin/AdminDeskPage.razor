@@ -495,20 +495,34 @@ else
         if (!await JS.InvokeAsync<bool>("confirm",
                 "Draft Korean texts for every published exam without approved Korean texts? Live, this calls the model and spends tokens. Instructors must still review and approve each exam's texts.")) return;
         busy = true;
+        draftAll = null;
+        message = null;
         try
         {
+            var notOffered = new List<string>();
             var r = await Gadfly.Server.Translation.LanguageOps.RunAsync(Scopes, Tenant, async s =>
             {
                 var res = await s.DraftAllPublishedAsync("ko");
                 foreach (var x in res.Exams.Where(x => x.Outcome != Gadfly.Server.Translation.ExamDraftOutcome.Fail))
                 {
                     var v = await s.GetAsync(x.ExamId);
-                    if (v is { CanEdit: true } && !v.Offered.Contains("ko")) await s.SetOfferedAsync(x.ExamId, [.. v.Offered, "ko"]);
+                    if (v is null || v.Offered.Contains("ko")) continue;
+                    if (v is { CanEdit: false }) { notOffered.Add($"{x.Title}: not allowed to change its languages"); continue; }
+                    var o = await s.SetOfferedAsync(x.ExamId, [.. v.Offered, "ko"]);
+                    if (!o.Ok) notOffered.Add($"{x.Title}: {o.Message}");
                 }
                 return res;
             });
             draftAll = r;
-            ok = r.Ok;
+            ok = r.Ok && notOffered.Count == 0;
+            message = notOffered.Count == 0 ? null : "Korean could not be offered on: " + string.Join("; ", notOffered);
+            edit = null;
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            message = "That didn't work: " + ex.Message;
         }
         finally { busy = false; }
     }
