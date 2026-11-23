@@ -9,6 +9,9 @@
 // photographic texture on a glowing face. Her eyes are never enlarged: the listening expression's eye-widening is left out
 // (useExaminerLook). No study shows green or bright irises draw longer looks, so they are not made to glow.
 //
+// The male examiner (GAD-T504, assets/avatars/examiner-m.glb) is built from the same MakeHuman parts and the same brown_eye sheet,
+// so the same palette, part names and iris circles style him; only his hair is named by style (short02), not "hair".
+//
 // The vendored avatar library under /lib/voice is copied in by tools/sync-voice-assets.ps1 and is never edited here: this module
 // restyles the loaded model's materials from the outside, through the element's public `head` (the TalkingHead instance) and its
 // `armature` (the model's three.js scene graph). It makes no network calls.
@@ -69,7 +72,8 @@ function partOf(material, mesh) {
     if (/teeth|tooth/.test(n)) return "teeth";
     if (/tongue/.test(n)) return "tongue";
     if (/high-poly|wolf3d_eye|\beye/.test(n)) return "eyes";
-    if (/hair|ponytail|braid/.test(n)) return "hair";
+    // MakeHuman hair assets are named by style (ponytail01, short02, bob01, afro01, long01, braid01), not "hair".
+    if (/hair|ponytail|braid|\bshort\d|\bbob\d|\bafro\d|\blong\d/.test(n)) return "hair";
     if (/body|skin|wolf3d_body|wolf3d_head/.test(n)) return "skin";
     return "clothing";
 }

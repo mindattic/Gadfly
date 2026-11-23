@@ -7,3 +7,5 @@ obj/
 
 # Voice exam room: copied at build time from MindAttic.Avatar (GAD-T53)
 Gadfly.Server/wwwroot/assets/avatars/*.glb
+# ...except the male examiner (GAD-T504, CC0, 9.5 MB), which is built here (tools/examiner-m) and committed.
+!Gadfly.Server/wwwroot/assets/avatars/examiner-m.glb
