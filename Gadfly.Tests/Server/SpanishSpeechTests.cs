@@ -126,7 +126,8 @@ public class SpanishSpeechTests
         string output;
         try
         {
-            var psi = new ProcessStartInfo("node") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            // Node writes UTF-8 to a pipe; without this .NET reads it in the console code page (CP437 on Windows) and Hangul or accents come back garbled.
+            var psi = new ProcessStartInfo("node") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, StandardOutputEncoding = System.Text.Encoding.UTF8, StandardErrorEncoding = System.Text.Encoding.UTF8 };
             foreach (var a in new[] { "--input-type=module", "-e", script, new Uri(module).AbsoluteUri }) psi.ArgumentList.Add(a);
             using var node = Process.Start(psi)!;
             output = node.StandardOutput.ReadToEnd();
