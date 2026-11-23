@@ -327,5 +327,20 @@
   "result.appeal.response": "Your response to the integrity notes (optional)",
   "result.appeal.responseHint": "Say what happened at those moments, if you want to. It goes to the teacher with your appeal. You can send a response on its own, without a reason above.",
   "result.appeal.submit": "Submit appeal",
-  "result.appeal.tooLong": "Your reason and response together are {0:N0} characters; please keep them to 4,000."
+  "result.appeal.tooLong": "Your reason and response together are {0:N0} characters; please keep them to 4,000.",
+  "notifications.pageTitle": "Email preferences · Gadfly Exams",
+  "notifications.optOut": "Don't email me reminders before an exam is due",
+  "notifications.explain": "This only affects the reminder email sent a couple of days before an exam closes. You'll still be emailed when an exam is assigned to you and when your result is released — those don't stop, since they matter operationally. Your organization can also turn off Gadfly's emails entirely; if they have, this choice won't change anything either way.",
+  "notifications.save": "Save",
+  "notifications.saved": "Saved.",
+  "notifications.failed": "That could not be saved: {0}",
+  "research.choice": "Your choice (you can skip this; the exam is the same either way)",
+  "research.yes": "Yes, include my de-identified exam records in the research",
+  "research.no": "No, don't use my records for research",
+  "research.changeOn": "You can change this on",
+  "research.changeOnAfter": "; it doesn't affect your exam.",
+  "research.saidAgreed": "Research: you have agreed to take part.",
+  "research.saidDeclined": "Research: you chose not to take part.",
+  "research.saidWithdrawn": "Research: you have withdrawn.",
+  "research.saveFailed": "Your research choice could not be saved; you can make it later on My research choice."
 }

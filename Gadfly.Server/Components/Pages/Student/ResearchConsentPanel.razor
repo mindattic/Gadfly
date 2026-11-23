@@ -3,6 +3,7 @@
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
 @inject TimeProvider Clock
+@inject Gadfly.Server.Localization.UiText T
 
 @* The optional research question on the get-ready page (GAD-T452). Shown only when the organization runs research and the
    student has not answered yet; never required to begin the exam. The choice is recorded when the student begins, against the
@@ -17,14 +18,14 @@
             <p>@p</p>
         }
         <fieldset>
-            <legend>Your choice (you can skip this; the exam is the same either way)</legend>
+            <legend>@T["research.choice"]</legend>
             <label class="inline">
                 <input type="radio" name="research-choice" checked="@(choice == ResearchConsentDecision.Agreed)" @onchange="() => choice = ResearchConsentDecision.Agreed" />
-                Yes, include my de-identified exam records in the research
+                @T["research.yes"]
             </label>
             <label class="inline">
                 <input type="radio" name="research-choice" checked="@(choice == ResearchConsentDecision.Declined)" @onchange="() => choice = ResearchConsentDecision.Declined" />
-                No, don't use my records for research
+                @T["research.no"]
             </label>
         </fieldset>
         @if (error is not null)
@@ -35,7 +36,7 @@
 }
 else if (status is { Enabled: true, Current: { } current })
 {
-    <p class="hint">@Said(current) You can change this on <a href="my-research">My research choice</a>; it doesn't affect your exam.</p>
+    <p class="hint">@Said(current) @T["research.changeOn"] <a href="my-research">@T["myExams.research"]</a>@T["research.changeOnAfter"]</p>
 }
 
 @code {
@@ -45,11 +46,11 @@ else if (status is { Enabled: true, Current: { } current })
     private ResearchConsentDecision? choice;
     private string? error;
 
-    private static string Said(ResearchConsentDecision d) => d switch
+    private string Said(ResearchConsentDecision d) => d switch
     {
-        ResearchConsentDecision.Agreed => "Research: you have agreed to take part.",
-        ResearchConsentDecision.Declined => "Research: you chose not to take part.",
-        _ => "Research: you have withdrawn.",
+        ResearchConsentDecision.Agreed => T["research.saidAgreed"],
+        ResearchConsentDecision.Declined => T["research.saidDeclined"],
+        _ => T["research.saidWithdrawn"],
     };
 
     protected override async Task OnInitializedAsync()
@@ -83,7 +84,7 @@ else if (status is { Enabled: true, Current: { } current })
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            error = "Your research choice could not be saved; you can make it later on My research choice.";
+            error = T["research.saveFailed"];
         }
     }
 }

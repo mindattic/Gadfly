@@ -5,26 +5,22 @@
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
 @inject TimeProvider Clock
+@inject Gadfly.Server.Localization.UiText T
 
 @* A student's own notification choice (GAD-T310/GAD-T375): opting out of exam-due reminders only. *@
 
-<PageTitle>Email preferences · Gadfly Exams</PageTitle>
-<h1>Email preferences</h1>
+<PageTitle>@T["notifications.pageTitle"]</PageTitle>
+<h1>@T["myExams.emailPrefs"]</h1>
 
 @if (loaded)
 {
     <EditForm Model="this" OnValidSubmit="SaveAsync" FormName="my-notifications" class="panel">
         <label class="check">
             <InputCheckbox @bind-Value="optedOut" />
-            Don't email me reminders before an exam is due
+            @T["notifications.optOut"]
         </label>
-        <p class="hint">
-            This only affects the reminder email sent a couple of days before an exam closes. You'll still be emailed
-            when an exam is assigned to you and when your result is released — those don't stop, since they matter
-            operationally. Your organization can also turn off Gadfly's emails entirely; if they have, this choice
-            won't change anything either way.
-        </p>
-        <button type="submit" disabled="@busy">Save</button>
+        <p class="hint">@T["notifications.explain"]</p>
+        <button type="submit" disabled="@busy">@T["notifications.save"]</button>
         @if (message is not null)
         {
             <p role="status" class="@(ok ? "ok" : "error")">@message</p>
@@ -33,7 +29,7 @@
 }
 else
 {
-    <p class="hint">Loading&hellip;</p>
+    <p class="hint">@T["common.loading"]</p>
 }
 
 @code {
@@ -66,12 +62,12 @@ else
             row.UpdatedAt = Clock.GetUtcNow();
             await db.SaveChangesAsync();
             ok = true;
-            message = "Saved.";
+            message = T["notifications.saved"];
         }
         catch (Exception ex)
         {
             ok = false;
-            message = "That could not be saved: " + ex.Message;
+            message = T["notifications.failed", ex.Message];
         }
         finally { busy = false; }
     }
