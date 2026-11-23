@@ -1,0 +1,92 @@
+// Catalog exams (GAD-T659). One file per category; every exams/*.json is read. Fields: title (unique, the idempotency key),
+// category (a slug from categories.json), subject, topic, instructions (optional; a default is used), passage (the source
+// material, one paragraph per entry), objectives (key, title, description, concept, definition, facts, misconceptions) and
+// translations (optional: { "ko": { "title", "instructions", "objectives": { "<key>": "<title>" } }, "es": { ... } }).
+[
+  {
+    "title": "Cell Structure and Function",
+    "category": "life-sciences",
+    "subject": "Biology",
+    "topic": "Cells",
+    "passage": [
+      "All living things are made of cells, the smallest units that carry out the processes of life. Cell theory holds that every organism is made of one or more cells, that the cell is the basic unit of structure and function, and that new cells arise only from existing cells by division.",
+      "Prokaryotic cells, such as bacteria and archaea, have no nucleus: their DNA lies in a region of the cytoplasm called the nucleoid, and they lack membrane-bound organelles. Eukaryotic cells, found in plants, animals, fungi and protists, keep their DNA inside a nucleus and contain membrane-bound organelles. Eukaryotic cells are usually much larger.",
+      "Organelles divide the work of a eukaryotic cell. Ribosomes build proteins; the endoplasmic reticulum and Golgi apparatus modify, package and ship them. Mitochondria release usable energy from food as ATP through cellular respiration. Plant cells also have chloroplasts, where photosynthesis happens, a cell wall of cellulose, and usually a large central vacuole.",
+      "The cell membrane is a phospholipid bilayer with embedded proteins. It is selectively permeable: small nonpolar molecules such as oxygen cross it easily, while ions and large polar molecules need channel or carrier proteins. Diffusion and osmosis move substances down their concentration gradients without energy; active transport moves them against a gradient and uses ATP."
+    ],
+    "objectives": [
+      { "key": "cell-theory", "title": "Explain cell theory", "description": "States the three ideas of cell theory and why they matter.",
+        "concept": "Cell theory", "definition": "Every organism is made of cells; the cell is the basic unit of life; cells come only from existing cells.",
+        "facts": ["All organisms are made of one or more cells.", "The cell is the basic unit of structure and function.", "New cells come only from the division of existing cells."],
+        "misconceptions": ["Cells can arise spontaneously from non-living matter."] },
+      { "key": "prokaryote-eukaryote", "title": "Compare prokaryotic and eukaryotic cells", "description": "Explains the defining difference and gives examples of each.",
+        "concept": "Prokaryotic and eukaryotic cells", "definition": "Prokaryotes lack a nucleus and membrane-bound organelles; eukaryotes have both.",
+        "facts": ["Prokaryotic DNA lies in the nucleoid, not in a nucleus.", "Eukaryotic cells have membrane-bound organelles.", "Bacteria are prokaryotes; plants, animals and fungi are eukaryotes."],
+        "misconceptions": ["Prokaryotes have no DNA.", "Plant cells are prokaryotic because they have a cell wall."] },
+      { "key": "organelles", "title": "Explain what the main organelles do", "description": "Links ribosomes, mitochondria, chloroplasts and the Golgi to their jobs.",
+        "concept": "Organelle functions", "definition": "Organelles divide a eukaryotic cell's work: protein synthesis, energy release, photosynthesis, packaging.",
+        "facts": ["Ribosomes make proteins.", "Mitochondria release energy from food as ATP.", "Chloroplasts carry out photosynthesis in plant cells.", "The Golgi apparatus modifies and packages proteins."],
+        "misconceptions": ["Mitochondria create energy from nothing.", "Plant cells have chloroplasts instead of mitochondria."] },
+      { "key": "membrane-transport", "title": "Explain how substances cross the cell membrane", "description": "Distinguishes passive transport from active transport and says why.",
+        "concept": "Membrane transport", "definition": "The selectively permeable membrane lets substances move down gradients passively, or against them by active transport using ATP.",
+        "facts": ["The membrane is a phospholipid bilayer with proteins.", "Diffusion and osmosis move substances down a gradient without energy.", "Active transport moves substances against a gradient and uses ATP."],
+        "misconceptions": ["Osmosis is the movement of solute rather than water.", "Diffusion needs energy from the cell."] }
+    ]
+  },
+  {
+    "title": "Mendelian Genetics",
+    "category": "life-sciences",
+    "subject": "Biology",
+    "topic": "Heredity",
+    "passage": [
+      "Gregor Mendel studied pea plants in the 1860s and found that traits are passed on as discrete units, now called genes. Each organism carries two copies, or alleles, of each gene, one from each parent. Different alleles produce different versions of a trait, such as purple or white flowers.",
+      "When the two alleles differ, one may be dominant and mask the other, which is recessive. An organism's genotype is its pair of alleles, for example PP, Pp or pp; its phenotype is the trait it shows. PP and Pp plants both have purple flowers, so the same phenotype can come from different genotypes.",
+      "Mendel's law of segregation states that the two alleles separate when gametes form, so each gamete carries only one. His law of independent assortment states that alleles of different genes are sorted into gametes independently, which holds for genes on different chromosomes.",
+      "A Punnett square predicts offspring ratios. Crossing two Pp plants gives genotypes PP, Pp and pp in a 1:2:1 ratio and phenotypes in a 3:1 ratio of purple to white. These are probabilities: a real family of four offspring need not show exactly three purple and one white."
+    ],
+    "objectives": [
+      { "key": "alleles", "title": "Explain genes, alleles, genotype and phenotype", "description": "Uses the terms correctly and explains how one phenotype can have two genotypes.",
+        "concept": "Genotype and phenotype", "definition": "Genotype is the pair of alleles an organism carries; phenotype is the trait it shows.",
+        "facts": ["Each organism carries two alleles of a gene, one from each parent.", "A dominant allele masks a recessive one.", "PP and Pp give the same phenotype."],
+        "misconceptions": ["Dominant alleles are always more common in a population.", "Genotype and phenotype mean the same thing."] },
+      { "key": "segregation", "title": "Explain the law of segregation", "description": "Explains why each gamete carries one allele and what follows from it.",
+        "concept": "Law of segregation", "definition": "The two alleles of a gene separate during gamete formation, so each gamete carries one.",
+        "facts": ["Alleles separate when gametes form.", "Each gamete carries one allele of each gene.", "Fertilization restores the pair."],
+        "misconceptions": ["Offspring receive both alleles from one parent."] },
+      { "key": "independent-assortment", "title": "Explain independent assortment", "description": "Says what it claims and when it holds.",
+        "concept": "Law of independent assortment", "definition": "Alleles of different genes are sorted into gametes independently of each other.",
+        "facts": ["Different genes are inherited independently.", "It holds for genes on different chromosomes."],
+        "misconceptions": ["Every pair of genes is inherited independently, even genes close together on one chromosome."] },
+      { "key": "punnett", "title": "Predict and interpret cross ratios", "description": "Works a monohybrid cross and explains why ratios are probabilities.",
+        "concept": "Punnett squares and ratios", "definition": "A Punnett square gives the probabilities of offspring genotypes and phenotypes from a cross.",
+        "facts": ["Pp x Pp gives a 1:2:1 genotype ratio.", "Pp x Pp gives a 3:1 phenotype ratio.", "Ratios are probabilities, not guarantees for a small family."],
+        "misconceptions": ["Four offspring of Pp x Pp must be exactly three dominant and one recessive."] }
+    ]
+  },
+  {
+    "title": "Evolution by Natural Selection",
+    "category": "life-sciences",
+    "subject": "Biology",
+    "topic": "Evolution",
+    "passage": [
+      "Charles Darwin and Alfred Russel Wallace proposed natural selection as the main mechanism of evolution, published in 1858; Darwin's On the Origin of Species followed in 1859. Evolution is a change in the inherited characteristics of a population over generations.",
+      "Natural selection rests on observable facts. Individuals in a population vary; much of that variation is inherited; more offspring are produced than can survive; and individuals with traits better suited to their environment tend to survive and reproduce more. Over generations those traits become more common.",
+      "Variation arises from mutation and from the shuffling of alleles in sexual reproduction. Selection does not create variation on demand: an individual cannot develop a useful trait because it needs it, and traits acquired during a lifetime, such as stronger muscles, are not inherited.",
+      "Evidence for evolution includes the fossil record, homologous structures such as the shared bone pattern of the human arm and the whale flipper, DNA similarities between species, and evolution observed directly, for example antibiotic resistance spreading in bacteria."
+    ],
+    "objectives": [
+      { "key": "mechanism", "title": "Explain how natural selection works", "description": "Connects variation, inheritance, overproduction and differential survival.",
+        "concept": "Mechanism of natural selection", "definition": "Inherited variants that improve survival and reproduction become more common over generations.",
+        "facts": ["Individuals in a population vary.", "Much variation is inherited.", "More offspring are born than survive.", "Better-suited individuals reproduce more, so their traits spread."],
+        "misconceptions": ["Individuals evolve during their lifetime.", "Evolution aims at a goal or at perfection."] },
+      { "key": "variation", "title": "Explain where variation comes from", "description": "Names mutation and sexual reproduction and rejects need-driven change.",
+        "concept": "Sources of variation", "definition": "Variation comes from mutation and recombination, not from an organism's needs.",
+        "facts": ["Mutation produces new alleles.", "Sexual reproduction shuffles alleles.", "Acquired traits are not inherited."],
+        "misconceptions": ["Organisms develop traits because they need them.", "A giraffe's stretched neck is passed to its young."] },
+      { "key": "evidence", "title": "Use evidence for evolution", "description": "Explains what fossils, homologous structures, DNA and observed change show.",
+        "concept": "Evidence for evolution", "definition": "Fossils, homologous structures, DNA comparisons and observed change support common descent and selection.",
+        "facts": ["The fossil record shows change over time.", "Homologous structures point to common ancestry.", "Antibiotic resistance is evolution observed directly."],
+        "misconceptions": ["Evolution is just a guess because it is called a theory."] }
+    ]
+  }
+]

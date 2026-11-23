@@ -12,6 +12,7 @@ feedback becomes tickets. It is ready to start as soon as the owner says go. Not
 | Answer D24 (staff MFA) | Owner | Erin's teacher account needs an authenticator app unless D24 = B. |
 | Create Erin's organization and teacher account | Claude, on the owner's word | Her own organization, separate from the "Gadfly Classroom" test data. She gets an email invitation (or a temporary password if email isn't set up). |
 | Seed the accounts (GAD-T226) | Claude, on the owner's word | `Gadfly.Server --seed-pilot --then-exit` (development, or `Gadfly:Demo:AllowPilotSeed=true`) creates the organization "Erin's Pilot" with `erin` as Owner and `ryan` as a Student. Existing `erin` and `ryan` accounts are reused with their passwords. |
+| Seed the exam catalog (GAD-T659) | Claude, on the owner's word | `Gadfly.Server --seed-catalog --then-exit` with `Gadfly:Demo:AllowCatalogSeed=true` set for that run only (switch it off after) creates the categories and published, open-to-all-students voice exams in `Gadfly.Server/Demo/Catalog` (`categories.json`, `exams/*.json`). No LLM calls: each exam's passage, concept map and rubric come from the data. Target organization: `--catalog-org "Name"`, else `Gadfly:Demo:CatalogOrganization`, else the one holding most of `admin`, `ryan` and `erin`. Safe to re-run: existing exams are kept and only gain their category and approved translations. |
 | Students | Erin | Real students, or the owner and friends playing students. At least five sessions in total (the ticket's target). |
 
 ## What Erin does

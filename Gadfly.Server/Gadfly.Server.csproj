@@ -49,6 +49,8 @@
   <ItemGroup>
     <!-- Demo and classroom source notes, used by the demo and classroom seeders (GAD-T103, GAD-T151). -->
     <None Include="Demo\Material\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- The exam catalog's categories and exams, read by CatalogSeeder (GAD-T659). -->
+    <None Include="Demo\Catalog\**\*.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- The in-app help center (GAD-T292): every file under docs/guides is embedded in the app as "Gadfly.Help/<path>", so the

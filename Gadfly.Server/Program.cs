@@ -219,6 +219,13 @@ if (args.Contains(Gadfly.Server.Demo.PilotSeeder.SeedArgument))
     catch (Exception ex) { app.Logger.LogError(ex, "Pilot seeding failed."); }
     if (args.Contains("--then-exit")) return;
 }
+// Exam catalog: categories and open, published exams from Demo/Catalog (GAD-T659); one-shot with --then-exit.
+if (args.Contains(Gadfly.Server.Demo.CatalogSeeder.SeedArgument))
+{
+    try { await Gadfly.Server.Demo.CatalogSeeder.RunAsync(app, args); }
+    catch (Exception ex) { app.Logger.LogError(ex, "Catalog seeding failed."); }
+    if (args.Contains("--then-exit")) return;
+}
 // Classroom test accounts: Teacher_A..C, Student_A..Z across their assessments (GAD-T151). --then-exit makes it a one-shot.
 if (args.Contains(Gadfly.Server.Demo.ClassroomSeeder.SeedArgument) || app.Configuration["Gadfly:Demo:SeedClassroomOnStartup"] == "true")
 {
