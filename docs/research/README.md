@@ -15,6 +15,8 @@ Prepared 2026-11-21 (GAD-T254).
 | [05-ai-examiner-llm-grading.md](05-ai-examiner-llm-grading.md) | LLM-as-judge biases, panels of models, LLM scoring of student work against human raters, human marking reliability, prompt injection, the EU AI Act's high-risk education category |
 | [06-integrity-proctoring-gaze-voice.md](06-integrity-proctoring-gaze-voice.md) | Cheating in online exams, remote proctoring ethics and bias, AI-text detectors, webcam eye tracking, voice stress analysis, the AI Act's ban on emotion recognition in education |
 
+Feasibility note: [corneal-reflection-and-room-sweep.md](corneal-reflection-and-room-sweep.md) finds that reading or detecting notes from the screen's reflection in the student's eyes is not feasible at webcam resolution (and would favour flagging glasses-wearers), and that an automated room sweep at the start buys little in an unwatched, frame-free exam (GAD-T244).
+
 Engineering note (not part of the literature review): [stt-alternatives.md](stt-alternatives.md) compares the speech-to-text integrations in the Prose repo (Groq and OpenAI Whisper) with Gadfly's ElevenLabs Scribe recognizer (GAD-T414).
 
 ## What the evidence supports
