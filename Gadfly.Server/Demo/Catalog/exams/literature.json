@@ -1,0 +1,394 @@
+// Catalog exams for Literature (GAD-T683). Format: see the header of life-sciences.json. Passages are original explanatory prose
+// about public-domain works and literary forms across traditions; translations carry the approved Korean and Spanish texts.
+[
+  {
+    "title": "Homer's Odyssey and the Oral Epic",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Ancient Greek epic",
+    "instructions": "The examiner will talk with you about Homer's Odyssey. Explain in your own words how the poem was made, how its story is told and what it values. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The Odyssey is an ancient Greek epic attributed to Homer and usually dated to the late eighth or seventh century BCE. It tells how Odysseus, king of Ithaca, struggles for ten years to return home after the Trojan War, while at home his wife Penelope holds off a crowd of suitors and his son Telemachus comes of age. Its central theme is nostos, the homecoming.",
+      "An epic is a long narrative poem about heroic deeds that matter to a whole people. The Odyssey is composed in dactylic hexameter, a six-beat line, and divided into 24 books. It opens with an invocation of the Muse and begins in medias res, in the middle of the action: we meet Odysseus near the end of his wanderings, and he tells the earlier adventures himself, as a flashback, to the Phaeacians in Books 9 to 12.",
+      "The poem grew out of a long tradition of oral performance. In the twentieth century Milman Parry and Albert Lord, comparing Homer with living South Slavic singers, argued that bards composed as they performed by drawing on stock phrases called formulas. Recurring epithets such as 'rosy-fingered Dawn' or 'grey-eyed Athena' fit the meter and gave the singer ready building blocks; repeated type-scenes, such as feasts and arrivals, served the same purpose.",
+      "The Odyssey also teaches values. Xenia, the sacred custom of hospitality between host and guest, runs through the poem: good hosts such as the Phaeacians are rewarded, while the Cyclops, who eats his guests, and the suitors, who devour Odysseus's household, violate it and are punished. Odysseus is admired less for strength than for metis, cunning intelligence, shown when he tells the Cyclops his name is 'Nobody'."
+    ],
+    "objectives": [
+      { "key": "epic-conventions", "title": "Explain the conventions of epic", "description": "Identifies invocation, in medias res, hexameter and heroic scope in the Odyssey.",
+        "concept": "Epic conventions", "definition": "An epic is a long heroic narrative poem with conventions such as an invocation of the Muse, a start in medias res and an elevated meter.",
+        "facts": ["The Odyssey opens by invoking the Muse.", "It begins in medias res, near the end of Odysseus's wanderings.", "Odysseus narrates his earlier adventures as a flashback to the Phaeacians.", "It is written in dactylic hexameter."],
+        "misconceptions": ["The Odyssey tells its story strictly in chronological order.", "An epic is any long story, whatever its subject or form."] },
+      { "key": "oral-formulaic", "title": "Explain oral-formulaic composition", "description": "Explains how formulas and epithets let bards compose in performance.",
+        "concept": "Oral-formulaic composition", "definition": "Oral poets composed while performing by combining traditional formulas, epithets and type-scenes that fit the meter.",
+        "facts": ["Milman Parry and Albert Lord compared Homer with living oral singers.", "Stock epithets such as 'rosy-fingered Dawn' fit the meter.", "Repeated type-scenes gave the singer ready building blocks."],
+        "misconceptions": ["Repeated phrases show that the poet was careless or short of ideas.", "Homer wrote the poem down from the start like a modern novelist."] },
+      { "key": "xenia", "title": "Explain the role of hospitality (xenia)", "description": "Uses the Phaeacians, the Cyclops and the suitors to show how the poem judges characters by xenia.",
+        "concept": "Xenia", "definition": "Xenia is the sacred Greek custom of hospitality, binding host and guest to mutual respect and protected by Zeus.",
+        "facts": ["Good hosts such as the Phaeacians are honored.", "The Cyclops violates xenia by eating his guests.", "The suitors abuse hospitality by consuming Odysseus's household and are punished."],
+        "misconceptions": ["Xenia is just politeness with no moral or religious weight."] },
+      { "key": "metis-nostos", "title": "Explain Odysseus's heroism and the homecoming theme", "description": "Explains metis and nostos and why cunning matters as much as strength.",
+        "concept": "Metis and nostos", "definition": "Metis is cunning intelligence, Odysseus's defining trait; nostos is the homecoming that drives the plot.",
+        "facts": ["Odysseus tricks the Cyclops by calling himself 'Nobody'.", "The plot is driven by his ten-year struggle to return home.", "Penelope's patience and cleverness mirror his own."],
+        "misconceptions": ["Odysseus is admired mainly for physical strength.", "The Odyssey is the story of the Trojan War itself."] }
+    ],
+    "translations": {
+      "ko": { "title": "호메로스의 『오디세이아』와 구전 서사시",
+        "instructions": "시험관이 호메로스의 『오디세이아』에 대해 이야기합니다. 이 시가 어떻게 만들어졌는지, 이야기가 어떻게 전개되는지, 무엇을 중요하게 여기는지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "epic-conventions": "서사시의 관습 설명하기", "oral-formulaic": "구전 정형구 창작 설명하기", "xenia": "환대(크세니아)의 역할 설명하기", "metis-nostos": "오디세우스의 영웅성과 귀향 주제 설명하기" } },
+      "es": { "title": "La Odisea de Homero y la épica oral",
+        "instructions": "El examinador conversará con usted sobre la Odisea de Homero. Explique con sus propias palabras cómo se compuso el poema, cómo se narra su historia y qué valores defiende. Diga \"No sé\" si no lo sabe.",
+        "objectives": { "epic-conventions": "Explicar las convenciones de la épica", "oral-formulaic": "Explicar la composición oral formularia", "xenia": "Explicar el papel de la hospitalidad (xenia)", "metis-nostos": "Explicar el heroísmo de Odiseo y el tema del regreso" } }
+    }
+  },
+  {
+    "title": "Greek Tragedy: Sophocles' Oedipus the King",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Ancient Greek drama",
+    "instructions": "The examiner will talk with you about Greek tragedy and Sophocles' Oedipus the King. Explain in your own words how the play works and why it affects its audience. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Greek tragedy developed in Athens in the fifth century BCE and was performed at the City Dionysia, a festival honoring the god Dionysus, where playwrights competed for a prize. Performances took place in an open-air theater; a few masked male actors played all the speaking roles, and a chorus sang and danced odes between the episodes, commenting on the action and voicing the community's fears and judgments.",
+      "Sophocles' Oedipus the King, first performed around 429 BCE, opens with Thebes struck by a plague. King Oedipus, who once saved the city by solving the riddle of the Sphinx, vows to find the killer of the former king Laius, whose death has polluted the city. Step by step his investigation reveals that he himself killed Laius, his true father, and married Jocasta, his own mother, fulfilling a prophecy that both he and his parents had tried to escape.",
+      "The play is a model of dramatic irony: the audience, who knew the myth, understands the truth long before Oedipus does, so his confident curses on the unknown killer fall back on himself. When Jocasta realizes the truth she takes her own life, and Oedipus blinds himself, the man who could see through riddles now unable to see at all.",
+      "A century later Aristotle used this play in his Poetics as an example of the best tragic plot. He described the reversal (peripeteia), when an action produces the opposite of what was intended, and the recognition (anagnorisis), a shift from ignorance to knowledge, both of which coincide in Oedipus. The hero falls through hamartia, an error or mistake of judgment rather than simple wickedness, and the tragedy arouses pity and fear to bring about catharsis."
+    ],
+    "objectives": [
+      { "key": "performance", "title": "Describe how Greek tragedy was performed", "description": "Explains the festival setting, the masked actors and the role of the chorus.",
+        "concept": "Conventions of Greek tragedy", "definition": "Tragedies were staged at the City Dionysia by a few masked actors and a chorus that sang odes and commented on the action.",
+        "facts": ["Tragedies competed at the City Dionysia in Athens.", "A few masked male actors played all speaking roles.", "The chorus sang odes between episodes and voiced the community's view."],
+        "misconceptions": ["The chorus is simply background music with no role in the meaning.", "Greek tragedies were staged indoors with large casts like modern plays."] },
+      { "key": "dramatic-irony", "title": "Explain dramatic irony in Oedipus the King", "description": "Shows how the audience's knowledge turns Oedipus's words against him.",
+        "concept": "Dramatic irony", "definition": "Dramatic irony occurs when the audience knows something a character does not, so the character's words carry a meaning they cannot see.",
+        "facts": ["The audience already knew the Oedipus myth.", "Oedipus curses the unknown killer, who is himself.", "The image of sight and blindness runs through the play: the clever king ends blind."],
+        "misconceptions": ["Dramatic irony means a character is being sarcastic."] },
+      { "key": "aristotle", "title": "Apply Aristotle's terms to the plot", "description": "Uses peripeteia, anagnorisis and catharsis correctly with examples from the play.",
+        "concept": "Aristotle's analysis of tragedy", "definition": "Aristotle's Poetics names reversal (peripeteia) and recognition (anagnorisis) as key plot elements and says tragedy arouses pity and fear leading to catharsis.",
+        "facts": ["Peripeteia is a reversal of fortune or of intended outcome.", "Anagnorisis is the change from ignorance to knowledge.", "In Oedipus the reversal and recognition coincide.", "Aristotle held up this play as a model tragedy."],
+        "misconceptions": ["Catharsis means the play has a happy ending."] },
+      { "key": "hamartia", "title": "Explain hamartia and the question of fate", "description": "Explains hamartia as error and weighs fate against Oedipus's own choices.",
+        "concept": "Hamartia", "definition": "Hamartia is a tragic error or mistake of judgment that brings about the hero's fall, not necessarily a moral vice.",
+        "facts": ["Hamartia is better translated as error than as 'tragic flaw'.", "Oedipus acts without knowing who his parents are.", "Both Oedipus and his parents tried to escape the prophecy, and their efforts fulfilled it."],
+        "misconceptions": ["Oedipus falls because he is a wicked man.", "Hamartia always means a single personality flaw such as pride."] }
+    ],
+    "translations": {
+      "ko": { "title": "그리스 비극: 소포클레스의 『오이디푸스 왕』",
+        "instructions": "시험관이 그리스 비극과 소포클레스의 『오이디푸스 왕』에 대해 이야기합니다. 이 극이 어떻게 구성되어 있고 왜 관객에게 깊은 감동을 주는지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "performance": "그리스 비극의 공연 방식 설명하기", "dramatic-irony": "『오이디푸스 왕』의 극적 아이러니 설명하기", "aristotle": "아리스토텔레스의 개념을 플롯에 적용하기", "hamartia": "하마르티아와 운명의 문제 설명하기" } },
+      "es": { "title": "La tragedia griega: Edipo rey de Sófocles",
+        "instructions": "El examinador conversará con usted sobre la tragedia griega y Edipo rey de Sófocles. Explique con sus propias palabras cómo funciona la obra y por qué conmueve a su público. Diga \"No sé\" si no lo sabe.",
+        "objectives": { "performance": "Describir cómo se representaba la tragedia griega", "dramatic-irony": "Explicar la ironía dramática en Edipo rey", "aristotle": "Aplicar los conceptos de Aristóteles a la trama", "hamartia": "Explicar la hamartia y la cuestión del destino" } }
+    }
+  },
+  {
+    "title": "Shakespeare's Hamlet and Revenge Tragedy",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Elizabethan drama",
+    "instructions": "The examiner will talk with you about Shakespeare's Hamlet. Explain in your own words how the play uses and changes the revenge tragedy and how Shakespeare reveals Hamlet's mind. Say \"I don't know\" if you don't.",
+    "passage": [
+      "William Shakespeare wrote Hamlet around 1600, for performance by his company at the Globe Theatre in London. The play belongs to the genre of revenge tragedy, popular on the Elizabethan stage since Thomas Kyd's The Spanish Tragedy. Its familiar ingredients include a murder that demands vengeance, a ghost, a hero who delays, feigned or real madness, and a final scene that ends in many deaths.",
+      "Prince Hamlet of Denmark is visited by the ghost of his father, who reveals that he was murdered by his brother Claudius, now king and married to Hamlet's mother, Gertrude. Hamlet swears revenge but delays. He doubts whether the ghost is honest or a devil, and he stages a play-within-a-play, 'The Mousetrap', which re-enacts the murder so that he can watch Claudius's reaction. The play ends with the deaths of Gertrude, Claudius, Laertes and Hamlet himself, and the Norwegian prince Fortinbras takes the throne.",
+      "Shakespeare gives Hamlet an unusually rich inner life, above all through soliloquies, speeches a character makes alone on stage that let the audience hear his thoughts. In the soliloquy beginning 'To be, or not to be', Hamlet weighs life against death and asks why people endure suffering rather than end it, concluding that fear of the unknown after death 'makes cowards of us all'. The soliloquies show a mind that questions, reasons and reproaches itself.",
+      "Like most of Shakespeare's plays, Hamlet mixes blank verse, unrhymed lines of iambic pentameter, with prose. Noble characters in serious scenes usually speak verse, while prose often marks comic scenes, lower-status speakers or disordered states of mind; Hamlet himself shifts into prose when he plays the madman. Critics still debate why Hamlet delays: moral scruple, doubt about the evidence, melancholy, or a tendency to think instead of act."
+    ],
+    "objectives": [
+      { "key": "revenge-tragedy", "title": "Explain how Hamlet uses revenge tragedy", "description": "Names the genre's conventions and shows how Hamlet follows and complicates them.",
+        "concept": "Revenge tragedy", "definition": "Revenge tragedy is a dramatic genre in which a wronged hero seeks vengeance for a murder, typically with a ghost, delay, madness and a bloody ending.",
+        "facts": ["Kyd's The Spanish Tragedy popularized the genre on the Elizabethan stage.", "Hamlet includes a ghost, a delayed revenge, madness and a final scene of many deaths.", "Hamlet complicates the genre by questioning whether revenge is right and whether the ghost can be trusted."],
+        "misconceptions": ["Shakespeare invented the revenge tragedy with Hamlet."] },
+      { "key": "soliloquy", "title": "Explain the soliloquy and what it reveals", "description": "Defines soliloquy and uses 'To be, or not to be' to show Hamlet's thinking.",
+        "concept": "Soliloquy", "definition": "A soliloquy is a speech a character delivers alone on stage, revealing private thoughts to the audience.",
+        "facts": ["A soliloquy is spoken when the character is alone or believes he is unheard.", "In 'To be, or not to be' Hamlet weighs life against death.", "He concludes that fear of what follows death makes people hesitate."],
+        "misconceptions": ["A soliloquy is the same as any long speech addressed to other characters."] },
+      { "key": "mousetrap", "title": "Explain the play-within-a-play", "description": "Explains why Hamlet stages 'The Mousetrap' and what it achieves.",
+        "concept": "Play-within-a-play", "definition": "A play-within-a-play is a performance staged inside the main play; in Hamlet it tests Claudius's guilt.",
+        "facts": ["Hamlet doubts whether the ghost tells the truth.", "'The Mousetrap' re-enacts a murder like his father's.", "Claudius's reaction convinces Hamlet of his guilt."],
+        "misconceptions": ["Hamlet stages the play only to entertain the court."] },
+      { "key": "verse-prose", "title": "Explain the use of verse and prose", "description": "Defines blank verse and explains what shifts between verse and prose signal.",
+        "concept": "Blank verse and prose", "definition": "Blank verse is unrhymed iambic pentameter; Shakespeare alternates it with prose to mark status, mood and states of mind.",
+        "facts": ["Blank verse is unrhymed iambic pentameter.", "Serious scenes with noble characters are usually in verse.", "Hamlet speaks prose when he feigns madness."],
+        "misconceptions": ["Blank verse means poetry with no regular rhythm.", "All of Shakespeare's plays are written entirely in rhyme."] }
+    ],
+    "translations": {
+      "ko": { "title": "셰익스피어의 『햄릿』과 복수 비극",
+        "instructions": "시험관이 셰익스피어의 『햄릿』에 대해 이야기합니다. 이 극이 복수 비극을 어떻게 활용하고 변화시키는지, 셰익스피어가 햄릿의 내면을 어떻게 드러내는지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "revenge-tragedy": "『햄릿』이 복수 비극을 활용하는 방식 설명하기", "soliloquy": "독백과 그것이 드러내는 것 설명하기", "mousetrap": "극중극 설명하기", "verse-prose": "운문과 산문의 쓰임 설명하기" } },
+      "es": { "title": "Hamlet de Shakespeare y la tragedia de venganza",
+        "instructions": "El examinador conversará con usted sobre Hamlet de Shakespeare. Explique con sus propias palabras cómo la obra usa y transforma la tragedia de venganza y cómo Shakespeare revela la mente de Hamlet. Diga \"No sé\" si no lo sabe.",
+        "objectives": { "revenge-tragedy": "Explicar cómo Hamlet usa la tragedia de venganza", "soliloquy": "Explicar el soliloquio y lo que revela", "mousetrap": "Explicar el teatro dentro del teatro", "verse-prose": "Explicar el uso del verso y la prosa" } }
+    }
+  },
+  {
+    "title": "The Sonnet: Petrarchan and Shakespearean Forms",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Poetic form",
+    "instructions": "The examiner will talk with you about the sonnet. Explain in your own words how its forms are built and how structure shapes what a sonnet says. Say \"I don't know\" if you don't.",
+    "passage": [
+      "A sonnet is a lyric poem of fourteen lines, in English usually written in iambic pentameter, a line of five feet in which an unstressed syllable is followed by a stressed one. The form arose in thirteenth-century Sicily and was made famous by the Italian poet Petrarch, whose fourteenth-century sonnets to a woman he called Laura set the pattern of idealized, unattainable love for centuries.",
+      "The Petrarchan, or Italian, sonnet divides into an octave of eight lines rhymed abbaabba and a sestet of six lines, often rhymed cdecde or cdcdcd. The octave typically raises a problem, question or feeling, and the sestet answers, resolves or reconsiders it. The shift in thought between them, usually at line nine, is called the volta, or turn.",
+      "Thomas Wyatt and Henry Howard, Earl of Surrey, brought the sonnet into English in the sixteenth century. Because English has fewer rhyming words than Italian, a new pattern developed: three quatrains and a closing couplet, rhymed abab cdcd efef gg. It is called the Shakespearean, or English, sonnet after William Shakespeare, whose 154 sonnets were published in 1609. The quatrains develop an idea in stages, and the couplet often delivers a turn, summary or twist.",
+      "In Sonnet 18, which begins 'Shall I compare thee to a summer's day?', Shakespeare's quatrains show that summer is brief and imperfect, then claim that the beloved's 'eternal summer shall not fade', and the couplet explains why: the poem itself will keep the beloved alive as long as people read it. Many of Shakespeare's sonnets also overturn Petrarchan conventions; Sonnet 130 mocks the habit of comparing a mistress's eyes to the sun."
+    ],
+    "objectives": [
+      { "key": "meter", "title": "Explain the sonnet's basic form and meter", "description": "States the fourteen-line form and explains iambic pentameter.",
+        "concept": "Sonnet and iambic pentameter", "definition": "A sonnet is a fourteen-line lyric poem, in English usually in iambic pentameter: five feet of unstressed then stressed syllables.",
+        "facts": ["A sonnet has fourteen lines.", "An iamb is an unstressed syllable followed by a stressed one.", "Pentameter means five feet per line."],
+        "misconceptions": ["Any short love poem is a sonnet.", "Iambic pentameter means a line of ten words."] },
+      { "key": "petrarchan", "title": "Describe the Petrarchan sonnet", "description": "Explains the octave-sestet structure, its rhyme scheme and the volta.",
+        "concept": "Petrarchan sonnet", "definition": "The Italian sonnet has an octave rhymed abbaabba and a sestet, with a volta, or turn in thought, usually at line nine.",
+        "facts": ["The octave rhymes abbaabba.", "The sestet often rhymes cdecde or cdcdcd.", "The volta usually comes at line nine."],
+        "misconceptions": ["The volta is a change of rhyme only, not of thought."] },
+      { "key": "shakespearean", "title": "Describe the Shakespearean sonnet", "description": "Explains three quatrains and a couplet and why the form developed in English.",
+        "concept": "Shakespearean sonnet", "definition": "The English sonnet has three quatrains and a final couplet rhymed abab cdcd efef gg.",
+        "facts": ["It rhymes abab cdcd efef gg.", "Wyatt and Surrey brought the sonnet into English.", "English has fewer rhymes than Italian, which favored more rhyme sounds.", "The couplet often gives a turn or conclusion."],
+        "misconceptions": ["Shakespeare invented the sonnet."] },
+      { "key": "form-meaning", "title": "Explain how structure shapes meaning", "description": "Uses Sonnet 18 or 130 to show how the parts of a sonnet build and turn an argument.",
+        "concept": "Form and meaning", "definition": "A sonnet's divisions organize its argument: problem and answer, development and turn.",
+        "facts": ["In Sonnet 18 the quatrains contrast summer's decay with the beloved's lasting beauty.", "Sonnet 18's couplet claims the poem will preserve the beloved.", "Sonnet 130 parodies Petrarchan comparisons."],
+        "misconceptions": ["Form is just decoration with no effect on meaning."] }
+    ],
+    "translations": {
+      "ko": { "title": "소네트: 페트라르카식과 셰익스피어식",
+        "instructions": "시험관이 소네트에 대해 이야기합니다. 소네트의 형식이 어떻게 짜여 있고 그 구조가 시의 내용을 어떻게 형성하는지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "meter": "소네트의 기본 형식과 운율 설명하기", "petrarchan": "페트라르카식 소네트 설명하기", "shakespearean": "셰익스피어식 소네트 설명하기", "form-meaning": "구조가 의미를 형성하는 방식 설명하기" } },
+      "es": { "title": "El soneto: formas petrarquista y shakespeariana",
+        "instructions": "El examinador conversará con usted sobre el soneto. Explique con sus propias palabras cómo se construyen sus formas y cómo la estructura moldea lo que dice un soneto. Diga \"No sé\" si no lo sabe.",
+        "objectives": { "meter": "Explicar la forma básica y el metro del soneto", "petrarchan": "Describir el soneto petrarquista", "shakespearean": "Describir el soneto shakespeariano", "form-meaning": "Explicar cómo la estructura moldea el sentido" } }
+    }
+  },
+  {
+    "title": "Don Quixote and the Modern Novel",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Spanish Golden Age prose",
+    "instructions": "The examiner will talk with you about Cervantes's Don Quixote. Explain in your own words what the book parodies, how it plays with its own telling and why it is called a founding modern novel. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Miguel de Cervantes published Don Quixote in two parts, in 1605 and 1615, during Spain's Golden Age. Its hero is Alonso Quijano, a minor gentleman of La Mancha who reads so many romances of chivalry that he loses his grip on reality. Renaming himself Don Quixote, he sets out as a knight-errant on a worn-out horse, Rocinante, with a farmer, Sancho Panza, as his squire, and devotes his deeds to an idealized lady, Dulcinea, who is really a peasant girl he has barely seen.",
+      "The book began as a parody of chivalric romances, which were hugely popular and full of enchanters, giants and impossible feats. Don Quixote sees the ordinary world through their lens: he charges at windmills he takes for giants and treats inns as castles. The comedy comes from the gap between his heroic vision and the plain reality around him, yet over the novel he also becomes a figure of dignity and idealism.",
+      "Don Quixote is famously self-aware. The narrator claims the story was translated from an Arabic chronicle by a historian called Cide Hamete Benengeli, which raises questions about who is telling the story and whether he can be trusted. In Part II, characters have read Part I and recognize the knight and his squire, and Cervantes mocks a rival, unauthorized sequel published in 1614 under the name Avellaneda. Fiction that draws attention to its own status as fiction is called metafiction.",
+      "Many critics call Don Quixote the first modern novel. Instead of fixed types moving through marvels, it shows characters who change through their relationship: Sancho grows wiser and more imaginative, while Quixote becomes more doubtful, a mutual influence sometimes called the 'quixotization' of Sancho and the 'sanchification' of Quixote. It sets idealism against realism and shows the same events through different perspectives, themes the novel as a form has explored ever since."
+    ],
+    "objectives": [
+      { "key": "parody", "title": "Explain the novel as a parody of chivalric romance", "description": "Explains what chivalric romances were and how the novel mocks and transforms them.",
+        "concept": "Parody", "definition": "Parody imitates the style and conventions of a genre or work in exaggerated form to mock or comment on it.",
+        "facts": ["Chivalric romances were popular tales of knights, enchanters and marvels.", "Quixote takes windmills for giants and inns for castles.", "The humor comes from the gap between his vision and reality."],
+        "misconceptions": ["Don Quixote is a serious chivalric romance that celebrates knights.", "The book is only mockery, with no sympathy for its hero."] },
+      { "key": "characters", "title": "Explain how Quixote and Sancho change each other", "description": "Contrasts the two characters and explains their growth through their relationship.",
+        "concept": "Character development", "definition": "Quixote and Sancho influence each other over the novel, the idealist and the realist each taking on traits of the other.",
+        "facts": ["Quixote represents idealism and Sancho practical realism.", "Sancho grows more imaginative and wiser.", "Quixote grows more doubtful and finally renounces chivalry."],
+        "misconceptions": ["Sancho Panza is only a comic sidekick who never changes."] },
+      { "key": "metafiction", "title": "Explain the novel's metafiction", "description": "Uses Cide Hamete Benengeli and Part II's readers of Part I to explain metafiction.",
+        "concept": "Metafiction", "definition": "Metafiction is fiction that draws attention to its own nature as a made story.",
+        "facts": ["The narrator attributes the story to the Arabic historian Cide Hamete Benengeli.", "In Part II characters have read Part I.", "Cervantes mocks the unauthorized Avellaneda sequel of 1614."],
+        "misconceptions": ["Self-aware storytelling first appeared in twentieth-century fiction."] },
+      { "key": "modern-novel", "title": "Explain why it is called the first modern novel", "description": "Gives reasons such as changing characters, realism and multiple perspectives.",
+        "concept": "The modern novel", "definition": "The modern novel is extended prose fiction centered on believable characters who develop in a recognizable world.",
+        "facts": ["Its characters develop rather than staying fixed types.", "It sets the ideal against everyday reality.", "It shows events from different perspectives."],
+        "misconceptions": ["It is called the first novel simply because it was the first long prose story ever written."] }
+    ],
+    "translations": {
+      "ko": { "title": "『돈키호테』와 근대 소설",
+        "instructions": "시험관이 세르반테스의 『돈키호테』에 대해 이야기합니다. 이 작품이 무엇을 패러디하는지, 자기 서술을 어떻게 가지고 노는지, 왜 근대 소설의 출발점으로 불리는지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "parody": "기사도 로맨스의 패러디로서 소설 설명하기", "characters": "돈키호테와 산초가 서로를 변화시키는 방식 설명하기", "metafiction": "소설의 메타픽션 설명하기", "modern-novel": "최초의 근대 소설로 불리는 이유 설명하기" } },
+      "es": { "title": "Don Quijote y la novela moderna",
+        "instructions": "El examinador conversará con usted sobre Don Quijote de Cervantes. Explique con sus propias palabras qué parodia el libro, cómo juega con su propia narración y por qué se le considera una novela moderna fundacional. Diga \"No sé\" si no lo sabe.",
+        "objectives": { "parody": "Explicar la novela como parodia de los libros de caballerías", "characters": "Explicar cómo don Quijote y Sancho se transforman mutuamente", "metafiction": "Explicar la metaficción de la novela", "modern-novel": "Explicar por qué se le llama la primera novela moderna" } }
+    }
+  },
+  {
+    "title": "The Tale of Genji and Heian Court Literature",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Classical Japanese literature",
+    "instructions": "The examiner will talk with you about Murasaki Shikibu's The Tale of Genji. Explain in your own words the world it came from, how it is written and the sensibility it expresses. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The Tale of Genji was written in the early eleventh century by Murasaki Shikibu, a lady-in-waiting at the imperial court of Heian Japan, in the capital Heian-kyō, today's Kyoto. A long prose narrative in 54 chapters, it follows the life and loves of Hikaru Genji, the 'Shining Genji', a brilliant and handsome son of an emperor who is removed from the line of succession and made a commoner, and it continues after his death with the lives of his descendants in the final chapters, set at Uji.",
+      "Language and gender shaped Heian writing. Official documents and learned works by men were written in classical Chinese, while women such as Murasaki wrote in Japanese using kana, the phonetic script from which hiragana derives. As a result much of the period's most important vernacular literature, including Genji and Sei Shōnagon's The Pillow Book, was written by women at court.",
+      "Poetry is woven through the tale. It contains some 800 waka, short poems of 31 syllables, which characters exchange to court, apologize, grieve or hint at feelings that cannot be said openly. In Heian court culture, skill in poetry, calligraphy, music and taste in dress and paper revealed a person's refinement and could decide a romance.",
+      "The tale's mood is often described with the term mono no aware, 'the pathos of things', a gentle sorrow at the passing of beauty and life. The eighteenth-century scholar Motoori Norinaga made the term central to reading Genji. Because of its psychological depth, its long time span and its focus on inner experience, the work is often called one of the world's earliest novels."
+    ],
+    "objectives": [
+      { "key": "context", "title": "Describe the work and its court setting", "description": "Explains who wrote Genji, when, and what kind of world it portrays.",
+        "concept": "Heian court literature", "definition": "The Tale of Genji is an early eleventh-century prose narrative by Murasaki Shikibu about aristocratic life at the Heian court.",
+        "facts": ["Murasaki Shikibu was a lady-in-waiting at the imperial court.", "The tale has 54 chapters.", "Genji is an emperor's son made a commoner.", "The last chapters continue after Genji's death."],
+        "misconceptions": ["The Tale of Genji is a samurai war epic."] },
+      { "key": "kana", "title": "Explain why women wrote much of Heian vernacular literature", "description": "Connects Chinese for official writing and kana for Japanese with women's authorship.",
+        "concept": "Kana writing and gender", "definition": "Men's official writing used classical Chinese, while women wrote in Japanese with kana, producing much of the vernacular literature.",
+        "facts": ["Official and learned writing was in classical Chinese.", "Women wrote in Japanese using kana.", "Sei Shōnagon's The Pillow Book is another major work by a court woman."],
+        "misconceptions": ["Women were barred from writing anything in Heian Japan."] },
+      { "key": "waka", "title": "Explain the role of poetry in the tale", "description": "Explains what waka are and how characters use them to communicate.",
+        "concept": "Waka in narrative", "definition": "Waka are 31-syllable poems that Genji's characters exchange to express feelings indirectly and show refinement.",
+        "facts": ["The tale contains about 800 waka.", "A waka has 31 syllables.", "Characters use poems to court, grieve and hint at feelings."],
+        "misconceptions": ["The poems in Genji are decorative and could be removed without loss."] },
+      { "key": "mono-no-aware", "title": "Explain mono no aware", "description": "Defines the term and shows how it fits the tale's mood.",
+        "concept": "Mono no aware", "definition": "Mono no aware is the pathos of things: a gentle sorrow and sensitivity to the passing of beauty and life.",
+        "facts": ["It means roughly 'the pathos of things'.", "Motoori Norinaga made it central to reading Genji in the eighteenth century.", "It reflects awareness that beauty and life are fleeting."],
+        "misconceptions": ["Mono no aware means despair or tragedy in the Western sense."] }
+    ],
+    "translations": {
+      "ko": { "title": "『겐지 이야기』와 헤이안 궁정 문학",
+        "instructions": "시험관이 무라사키 시키부의 『겐지 이야기』에 대해 이야기합니다. 이 작품이 나온 세계, 쓰인 방식, 작품이 표현하는 정서를 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "context": "작품과 궁정 배경 설명하기", "kana": "헤이안 시대 자국어 문학을 여성이 많이 쓴 이유 설명하기", "waka": "이야기 속 시의 역할 설명하기", "mono-no-aware": "모노노아와레 설명하기" } },
+      "es": { "title": "La historia de Genji y la literatura de la corte Heian",
+        "instructions": "El examinador conversará con usted sobre La historia de Genji de Murasaki Shikibu. Explique con sus propias palabras el mundo del que surgió, cómo está escrita y la sensibilidad que expresa. Diga \"No sé\" si no lo sabe.",
+        "objectives": { "context": "Describir la obra y su entorno cortesano", "kana": "Explicar por qué las mujeres escribieron gran parte de la literatura vernácula Heian", "waka": "Explicar el papel de la poesía en el relato", "mono-no-aware": "Explicar el mono no aware" } }
+    }
+  },
+  {
+    "title": "Tang Dynasty Poetry: Li Bai and Du Fu",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Classical Chinese poetry",
+    "instructions": "The examiner will talk with you about Tang dynasty poetry. Explain in your own words the forms Tang poets used and how Li Bai and Du Fu differ. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The Tang dynasty (618 to 907) is often called the golden age of Chinese poetry. Poetry was part of elite life: it was written at gatherings and partings, exchanged between friends and officials, and for long periods composing verse was tested in the imperial civil service examinations. Tens of thousands of Tang poems survive.",
+      "Tang poets perfected 'recent-style' forms with strict rules. Regulated verse (lüshi) has eight lines of five or seven characters each, follows set patterns of tones, and requires the two middle couplets to be parallel, matching word for word in grammar and sense. The quatrain (jueju) has four lines and is prized for compression: a single image can carry a whole mood. Older, freer forms, such as the 'old-style' poem, remained in use.",
+      "Li Bai (701 to 762) is remembered as a free and romantic spirit. His poems celebrate wine, friendship, mountains and the moon, often with a Daoist sense of escape from worldly limits and a bold, spontaneous voice. His short poem known in English as 'Quiet Night Thought', in which moonlight on the floor looks like frost and turns the speaker's mind to home, is among the best known poems in China.",
+      "Du Fu (712 to 770) lived through the An Lushan Rebellion (755 to 763), which devastated the empire. His poems record war, displacement and the suffering of ordinary people with a Confucian sense of moral duty, and later readers called him the 'poet-historian'. He is admired as a master of regulated verse. Both poets show how classical Chinese poetry joins a precise image to an emotion, which makes translation especially difficult, since the compressed grammar and tonal music do not carry over."
+    ],
+    "objectives": [
+      { "key": "context", "title": "Explain the place of poetry in Tang society", "description": "Explains why the Tang is called a golden age and how poetry fit elite life.",
+        "concept": "Tang poetic culture", "definition": "In the Tang dynasty poetry was a central social and official art, practiced by the educated elite and long tested in civil service examinations.",
+        "facts": ["The Tang dynasty ran from 618 to 907.", "Poems were exchanged at gatherings and partings.", "Poetry composition was tested in the civil service examinations for long periods."],
+        "misconceptions": ["Tang poetry was a folk art with no role in official life."] },
+      { "key": "forms", "title": "Describe regulated verse and the quatrain", "description": "Explains line length, tonal rules, parallelism and compression.",
+        "concept": "Regulated verse and jueju", "definition": "Regulated verse has eight lines of five or seven characters with tonal patterns and parallel middle couplets; jueju is a compressed four-line form.",
+        "facts": ["Regulated verse has eight lines of five or seven characters.", "Its two middle couplets must be parallel.", "It follows set tonal patterns.", "The jueju has four lines."],
+        "misconceptions": ["Classical Chinese poems are free verse without rules."] },
+      { "key": "li-bai", "title": "Characterize Li Bai's poetry", "description": "Describes his themes and voice and links them to Daoist feeling.",
+        "concept": "Li Bai", "definition": "Li Bai is the Tang poet of spontaneity and romantic freedom, known for wine, the moon, nature and a Daoist spirit.",
+        "facts": ["Li Bai lived from 701 to 762.", "His poems celebrate wine, friendship, mountains and the moon.", "'Quiet Night Thought' links moonlight to homesickness."],
+        "misconceptions": ["Li Bai wrote mainly about war and social injustice."] },
+      { "key": "du-fu", "title": "Characterize Du Fu's poetry", "description": "Explains why Du Fu is called the poet-historian and contrasts him with Li Bai.",
+        "concept": "Du Fu", "definition": "Du Fu is the Tang poet of moral seriousness who recorded the suffering of the An Lushan Rebellion and mastered regulated verse.",
+        "facts": ["Du Fu lived from 712 to 770.", "He lived through the An Lushan Rebellion.", "He is called the 'poet-historian'.", "His concern for ordinary people reflects Confucian values."],
+        "misconceptions": ["Du Fu and Li Bai wrote in the same carefree style."] }
+    ],
+    "translations": {
+      "ko": { "title": "당나라 시: 이백과 두보",
+        "instructions": "시험관이 당나라 시에 대해 이야기합니다. 당나라 시인들이 쓴 형식과 이백과 두보의 차이를 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "context": "당나라 사회에서 시가 차지한 위치 설명하기", "forms": "율시와 절구 설명하기", "li-bai": "이백 시의 특징 설명하기", "du-fu": "두보 시의 특징 설명하기" } },
+      "es": { "title": "La poesía de la dinastía Tang: Li Bai y Du Fu",
+        "instructions": "El examinador conversará con usted sobre la poesía de la dinastía Tang. Explique con sus propias palabras las formas que usaron los poetas Tang y en qué se diferencian Li Bai y Du Fu. Diga \"No sé\" si no lo sabe.",
+        "objectives": { "context": "Explicar el lugar de la poesía en la sociedad Tang", "forms": "Describir el verso regulado y la cuarteta", "li-bai": "Caracterizar la poesía de Li Bai", "du-fu": "Caracterizar la poesía de Du Fu" } }
+    }
+  },
+  {
+    "title": "Sijo: Korea's Classical Verse Form",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Classical Korean poetry",
+    "instructions": "The examiner will talk with you about sijo, the classical Korean poem. Explain in your own words how a sijo is built, who wrote sijo and what they express. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Sijo is a Korean poetic form that took shape in the late Goryeo period and flourished in the Joseon dynasty (1392 to 1910). It was originally sung to music, and for centuries it was the most widely practiced verse form in Korea. Before the Korean alphabet, hangul, was created in the fifteenth century, sijo were passed on orally or recorded with Chinese characters; afterward they could be written down directly in Korean.",
+      "A sijo has three lines, each of about fourteen to sixteen syllables, for a total of around forty-three to forty-five. Each line breaks into two halves and four smaller groups of syllables. The first line introduces a situation or theme, the second develops it, and the third delivers a twist, a turn in thought, or a resolution. The third line opens with a group of exactly three syllables, which signals the turn, followed by a longer group.",
+      "Sijo were written by many kinds of people. Confucian scholar-officials of the yangban class used the form to express loyalty to the king, moral principles and the pleasures of retirement in nature; Yun Seon-do's seventeenth-century cycle 'The Fisherman's Calendar' pictures a simple life on the water through the seasons. Kisaeng, trained female entertainers, also composed celebrated sijo; Hwang Jini, of the sixteenth century, is famous for poems of love and longing that play with images of time and nature.",
+      "A famous exchange shows how sijo could carry political meaning. Yi Bang-won, son of the founder of Joseon, is said to have tested the loyalist Jeong Mong-ju with a sijo suggesting that, like vines tangled together, they should join the new dynasty. Jeong replied with his 'Song of a Single Heart', declaring that even if he died a hundred times his loyalty to Goryeo would not change; he was killed in 1392. Later, longer variants such as the narrative sasol sijo opened the form to humor and everyday life."
+    ],
+    "objectives": [
+      { "key": "structure", "title": "Describe the structure of a sijo", "description": "Explains the three lines, syllable counts and the job of each line.",
+        "concept": "Sijo structure", "definition": "A sijo has three lines of about fourteen to sixteen syllables: the first introduces, the second develops and the third turns or resolves.",
+        "facts": ["A sijo has three lines.", "Each line has about fourteen to sixteen syllables.", "The total is around forty-three to forty-five syllables.", "Each line divides into two halves."],
+        "misconceptions": ["A sijo is the same as a Japanese haiku.", "A sijo has no fixed structure."] },
+      { "key": "turn", "title": "Explain the third-line turn", "description": "Explains the three-syllable opening of the third line and the twist it signals.",
+        "concept": "The final turn", "definition": "The third line opens with a group of exactly three syllables that signals a twist or resolution of the poem's idea.",
+        "facts": ["The third line begins with a three-syllable group.", "That group signals a turn in thought.", "The third line resolves or reframes what came before."],
+        "misconceptions": ["The third line simply repeats the first."] },
+      { "key": "history", "title": "Explain the history and performance of sijo", "description": "Places sijo in Goryeo and Joseon and explains its musical and written transmission.",
+        "concept": "History of sijo", "definition": "Sijo arose in late Goryeo, flourished in Joseon, was sung to music and could be written in hangul after the fifteenth century.",
+        "facts": ["Sijo took shape in the late Goryeo period.", "It flourished in the Joseon dynasty.", "It was originally sung.", "Hangul let sijo be written directly in Korean."],
+        "misconceptions": ["Sijo was invented in the twentieth century."] },
+      { "key": "poets", "title": "Explain who wrote sijo and why", "description": "Uses yangban scholars, kisaeng poets and the Jeong Mong-ju exchange as examples.",
+        "concept": "Sijo poets and themes", "definition": "Sijo was written by scholar-officials on loyalty, virtue and nature and by kisaeng poets on love and longing, and could carry political meaning.",
+        "facts": ["Yangban scholar-officials wrote of loyalty, morality and nature.", "Hwang Jini was a celebrated kisaeng poet.", "Jeong Mong-ju's 'Song of a Single Heart' declared loyalty to Goryeo.", "Yun Seon-do wrote 'The Fisherman's Calendar'."],
+        "misconceptions": ["Only male aristocrats wrote sijo."] }
+    ],
+    "translations": {
+      "ko": { "title": "시조: 한국의 고전 시가 형식",
+        "instructions": "시험관이 한국의 고전 시인 시조에 대해 이야기합니다. 시조가 어떻게 짜여 있는지, 누가 시조를 지었는지, 무엇을 표현했는지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "structure": "시조의 구조 설명하기", "turn": "종장의 전환 설명하기", "history": "시조의 역사와 연행 방식 설명하기", "poets": "시조를 지은 사람들과 그 이유 설명하기" } },
+      "es": { "title": "El sijo: la forma poética clásica de Corea",
+        "instructions": "El examinador conversará con usted sobre el sijo, el poema clásico coreano. Explique con sus propias palabras cómo se construye un sijo, quiénes lo escribieron y qué expresaban. Diga \"No sé\" si no lo sabe.",
+        "objectives": { "structure": "Describir la estructura de un sijo", "turn": "Explicar el giro del tercer verso", "history": "Explicar la historia y la interpretación del sijo", "poets": "Explicar quiénes escribieron sijo y por qué" } }
+    }
+  },
+  {
+    "title": "The Epic of Sundiata and the Griot Tradition",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "West African oral literature",
+    "instructions": "The examiner will talk with you about the Epic of Sundiata. Explain in your own words what the epic tells, who keeps it alive and how oral literature differs from written texts. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The Epic of Sundiata is the founding story of the Mali Empire, told among the Mande peoples of West Africa. It recounts the life of Sundiata Keita, who in the thirteenth century united the Mande clans and defeated Soumaoro Kanté, the powerful sorcerer-king of Sosso, at the Battle of Kirina, around 1235. Sundiata became the first ruler of Mali, which grew into one of the largest empires in African history.",
+      "The epic follows a classic heroic pattern. A prophecy foretells that Sundiata will become a great king, yet he is born unable to walk and mocked as a child; his mother, Sogolon, is scorned at court. When he finally rises to his feet, he shows extraordinary strength. Driven into exile by a jealous rival queen, he grows to manhood abroad, then returns at his people's call to free them from Soumaoro's tyranny, whose magical protection is overcome once his secret weakness is discovered.",
+      "The epic has been preserved not in a single written text but by griots, called jeli in Mande languages. Griots are hereditary bards, historians, genealogists and advisers to rulers; they recite the deeds and lineages of families and peoples, often accompanied by instruments such as the kora, a harp-lute, or the balafon, a wooden xylophone. Their art is passed from generation to generation within griot families.",
+      "As oral literature, the epic exists in many versions. Each performance adapts to its audience and occasion, and different griots and regions tell episodes differently, so there is no single authoritative text. Written and translated versions recorded in the twentieth century made the epic widely known, but they capture particular tellings. The epic shows how oral traditions preserve history, give a people its identity and teach values such as destiny, perseverance and the duties of a ruler."
+    ],
+    "objectives": [
+      { "key": "story", "title": "Summarize the story and its history", "description": "Explains who Sundiata was and links the epic to the founding of the Mali Empire.",
+        "concept": "Sundiata and the Mali Empire", "definition": "The epic tells how Sundiata Keita overcame his early disability and exile to defeat Soumaoro Kanté and found the Mali Empire in the thirteenth century.",
+        "facts": ["Sundiata defeated Soumaoro Kanté of Sosso at Kirina around 1235.", "He became the first ruler of the Mali Empire.", "The epic is told among the Mande peoples."],
+        "misconceptions": ["The Epic of Sundiata is pure fantasy with no connection to real history."] },
+      { "key": "hero-pattern", "title": "Explain the epic's heroic pattern", "description": "Identifies prophecy, early weakness, exile and return in Sundiata's story.",
+        "concept": "Heroic pattern", "definition": "Many epics follow a pattern of prophecy, humble or hard beginnings, exile and a triumphant return; Sundiata's story follows it.",
+        "facts": ["A prophecy foretells his greatness.", "He cannot walk as a child and is mocked.", "He is driven into exile and returns to free his people."],
+        "misconceptions": ["Sundiata is a hero from birth with no hardship to overcome."] },
+      { "key": "griots", "title": "Explain the role of the griot", "description": "Describes what griots do and how they preserve and transmit the epic.",
+        "concept": "Griots (jeli)", "definition": "Griots are hereditary West African bards, historians and genealogists who preserve and perform the history of peoples and families.",
+        "facts": ["Griots are called jeli in Mande languages.", "The role is hereditary within griot families.", "They recite history and genealogies, often with the kora or balafon.", "Griots also served as advisers to rulers."],
+        "misconceptions": ["Griots are simply entertainers with no role as historians."] },
+      { "key": "orality", "title": "Explain how oral literature differs from written texts", "description": "Explains variation between performances and the absence of a single authoritative text.",
+        "concept": "Oral literature", "definition": "Oral literature lives in performance, so it exists in many versions adapted to audience and occasion rather than in one fixed text.",
+        "facts": ["Each performance adapts to its audience and occasion.", "Different griots and regions tell the epic differently.", "Written versions record particular tellings, not the one true text."],
+        "misconceptions": ["The written translation is the original, correct version of the epic.", "Oral literature is less sophisticated than written literature."] }
+    ],
+    "translations": {
+      "ko": { "title": "순디아타 서사시와 그리오 전통",
+        "instructions": "시험관이 순디아타 서사시에 대해 이야기합니다. 이 서사시가 무엇을 이야기하는지, 누가 그것을 이어 가는지, 구전 문학이 기록된 텍스트와 어떻게 다른지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "story": "이야기와 그 역사적 배경 요약하기", "hero-pattern": "서사시의 영웅 서사 유형 설명하기", "griots": "그리오의 역할 설명하기", "orality": "구전 문학과 기록된 텍스트의 차이 설명하기" } },
+      "es": { "title": "La epopeya de Sundiata y la tradición de los griots",
+        "instructions": "El examinador conversará con usted sobre la epopeya de Sundiata. Explique con sus propias palabras qué narra la epopeya, quiénes la mantienen viva y en qué se diferencia la literatura oral de los textos escritos. Diga \"No sé\" si no lo sabe.",
+        "objectives": { "story": "Resumir la historia y su trasfondo histórico", "hero-pattern": "Explicar el patrón heroico de la epopeya", "griots": "Explicar el papel del griot", "orality": "Explicar en qué se diferencia la literatura oral de los textos escritos" } }
+    }
+  },
+  {
+    "title": "Frankenstein: Gothic Fiction and Romanticism",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Nineteenth-century English novel",
+    "instructions": "The examiner will talk with you about Mary Shelley's Frankenstein. Explain in your own words how the novel is told, how it uses the Gothic and Romantic traditions and what it asks about creation and responsibility. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Mary Shelley began Frankenstein in the summer of 1816 at the Villa Diodati near Geneva, when Lord Byron challenged his guests, including Mary, Percy Bysshe Shelley and John Polidori, to write ghost stories. The novel was published anonymously in 1818, when she was twenty, and revised in 1831. Its subtitle, The Modern Prometheus, recalls the Titan of Greek myth who defied the gods to give fire to humanity and was punished for it.",
+      "The novel is built as a frame narrative, a story within a story within a story. The explorer Robert Walton writes letters to his sister from an Arctic voyage; within them he records the tale told by Victor Frankenstein, whom he rescues from the ice; and at the center of Victor's account the creature tells his own story. Each narrator has his own perspective and interests, and the reader must weigh their accounts against one another.",
+      "Victor, a young student of natural philosophy, discovers how to give life to dead matter and builds a creature, then flees in horror from what he has made. The creature, who is never given a name, is at first gentle and eager for affection. He teaches himself to speak and read by secretly watching a family, the De Laceys, and reading books such as Paradise Lost. Rejected by everyone who sees him, he turns to revenge against his creator, killing those Victor loves.",
+      "Frankenstein draws on the Gothic novel, with its terror, dark secrets, transgression and the monstrous, and on Romanticism, with its sublime landscapes such as the Alps and the Arctic, its valuing of feeling and nature, and its fascination with the solitary overreacher. It questions the pursuit of knowledge without responsibility and asks whether the creature's monstrousness is born or made by the cruelty he meets. A common error is to call the creature 'Frankenstein'; that is the name of his creator."
+    ],
+    "objectives": [
+      { "key": "frame", "title": "Explain the novel's frame narrative", "description": "Identifies the three nested narrators and explains the effect of the structure.",
+        "concept": "Frame narrative", "definition": "A frame narrative places one story inside another; Frankenstein nests the creature's tale inside Victor's, inside Walton's letters.",
+        "facts": ["Robert Walton's letters to his sister form the outer frame.", "Victor Frankenstein tells his story to Walton.", "The creature's own narrative sits at the center.", "Readers must compare the narrators' perspectives."],
+        "misconceptions": ["The whole novel is told by an all-knowing narrator."] },
+      { "key": "gothic-romantic", "title": "Explain the novel's Gothic and Romantic elements", "description": "Gives examples of Gothic horror and Romantic ideas such as the sublime.",
+        "concept": "Gothic and Romanticism", "definition": "Gothic fiction features terror, secrets and transgression; Romanticism values feeling, nature and the sublime. Frankenstein combines both.",
+        "facts": ["Gothic elements include horror, secret experiments and the monstrous.", "Romantic elements include sublime landscapes like the Alps and the Arctic.", "Victor is a solitary overreacher, a Romantic figure."],
+        "misconceptions": ["The sublime simply means 'pretty' scenery."] },
+      { "key": "creature", "title": "Explain how the creature is portrayed", "description": "Explains the creature's education, eloquence and turn to violence.",
+        "concept": "The creature", "definition": "The unnamed creature begins gentle, educates himself and turns to revenge after repeated rejection, raising the question of nature versus nurture.",
+        "facts": ["The creature is never given a name.", "He learns language by watching the De Lacey family.", "He reads Paradise Lost.", "He turns violent after being rejected."],
+        "misconceptions": ["Frankenstein is the creature's name.", "The creature in the novel is a speechless brute."] },
+      { "key": "responsibility", "title": "Explain the novel's questions about knowledge and responsibility", "description": "Links the Prometheus subtitle to Victor's ambition and his abandonment of the creature.",
+        "concept": "Knowledge and responsibility", "definition": "Frankenstein warns against pursuing knowledge and power without accepting responsibility for what one creates.",
+        "facts": ["The subtitle refers to Prometheus, who was punished for giving fire to humans.", "Victor abandons the creature immediately after creating him.", "The novel asks whether monstrousness is innate or caused by mistreatment."],
+        "misconceptions": ["The novel simply says that all science is evil."] }
+    ],
+    "translations": {
+      "ko": { "title": "『프랑켄슈타인』: 고딕 소설과 낭만주의",
+        "instructions": "시험관이 메리 셸리의 『프랑켄슈타인』에 대해 이야기합니다. 이 소설이 어떻게 서술되는지, 고딕과 낭만주의 전통을 어떻게 활용하는지, 창조와 책임에 대해 무엇을 묻는지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "frame": "소설의 액자식 구성 설명하기", "gothic-romantic": "소설의 고딕적·낭만주의적 요소 설명하기", "creature": "피조물이 그려지는 방식 설명하기", "responsibility": "지식과 책임에 관한 소설의 질문 설명하기" } },
+      "es": { "title": "Frankenstein: la novela gótica y el Romanticismo",
+        "instructions": "El examinador conversará con usted sobre Frankenstein de Mary Shelley. Explique con sus propias palabras cómo se narra la novela, cómo usa las tradiciones gótica y romántica y qué plantea sobre la creación y la responsabilidad. Diga \"No sé\" si no lo sabe.",
+        "objectives": { "frame": "Explicar el relato enmarcado de la novela", "gothic-romantic": "Explicar los elementos góticos y románticos de la novela", "creature": "Explicar cómo se retrata a la criatura", "responsibility": "Explicar lo que plantea la novela sobre el conocimiento y la responsabilidad" } }
+    }
+  }
+]
