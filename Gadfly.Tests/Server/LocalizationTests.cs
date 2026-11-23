@@ -104,7 +104,9 @@ public class LocalizationTests
         var missing = Directory.EnumerateFiles(server, "*.*", SearchOption.AllDirectories)
             .Where(f => (f.EndsWith(".razor") || f.EndsWith(".cs")) && !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
                         && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
-            .SelectMany(f => use.Matches(File.ReadAllText(f)).Select(m => (File: Path.GetFileName(f), Key: m.Groups[1].Value)))
+            // Comment lines are skipped: UiText.cs documents its own syntax as T["key"], which is an example, not a use.
+            .SelectMany(f => use.Matches(string.Join('\n', File.ReadLines(f).Where(l => !l.TrimStart().StartsWith("//"))))
+                .Select(m => (File: Path.GetFileName(f), Key: m.Groups[1].Value)))
             .Where(u => Catalog.Find("en", u.Key) is null)
             .Select(u => $"{u.File}: {u.Key}")
             .Distinct();
