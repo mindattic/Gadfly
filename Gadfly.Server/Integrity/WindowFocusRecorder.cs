@@ -6,7 +6,9 @@ namespace Gadfly.Server.Integrity;
 /// <summary>What one recorded absence from the exam window adds up to for the attempt (GAD-T511).</summary>
 /// <param name="Count">Absences of a second or more recorded in this attempt so far.</param>
 /// <param name="Longest">The longest of them.</param>
-/// <param name="NeedsReview">The attempt is marked for an instructor's review (by this absence or an earlier one).</param>
+/// <param name="NeedsReview">The absences so far reach the window-absence threshold, so the attempt is marked for review because of them (by
+/// this absence or an earlier one). Only window absences count (GAD-T615): a review flag set for another reason, such as the calibration
+/// review every Korean attempt gets (GAD-T536), is never reported here, so the student is never told about it.</param>
 /// <param name="NewlyFlagged">This absence is the one that marked it.</param>
 /// <param name="Exempt">An accommodation turns the counting off for this student: absences are still noted, never flagged.</param>
 public sealed record WindowAbsence(int Count, TimeSpan Longest, bool NeedsReview, bool NewlyFlagged, bool Exempt);
@@ -132,7 +134,8 @@ public sealed class WindowFocusRecorder(GadflyDbContext db, TimeProvider clock, 
             return null;
         }
         if (newly) log.LogInformation("Session {SessionId} marked for instructor review after {Count} absences from the exam window.", sessionId, count);
-        return new WindowAbsence(count, longest, session.NeedsInstructorReview, newly, exempt);
+        // The window's own threshold, never session.NeedsInstructorReview: that flag may have been set for another reason (GAD-T615).
+        return new WindowAbsence(count, longest, rule.Flags(count, longest), newly, exempt);
     }
 
     /// <summary>The window-absence rule for one assignment (GAD-T604); the standard one when the assignment is gone.</summary>

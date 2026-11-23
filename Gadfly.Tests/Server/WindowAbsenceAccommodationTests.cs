@@ -131,4 +131,29 @@ public class WindowAbsenceAccommodationTests : ServerTest
         await using var db = SystemDb();
         Assert.That(await db.ExamAssignments.Where(x => x.Id == w.AssignmentId).Select(x => x.WindowAbsenceFlagOff).SingleAsync(), Is.False);
     }
+
+    /// <summary>
+    /// GAD-T615: an attempt already marked for review for another reason (the calibration review every Korean attempt gets, GAD-T536)
+    /// is not reported as marked by the window: one short absence never tells the student their attempt is under review; only the
+    /// window's own threshold does.
+    /// </summary>
+    [Test]
+    public async Task A_review_flag_set_for_another_reason_is_never_reported_as_the_windows()
+    {
+        var w = await RunningAsync();
+        await using (var db = OrgDb(w.Org))
+        {
+            var s = await db.ExamSessions.FirstAsync(x => x.Id == w.SessionId);
+            s.NeedsInstructorReview = true;
+            s.ReviewReason = "Calibration review (exam language ko).";
+            await db.SaveChangesAsync();
+        }
+        var first = await AwayAsync(w, 5);
+        Assert.That(first!.NeedsReview, Is.False, "one short absence is below the window threshold");
+        Assert.That(first.NewlyFlagged, Is.False);
+        await AwayAsync(w, 5);
+        var third = await AwayAsync(w, 5);
+        Assert.That(third!.NeedsReview, Is.True, "three absences reach the window threshold");
+        Assert.That(third.NewlyFlagged, Is.False, "the attempt was already marked");
+    }
 }
