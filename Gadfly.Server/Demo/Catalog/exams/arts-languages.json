@@ -1,0 +1,534 @@
+// Catalog exams for Arts and Languages (GAD-T685): visual art, music history and theory, and linguistics. Same format as
+// life-sciences.json; translations carry the approved Korean and Spanish (neutral Latin American, usted) student-facing texts.
+[
+  {
+    "title": "Linear Perspective in Renaissance Painting",
+    "category": "arts-languages",
+    "subject": "Art History",
+    "topic": "Renaissance perspective",
+    "instructions": "The examiner will talk with you about how Renaissance painters created the illusion of depth. Explain the method and why it mattered, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Linear perspective is a geometric method for showing three-dimensional space on a flat surface. In Florence in the early fifteenth century, the architect Filippo Brunelleschi demonstrated it, around 1415 to 1420, with a painted panel of the Baptistery that a viewer checked against the real building through a peephole and a mirror. In 1435 Leon Battista Alberti set the method out in writing in his treatise On Painting, which compared a picture to an open window through which the viewer looks at the scene.",
+      "In one-point perspective, lines that run straight away from the viewer, called orthogonals, are drawn so that they converge at a single vanishing point. The vanishing point lies on the horizon line, which sits at the viewer's eye level. Objects of the same real size are drawn smaller the farther away they are, at a rate the construction fixes, so the whole picture is seen from one fixed viewpoint.",
+      "Masaccio's Holy Trinity fresco in Santa Maria Novella, painted around 1427, is one of the earliest paintings built on this system: its coffered barrel vault appears to recede into the wall. In Leonardo da Vinci's Last Supper, painted in the 1490s, the orthogonals of the room converge at Christ's head, so the geometry also directs the viewer's attention to the central figure.",
+      "Painters also used atmospheric, or aerial, perspective: distant things appear paler, bluer and less sharply detailed because of the air between them and the viewer. Leonardo described and used this effect. Medieval painting had often sized figures by importance rather than by distance, a convention called hierarchical scale; it served religious meaning rather than being a failed attempt at realism."
+    ],
+    "objectives": [
+      { "key": "construction", "title": "Explain how one-point perspective is constructed", "description": "Describes orthogonals, the vanishing point and the horizon line and how they relate.",
+        "concept": "One-point linear perspective", "definition": "Receding parallel lines converge at a single vanishing point on the horizon line at the viewer's eye level.",
+        "facts": ["Orthogonals are lines running away from the viewer.", "Orthogonals converge at one vanishing point.", "The vanishing point lies on the horizon line at eye level.", "Objects shrink with distance at a regular rate."],
+        "misconceptions": ["The vanishing point can be placed anywhere, unrelated to eye level.", "Parallel lines in a picture always stay parallel."] },
+      { "key": "origins", "title": "Describe who developed and codified the method", "description": "Credits Brunelleschi's demonstration and Alberti's treatise and places them in time.",
+        "concept": "Origins of linear perspective", "definition": "Brunelleschi demonstrated perspective in Florence around 1415 to 1420; Alberti codified it in On Painting in 1435.",
+        "facts": ["Brunelleschi demonstrated perspective with a panel of the Florence Baptistery.", "Alberti wrote the method down in On Painting in 1435.", "Alberti compared a painting to an open window."],
+        "misconceptions": ["Leonardo da Vinci invented linear perspective.", "Ancient painters used one-point perspective in the same systematic way."] },
+      { "key": "examples", "title": "Analyze perspective in a Renaissance painting", "description": "Uses Masaccio's Trinity or Leonardo's Last Supper to show what perspective does in a work.",
+        "concept": "Perspective as composition", "definition": "Perspective creates convincing depth and can direct attention by placing the vanishing point at a key figure.",
+        "facts": ["Masaccio's Holy Trinity, about 1427, is an early example.", "Its painted vault seems to recede into the wall.", "In the Last Supper the orthogonals converge at Christ's head."],
+        "misconceptions": ["Perspective only makes a picture look real and has no role in composition."] },
+      { "key": "atmospheric", "title": "Distinguish atmospheric perspective and hierarchical scale", "description": "Explains aerial perspective and why medieval scale was not simply an error.",
+        "concept": "Atmospheric perspective and hierarchical scale", "definition": "Atmospheric perspective shows distance by paler, bluer, softer forms; hierarchical scale sizes figures by importance.",
+        "facts": ["Distant objects look paler, bluer and less detailed.", "Leonardo described atmospheric perspective.", "Medieval art often sized figures by importance, not distance."],
+        "misconceptions": ["Medieval painters used hierarchical scale because they could not draw.", "Atmospheric perspective is the same as linear perspective."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "르네상스 회화의 선원근법",
+        "instructions": "시험관이 르네상스 화가들이 어떻게 깊이의 환영을 만들었는지에 대해 이야기를 나눕니다. 그 방법과 그것이 왜 중요했는지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": {
+          "construction": "1점 투시 원근법의 구성 방법 설명하기",
+          "origins": "원근법을 개발하고 체계화한 사람 설명하기",
+          "examples": "르네상스 회화에서 원근법 분석하기",
+          "atmospheric": "대기 원근법과 위계적 크기 구분하기"
+        }
+      },
+      "es": {
+        "title": "La perspectiva lineal en la pintura renacentista",
+        "instructions": "El examinador conversará con usted sobre cómo los pintores del Renacimiento crearon la ilusión de profundidad. Explique el método y por qué fue importante, con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "construction": "Explicar cómo se construye la perspectiva de un punto",
+          "origins": "Describir quién desarrolló y sistematizó el método",
+          "examples": "Analizar la perspectiva en una pintura renacentista",
+          "atmospheric": "Distinguir la perspectiva atmosférica y la escala jerárquica"
+        }
+      }
+    }
+  },
+  {
+    "title": "Impressionism and Painting Modern Life",
+    "category": "arts-languages",
+    "subject": "Art History",
+    "topic": "Impressionism",
+    "instructions": "The examiner will talk with you about the Impressionist painters. Explain what they did differently and why it was controversial, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "In nineteenth-century France, the official Salon, run by the Academy of Fine Arts, decided which paintings were shown to the public. Academic taste favored historical, religious and mythological subjects, careful drawing and a smooth, polished finish that hid the brushwork. Artists rejected by the Salon had few other ways to reach buyers.",
+      "In 1874 a group of painters, including Claude Monet, Pierre-Auguste Renoir, Camille Pissarro, Edgar Degas, Alfred Sisley and Berthe Morisot, held their own independent exhibition in Paris, in the former studio of the photographer Nadar. A critic, Louis Leroy, mocked Monet's painting Impression, Sunrise and called the group Impressionists; the name stuck. The group held eight exhibitions between 1874 and 1886.",
+      "The Impressionists tried to capture the passing effects of light and atmosphere. Many worked outdoors, en plein air, helped by paint sold in portable metal tubes, invented in 1841. They used visible, broken brushstrokes and placed strokes of fairly pure color side by side instead of blending them smoothly, and they painted shadows with color rather than with black or brown. Monet's series of haystacks and of Rouen Cathedral show the same subject under changing light at different times of day.",
+      "Their subjects were modern life: cafés, boating parties, railway stations, city boulevards and leisure in the suburbs. Critics at first called the work unfinished. Later painters such as Georges Seurat, with his system of small dots of color, and Paul Cézanne built on Impressionism but moved away from it; they are grouped as Post-Impressionists."
+    ],
+    "objectives": [
+      { "key": "salon", "title": "Explain what the Impressionists reacted against", "description": "Describes the Salon system and academic standards of subject and finish.",
+        "concept": "The Salon and academic art", "definition": "The official Salon controlled public exhibition and favored historical subjects and a smooth, polished finish.",
+        "facts": ["The Salon decided which paintings were shown.", "Academic taste favored history, religion and myth.", "Academic finish was smooth and hid brushstrokes."],
+        "misconceptions": ["The Impressionists were welcomed by the Salon from the start."] },
+      { "key": "exhibition", "title": "Describe how the movement got its name", "description": "Places the 1874 independent exhibition and the origin of the label.",
+        "concept": "The first Impressionist exhibition", "definition": "In 1874 the group exhibited independently in Paris, and a critic's mockery of Monet's Impression, Sunrise gave them their name.",
+        "facts": ["The first independent exhibition was in Paris in 1874.", "Louis Leroy mocked Monet's Impression, Sunrise.", "There were eight exhibitions from 1874 to 1886."],
+        "misconceptions": ["The painters chose the name Impressionism to praise themselves."] },
+      { "key": "technique", "title": "Explain Impressionist technique and its purpose", "description": "Links plein-air painting, broken brushwork and colored shadows to capturing light.",
+        "concept": "Impressionist technique", "definition": "Visible broken strokes of unblended color, often painted outdoors, record fleeting effects of light.",
+        "facts": ["Many worked outdoors, en plein air.", "Portable paint tubes made outdoor painting easier.", "Strokes of color were placed side by side, not blended smoothly.", "Shadows were painted in color, not black."],
+        "misconceptions": ["Impressionists painted carelessly with no method.", "Impressionism is the same as Seurat's pointillism."] },
+      { "key": "modern-life", "title": "Discuss subjects and legacy", "description": "Explains the choice of modern subjects and how Post-Impressionists moved on.",
+        "concept": "Modern life and Post-Impressionism", "definition": "Impressionists painted contemporary leisure and city life; Post-Impressionists such as Seurat and Cézanne built on and departed from them.",
+        "facts": ["Subjects included cafés, boating, railways and boulevards.", "Monet painted series of one subject in changing light.", "Seurat and Cézanne are Post-Impressionists."],
+        "misconceptions": ["Impressionists mainly painted historical and mythological scenes."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "인상주의와 현대 생활의 회화",
+        "instructions": "시험관이 인상주의 화가들에 대해 이야기를 나눕니다. 그들이 무엇을 다르게 했고 왜 논란이 되었는지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": {
+          "salon": "인상주의자들이 반발한 대상 설명하기",
+          "exhibition": "이 운동의 이름이 생긴 과정 설명하기",
+          "technique": "인상주의 기법과 그 목적 설명하기",
+          "modern-life": "주제와 영향 논의하기"
+        }
+      },
+      "es": {
+        "title": "El impresionismo y la pintura de la vida moderna",
+        "instructions": "El examinador conversará con usted sobre los pintores impresionistas. Explique qué hicieron de manera diferente y por qué causaron polémica, con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "salon": "Explicar contra qué reaccionaron los impresionistas",
+          "exhibition": "Describir cómo recibió su nombre el movimiento",
+          "technique": "Explicar la técnica impresionista y su propósito",
+          "modern-life": "Analizar los temas y el legado"
+        }
+      }
+    }
+  },
+  {
+    "title": "Color Theory for the Visual Arts",
+    "category": "arts-languages",
+    "subject": "Visual Art",
+    "topic": "Color",
+    "instructions": "The examiner will talk with you about how artists describe and mix color. Explain the ideas and give examples, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Artists describe any color by three properties. Hue is the color's name and position on the color wheel, such as red, yellow or blue-green. Value is how light or dark it is. Saturation, also called intensity or chroma, is how pure or vivid it is compared with a grey of the same value. Adding white to a hue makes a tint, adding black makes a shade, and adding grey lowers its saturation.",
+      "Mixing light and mixing paint follow different rules. Light mixes additively: the primaries red, green and blue combine toward white, which is how screens make color. Pigments mix subtractively, because each absorbs some wavelengths and reflects the rest: the printing primaries cyan, magenta and yellow combine toward a dark, near-black color. The traditional painter's wheel uses red, yellow and blue as primaries, with orange, green and violet as secondaries.",
+      "Complementary colors lie opposite each other on the color wheel, such as red and green, blue and orange, or yellow and violet. Placed side by side, complements make each other look more intense; mixed together, they neutralize toward grey or brown. Painters often darken or dull a color by adding a little of its complement instead of black.",
+      "Colors are also described as warm, such as reds, oranges and yellows, or cool, such as blues, greens and violets; warm colors tend to seem to advance and cool colors to recede. Strong contrast of value or of hue draws the eye, so artists use it to create emphasis, while a limited, related palette builds unity."
+    ],
+    "objectives": [
+      { "key": "properties", "title": "Describe a color by hue, value and saturation", "description": "Defines the three properties and tints, shades and tones.",
+        "concept": "Properties of color", "definition": "Hue is the color family, value its lightness or darkness, and saturation its purity or vividness.",
+        "facts": ["Hue is the color's name on the wheel.", "Value is lightness or darkness.", "Saturation is purity or vividness.", "White makes a tint; black makes a shade."],
+        "misconceptions": ["Value and saturation mean the same thing.", "A darker color is always more saturated."] },
+      { "key": "mixing", "title": "Compare additive and subtractive mixing", "description": "Explains why light and pigment mix differently and names each set of primaries.",
+        "concept": "Additive and subtractive color", "definition": "Light adds wavelengths and mixes toward white; pigments absorb wavelengths and mix toward dark.",
+        "facts": ["Red, green and blue light combine toward white.", "Screens use additive color.", "Cyan, magenta and yellow pigments combine toward near-black.", "Pigments absorb some wavelengths and reflect the rest."],
+        "misconceptions": ["Mixing all paint colors gives white.", "Light and paint have the same primaries and rules."] },
+      { "key": "complements", "title": "Explain complementary colors", "description": "Identifies complements and explains their effect side by side and mixed.",
+        "concept": "Complementary colors", "definition": "Colors opposite on the wheel intensify each other side by side and neutralize each other when mixed.",
+        "facts": ["Red-green, blue-orange and yellow-violet are complementary pairs.", "Side by side they look more intense.", "Mixed they move toward grey or brown."],
+        "misconceptions": ["Complementary colors are colors that look similar."] },
+      { "key": "temperature-emphasis", "title": "Use color temperature and contrast in a design", "description": "Explains warm and cool colors and how contrast creates emphasis and unity.",
+        "concept": "Color temperature and contrast", "definition": "Warm colors tend to advance and cool colors recede; strong contrast creates emphasis and a related palette builds unity.",
+        "facts": ["Reds, oranges and yellows are warm.", "Blues, greens and violets are cool.", "Strong value or hue contrast draws the eye."],
+        "misconceptions": ["Color temperature refers to the physical heat of the paint."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "시각 예술을 위한 색채 이론",
+        "instructions": "시험관이 예술가들이 색을 어떻게 설명하고 혼합하는지에 대해 이야기를 나눕니다. 개념을 설명하고 예를 들어 자신의 말로 답하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": {
+          "properties": "색상, 명도, 채도로 색 설명하기",
+          "mixing": "가산 혼합과 감산 혼합 비교하기",
+          "complements": "보색 설명하기",
+          "temperature-emphasis": "디자인에서 색온도와 대비 활용하기"
+        }
+      },
+      "es": {
+        "title": "Teoría del color para las artes visuales",
+        "instructions": "El examinador conversará con usted sobre cómo los artistas describen y mezclan los colores. Explique las ideas y dé ejemplos, con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "properties": "Describir un color por su tono, valor y saturación",
+          "mixing": "Comparar la mezcla aditiva y la sustractiva",
+          "complements": "Explicar los colores complementarios",
+          "temperature-emphasis": "Usar la temperatura del color y el contraste en un diseño"
+        }
+      }
+    }
+  },
+  {
+    "title": "Tonal Harmony Basics",
+    "category": "arts-languages",
+    "subject": "Music Theory",
+    "topic": "Harmony",
+    "instructions": "The examiner will talk with you about scales, chords and cadences in tonal music. Explain how they work and why, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Tonal music is organized around a central note, the tonic, which sounds like home. A major scale climbs from the tonic in a fixed pattern of whole steps and half steps: whole, whole, half, whole, whole, whole, half. Starting on C, it uses only the white keys of the piano: C, D, E, F, G, A, B, C. The scale degrees are numbered from 1 to 7, and the seventh degree, a half step below the tonic, is called the leading tone because it pulls upward to the tonic.",
+      "A triad is a chord of three notes stacked in thirds: a root, a third and a fifth. Building a triad on each degree of the major scale gives major triads on degrees 1, 4 and 5, minor triads on 2, 3 and 6, and a diminished triad on 7. Roman numerals name these chords, uppercase for major and lowercase for minor: in C major, I is C-E-G, IV is F-A-C and V is G-B-D.",
+      "The dominant chord, V, contains the leading tone, so it creates tension that resolves to the tonic chord, I. Adding a seventh above the root gives the dominant seventh chord, V7; in C major it is G-B-D-F, and the tritone between B and F intensifies the pull, B rising to C and F falling to E.",
+      "A cadence is a harmonic ending to a phrase. An authentic cadence moves V to I and sounds final. A plagal cadence moves IV to I, the familiar Amen ending of hymns. A half cadence ends on V and sounds unfinished, like a comma. A deceptive cadence moves V to vi, surprising the listener by avoiding the expected tonic."
+    ],
+    "objectives": [
+      { "key": "scale", "title": "Build a major scale and name its degrees", "description": "Gives the step pattern and explains the tonic and leading tone.",
+        "concept": "The major scale", "definition": "A major scale follows the pattern whole, whole, half, whole, whole, whole, half from the tonic.",
+        "facts": ["The pattern is W W H W W W H.", "C major uses no sharps or flats.", "The tonic is degree 1 and sounds like home.", "The leading tone, degree 7, is a half step below the tonic."],
+        "misconceptions": ["All steps in a major scale are the same size."] },
+      { "key": "triads", "title": "Build triads and label them with Roman numerals", "description": "Stacks thirds on scale degrees and identifies major, minor and diminished chords.",
+        "concept": "Diatonic triads", "definition": "Triads stacked in thirds on each scale degree are major on I, IV and V, minor on ii, iii and vi, and diminished on vii.",
+        "facts": ["A triad is root, third and fifth.", "I, IV and V are major in a major key.", "ii, iii and vi are minor; vii is diminished.", "In C major, V is G-B-D."],
+        "misconceptions": ["Every chord in a major key is a major chord."] },
+      { "key": "dominant", "title": "Explain why the dominant pulls to the tonic", "description": "Uses the leading tone and the dominant seventh's tritone to explain resolution.",
+        "concept": "Dominant function", "definition": "V contains the leading tone, and V7 adds a tritone, creating tension that resolves to I.",
+        "facts": ["V contains the leading tone.", "V7 in C major is G-B-D-F.", "The tritone B-F resolves inward to C and E."],
+        "misconceptions": ["The dominant is called that because it is the loudest chord."] },
+      { "key": "cadences", "title": "Identify the main cadences", "description": "Distinguishes authentic, plagal, half and deceptive cadences by chords and effect.",
+        "concept": "Cadences", "definition": "Cadences end phrases: authentic V-I, plagal IV-I, half ending on V, deceptive V-vi.",
+        "facts": ["An authentic cadence is V to I and sounds final.", "A plagal cadence is IV to I, the Amen cadence.", "A half cadence ends on V.", "A deceptive cadence is V to vi."],
+        "misconceptions": ["A half cadence is a cadence that is half as long.", "Every cadence ends on the tonic chord."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "조성 화성학의 기초",
+        "instructions": "시험관이 조성 음악의 음계, 화음, 종지에 대해 이야기를 나눕니다. 그것들이 어떻게, 왜 작동하는지 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": {
+          "scale": "장음계를 만들고 음도 이름 말하기",
+          "triads": "3화음을 만들고 로마 숫자로 표기하기",
+          "dominant": "딸림화음이 으뜸화음으로 이끌리는 이유 설명하기",
+          "cadences": "주요 종지 구별하기"
+        }
+      },
+      "es": {
+        "title": "Fundamentos de la armonía tonal",
+        "instructions": "El examinador conversará con usted sobre escalas, acordes y cadencias en la música tonal. Explique cómo funcionan y por qué, con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "scale": "Construir una escala mayor y nombrar sus grados",
+          "triads": "Construir tríadas y cifrarlas con números romanos",
+          "dominant": "Explicar por qué la dominante tiende hacia la tónica",
+          "cadences": "Identificar las cadencias principales"
+        }
+      }
+    }
+  },
+  {
+    "title": "Rhythm, Meter and Tempo",
+    "category": "arts-languages",
+    "subject": "Music Theory",
+    "topic": "Rhythm",
+    "instructions": "The examiner will talk with you about how musical time is organized. Explain the ideas and give examples, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The beat is the steady pulse a listener taps along to. Tempo is the speed of the beat, measured in beats per minute or described with Italian terms such as largo for very slow, andante for a walking pace, allegro for fast and presto for very fast. Rhythm is the pattern of long and short durations that sounds against the beat.",
+      "Meter groups beats into recurring patterns of strong and weak beats, and each group is written as a measure, or bar. Duple meter has two beats per measure, triple meter three and quadruple meter four. The first beat of a measure, the downbeat, is usually the strongest. A waltz is in triple meter: strong, weak, weak.",
+      "A time signature shows the meter. In simple meters each beat divides into two equal parts: 2/4, 3/4 and 4/4 have two, three and four quarter-note beats. In compound meters each beat divides into three: 6/8 has two beats per measure, each a dotted quarter note divided into three eighth notes. So 6/8 and 3/4 both contain six eighth notes per measure but are felt differently, as two groups of three versus three groups of two.",
+      "Syncopation places accents where the meter does not expect them, on weak beats or between beats, creating rhythmic surprise. It is central to ragtime, jazz and much popular music. Tempo can also change on purpose: accelerando means gradually faster and ritardando gradually slower."
+    ],
+    "objectives": [
+      { "key": "beat-tempo-rhythm", "title": "Distinguish beat, tempo and rhythm", "description": "Defines each term and gives tempo markings.",
+        "concept": "Beat, tempo and rhythm", "definition": "The beat is the steady pulse, tempo its speed, and rhythm the pattern of durations heard against it.",
+        "facts": ["The beat is a steady pulse.", "Tempo is measured in beats per minute.", "Allegro is fast; andante is a walking pace.", "Rhythm is the pattern of long and short sounds."],
+        "misconceptions": ["Rhythm and tempo mean the same thing."] },
+      { "key": "meter", "title": "Explain meter and measures", "description": "Describes duple, triple and quadruple meter and the downbeat.",
+        "concept": "Meter", "definition": "Meter groups beats into recurring patterns of strong and weak beats written as measures.",
+        "facts": ["Duple, triple and quadruple meters have two, three and four beats.", "The downbeat is usually the strongest beat.", "A waltz is in triple meter."],
+        "misconceptions": ["Every beat in a measure is equally strong."] },
+      { "key": "simple-compound", "title": "Compare simple and compound meter", "description": "Reads time signatures and explains why 6/8 differs from 3/4.",
+        "concept": "Simple and compound meter", "definition": "In simple meter beats divide into two; in compound meter they divide into three.",
+        "facts": ["2/4, 3/4 and 4/4 are simple meters.", "6/8 has two dotted-quarter beats.", "6/8 groups eighths in threes; 3/4 groups them in twos."],
+        "misconceptions": ["6/8 is the same as 3/4 because both hold six eighth notes.", "The top number always gives the number of felt beats."] },
+      { "key": "syncopation", "title": "Explain syncopation and tempo change", "description": "Defines syncopation with a musical context and names tempo-change terms.",
+        "concept": "Syncopation", "definition": "Syncopation accents weak beats or offbeats against the expected meter.",
+        "facts": ["Syncopation accents unexpected beats or offbeats.", "It is central to ragtime and jazz.", "Accelerando speeds up; ritardando slows down."],
+        "misconceptions": ["Syncopation means playing out of time."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "리듬, 박자, 템포",
+        "instructions": "시험관이 음악의 시간이 어떻게 조직되는지에 대해 이야기를 나눕니다. 개념을 설명하고 예를 들어 자신의 말로 답하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": {
+          "beat-tempo-rhythm": "박, 템포, 리듬 구별하기",
+          "meter": "박자와 마디 설명하기",
+          "simple-compound": "홑박자와 겹박자 비교하기",
+          "syncopation": "당김음과 템포 변화 설명하기"
+        }
+      },
+      "es": {
+        "title": "Ritmo, compás y tempo",
+        "instructions": "El examinador conversará con usted sobre cómo se organiza el tiempo en la música. Explique las ideas y dé ejemplos, con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "beat-tempo-rhythm": "Distinguir pulso, tempo y ritmo",
+          "meter": "Explicar el compás y los compases",
+          "simple-compound": "Comparar el compás simple y el compuesto",
+          "syncopation": "Explicar la síncopa y los cambios de tempo"
+        }
+      }
+    }
+  },
+  {
+    "title": "Baroque, Classical and Romantic Music",
+    "category": "arts-languages",
+    "subject": "Music History",
+    "topic": "Style periods",
+    "instructions": "The examiner will talk with you about three periods of Western art music. Explain what sets each apart and why styles changed, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Historians divide Western art music into style periods. The Baroque period runs roughly from 1600 to 1750. Opera arose in Italy around 1600, and Claudio Monteverdi was an early master of it. Baroque music rests on the basso continuo, a bass line played by instruments such as cello and harpsichord with chords improvised above it. Counterpoint, the combining of independent melodic lines, reached a peak in the fugue. Dynamics often changed in blocks, called terraced dynamics. Johann Sebastian Bach and George Frideric Handel are its best-known late composers; Bach's death in 1750 conventionally ends the period.",
+      "The Classical period runs roughly from 1750 to 1820, centered on Vienna, with Joseph Haydn, Wolfgang Amadeus Mozart and the early Ludwig van Beethoven. Its music favors clear, balanced phrases and a mostly homophonic texture, a melody over accompanying chords. The symphony, the string quartet and the piano sonata became central genres, and sonata form, with its exposition, development and recapitulation, organized their first movements. The piano replaced the harpsichord, and gradual crescendos and decrescendos became common.",
+      "The Romantic period runs roughly from 1820 to 1900. Composers prized personal emotion and expression and often linked music to literature, nature or national identity. Program music told a story or depicted a scene, as in Hector Berlioz's Symphonie fantastique of 1830. Orchestras grew larger, harmony became more chromatic, and composers such as Frédéric Chopin, Franz Liszt, Richard Wagner and Johannes Brahms wrote for a growing public of concertgoers. Nationalist composers drew on folk music from their own countries.",
+      "These dates are conventions. Styles overlap and change gradually, and Beethoven's career bridges the Classical and Romantic periods."
+    ],
+    "objectives": [
+      { "key": "baroque", "title": "Describe the Baroque style", "description": "Names basso continuo, counterpoint and terraced dynamics, with dates and composers.",
+        "concept": "Baroque music", "definition": "Music of about 1600 to 1750 built on basso continuo and counterpoint, with terraced dynamics.",
+        "facts": ["The Baroque runs about 1600 to 1750.", "Opera arose in Italy around 1600.", "Basso continuo underlies Baroque music.", "Bach and Handel are late Baroque composers."],
+        "misconceptions": ["Baroque music was written for the piano."] },
+      { "key": "classical", "title": "Describe the Classical style", "description": "Explains balanced phrasing, homophony, sonata form and key genres and composers.",
+        "concept": "Classical-period music", "definition": "Music of about 1750 to 1820 with balanced phrases, homophonic texture and sonata form.",
+        "facts": ["Haydn and Mozart are central Classical composers.", "Texture is mostly melody with accompaniment.", "Sonata form has exposition, development and recapitulation.", "The symphony and string quartet became central genres."],
+        "misconceptions": ["Classical music means any old or orchestral music.", "Sonata form means a piece written for a solo instrument."] },
+      { "key": "romantic", "title": "Describe the Romantic style", "description": "Explains emotional expression, program music, larger orchestras and nationalism.",
+        "concept": "Romantic music", "definition": "Music of about 1820 to 1900 stressing personal expression, program music, chromatic harmony and larger orchestras.",
+        "facts": ["Program music tells a story or depicts a scene.", "Berlioz's Symphonie fantastique is program music.", "Orchestras grew larger and harmony more chromatic.", "Nationalist composers used folk music."],
+        "misconceptions": ["Romantic music is music about romantic love only."] },
+      { "key": "periodization", "title": "Explain the limits of style periods", "description": "Explains why the dates are conventions and how Beethoven bridges periods.",
+        "concept": "Periodization", "definition": "Style periods are conventional labels for gradual, overlapping change.",
+        "facts": ["Period dates are approximate conventions.", "Styles overlap and change gradually.", "Beethoven bridges the Classical and Romantic periods."],
+        "misconceptions": ["Every composer abruptly changed style in 1750 and 1820."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "바로크, 고전, 낭만 음악",
+        "instructions": "시험관이 서양 예술 음악의 세 시대에 대해 이야기를 나눕니다. 각 시대를 구별하는 특징과 양식이 바뀐 이유를 자신의 말로 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": {
+          "baroque": "바로크 양식 설명하기",
+          "classical": "고전 양식 설명하기",
+          "romantic": "낭만 양식 설명하기",
+          "periodization": "시대 구분의 한계 설명하기"
+        }
+      },
+      "es": {
+        "title": "La música barroca, clásica y romántica",
+        "instructions": "El examinador conversará con usted sobre tres periodos de la música académica occidental. Explique qué distingue a cada uno y por qué cambiaron los estilos, con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "baroque": "Describir el estilo barroco",
+          "classical": "Describir el estilo clásico",
+          "romantic": "Describir el estilo romántico",
+          "periodization": "Explicar los límites de los periodos estilísticos"
+        }
+      }
+    }
+  },
+  {
+    "title": "How Languages Change",
+    "category": "arts-languages",
+    "subject": "Linguistics",
+    "topic": "Historical linguistics",
+    "instructions": "The examiner will talk with you about how and why languages change over time. Explain the processes and give examples, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "All living languages change. Sounds, words, meanings and grammar shift from generation to generation, and linguists study these changes systematically rather than treating them as decay. Change is gradual and usually goes unnoticed by speakers, but over centuries it can make an earlier stage of a language unreadable: speakers of modern English cannot understand Old English, the language of Beowulf, without study.",
+      "Sound change is often regular, affecting every word with a given sound in a given position. Grimm's law describes how voiceless stops in Proto-Indo-European became fricatives in the Germanic languages: p became f, t became th and k became h. That is why Latin pater, tres and cornu correspond to English father, three and horn. In the Great Vowel Shift, roughly 1400 to 1700, the English long vowels rose and the highest became diphthongs, so bite, once pronounced like beet, and house, once like hoose, took their modern sounds. English spelling had largely settled before the shift ended, which is one reason English spelling and pronunciation often disagree.",
+      "Meanings change too. In narrowing, a word's meaning becomes more specific: meat once meant any food. In broadening, it becomes more general: dog once named a particular kind of dog. Words can also shift in value: nice once meant foolish. Languages also borrow words from one another; English took many words from French after the Norman Conquest of 1066, such as beef, court and justice.",
+      "When related languages descend from a common ancestor, they form a language family. In 1786 William Jones observed that Sanskrit, Greek and Latin share so much that they must come from a common source. Using the comparative method, linguists compare regular sound correspondences among daughter languages to reconstruct the unwritten ancestor, Proto-Indo-European. English and German are sister languages descended from Proto-Germanic; English did not descend from modern German."
+    ],
+    "objectives": [
+      { "key": "change-is-normal", "title": "Explain why language change is normal", "description": "Describes change as continuous and systematic rather than decay.",
+        "concept": "Language change", "definition": "All living languages change gradually and systematically in sound, vocabulary, meaning and grammar.",
+        "facts": ["Every living language changes.", "Change is gradual and mostly unnoticed by speakers.", "Old English is unreadable to modern speakers without study."],
+        "misconceptions": ["Language change is decay or corruption of a once-correct form.", "A language can be kept from changing by its speakers."] },
+      { "key": "sound-change", "title": "Explain regular sound change with examples", "description": "Uses Grimm's law and the Great Vowel Shift to show systematic sound change.",
+        "concept": "Regular sound change", "definition": "Sound changes apply systematically to a sound in a given environment across the vocabulary.",
+        "facts": ["Grimm's law changed p, t, k to f, th, h in Germanic.", "Latin pater corresponds to English father.", "The Great Vowel Shift ran roughly 1400 to 1700.", "Spelling settled before the shift ended, so spelling and sound diverge."],
+        "misconceptions": ["Sound changes happen randomly word by word.", "English spelling is irregular only because of careless writers."] },
+      { "key": "meaning-borrowing", "title": "Describe semantic change and borrowing", "description": "Gives examples of narrowing, broadening and borrowing.",
+        "concept": "Semantic change and borrowing", "definition": "Word meanings narrow, broaden or shift in value, and languages borrow words through contact.",
+        "facts": ["Meat once meant any food, an example of narrowing.", "Dog once named a particular kind of dog, an example of broadening.", "English borrowed beef, court and justice from French after 1066."],
+        "misconceptions": ["A word's original meaning is its only true meaning."] },
+      { "key": "families", "title": "Explain language families and the comparative method", "description": "Explains common descent and how ancestors are reconstructed.",
+        "concept": "Language families", "definition": "Languages descended from a common ancestor form a family; the comparative method reconstructs that ancestor from regular correspondences.",
+        "facts": ["William Jones linked Sanskrit, Greek and Latin in 1786.", "Proto-Indo-European is reconstructed, not written.", "English and German are sisters from Proto-Germanic."],
+        "misconceptions": ["English descended from modern German.", "Languages are related simply because they share a few similar-sounding words."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "언어는 어떻게 변하는가",
+        "instructions": "시험관이 언어가 시간에 따라 어떻게, 왜 변하는지에 대해 이야기를 나눕니다. 그 과정을 설명하고 예를 들어 자신의 말로 답하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": {
+          "change-is-normal": "언어 변화가 정상적인 이유 설명하기",
+          "sound-change": "규칙적인 음운 변화를 예를 들어 설명하기",
+          "meaning-borrowing": "의미 변화와 차용 설명하기",
+          "families": "어족과 비교 방법 설명하기"
+        }
+      },
+      "es": {
+        "title": "Cómo cambian las lenguas",
+        "instructions": "El examinador conversará con usted sobre cómo y por qué cambian las lenguas con el tiempo. Explique los procesos y dé ejemplos, con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "change-is-normal": "Explicar por qué el cambio lingüístico es normal",
+          "sound-change": "Explicar el cambio fonético regular con ejemplos",
+          "meaning-borrowing": "Describir el cambio semántico y los préstamos",
+          "families": "Explicar las familias de lenguas y el método comparativo"
+        }
+      }
+    }
+  },
+  {
+    "title": "Phonetics and Phonology Basics",
+    "category": "arts-languages",
+    "subject": "Linguistics",
+    "topic": "Speech sounds",
+    "instructions": "The examiner will talk with you about how speech sounds are made and organized. Explain the ideas and give examples, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Phonetics studies the physical sounds of speech: how they are produced, transmitted and heard. Because ordinary spelling is an unreliable guide to sound, linguists use the International Phonetic Alphabet, or IPA, in which each symbol stands for one sound. English spelling, for example, writes the same vowel sound in see, sea and ceiling with different letters.",
+      "Consonants are described by three features. Voicing tells whether the vocal folds vibrate: [b] and [z] are voiced, [p] and [s] are voiceless. Place of articulation tells where the airflow is obstructed: at the two lips for bilabial [p], [b] and [m], at the ridge behind the upper teeth for alveolar [t], [d] and [n], and at the soft palate for velar [k] and [g]. Manner of articulation tells how: stops block the air completely, fricatives narrow it to make friction, as in [f] and [s], and nasals send it through the nose.",
+      "Vowels are described by tongue height, from high to low, by tongue position from front to back, and by lip rounding. The vowel [i] in beet is high, front and unrounded; [u] in boot is high, back and rounded; [a] is low.",
+      "Phonology studies how a particular language organizes sounds into a system. A phoneme is a sound unit that distinguishes words in that language, shown by minimal pairs such as pat and bat, which differ in one sound. Allophones are predictable variants of one phoneme: English /p/ is aspirated, with a puff of air, at the start of pin, but unaspirated in spin, and English speakers hear both as the same sound. Languages draw these lines differently: in Korean, the aspirated and plain stops written ㅍ and ㅂ are separate phonemes that distinguish words."
+    ],
+    "objectives": [
+      { "key": "ipa", "title": "Explain why linguists use the IPA", "description": "Explains the mismatch between spelling and sound and the one-symbol-one-sound principle.",
+        "concept": "The International Phonetic Alphabet", "definition": "A transcription system in which each symbol consistently represents one speech sound.",
+        "facts": ["Spelling is an unreliable guide to pronunciation.", "Each IPA symbol stands for one sound.", "See, sea and ceiling share a vowel spelled differently."],
+        "misconceptions": ["Letters and sounds are the same thing."] },
+      { "key": "consonants", "title": "Describe consonants by voicing, place and manner", "description": "Classifies consonants with the three features and examples.",
+        "concept": "Consonant description", "definition": "Consonants are classified by voicing, place of articulation and manner of articulation.",
+        "facts": ["Voiced sounds vibrate the vocal folds.", "[p], [b] and [m] are bilabial.", "[k] and [g] are velar.", "Stops block air; fricatives create friction; nasals use the nose."],
+        "misconceptions": ["[p] and [b] differ in place of articulation."] },
+      { "key": "vowels", "title": "Describe vowels by height, backness and rounding", "description": "Places example vowels using the three dimensions.",
+        "concept": "Vowel description", "definition": "Vowels are described by tongue height, front-back position and lip rounding.",
+        "facts": ["[i] is high, front and unrounded.", "[u] is high, back and rounded.", "[a] is a low vowel."],
+        "misconceptions": ["English has only five vowel sounds because it has five vowel letters."] },
+      { "key": "phonemes", "title": "Distinguish phonemes and allophones", "description": "Uses minimal pairs and aspiration to explain the difference and how languages differ.",
+        "concept": "Phonemes and allophones", "definition": "A phoneme distinguishes words in a language; allophones are its predictable, non-contrastive variants.",
+        "facts": ["Minimal pairs such as pat and bat show phonemes.", "English aspirated and plain [p] are allophones of /p/.", "In Korean, aspirated and plain stops are separate phonemes."],
+        "misconceptions": ["If two sounds are physically different, they must be different phonemes in every language."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "음성학과 음운론의 기초",
+        "instructions": "시험관이 말소리가 어떻게 만들어지고 체계화되는지에 대해 이야기를 나눕니다. 개념을 설명하고 예를 들어 자신의 말로 답하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": {
+          "ipa": "언어학자들이 국제음성기호를 쓰는 이유 설명하기",
+          "consonants": "유성성, 조음 위치, 조음 방법으로 자음 설명하기",
+          "vowels": "혀의 높이, 전후 위치, 원순성으로 모음 설명하기",
+          "phonemes": "음소와 변이음 구별하기"
+        }
+      },
+      "es": {
+        "title": "Fundamentos de fonética y fonología",
+        "instructions": "El examinador conversará con usted sobre cómo se producen y se organizan los sonidos del habla. Explique las ideas y dé ejemplos, con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "ipa": "Explicar por qué los lingüistas usan el AFI",
+          "consonants": "Describir las consonantes por sonoridad, punto y modo de articulación",
+          "vowels": "Describir las vocales por altura, posición y redondeamiento",
+          "phonemes": "Distinguir fonemas y alófonos"
+        }
+      }
+    }
+  },
+  {
+    "title": "Morphology: How Words Are Built",
+    "category": "arts-languages",
+    "subject": "Linguistics",
+    "topic": "Morphology",
+    "instructions": "The examiner will talk with you about the parts that words are made of. Explain the ideas and give examples, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Morphology studies the internal structure of words. A morpheme is the smallest unit of language that carries meaning or grammatical function. The word unhappiness has three morphemes: un-, meaning not, the root happy, and -ness, which makes a noun. A morpheme is not the same as a syllable: the word elephant has three syllables but only one morpheme.",
+      "Free morphemes can stand alone as words, such as happy, cat or run. Bound morphemes must attach to another morpheme, such as the prefix un- or the suffixes -ness and -s. Prefixes attach before a root and suffixes after it.",
+      "Inflection adds grammatical information such as number, tense or person without creating a new word or changing its category: cat and cats are forms of one noun, and walk and walked are forms of one verb. Derivation creates a new word, often of a different category: happy is an adjective, happiness a noun, and teach becomes teacher. Compounding joins two roots into one word, as in blackboard or toothbrush; a blackboard need not be black, which shows that a compound's meaning is not simply the sum of its parts.",
+      "Languages differ in how they build words. Isolating languages such as Mandarin and Vietnamese use mostly single-morpheme words and express grammar with word order and separate words. Agglutinative languages such as Turkish and Korean stack morphemes in sequence, each usually carrying one meaning; Korean attaches particles and endings to stems, as in 먹었습니다, built from the stem 먹- eat, the past marker -었-, and the formal ending -습니다. Fusional languages such as Spanish and Latin pack several meanings into one ending: the -o in Spanish hablo marks first person, singular, present tense and indicative mood at once."
+    ],
+    "objectives": [
+      { "key": "morphemes", "title": "Identify morphemes in a word", "description": "Segments words into morphemes and distinguishes morphemes from syllables.",
+        "concept": "Morphemes", "definition": "A morpheme is the smallest unit of language with meaning or grammatical function.",
+        "facts": ["Unhappiness has three morphemes.", "Elephant has three syllables but one morpheme.", "Morphemes carry meaning or grammatical function."],
+        "misconceptions": ["A morpheme is the same as a syllable."] },
+      { "key": "free-bound", "title": "Distinguish free and bound morphemes", "description": "Classifies morphemes and names prefixes and suffixes.",
+        "concept": "Free and bound morphemes", "definition": "Free morphemes stand alone as words; bound morphemes must attach to another morpheme.",
+        "facts": ["Happy and cat are free morphemes.", "Un-, -ness and plural -s are bound.", "Prefixes come before the root and suffixes after it."],
+        "misconceptions": ["Every morpheme can be used as a word by itself."] },
+      { "key": "inflection-derivation", "title": "Compare inflection, derivation and compounding", "description": "Explains how each process works with examples and why category change matters.",
+        "concept": "Word-formation processes", "definition": "Inflection adds grammatical information to one word; derivation makes a new word; compounding joins roots.",
+        "facts": ["Cats and walked are inflected forms.", "Happiness and teacher are derived words.", "Derivation often changes word category.", "Blackboard is a compound."],
+        "misconceptions": ["Adding any suffix creates a new word.", "A compound always means exactly the sum of its parts."] },
+      { "key": "typology", "title": "Compare isolating, agglutinative and fusional languages", "description": "Gives an example language of each type and explains the difference.",
+        "concept": "Morphological typology", "definition": "Isolating languages use single-morpheme words, agglutinative languages stack one-meaning morphemes, fusional languages fuse several meanings into one affix.",
+        "facts": ["Mandarin and Vietnamese are largely isolating.", "Turkish and Korean are agglutinative.", "Spanish and Latin are fusional.", "Spanish -o in hablo marks person, number, tense and mood together."],
+        "misconceptions": ["Isolating languages have no grammar.", "One type of language is more advanced than another."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "형태론: 단어는 어떻게 만들어지는가",
+        "instructions": "시험관이 단어를 이루는 부분에 대해 이야기를 나눕니다. 개념을 설명하고 예를 들어 자신의 말로 답하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": {
+          "morphemes": "단어에서 형태소 찾기",
+          "free-bound": "자립 형태소와 의존 형태소 구별하기",
+          "inflection-derivation": "굴절, 파생, 합성 비교하기",
+          "typology": "고립어, 교착어, 굴절어 비교하기"
+        }
+      },
+      "es": {
+        "title": "Morfología: cómo se forman las palabras",
+        "instructions": "El examinador conversará con usted sobre las partes que forman las palabras. Explique las ideas y dé ejemplos, con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "morphemes": "Identificar los morfemas de una palabra",
+          "free-bound": "Distinguir morfemas libres y ligados",
+          "inflection-derivation": "Comparar la flexión, la derivación y la composición",
+          "typology": "Comparar lenguas aislantes, aglutinantes y fusionantes"
+        }
+      }
+    }
+  },
+  {
+    "title": "Writing Systems and Hangul",
+    "category": "arts-languages",
+    "subject": "Linguistics",
+    "topic": "Writing systems",
+    "instructions": "The examiner will talk with you about the kinds of writing systems people use and how Hangul was designed. Explain the ideas and give examples, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Writing represents spoken language with visible marks. It was invented independently several times: in Mesopotamia, where cuneiform developed around 3200 BCE, in China, and in Mesoamerica. Speech is far older; most of the world's languages have been spoken without being written.",
+      "Writing systems differ in what unit each symbol stands for. In a logographic system, a symbol represents a word or morpheme; Chinese characters work this way, and most of them include a component that hints at pronunciation, so they are not pure pictures of ideas. In a syllabary, each symbol stands for a syllable, as in Japanese kana or the Cherokee script. In an alphabet, symbols stand for individual consonants and vowels, as in Greek, Latin and Cyrillic. An abjad writes mainly consonants and leaves most vowels to the reader, as in Arabic and Hebrew. An abugida writes consonants with a built-in vowel that marks change, as in Devanagari, used for Hindi. Japanese combines kanji, which are logographic, with kana.",
+      "Hangul, the Korean alphabet, is unusual because it was deliberately designed and its origin is documented. It was created under King Sejong the Great in 1443 and promulgated in 1446 in a document called Hunminjeongeum, The Correct Sounds for the Instruction of the People. Before it, Koreans wrote with Chinese characters, which were hard for ordinary people to learn and fit the Korean language poorly. South Korea celebrates Hangul Day on October 9.",
+      "Hangul is often called a featural alphabet. The basic consonant shapes depict the speech organs that make them: ㄱ shows the back of the tongue raised toward the soft palate, ㄴ the tongue tip touching the ridge behind the teeth, ㅁ the closed mouth, ㅅ a tooth and ㅇ the throat. Related sounds add strokes, so aspirated ㅋ adds a stroke to ㄱ. The vowels were built from three symbols for heaven, a dot, earth, a horizontal line, and human, a vertical line. Letters are grouped into syllable blocks: 한 is ㅎ plus ㅏ plus ㄴ. Modern Hangul has 14 basic consonants and 10 basic vowels. Because each letter is a consonant or vowel, Hangul is an alphabet arranged in syllables, not a syllabary."
+    ],
+    "objectives": [
+      { "key": "origins", "title": "Explain where writing came from", "description": "Names independent inventions and distinguishes writing from speech.",
+        "concept": "Origins of writing", "definition": "Writing, invented independently in several places, represents speech, which is much older.",
+        "facts": ["Cuneiform developed in Mesopotamia around 3200 BCE.", "Writing was invented independently more than once.", "Many languages have been spoken without being written."],
+        "misconceptions": ["Writing is the same thing as language.", "All writing systems descend from one original invention."] },
+      { "key": "types", "title": "Classify writing systems by type", "description": "Distinguishes logographic, syllabic, alphabetic, abjad and abugida systems with examples.",
+        "concept": "Types of writing systems", "definition": "Writing systems are classified by whether symbols stand for morphemes, syllables, or individual consonants and vowels.",
+        "facts": ["Chinese characters are logographic.", "Japanese kana are syllabaries.", "Arabic and Hebrew are abjads.", "Devanagari is an abugida."],
+        "misconceptions": ["Chinese characters are pictures with no information about sound.", "The alphabet is the most advanced kind of writing."] },
+      { "key": "hangul-history", "title": "Explain why and when Hangul was created", "description": "Places Hangul's creation under King Sejong and gives its purpose.",
+        "concept": "Creation of Hangul", "definition": "Hangul was created under King Sejong in 1443 and promulgated in 1446 to let ordinary Koreans write their language.",
+        "facts": ["Hangul was created in 1443 under King Sejong.", "It was promulgated in 1446 in Hunminjeongeum.", "Before it, Koreans wrote with Chinese characters."],
+        "misconceptions": ["Hangul gradually evolved from Chinese characters."] },
+      { "key": "hangul-design", "title": "Explain the design of Hangul", "description": "Describes featural consonant shapes, the vowel symbols and syllable blocks, and why Hangul is an alphabet.",
+        "concept": "Hangul as a featural alphabet", "definition": "Hangul letters depict speech organs and features and are grouped into syllable blocks.",
+        "facts": ["Basic consonant shapes depict the speech organs.", "Aspirated consonants add a stroke, as ㄱ to ㅋ.", "Vowels derive from symbols for heaven, earth and human.", "Letters combine into syllable blocks such as 한."],
+        "misconceptions": ["Hangul is a syllabary because it is written in syllable blocks."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "문자 체계와 한글",
+        "instructions": "시험관이 사람들이 사용하는 문자 체계의 종류와 한글이 어떻게 만들어졌는지에 대해 이야기를 나눕니다. 개념을 설명하고 예를 들어 자신의 말로 답하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": {
+          "origins": "문자가 어디에서 생겨났는지 설명하기",
+          "types": "문자 체계를 유형별로 분류하기",
+          "hangul-history": "한글이 언제, 왜 만들어졌는지 설명하기",
+          "hangul-design": "한글의 창제 원리 설명하기"
+        }
+      },
+      "es": {
+        "title": "Los sistemas de escritura y el hangul",
+        "instructions": "El examinador conversará con usted sobre los tipos de sistemas de escritura que usan las personas y sobre cómo se diseñó el hangul. Explique las ideas y dé ejemplos, con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "origins": "Explicar el origen de la escritura",
+          "types": "Clasificar los sistemas de escritura por tipo",
+          "hangul-history": "Explicar cuándo y por qué se creó el hangul",
+          "hangul-design": "Explicar el diseño del hangul"
+        }
+      }
+    }
+  }
+]
