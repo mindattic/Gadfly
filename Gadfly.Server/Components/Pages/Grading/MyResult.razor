@@ -16,12 +16,16 @@
 }
 else if (report is null || w is null)
 {
-    <h1>@T["result.unavailable"]</h1>
-    <p class="notice">@T["result.notPublished"]</p>
+    <header class="page-header">
+        <h1>@T["result.unavailable"]</h1>
+    </header>
+    <p class="notice info" role="status">@T["result.notPublished"]</p>
 }
 else
 {
-    <h1>@T["myExams.result"] <span>· @report.ExamTitle</span> <HelpLink Topic="grading-and-results" /></h1>
+    <header class="page-header">
+        <h1>@T["myExams.result"] <span>· @report.ExamTitle</span> <HelpLink Topic="grading-and-results" /></h1>
+    </header>
     <p class="hint no-print">
         <a href="@GradingSetup.StudentReportMarkdownPath(SessionId)" download data-enhance-nav="false">@T["result.downloadMarkdown"]</a> ·
         <a href="@GradingSetup.StudentReportPdfPath(SessionId)" download data-enhance-nav="false">@T["result.downloadPdf"]</a>
@@ -34,7 +38,7 @@ else
 
     @* GAD-T450: the integrity notes recorded on this attempt, with the same plain explanations a reviewer reads. Shown only once
        the result is published to the student (StudentIntegrityRecord checks), never a verdict and never part of the grade. *@
-    <section class="student-integrity" aria-labelledby="integrity-heading">
+    <section class="student-integrity page-section" aria-labelledby="integrity-heading">
         <h2 class="gr-section" id="integrity-heading">@T["result.integrity.title"]</h2>
         @if (integrity is null || integrity.IsEmpty)
         {
@@ -67,28 +71,38 @@ else
         }
     </section>
 
-    <div class="no-print">
-        <h2 class="gr-section">@T["result.appeal.title"]</h2>
+    <section class="no-print page-section" aria-labelledby="appeal-heading">
+        <h2 class="gr-section" id="appeal-heading">@T["result.appeal.title"]</h2>
         @if (w.OpenAppeal is { } open)
         {
             <p>@T["result.appeal.open", T.Date(open.OpenedAt)]</p>
         }
         else if (w.Status is GradeStatus.Published or GradeStatus.Amended)
         {
-            <p class="hint">@T["result.appeal.how"]</p>
-            <label class="gr-wide">@T["result.appeal.reason"] <textarea rows="4" @bind="reason" maxlength="4000"></textarea></label>
-            @if (integrity is { Notes.Count: > 0 })
-            {
-                <label class="gr-wide">@T["result.appeal.response"] <textarea rows="3" @bind="integrityResponse" maxlength="3000"></textarea></label>
-                <p class="hint">@T["result.appeal.responseHint"]</p>
-            }
-            <button type="button" disabled="@busy" @onclick="AppealAsync">@T["result.appeal.submit"]</button>
+            <div class="form">
+                <p class="hint" id="appeal-how">@T["result.appeal.how"]</p>
+                <div class="field gr-wide">
+                    <label for="appeal-reason">@T["result.appeal.reason"]</label>
+                    <textarea id="appeal-reason" rows="4" @bind="reason" maxlength="4000" aria-describedby="appeal-how"></textarea>
+                </div>
+                @if (integrity is { Notes.Count: > 0 })
+                {
+                    <div class="field gr-wide">
+                        <label for="appeal-response">@T["result.appeal.response"]</label>
+                        <textarea id="appeal-response" rows="3" @bind="integrityResponse" maxlength="3000" aria-describedby="appeal-response-hint"></textarea>
+                        <p class="field-hint" id="appeal-response-hint">@T["result.appeal.responseHint"]</p>
+                    </div>
+                }
+                <div class="form-actions">
+                    <button type="button" disabled="@busy" @onclick="AppealAsync">@T["result.appeal.submit"]</button>
+                </div>
+            </div>
         }
         @if (message is not null)
         {
-            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+            <p role="status" class="notice @(ok ? "ok" : "error")">@message</p>
         }
-    </div>
+    </section>
 }
 
 @code {

@@ -10,26 +10,32 @@
 @* A student's own notification choice (GAD-T310/GAD-T375): opting out of exam-due reminders only. *@
 
 <PageTitle>@T["notifications.pageTitle"]</PageTitle>
-<h1>@T["myExams.emailPrefs"]</h1>
+<header class="page-header">
+    <h1>@T["myExams.emailPrefs"]</h1>
+</header>
 
 @if (loaded)
 {
-    <EditForm Model="this" OnValidSubmit="SaveAsync" FormName="my-notifications" class="panel">
-        <label class="check">
-            <InputCheckbox @bind-Value="optedOut" />
-            @T["notifications.optOut"]
-        </label>
-        <p class="hint">@T["notifications.explain"]</p>
-        <button type="submit" disabled="@busy">@T["notifications.save"]</button>
+    <EditForm Model="this" OnValidSubmit="SaveAsync" FormName="my-notifications" class="panel form">
+        <div class="field">
+            <label class="check">
+                <InputCheckbox @bind-Value="optedOut" aria-describedby="notifications-explain" />
+                @T["notifications.optOut"]
+            </label>
+            <p class="field-hint" id="notifications-explain">@T["notifications.explain"]</p>
+        </div>
+        <div class="form-actions">
+            <button type="submit" disabled="@busy">@T["notifications.save"]</button>
+        </div>
         @if (message is not null)
         {
-            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+            <p role="status" class="notice @(ok ? "ok" : "error")">@message</p>
         }
     </EditForm>
 }
 else
 {
-    <p class="hint">@T["common.loading"]</p>
+    <p class="hint" role="status">@T["common.loading"]</p>
 }
 
 @code {

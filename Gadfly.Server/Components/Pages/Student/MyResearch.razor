@@ -12,7 +12,9 @@
 
 <HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
 <PageTitle>@T["myResearch.pageTitle"]</PageTitle>
-<h1>@T["myExams.research"]</h1>
+<header class="page-header">
+    <h1>@T["myExams.research"]</h1>
+</header>
 
 @if (!loaded)
 {
@@ -20,11 +22,11 @@
 }
 else if (status is null || (!status.Enabled && status.Current != ResearchConsentDecision.Agreed))
 {
-    <p class="panel">@T["myResearch.none"]</p>
+    <p class="notice info" role="status">@T["myResearch.none"]</p>
 }
 else
 {
-    <section class="panel wide">
+    <section class="panel prose page-section">
         @if (status.Current == ResearchConsentDecision.Agreed)
         {
             <p><strong>@T["myResearch.taking"]</strong> @T["myResearch.takingSince", When(status.Since)]</p>
@@ -37,7 +39,9 @@ else
             {
                 <p>@p</p>
             }
-            <button type="button" @onclick="() => DecideAsync(ResearchConsentDecision.Withdrawn)" disabled="@busy">@T["myResearch.withdraw"]</button>
+            <div class="actions">
+                <button type="button" @onclick="() => DecideAsync(ResearchConsentDecision.Withdrawn)" disabled="@busy">@T["myResearch.withdraw"]</button>
+            </div>
         }
         else
         {
@@ -68,7 +72,7 @@ else
         }
         @if (message is not null)
         {
-            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
+            <p role="status" class="notice @(ok ? "ok" : "error")">@message</p>
         }
     </section>
     <p><a href="my-exams">@T["getReady.backToMyExams"]</a></p>

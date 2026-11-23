@@ -274,8 +274,24 @@ Pages: landing, how it works, science, pricing, security, contact, privacy, term
   look segment uses `--accent-ink` instead of a hard-coded white.
 - **Shared student CSS.** `student.css` (outside the exam room's rules, which GAD-T694 owns), `practice.css` and
   `exams.css` spacing and type sizes moved to `--space-*` / `--text-*`; the practice tag uses `--radius-pill`.
-- **Not done in this pass.** A markup-level audit of My exams, Exam catalog, My notifications, My research, Practice gaze
-  and My result (heading order, `.page-header`, `.table-scroll`, status roles) is filed as a follow-up.
+- **Markup pass (GAD-T704).** My exams, My notifications, My research and My result open with one `h1` in a
+  `.page-header`; their blocks are `.page-section`s. On My exams each exam card and the practice offer is a section
+  named by its own `h2` (`aria-labelledby`); the empty list is a `.notice.info` with `role="status"`. The exam catalog's
+  filters are a named search landmark, each category is a section named by its `h3`, and the redundant `title` tooltip
+  on the languages line is gone. My notifications is a `.form`: the opt-out checkbox is described by its explanation
+  (`aria-describedby`), the save button sits in `.form-actions`, the loading line and the saved/failed message are
+  status messages (the message as a `.notice.ok` / `.notice.error`). My research's text is a panel held to
+  `--measure`; "no study" is a `.notice.info`; its message is a status `.notice`. My result's appeal is a labelled
+  section with `.field`s: each textarea has a `for`-linked label and is described by its hint; the "not published" and
+  appeal messages are status notices. These pages have no data tables, so no `.table-scroll` was needed.
+- **Eye-contact indicator (`PracticeGaze`, `ExaminerGaze`).** The live region moved from the whole indicator (which held a
+  button and a disclosure, so every change re-read them) to its label alone, so only the state sentence is announced.
+  The state is always said in words, the dot's colour only repeats it.
+- **CSS.** `student.css` no longer has fixed 760px widths outside the exam room: `.panel.wide` is full width, exam cards
+  and the catalog are held to `--measure`, the camera preview is 12.5rem; its own `a.button` / `.secondary` copies are
+  gone (app.css has them); the result, steps, check-mark and catalog rows use the space and border tokens.
+  `languages.css` (exam languages panel, machine-translation bar) is on `--space-*`, `--text-*`, `--radius-*` and
+  `--border`.
 
 ## Exam room (GAD-T694)
 
@@ -358,22 +374,3 @@ status (`Pages/Admin/*`), `OrgMembers`, `Platform*`; stylesheets `admin*.css`, `
   students directory and console show their open state by fill as well as by the panel that opens, with no
   `aria-expanded` yet; the sign-in, password-reset and invitation pages were already covered by GAD-T507 and only
   checked.
-
-### Inbox (GAD-T701)
-
-`/inbox` (Components/Pages/Inbox.razor, `inbox.css`) and the top bar's Inbox link, built on the design system:
-
-- **Structure.** One h1 in a `.page-header` with its actions (Mark all as read, Email preferences); the list is a `<ul>`
-  named "Messages"; an opened message is an `<article>` labelled by its h2, with a "Back to inbox" link first.
-- **Not by colour alone.** An unread message carries the word "Unread" (a badge), a bold title and an accent edge; the
-  count line above the list says "2 unread of 5".
-- **Top bar.** The Inbox link reads "Inbox, 2 unread" to a screen reader (visually hidden text; the number pill is
-  `aria-hidden`), and below 40rem the Menu toggle shows the same count so it isn't hidden in the closed menu. The count
-  is read on load, on each navigation and when the inbox marks messages read, never on a timer.
-- **Status.** Marking read and failures are announced through a `role="status"` line, worded "Marked as read." /
-  "That didn't work: ...".
-- **Controls.** Each "Mark as read" button is named with its message's title; targets meet `--target-min`; dates are
-  `<time datetime>`.
-- **Reflow.** Each row wraps (badge, title, date, then the button) and long titles and bodies break anywhere, so
-  320px has no sideways scroll; the body keeps its line breaks (`pre-line`) at text-spacing overrides.
-- **Links.** A message's "Open" button follows only app-relative links.

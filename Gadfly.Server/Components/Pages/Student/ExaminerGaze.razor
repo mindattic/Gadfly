@@ -24,21 +24,21 @@
 
 @if (enabled)
 {
-    <div class="examiner-gaze" data-examiner-gaze data-state="off" role="status" aria-live="polite">
+    <div class="examiner-gaze" data-examiner-gaze data-state="off">
         <span class="examiner-gaze-dot" aria-hidden="true"></span>
-        <span class="examiner-gaze-label" data-examiner-gaze-label></span>
+        <span class="examiner-gaze-label" data-examiner-gaze-label role="status" aria-live="polite"></span>
         <button type="button" class="link" data-examiner-gaze-action="calibrate" hidden>@T["examRoom.gaze.calibrate"]</button>
         @* Folded to one link (GAD-T416): the exam room fits one screen, and the student was told all this before starting. *@
         <details class="examiner-gaze-more">
-        <summary>@T["examRoom.gaze.how"]</summary>
-        @if (accommodated)
-        {
-            <p class="examiner-gaze-note">@T["examRoom.gaze.noteAccommodated"]</p>
-        }
-        else
-        {
-            <p class="examiner-gaze-note">@T["examRoom.gaze.note"]</p>
-        }
+            <summary>@T["examRoom.gaze.how"]</summary>
+            @if (accommodated)
+            {
+                <p class="examiner-gaze-note">@T["examRoom.gaze.noteAccommodated"]</p>
+            }
+            else
+            {
+                <p class="examiner-gaze-note">@T["examRoom.gaze.note"]</p>
+            }
         </details>
     </div>
     @* The soften (GAD-T561): no words on it, ever; the examiner is the reminder. *@

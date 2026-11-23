@@ -14,9 +14,9 @@
 
 <HeadContent><link rel="stylesheet" href="examiner-gaze.css" /></HeadContent>
 
-<div class="examiner-gaze" data-examiner-gaze data-state="off" role="status" aria-live="polite">
+<div class="examiner-gaze" data-examiner-gaze data-state="off">
     <span class="examiner-gaze-dot" aria-hidden="true"></span>
-    <span class="examiner-gaze-label" data-examiner-gaze-label></span>
+    <span class="examiner-gaze-label" data-examiner-gaze-label role="status" aria-live="polite"></span>
     <button type="button" class="link" data-examiner-gaze-action="calibrate" hidden>@T["examRoom.gaze.calibrate"]</button>
     <details class="examiner-gaze-more">
         <summary>@T["examRoom.gaze.how"]</summary>

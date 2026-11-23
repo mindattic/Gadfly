@@ -9,10 +9,10 @@
    finds or makes the student's assignment and hands over to its get-ready page. *@
 @if (groups is { Count: > 0 })
 {
-    <section class="catalog" aria-labelledby="catalog-heading">
+    <section class="catalog page-section" aria-labelledby="catalog-heading">
         <h2 id="catalog-heading">@T["myExams.catalog.heading"]</h2>
         <p class="hint">@T["myExams.catalog.what"]</p>
-        <div class="catalog-filters">
+        <div class="catalog-filters" role="search" aria-label="@T["myExams.catalog.heading"]">
             <label>
                 <span>@T["myExams.catalog.category"]</span>
                 <select @bind="categoryFilter">
@@ -38,14 +38,14 @@
             <p class="hint" role="status">@T["myExams.catalog.count", shown.Sum(g => g.Exams.Count)]</p>
             @foreach (var g in shown)
             {
-                <section class="catalog-group" aria-label="@Name(g)">
-                    <h3>@Name(g) <span class="hint">(@g.Exams.Count)</span></h3>
+                <section class="catalog-group" aria-labelledby="catalog-@Key(g)">
+                    <h3 id="catalog-@Key(g)">@Name(g) <span class="hint">(@g.Exams.Count)</span></h3>
                     <ul class="catalog-list">
                         @foreach (var e in g.Exams)
                         {
                             <li class="catalog-exam">
                                 <a href="my-exams/exam/@e.ExamId/start">@e.Title</a>
-                                <span class="hint" title="@T["myExams.catalog.languages"]">
+                                <span class="hint">
                                     @T["myExams.catalog.languages"]: @string.Join(", ", e.Languages.Select(Gadfly.Engine.ExamLanguage.NativeName))
                                 </span>
                                 @if (e.Assigned)
