@@ -254,8 +254,9 @@ const TEXT = {
 };
 
 /** Each line in the page's language (GAD-T606: examRoom.js.gaze.<camelCase state>), TEXT's English as the fallback. */
+const GAZE_KEY = "examRoom.js.gaze.";
 const say = (state) => TEXT[state]
-    ? t("examRoom.js.gaze." + state.replace(/-(\w)/g, (m, c) => c.toUpperCase()), TEXT[state])
+    ? t(GAZE_KEY + state.replace(/-(\w)/g, (m, c) => c.toUpperCase()), TEXT[state])
     : "";
 
 /** Starts watching for the examiner; the camera is used only while the examiner is on screen. */
