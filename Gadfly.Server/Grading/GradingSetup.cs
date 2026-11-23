@@ -41,10 +41,10 @@ public static class GradingSetup
             await ReviewerReportAsync(grading, sessionId, "csv", ct)).RequireAuthorization(GadflyPolicies.Member);
         app.MapGet("/grading/{sessionId:guid}/report.pdf", async (Guid sessionId, GradingService grading, TimeProvider clock, CancellationToken ct) =>
             await ReviewerReportAsync(grading, sessionId, "pdf", ct, clock)).RequireAuthorization(GadflyPolicies.Member);
-        app.MapGet("/my-results/{sessionId:guid}/report.md", async (Guid sessionId, GradingService grading, CancellationToken ct) =>
-            await StudentReportAsync(grading, sessionId, "md", ct)).RequireAuthorization(GadflyPolicies.Student);
-        app.MapGet("/my-results/{sessionId:guid}/report.pdf", async (Guid sessionId, GradingService grading, TimeProvider clock, CancellationToken ct) =>
-            await StudentReportAsync(grading, sessionId, "pdf", ct, clock)).RequireAuthorization(GadflyPolicies.Student);
+        app.MapGet("/my-results/{sessionId:guid}/report.md", async (Guid sessionId, GradingService grading, IServiceScopeFactory scopes, CancellationToken ct) =>
+            await StudentReportAsync(grading, scopes, sessionId, "md", ct)).RequireAuthorization(GadflyPolicies.Student);
+        app.MapGet("/my-results/{sessionId:guid}/report.pdf", async (Guid sessionId, GradingService grading, IServiceScopeFactory scopes, TimeProvider clock, CancellationToken ct) =>
+            await StudentReportAsync(grading, scopes, sessionId, "pdf", ct, clock)).RequireAuthorization(GadflyPolicies.Student);
         app.MapGet("/grading/exam/{examId:guid}/class-summary.pdf", async (Guid examId, ClassSummaryService summary, TimeProvider clock, CancellationToken ct) =>
         {
             var report = await summary.BuildAsync(examId, ct);
@@ -64,13 +64,21 @@ public static class GradingSetup
         return Render(report, format, clock);
     }
 
-    private static async Task<IResult> StudentReportAsync(GradingService grading, Guid sessionId, string format, CancellationToken ct, TimeProvider? clock = null)
+    private static async Task<IResult> StudentReportAsync(GradingService grading, IServiceScopeFactory scopes, Guid sessionId, string format, CancellationToken ct, TimeProvider? clock = null)
     {
         var w = await grading.StudentWorkspaceAsync(sessionId, ct);
         if (w is null) return Results.NotFound();
-        var report = AssessmentReport.Build(w, forStudent: true);
-        return Render(report, format, clock);
+        return Render(await StudentDownloadReportAsync(scopes, w), format, clock);
     }
+
+    /// <summary>
+    /// The student's own result download (Markdown and PDF): the report the result page shows, with the exam and objective
+    /// titles in the attempt's language when that language's texts are approved, else the English (GAD-T634, as GAD-T630).
+    /// Staff exports stay in English.
+    /// </summary>
+    public static Task<AssessmentReport> StudentDownloadReportAsync(IServiceScopeFactory scopes, GradingWorkspace w) =>
+        Student.StudentExamTexts.LocalizeAsync(scopes, w.Session.OrganizationId, w.Session.ExamId, w.Session.Language,
+            AssessmentReport.Build(w, forStudent: true));
 
     /// <summary>The report in the format asked for: Markdown and CSV beside the PDF (GAD-T311), which reuses the transcript
     /// downloads' hand-written PDF engine (<see cref="GradingReportPdf"/>) rather than a new PDF library.</summary>

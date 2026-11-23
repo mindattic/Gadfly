@@ -1,4 +1,6 @@
+using Gadfly.Assessment;
 using Gadfly.Server.Data;
+using Gadfly.Server.Grading;
 using Gadfly.Server.Student;
 using Gadfly.Server.Tenancy;
 using Gadfly.Server.Translation;
@@ -56,5 +58,34 @@ public class StudentExamTextsTests
     {
         var w = await WorldAsync(ExamLocalizationStatus.Approved);
         Assert.That((await ListAsync(w, "en")).Single().ExamTitle, Is.EqualTo("Biology check"));
+    }
+
+    /// <summary>A student's own result download, as the /my-results report.md and report.pdf endpoints build it (GAD-T634).</summary>
+    private static Task<AssessmentReport> DownloadAsync(Seed.ExamWorld w, string language)
+    {
+        var objective = new LearningObjective { Key = "o1", Title = "Photosynthesis", MaxScore = 100, Weight = 1 };
+        var human = new HumanObjectiveGrade { ObjectiveId = objective.Id, Level = MasteryLevel.Application, Score = 80, MaxScore = 100 };
+        var workspace = new GradingWorkspace
+        {
+            Session = new ExamSession { OrganizationId = w.Org, ExamId = w.ExamId, Language = language }, ExamTitle = "Biology check",
+            StudentName = "Student", Grade = new FinalGrade { Status = GradeStatus.Published, FinalPercent = 80 },
+            Policy = new PolicySnapshot(), AiVisible = true, Responses = [],
+            Objectives = [new ObjectiveView(objective, null, human, [human], [], null, AiExcluded: false, null, [])], Combined = null,
+            Approvals = [], Appeals = [], Audit = [], Names = new Dictionary<Guid, string>(), SecondReviewers = [],
+            RequestedSecondReviews = new Dictionary<Guid, Guid>(), Viewer = GradingActor.System,
+        };
+        return GradingSetup.StudentDownloadReportAsync(ServerFixture.Factory.Services.GetRequiredService<IServiceScopeFactory>(), workspace);
+    }
+
+    [Test]
+    public async Task The_result_download_uses_the_approved_texts_and_English_for_a_draft()
+    {
+        var approved = await DownloadAsync(await WorldAsync(ExamLocalizationStatus.Approved), "ko");
+        Assert.That(approved.ExamTitle, Is.EqualTo("생물 시험"));
+        Assert.That(approved.ToMarkdown(), Does.Contain("생물 시험").And.Contain("광합성").And.Not.Contain("Photosynthesis"));
+
+        var draft = await DownloadAsync(await WorldAsync(ExamLocalizationStatus.MachineDraft), "ko");
+        Assert.That(draft.ExamTitle, Is.EqualTo("Biology check"));
+        Assert.That(draft.ToMarkdown(), Does.Contain("Photosynthesis").And.Not.Contain("광합성"));
     }
 }
