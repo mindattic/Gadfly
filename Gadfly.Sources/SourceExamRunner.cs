@@ -227,8 +227,16 @@ public sealed class SourceExamEngine
             // The exam would end on a provisional judgment: the panel's full judgments come in first, and decide again from them
             // (they may show an objective is not yet settled). A speculative copy leaves that to the live session.
             if (Speculative) throw new InvalidOperationException("A speculative step does not end the exam before the panel has judged.");
-            await FinishFullJudgmentsAsync(ct);
-            decision = _planner.Next(Session.ForPlanning(), _clock.GetUtcNow(), Ledger.ForPlanner());
+            var waitStarted = _clock.GetTimestamp();
+            var pending = Session.PendingFullJudgments.Count;
+            var ok = false;
+            try
+            {
+                await FinishFullJudgmentsAsync(ct);
+                decision = _planner.Next(Session.ForPlanning(), _clock.GetUtcNow(), Ledger.ForPlanner());
+                ok = true;
+            }
+            finally { NoteEndWait(pending, waitStarted, ok && decision.EndsSession, !ok, planned: true); }
         }
         else if (!decision.EndsSession && LeavesSettledObjectiveWithPending(decision))
         {
@@ -809,13 +817,47 @@ public sealed class SourceExamEngine
         if (Session.IsEnded) return;
         if (Session.PendingFullJudgments.Count > 0)
         {
+            var waitStarted = _clock.GetTimestamp();
+            var pending = Session.PendingFullJudgments.Count;
+            var failed = false;
             try { await FinishFullJudgmentsAsync(ct); }
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
+                failed = true;
                 Diagnostics?.Report($"[Ending with an answer the panel could not judge; it goes to a human: {ex.Message}]");
             }
+            NoteEndWait(pending, waitStarted, ended: true, failed, planned: false);
         }
         End(reason);
+    }
+
+    /// <summary>
+    /// How long the exam's end waited for the panel's last full judgments (GAD-T516), measured where the exam would end: the planner
+    /// deciding it is over (<see cref="NextQuestionAsync"/>) or the student, staff, the clock or the sweep ending it (<see cref="EndAsync"/>).
+    /// </summary>
+    /// <param name="Pending">Answers still waiting for their full judgment when the wait began (usually the last one or two).</param>
+    /// <param name="WaitedMs">Wall time the end waited for them: the time a student sits on the last answer beyond the examiner's own step.</param>
+    /// <param name="Ended">False when the panel's judgments changed the planner's mind and the exam went on (the wait still happened).</param>
+    /// <param name="Failed">The panel could not judge one of them (it goes to a human) or the wait threw.</param>
+    /// <param name="Planned">True when the planner ended it; false when the student, staff, the clock or the sweep did.</param>
+    public sealed record EndJudgingWait(int Pending, long WaitedMs, bool Ended, bool Failed, bool Planned);
+
+    private EndJudgingWait? _endWait;
+
+    /// <summary>The end-of-exam judging wait measured since the last call (GAD-T516), or null; the host records it once.</summary>
+    public EndJudgingWait? TakeEndJudgingWait()
+    {
+        var w = _endWait;
+        _endWait = null;
+        return w;
+    }
+
+    private void NoteEndWait(int pending, long started, bool ended, bool failed, bool planned)
+    {
+        if (pending == 0) return;
+        var waited = (long)_clock.GetElapsedTime(started).TotalMilliseconds;
+        _endWait = new EndJudgingWait(pending, waited, ended, failed, planned);
+        Diagnostics?.Report($"[End waited {waited} ms for the panel's last {pending} judgment(s){(ended ? "" : "; the exam goes on")}{(failed ? "; one failed" : "")}.]");
     }
 
     /// <summary>The report for the session so far (normally called once it has ended), with per-objective levels.</summary>

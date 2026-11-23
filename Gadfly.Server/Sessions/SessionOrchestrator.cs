@@ -1171,6 +1171,7 @@ public sealed partial class SessionOrchestrator(
         }
 
         await RecordDisagreementsAsync(db, org, s.Id, stored, judged, ct);
+        RecordEndJudgingWait(db, org, s.Id, live.Engine.TakeEndJudgingWait());   // GAD-T516
 
         var mastery = await db.ConceptMastery.Where(m => m.SessionId == s.Id).ToDictionaryAsync(m => m.ConceptKey, ct);
         foreach (var conceptKey in s.Policy.ConceptIds)

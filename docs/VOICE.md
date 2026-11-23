@@ -435,6 +435,19 @@ Decision: no fast-model misconception pass for now. It would add a second fast-m
 misconceptions would not carry the panel's quote checks; revisit if the `judgment.provisional.disagreed` rate (GAD-T514)
 or reviewer reports show the examiner steering past misconceptions.
 
+**The wait at the end (GAD-T516).** Ending waits for the panel, so the student's last step costs the full panel time of
+the last answer (its full judgment only starts once that answer is recorded, inside the step that ends the exam) plus
+whatever is left of the one before it; the judgments run one at a time, in turn order, because each reads the claim
+ledger of every earlier answer. Every such wait is measured (`SourceExamEngine.EndJudgingWait`: answers pending, ms
+waited, whether the exam then ended or the panel's verdicts kept it going, whether one failed, whether the planner or
+someone else ended it), logged, and written to the audit trail against the session as `judgment.end.waited`. Decision
+until live numbers say otherwise: hide it rather than reshape the judging. Judging the last answers in parallel would
+break the claim-ledger order the contradiction checks rely on, and starting the last judgment earlier would mean running
+the panel on a partial answer, which the prefetch deliberately never does (GAD-T497). If `judgment.end.waited` shows
+waits of more than a few seconds, the exam room should cover them with the examiner's closing remarks and a
+"reviewing your last answer" progress line; only if that is still too long is it worth judging the last answer's
+panel calls in parallel with the earlier one while keeping the ledger merge in turn order.
+
 **Prefetching the next step (GAD-T497).** While the student is still speaking, the exam room can send the answer so far
 (the recognizer's finished segments plus its current partial) to `SessionOrchestrator.NotePartialAnswerAsync`. Once those
 words have stood still for `Gadfly:LiveTurn:Prefetch:DebounceMs` (default 700 ms) and are at least `MinWords` long

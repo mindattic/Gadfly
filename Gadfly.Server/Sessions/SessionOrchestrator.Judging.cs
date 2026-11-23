@@ -27,6 +27,12 @@ public sealed partial class SessionOrchestrator
     /// <summary>The audit action recorded when the panel's full judgment disagreed materially with the provisional one.</summary>
     public const string ProvisionalDisagreedAction = "judgment.provisional.disagreed";
 
+    /// <summary>
+    /// The audit action recording how long the exam's end waited for the panel's last full judgments (GAD-T516), against the session,
+    /// so the wait students see after their last answer can be measured from live exams before deciding to hide or shorten it.
+    /// </summary>
+    public const string EndJudgingWaitAction = "judgment.end.waited";
+
     /// <summary>On when the live turn has its fast model and the setting does not turn it off.</summary>
     private bool DeferJudging => liveModel is not null
         && !string.Equals(configuration?[DeferJudgingSetting], "false", StringComparison.OrdinalIgnoreCase);
@@ -94,6 +100,24 @@ public sealed partial class SessionOrchestrator
         {
             log.LogWarning(ex, "A background panel judgment could not be applied; the next step tries again.");
         }
+    }
+
+    /// <summary>
+    /// The end-of-exam wait for the panel's last judgments, if this step measured one (GAD-T516): logged, and written to the audit
+    /// trail against the session (pending count, milliseconds waited, whether the exam then ended, failed, or was ended by the planner).
+    /// </summary>
+    private void RecordEndJudgingWait(GadflyDbContext db, Guid org, Guid sessionId, SourceExamEngine.EndJudgingWait? wait)
+    {
+        if (wait is null) return;
+        log.LogInformation("The exam's end waited {WaitedMs} ms for the panel's last {Pending} judgment(s) (ended {Ended}, failed {Failed}, planned {Planned}).",
+            wait.WaitedMs, wait.Pending, wait.Ended, wait.Failed, wait.Planned);
+        db.AuditEvents.Add(new AuditEvent
+        {
+            OrganizationId = org, ActorRole = "System", Action = EndJudgingWaitAction, EntityType = "ExamSession", EntityId = sessionId.ToString(),
+            SessionId = sessionId, At = clock.GetUtcNow(),
+            AfterJson = JsonSerializer.Serialize(new { wait.Pending, wait.WaitedMs, wait.Ended, wait.Failed, wait.Planned }),
+            Reason = $"The exam's end waited {wait.WaitedMs} ms for the panel's last {wait.Pending} judgment(s).",
+        });
     }
 
     /// <summary>
