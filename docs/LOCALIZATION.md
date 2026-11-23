@@ -237,3 +237,48 @@ How the interface text is localized, how a student chooses a language, and the K
 | 10 | GAD-T541 | Draft Korean texts for exams already live (after deploy) | after deploy |
 | 11 | GAD-T550 | Multilingual docs and the dissertation section | with this page |
 | 12 | GAD-T596 | Spanish, later: the same steps for a third language | later |
+
+## Exam room strings (for the exam room's owner)
+
+The exam room's text is in English and Korean in `Localization/Strings/examRoom.en.json` and `examRoom.ko.json` (GAD-T544,
+201 keys, merged into each language at startup). The English is the current literal, word for word, so switching to keys
+changes nothing for English students. Wherever the code builds a sentence from parts (the integrity notice's list, the paused
+line's devices, the typed or spoken variants, the 3D-picture reasons), each whole sentence has its own key: pick the key,
+don't join fragments.
+
+- **Razor:** `@inject UiText T`, then `T.For(attemptLanguage)["key"]` (the attempt's `ExamSession.Language`, not the switch;
+  VoiceRoom already has `UiFor`). Slots are `{0}`, `{1}` (`T.For(lang)["examRoom.progress", closed, total]`).
+  `examRoom.ended.results` takes the `My exams` link (`examRoom.ended.resultsLink`) as `{0}`.
+- **Scripts:** render `<UiTextData Prefix="examRoom.js." />` (in the attempt's language) and
+  `import { t } from "./ui-text.js"; t("examRoom.js.held", "Your instructor paused the exam. …", vars)`; slots are named
+  (`t("examRoom.js.delay", "Response delay: {s} s", { s: (ms / 1000).toFixed(1) })`). Pass `t("examRoom.js.gaze.skip", "Skip")` as
+  gaze-quality.js's `skipLabel`, since the exam room has no `getReady.js.` strings.
+- `fail()`/`problem()` messages in voice-room.js are not shown (VoiceRoom picks `examRoom.problem.*` by kind), so they have no
+  keys. "The examiner is speaking..." (three dots, voice-room.js) uses `examRoom.js.speaking`.
+
+| Keys (`examRoom.` …) | File | English starts |
+|---|---|---|
+| `pageTitle`, `defaultTitle` | ExamRoom.razor | `{0} · Gadfly Exams`, Exam |
+| `integrity.summary`, `integrity.notice` (`.typed`, `.strict`, `.strictTyped`), `integrity.fullscreen` | ExamRoom.razor | Integrity notes are on… |
+| `timer.title`, `progress` | ExamRoom.razor | Time left; Topics finished {0} of {1} |
+| `voiceOff` | ExamRoom.razor | This exam is spoken, but the talking examiner… |
+| `window.away`, `window.back`, `review.title`, `review.body`, `review.noteLabel`, `review.noteSend`, `review.noteLater`, `review.noteThanks` | ExamRoomText.cs | The exam is paused while this window…; A person will look… |
+| `loading`, `notFound`, `backToMyExams` | ExamRoom.razor | Loading your exam…; That exam session isn't yours… |
+| `thinking.answer`, `thinking.finish`, `thinking.saving`, `thinking.question`, `thinking.wait` | ExamRoom.razor | Thinking about your answer…; This can take a few seconds… |
+| `paused` (`.clockStopped`, `.typed`, `.typed.clockStopped`), `waitingToStart` (`.typed`) | ExamRoom.razor (+ Typed.cs) | The exam is paused until…; The examiner will ask the first question… |
+| `verify.recorded`, `verify.title`, `verify.hint`, `verify.typoLabel`, `verify.typoHint`, `verify.saveTypo`, `back`, `verify.clarifyLabel`, `verify.clarifyPlaceholder`, `verify.send`, `verify.decline`, `verify.typoInstead`, `verify.spoken` | ExamRoom.razor | Your answer, as recorded; A quick clarification… |
+| `typed.label`, `typed.placeholder`, `typed.hint`, `typed.submit`, `typed.heldTitle`, `dontKnow`, `spoken.hint` | ExamRoom.razor | Your answer; Submit answer; I don't know… |
+| `dontKnow.heldTitle`, `error.noAnswer` | ExamRoom.razor.cs | Your instructor paused the exam. You can use this…; I didn't catch… |
+| `last.title`, `last.question`, `last.typoLabel`, `last.typoHint`, `last.save`, `cancel`, `last.typoOpen` | ExamRoom.razor | Your last answer; Question: {0}… |
+| `finish.open`, `finish.question`, `finish.confirm`, `finish.yes`, `finish.keepGoing` | ExamRoom.razor | Finish and leave the exam; Finish the exam now?… |
+| `ended.title`, `ended.timeUp`, `ended.early`, `ended.examinerDone`, `ended.results`, `ended.resultsLink`, `help.grading`, `help.browser`, `tryAgain`, `error.cantContinue`, `error.step` | ExamRoom.razor | Your answers were submitted; Time ran out.… |
+| `staff.heldTitle`, `staff.heldBody`, `staff.heldMessage`, `staff.messageLabel`, `staff.ok` | StaffNoticeBanner.razor | Your exam is paused; Message from your instructor… |
+| `voice.regionLabel`, `voice.mock`, `voice.unsupported`, `voice.unsupportedHint` (`.typed`), `help.browsers`, `voice.oneClick`, `voice.paused`, `voice.continue`, `voice.failedHint` (`.typed`), `help.microphone`, `help.camera`, `voice.connecting` (`.typed`), `voice.connectingStatus` | VoiceRoom.razor | The examiner; This browser can't run…; One click to go.… |
+| `voice.examiner`, `voice.you`, `transcript.title`, `transcript.empty` (`.typed`), `transcript.delay`, `voice.browserVoice`, `voice.repeat`, `voice.heard`, `voice.done`, `voice.clear`, `voice.toPushToTalk`, `voice.ptt`, `voice.pttHint` | VoiceRoom.razor | Examiner; Transcript; Done answering… |
+| `camera.on`, `camera.starting`, `camera.show`, `camera.hide`, `camera.previewLabel`, `transcript.quiet`, `pause.label`, `pause.standard`, `pause.longer`, `pause.longest`, `pause.done` | ExamRoomText.cs | Camera on; Wait before sending my answer… |
+| `camera.denied`, `camera.unavailable`, `avatar.portrait` (`.noWebgl`, `.reducedMotion`, `.loadFailed`, `.slowDevice`, `.graphicsLost`), `avatar.none` | VoiceRoom.razor | The camera wasn't allowed.; Showing the examiner's picture… |
+| `problem.unsupported`, `problem.timeout`, `problem.couldNotStart`, `problem.gesture`, `problem.micDenied`, `problem.microphone`, `problem.micLost`, `problem.cameraDenied`, `problem.camera`, `problem.cameraLost`, `problem.connection`, `problem.other` | VoiceRoom.razor | This browser can't use the microphone…; The microphone wasn't allowed… |
+| `webcam.on`, `webcam.unavailable`, `webcam.stopped`, `webcam.off`, `webcam.starting`, `webcam.hint.noFace`, `.lowLight`, `.tooSmall`, `.cutOff`, `.offCenter` | WebcamIntegrity.razor | Camera on. Checks run on this device…; We can't see your face… |
+| `gaze.calibrate`, `gaze.how`, `gaze.noteAccommodated`, `gaze.note`; `gaze.notePractice` | ExaminerGaze.razor; PracticeGaze.razor | Set up eye contact again; How this works; Your camera checks… |
+| `js.connecting`, `js.hearing`, `js.reconnecting`, `js.ready`, `js.speaking`, `js.waiting`, `js.thinking`, `js.noVoice`, `js.held` (HELD_TEXT), `js.windowAway` (WINDOW_AWAY_TEXT), `js.listen` (`.ptt`, `.typed`), `js.carryOn`, `js.recovered`, `js.finishing`, `js.doneOnly` (DONE_ONLY_TEXT), `js.cleared`, `js.sending`, `js.notThrough`, `js.kept` (KEPT_TEXT), `js.keptGiveUp` (KEPT_GIVE_UP_TEXT), `js.dropped` (DROPPED_TEXT), `js.mode.toPushToTalk`, `js.mode.toHandsFree`, `js.delay`, `js.avatar.none` | voice-room.js | Connecting you to the examiner…; Hearing you…; Response delay: {s} s |
+| `js.gaze.loading`, `.calibrating`, `.calibratingSimple`, `.setup`, `.on`, `.noFace`, `.twoFaces`, `.lost`, `.unknown`, `.accommodated`, `.unavailable`, `.setupCaption`, `.setupRetry`, `.skip` | examiner-gaze.js (TEXT) | Starting the eye-contact check…; Follow the dot… |
