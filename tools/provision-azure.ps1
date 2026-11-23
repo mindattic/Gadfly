@@ -31,6 +31,7 @@ param(
   [string]$StorageAccount = 'stmindatticdbf65744',
   [string]$StagingSlot = 'staging',
   [string]$StagingDatabase = 'Gadfly-staging',
+  [string]$CustomDomain = '',
   [switch]$WhatIf
 )
 $ErrorActionPreference = 'Stop'
@@ -110,6 +111,16 @@ Invoke-Az @('role','assignment','create','--assignee-object-id',$slotPrincipal,'
 Invoke-Az @('role','assignment','create','--assignee-object-id',$slotPrincipal,'--assignee-principal-type','ServicePrincipal',
             '--role','Key Vault Secrets User','--scope',$vaultId)
 
+if ($CustomDomain) {
+  Write-Host "== Custom domain $CustomDomain (HTTPS-only is on above; free App Service managed certificate, SNI)" -ForegroundColor Green
+  $verifyId = Get-AzValue @('webapp','show','-g',$ResourceGroup,'-n',$App,'--query','customDomainVerificationId','-o','tsv')
+  $default = Get-AzValue @('webapp','show','-g',$ResourceGroup,'-n',$App,'--query','defaultHostName','-o','tsv')
+  Write-Host "DNS first (at the registrar): CNAME $CustomDomain -> $default, and TXT asuid.$CustomDomain = $verifyId (an apex domain uses an A record to the app's inbound IP instead of the CNAME)." -ForegroundColor Yellow
+  Invoke-Az @('webapp','config','hostname','add','-g',$ResourceGroup,'--webapp-name',$App,'--hostname',$CustomDomain,'-o','none')
+  $thumb = Invoke-Az @('webapp','config','ssl','create','-g',$ResourceGroup,'-n',$App,'--hostname',$CustomDomain,'--query','thumbprint','-o','tsv')
+  if ($thumb) { Invoke-Az @('webapp','config','ssl','bind','-g',$ResourceGroup,'-n',$App,'--certificate-thumbprint',$thumb,'--ssl-type','SNI','-o','none') }
+}
+
 Write-Host "== App settings" -ForegroundColor Green
 $kvRef = { param($name) "@Microsoft.KeyVault(VaultName=$KeyVault;SecretName=$name)" }
 $settings = @(
@@ -129,9 +140,14 @@ $settings = @(
   "ASPNETCORE_ENVIRONMENT=Production"
 )
 # az is a .cmd wrapper: values with ';' or '(' break on the command line, so the settings go in a JSON file.
+# Production keeps whatever AiMode it already runs (GAD-T654): re-running provisioning must never flip a live app back to mock.
+# Only a first run, where the setting is absent, starts on the labelled mock panel (no LLM spend until the owner says go live, GAD-T100).
+$currentAiMode = Get-AzValue @('webapp','config','appsettings','list','-g',$ResourceGroup,'-n',$App,'--query',"[?name=='Gadfly__AiMode'].value | [0]",'-o','tsv')
+if ($currentAiMode) { $currentAiMode = "$currentAiMode".Trim() }
+if (-not $currentAiMode) { $currentAiMode = 'mock' }
+Write-Host "   Production Gadfly__AiMode stays $currentAiMode"
 $settings += @(
-  # No LLM spend until the owner says go live: the app starts on the labelled mock panel (GAD-T100).
-  "Gadfly__AiMode=mock",
+  "Gadfly__AiMode=$currentAiMode",
   # When Claude is in the panel, Sonnet 5 (owner, 2026-11-21).
   "Gadfly__ClaudeModel=claude-sonnet-5"
 )
@@ -146,10 +162,11 @@ function Set-AppSettings([string[]]$Lines, [string[]]$SlotArgs) {
 }
 Set-AppSettings $settings @()
 
-# The slot was cloned from production's settings; point its three slot settings at staging. Staging stays mock until the owner says otherwise.
+# The slot was cloned from production's settings; point its three slot settings at staging. Staging is always forced to mock (no LLM spend from staging).
 $stagingSettings = $settings | ForEach-Object {
   if ($_ -like 'ConnectionStrings__Gadfly=*') { $_.Replace("Database=$Database;", "Database=$StagingDatabase;") }
   elseif ($_ -like 'DataProtection__BlobUri=*') { $_.Replace('/keys.xml', '/keys-staging.xml') }
+  elseif ($_ -like 'Gadfly__AiMode=*') { 'Gadfly__AiMode=mock' }
   else { $_ }
 }
 Set-AppSettings $stagingSettings @('--slot', $StagingSlot)

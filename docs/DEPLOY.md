@@ -195,7 +195,10 @@ print it once in the log.
 
 ## After the first deploy
 
-- Custom domain and certificate (App Service → Custom domains), if wanted.
+- Custom domain: create the DNS records first (CNAME to the app's default host name, TXT `asuid.<domain>` with the app's
+  `customDomainVerificationId`), then run `tools/provision-azure.ps1 -CustomDomain www.example.com`. It adds the host
+  name, creates a free managed certificate and binds it (SNI). HTTPS-only and TLS 1.2 are already set, and the app
+  redirects to HTTPS and sends HSTS in production.
 - If the GitHub workflow's trigger is ever switched to `push` on `main`, every push becomes a numbered release: think twice.
 - Watch `/healthz/ready` (anonymous) and `/healthz/providers` (SuperAdmin only) for failing checks and LLM keys; see
   [OPERATIONS.md](OPERATIONS.md).
