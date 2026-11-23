@@ -59,37 +59,40 @@ else if (hooks.Count == 0)
 }
 else
 {
-    <table class="grid">
-        <thead><tr><th>URL</th><th>Events</th><th>Created</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-        <tbody>
-            @foreach (var h in hooks)
-            {
-                <tr>
-                    <td><code>@h.Url</code></td>
-                    <td>@h.Events.Replace(",", ", ")</td>
-                    <td>@AdminDb.When(h.CreatedAt)</td>
-                    <td>@if (h.IsActive) { <span class="ok">active</span> } else { <span class="muted">deactivated</span> }</td>
-                    <td>
-                        @if (h.IsActive)
-                        {
-                            @if (confirming == h.Id)
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">Endpoints</caption>
+            <thead><tr><th scope="col">URL</th><th scope="col">Events</th><th scope="col">Created</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+                @foreach (var h in hooks)
+                {
+                    <tr>
+                        <td><code>@h.Url</code></td>
+                        <td>@h.Events.Replace(",", ", ")</td>
+                        <td>@AdminDb.When(h.CreatedAt)</td>
+                        <td>@if (h.IsActive) { <span class="ok">active</span> } else { <span class="muted">deactivated</span> }</td>
+                        <td>
+                            @if (h.IsActive)
                             {
-                                <div class="row-actions">
-                                    <span>Deactivate? Pending deliveries are dropped.</span>
-                                    <button type="button" class="danger" @onclick="() => DeactivateAsync(h.Id)">Deactivate</button>
-                                    <button type="button" class="link" @onclick="() => confirming = null">Cancel</button>
-                                </div>
+                                @if (confirming == h.Id)
+                                {
+                                    <div class="row-actions">
+                                        <span>Deactivate? Pending deliveries are dropped.</span>
+                                        <button type="button" class="danger" @onclick="() => DeactivateAsync(h.Id)">Deactivate</button>
+                                        <button type="button" class="link" @onclick="() => confirming = null">Cancel</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <button type="button" class="link" @onclick="() => confirming = h.Id">Deactivate…</button>
+                                }
                             }
-                            else
-                            {
-                                <button type="button" class="link" @onclick="() => confirming = h.Id">Deactivate…</button>
-                            }
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 <h2 class="section">Recent deliveries</h2>
@@ -103,22 +106,25 @@ else if (deliveries.Count == 0)
 }
 else
 {
-    <table class="grid">
-        <thead><tr><th>Created</th><th>Event</th><th>Endpoint</th><th>Status</th><th class="num">Attempt</th><th class="num">Response</th></tr></thead>
-        <tbody>
-            @foreach (var d in deliveries)
-            {
-                <tr>
-                    <td>@AdminDb.When(d.CreatedAt)</td>
-                    <td>@d.EventType</td>
-                    <td><code>@(urls.GetValueOrDefault(d.WebhookId) ?? "(removed)")</code></td>
-                    <td class="status-@d.Status.ToString().ToLowerInvariant()">@Describe(d.Status)</td>
-                    <td class="num">@d.Attempt</td>
-                    <td class="num">@(d.ResponseCode?.ToString() ?? "—")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">Recent deliveries</caption>
+            <thead><tr><th scope="col">Created</th><th scope="col">Event</th><th scope="col">Endpoint</th><th scope="col">Status</th><th scope="col" class="num">Attempt</th><th scope="col" class="num">Response</th></tr></thead>
+            <tbody>
+                @foreach (var d in deliveries)
+                {
+                    <tr>
+                        <td>@AdminDb.When(d.CreatedAt)</td>
+                        <td>@d.EventType</td>
+                        <td><code>@(urls.GetValueOrDefault(d.WebhookId) ?? "(removed)")</code></td>
+                        <td class="status-@d.Status.ToString().ToLowerInvariant()">@Describe(d.Status)</td>
+                        <td class="num">@d.Attempt</td>
+                        <td class="num">@(d.ResponseCode?.ToString() ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
     <p class="hint">The latest @DeliveryLimit deliveries.</p>
 }
 

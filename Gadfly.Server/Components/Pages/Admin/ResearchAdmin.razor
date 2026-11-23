@@ -87,25 +87,28 @@ else
             }
             else
             {
-                <table class="grid">
-                    <thead><tr><th>Arm</th><th>What differs</th><th>Students</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-                    <tbody>
-                        @foreach (var a in arms)
-                        {
-                            <tr>
-                                <td>@a.Name @(a.Archived ? "(closed)" : "")</td>
-                                <td>@a.Description</td>
-                                <td>@a.Members</td>
-                                <td>
-                                    @if (!a.Archived)
-                                    {
-                                        <button type="button" class="secondary" @onclick="() => ArchiveAsync(a.Id)" disabled="@busy">Close</button>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <div class="table-scroll">
+                    <table class="grid">
+                        <caption class="visually-hidden">Study arms</caption>
+                        <thead><tr><th scope="col">Arm</th><th scope="col">What differs</th><th scope="col">Students</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+                        <tbody>
+                            @foreach (var a in arms)
+                            {
+                                <tr>
+                                    <td>@a.Name @(a.Archived ? "(closed)" : "")</td>
+                                    <td>@a.Description</td>
+                                    <td>@a.Members</td>
+                                    <td>
+                                        @if (!a.Archived)
+                                        {
+                                            <button type="button" class="secondary" @onclick="() => ArchiveAsync(a.Id)" disabled="@busy">Close</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
             <div>
                 <label>New arm name <input type="text" @bind="newArmName" maxlength="80" /></label>
@@ -121,34 +124,37 @@ else
             else
             {
                 <button type="button" class="secondary" @onclick="RandomizeAsync" disabled="@(busy || arms.Count(a => !a.Archived) < 2)">Put students without an arm into one at random</button>
-                <table class="grid">
-                    <thead><tr><th>Student</th><th>Arm</th></tr></thead>
-                    <tbody>
-                        @foreach (var r in rows)
-                        {
-                            <tr>
-                                <td>@r.Student</td>
-                                <td>
-                                    @if (r.Locked)
-                                    {
-                                        <span>@(ArmName(r.ArmId)) <span class="hint">(fixed: attempt started)</span></span>
-                                    }
-                                    else
-                                    {
-                                        <select value="@(r.ArmId?.ToString() ?? "")" @onchange="e => SetArmAsync(r.AssignmentId, e.Value?.ToString())" disabled="@busy"
-                                                aria-label="@($"Arm for {r.Student}")">
-                                            <option value="">No arm</option>
-                                            @foreach (var a in arms.Where(a => !a.Archived || a.Id == r.ArmId))
-                                            {
-                                                <option value="@a.Id">@a.Name</option>
-                                            }
-                                        </select>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <div class="table-scroll">
+                    <table class="grid">
+                        <caption class="visually-hidden">Students on this exam</caption>
+                        <thead><tr><th scope="col">Student</th><th scope="col">Arm</th></tr></thead>
+                        <tbody>
+                            @foreach (var r in rows)
+                            {
+                                <tr>
+                                    <td>@r.Student</td>
+                                    <td>
+                                        @if (r.Locked)
+                                        {
+                                            <span>@(ArmName(r.ArmId)) <span class="hint">(fixed: attempt started)</span></span>
+                                        }
+                                        else
+                                        {
+                                            <select value="@(r.ArmId?.ToString() ?? "")" @onchange="e => SetArmAsync(r.AssignmentId, e.Value?.ToString())" disabled="@busy"
+                                                    aria-label="@($"Arm for {r.Student}")">
+                                                <option value="">No arm</option>
+                                                @foreach (var a in arms.Where(a => !a.Archived || a.Id == r.ArmId))
+                                                {
+                                                    <option value="@a.Id">@a.Name</option>
+                                                }
+                                            </select>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
         }
     </section>

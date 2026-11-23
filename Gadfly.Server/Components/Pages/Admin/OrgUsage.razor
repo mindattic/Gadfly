@@ -45,43 +45,49 @@ else
     }
 
     <h2 class="section">By month</h2>
-    <table class="grid">
-        <thead><tr><th>Month</th><th class="num">Sessions</th><th class="num">Ended</th><th class="num">Metered calls</th><th class="num">Cost (USD)</th></tr></thead>
-        <tbody>
-            @foreach (var m in months)
-            {
-                <tr>
-                    <td>@m.Label</td>
-                    <td class="num">@m.Sessions</td>
-                    <td class="num">@m.Completed</td>
-                    <td class="num">@m.Lines.Sum(l => l.Count)</td>
-                    <td class="num">@Usd(m.Cost)</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">By month</caption>
+            <thead><tr><th scope="col">Month</th><th scope="col" class="num">Sessions</th><th scope="col" class="num">Ended</th><th scope="col" class="num">Metered calls</th><th scope="col" class="num">Cost (USD)</th></tr></thead>
+            <tbody>
+                @foreach (var m in months)
+                {
+                    <tr>
+                        <td>@m.Label</td>
+                        <td class="num">@m.Sessions</td>
+                        <td class="num">@m.Completed</td>
+                        <td class="num">@m.Lines.Sum(l => l.Count)</td>
+                        <td class="num">@Usd(m.Cost)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 
     @foreach (var m in months.Where(m => m.Lines.Count > 0))
     {
         <section class="month">
             <h2 class="section">@m.Label: by kind and provider</h2>
-            <table class="grid">
-                <thead><tr><th>Kind</th><th>Provider</th><th class="num">Calls</th><th class="num">Input</th><th class="num">Output</th><th class="num">Cost (USD)</th></tr></thead>
-                <tbody>
-                    @foreach (var l in m.Lines)
-                    {
-                        <tr>
-                            <td>@KindName(l.Kind)</td>
-                            <td>@l.Provider</td>
-                            <td class="num">@l.Count.ToString("N0")</td>
-                            <td class="num">@Units(l.Kind, l.Input)</td>
-                            <td class="num">@Units(l.Kind, l.Output)</td>
-                            <td class="num">@Usd(l.Cost)</td>
-                        </tr>
-                    }
-                    <tr class="total"><td colspan="5">Total</td><td class="num">@Usd(m.Cost)</td></tr>
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="grid">
+                    <caption class="visually-hidden">@m.Label: by kind and provider</caption>
+                    <thead><tr><th scope="col">Kind</th><th scope="col">Provider</th><th scope="col" class="num">Calls</th><th scope="col" class="num">Input</th><th scope="col" class="num">Output</th><th scope="col" class="num">Cost (USD)</th></tr></thead>
+                    <tbody>
+                        @foreach (var l in m.Lines)
+                        {
+                            <tr>
+                                <td>@KindName(l.Kind)</td>
+                                <td>@l.Provider</td>
+                                <td class="num">@l.Count.ToString("N0")</td>
+                                <td class="num">@Units(l.Kind, l.Input)</td>
+                                <td class="num">@Units(l.Kind, l.Output)</td>
+                                <td class="num">@Usd(l.Cost)</td>
+                            </tr>
+                        }
+                        <tr class="total"><td colspan="5">Total</td><td class="num">@Usd(m.Cost)</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
     }
 }
@@ -93,28 +99,31 @@ else
 }
 else
 {
-    <table class="grid">
-        <thead><tr><th>Provider</th><th>Status</th><th class="num">Calls</th><th class="num">Failures</th><th>Last success</th><th>Last failure</th></tr></thead>
-        <tbody>
-            @foreach (var p in health)
-            {
-                <tr>
-                    <td>@p.ProviderId</td>
-                    <td class="@(p.Failing ? "status-failing" : "status-ok")">
-                        @(p.Failing ? $"failing ({p.ConsecutiveFailures} in a row)" : "working")
-                        @if (p.Failing && !string.IsNullOrWhiteSpace(p.LastError))
-                        {
-                            <br /><span class="hint">@p.LastError</span>
-                        }
-                    </td>
-                    <td class="num">@p.TotalCalls</td>
-                    <td class="num">@p.TotalFailures</td>
-                    <td>@AdminDb.When(p.LastSuccessAt)</td>
-                    <td>@AdminDb.When(p.LastFailureAt)</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">LLM provider health</caption>
+            <thead><tr><th scope="col">Provider</th><th scope="col">Status</th><th scope="col" class="num">Calls</th><th scope="col" class="num">Failures</th><th scope="col">Last success</th><th scope="col">Last failure</th></tr></thead>
+            <tbody>
+                @foreach (var p in health)
+                {
+                    <tr>
+                        <td>@p.ProviderId</td>
+                        <td class="@(p.Failing ? "status-failing" : "status-ok")">
+                            @(p.Failing ? $"failing ({p.ConsecutiveFailures} in a row)" : "working")
+                            @if (p.Failing && !string.IsNullOrWhiteSpace(p.LastError))
+                            {
+                                <br /><span class="hint">@p.LastError</span>
+                            }
+                        </td>
+                        <td class="num">@p.TotalCalls</td>
+                        <td class="num">@p.TotalFailures</td>
+                        <td>@AdminDb.When(p.LastSuccessAt)</td>
+                        <td>@AdminDb.When(p.LastFailureAt)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 <p class="hint">Provider health is for the whole platform since the server last started, not only this organization. A failing provider is left out of the judging panel until it recovers; the remaining judges still decide.</p>
 

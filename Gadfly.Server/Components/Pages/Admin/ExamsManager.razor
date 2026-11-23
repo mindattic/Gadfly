@@ -13,7 +13,7 @@
 <PageTitle>Exams · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="admin-exams.css" /></HeadContent>
 
-<div class="xm-head">
+<div class="page-header">
     <h1>Exams <HelpLink Topic="admin-exams" /></h1>
     <div class="row-actions" data-tour="exams-new">
         <a href="assessments/new">New exam</a>
@@ -25,7 +25,7 @@
 
 @if (message is not null)
 {
-    <p class="notice @(messageOk ? "ok-note" : "error-note")" role="status">@message</p>
+    <p class="notice @(messageOk ? "ok" : "error")" role="status">@message</p>
 }
 
 @if (importing)
@@ -121,68 +121,71 @@ else
     }
     else
     {
-        <table class="grid xm-table" data-tour="exams-table">
-            <thead>
-                <tr>
-                    <th scope="col">Exam</th>
-                    <th scope="col">Status</th>
-                    <th scope="col" class="num">Objectives</th>
-                    <th scope="col" class="num">Assigned</th>
-                    <th scope="col" class="num">Completed</th>
-                    <th scope="col" class="num">Average time</th>
-                    <th scope="col">Window</th>
-                    <th scope="col"><span class="sr-only">Actions</span></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var r in shown)
-                {
-                    <tr class="@(selected == r.Id ? "xm-selected" : null)">
-                        <td>
-                            <a href="assessments/@r.Id"><strong>@r.Title</strong></a>
-                            <span class="hint xm-sub">@(r.CourseTitle ?? "No course") · @r.CollectionTitle@(r.AssessmentMode == Gadfly.Assessment.AssessmentMode.Learning ? " · practice" : "")</span>
-                        </td>
-                        <td><span class="xm-status s-@r.Status">@r.Status</span></td>
-                        <td class="num">@r.Objectives</td>
-                        <td class="num">@r.Assigned</td>
-                        <td class="num" title="@r.Started started">@r.Completed</td>
-                        <td class="num">@Duration(r.AverageTime)</td>
-                        <td>@r.Window.Describe()</td>
-                        <td>
-                            <details class="xm-actions" data-tour="exams-actions">
-                                <summary>Actions</summary>
-                                <div>
-                                    <button type="button" class="link" @onclick="() => OpenSettingsAsync(r.Id)">Settings</button>
-                                    <button type="button" class="link" @onclick="() => OpenCoverageAsync(r.Id)">Objective coverage</button>
-                                    <button type="button" class="link" @onclick="() => OpenWindow(r)">Window…</button>
-                                    @if (r.Status == ExamStatus.Published && r.Assigned > 0)
-                                    {
-                                        <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.OpenNowAsync(r.Id))" disabled="@busy">Open now</button>
-                                    }
-                                    @if (r.Assigned > 0 && r.Window.Closed < r.Window.Assignments)
-                                    {
-                                        <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.CloseNowAsync(r.Id))" disabled="@busy">Close now</button>
-                                    }
-                                    <a href="admin/exams/@r.Id/preview">Preview as a student</a>
-                                    <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.DuplicateAsync(r.Id))" disabled="@busy">Duplicate</button>
-                                    <a href="@ExamAuditEndpoints.ExamExportPath(r.Id)" download>Export as JSON</a>
-                                    <a href="admin/assignments">Assign…</a>
-                                    <a href="admin/audit?exam=@r.Id">History</a>
-                                    @if (r.Status == ExamStatus.Archived)
-                                    {
-                                        <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.RestoreAsync(r.Id))" disabled="@busy">Restore</button>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="link xm-danger" @onclick="() => ConfirmArchive(r)" disabled="@busy">Archive</button>
-                                    }
-                                </div>
-                            </details>
-                        </td>
+        <div class="table-scroll">
+            <table class="grid xm-table" data-tour="exams-table">
+                <caption class="visually-hidden">Exams</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Exam</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" class="num">Objectives</th>
+                        <th scope="col" class="num">Assigned</th>
+                        <th scope="col" class="num">Completed</th>
+                        <th scope="col" class="num">Average time</th>
+                        <th scope="col">Window</th>
+                        <th scope="col"><span class="visually-hidden">Actions</span></th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    @foreach (var r in shown)
+                    {
+                        <tr class="@(selected == r.Id ? "xm-selected" : null)">
+                            <td>
+                                <a href="assessments/@r.Id"><strong>@r.Title</strong></a>
+                                <span class="hint xm-sub">@(r.CourseTitle ?? "No course") · @r.CollectionTitle@(r.AssessmentMode == Gadfly.Assessment.AssessmentMode.Learning ? " · practice" : "")</span>
+                            </td>
+                            <td><span class="xm-status s-@r.Status">@r.Status</span></td>
+                            <td class="num">@r.Objectives</td>
+                            <td class="num">@r.Assigned</td>
+                            <td class="num" title="@r.Started started">@r.Completed</td>
+                            <td class="num">@Duration(r.AverageTime)</td>
+                            <td>@r.Window.Describe()</td>
+                            <td>
+                                <details class="xm-actions" data-tour="exams-actions">
+                                    <summary>Actions</summary>
+                                    <div>
+                                        <button type="button" class="link" @onclick="() => OpenSettingsAsync(r.Id)">Settings</button>
+                                        <button type="button" class="link" @onclick="() => OpenCoverageAsync(r.Id)">Objective coverage</button>
+                                        <button type="button" class="link" @onclick="() => OpenWindow(r)">Window…</button>
+                                        @if (r.Status == ExamStatus.Published && r.Assigned > 0)
+                                        {
+                                            <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.OpenNowAsync(r.Id))" disabled="@busy">Open now</button>
+                                        }
+                                        @if (r.Assigned > 0 && r.Window.Closed < r.Window.Assignments)
+                                        {
+                                            <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.CloseNowAsync(r.Id))" disabled="@busy">Close now</button>
+                                        }
+                                        <a href="admin/exams/@r.Id/preview">Preview as a student</a>
+                                        <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.DuplicateAsync(r.Id))" disabled="@busy">Duplicate</button>
+                                        <a href="@ExamAuditEndpoints.ExamExportPath(r.Id)" download>Export as JSON</a>
+                                        <a href="admin/assignments">Assign…</a>
+                                        <a href="admin/audit?exam=@r.Id">History</a>
+                                        @if (r.Status == ExamStatus.Archived)
+                                        {
+                                            <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.RestoreAsync(r.Id))" disabled="@busy">Restore</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="link xm-danger" @onclick="() => ConfirmArchive(r)" disabled="@busy">Archive</button>
+                                        }
+                                    </div>
+                                </details>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
         <p class="hint">Average time counts completed attempts only. Archived exams can't be started or assigned; their attempts and results are kept.</p>
     }
 }
@@ -301,25 +304,28 @@ else
         {
             <p class="hint">Of @cv.AttemptsStarted started attempt@(cv.AttemptsStarted == 1 ? "" : "s"): how many examined each @(cv.ByConcept ? "concept" : "objective")@(cv.ByConcept ? "" : ", and how many produced independent evidence (not after a hint, and not after a question that gave the answer away)").
                 An objective few attempts reach may need more time, fewer objectives, or a higher question limit.</p>
-            <table class="grid">
-                <thead>
-                    <tr><th scope="col">@(cv.ByConcept ? "Concept" : "Objective")</th><th scope="col" class="num">Examined</th>
-                        @if (!cv.ByConcept) { <th scope="col" class="num">With independent evidence</th> }
-                        <th scope="col">Share</th></tr>
-                </thead>
-                <tbody>
-                    @foreach (var o in cv.Rows)
-                    {
-                        var share = (double)o.AttemptsExamined / cv.AttemptsStarted;
-                        <tr>
-                            <td>@o.Title <span class="hint">@o.Key</span></td>
-                            <td class="num">@o.AttemptsExamined</td>
-                            @if (!cv.ByConcept) { <td class="num">@o.AttemptsWithIndependentEvidence</td> }
-                            <td><span class="xm-bar" style="--share:@((Math.Min(1, share) * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></span> @share.ToString("P0")</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="grid">
+                    <caption class="visually-hidden">Objective coverage: @cv.Title</caption>
+                    <thead>
+                        <tr><th scope="col">@(cv.ByConcept ? "Concept" : "Objective")</th><th scope="col" class="num">Examined</th>
+                            @if (!cv.ByConcept) { <th scope="col" class="num">With independent evidence</th> }
+                            <th scope="col">Share</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var o in cv.Rows)
+                        {
+                            var share = (double)o.AttemptsExamined / cv.AttemptsStarted;
+                            <tr>
+                                <td>@o.Title <span class="hint">@o.Key</span></td>
+                                <td class="num">@o.AttemptsExamined</td>
+                                @if (!cv.ByConcept) { <td class="num">@o.AttemptsWithIndependentEvidence</td> }
+                                <td><span class="xm-bar" style="--share:@((Math.Min(1, share) * 100).ToString("0", System.Globalization.CultureInfo.InvariantCulture))%"></span> @share.ToString("P0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
         <button type="button" class="link" @onclick="() => coverage = null">Close</button>
     </section>

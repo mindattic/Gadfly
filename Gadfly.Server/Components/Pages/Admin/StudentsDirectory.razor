@@ -11,20 +11,20 @@
 <PageTitle>Students · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-desk.css" /><link rel="stylesheet" href="admin-people.css" /></HeadContent>
 
-<div class="people-head">
+<div class="page-header">
     <h1>Students <HelpLink Topic="admin-students" /></h1>
     <div class="row-actions" data-tour="students-add">
-        <button type="button" class="@(panel == "add" ? null : "people-ghost")" @onclick='() => Toggle("add")'>Add a student</button>
-        <button type="button" class="@(panel == "invite" ? null : "people-ghost")" @onclick='() => Toggle("invite")'>Invite by email</button>
-        <button type="button" class="@(panel == "import" ? null : "people-ghost")" @onclick='() => Toggle("import")'>Import CSV</button>
-        <a class="people-button people-ghost" href="@PeopleExportEndpoints.StudentsCsv(CurrentQuery)" download data-enhance-nav="false">Export CSV</a>
+        <button type="button" class="@(panel == "add" ? null : "secondary")" @onclick='() => Toggle("add")'>Add a student</button>
+        <button type="button" class="@(panel == "invite" ? null : "secondary")" @onclick='() => Toggle("invite")'>Invite by email</button>
+        <button type="button" class="@(panel == "import" ? null : "secondary")" @onclick='() => Toggle("import")'>Import CSV</button>
+        <a class="button secondary" href="@PeopleExportEndpoints.StudentsCsv(CurrentQuery)" download data-enhance-nav="false">Export CSV</a>
         <Tour Id="@Tours.TourIds.AdminStudents" />
     </div>
 </div>
 
 @if (message is not null)
 {
-    <p role="status" class="people-message @(ok ? "ok" : "error")">@message</p>
+    <p role="status" class="notice @(ok ? "ok" : "error")">@message</p>
 }
 
 @if (panel == "add")
@@ -83,7 +83,7 @@ else if (panel == "import")
         {
             @foreach (var e in import.FileErrors)
             {
-                <p class="people-message error" role="alert">@e</p>
+                <p class="notice error" role="alert">@e</p>
             }
             @if (import.IgnoredColumns.Count > 0)
             {
@@ -98,6 +98,7 @@ else if (panel == "import")
                 </p>
                 <div class="table-scroll">
                     <table class="grid people-import-rows">
+                        <caption class="visually-hidden">Import preview</caption>
                         <thead><tr><th scope="col" class="num">Line</th><th scope="col">Email</th><th scope="col">Name</th><th scope="col">What happens</th><th scope="col">Detail</th></tr></thead>
                         <tbody>
                             @foreach (var r in import.Rows)
@@ -165,7 +166,7 @@ else if (panel == "import")
 
 @if (error is not null)
 {
-    <div class="notice people-error" role="alert">
+    <div class="notice error" role="alert">
         <p><strong>The students could not load.</strong> @error</p>
         <button type="button" @onclick="LoadAsync" disabled="@busy">Try again</button>
     </div>
@@ -196,9 +197,10 @@ else
     <p class="hint" role="status">@list.Total.ToString("N0") @(CurrentStatus == StudentStatusFilter.Invited ? "invitation" : "student")@(list.Total == 1 ? "" : "s")@(HasFilters ? " match" : "")</p>
     <div class="table-scroll">
         <table class="grid people-table" data-tour="students-table">
+            <caption class="visually-hidden">@(CurrentStatus == StudentStatusFilter.Invited ? "Invitations" : "Students")</caption>
             @if (CurrentStatus == StudentStatusFilter.Invited)
             {
-                <thead><tr><th scope="col">Email</th><th scope="col">Invited</th><th scope="col"><span class="people-sr">Actions</span></th></tr></thead>
+                <thead><tr><th scope="col">Email</th><th scope="col">Invited</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
                 <tbody>
                     @foreach (var r in list.Rows)
                     {

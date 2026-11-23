@@ -9,7 +9,7 @@
 <PageTitle>Dashboard · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="admin-dashboard.css" /></HeadContent>
 
-<div class="dash-head">
+<div class="page-header">
     <h1>Dashboard <HelpLink Topic="admin-dashboard" /></h1>
     <div class="row-actions">
         @if (data is not null)
@@ -94,31 +94,34 @@ else
 
     <section aria-labelledby="numbers-h">
         <h2 id="numbers-h" class="section">The last 7 and 30 days</h2>
-        <table class="grid dash-numbers" data-tour="dash-numbers">
-            <thead><tr><th scope="col"><span class="visually-hidden">Measure</span></th><th scope="col" class="num">Last 7 days</th><th scope="col" class="num">Last 30 days</th></tr></thead>
-            <tbody>
-                <tr>
-                    <th scope="row">Exams taken <span class="hint">interviews that ended</span></th>
-                    <td class="num">@data.Last7.ExamsTaken</td>
-                    <td class="num">@data.Last30.ExamsTaken</td>
-                </tr>
-                <tr>
-                    <th scope="row">Completion rate <span class="hint">started and reached a proper end</span></th>
-                    <td class="num" title="@Of(data.Last7)">@Pct(data.Last7.CompletionRate)</td>
-                    <td class="num" title="@Of(data.Last30)">@Pct(data.Last30.CompletionRate)</td>
-                </tr>
-                <tr>
-                    <th scope="row">Median interview length</th>
-                    <td class="num">@AdminDashboardService.Duration(data.Last7.MedianDuration)</td>
-                    <td class="num">@AdminDashboardService.Duration(data.Last30.MedianDuration)</td>
-                </tr>
-                <tr>
-                    <th scope="row">Grading turnaround <span class="hint">median, interview end to final approval</span></th>
-                    <td class="num" title="@data.Last7.GradesApproved approved">@AdminDashboardService.Duration(data.Last7.MedianTurnaround)</td>
-                    <td class="num" title="@data.Last30.GradesApproved approved">@AdminDashboardService.Duration(data.Last30.MedianTurnaround)</td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-scroll">
+            <table class="grid dash-numbers" data-tour="dash-numbers">
+                <caption class="visually-hidden">The last 7 and 30 days</caption>
+                <thead><tr><th scope="col"><span class="visually-hidden">Measure</span></th><th scope="col" class="num">Last 7 days</th><th scope="col" class="num">Last 30 days</th></tr></thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">Exams taken <span class="hint">interviews that ended</span></th>
+                        <td class="num">@data.Last7.ExamsTaken</td>
+                        <td class="num">@data.Last30.ExamsTaken</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Completion rate <span class="hint">started and reached a proper end</span></th>
+                        <td class="num" title="@Of(data.Last7)">@Pct(data.Last7.CompletionRate)</td>
+                        <td class="num" title="@Of(data.Last30)">@Pct(data.Last30.CompletionRate)</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Median interview length</th>
+                        <td class="num">@AdminDashboardService.Duration(data.Last7.MedianDuration)</td>
+                        <td class="num">@AdminDashboardService.Duration(data.Last30.MedianDuration)</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Grading turnaround <span class="hint">median, interview end to final approval</span></th>
+                        <td class="num" title="@data.Last7.GradesApproved approved">@AdminDashboardService.Duration(data.Last7.MedianTurnaround)</td>
+                        <td class="num" title="@data.Last30.GradesApproved approved">@AdminDashboardService.Duration(data.Last30.MedianTurnaround)</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <p class="hint">
             @data.PublishedExams published exam@(data.PublishedExams == 1 ? "" : "s") of @data.Exams,
             @data.Students student@(data.Students == 1 ? "" : "s"), @data.Assignments assignment@(data.Assignments == 1 ? "" : "s").

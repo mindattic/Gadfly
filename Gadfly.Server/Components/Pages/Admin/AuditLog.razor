@@ -11,7 +11,7 @@
 <PageTitle>Audit log · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="admin-audit.css" /></HeadContent>
 
-<div class="al-head">
+<div class="page-header">
     <h1>Audit log <HelpLink Topic="admin-audit-log" /></h1>
     @if (allowed && results is not null)
     {
@@ -129,66 +129,69 @@ else
     else
     {
         <p class="hint" role="status">@results.Total.ToString("N0") event@(results.Total == 1 ? "" : "s"), newest first. Page @results.Page of @results.Pages.</p>
-        <table class="grid al-table">
-            <thead>
-                <tr><th scope="col">When (UTC)</th><th scope="col">Who</th><th scope="col">Action</th><th scope="col">Record</th><th scope="col">Reason</th><th scope="col"><span class="sr-only">Detail</span></th></tr>
-            </thead>
-            <tbody>
-                @foreach (var r in results.Rows)
-                {
-                    <tr class="@(detail?.Row.Id == r.Id ? "al-open" : null)">
-                        <td class="al-when">@r.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
-                        <td>@r.ActorName @if (r.ActorRole is not null) { <span class="hint">@r.ActorRole</span> }</td>
-                        <td><code>@r.Action</code> @if (AuditActionLabels.For(r.Action) is { } label) { <span class="hint">@label</span> } @if (r.IsRedacted) { <span class="al-redacted">Redacted</span> }</td>
-                        <td>@r.EntityType @if (r.EntityId is not null) { <span class="hint al-id">@Short(r.EntityId)</span> }</td>
-                        <td class="al-reason">@Clip(r.Reason, 140)</td>
-                        <td><button type="button" class="link" @onclick="() => OpenAsync(r.Id)">Details</button></td>
-                    </tr>
-                    @if (detail is { } d && d.Row.Id == r.Id)
+        <div class="table-scroll">
+            <table class="grid al-table">
+                <caption class="visually-hidden">Audit events</caption>
+                <thead>
+                    <tr><th scope="col">When (UTC)</th><th scope="col">Who</th><th scope="col">Action</th><th scope="col">Record</th><th scope="col">Reason</th><th scope="col"><span class="visually-hidden">Detail</span></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in results.Rows)
                     {
-                        <tr class="al-detail-row">
-                            <td colspan="6">
-                                <div class="al-detail">
-                                    <dl>
-                                        <dt>Event</dt><dd>#@d.Row.Id at @d.Row.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
-                                        <dt>Who</dt><dd>@d.Row.ActorName@(d.Row.ActorRole is null ? "" : $" ({d.Row.ActorRole})")@(d.Row.ActorUserId is { } u ? $" · {u}" : "")</dd>
-                                        <dt>Action</dt><dd><code>@d.Row.Action</code>@(AuditActionLabels.For(d.Row.Action) is { } dlabel ? $" ({dlabel})" : "")</dd>
-                                        <dt>Record</dt><dd>@d.Row.EntityType @d.Row.EntityId</dd>
-                                        @if (d.Row.SessionId is { } sid)
-                                        {
-                                            <dt>Attempt</dt><dd>@sid · <a href="review/@sid">review</a> · <button type="button" class="link" @onclick="() => FilterSessionAsync(sid)">all its events</button></dd>
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(d.Row.Reason))
-                                        {
-                                            <dt>Reason</dt><dd class="al-pre">@d.Row.Reason</dd>
-                                        }
-                                    </dl>
-                                    @if (d.RedactionNote is not null)
-                                    {
-                                        <p class="notice al-redaction-note"><span class="al-redacted">Redacted</span> @d.RedactionNote</p>
-                                    }
-                                    @if (d.Before is not null)
-                                    {
-                                        <h3>Before</h3>
-                                        <pre class="al-json">@d.Before</pre>
-                                    }
-                                    @if (d.After is not null)
-                                    {
-                                        <h3>@(d.Before is null ? "Detail" : "After")</h3>
-                                        <pre class="al-json">@d.After</pre>
-                                    }
-                                    @if (d.Before is null && d.After is null && d.RedactionNote is null)
-                                    {
-                                        <p class="hint">This event carries no before/after detail.</p>
-                                    }
-                                    <button type="button" class="link" @onclick="() => detail = null">Close</button>
-                                </div>
-                            </td>
+                        <tr class="@(detail?.Row.Id == r.Id ? "al-open" : null)">
+                            <td class="al-when">@r.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            <td>@r.ActorName @if (r.ActorRole is not null) { <span class="hint">@r.ActorRole</span> }</td>
+                            <td><code>@r.Action</code> @if (AuditActionLabels.For(r.Action) is { } label) { <span class="hint">@label</span> } @if (r.IsRedacted) { <span class="al-redacted">Redacted</span> }</td>
+                            <td>@r.EntityType @if (r.EntityId is not null) { <span class="hint al-id">@Short(r.EntityId)</span> }</td>
+                            <td class="al-reason">@Clip(r.Reason, 140)</td>
+                            <td><button type="button" class="link" @onclick="() => OpenAsync(r.Id)">Details</button></td>
                         </tr>
+                        @if (detail is { } d && d.Row.Id == r.Id)
+                        {
+                            <tr class="al-detail-row">
+                                <td colspan="6">
+                                    <div class="al-detail">
+                                        <dl>
+                                            <dt>Event</dt><dd>#@d.Row.Id at @d.Row.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm:ss") UTC</dd>
+                                            <dt>Who</dt><dd>@d.Row.ActorName@(d.Row.ActorRole is null ? "" : $" ({d.Row.ActorRole})")@(d.Row.ActorUserId is { } u ? $" · {u}" : "")</dd>
+                                            <dt>Action</dt><dd><code>@d.Row.Action</code>@(AuditActionLabels.For(d.Row.Action) is { } dlabel ? $" ({dlabel})" : "")</dd>
+                                            <dt>Record</dt><dd>@d.Row.EntityType @d.Row.EntityId</dd>
+                                            @if (d.Row.SessionId is { } sid)
+                                            {
+                                                <dt>Attempt</dt><dd>@sid · <a href="review/@sid">review</a> · <button type="button" class="link" @onclick="() => FilterSessionAsync(sid)">all its events</button></dd>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(d.Row.Reason))
+                                            {
+                                                <dt>Reason</dt><dd class="al-pre">@d.Row.Reason</dd>
+                                            }
+                                        </dl>
+                                        @if (d.RedactionNote is not null)
+                                        {
+                                            <p class="notice al-redaction-note"><span class="al-redacted">Redacted</span> @d.RedactionNote</p>
+                                        }
+                                        @if (d.Before is not null)
+                                        {
+                                            <h3>Before</h3>
+                                            <pre class="al-json">@d.Before</pre>
+                                        }
+                                        @if (d.After is not null)
+                                        {
+                                            <h3>@(d.Before is null ? "Detail" : "After")</h3>
+                                            <pre class="al-json">@d.After</pre>
+                                        }
+                                        @if (d.Before is null && d.After is null && d.RedactionNote is null)
+                                        {
+                                            <p class="hint">This event carries no before/after detail.</p>
+                                        }
+                                        <button type="button" class="link" @onclick="() => detail = null">Close</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     }
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
         <nav class="row-actions al-pager" aria-label="Pages">
             <button type="button" @onclick="() => GoAsync(1)" disabled="@(loading || results.Page <= 1)">Newest</button>
             <button type="button" @onclick="() => GoAsync(results.Page - 1)" disabled="@(loading || results.Page <= 1)">Newer</button>

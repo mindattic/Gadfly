@@ -192,45 +192,48 @@ else if (regs.Count == 0)
 }
 else
 {
-    <table class="grid">
-        <thead><tr><th>Name</th><th>Issuer</th><th>Client ID</th><th>Deployment ID</th><th class="num">Placements</th><th class="num">People</th><th>Rosters</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-        <tbody>
-            @foreach (var r in regs)
-            {
-                <tr>
-                    <td>@r.Name</td>
-                    <td><code>@r.Issuer</code></td>
-                    <td><code>@r.ClientId</code></td>
-                    <td><code>@r.DeploymentId</code></td>
-                    <td class="num">@r.Placements</td>
-                    <td class="num">@r.People</td>
-                    <td>@(r.RosterRefreshHours > 0 ? $"every {r.RosterRefreshHours} h" : "on request")</td>
-                    <td>@if (r.Enabled) { <span class="ok">on</span> } else { <span class="muted">off</span> }</td>
-                    <td>
-                        @if (confirming == r.Id)
-                        {
-                            <div class="row-actions">
-                                <span>Remove @r.Name?</span>
-                                <button type="button" class="danger" @onclick="() => DeleteAsync(r.Id)">Remove</button>
-                                <button type="button" class="link" @onclick="() => confirming = null">Cancel</button>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="row-actions">
-                                <button type="button" class="link" @onclick="() => Edit(r)">Change…</button>
-                                <button type="button" class="link" @onclick="() => SetEnabledAsync(r.Id, !r.Enabled)">@(r.Enabled ? "Turn off" : "Turn on")</button>
-                                @if (r.Placements == 0 && r.People == 0)
-                                {
-                                    <button type="button" class="link" @onclick="() => confirming = r.Id">Remove…</button>
-                                }
-                            </div>
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">Connections</caption>
+            <thead><tr><th scope="col">Name</th><th scope="col">Issuer</th><th scope="col">Client ID</th><th scope="col">Deployment ID</th><th scope="col" class="num">Placements</th><th scope="col" class="num">People</th><th scope="col">Rosters</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+                @foreach (var r in regs)
+                {
+                    <tr>
+                        <td>@r.Name</td>
+                        <td><code>@r.Issuer</code></td>
+                        <td><code>@r.ClientId</code></td>
+                        <td><code>@r.DeploymentId</code></td>
+                        <td class="num">@r.Placements</td>
+                        <td class="num">@r.People</td>
+                        <td>@(r.RosterRefreshHours > 0 ? $"every {r.RosterRefreshHours} h" : "on request")</td>
+                        <td>@if (r.Enabled) { <span class="ok">on</span> } else { <span class="muted">off</span> }</td>
+                        <td>
+                            @if (confirming == r.Id)
+                            {
+                                <div class="row-actions">
+                                    <span>Remove @r.Name?</span>
+                                    <button type="button" class="danger" @onclick="() => DeleteAsync(r.Id)">Remove</button>
+                                    <button type="button" class="link" @onclick="() => confirming = null">Cancel</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="row-actions">
+                                    <button type="button" class="link" @onclick="() => Edit(r)">Change…</button>
+                                    <button type="button" class="link" @onclick="() => SetEnabledAsync(r.Id, !r.Enabled)">@(r.Enabled ? "Turn off" : "Turn on")</button>
+                                    @if (r.Placements == 0 && r.People == 0)
+                                    {
+                                        <button type="button" class="link" @onclick="() => confirming = r.Id">Remove…</button>
+                                    }
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 <h2 class="section">Placements</h2>
@@ -254,44 +257,47 @@ else if (placements.Count == 0)
 }
 else
 {
-    <table class="grid">
-        <thead><tr><th>Exam</th><th>Course</th><th>Connection</th><th>Gradebook</th><th class="num">Students</th><th class="num">Grades sent</th><th>Roster</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-        <tbody>
-            @foreach (var p in placements)
-            {
-                <tr>
-                    <td>@p.ExamTitle</td>
-                    <td><code>@p.ContextId</code></td>
-                    <td>@p.RegistrationName</td>
-                    <td>@(p.HasLineItem ? "linked" : "not offered by the LMS")</td>
-                    <td class="num">@p.Students</td>
-                    <td class="num">
-                        @p.GradesSent
-                        @if (p.GradesFailed > 0) { <br /><span class="error">@p.GradesFailed failed</span> }
-                        @if (p.GradesRetrying > 0) { <br /><span class="muted">@p.GradesRetrying retrying</span> }
-                    </td>
-                    <td>
-                        @if (!p.HasRoster) { <span>not offered by the LMS</span> }
-                        else if (p.RosterProblem is { } problem) { <span class="error">@problem</span> }
-                        else { <span>@(p.LastRosterSyncAt is null ? "never synced" : "synced " + AdminDb.When(p.LastRosterSyncAt))</span> }
-                        @if (p.HasRoster && p.RosterRefreshHours > 0) { <br /><span class="hint">refreshes every @p.RosterRefreshHours h</span> }
-                    </td>
-                    <td>
-                        <div class="row-actions">
-                            @if (p.HasRoster)
-                            {
-                                <button type="button" class="link" disabled="@(syncing == p.Id)" @onclick="() => SyncAsync(p.Id)">@(syncing == p.Id ? "Syncing…" : "Sync roster")</button>
-                            }
-                            @if (p.GradesFailed + p.GradesRetrying > 0)
-                            {
-                                <button type="button" class="link" disabled="@(retrying == p.Id)" @onclick="() => RetryAsync(null, p.Id)">@(retrying == p.Id ? "Sending…" : "Retry grades")</button>
-                            }
-                        </div>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">Placements</caption>
+            <thead><tr><th scope="col">Exam</th><th scope="col">Course</th><th scope="col">Connection</th><th scope="col">Gradebook</th><th scope="col" class="num">Students</th><th scope="col" class="num">Grades sent</th><th scope="col">Roster</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+                @foreach (var p in placements)
+                {
+                    <tr>
+                        <td>@p.ExamTitle</td>
+                        <td><code>@p.ContextId</code></td>
+                        <td>@p.RegistrationName</td>
+                        <td>@(p.HasLineItem ? "linked" : "not offered by the LMS")</td>
+                        <td class="num">@p.Students</td>
+                        <td class="num">
+                            @p.GradesSent
+                            @if (p.GradesFailed > 0) { <br /><span class="error">@p.GradesFailed failed</span> }
+                            @if (p.GradesRetrying > 0) { <br /><span class="muted">@p.GradesRetrying retrying</span> }
+                        </td>
+                        <td>
+                            @if (!p.HasRoster) { <span>not offered by the LMS</span> }
+                            else if (p.RosterProblem is { } problem) { <span class="error">@problem</span> }
+                            else { <span>@(p.LastRosterSyncAt is null ? "never synced" : "synced " + AdminDb.When(p.LastRosterSyncAt))</span> }
+                            @if (p.HasRoster && p.RosterRefreshHours > 0) { <br /><span class="hint">refreshes every @p.RosterRefreshHours h</span> }
+                        </td>
+                        <td>
+                            <div class="row-actions">
+                                @if (p.HasRoster)
+                                {
+                                    <button type="button" class="link" disabled="@(syncing == p.Id)" @onclick="() => SyncAsync(p.Id)">@(syncing == p.Id ? "Syncing…" : "Sync roster")</button>
+                                }
+                                @if (p.GradesFailed + p.GradesRetrying > 0)
+                                {
+                                    <button type="button" class="link" disabled="@(retrying == p.Id)" @onclick="() => RetryAsync(null, p.Id)">@(retrying == p.Id ? "Sending…" : "Retry grades")</button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @if (problems is { Count: > 0 })
@@ -302,24 +308,27 @@ else
         @LtiGradePassbackService.MaxAttempts tries it is marked <strong>failed</strong> and waits for you: fix the cause (the
         connection's addresses, or the gradebook services in the LMS), then press Retry. A grade that changes is sent afresh.
     </p>
-    <table class="grid">
-        <thead><tr><th>Student</th><th>Exam</th><th>Course</th><th class="num">Grade</th><th class="num">Tries</th><th>Last problem</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-        <tbody>
-            @foreach (var f in problems)
-            {
-                <tr>
-                    <td>@f.StudentName</td>
-                    <td>@f.ExamTitle</td>
-                    <td><code>@f.Course</code></td>
-                    <td class="num">@(f.Percent is { } pct ? pct.ToString("0.##") + "%" : "—")</td>
-                    <td class="num">@f.Attempts</td>
-                    <td>@(f.Error ?? "—")</td>
-                    <td>@if (f.GaveUp) { <span class="error">failed @AdminDb.When(f.FailedAt)</span> } else { <span class="muted">next try @AdminDb.When(f.RetryAt)</span> }</td>
-                    <td><button type="button" class="link" disabled="@(retrying == f.AssignmentId)" @onclick="() => RetryAsync(f.AssignmentId, null)">@(retrying == f.AssignmentId ? "Sending…" : "Retry now")</button></td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">Grades the LMS hasn't accepted</caption>
+            <thead><tr><th scope="col">Student</th><th scope="col">Exam</th><th scope="col">Course</th><th scope="col" class="num">Grade</th><th scope="col" class="num">Tries</th><th scope="col">Last problem</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+                @foreach (var f in problems)
+                {
+                    <tr>
+                        <td>@f.StudentName</td>
+                        <td>@f.ExamTitle</td>
+                        <td><code>@f.Course</code></td>
+                        <td class="num">@(f.Percent is { } pct ? pct.ToString("0.##") + "%" : "—")</td>
+                        <td class="num">@f.Attempts</td>
+                        <td>@(f.Error ?? "—")</td>
+                        <td>@if (f.GaveUp) { <span class="error">failed @AdminDb.When(f.FailedAt)</span> } else { <span class="muted">next try @AdminDb.When(f.RetryAt)</span> }</td>
+                        <td><button type="button" class="link" disabled="@(retrying == f.AssignmentId)" @onclick="() => RetryAsync(f.AssignmentId, null)">@(retrying == f.AssignmentId ? "Sending…" : "Retry now")</button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 <h2 class="section">Waiting to be linked</h2>
@@ -343,26 +352,29 @@ else if (linkRequests.Count == 0)
 }
 else
 {
-    <table class="grid">
-        <thead><tr><th>From the LMS</th><th>Existing Gadfly account</th><th>Connection</th><th>Seen</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-        <tbody>
-            @foreach (var q in linkRequests)
-            {
-                <tr>
-                    <td>@q.LmsName<br /><span class="hint">@(q.LmsEmail ?? "no email") · @q.Role@(q.EmailSent ? " · confirmation email sent" : "")</span></td>
-                    <td>@q.CandidateName<br /><span class="hint">@q.CandidateUserName · @(q.CandidateEmail ?? "no email") · @q.CandidateRole</span></td>
-                    <td>@q.Connection</td>
-                    <td>@AdminDb.When(q.CreatedAt)<br /><span class="hint">from @(q.Source == LtiUserProvisioner.SourceRoster ? "a roster sync" : "a launch")</span></td>
-                    <td>
-                        <div class="row-actions">
-                            <button type="button" disabled="@(deciding == q.Id)" @onclick="() => DecideAsync(q.Id, link: true)">Link</button>
-                            <button type="button" class="link" disabled="@(deciding == q.Id)" @onclick="() => DecideAsync(q.Id, link: false)">Keep separate</button>
-                        </div>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">Waiting to be linked</caption>
+            <thead><tr><th scope="col">From the LMS</th><th scope="col">Existing Gadfly account</th><th scope="col">Connection</th><th scope="col">Seen</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+                @foreach (var q in linkRequests)
+                {
+                    <tr>
+                        <td>@q.LmsName<br /><span class="hint">@(q.LmsEmail ?? "no email") · @q.Role@(q.EmailSent ? " · confirmation email sent" : "")</span></td>
+                        <td>@q.CandidateName<br /><span class="hint">@q.CandidateUserName · @(q.CandidateEmail ?? "no email") · @q.CandidateRole</span></td>
+                        <td>@q.Connection</td>
+                        <td>@AdminDb.When(q.CreatedAt)<br /><span class="hint">from @(q.Source == LtiUserProvisioner.SourceRoster ? "a roster sync" : "a launch")</span></td>
+                        <td>
+                            <div class="row-actions">
+                                <button type="button" disabled="@(deciding == q.Id)" @onclick="() => DecideAsync(q.Id, link: true)">Link</button>
+                                <button type="button" class="link" disabled="@(deciding == q.Id)" @onclick="() => DecideAsync(q.Id, link: false)">Keep separate</button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {

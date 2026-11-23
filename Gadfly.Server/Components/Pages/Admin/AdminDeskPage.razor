@@ -16,15 +16,15 @@
 <Tour Id="@Tours.TourIds.AdminDesk" Float="true" />
 <h1>Admin desk <span>exams, students and resets on one page</span> <HelpLink Topic="admin-guide" Anchor="the-admin-desk" /></h1>
 
-<nav class="desk-tabs" data-tour="desk-tabs" role="tablist" aria-label="Admin desk">
-    <a href="admin/desk?tab=exams" role="tab" aria-selected="@(CurrentTab == "exams")" class="@(CurrentTab == "exams" ? "active" : null)">Exams</a>
-    <a href="admin/desk?tab=students" role="tab" aria-selected="@(CurrentTab == "students")" class="@(CurrentTab == "students" ? "active" : null)">Students</a>
-    <a href="admin/desk?tab=student-exams" role="tab" aria-selected="@(CurrentTab == "student-exams")" class="@(CurrentTab == "student-exams" ? "active" : null)">Student exams</a>
+<nav class="desk-tabs" data-tour="desk-tabs" aria-label="Admin desk">
+    <a href="admin/desk?tab=exams" class="@(CurrentTab == "exams" ? "active" : null)" aria-current="@(CurrentTab == "exams" ? "page" : null)">Exams</a>
+    <a href="admin/desk?tab=students" class="@(CurrentTab == "students" ? "active" : null)" aria-current="@(CurrentTab == "students" ? "page" : null)">Students</a>
+    <a href="admin/desk?tab=student-exams" class="@(CurrentTab == "student-exams" ? "active" : null)" aria-current="@(CurrentTab == "student-exams" ? "page" : null)">Student exams</a>
 </nav>
 
 @if (message is not null)
 {
-    <p role="status" class="desk-message @(ok ? "ok" : "error")">@message</p>
+    <p role="status" class="notice @(ok ? "ok" : "error")">@message</p>
 }
 
 @if (CurrentTab == "exams")
@@ -66,7 +66,7 @@
             <button type="button" @onclick="DraftKoreanAllAsync" disabled="@busy">Draft Korean for all published exams</button>
             @if (draftAll is not null)
             {
-                <p role="status" class="desk-message @(draftAll.Ok ? "ok" : "error")">@draftAll.Message</p>
+                <p role="status" class="notice @(draftAll.Ok ? "ok" : "error")">@draftAll.Message</p>
                 <ul class="hint">
                     @foreach (var x in draftAll.Exams)
                     {
@@ -115,79 +115,82 @@
     }
     else
     {
-        <table class="grid">
-            <thead><tr><th>Exam</th><th>Mode</th><th>Status</th><th>Notes</th><th class="num">Objectives</th><th class="num">Assigned</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-            <tbody>
-                @foreach (var e in exams)
-                {
-                    <tr>
-                        <td><strong>@e.Title</strong><br /><span class="hint">@e.Subject@(e.Topic.Length > 0 ? " · " + e.Topic : "") · @e.DurationMinutes min</span>
-                            @if (categories.Count > 0)
-                            {
-                                <br /><label class="hint">Category
-                                    <select value="@(examCategories.TryGetValue(e.Id, out var cid) ? cid.ToString() : "")" @onchange="ev => SetCategoryAsync(e.Id, ev)" disabled="@busy">
-                                        <option value="">(uncategorized)</option>
-                                        @foreach (var c in categories)
-                                        {
-                                            <option value="@c.Id">@c.Name</option>
-                                        }
-                                    </select>
-                                </label>
-                            }
-                        </td>
-                        <td>@(e.Voice ? "Voice" : "Text")</td>
-                        <td>@e.Status</td>
-                        <td>@(e.Processing ?? (e.CollectionStatus == ProcessingStatus.Ready ? "Ready" : e.CollectionStatus.ToString()))</td>
-                        <td class="num">@e.Objectives</td>
-                        <td class="num">@e.Assigned</td>
-                        <td>
-                            <div class="row-actions">
-                                <button class="link" type="button" @onclick="() => EditAsync(e.Id)" disabled="@busy">Edit</button>
-                                @if (e.CanFinish)
-                                {
-                                    <button type="button" @onclick="() => FinishAsync(e.Id)" disabled="@busy">Build objectives &amp; publish</button>
-                                }
-                                @if (e.Status == ExamStatus.Published)
-                                {
-                                    <button class="link" type="button" @onclick="() => ArchiveAsync(e)" disabled="@busy">Archive</button>
-                                }
-                                @if (IsStaff)
-                                {
-                                    <a href="assessments/@e.Id">Full editor</a>
-                                }
-                            </div>
-                        </td>
-                    </tr>
-                    @if (edit is not null && edit.Id == e.Id)
+        <div class="table-scroll">
+            <table class="grid">
+                <caption class="visually-hidden">Exams</caption>
+                <thead><tr><th scope="col">Exam</th><th scope="col">Mode</th><th scope="col">Status</th><th scope="col">Notes</th><th scope="col" class="num">Objectives</th><th scope="col" class="num">Assigned</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+                <tbody>
+                    @foreach (var e in exams)
                     {
-                        <tr class="desk-edit">
-                            <td colspan="7">
-                                <div class="desk-form">
-                                    @if (e.Status != ExamStatus.Draft)
+                        <tr>
+                            <td><strong>@e.Title</strong><br /><span class="hint">@e.Subject@(e.Topic.Length > 0 ? " · " + e.Topic : "") · @e.DurationMinutes min</span>
+                                @if (categories.Count > 0)
+                                {
+                                    <br /><label class="hint">Category
+                                        <select value="@(examCategories.TryGetValue(e.Id, out var cid) ? cid.ToString() : "")" @onchange="ev => SetCategoryAsync(e.Id, ev)" disabled="@busy">
+                                            <option value="">(uncategorized)</option>
+                                            @foreach (var c in categories)
+                                            {
+                                                <option value="@c.Id">@c.Name</option>
+                                            }
+                                        </select>
+                                    </label>
+                                }
+                            </td>
+                            <td>@(e.Voice ? "Voice" : "Text")</td>
+                            <td>@e.Status</td>
+                            <td>@(e.Processing ?? (e.CollectionStatus == ProcessingStatus.Ready ? "Ready" : e.CollectionStatus.ToString()))</td>
+                            <td class="num">@e.Objectives</td>
+                            <td class="num">@e.Assigned</td>
+                            <td>
+                                <div class="row-actions">
+                                    <button class="link" type="button" @onclick="() => EditAsync(e.Id)" disabled="@busy">Edit</button>
+                                    @if (e.CanFinish)
                                     {
-                                        <p class="hint">This exam is @e.Status.ToString().ToLowerInvariant(): its objectives, rubric and duration are frozen. The wording and voice mode can still change.</p>
+                                        <button type="button" @onclick="() => FinishAsync(e.Id)" disabled="@busy">Build objectives &amp; publish</button>
                                     }
-                                    <label>Title <input @bind="edit.Title" maxlength="200" /></label>
-                                    <div class="desk-row">
-                                        <label>Subject <input @bind="edit.Subject" maxlength="200" /></label>
-                                        <label>Topic <input @bind="edit.Topic" maxlength="200" /></label>
-                                        <label>Duration (minutes) <input type="number" min="1" max="240" @bind="edit.DurationMinutes" disabled="@(e.Status != ExamStatus.Draft)" /></label>
-                                    </div>
-                                    <label class="check"><input type="checkbox" @bind="edit.VoiceOnly" /> Voice exam</label>
-                                    <label>Instructions <textarea @bind="edit.Instructions" rows="2"></textarea></label>
-                                    <div class="row-actions">
-                                        <button type="button" @onclick="SaveEditAsync" disabled="@busy">Save</button>
-                                        <button class="link" type="button" @onclick="() => edit = null">Cancel</button>
-                                    </div>
-                                    @* GAD-T539/T540: the languages the exam is offered in and their texts, saved on their own. *@
-                                    <Gadfly.Server.Components.Pages.Assessments.ExamLanguagesPanel ExamId="e.Id" />
+                                    @if (e.Status == ExamStatus.Published)
+                                    {
+                                        <button class="link" type="button" @onclick="() => ArchiveAsync(e)" disabled="@busy">Archive</button>
+                                    }
+                                    @if (IsStaff)
+                                    {
+                                        <a href="assessments/@e.Id">Full editor</a>
+                                    }
                                 </div>
                             </td>
                         </tr>
+                        @if (edit is not null && edit.Id == e.Id)
+                        {
+                            <tr class="desk-edit">
+                                <td colspan="7">
+                                    <div class="desk-form">
+                                        @if (e.Status != ExamStatus.Draft)
+                                        {
+                                            <p class="hint">This exam is @e.Status.ToString().ToLowerInvariant(): its objectives, rubric and duration are frozen. The wording and voice mode can still change.</p>
+                                        }
+                                        <label>Title <input @bind="edit.Title" maxlength="200" /></label>
+                                        <div class="desk-row">
+                                            <label>Subject <input @bind="edit.Subject" maxlength="200" /></label>
+                                            <label>Topic <input @bind="edit.Topic" maxlength="200" /></label>
+                                            <label>Duration (minutes) <input type="number" min="1" max="240" @bind="edit.DurationMinutes" disabled="@(e.Status != ExamStatus.Draft)" /></label>
+                                        </div>
+                                        <label class="check"><input type="checkbox" @bind="edit.VoiceOnly" /> Voice exam</label>
+                                        <label>Instructions <textarea @bind="edit.Instructions" rows="2"></textarea></label>
+                                        <div class="row-actions">
+                                            <button type="button" @onclick="SaveEditAsync" disabled="@busy">Save</button>
+                                            <button class="link" type="button" @onclick="() => edit = null">Cancel</button>
+                                        </div>
+                                        @* GAD-T539/T540: the languages the exam is offered in and their texts, saved on their own. *@
+                                        <Gadfly.Server.Components.Pages.Assessments.ExamLanguagesPanel ExamId="e.Id" />
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     }
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     }
 }
 else if (CurrentTab == "students")
@@ -216,36 +219,39 @@ else if (CurrentTab == "students")
     }
     else
     {
-        <table class="grid">
-            <thead><tr><th>User name</th><th>Name</th><th>Email</th><th class="num">Exams</th><th>Last sign-in</th><th>Password</th></tr></thead>
-            <tbody>
-                @foreach (var s in students)
-                {
-                    <tr class="@(s.Active ? null : "muted")">
-                        <td>@s.UserName@(s.Active ? "" : " (removed)")</td>
-                        <td>@s.DisplayName</td>
-                        <td>@s.Email</td>
-                        <td class="num">@s.Assigned</td>
-                        <td>@(s.LastLogin is { } l ? l.ToString("yyyy-MM-dd HH:mm") + " UTC" : "never")</td>
-                        <td>
-                            @if (resetFor == s.UserId)
-                            {
-                                <div class="row-actions">
-                                    <input type="password" @bind="resetPassword" placeholder="New password" autocomplete="new-password" aria-label="New password for @s.UserName" />
-                                    <label class="check"><input type="checkbox" @bind="resetMustChange" /> must change</label>
-                                    <button type="button" @onclick="() => ResetPasswordAsync(s.UserId)" disabled="@busy">Set</button>
-                                    <button class="link" type="button" @onclick="() => resetFor = null">Cancel</button>
-                                </div>
-                            }
-                            else
-                            {
-                                <button class="link" type="button" @onclick="() => StartReset(s.UserId)">Reset password</button>
-                            }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="table-scroll">
+            <table class="grid">
+                <caption class="visually-hidden">Students</caption>
+                <thead><tr><th scope="col">User name</th><th scope="col">Name</th><th scope="col">Email</th><th scope="col" class="num">Exams</th><th scope="col">Last sign-in</th><th scope="col">Password</th></tr></thead>
+                <tbody>
+                    @foreach (var s in students)
+                    {
+                        <tr class="@(s.Active ? null : "muted")">
+                            <td>@s.UserName@(s.Active ? "" : " (removed)")</td>
+                            <td>@s.DisplayName</td>
+                            <td>@s.Email</td>
+                            <td class="num">@s.Assigned</td>
+                            <td>@(s.LastLogin is { } l ? l.ToString("yyyy-MM-dd HH:mm") + " UTC" : "never")</td>
+                            <td>
+                                @if (resetFor == s.UserId)
+                                {
+                                    <div class="row-actions">
+                                        <input type="password" @bind="resetPassword" placeholder="New password" autocomplete="new-password" aria-label="New password for @s.UserName" />
+                                        <label class="check"><input type="checkbox" @bind="resetMustChange" /> must change</label>
+                                        <button type="button" @onclick="() => ResetPasswordAsync(s.UserId)" disabled="@busy">Set</button>
+                                        <button class="link" type="button" @onclick="() => resetFor = null">Cancel</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <button class="link" type="button" @onclick="() => StartReset(s.UserId)">Reset password</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 }
 else
@@ -296,91 +302,94 @@ else
                 }
             </select>
         </label>
-        <table class="grid">
-            <thead><tr><th>Student</th><th>Exam</th><th>Attempts</th><th>Answers</th><th>Status</th><th>Latest score</th><th>Transcript</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-            <tbody>
-                @foreach (var a in assignments.Where(x => string.IsNullOrEmpty(filterStudent) || x.StudentName == filterStudent))
-                {
-                    <tr>
-                        <td>@a.StudentName</td>
-                        <td>@a.ExamTitle@(a.Voice ? " (voice)" : "")</td>
-                        <td>
-                            @if (attemptsFor == a.Id)
-                            {
-                                <div class="row-actions">
-                                    <input type="number" min="1" max="20" @bind="attemptsValue" aria-label="Attempts allowed" />
-                                    <button type="button" @onclick="() => SetAttemptsAsync(a.Id)" disabled="@busy">Set</button>
-                                    <button class="link" type="button" @onclick="() => attemptsFor = null">Cancel</button>
-                                </div>
-                            }
-                            else
-                            {
-                                <button class="link" type="button" title="Change attempts allowed" @onclick="() => { attemptsFor = a.Id; attemptsValue = a.AttemptsAllowed; }">@a.AttemptsUsed of @a.AttemptsAllowed used</button>
-                            }
-                        </td>
-                        <td title="GAD-T260: typed answers are an accommodation for one student on one exam (documented speech, hearing or anxiety need); camera, spoken questions and eye-contact check stay. Audited.">
-                            @(a.TypedAnswers ? "typed (accommodation)" : "spoken")
-                            <button class="link" type="button" disabled="@busy" @onclick="() => TypedAnswersAsync(a, !a.TypedAnswers)">@(a.TypedAnswers ? "Withdraw" : "Grant typed answers")</button>
-                        </td>
-                        <td>
-                            @a.Status
-                            @if (a.HeldSessionId is { } held)
-                            {
-                                @* GAD-T603: held until a person decides; open the review to see why and clear it. *@
-                                <a class="tag warn" href="review/@held" title="@(a.ReviewReason ?? "Marked for an instructor's review"). The result is held until someone clears the mark or approves with a note.">@Gadfly.Server.Review.InstructorReview.Badge: @Gadfly.Server.Review.InstructorReview.ShortReason(a.ReviewReason, a.HeldLanguage)</a>
-                            }
-                        </td>
-                        <td>@(a.LatestScore ?? "—")</td>
-                        <td>
-                            @if (a.LatestSessionId is { } sid)
-                            {
-                                <div class="row-actions">
-                                    <button class="link" type="button" @onclick="() => ToggleTranscriptAsync(sid)">@(transcriptFor == sid ? "Hide" : "Transcript")</button>
-                                    @if (IsStaff)
-                                    {
-                                        <a href="review/@sid">Review</a>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <span class="hint">—</span>
-                            }
-                        </td>
-                        <td>
-                            <div class="row-actions">
-                                <button class="danger" type="button" @onclick="() => ResetAsync(a)" disabled="@busy" title="Remove every attempt with its scores and grades; the student starts fresh">Reset</button>
-                                <button class="link" type="button" @onclick="() => ClearScoresAsync(a)" disabled="@busy">Clear scores</button>
-                            </div>
-                        </td>
-                    </tr>
-                    @if (a.LatestSessionId is { } open && transcriptFor == open)
+        <div class="table-scroll">
+            <table class="grid">
+                <caption class="visually-hidden">Student exams</caption>
+                <thead><tr><th scope="col">Student</th><th scope="col">Exam</th><th scope="col">Attempts</th><th scope="col">Answers</th><th scope="col">Status</th><th scope="col">Latest score</th><th scope="col">Transcript</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+                <tbody>
+                    @foreach (var a in assignments.Where(x => string.IsNullOrEmpty(filterStudent) || x.StudentName == filterStudent))
                     {
-                        <tr class="desk-edit">
-                            <td colspan="8">
-                                <p class="hint"><Gadfly.Server.Transcripts.TranscriptLinks SessionId="open" Label="Official transcript, with its verification code:" /></p>
-                                @if (transcript is null || transcript.Count == 0)
+                        <tr>
+                            <td>@a.StudentName</td>
+                            <td>@a.ExamTitle@(a.Voice ? " (voice)" : "")</td>
+                            <td>
+                                @if (attemptsFor == a.Id)
                                 {
-                                    <p class="hint">No questions asked yet.</p>
+                                    <div class="row-actions">
+                                        <input type="number" min="1" max="20" @bind="attemptsValue" aria-label="Attempts allowed" />
+                                        <button type="button" @onclick="() => SetAttemptsAsync(a.Id)" disabled="@busy">Set</button>
+                                        <button class="link" type="button" @onclick="() => attemptsFor = null">Cancel</button>
+                                    </div>
                                 }
                                 else
                                 {
-                                    <ol class="desk-transcript">
-                                        @foreach (var t in transcript)
-                                        {
-                                            <li>
-                                                <p class="q"><strong>Examiner:</strong> @t.Question</p>
-                                                <p class="a"><strong>Student@(t.AnswerMode is { Length: > 0 } m ? $" ({(m == "text" ? "typed" : m.ToLowerInvariant())})" : ""):</strong> @(t.Answer ?? "(no answer yet)")</p>
-                                            </li>
-                                        }
-                                    </ol>
+                                    <button class="link" type="button" title="Change attempts allowed" @onclick="() => { attemptsFor = a.Id; attemptsValue = a.AttemptsAllowed; }">@a.AttemptsUsed of @a.AttemptsAllowed used</button>
                                 }
                             </td>
+                            <td title="GAD-T260: typed answers are an accommodation for one student on one exam (documented speech, hearing or anxiety need); camera, spoken questions and eye-contact check stay. Audited.">
+                                @(a.TypedAnswers ? "typed (accommodation)" : "spoken")
+                                <button class="link" type="button" disabled="@busy" @onclick="() => TypedAnswersAsync(a, !a.TypedAnswers)">@(a.TypedAnswers ? "Withdraw" : "Grant typed answers")</button>
+                            </td>
+                            <td>
+                                @a.Status
+                                @if (a.HeldSessionId is { } held)
+                                {
+                                    @* GAD-T603: held until a person decides; open the review to see why and clear it. *@
+                                    <a class="tag warn" href="review/@held" title="@(a.ReviewReason ?? "Marked for an instructor's review"). The result is held until someone clears the mark or approves with a note.">@Gadfly.Server.Review.InstructorReview.Badge: @Gadfly.Server.Review.InstructorReview.ShortReason(a.ReviewReason, a.HeldLanguage)</a>
+                                }
+                            </td>
+                            <td>@(a.LatestScore ?? "—")</td>
+                            <td>
+                                @if (a.LatestSessionId is { } sid)
+                                {
+                                    <div class="row-actions">
+                                        <button class="link" type="button" @onclick="() => ToggleTranscriptAsync(sid)">@(transcriptFor == sid ? "Hide" : "Transcript")</button>
+                                        @if (IsStaff)
+                                        {
+                                            <a href="review/@sid">Review</a>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="hint">—</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="row-actions">
+                                    <button class="danger" type="button" @onclick="() => ResetAsync(a)" disabled="@busy" title="Remove every attempt with its scores and grades; the student starts fresh">Reset</button>
+                                    <button class="link" type="button" @onclick="() => ClearScoresAsync(a)" disabled="@busy">Clear scores</button>
+                                </div>
+                            </td>
                         </tr>
+                        @if (a.LatestSessionId is { } open && transcriptFor == open)
+                        {
+                            <tr class="desk-edit">
+                                <td colspan="8">
+                                    <p class="hint"><Gadfly.Server.Transcripts.TranscriptLinks SessionId="open" Label="Official transcript, with its verification code:" /></p>
+                                    @if (transcript is null || transcript.Count == 0)
+                                    {
+                                        <p class="hint">No questions asked yet.</p>
+                                    }
+                                    else
+                                    {
+                                        <ol class="desk-transcript">
+                                            @foreach (var t in transcript)
+                                            {
+                                                <li>
+                                                    <p class="q"><strong>Examiner:</strong> @t.Question</p>
+                                                    <p class="a"><strong>Student@(t.AnswerMode is { Length: > 0 } m ? $" ({(m == "text" ? "typed" : m.ToLowerInvariant())})" : ""):</strong> @(t.Answer ?? "(no answer yet)")</p>
+                                                </li>
+                                            }
+                                        </ol>
+                                    }
+                                </td>
+                            </tr>
+                        }
                     }
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     }
 }
 

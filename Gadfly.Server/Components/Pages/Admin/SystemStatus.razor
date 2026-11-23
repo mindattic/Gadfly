@@ -12,7 +12,7 @@
    exam's outside calls take (GAD-T413, GAD-T317/GAD-T392). The same checks answer /healthz/ready (GAD-T356). *@
 <PageTitle>System status · Gadfly Exams</PageTitle>
 
-<div class="dash-head">
+<div class="page-header">
     <h1>System status <HelpLink Topic="admin-system-status" /></h1>
     <div class="row-actions">
         @if (data is not null)
@@ -47,19 +47,22 @@ else
             @(platform.Ready ? "Ready: everything an exam needs is working." : "Not ready: a check below is failing, so exams may not start or save.")
             The same checks answer <code>/healthz/ready</code> for monitoring (names and states only).
         </p>
-        <table class="grid">
-            <thead><tr><th>Check</th><th>State</th><th>What was found</th></tr></thead>
-            <tbody>
-                @foreach (var c in platform.Checks)
-                {
-                    <tr>
-                        <td>@c.Title</td>
-                        <td class="@StateClass(c.State)">@StateWord(c.State)</td>
-                        <td>@c.Summary</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="table-scroll">
+            <table class="grid">
+                <caption class="visually-hidden">Checks</caption>
+                <thead><tr><th scope="col">Check</th><th scope="col">State</th><th scope="col">What was found</th></tr></thead>
+                <tbody>
+                    @foreach (var c in platform.Checks)
+                    {
+                        <tr>
+                            <td>@c.Title</td>
+                            <td class="@StateClass(c.State)">@StateWord(c.State)</td>
+                            <td>@c.Summary</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </section>
 
     <section aria-labelledby="app-h">
@@ -85,29 +88,32 @@ else
         }
         else
         {
-            <table class="grid">
-                <thead><tr><th>Provider</th><th>Model</th><th>State</th><th>Calls</th><th>Failed</th><th>Last answered</th><th>Last failed</th></tr></thead>
-                <tbody>
-                    @foreach (var p in platform.Providers)
-                    {
-                        <tr>
-                            <td>@p.ProviderId</td>
-                            <td>@(p.Model.Length == 0 ? "(default)" : p.Model)</td>
-                            <td class="@(p.Failing ? "error" : null)">@(p.Failing ? $"Failing ({p.ConsecutiveFailures} in a row)" : "Answering")</td>
-                            <td>@p.TotalCalls</td>
-                            <td>@p.TotalFailures</td>
-                            <td>@When(p.LastSuccessAt)</td>
-                            <td>
-                                @When(p.LastFailureAt)
-                                @if (p.LastError is { Length: > 0 } err)
-                                {
-                                    <div class="hint">@err</div>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="grid">
+                    <caption class="visually-hidden">AI panel providers</caption>
+                    <thead><tr><th scope="col">Provider</th><th scope="col">Model</th><th scope="col">State</th><th scope="col">Calls</th><th scope="col">Failed</th><th scope="col">Last answered</th><th scope="col">Last failed</th></tr></thead>
+                    <tbody>
+                        @foreach (var p in platform.Providers)
+                        {
+                            <tr>
+                                <td>@p.ProviderId</td>
+                                <td>@(p.Model.Length == 0 ? "(default)" : p.Model)</td>
+                                <td class="@(p.Failing ? "error" : null)">@(p.Failing ? $"Failing ({p.ConsecutiveFailures} in a row)" : "Answering")</td>
+                                <td>@p.TotalCalls</td>
+                                <td>@p.TotalFailures</td>
+                                <td>@When(p.LastSuccessAt)</td>
+                                <td>
+                                    @When(p.LastFailureAt)
+                                    @if (p.LastError is { Length: > 0 } err)
+                                    {
+                                        <div class="hint">@err</div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
             <p class="hint">Since this server started. No provider is called to fill this table: it is what the panel recorded on real calls.</p>
         }
 
@@ -118,20 +124,23 @@ else
         </ul>
         @if (platform.VoiceCalls.Count > 0)
         {
-            <table class="grid">
-                <thead><tr><th>Latest call</th><th>When</th><th>Took</th><th>Outcome</th></tr></thead>
-                <tbody>
-                    @foreach (var v in platform.VoiceCalls)
-                    {
-                        <tr>
-                            <td>@v.CallName</td>
-                            <td>@When(v.At)</td>
-                            <td>@AdminDashboardService.Duration(TimeSpan.FromMilliseconds(v.DurationMs))</td>
-                            <td class="@(v.Succeeded ? null : "error")">@(v.Succeeded ? "Succeeded" : "Failed")@(v.Error is { Length: > 0 } ve ? $": {ve}" : "")</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="grid">
+                    <caption class="visually-hidden">Speech</caption>
+                    <thead><tr><th scope="col">Latest call</th><th scope="col">When</th><th scope="col">Took</th><th scope="col">Outcome</th></tr></thead>
+                    <tbody>
+                        @foreach (var v in platform.VoiceCalls)
+                        {
+                            <tr>
+                                <td>@v.CallName</td>
+                                <td>@When(v.At)</td>
+                                <td>@AdminDashboardService.Duration(TimeSpan.FromMilliseconds(v.DurationMs))</td>
+                                <td class="@(v.Succeeded ? null : "error")">@(v.Succeeded ? "Succeeded" : "Failed")@(v.Error is { Length: > 0 } ve ? $": {ve}" : "")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
         else if (platform.VoiceMode != "off")
         {
@@ -182,31 +191,34 @@ else
         }
         else
         {
-            <table class="grid">
-                <thead><tr><th>Job</th><th>State</th><th>Attempts</th><th>Queued</th><th>Details</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-                <tbody>
-                    @foreach (var j in data.JobList)
-                    {
-                        <tr>
-                            <td>@AdminDashboardService.JobLabel(j.Kind)</td>
-                            <td class="@(j.State == JobState.Failed ? "error" : null)">@JobWord(j)</td>
-                            <td>@j.Attempts of @j.MaxAttempts</td>
-                            <td>@When(j.CreatedAt)</td>
-                            <td>@(j.State == JobState.Failed ? j.Error : j.ProgressMessage)</td>
-                            <td>
-                                @if (j.CanRetry)
-                                {
-                                    <button type="button" class="link" disabled="@loading" @onclick="() => ActAsync(j, retry: true)">Retry</button>
-                                }
-                                @if (j.CanCancel)
-                                {
-                                    <button type="button" class="link" disabled="@loading" @onclick="() => ActAsync(j, retry: false)">Cancel</button>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="grid">
+                    <caption class="visually-hidden">Your organization's jobs</caption>
+                    <thead><tr><th scope="col">Job</th><th scope="col">State</th><th scope="col">Attempts</th><th scope="col">Queued</th><th scope="col">Details</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+                    <tbody>
+                        @foreach (var j in data.JobList)
+                        {
+                            <tr>
+                                <td>@AdminDashboardService.JobLabel(j.Kind)</td>
+                                <td class="@(j.State == JobState.Failed ? "error" : null)">@JobWord(j)</td>
+                                <td>@j.Attempts of @j.MaxAttempts</td>
+                                <td>@When(j.CreatedAt)</td>
+                                <td>@(j.State == JobState.Failed ? j.Error : j.ProgressMessage)</td>
+                                <td>
+                                    @if (j.CanRetry)
+                                    {
+                                        <button type="button" class="link" disabled="@loading" @onclick="() => ActAsync(j, retry: true)">Retry</button>
+                                    }
+                                    @if (j.CanCancel)
+                                    {
+                                        <button type="button" class="link" disabled="@loading" @onclick="() => ActAsync(j, retry: false)">Cancel</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
             <p class="hint">Waiting and running jobs, and those that failed or were cancelled in the last @AdminStatusService.FailedJobDays days (up to @AdminStatusService.ListSize). A retry runs the job again from the start; both actions are recorded in the audit log.</p>
         }
     </section>
@@ -224,23 +236,26 @@ else
             </div>
             @if (wh.Problems.Count > 0)
             {
-                <table class="grid">
-                    <thead><tr><th>Event</th><th>Endpoint</th><th>State</th><th>Attempt</th><th>Response</th><th>Created</th><th>Next try</th></tr></thead>
-                    <tbody>
-                        @foreach (var d in wh.Problems)
-                        {
-                            <tr>
-                                <td>@d.EventType</td>
-                                <td>@d.Url</td>
-                                <td class="error">@(d.Status == DeliveryStatus.GaveUp ? "Given up" : "Failed, will retry")</td>
-                                <td>@d.Attempt</td>
-                                <td>@(d.ResponseCode?.ToString() ?? "no answer")</td>
-                                <td>@When(d.CreatedAt)</td>
-                                <td>@When(d.NextAttemptAt)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <div class="table-scroll">
+                    <table class="grid">
+                        <caption class="visually-hidden">Webhooks</caption>
+                        <thead><tr><th scope="col">Event</th><th scope="col">Endpoint</th><th scope="col">State</th><th scope="col">Attempt</th><th scope="col">Response</th><th scope="col">Created</th><th scope="col">Next try</th></tr></thead>
+                        <tbody>
+                            @foreach (var d in wh.Problems)
+                            {
+                                <tr>
+                                    <td>@d.EventType</td>
+                                    <td>@d.Url</td>
+                                    <td class="error">@(d.Status == DeliveryStatus.GaveUp ? "Given up" : "Failed, will retry")</td>
+                                    <td>@d.Attempt</td>
+                                    <td>@(d.ResponseCode?.ToString() ?? "no answer")</td>
+                                    <td>@When(d.CreatedAt)</td>
+                                    <td>@When(d.NextAttemptAt)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
             <p class="hint">Endpoints and every delivery are managed on <a href="org/webhooks">Webhooks</a>.</p>
         </section>
@@ -276,23 +291,26 @@ else
         }
         else
         {
-            <table class="grid">
-                <thead>
-                    <tr><th>Call</th><th>Count</th><th>Average</th><th>Worst</th><th>Succeeded</th></tr>
-                </thead>
-                <tbody>
-                    @foreach (var t in data.CallTimings)
-                    {
-                        <tr>
-                            <td>@t.CallName</td>
-                            <td>@t.Count</td>
-                            <td>@AdminDashboardService.Duration(TimeSpan.FromMilliseconds(t.AvgMs))</td>
-                            <td>@AdminDashboardService.Duration(TimeSpan.FromMilliseconds(t.MaxMs))</td>
-                            <td class="@(t.SuccessRate < 1 ? "error" : null)">@t.SuccessRate.ToString("P0")</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="grid">
+                    <caption class="visually-hidden">Time to the next question</caption>
+                    <thead>
+                        <tr><th scope="col">Call</th><th scope="col">Count</th><th scope="col">Average</th><th scope="col">Worst</th><th scope="col">Succeeded</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var t in data.CallTimings)
+                        {
+                            <tr>
+                                <td>@t.CallName</td>
+                                <td>@t.Count</td>
+                                <td>@AdminDashboardService.Duration(TimeSpan.FromMilliseconds(t.AvgMs))</td>
+                                <td>@AdminDashboardService.Duration(TimeSpan.FromMilliseconds(t.MaxMs))</td>
+                                <td class="@(t.SuccessRate < 1 ? "error" : null)">@t.SuccessRate.ToString("P0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
             <p class="hint">Sampled over the most recent @data.CallSampleSize.ToString("N0") call(s) in the window, whichever comes first.</p>
         }
     </section>
@@ -307,25 +325,28 @@ else
             }
             else
             {
-                <table class="grid">
-                    <thead><tr><th>When</th><th>Where</th><th>Message</th></tr></thead>
-                    <tbody>
-                        @foreach (var e in platform.RecentErrors)
-                        {
-                            <tr>
-                                <td>@When(e.At)</td>
-                                <td>@e.Category</td>
-                                <td>
-                                    @e.Message
-                                    @if (e.Exception is { Length: > 0 } ex)
-                                    {
-                                        <div class="hint">@ex</div>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <div class="table-scroll">
+                    <table class="grid">
+                        <caption class="visually-hidden">Recent errors on this server</caption>
+                        <thead><tr><th scope="col">When</th><th scope="col">Where</th><th scope="col">Message</th></tr></thead>
+                        <tbody>
+                            @foreach (var e in platform.RecentErrors)
+                            {
+                                <tr>
+                                    <td>@When(e.At)</td>
+                                    <td>@e.Category</td>
+                                    <td>
+                                        @e.Message
+                                        @if (e.Exception is { Length: > 0 } ex)
+                                        {
+                                            <div class="hint">@ex</div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
             <p class="hint">The last @Gadfly.Server.Diagnostics.RecentErrorLog.Capacity errors this server logged, kept in memory only. Shown to the platform admin alone: it covers every organization. The full log is in the App Service log stream.</p>
         </section>

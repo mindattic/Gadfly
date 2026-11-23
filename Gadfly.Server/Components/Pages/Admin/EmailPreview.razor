@@ -42,8 +42,7 @@ else
         <section class="panel">
             <h2>@EmailKinds.Describe(kind)</h2>
             <p class="hint"><code>@kind</code> &middot; Subject: @rendered.Subject</p>
-            <iframe title="@EmailKinds.Describe(kind) preview" srcdoc="@rendered.Html"
-                     style="width:100%;max-width:620px;height:420px;border:1px solid var(--line);border-radius:8px;background:#fff"></iframe>
+            <iframe title="@EmailKinds.Describe(kind) preview" srcdoc="@rendered.Html" class="email-frame"></iframe>
             <div class="row-actions">
                 <button type="button" @onclick="() => SendTestAsync(kind)" disabled="@busy">Send test to my email</button>
             </div>
@@ -58,21 +57,24 @@ else
 }
 else
 {
-    <table class="grid">
-        <thead><tr><th>When</th><th>Kind</th><th>To</th><th>Status</th><th>Detail</th></tr></thead>
-        <tbody>
-            @foreach (var e in recent)
-            {
-                <tr>
-                    <td>@e.CreatedAt.UtcDateTime.ToString("d MMM yyyy HH:mm")</td>
-                    <td>@EmailKinds.Describe(e.Kind)</td>
-                    <td>@(e.ToEmail ?? e.ToUserId?.ToString("D") ?? "")</td>
-                    <td>@e.Status</td>
-                    <td>@(e.Error ?? "")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">Recent sends</caption>
+            <thead><tr><th scope="col">When</th><th scope="col">Kind</th><th scope="col">To</th><th scope="col">Status</th><th scope="col">Detail</th></tr></thead>
+            <tbody>
+                @foreach (var e in recent)
+                {
+                    <tr>
+                        <td>@e.CreatedAt.UtcDateTime.ToString("d MMM yyyy HH:mm")</td>
+                        <td>@EmailKinds.Describe(e.Kind)</td>
+                        <td>@(e.ToEmail ?? e.ToUserId?.ToString("D") ?? "")</td>
+                        <td>@e.Status</td>
+                        <td>@(e.Error ?? "")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {

@@ -50,47 +50,50 @@ else if (keys.Count == 0)
 }
 else
 {
-    <table class="grid">
-        <thead><tr><th>Name</th><th>Key</th><th>Created</th><th>Last used</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-        <tbody>
-            @foreach (var k in keys)
-            {
-                <tr>
-                    <td>@k.Name</td>
-                    <td><code>@(ApiKeyService.KeyPrefix)@(k.Prefix)_…</code></td>
-                    <td>@AdminDb.When(k.CreatedAt)</td>
-                    <td>@AdminDb.When(k.LastUsedAt)</td>
-                    <td>
-                        @if (k.RevokedAt is { } r)
-                        {
-                            <span class="muted">revoked @AdminDb.When(r)</span>
-                        }
-                        else
-                        {
-                            <span class="ok">active</span>
-                        }
-                    </td>
-                    <td>
-                        @if (k.RevokedAt is null)
-                        {
-                            @if (confirming == k.Id)
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">API keys</caption>
+            <thead><tr><th scope="col">Name</th><th scope="col">Key</th><th scope="col">Created</th><th scope="col">Last used</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+                @foreach (var k in keys)
+                {
+                    <tr>
+                        <td>@k.Name</td>
+                        <td><code>@(ApiKeyService.KeyPrefix)@(k.Prefix)_…</code></td>
+                        <td>@AdminDb.When(k.CreatedAt)</td>
+                        <td>@AdminDb.When(k.LastUsedAt)</td>
+                        <td>
+                            @if (k.RevokedAt is { } r)
                             {
-                                <div class="row-actions">
-                                    <span>Revoke? Apps using it stop working at once.</span>
-                                    <button type="button" class="danger" @onclick="() => RevokeAsync(k.Id)">Revoke</button>
-                                    <button type="button" class="link" @onclick="() => confirming = null">Cancel</button>
-                                </div>
+                                <span class="muted">revoked @AdminDb.When(r)</span>
                             }
                             else
                             {
-                                <button type="button" class="link" @onclick="() => confirming = k.Id">Revoke…</button>
+                                <span class="ok">active</span>
                             }
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                        </td>
+                        <td>
+                            @if (k.RevokedAt is null)
+                            {
+                                @if (confirming == k.Id)
+                                {
+                                    <div class="row-actions">
+                                        <span>Revoke? Apps using it stop working at once.</span>
+                                        <button type="button" class="danger" @onclick="() => RevokeAsync(k.Id)">Revoke</button>
+                                        <button type="button" class="link" @onclick="() => confirming = null">Cancel</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <button type="button" class="link" @onclick="() => confirming = k.Id">Revoke…</button>
+                                }
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {

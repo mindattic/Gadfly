@@ -13,13 +13,13 @@
 <PageTitle>Assignments · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-desk.css" /><link rel="stylesheet" href="admin-people.css" /></HeadContent>
 
-<div class="people-head">
+<div class="page-header">
     <h1>Assignments <HelpLink Topic="admin-assignments" /></h1>
     <div class="row-actions">
-        <button type="button" class="@(assignOpen ? null : "people-ghost")" @onclick="ToggleAssign">Assign an exam</button>
+        <button type="button" class="@(assignOpen ? null : "secondary")" @onclick="ToggleAssign">Assign an exam</button>
         @if (!IsGrid)
         {
-            <a class="people-button people-ghost" href="@PeopleExportEndpoints.AssignmentsCsv(CurrentQuery)" download data-enhance-nav="false">Export CSV</a>
+            <a class="button secondary" href="@PeopleExportEndpoints.AssignmentsCsv(CurrentQuery)" download data-enhance-nav="false">Export CSV</a>
         }
         <Tour Id="@Tours.TourIds.AdminAssignments" />
     </div>
@@ -32,11 +32,11 @@
 
 @if (message is not null)
 {
-    <div role="status" class="people-message @(ok ? "ok" : "error")">
-        <p style="margin:0">@message</p>
+    <div role="status" class="notice stack stack-sm @(ok ? "ok" : "error")">
+        <p>@message</p>
         @foreach (var p in problems)
         {
-            <p class="hint" style="margin:.2rem 0 0">@p</p>
+            <p class="hint">@p</p>
         }
     </div>
 }
@@ -54,7 +54,7 @@
                 }
             </select>
         </label>
-        <fieldset class="checks" style="border:0;padding:0;margin:0">
+        <fieldset class="checks">
             <legend class="hint">To whom</legend>
             <label><input type="radio" name="who" checked="@(assign.Who == "picked")" @onchange='() => assign.Who = "picked"' disabled="@(pickedPairs.Count == 0)" />
                 Students ticked on the grid@(pickedPairs.Count > 0 ? $" ({pickedPairs.Select(p => p.Student).Distinct().Count()})" : " (none ticked)")</label>
@@ -159,12 +159,12 @@ else
     <section class="panel console-bulk" aria-labelledby="bulk-h">
         <h2 id="bulk-h">@selected.Count assignment@(selected.Count == 1 ? "" : "s") selected <button type="button" class="link" @onclick="() => selected.Clear()">clear</button></h2>
         <div class="row-actions">
-            <button type="button" class="@(bulk == "dates" ? null : "people-ghost")" @onclick='() => Bulk("dates")'>Set dates</button>
-            <button type="button" class="@(bulk == "move" ? null : "people-ghost")" @onclick='() => Bulk("move")'>Move due date</button>
-            <button type="button" class="@(bulk == "attempt" ? null : "people-ghost")" @onclick='() => Bulk("attempt")'>Grant another attempt</button>
-            <button type="button" class="@(bulk == "reset" ? null : "people-ghost")" @onclick='() => Bulk("reset")'>Reset attempt</button>
-            <button type="button" class="@(bulk == "access" ? null : "people-ghost")" @onclick='() => Bulk("access")'>Accommodations</button>
-            <button type="button" class="people-ghost danger-text" @onclick='() => Bulk("remove")'>Unassign</button>
+            <button type="button" class="@(bulk == "dates" ? null : "secondary")" @onclick='() => Bulk("dates")'>Set dates</button>
+            <button type="button" class="@(bulk == "move" ? null : "secondary")" @onclick='() => Bulk("move")'>Move due date</button>
+            <button type="button" class="@(bulk == "attempt" ? null : "secondary")" @onclick='() => Bulk("attempt")'>Grant another attempt</button>
+            <button type="button" class="@(bulk == "reset" ? null : "secondary")" @onclick='() => Bulk("reset")'>Reset attempt</button>
+            <button type="button" class="@(bulk == "access" ? null : "secondary")" @onclick='() => Bulk("access")'>Accommodations</button>
+            <button type="button" class="secondary danger-text" @onclick='() => Bulk("remove")'>Unassign</button>
         </div>
         @switch (bulk)
         {
@@ -206,12 +206,12 @@ else
                 </div>
                 <div class="row-actions">
                     <button type="button" @onclick="ExtraTimeAsync" disabled="@busy">Set extra time</button>
-                    <button type="button" class="people-ghost" @onclick="() => EyeContactAsync(true)" disabled="@busy">No eye contact expected: on</button>
-                    <button type="button" class="people-ghost" @onclick="() => EyeContactAsync(false)" disabled="@busy">off</button>
+                    <button type="button" class="secondary" @onclick="() => EyeContactAsync(true)" disabled="@busy">No eye contact expected: on</button>
+                    <button type="button" class="secondary" @onclick="() => EyeContactAsync(false)" disabled="@busy">off</button>
                     @if (TypedAvailable)
                     {
-                        <button type="button" class="people-ghost" @onclick="() => TypedAsync(true)" disabled="@busy">Typed answers: on</button>
-                        <button type="button" class="people-ghost" @onclick="() => TypedAsync(false)" disabled="@busy">off</button>
+                        <button type="button" class="secondary" @onclick="() => TypedAsync(true)" disabled="@busy">Typed answers: on</button>
+                        <button type="button" class="secondary" @onclick="() => TypedAsync(false)" disabled="@busy">off</button>
                     }
                 </div>
                 <p class="hint">Accommodations are granted per student and exam, by staff only; a student can never switch them on. Extra time applies from the next attempt; the eye-contact accommodation from the next answer@(TypedAvailable ? "; typed answers the next time the student opens the exam" : ""). Every change is audited.</p>
@@ -227,7 +227,7 @@ else
 
 @if (error is not null)
 {
-    <div class="notice people-error" role="alert">
+    <div class="notice error" role="alert">
         <p><strong>The assignments could not load.</strong> @error</p>
         <button type="button" @onclick="LoadAsync" disabled="@busy">Try again</button>
     </div>
@@ -251,6 +251,7 @@ else if (IsGrid)
         <p class="hint">Tick an empty cell to pick that student for the exam, then <strong>Assign an exam</strong>. Tick an assigned cell to select it for the changes above. @(grid.Exams.Count == AssignmentAdminService.MaxGridExams ? $"Showing the first {AssignmentAdminService.MaxGridExams} exams; choose one to narrow it." : "")</p>
         <div class="table-scroll">
             <table class="grid console-grid">
+                <caption class="visually-hidden">Assignments: students by exam</caption>
                 <thead>
                     <tr>
                         <th scope="col">Student</th>
@@ -321,6 +322,7 @@ else
     <p class="hint" role="status">@list.Total.ToString("N0") assignment@(list.Total == 1 ? "" : "s")@(HasFilters ? " match" : "")</p>
     <div class="table-scroll">
         <table class="grid people-table">
+            <caption class="visually-hidden">Assignments</caption>
             <thead>
                 <tr>
                     <th scope="col" class="console-row-check"><input type="checkbox" checked="@AllOnPageSelected" @onchange="TogglePage" aria-label="Select every assignment on this page" /></th>

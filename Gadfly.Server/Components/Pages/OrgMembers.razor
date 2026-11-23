@@ -87,29 +87,32 @@
 
 @if (invitations.Count > 0)
 {
-    <table class="grid">
-        <thead><tr><th>Invited</th><th>Role</th><th>Status</th><th>Expires</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-        <tbody>
-            @foreach (var i in invitations)
-            {
-                <tr>
-                    <td>@i.Email</td>
-                    <td>@i.Role</td>
-                    <td>@i.Status.ToString().ToLowerInvariant()</td>
-                    <td>@(i.Status == InvitationStatus.Pending ? i.ExpiresUtc.ToString("yyyy-MM-dd HH:mm") + " UTC" : "")</td>
-                    <td>
-                        @if (i.Status is InvitationStatus.Pending or InvitationStatus.Expired)
-                        {
-                            <div class="row-actions">
-                                <button class="link" @onclick="() => ResendAsync(i.Id)">Resend</button>
-                                <button class="link" @onclick="() => RevokeAsync(i.Id)">Revoke</button>
-                            </div>
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">Pending invitations</caption>
+            <thead><tr><th scope="col">Invited</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Expires</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody>
+                @foreach (var i in invitations)
+                {
+                    <tr>
+                        <td>@i.Email</td>
+                        <td>@i.Role</td>
+                        <td>@i.Status.ToString().ToLowerInvariant()</td>
+                        <td>@(i.Status == InvitationStatus.Pending ? i.ExpiresUtc.ToString("yyyy-MM-dd HH:mm") + " UTC" : "")</td>
+                        <td>
+                            @if (i.Status is InvitationStatus.Pending or InvitationStatus.Expired)
+                            {
+                                <div class="row-actions">
+                                    <button class="link" @onclick="() => ResendAsync(i.Id)">Resend</button>
+                                    <button class="link" @onclick="() => RevokeAsync(i.Id)">Revoke</button>
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 <EditForm Model="form" OnValidSubmit="AddAsync" FormName="add-member" class="panel">
@@ -133,40 +136,43 @@
     }
 </EditForm>
 
-<table class="grid">
-    <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
-    <tbody>
-        @foreach (var m in members)
-        {
-            <tr>
-                <td>@m.UserName</td>
-                <td>@m.Email</td>
-                <td>@m.Member.Role</td>
-                <td>@(m.Member.IsActive ? "active" : "removed")</td>
-                <td>
-                    <div class="row-actions">
-                        <button class="link" @onclick="() => ToggleAsync(m.Member.Id, !m.Member.IsActive)">@(m.Member.IsActive ? "Remove" : "Restore")</button>
-                        <a href="privacy/export/@m.Member.UserId" download="gadfly-data-@(m.Member.UserId.ToString("N")).json">Export data</a>
-                    </div>
-                    @if (m.Member.UserId != Tenant.UserId)
-                    {
-                        <details class="erase">
-                            <summary>Erase data…</summary>
-                            <form method="post" action="privacy/erase/@m.Member.UserId" data-enhance="false">
-                                <AntiforgeryToken />
-                                <p class="hint">Deletes every exam session and assignment of @m.UserName in this organization (answers, judgments, reports, grades) and deactivates the membership. This cannot be undone; export first if the data is needed.</p>
-                                <div class="row-actions">
-                                    <input name="confirm" required pattern="DELETE" autocomplete="off" placeholder="Type DELETE" aria-label="Type DELETE to confirm" />
-                                    <button type="submit" class="danger">Erase</button>
-                                </div>
-                            </form>
-                        </details>
-                    }
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+<div class="table-scroll">
+    <table class="grid">
+        <caption class="visually-hidden">Members</caption>
+        <thead><tr><th scope="col">User</th><th scope="col">Email</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+        <tbody>
+            @foreach (var m in members)
+            {
+                <tr>
+                    <td>@m.UserName</td>
+                    <td>@m.Email</td>
+                    <td>@m.Member.Role</td>
+                    <td>@(m.Member.IsActive ? "active" : "removed")</td>
+                    <td>
+                        <div class="row-actions">
+                            <button class="link" @onclick="() => ToggleAsync(m.Member.Id, !m.Member.IsActive)">@(m.Member.IsActive ? "Remove" : "Restore")</button>
+                            <a href="privacy/export/@m.Member.UserId" download="gadfly-data-@(m.Member.UserId.ToString("N")).json">Export data</a>
+                        </div>
+                        @if (m.Member.UserId != Tenant.UserId)
+                        {
+                            <details class="erase">
+                                <summary>Erase data…</summary>
+                                <form method="post" action="privacy/erase/@m.Member.UserId" data-enhance="false">
+                                    <AntiforgeryToken />
+                                    <p class="hint">Deletes every exam session and assignment of @m.UserName in this organization (answers, judgments, reports, grades) and deactivates the membership. This cannot be undone; export first if the data is needed.</p>
+                                    <div class="row-actions">
+                                        <input name="confirm" required pattern="DELETE" autocomplete="off" placeholder="Type DELETE" aria-label="Type DELETE to confirm" />
+                                        <button type="submit" class="danger">Erase</button>
+                                    </div>
+                                </form>
+                            </details>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
 
 @code {
     private sealed class Form

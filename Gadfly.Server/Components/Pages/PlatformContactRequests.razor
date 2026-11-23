@@ -32,41 +32,44 @@ else if (rows.Count == 0)
 }
 else
 {
-    <table class="grid">
-        <thead>
-            <tr><th>Received</th><th>From</th><th>Asked for</th><th>Message</th><th>Status</th></tr>
-        </thead>
-        <tbody>
-            @foreach (var r in rows)
-            {
-                <tr>
-                    <td>@r.ReceivedAt.ToString("yyyy-MM-dd HH:mm") UTC</td>
-                    <td>
-                        <strong>@r.Name</strong><br />
-                        <a href="mailto:@r.Email">@r.Email</a><br />
-                        @r.Institution@(r.Role is null ? "" : $", {r.Role}")
-                    </td>
-                    <td>@r.Topic@(r.Plan is null ? "" : $" ({r.Plan})")@(r.Students is null ? "" : $"; {r.Students} students")</td>
-                    <td class="message">@(r.Message ?? "—")</td>
-                    <td>
-                        @if (r.HandledAt is { } at)
-                        {
-                            <span class="ok">Handled @at.ToString("yyyy-MM-dd")</span>
-                            @if (!string.IsNullOrEmpty(r.Note)) { <br /><span class="hint">@r.Note</span> }
-                            <br /><button type="button" class="link" disabled="@busy" @onclick="() => MarkAsync(r, false)">Reopen</button>
-                        }
-                        else
-                        {
-                            <label>Note <small class="hint">(optional)</small>
-                                <input value="@Note(r.Id)" maxlength="1000" @onchange="e => notes[r.Id] = e.Value?.ToString()" aria-label="Note for @r.Name" />
-                            </label>
-                            <button type="button" disabled="@busy" @onclick="() => MarkAsync(r, true)">Mark handled</button>
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="table-scroll">
+        <table class="grid">
+            <caption class="visually-hidden">Contact requests</caption>
+            <thead>
+                <tr><th scope="col">Received</th><th scope="col">From</th><th scope="col">Asked for</th><th scope="col">Message</th><th scope="col">Status</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in rows)
+                {
+                    <tr>
+                        <td>@r.ReceivedAt.ToString("yyyy-MM-dd HH:mm") UTC</td>
+                        <td>
+                            <strong>@r.Name</strong><br />
+                            <a href="mailto:@r.Email">@r.Email</a><br />
+                            @r.Institution@(r.Role is null ? "" : $", {r.Role}")
+                        </td>
+                        <td>@r.Topic@(r.Plan is null ? "" : $" ({r.Plan})")@(r.Students is null ? "" : $"; {r.Students} students")</td>
+                        <td class="message">@(r.Message ?? "—")</td>
+                        <td>
+                            @if (r.HandledAt is { } at)
+                            {
+                                <span class="ok">Handled @at.ToString("yyyy-MM-dd")</span>
+                                @if (!string.IsNullOrEmpty(r.Note)) { <br /><span class="hint">@r.Note</span> }
+                                <br /><button type="button" class="link" disabled="@busy" @onclick="() => MarkAsync(r, false)">Reopen</button>
+                            }
+                            else
+                            {
+                                <label>Note <small class="hint">(optional)</small>
+                                    <input value="@Note(r.Id)" maxlength="1000" @onchange="e => notes[r.Id] = e.Value?.ToString()" aria-label="Note for @r.Name" />
+                                </label>
+                                <button type="button" disabled="@busy" @onclick="() => MarkAsync(r, true)">Mark handled</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {

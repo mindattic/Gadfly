@@ -1,74 +1,68 @@
-/* Admin people pages: students directory and profile (GAD-T296), assignments console (GAD-T298). Uses the app's colour tokens. */
-.people-head { display: flex; flex-wrap: wrap; gap: .75rem 1.5rem; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-.people-head h1 { margin: 0; }
-.people-back { margin: 0 0 .5rem; font-size: .92rem; }
-.people-message { margin: 0 0 1rem; padding: .6rem .9rem; border-radius: 6px; border: 1px solid var(--line); background: var(--panel); }
-.people-message.ok { border-left: 4px solid var(--ok); }
-.people-message.error { border-left: 4px solid var(--error); }
-.people-error { border-left-color: var(--error); }
-.people-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Admin people pages: students directory and profile (GAD-T296), assignments console (GAD-T298). Tokens from app.css
+   (GAD-T695); the header, notices, buttons and table-scroll come from the design system. */
+.people-back { margin: 0 0 var(--space-2); font-size: var(--text-sm); }
+.notice[role=status], .notice[role=alert] { margin: 0 0 var(--space-4); }
 
-button.people-ghost, a.people-button.people-ghost { background: none; color: var(--accent); border: 1px solid var(--accent); }
-a.people-button { display: inline-block; padding: .45rem .85rem; border-radius: 6px; text-decoration: none; }
 .danger-text { color: var(--error) !important; border-color: var(--error) !important; }
 .error-text { color: var(--error); }
 
-.people-form { max-width: 760px; }
-.people-form label { display: grid; gap: .2rem; }
+.people-form { max-width: 48rem; }
+.people-form label { display: grid; gap: var(--space-1); }
 .people-form label.check { display: flex; }
-.people-form textarea, .people-form input:not([type=checkbox]) { width: 100%; }
-.people-form textarea { font-family: ui-monospace, Consolas, monospace; font-size: .88rem; }
-.people-import { max-width: 980px; }
-.people-danger { border-left: 3px solid var(--error); padding-left: .75rem; }
+.people-form textarea, .people-form input:not([type=checkbox]):not([type=radio]) { width: 100%; }
+.people-form textarea { font-family: ui-monospace, Consolas, monospace; font-size: var(--text-sm); }
+.people-import { max-width: 62rem; }
+.people-danger { border-left: 3px solid var(--error); padding-left: var(--space-3); }
 
-.people-filters { display: flex; flex-wrap: wrap; gap: .6rem .9rem; align-items: end; margin: 0 0 1rem; }
-.people-filters label { display: grid; gap: .2rem; font-size: .85rem; color: var(--muted); }
-.people-filters label.grow { flex: 1 1 220px; }
-.people-filters input, .people-filters select { font-size: .92rem; color: var(--ink); }
-.people-filters button { padding: .4rem .8rem; }
-.people-filters button.link { padding: .4rem 0; }
+.people-filters { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: end; margin: 0 0 var(--space-4); }
+.people-filters label { display: grid; gap: var(--space-1); font-size: var(--text-sm); color: var(--muted); }
+.people-filters label.grow { flex: 1 1 min(14rem, 100%); }
+.people-filters input, .people-filters select { font-size: var(--text-sm); color: var(--ink); max-width: 100%; }
+.people-filters button { padding: var(--space-2) var(--space-3); }
+.people-filters button.link { padding: var(--space-2) 0; }
 
-.table-scroll { overflow-x: auto; margin-bottom: 1rem; }
-.table-scroll .grid { min-width: 640px; }
+.table-scroll { margin-bottom: var(--space-4); }
+.table-scroll .grid { min-width: 40rem; }
 .grid tr.muted td { color: var(--muted); }
 
-.pill { display: inline-block; padding: .1rem .55rem; border-radius: 999px; font-size: .8rem; border: 1px solid var(--line); white-space: nowrap; background: var(--bg); }
+.pill { display: inline-block; padding: 0 var(--space-2); border-radius: var(--radius-pill); font-size: var(--text-xs); border: var(--border-strong); white-space: nowrap; background: var(--bg); }
 .pill.state-active, .pill.progress-released { color: var(--ok); border-color: var(--ok); }
 .pill.state-deactivated, .pill.progress-interrupted { color: var(--error); border-color: var(--error); }
 .pill.state-never-signed-in, .pill.progress-notstarted { color: var(--muted); }
 .pill.progress-inprogress { color: var(--accent); border-color: var(--accent); }
 .pill.progress-awaitinggrading, .pill.progress-graded { color: var(--ink); border-color: var(--ink); }
 
-.pager { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin: .5rem 0 1.5rem; font-size: .92rem; }
-.pager label { display: flex; gap: .4rem; align-items: center; margin-left: auto; color: var(--muted); }
+.pager { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; margin: var(--space-2) 0 var(--space-5); font-size: var(--text-sm); }
+.pager label { display: flex; gap: var(--space-2); align-items: center; margin-left: auto; color: var(--muted); }
 
-.people-columns { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); align-items: start; }
+.people-columns { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(19rem, 100%), 1fr)); align-items: start; }
 .people-columns .panel { max-width: none; margin-bottom: 0; }
-.people-facts { display: grid; grid-template-columns: max-content 1fr; gap: .3rem 1rem; margin: 0; }
+.people-facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--space-1) var(--space-4); margin: 0; }
 .people-facts dt { color: var(--muted); }
 .people-facts dd { margin: 0; overflow-wrap: anywhere; }
 .people-assignment { max-width: none; }
-.people-assignment-head { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; justify-content: space-between; }
-.people-assignment-head h3 { margin: 0; font-size: 1.02rem; }
+.people-assignment-head { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; justify-content: space-between; }
+.people-assignment-head h3 { margin: 0; font-size: var(--text-lg); }
 .people-assignment p.hint { margin: 0; }
-.people-audit code { font-size: .82rem; }
+.people-audit code { font-size: var(--text-xs); }
 
 .import-error td { color: var(--error); }
 .import-create td:nth-child(4), .import-invite td:nth-child(4), .import-updatename td:nth-child(4) { font-weight: 600; }
 .import-unchanged td, .import-skip td { color: var(--muted); }
 
-/* Assignments console (GAD-T298) */
-.console-tabs { display: flex; gap: .25rem; margin: 0 0 1rem; border-bottom: 1px solid var(--line); padding-bottom: .5rem; }
-.console-tabs a { padding: .35rem .8rem; border-radius: 6px; text-decoration: none; color: var(--ink); }
-.console-tabs a.active { background: var(--panel); border: 1px solid var(--line); color: var(--accent); font-weight: 600; }
-.console-bulk { position: sticky; top: 0; z-index: 2; display: grid; gap: .6rem; max-width: none; }
-.console-bulk .desk-row > label { flex: 1 1 180px; }
-.console-bulk .row-actions { gap: .4rem .6rem; }
+/* Assignments console (GAD-T298). The bulk-change panel scrolls with the page: pinned, it would cover the grid row that
+   has focus (WCAG 2.4.11). */
+.console-tabs { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0 0 var(--space-4); border-bottom: var(--border); padding-bottom: var(--space-2); }
+.console-tabs a { display: inline-flex; align-items: center; min-height: var(--target-min); padding: var(--space-1) var(--space-3); border: 1px solid transparent; border-radius: var(--radius-sm); text-decoration: none; color: var(--ink); }
+.console-tabs a.active { background: var(--panel); border-color: var(--line-strong); color: var(--accent); font-weight: 600; }
+.console-bulk { display: grid; gap: var(--space-2); max-width: none; }
+.console-bulk .desk-row > label { flex: 1 1 min(11rem, 100%); }
+.console-bulk .row-actions { gap: var(--space-2) var(--space-3); }
 .console-grid { border-collapse: collapse; }
-.console-grid th, .console-grid td { padding: .35rem .5rem; border: 1px solid var(--line); font-size: .85rem; vertical-align: top; }
+.console-grid th, .console-grid td { padding: var(--space-1) var(--space-2); border: var(--border); font-size: var(--text-sm); vertical-align: top; }
 .console-grid thead th { position: sticky; top: 0; background: var(--panel); max-width: 9rem; font-weight: 600; }
 .console-grid th[scope=row] { text-align: left; white-space: nowrap; }
 .console-grid td.cell-empty { color: var(--muted); text-align: center; }
-.console-grid td label { display: flex; gap: .3rem; align-items: center; cursor: pointer; }
-.console-grid td .pill { font-size: .74rem; }
+.console-grid td label { display: flex; gap: var(--space-1); align-items: center; min-height: var(--target-min); cursor: pointer; }
+.console-grid td .pill { font-size: var(--text-xs); }
 .console-row-check { width: 2rem; }
