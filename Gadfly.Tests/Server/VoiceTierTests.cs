@@ -149,7 +149,8 @@ public class VoiceTierTests
     {
         Assert.That(VoiceTierLatency.Median([]), Is.Null);
         Assert.That(VoiceTierLatency.Median([900, 100, 300]), Is.EqualTo(300));
-        Assert.That(VoiceTierLatency.Median([100, 200, 300, 401]), Is.EqualTo(251));
+        Assert.That(VoiceTierLatency.Median([100, 200, 300, 401]), Is.EqualTo(250));
+        Assert.That(VoiceTierLatency.Median([100, 200, 301, 401]), Is.EqualTo(251), "a half rounds away from zero");
     }
 
     [Test]
