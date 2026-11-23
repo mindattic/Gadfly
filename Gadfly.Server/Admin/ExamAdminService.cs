@@ -40,6 +40,8 @@ public sealed class ExamSettingsForm
     public int MinSummativeObjectives { get; set; } = ExamObjectives.DefaultMinSummativeObjectives;
     public string? VoiceId { get; set; }
     public string? AvatarId { get; set; }
+    /// <summary>The examiner's voice quality/speed tier (GAD-T617, <see cref="Voice.VoiceTier"/> id); blank uses the organization's.</summary>
+    public string? VoiceTier { get; set; }
     /// <summary>The spoken language this exam expects (GAD-T357), e.g. "en"; blank lets the recognizer detect it.</summary>
     public string? Language { get; set; }
     /// <summary>Why, recorded in the audit log. Required once students have started the exam.</summary>
@@ -162,6 +164,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
             MinSummativeObjectives = p.MinSummativeObjectives,
             VoiceId = e.VoiceId,
             AvatarId = e.AvatarId,
+            VoiceTier = Voice.VoiceTier.Normalize(e.VoiceTier) ?? "",
             Language = p.Language,
         }, e.Title, e.Status, started);
     }
@@ -291,6 +294,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
             IntegrityLevel = source.IntegrityLevel,
             VoiceId = source.VoiceId,
             AvatarId = source.AvatarId,
+            VoiceTier = source.VoiceTier,   // the examiner's voice tier (GAD-T617)
             PromptSetId = source.PromptSetId,
             PromptSetVersion = source.PromptSetVersion,
             Languages = source.Languages,   // the offered languages (GAD-T539); the copy's texts are drafted and approved on their own
@@ -434,6 +438,9 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
         var avatar = string.IsNullOrWhiteSpace(form.AvatarId) ? null : form.AvatarId.Trim();
         if (voice?.Length > 100 || avatar?.Length > 100) return new(false, "Keep the voice and avatar ids under 100 characters.");
         if (voice is not null && !Voice.ExaminerVoice.IsWellFormed(voice)) return new(false, "That voice id doesn't look like an ElevenLabs voice id (letters and digits only, copied from the voice's page in ElevenLabs).");
+        var voiceTier = Voice.VoiceTier.Normalize(form.VoiceTier);
+        if (voiceTier is null && !string.IsNullOrWhiteSpace(form.VoiceTier))
+            return new(false, $"Choose a voice quality: {string.Join(" or ", Voice.VoiceTier.All.Select(t => t.Label))}, or the organization's default.");
         var reason = string.IsNullOrWhiteSpace(form.Reason) ? null : form.Reason.Trim();
         if (reason?.Length > 1000) return new(false, "Keep the reason under 1000 characters.");
         var language = string.IsNullOrWhiteSpace(form.Language) ? null : form.Language.Trim();
@@ -461,6 +468,8 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
         exam.IntegrityLevel = form.IntegrityLevel;
         exam.VoiceId = voice;
         exam.AvatarId = avatar;
+        var tierBefore = exam.VoiceTier;
+        exam.VoiceTier = voiceTier;
         var newJson = JsonSerializer.Serialize(updated, Json);
         if (updated != policy) exam.PolicyJson = newJson;
         var after = SettingsAudit(exam, updated);
@@ -476,6 +485,10 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
         }
         guard.Audit("assessment.settings.updated", "Exam", exam.Id.ToString(), before, after,
             reason ?? (frozen ? "Applies to attempts that start from now on." : null));
+        // GAD-T617: the voice tier trades the examiner's latency for quality, so its change is also recorded on its own.
+        if (tierBefore != voiceTier)
+            guard.Audit("exam.voice-tier.changed", "Exam", exam.Id.ToString(), new { voiceTier = tierBefore }, new { voiceTier },
+                reason ?? "GAD-T415: the examiner's voice quality/speed tier for this exam.");
         await SaveAsync(ct);
         return new(true, frozen || started > 0 ? "Settings saved. They apply to attempts that start from now on; attempts already started keep theirs." : "Settings saved.", exam.Id);
     }
@@ -488,6 +501,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
         p.MinSummativeObjectives,
         e.VoiceId,
         e.AvatarId,
+        e.VoiceTier,
         p.Language,
     };
 
@@ -569,6 +583,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
             IntegrityLevel = ExamDefinitionJson.EnumOr(d.IntegrityLevel, IntegrityLevel.Standard),
             VoiceId = string.IsNullOrWhiteSpace(d.VoiceId) ? null : d.VoiceId.Trim(),
             AvatarId = string.IsNullOrWhiteSpace(d.AvatarId) ? null : d.AvatarId.Trim(),
+            VoiceTier = Voice.VoiceTier.Normalize(d.VoiceTier),
             PromptSetId = ExamPrompts.SetId,
             PromptSetVersion = ExamPrompts.Version,
             PolicyJson = JsonSerializer.Serialize(policy, Json),

@@ -53,6 +53,34 @@ else
         </label>
         <ValidationMessage For="() => form.DefaultAvatarId" class="error" />
         <p class="hint">The voice id is an ElevenLabs voice id (letters and digits, from the voice's page in ElevenLabs). Every exam speaks with it unless the exam sets its own; leave it empty for the platform voice. The avatar id is saved for a later release: today every exam shows the platform's examiner (GAD-T475).</p>
+        @* GAD-T415, GAD-T617: the examiner's voice quality/speed tier, with what each tier has measured on live exams. *@
+        <label>Examiner voice quality
+            <InputSelect @bind-Value="form.VoiceTier">
+                <option value="">Platform default (Fast)</option>
+                @foreach (var tier in Gadfly.Server.Voice.VoiceTier.All)
+                {
+                    <option value="@tier.Id">@tier.Label</option>
+                }
+            </InputSelect>
+        </label>
+        <ul class="hint">
+            @foreach (var tier in Gadfly.Server.Voice.VoiceTier.All)
+            {
+                var measured = latency?.FirstOrDefault(m => m.Tier == tier);
+                <li>
+                    <strong>@tier.Label</strong>: @tier.Hint
+                    @if (measured is { Count: > 0, MedianMs: { } median })
+                    {
+                        <text> Measured on live exams in the last @Gadfly.Server.Voice.VoiceTierLatency.Days days: median @median ms to first audio over @measured.Count question@(measured.Count == 1 ? "" : "s").</text>
+                    }
+                    else
+                    {
+                        <text> No measurements yet.</text>
+                    }
+                </li>
+            }
+        </ul>
+        <p class="hint">Every voice exam uses this unless the exam sets its own. A tier whose voice model does not speak an exam's language falls back to the platform's model for that language. Changing it is recorded in the audit log.</p>
 
         <h2>What instructors see</h2>
         <label class="check">
@@ -156,6 +184,9 @@ else
         [StringLength(100, ErrorMessage = "At most 100 characters.")]
         public string? DefaultAvatarId { get; set; }
 
+        /// <summary>A <see cref="Gadfly.Server.Voice.VoiceTier"/> id, or empty for the platform default (GAD-T617).</summary>
+        public string? VoiceTier { get; set; }
+
         public bool InstructorsSeeOnlyOwn { get; set; } = true;
 
         public bool InEuropeanUnion { get; set; }
@@ -170,6 +201,7 @@ else
     }
 
     private Form? form;
+    private IReadOnlyList<Gadfly.Server.Voice.VoiceTierLatency.Measure>? latency;
     private DateTimeOffset? updatedAt;
     private string? message;
     private bool ok, busy;
@@ -185,6 +217,7 @@ else
             MonthlyCostQuotaUsd = row?.MonthlyCostQuotaUsd,
             DefaultVoiceId = row?.DefaultVoiceId,
             DefaultAvatarId = row?.DefaultAvatarId,
+            VoiceTier = Gadfly.Server.Voice.VoiceTier.Normalize(row?.VoiceTier) ?? "",
             InstructorsSeeOnlyOwn = row?.InstructorsSeeOnlyOwn ?? true,
             InEuropeanUnion = row?.InEuropeanUnion ?? false,
             VoiceMeasures = row?.VoiceMeasures ?? VoiceMeasuresSetting.RegionDefault,
@@ -193,6 +226,14 @@ else
             EmailNotificationsEnabled = row?.EmailNotificationsEnabled ?? true,
         };
         updatedAt = row is null || row.UpdatedAt == default ? null : row.UpdatedAt;
+        try
+        {
+            latency = await AdminDb.RunAsync(Scopes, Tenant, (_, db) => Gadfly.Server.Voice.VoiceTierLatency.ForTiersAsync(db, Clock.GetUtcNow()));
+        }
+        catch (Exception)
+        {
+            latency = null;   // the measurements are a hint; the settings still load without them
+        }
     }
 
     private async Task SaveAsync()
@@ -212,6 +253,20 @@ else
                 row.DefaultVoiceId = Clean(form.DefaultVoiceId);
                 row.DefaultAvatarId = Clean(form.DefaultAvatarId);
                 row.UpdatedAt = now;
+                var voiceTier = Gadfly.Server.Voice.VoiceTier.Normalize(form.VoiceTier);
+                if (row.VoiceTier != voiceTier)
+                {
+                    // GAD-T617: the examiner's voice tier trades latency for quality on every voice exam, so who changed it is recorded.
+                    db.AuditEvents.Add(new AuditEvent
+                    {
+                        OrganizationId = org, ActorUserId = Tenant.UserId, ActorRole = Tenant.Role, Action = "settings.voice-tier.changed",
+                        EntityType = "OrganizationSettings", EntityId = org.ToString(),
+                        BeforeJson = System.Text.Json.JsonSerializer.Serialize(new { voiceTier = row.VoiceTier }),
+                        AfterJson = System.Text.Json.JsonSerializer.Serialize(new { voiceTier }),
+                        Reason = "GAD-T415: the examiner's voice quality/speed tier for this organization's voice exams.", At = now,
+                    });
+                    row.VoiceTier = voiceTier;
+                }
                 if (row.InEuropeanUnion != form.InEuropeanUnion || row.VoiceMeasures != form.VoiceMeasures)
                 {
                     // GAD-T259: whether voice measurements run is a privacy decision, so who changed it is recorded.

@@ -239,6 +239,17 @@ else
         <label>Examiner voice id <input @bind="sv.Form.VoiceId" maxlength="100" placeholder="Platform default" /></label>
         <label>Examiner avatar id <input @bind="sv.Form.AvatarId" maxlength="100" placeholder="Platform default (examiner-f or examiner-m)" /></label>
         <span class="hint">Voice id: an ElevenLabs voice id; empty uses the organization's default voice, else the platform's. The avatar id is saved for a later release: today every exam shows the platform's examiner (GAD-T475).</span>
+        @* GAD-T415, GAD-T617: the examiner's voice quality/speed tier for this exam; empty follows the organization's settings. *@
+        <label>Examiner voice quality
+            <select @bind="sv.Form.VoiceTier">
+                <option value="">The organization's default</option>
+                @foreach (var tier in Gadfly.Server.Voice.VoiceTier.All)
+                {
+                    <option value="@tier.Id">@tier.Label</option>
+                }
+            </select>
+            <span class="hint">@string.Join(" ", Gadfly.Server.Voice.VoiceTier.All.Select(t => $"{t.Label}: {t.Hint}")) Applies to attempts that start from now on.</span>
+        </label>
         @if (sv.StartedAttempts > 0)
         {
             <label>Why (required: @sv.StartedAttempts attempt@(sv.StartedAttempts == 1 ? " has" : "s have") started)

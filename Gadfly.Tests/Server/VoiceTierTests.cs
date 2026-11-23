@@ -4,6 +4,7 @@ using Gadfly.Server.Tenancy;
 using Gadfly.Server.Voice;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using NUnit.Framework;
 using VoiceSettings = Gadfly.Server.Voice.VoiceSettings;
 
@@ -119,6 +120,46 @@ public class VoiceTierTests
         Assert.That(ExaminerTts.TierFallsBack(KoreanNative), Is.Null);
     }
 
+    // ------------------------------------------------------------------------------------------ admin (GAD-T617)
+
+    [Test]
+    public void The_exam_definition_carries_the_tier_and_rejects_an_unknown_one()
+    {
+        var exam = new Exam { Title = "Cells", VoiceTier = "quality", PolicyJson = "{}" };
+        var json = Gadfly.Server.Admin.ExamDefinitionJson.Serialize(
+            Gadfly.Server.Admin.ExamDefinitionJson.Build(exam, [], null, null, null, DateTimeOffset.UtcNow));
+        var read = Gadfly.Server.Admin.ExamDefinitionJson.Parse(json);
+        Assert.That(read.Errors, Is.Empty);
+        Assert.That(read.Definition!.VoiceTier, Is.EqualTo("quality"));
+
+        var bad = Gadfly.Server.Admin.ExamDefinitionJson.Parse(json.Replace("\"quality\"", "\"expressive\""));
+        Assert.That(bad.Errors, Has.Some.Contains("voice tier"));
+    }
+
+    [Test]
+    public void A_copy_keeps_the_exams_tier()
+    {
+        var exam = new Exam { Title = "Cells", VoiceTier = "quality", PolicyJson = "{}" };
+        var copy = Gadfly.Server.Admin.ExamAdminService.CopyOf(exam, [], null, "Cells (copy)", Guid.NewGuid(), DateTimeOffset.UtcNow, seed: 1);
+        Assert.That(copy.Exam.VoiceTier, Is.EqualTo("quality"));
+    }
+
+    [Test]
+    public void The_median_is_the_middle_value_or_the_mean_of_the_middle_two()
+    {
+        Assert.That(VoiceTierLatency.Median([]), Is.Null);
+        Assert.That(VoiceTierLatency.Median([900, 100, 300]), Is.EqualTo(300));
+        Assert.That(VoiceTierLatency.Median([100, 200, 300, 401]), Is.EqualTo(251));
+    }
+
+    [Test]
+    public void The_per_model_timing_name_fits_the_timing_table_for_every_tier()
+    {
+        foreach (var tier in VoiceTier.All)
+            Assert.That((QuestionVoiceStream.ModelTimingPrefix + tier.ModelId).Length, Is.LessThanOrEqualTo(80));
+        Assert.That(QuestionVoiceStream.ModelTimingPrefix, Does.StartWith("voice.question.firstAudio"));
+    }
+
     // ------------------------------------------------------------------------------------------ read from the database
 
     [Test]
@@ -161,5 +202,32 @@ public class VoiceTierTests
         db.ExamSessions.Add(session);
         await db.SaveChangesAsync();
         return session.Id;
+    }
+}
+
+/// <summary>The exam's voice tier saved from the exams manager (GAD-T617): stored normalized and audited on its own.</summary>
+[TestFixture]
+public class VoiceTierAdminTests : ServerTest
+{
+    [Test]
+    public async Task Saving_an_exams_tier_stores_it_and_audits_exam_voice_tier_changed_and_an_unknown_one_is_refused()
+    {
+        var w = await Seed.ExamAsync();
+        var admin = Member(w.Org, Guid.NewGuid(), OrgRoles.Admin);
+        await using (var scope = Scope(admin))
+        {
+            var svc = ActivatorUtilities.CreateInstance<Gadfly.Server.Admin.ExamAdminService>(scope.ServiceProvider);
+            var form = (await svc.SettingsAsync(w.ExamId))!.Form;
+            Assert.That(form.VoiceTier, Is.Empty, "nothing set: the organization's default");
+            form.VoiceTier = "turbo";
+            Assert.That((await svc.SaveSettingsAsync(form)).Ok, Is.False);
+            form.VoiceTier = " Quality ";
+            var saved = await svc.SaveSettingsAsync(form);
+            Assert.That(saved.Ok, Is.True, saved.Message);
+        }
+        await using var check = SystemDb();
+        Assert.That((await check.Exams.SingleAsync(e => e.Id == w.ExamId)).VoiceTier, Is.EqualTo("quality"));
+        var audit = await check.AuditEvents.SingleAsync(a => a.Action == "exam.voice-tier.changed" && a.EntityId == w.ExamId.ToString());
+        Assert.That((audit.BeforeJson, audit.AfterJson), Is.EqualTo(("{\"voiceTier\":null}", "{\"voiceTier\":\"quality\"}")));
     }
 }

@@ -27,7 +27,7 @@ public sealed record VoiceTier(string Id, string ModelId, string Label, string H
     public const string QualityId = "quality";
 
     /// <summary>The low-latency model, and the deployment default (<see cref="VoiceSettings.TtsModel"/>).</summary>
-    public static readonly VoiceTier Fast = new(FastId, "eleven_flash_v2_5", "Fast (default)",
+    public static readonly VoiceTier Fast = new(FastId, "eleven_flash_v2_5", "Fast",
         "First audio in about a quarter of a second, so the exam keeps a live conversational rhythm; a little flatter on long or expressive sentences.");
 
     /// <summary>ElevenLabs' most natural multilingual v2 model, slower to start.</summary>

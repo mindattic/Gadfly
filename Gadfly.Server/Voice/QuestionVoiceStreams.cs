@@ -52,10 +52,18 @@ public sealed class QuestionVoiceStreams(IServiceProvider services, ApiCallRecor
             ? (text, voice, ct) => services.GetRequiredService<ElevenLabsTtsClient>().StreamAsync(text, voice, ct)
             : (text, voice, ct) => services.GetRequiredService<ExaminerTts>().StreamAsync(profile, text, voice, cacheable: false, ct);
         var stream = new QuestionVoiceStream(Guid.NewGuid().ToString("N"), user, organization, session, voiceId, committedAt, committedAtUtc,
-            tts, timings, log);
+            tts, timings, log, measuredModel: MeasuredModel(profile));
         _streams[stream.Id] = stream;
         return stream;
     }
+
+    /// <summary>
+    /// The ElevenLabs model a question's first-audio time is recorded against (GAD-T617, <see cref="QuestionVoiceStream.ModelTimingPrefix"/>):
+    /// the session's own model, else the library's; null outside live mode, so the mock voice never counts as a tier's latency.
+    /// </summary>
+    private string? MeasuredModel(ExaminerTts.Profile? profile) =>
+        services.GetService<VoiceSettings>()?.Mode != VoiceMode.Live ? null
+        : profile?.ModelId ?? services.GetService<ElevenLabsOptions>()?.ModelId;
 
     /// <summary>
     /// Says a whole text with a session's own model and speed (GAD-T530, GAD-T555): an avatar hub <c>Speak</c> of a text the server
@@ -164,15 +172,22 @@ public sealed class QuestionVoiceStream : IQuestionSpeech, IDisposable
     private TaskCompletionSource _changed = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private ApiCallContext? _context;
     private bool _ended, _claimed, _firstAudio;
+    /// <summary>The live model this question's first-audio time is recorded against (GAD-T617), or null (mock voice: not recorded).</summary>
+    private readonly string? _measuredModel;
+    /// <summary>When the first part was handed to synthesis (a <see cref="Stopwatch"/> timestamp, and the wall clock).</summary>
+    private long _firstPartAt;
+    private DateTimeOffset _firstPartAtUtc;
     /// <summary>A whole text spoken through <see cref="QuestionVoiceStreams.SpeakText"/>: not a question being written, so no
     /// <c>questionText</c> caption parts (the browser already shows the text) and no question timings.</summary>
     private readonly bool _wholeText;
     private int _disposed;
 
     public QuestionVoiceStream(string id, Guid user, Guid organization, Guid session, string? voiceId, long committedAt, DateTimeOffset committedAtUtc,
-        Func<string, string?, CancellationToken, IAsyncEnumerable<SpeechChunk>> tts, ApiCallRecorder timings, ILogger log, bool wholeText = false)
+        Func<string, string?, CancellationToken, IAsyncEnumerable<SpeechChunk>> tts, ApiCallRecorder timings, ILogger log, bool wholeText = false,
+        string? measuredModel = null)
     {
         _wholeText = wholeText;
+        _measuredModel = string.IsNullOrWhiteSpace(measuredModel) ? null : measuredModel.Trim();
         Id = id;
         User = user;
         Organization = organization;
@@ -216,6 +231,8 @@ public sealed class QuestionVoiceStream : IQuestionSpeech, IDisposable
             if (first)
             {
                 Move = move;
+                _firstPartAt = Stopwatch.GetTimestamp();
+                _firstPartAtUtc = DateTimeOffset.UtcNow;
                 // The step's own call context (organization, session, turn), so the voice calls are timed against it.
                 _context = ApiCallScope.Current is { } c ? new ApiCallContext(c.OrganizationId, c.SessionId) { TurnIndex = c.TurnIndex }
                     : new ApiCallContext(Organization, Session);
@@ -285,6 +302,7 @@ public sealed class QuestionVoiceStream : IQuestionSpeech, IDisposable
                 {
                     _firstAudio = true;
                     if (!_wholeText) Record("voice.question.firstAudio");
+                    if (!_wholeText && _measuredModel is not null) RecordModelFirstAudio(_measuredModel);
                 }
                 await part.Audio.Writer.WriteAsync(chunk, _synth.Token);
             }
@@ -396,6 +414,20 @@ public sealed class QuestionVoiceStream : IQuestionSpeech, IDisposable
     }
 
     /// <summary>A timing from the answer's commit to now (GAD-T495: how long the student waited for this much of the question).</summary>
+    /// <summary>
+    /// The per-model first-audio row (GAD-T617): <c>voice.question.firstAudio@&lt;model&gt;</c>, timed from the first part being handed to
+    /// ElevenLabs to its first audio, so it measures the voice model alone (not the writing of the question, which
+    /// <c>voice.question.firstAudio</c> includes). The organization settings page shows its 30-day median per voice tier.
+    /// </summary>
+    public const string ModelTimingPrefix = "voice.question.firstAudio@";
+
+    private void RecordModelFirstAudio(string model)
+    {
+        var name = ModelTimingPrefix + model;
+        if (name.Length > 80) return;   // ApiCallTiming.CallName's length; no real model id comes near it
+        _timings.Record(name, _firstPartAtUtc, (long)Stopwatch.GetElapsedTime(_firstPartAt).TotalMilliseconds, true, null, _context);
+    }
+
     private void Record(string name) =>
         _timings.Record(name, _committedAtUtc, (long)Stopwatch.GetElapsedTime(_committedAt).TotalMilliseconds, true, null, _context);
 

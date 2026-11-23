@@ -539,28 +539,40 @@ counters above.
   existing `SessionHub.Answer`. The metrics and verification advice are recomputed on the server from the relayed words.
   A server-side tap on the recognizer (so the browser never carries the text) would need a hook in the speech library.
 
-## Voice quality vs. latency (GAD-T415)
+## Voice quality vs. latency (GAD-T415, GAD-T616, GAD-T617)
 
-ElevenLabs offers several text-to-speech model tiers that trade voice quality for how long the examiner takes to start
-speaking. `Gadfly:Voice:TtsModel` already picks the tier (GAD-T303), and today defaults to the fast end of that
-tradeoff, per the owner's "fluid conversation now" call:
+ElevenLabs' text-to-speech models trade voice quality for how long the examiner takes to start speaking. An organization
+admin picks the examiner's **voice quality** tier on Organization settings (Voice exam defaults), and an exam may set its
+own in the exams manager's settings; the default is the fast end, per the owner's "fluid conversation now" call:
 
-| Tier | Example model ids | Latency | Voice quality |
+| Tier (id) | Model | Latency | Voice quality |
 |---|---|---|---|
-| Fast / low-latency (**default**) | `eleven_flash_v2_5`, `eleven_turbo_v2_5` | First audio in well under a second; this is what keeps the question-and-answer rhythm of an exam feeling live. | Noticeably more robotic/clipped than the quality tier, especially on longer or more expressive sentences. |
-| Quality | `eleven_multilingual_v2` (the library's own upstream default) | Visibly slower to start — often a second or more before the first chunk, which shows up as a longer pause before each question. | ElevenLabs' most natural-sounding voice; worth it for a recorded demo or a review, less so mid-exam. |
+| Fast (`fast`, **default**) | `eleven_flash_v2_5` | First audio in about a quarter of a second (ElevenLabs quotes a ~100 ms median of model time; network and the first part's size add the rest); this keeps the question-and-answer rhythm of an exam feeling live. | A little flatter/clipped than the quality tier, especially on longer or more expressive sentences. |
+| Quality (`quality`) | `eleven_multilingual_v2` | Visibly slower to start: often a second or more before the first chunk, which shows up as a longer pause before each question. | ElevenLabs' most natural-sounding multilingual voice; worth it for a recorded demo or a slower-paced oral, less so in a quick exchange. |
 
-**Current limitation — not yet admin-selectable per organization or per exam.** `ElevenLabsOptions.ModelId`
-(`MindAttic.Avatar.ElevenLabs`) is bound once from configuration into a singleton when the server starts
-(`AddMindAtticAvatar` in `MindAttic.Avatar.AspNetCore`) and stays fixed for the life of the process; every organization's
-voice exams on that process share it. Unlike the voice id, which `AvatarSpeechService.StreamAsync`/`AvatarSpeechHub.Speak`
-already accept as a per-call override, there is no per-call or per-session override for the model id, so Gadfly cannot
-safely let one organization run "quality" while another runs "fast" at the same time on a shared server, and changing the
-tier at all still means editing `Gadfly:Voice:TtsModel` (or `MindAttic:Avatar:ElevenLabs:ModelId`) and restarting the
-app — there's no admin screen for it yet. Filed against the library as MAA-T20 (add a per-call `modelId` override
-mirroring `voiceId`, and make the option hot-reloadable) so Gadfly can later expose a real per-organization picker in
-`OrgSettings.razor` next to the EU voice-measures toggle (GAD-T259); tracked on the Gadfly side as GAD-T415, left open
-pending that library change.
+Both speak English, Korean and Spanish (`eleven_multilingual_v2` has 29 languages, the v2.5 models 32). Checked against
+ElevenLabs' model docs on 2026-11-22, two tiers that were planned are not offered: a "balanced" tier on
+`eleven_turbo_v2_5` (deprecated, "functionally equivalent" to `eleven_flash_v2_5`), and an "expressive" one on
+`eleven_v3`/`eleven_v4` (`eleven_v4` and `eleven_v4_turbo` are served only by the Text to Dialogue API and WebSocket and have
+no speed setting; `eleven_v3` is not on the stream-input WebSocket and its support on the `stream/with-timestamps` endpoint
+the examiner uses is not documented). An expressive tier needs the avatar library to speak through the dialogue
+endpoint with word timings first.
+
+**Which model speaks** (`ExaminerTts.Choose`): the exam's tier, else the organization's (`SessionSpeech.VoiceTier`, read for
+every attempt, English ones included); a tier whose model does not speak the exam language is skipped, with one logged note
+per tier and language; then `Gadfly:Voice:TtsModels:<lang>`; then the library's model (`Gadfly:Voice:TtsModel` /
+`MindAttic:Avatar:ElevenLabs:ModelId`). With no tier set, an English exam by an English speaker goes to the library's voice
+exactly as before; an explicit Fast tier on a default deployment does too. A session whose model differs gets its own
+`ElevenLabsTtsClient` with only the model (and speed) changed (`ExaminerTts`, GAD-T530), so organizations on different tiers
+share one server safely, and no restart or library change (MAA-T20) is needed; its fixed lines are prepared in that model when
+the exam room opens. Changes are audited as `settings.voice-tier.changed` and `exam.voice-tier.changed` (before/after
+`{"voiceTier":...}`), and apply to attempts that start afterwards.
+
+**Measured latency.** In live mode every streamed question also records `voice.question.firstAudio@<model>` (GAD-T617): the
+time from its first part being handed to ElevenLabs to the first audio back, so it measures the model alone (the existing
+`voice.question.firstAudio` counts from the answer's commit and includes writing the question). Mock mode never records it.
+Organization settings shows each tier's platform-wide median and count over the last 30 days (`VoiceTierLatency`), or "No
+measurements yet"; `/healthz/call-timings` lists the rows too.
 
 ## Configuration
 
@@ -573,6 +585,7 @@ pending that library change.
 | `Gadfly:Voice:Examiners:<id>:VoiceId` / `:VoiceIds:<lang>` | That examiner's own ElevenLabs voice, for every language or one (live only). Unset: the male examiner's is `nPczCjzI2devNBz1zQrb` ("Brian"), hers the platform voice. |
 | `Gadfly:Voice:PortraitMouth` | Where the portrait's mouth is, "x,y,w" as fractions of the image (set for the default portrait; unset for a custom one means no drawn mouth). |
 | `Gadfly:Voice:TtsModel` | The examiner's ElevenLabs voice model when `MindAttic:Avatar:ElevenLabs:ModelId` isn't set (default `eleven_flash_v2_5`, low latency). |
+| Organization / exam **voice quality** (database, not configuration) | The examiner's tier, `fast` or `quality` (GAD-T617): set on Organization settings and per exam; wins over `TtsModels:<lang>` and `TtsModel` when its model speaks the exam language. Unset: the settings below and above, as before. |
 | `Gadfly:Voice:WarmPhrases` | Prepare the fixed examiner lines in the phrase cache when the first exam room opens (default true). |
 | `Gadfly:Voice:EndOfAnswerSeconds` | Shortest silence that ends an answer (2 to 15, default 4). |
 | `Gadfly:Voice:EndOfAnswerMaxSeconds` | Longest the silence may adapt to for a student who pauses long (up to 30, default 12). Both are multiplied by the extra-time accommodation. |

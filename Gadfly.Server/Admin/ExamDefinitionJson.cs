@@ -38,6 +38,8 @@ public sealed class ExamDefinition
     public string? IntegrityLevel { get; set; }
     public string? VoiceId { get; set; }
     public string? AvatarId { get; set; }
+    /// <summary>The examiner's voice quality/speed tier (GAD-T617): "fast" or "quality"; absent uses the organization's.</summary>
+    public string? VoiceTier { get; set; }
     /// <summary>Informational: what the source material and course were called where the file was exported.</summary>
     public string? CourseTitle { get; set; }
     public string? CollectionTitle { get; set; }
@@ -163,6 +165,7 @@ public static class ExamDefinitionJson
                 IntegrityLevel = exam.IntegrityLevel.ToString(),
                 VoiceId = exam.VoiceId,
                 AvatarId = exam.AvatarId,
+                VoiceTier = exam.VoiceTier,
                 CourseTitle = courseTitle,
                 CollectionTitle = collectionTitle,
                 Settings = new ExamSettingsDefinition
@@ -278,6 +281,8 @@ public static class ExamDefinitionJson
         else if (!string.IsNullOrWhiteSpace(e.VoiceId) && !Voice.ExaminerVoice.IsWellFormed(e.VoiceId))
             errors.Add("Details: the examiner voice id is not an ElevenLabs voice id (letters and digits only).");
         if ((e.AvatarId?.Trim().Length ?? 0) > 100) errors.Add("Details: the examiner avatar id is longer than 100 characters.");
+        if (!string.IsNullOrWhiteSpace(e.VoiceTier) && Voice.VoiceTier.Find(e.VoiceTier) is null)
+            errors.Add($"Details: the voice tier \"{e.VoiceTier.Trim()}\" is not one of {string.Join(", ", Voice.VoiceTier.All.Select(t => t.Id))}.");
         EnumOrNull<AssessmentMode>(e.AssessmentMode, "Details: the assessment mode", errors);
         EnumOrNull<ExamMode>(e.Mode, "Details: the answer mode", errors);
         EnumOrNull<IntegrityLevel>(e.IntegrityLevel, "Details: the integrity level", errors);
