@@ -102,7 +102,7 @@ else
             <ul>@foreach (var n in summary.Advice.Notes) { <li>@n</li> }</ul>
             <div class="gr-table-wrap">
                 <table class="grid">
-                    <thead><tr><th>AI weight</th><th>Agreement of the combined grade with the other marker (QWK)</th></tr></thead>
+                    <thead><tr><th scope="col">AI weight</th><th scope="col">Agreement of the combined grade with the other marker (QWK)</th></tr></thead>
                     <tbody>
                         @foreach (var w in summary.Advice.Weights)
                         {
@@ -115,7 +115,7 @@ else
 
             <h3>Systematic difference by group</h3>
             <p class="hint">An overall SMD can hide a gap that one group of students carries. Paste one "student email or session code, group" per line. The list is used for this check only and is never stored.</p>
-            <div class="gr-form-row gr-wide"><textarea rows="5" @bind="grouping" placeholder="student@example.edu, group A"></textarea></div>
+            <div class="gr-form-row gr-wide"><textarea rows="5" @bind="grouping" placeholder="student@example.edu, group A" aria-label="Students and their groups, one per line"></textarea></div>
             <div class="gr-actions">
                 <button type="button" disabled="@busy" @onclick="CheckGroupsAsync">Check by group</button>
                 @if (Gadfly.Server.Analytics.GroupFairness.ViewerAllowed(Tenant.Role))
@@ -137,7 +137,7 @@ else
             {
                 <div class="gr-table-wrap">
                     <table class="grid">
-                        <thead><tr><th>Group</th><th>Answers</th><th>SMD (panel vs markers)</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+                        <thead><tr><th scope="col">Group</th><th scope="col">Answers</th><th scope="col">SMD (panel vs markers)</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
                         <tbody>
                             @foreach (var g in summary.Groups)
                             {
@@ -157,7 +157,7 @@ else
                 <summary>Every double-marked answer (@summary.Items.Count)</summary>
                 <div class="gr-table-wrap">
                     <table class="grid">
-                        <thead><tr><th>Session</th><th>Objective</th><th>Panel</th><th>First examiner</th><th>Second marker</th><th>Panel members</th></tr></thead>
+                        <thead><tr><th scope="col">Session</th><th scope="col">Objective</th><th scope="col">Panel</th><th scope="col">First examiner</th><th scope="col">Second marker</th><th scope="col">Panel members</th></tr></thead>
                         <tbody>
                             @foreach (var i in summary.Items)
                             {

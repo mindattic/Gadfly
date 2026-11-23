@@ -53,7 +53,7 @@ else
                 {
                     <div class="gr-table-wrap">
                         <table class="grid">
-                            <thead><tr><th>Member</th><th>Model</th><th>Input tokens (est.)</th><th>Output tokens (est.)</th><th>Cost (est.)</th></tr></thead>
+                            <thead><tr><th scope="col">Member</th><th scope="col">Model</th><th scope="col">Input tokens (est.)</th><th scope="col">Output tokens (est.)</th><th scope="col">Cost (est.)</th></tr></thead>
                             <tbody>@foreach (var c in plan.Cost) { <tr><td>@c.Provider</td><td>@c.Model</td><td>@c.InputTokens.ToString("N0")</td><td>@c.OutputTokens.ToString("N0")</td><td>$@c.Usd.ToString("0.00")</td></tr> }</tbody>
                         </table>
                     </div>
@@ -81,7 +81,7 @@ else
                         {
                             <div class="gr-table-wrap">
                                 <table class="grid">
-                                    <thead><tr><th>Probe</th><th>Mean shift (% of maximum)</th><th>Answers past the tolerance</th></tr></thead>
+                                    <thead><tr><th scope="col">Probe</th><th scope="col">Mean shift (% of maximum)</th><th scope="col">Answers past the tolerance</th></tr></thead>
                                     <tbody>
                                         @foreach (var (probe, shift) in r.MeanShiftPercent)
                                         {
@@ -124,7 +124,7 @@ else
                     {
                         <div class="gr-table-wrap">
                             <table class="grid">
-                                <thead><tr><th>Form</th><th>Marks</th><th>Mean level</th><th>Shift from original (levels)</th><th>Panel's shift (levels)</th></tr></thead>
+                                <thead><tr><th scope="col">Form</th><th scope="col">Marks</th><th scope="col">Mean level</th><th scope="col">Shift from original (levels)</th><th scope="col">Panel's shift (levels)</th></tr></thead>
                                 <tbody>
                                     @foreach (var v in res.Variants)
                                     {

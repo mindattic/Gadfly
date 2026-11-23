@@ -2,47 +2,48 @@
 /* The mock-mode badge colour, same values as demo.css's --mock-tag-bg/--mock-tag-ink (GAD-T396): kept here too so it
    stays correct in dark mode on a grading page even when demo.css isn't loaded. */
 :root { --mock-tag-bg: #8a5a00; --mock-tag-ink: #ffffff; }
-@media (prefers-color-scheme: dark) { :root { --mock-tag-bg: #f0c050; --mock-tag-ink: #1d1d1f; } }
-.gr-filters { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: end; margin-bottom: 1rem; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --mock-tag-bg: #f0c050; --mock-tag-ink: #1d1d1f; } }
+:root[data-theme="dark"] { --mock-tag-bg: #f0c050; --mock-tag-ink: #1d1d1f; }
+.gr-filters { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: end; margin-bottom: var(--space-4); }
 .gr-filters label { margin: 0; }
-.gr-status { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-size: .8rem; border: 1px solid var(--line); white-space: nowrap; }
+.gr-status { display: inline-block; padding: .1rem var(--space-2); border-radius: var(--radius-pill); font-size: var(--text-xs); border: 1px solid var(--border-strong); white-space: nowrap; }
 .gr-status.s-HumanReviewPending, .gr-status.s-AwaitingFinalApproval { border-color: var(--accent); color: var(--accent); }
 .gr-status.s-ReconciliationRequired, .gr-status.s-TranscriptVerificationPending, .gr-status.s-UnderAppeal { border-color: var(--error); color: var(--error); }
 .gr-status.s-Finalized, .gr-status.s-Published, .gr-status.s-Amended { border-color: var(--ok); color: var(--ok); }
 /* The same mock-mode colour as demo.css's .mock-label (GAD-T396): fixed hex before, so it didn't stay legible in dark mode. */
-.gr-mock { display: inline-block; padding: .1rem .45rem; border-radius: 4px; background: var(--mock-tag-bg, #8a5a00); color: var(--mock-tag-ink, #fff); font-weight: 700; font-size: .75rem; letter-spacing: .04em; }
-.gr-banner { padding: .75rem 1rem; border-radius: var(--radius); border: 1px solid var(--line); background: var(--panel); margin: 0 0 1rem; }
-.gr-banner.warn { border-color: var(--error); }
-.gr-banner.mock { border-color: var(--mock-tag-bg, #8a5a00); }
-.gr-summary { display: grid; gap: .5rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); margin-bottom: 1rem; }
+.gr-mock { display: inline-block; padding: .1rem var(--space-2); border-radius: var(--radius-sm); background: var(--mock-tag-bg, #8a5a00); color: var(--mock-tag-ink, #fff); font-weight: 700; font-size: var(--text-xs); letter-spacing: .04em; }
+.gr-banner { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border); border-left-width: 4px; background: var(--panel); margin: 0 0 var(--space-4); }
+.gr-banner.warn { border-left-color: var(--warn); background: var(--warn-tint); }
+.gr-banner.mock { border-left-color: var(--mock-tag-bg, #8a5a00); }
+.gr-summary { display: grid; gap: var(--space-2) var(--space-5); grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); margin-bottom: var(--space-4); }
 .gr-summary .hint { display: block; }
-.gr-section { margin-top: 2rem; }
-.gr-response { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: .75rem 1rem; margin-bottom: .75rem; }
-.gr-response.needs-human { border-color: var(--error); }
-.gr-response .q { margin: .25rem 0; font-weight: 600; }
-.gr-response blockquote { margin: .4rem 0; padding: .4rem .75rem; border-left: 3px solid var(--accent); white-space: pre-wrap; }
-.gr-response blockquote.original { border-left-color: var(--line); color: var(--muted); }
-.gr-objective { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); padding: 1rem; margin-bottom: 1rem; }
-.gr-objective h3 { margin: 0 0 .25rem; }
-.gr-two { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
+.gr-section { margin-top: var(--space-6); }
+.gr-response { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); min-width: 0; overflow-wrap: break-word; }
+.gr-response.needs-human { border-color: var(--error); border-left-width: 4px; }
+.gr-response .q { margin: var(--space-1) 0; font-weight: 600; }
+.gr-response blockquote { margin: var(--space-2) 0; padding: var(--space-2) var(--space-3); border-left: 3px solid var(--accent); white-space: pre-wrap; }
+.gr-response blockquote.original { border-left-color: var(--border-strong); color: var(--muted); }
+.gr-objective { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel); padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-5)); margin-bottom: var(--space-4); min-width: 0; }
+.gr-objective h3 { margin: 0 0 var(--space-1); }
+.gr-two { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
 .gr-two > div { min-width: 0; }
-.gr-form-row { display: grid; gap: .5rem 1rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); align-items: end; }
+.gr-form-row { display: grid; gap: var(--space-2) var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); align-items: end; }
 .gr-form-row label { margin: 0; }
 .gr-form-row textarea, .gr-wide textarea { width: 100%; }
-.gr-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin-top: .75rem; }
-.gr-flags { margin: .25rem 0; padding-left: 1.1rem; }
-.gr-flags li { font-size: .9rem; }
+.gr-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-top: var(--space-3); }
+.gr-flags { margin: var(--space-1) 0; padding-left: var(--space-5); }
+.gr-flags li { font-size: var(--text-sm); }
 .gr-dissent { color: var(--error); }
 .gr-band-MandatoryReconciliation { color: var(--error); font-weight: 600; }
 .gr-band-AdditionalReview { color: var(--accent); }
-.gr-audit td { font-size: .85rem; vertical-align: top; }
-.gr-hidden { padding: .75rem 1rem; border: 1px dashed var(--line); border-radius: var(--radius); color: var(--muted); }
+.gr-audit td { font-size: var(--text-sm); vertical-align: top; }
+.gr-hidden { padding: var(--space-3) var(--space-4); border: 1px dashed var(--border-strong); border-radius: var(--radius-md); color: var(--muted); }
 .gr-report .gr-objective { break-inside: avoid; }
 .gr-table-wrap { overflow-x: auto; }
 /* The queue's pager (GAD-T390), same pattern as the admin-people pages' .pager. */
-.pager { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; margin: .5rem 0 1.5rem; font-size: .92rem; }
-@media (max-width: 640px) {
-    .gr-summary { grid-template-columns: 1fr 1fr; }
+.pager { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; margin: var(--space-2) 0 var(--space-5); font-size: var(--text-sm); }
+@media (max-width: 39.99rem) {
+    .gr-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* Printing (GAD-T397): the report's panels keep their border but print on white paper regardless of the screen's theme
@@ -54,7 +55,7 @@
 }
 
 /* Speech-recognition notes on voice responses (GAD-T265). */
-.gr-speech { margin: .3rem 0; font-size: .9rem; }
-.gr-speech.corrected { color: var(--ink); border-left: 3px solid var(--accent); padding-left: .6rem; }
-.gr-speech.unsure { color: var(--ink); border-left: 3px solid var(--error); padding-left: .6rem; }
+.gr-speech { margin: var(--space-1) 0; font-size: var(--text-sm); }
+.gr-speech.corrected { color: var(--ink); border-left: 3px solid var(--accent); padding-left: var(--space-2); }
+.gr-speech.unsure { color: var(--ink); border-left: 3px solid var(--warn); padding-left: var(--space-2); }
 .gr-speech mark { background: color-mix(in srgb, var(--error) 22%, transparent); color: inherit; padding: 0 .15rem; border-radius: 3px; }

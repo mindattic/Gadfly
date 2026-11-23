@@ -24,7 +24,7 @@
     {
         <table class="grid">
             <caption>@(grouped ? "By the grouping you supplied" : "By fillers and repetitions in the recognized answers (a proxy, not a diagnosis)") · @GroupFairness.Total(report.Responses, report.TotalWithheld, "spoken answer(s)")</caption>
-            <thead><tr><th>Group</th><th>Students</th><th>Answers</th><th>With a reference (human listener)</th><th>Word error rate</th><th>Answers corrected</th><th>Words the recognizer was unsure of</th><th>Mean recognizer confidence</th></tr></thead>
+            <thead><tr><th scope="col">Group</th><th scope="col">Students</th><th scope="col">Answers</th><th scope="col">With a reference (human listener)</th><th scope="col">Word error rate</th><th scope="col">Answers corrected</th><th scope="col">Words the recognizer was unsure of</th><th scope="col">Mean recognizer confidence</th></tr></thead>
             <tbody>
                 @foreach (var g in report.Groups)
                 {
@@ -50,7 +50,7 @@
         </table>
         @foreach (var w in report.Warnings)
         {
-            <p class="notice" role="status">@w</p>
+            <p class="notice warn" role="status">@w</p>
         }
         @if (!grouped)
         {

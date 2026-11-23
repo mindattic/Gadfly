@@ -27,7 +27,7 @@
     <h2 class="gr-section">@T["report.objectives"]</h2>
     <div class="gr-table-wrap">
         <table class="grid">
-            <thead><tr><th>@T["report.objective"]</th><th>@T["report.max"]</th><th>@T["report.weight"]</th><th>@T["report.aiScore"]</th><th>@T["report.humanScore"]</th><th>@T["report.combined"]</th>@if (ShowFollowUps) { <th>Follow-ups</th> }</tr></thead>
+            <thead><tr><th scope="col">@T["report.objective"]</th><th scope="col">@T["report.max"]</th><th scope="col">@T["report.weight"]</th><th scope="col">@T["report.aiScore"]</th><th scope="col">@T["report.humanScore"]</th><th scope="col">@T["report.combined"]</th>@if (ShowFollowUps) { <th scope="col">Follow-ups</th> }</tr></thead>
             <tbody>
                 @foreach (var o in Report.Objectives)
                 {

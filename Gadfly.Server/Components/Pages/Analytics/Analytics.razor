@@ -16,7 +16,7 @@
 
 @if (denied)
 {
-    <p class="notice" role="alert">Your role in this organization does not include analytics (ViewAnalytics). The attempt was recorded.</p>
+    <p class="notice error" role="alert">Your role in this organization does not include analytics (ViewAnalytics). The attempt was recorded.</p>
 }
 else if (report is null)
 {
@@ -48,7 +48,7 @@ else
                 }
             </select>
         </label>
-        <a class="button-link" href="@AnalyticsEndpoints.CsvPath(Scope)" download data-enhance-nav="false">Export CSV</a>
+        <a class="button" href="@AnalyticsEndpoints.CsvPath(Scope)" download data-enhance-nav="false">Export CSV</a>
         <span class="hint">Generated @AdminDb.When(report.GeneratedAt)</span>
     </div>
 
@@ -107,6 +107,11 @@ else
                                     <rect class="seg lv@(l)" x="@P(x)" y="0" width="@P(w)" height="100%">
                                         <title>Level @l @MasteryLevels.Label((MasteryLevel)l): @n of @m.Total (@AnalyticsService.Pct(n / (double)m.Total))</title>
                                     </rect>
+                                    @if (w >= 6)
+                                    {
+                                        @* Razor reserves <text>, so the SVG element is written as markup (numbers only). *@
+                                        @((MarkupString)$"<text class=\"seg-level lv{l}\" x=\"{P(x + w / 2)}\" y=\"50%\" aria-hidden=\"true\">{l}</text>")
+                                    }
                                     x += w;
                                 }
                             </svg>
@@ -118,7 +123,7 @@ else
             <details>
                 <summary>Show as table</summary>
                 <table class="grid">
-                    <thead><tr><th>Objective</th>@if (ShowExam) { <th>Assessment</th> }@for (var l = 0; l <= 5; l++) { <th>@l</th> }<th>Mean (1–5)</th><th>At 1–2</th></tr></thead>
+                    <thead><tr><th scope="col">Objective</th>@if (ShowExam) { <th scope="col">Assessment</th> }@for (var l = 0; l <= 5; l++) { <th scope="col">@l</th> }<th scope="col">Mean (1–5)</th><th scope="col">At 1–2</th></tr></thead>
                     <tbody>
                         @foreach (var m in report.ObjectiveMastery.Where(m => m.Source == source))
                         {
@@ -135,7 +140,7 @@ else
             <h3>Engine mastery estimate by concept</h3>
             <p class="hint">The Socratic engine's running estimate (0–1) at the end of each session. It steers questioning; it is not a rubric level or a grade.</p>
             <table class="grid">
-                <thead><tr><th>Concept</th>@if (ShowExam) { <th>Assessment</th> }<th>Sessions</th><th>Mean estimate</th><th>Mastered</th><th>Open</th><th>Aporia</th><th>Exhausted</th></tr></thead>
+                <thead><tr><th scope="col">Concept</th>@if (ShowExam) { <th scope="col">Assessment</th> }<th scope="col">Sessions</th><th scope="col">Mean estimate</th><th scope="col">Mastered</th><th scope="col">Open</th><th scope="col">Aporia</th><th scope="col">Exhausted</th></tr></thead>
                 <tbody>
                     @foreach (var c in report.ConceptMastery)
                     {
@@ -163,7 +168,7 @@ else
         else
         {
             <table class="grid">
-                <thead><tr><th>Objective or concept</th>@if (ShowExam) { <th>Assessment</th> }<th>Based on</th><th>Finding</th><th>n</th></tr></thead>
+                <thead><tr><th scope="col">Objective or concept</th>@if (ShowExam) { <th scope="col">Assessment</th> }<th scope="col">Based on</th><th scope="col">Finding</th><th scope="col">n</th></tr></thead>
                 <tbody>
                     @foreach (var g in report.Gaps)
                     {
@@ -181,7 +186,7 @@ else
         else
         {
             <table class="grid">
-                <thead><tr><th>Misconception</th><th>Objective</th><th>Examinations</th><th>Mentions</th><th>From</th></tr></thead>
+                <thead><tr><th scope="col">Misconception</th><th scope="col">Objective</th><th scope="col">Examinations</th><th scope="col">Mentions</th><th scope="col">From</th></tr></thead>
                 <tbody>
                     @foreach (var m in report.Misconceptions.Take(misconceptionLimit))
                     {
@@ -206,7 +211,7 @@ else
         else
         {
             <table class="grid">
-                <thead><tr><th>Assessment</th><th>Assigned</th><th>Started</th><th>Completed</th><th>In progress</th><th>Failed sessions</th><th>Completion</th></tr></thead>
+                <thead><tr><th scope="col">Assessment</th><th scope="col">Assigned</th><th scope="col">Started</th><th scope="col">Completed</th><th scope="col">In progress</th><th scope="col">Failed sessions</th><th scope="col">Completion</th></tr></thead>
                 <tbody>
                     @foreach (var c in report.Completion)
                     {
@@ -223,7 +228,7 @@ else
     @* ------------------------------------------------------------ AI-human agreement *@
     <section class="analytics-section" aria-labelledby="h-agreement">
         <h2 id="h-agreement">AI–human scoring agreement</h2>
-        <p class="notice caveat"><strong>Agreement is not validity.</strong> @AnalyticsService.AgreementCaveat</p>
+        <p class="notice info"><strong>Agreement is not validity.</strong> @AnalyticsService.AgreementCaveat</p>
         @{ var a = report.Agreement; }
         @if (a.Pairs == 0)
         {
@@ -238,7 +243,7 @@ else
                 <div class="stat"><span class="label">Mean absolute difference</span><span class="value">@(a.MeanAbsPoints?.ToString("0.0") ?? "—")</span><span class="hint">points of 100</span></div>
             </div>
             <table class="grid">
-                <thead><tr><th>Objective</th><th>Pairs</th><th>Same level</th><th>Within one</th><th>Mean AI − human</th><th>Mean |difference|</th></tr></thead>
+                <thead><tr><th scope="col">Objective</th><th scope="col">Pairs</th><th scope="col">Same level</th><th scope="col">Within one</th><th scope="col">Mean AI − human</th><th scope="col">Mean |difference|</th></tr></thead>
                 <tbody>
                     @foreach (var o in a.ByObjective)
                     {
@@ -266,7 +271,7 @@ else
             <div class="analytics-cols">
                 <table class="grid">
                     <caption>Corrections by kind</caption>
-                    <thead><tr><th>Kind</th><th>Versions</th><th>Per 100 responses</th></tr></thead>
+                    <thead><tr><th scope="col">Kind</th><th scope="col">Versions</th><th scope="col">Per 100 responses</th></tr></thead>
                     <tbody>
                         @foreach (var (k, v) in c2.VersionsByKind)
                         {
@@ -276,7 +281,7 @@ else
                 </table>
                 <table class="grid">
                     <caption>Clarification questions</caption>
-                    <thead><tr><th>Type</th><th>Asked</th></tr></thead>
+                    <thead><tr><th scope="col">Type</th><th scope="col">Asked</th></tr></thead>
                     <tbody>
                         @foreach (var (k, v) in c2.ClarificationsByType)
                         {
@@ -287,7 +292,7 @@ else
                 </table>
                 <table class="grid">
                     <caption>Verification state now</caption>
-                    <thead><tr><th>State</th><th>Responses</th></tr></thead>
+                    <thead><tr><th scope="col">State</th><th scope="col">Responses</th></tr></thead>
                     <tbody>
                         @foreach (var (k, v) in c2.VerificationStates.Where(x => x.Value > 0))
                         {
@@ -318,7 +323,7 @@ else
             var max = Math.Max(1, r.JudgeAgreementBuckets.Max());
             <table class="grid">
                 <caption>Judge panel agreement per answer</caption>
-                <thead><tr><th>Agreement</th><th>Answers</th><th><span class="visually-hidden">Bar</span></th></tr></thead>
+                <thead><tr><th scope="col">Agreement</th><th scope="col">Answers</th><th scope="col"><span class="visually-hidden">Bar</span></th></tr></thead>
                 <tbody>
                     @for (var i = 0; i < 5; i++)
                     {

@@ -69,7 +69,7 @@ else
 {
     <p class="hint"><a href="@($"grading/exam/{ExamId:D}/class-summary.pdf")" download data-enhance-nav="false">Download class summary (PDF)</a>: score distribution, per-objective average and who hasn't completed, over this exam's released results.</p>
     <table class="grid">
-        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Answers</th><th>Eye contact</th><th>Leaving the window</th><th>Lives in EU/EEA</th><th>Latest session</th><th>Results</th></tr></thead>
+        <thead><tr><th scope="col">Student</th><th scope="col">Window</th><th scope="col">Attempts</th><th scope="col">Extra time</th><th scope="col">Answers</th><th scope="col">Eye contact</th><th scope="col">Leaving the window</th><th scope="col">Lives in EU/EEA</th><th scope="col">Latest session</th><th scope="col">Results</th></tr></thead>
         <tbody>
             @foreach (var r in rows)
             {

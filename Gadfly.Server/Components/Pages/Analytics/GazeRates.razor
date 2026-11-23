@@ -21,7 +21,7 @@
         <table class="grid">
             @* GAD-T486: the total would give a withheld group's count away, so it is withheld with it. *@
             <caption>@Caption · @GroupFairness.Total(report.Sessions, report.TotalWithheld, "answered session(s)")</caption>
-            <thead><tr><th>Group</th><th>Students</th><th>Sessions</th><th>Answering minutes</th><th>Look-aways / 10 min</th><th>Reading-like / 10 min</th><th>Fades / 10 min</th><th>Time faded</th><th>Sessions with a fade</th><th>Spoken requests / 10 min</th></tr></thead>
+            <thead><tr><th scope="col">Group</th><th scope="col">Students</th><th scope="col">Sessions</th><th scope="col">Answering minutes</th><th scope="col">Look-aways / 10 min</th><th scope="col">Reading-like / 10 min</th><th scope="col">Fades / 10 min</th><th scope="col">Time faded</th><th scope="col">Sessions with a fade</th><th scope="col">Spoken requests / 10 min</th></tr></thead>
             <tbody>
                 @foreach (var g in report.Groups)
                 {
@@ -53,7 +53,7 @@
             <p class="hint">@GazeFlagRates.FaceCaveat</p>
             <table class="grid">
                 <caption>@Caption</caption>
-                <thead><tr><th>Group</th><th>Students</th><th>No face / 10 min</th><th>Second face / 10 min</th><th>Changed face / 10 min</th><th>Sessions with a quality score</th><th>Median quality</th><th>Poor quality</th><th>Calibrated to the screen</th></tr></thead>
+                <thead><tr><th scope="col">Group</th><th scope="col">Students</th><th scope="col">No face / 10 min</th><th scope="col">Second face / 10 min</th><th scope="col">Changed face / 10 min</th><th scope="col">Sessions with a quality score</th><th scope="col">Median quality</th><th scope="col">Poor quality</th><th scope="col">Calibrated to the screen</th></tr></thead>
                 <tbody>
                     @foreach (var g in report.Groups)
                     {
@@ -81,7 +81,7 @@
         }
         @foreach (var w in report.Warnings)
         {
-            <p class="notice" role="status">@w</p>
+            <p class="notice warn" role="status">@w</p>
         }
         @if (grouped && (report.Unplaced > 0 || unmatched > 0))
         {
@@ -100,7 +100,7 @@
             {
                 <table class="grid">
                     <caption>Faded answers against the same students' other answers@(byQuality ? " (grouped by eye-contact accommodation)" : "")</caption>
-                    <thead><tr><th>Group</th><th>Students</th><th>Students compared</th><th>Faded answers</th><th>Judged score, faded − other</th><th>Answer length, faded − other</th><th>Next answer − clean answers</th></tr></thead>
+                    <thead><tr><th scope="col">Group</th><th scope="col">Students</th><th scope="col">Students compared</th><th scope="col">Faded answers</th><th scope="col">Judged score, faded − other</th><th scope="col">Answer length, faded − other</th><th scope="col">Next answer − clean answers</th></tr></thead>
                     <tbody>
                         @foreach (var g in fade.Groups.Prepend(fade.Overall))
                         {
@@ -125,7 +125,7 @@
                 </table>
                 @foreach (var w in fade.Warnings)
                 {
-                    <p class="notice" role="status">@w</p>
+                    <p class="notice warn" role="status">@w</p>
                 }
             }
         }

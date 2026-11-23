@@ -91,7 +91,7 @@ else
         @if (integrity.Lines.Count > 0)
         {
             <table class="grid">
-                <thead><tr><th>Signal</th><th>Source</th><th>Times</th><th>Total time</th><th>Turns</th><th>What it means</th></tr></thead>
+                <thead><tr><th scope="col">Signal</th><th scope="col">Source</th><th scope="col">Times</th><th scope="col">Total time</th><th scope="col">Turns</th><th scope="col">What it means</th></tr></thead>
                 <tbody>
                     @foreach (var l in integrity.Lines)
                     {
@@ -204,7 +204,7 @@ else
                             @if (j.Criteria.Count > 0)
                             {
                                 <table class="grid criteria">
-                                    <thead><tr><th>Criterion</th><th>Score</th><th>Why</th></tr></thead>
+                                    <thead><tr><th scope="col">Criterion</th><th scope="col">Score</th><th scope="col">Why</th></tr></thead>
                                     <tbody>
                                         @foreach (var c in j.Criteria)
                                         {
@@ -300,13 +300,13 @@ else
             objective above and in the AI report.
         </p>
         <table class="grid">
-            <thead><tr><th>Concept</th><th>Running estimate (steering only)</th><th>Questions</th><th>Status</th></tr></thead>
+            <thead><tr><th scope="col">Concept</th><th scope="col">Running estimate (steering only)</th><th scope="col">Questions</th><th scope="col">Status</th></tr></thead>
             <tbody>
                 @foreach (var m in view.Mastery)
                 {
                     <tr>
                         <td>@m.ConceptTitle</td>
-                        <td><span class="bar" style="--v:@((int)Math.Round(m.Estimate * 100))%"></span> @Pct(m.Estimate)</td>
+                        <td><span class="bar" aria-hidden="true" style="--v:@((int)Math.Round(m.Estimate * 100))%"></span> @Pct(m.Estimate)</td>
                         <td>@m.Turns</td>
                         <td>@m.Status</td>
                     </tr>
@@ -345,7 +345,7 @@ else
     {
         <h2 class="section">Earlier instructor decisions</h2>
         <table class="grid">
-            <thead><tr><th>When</th><th>By</th><th>Grade</th><th>Score</th><th title="Whether the grade differs from the AI's objective levels">Override</th><th>Comment</th></tr></thead>
+            <thead><tr><th scope="col">When</th><th scope="col">By</th><th scope="col">Grade</th><th scope="col">Score</th><th scope="col" title="Whether the grade differs from the AI's objective levels">Override</th><th scope="col">Comment</th></tr></thead>
             <tbody>
                 @foreach (var (g, by) in view.Grades)
                 {

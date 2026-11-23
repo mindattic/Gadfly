@@ -393,3 +393,39 @@ status (`Pages/Admin/*`), `OrgMembers`, `Platform*`; stylesheets `admin*.css`, `
 - **Reflow.** Each row wraps (badge, title, date, then the button) and long titles and bodies break anywhere, so
   320px has no sideways scroll; the body keeps its line breaks (`pre-line`) at text-spacing overrides.
 - **Links.** A message's "Open" button follows only app-relative links.
+
+### Staff work pages (GAD-T696)
+
+Analytics, help, guided tours, source library, review, grading (all but the student's own result) and the exam and
+assessment editors.
+
+- **Tokens.** `analytics.css`, `help.css`, `tour.css`, `sources.css`, `review.css`, `grading.css`, `assessments.css`
+  and the builder rules in `exams.css` use the space, type, radius, border and shadow tokens instead of literal sizes.
+  Removed what `app.css` now covers: `.button-link` (the CSV export is a `.button`), the second `.visually-hidden`,
+  `label.check`, the global `input, select, textarea` width rule, `.analytics-section caption`, and the phone rule that
+  turned analytics tables into `display: block` (`.grid` already scrolls in its own box below 900px).
+- **Status colours.** `review.css` no longer repaints `.notice.warn` red; warnings use `--warn` and its tint
+  (integrity summaries marked minor, medium-severity integrity notes, the grading warn banner, unsure speech words),
+  errors stay `--error`. The "judges disagreed" banner text is `--danger-ink` on `--error` (it was `--panel`). The
+  mock-mode badge colours in `grading.css` now also follow an explicit `data-theme`.
+- **Charts.** Each segment of a mastery bar wide enough to hold it prints its level number, so a level never rests on
+  the blue ramp alone (WCAG 1.4.1); the number's ink flips with the ramp in dark mode. The bar keeps its `aria-label`
+  with every count, and "Show as table" stays. Meters stay decorative (`aria-hidden`, value printed beside them) and
+  their track now has a `--border-strong` outline; the review page's concept-estimate bar is `aria-hidden` too.
+- **Notices.** Access-denied notices are `.notice.error` with `role="alert"`; the fairness, gaze and speech-recognition
+  warnings are `.notice.warn`; caveats ("Agreement is not validity", "The typed group chose itself") are `.notice.info`;
+  the help "nothing matched", sign-in and missing-text notices say their status by class.
+- **Tables.** Every header cell in a `<thead>` on these pages has `scope="col"`.
+- **Labels.** The source library's file picker and the rubric's understanding, variant and misconception rows (which
+  had only placeholders), and the panel-calibration grouping box, now have accessible names.
+- **Help.** The topic contents and the search row wrap at 320px; contents links and the summary meet `--target-min`;
+  the guide text keeps to `--measure` and long code wraps instead of widening the page; tip and warning callouts get
+  the `--ok`/`--warn` tints; the search breadcrumb marks the current page with `aria-current`. The contents column now
+  folds above the text below 64rem (it was 820px).
+- **Tours.** The callout uses `--radius-lg` and `--shadow-3`, scrolls itself when taller than the screen, and the
+  launch button meets `--target-min`.
+- **Responsive.** Grids use `minmax(0, 1fr)` / `min(…, 100%)` so long titles, objective names and source lines wrap
+  instead of pushing the page sideways; breakpoints moved to the system's 40rem / 64rem.
+- **Not done here.** `AssessmentEditor.razor` and `GradingSession.razor` were being changed by GAD-T703 at the same time,
+  so only their stylesheets were touched, not their markup (their table headers still lack `scope`). `MyResult.razor`
+  belongs to GAD-T693.

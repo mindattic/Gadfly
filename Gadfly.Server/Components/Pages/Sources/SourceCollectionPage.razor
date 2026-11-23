@@ -36,7 +36,7 @@ else if (collection is not null)
     <div class="src-columns">
         <section class="panel">
             <h2>Upload documents</h2>
-            <InputFile OnChange="UploadAsync" multiple accept="@SourceLibraryService.AcceptAttribute" disabled="@(uploading || JobActive)" />
+            <InputFile OnChange="UploadAsync" aria-label="Documents to upload" multiple accept="@SourceLibraryService.AcceptAttribute" disabled="@(uploading || JobActive)" />
             <p class="hint">
                 Plain text and Markdown (@string.Join(", ", SourceLibraryService.AcceptedExtensions)), up to
                 @(SourceLibraryService.MaxFileBytes / (1024 * 1024)) MB each. PDF, Word (DOCX), EPUB and HTML are also
@@ -78,7 +78,7 @@ else if (collection is not null)
     else
     {
         <table class="grid">
-            <thead><tr><th>File</th><th>Size</th><th>Passages</th><th>Status</th></tr></thead>
+            <thead><tr><th scope="col">File</th><th scope="col">Size</th><th scope="col">Passages</th><th scope="col">Status</th></tr></thead>
             <tbody>
                 @foreach (var d in documents)
                 {
@@ -182,7 +182,7 @@ else if (collection is not null)
                         @foreach (var row in rubricForm.Understanding)
                         {
                             <div class="src-row">
-                                <input class="src-text" @bind="row.Text" placeholder="A point a good answer covers" />
+                                <input class="src-text" @bind="row.Text" placeholder="A point a good answer covers" aria-label="Understanding point" />
                                 <label class="src-weight">Weight <input type="number" step="0.1" min="0.1" max="100" @bind="row.Weight" /></label>
                                 <button class="link" @onclick="() => rubricForm.Understanding.Remove(row)">Remove</button>
                             </div>
@@ -192,7 +192,7 @@ else if (collection is not null)
                         @foreach (var row in rubricForm.Variants)
                         {
                             <div class="src-row">
-                                <input class="src-text" @bind="row.Text" placeholder="An acceptable variant" />
+                                <input class="src-text" @bind="row.Text" placeholder="An acceptable variant" aria-label="Acceptable variant" />
                                 <button class="link" @onclick="() => rubricForm.Variants.Remove(row)">Remove</button>
                             </div>
                         }
@@ -201,7 +201,7 @@ else if (collection is not null)
                         @foreach (var row in rubricForm.Misconceptions)
                         {
                             <div class="src-row">
-                                <input class="src-text" @bind="row.Text" placeholder="A wrong belief to watch for" />
+                                <input class="src-text" @bind="row.Text" placeholder="A wrong belief to watch for" aria-label="Misconception" />
                                 <button class="link" @onclick="() => rubricForm.Misconceptions.Remove(row)">Remove</button>
                             </div>
                         }
