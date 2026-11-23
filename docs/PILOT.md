@@ -11,6 +11,7 @@ feedback becomes tickets. It is ready to start as soon as the owner says go. Not
 | Pick the ElevenLabs voice (D4) | Owner | Needed for every live session: every exam is spoken by the examiner, also for a student granted typed answers. Mock mode needs no voice. |
 | Answer D24 (staff MFA) | Owner | Erin's teacher account needs an authenticator app unless D24 = B. |
 | Create Erin's organization and teacher account | Claude, on the owner's word | Her own organization, separate from the "Gadfly Classroom" test data. She gets an email invitation (or a temporary password if email isn't set up). |
+| Seed the accounts (GAD-T226) | Claude, on the owner's word | `Gadfly.Server --seed-pilot --then-exit` (development, or `Gadfly:Demo:AllowPilotSeed=true`) creates the organization "Erin's Pilot" with `erin` as Owner and `ryan` as a Student. Existing `erin` and `ryan` accounts are reused with their passwords. |
 | Students | Erin | Real students, or the owner and friends playing students. At least five sessions in total (the ticket's target). |
 
 ## What Erin does
