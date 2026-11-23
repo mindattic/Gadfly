@@ -38,7 +38,7 @@ output is schema-validated and treated as a recommendation.
 
 | Master plan | What it requires | Where it lives | Tickets | Status |
 |---|---|---|---|---|
-| Part 1 | Product vision: Socratic examination, mandatory human grading | This document; [MASTER-PLAN-STATUS.md](MASTER-PLAN-STATUS.md) | GAD-T79 | built |
+| Part 1 | Product vision: Socratic examination; human grading per exam since GAD-T703 (owner decision 2026-11-23) | This document; [MASTER-PLAN-STATUS.md](MASTER-PLAN-STATUS.md) | GAD-T79 | built |
 | Part 2.1-2.2 | Adaptive Socratic examination | `Gadfly/Engine` (`SocraticSession`, `QuestionPlanner`), `Gadfly.Sources/SourceExamRunner.cs` (`SourceExamEngine`) | GAD-T35, T44 | built |
 | Part 2.3 | Strategies A-H | `MoveKind` (Gadfly/Engine/Moves.cs), see the table in section 3 | GAD-T90 | built |
 | Part 2.4 | Adaptive question selection by information value | `QuestionPlanner`, `MoveProfiles` (Gadfly/Engine/Objectives.cs) | GAD-T89, T90 | built |
@@ -360,6 +360,7 @@ stateDiagram-v2
     ExaminationCompleted --> AiGradingPending
     TranscriptVerificationPending --> AiGradingPending
     AiGradingPending --> HumanReviewPending
+    AiGradingPending --> Finalized: AI-only grading
     HumanReviewPending --> ReconciliationRequired
     HumanReviewPending --> AwaitingFinalApproval
     ReconciliationRequired --> AwaitingFinalApproval
@@ -377,14 +378,38 @@ stateDiagram-v2
 ```
 
 A student sees a grade only in Published, Under Appeal or Amended (`GradeStatusMachine.IsVisibleToStudent`).
-Publication requires Finalized, which requires an approval; there is no edge from any AI stage to Finalized.
+Publication requires Finalized, which requires an approval. The one edge from an AI stage to Finalized, AI Grading Pending →
+Finalized, exists only for an exam whose grading mode is `AiOnly` (`GradeStatusMachine.CanMove(from, to, mode)`): the system
+finalizes and publishes the AI's grade, writing the Finalize and Publish approval records itself. This is an owner decision
+(2026-11-23, GAD-T703) that overrides the dissertation's Part 8.1 rule that a human examiner takes part in every grade.
 
 ---
 
 ## 8 Grading and approval workflow
 
 Part 11.1's stages, as the code runs them (`AiGradingJob`, `GradingService`; GAD-T94..T98 on the
-deterministic rules):
+deterministic rules).
+
+**Grading mode (GAD-T703).** Each exam's `GradingPolicy.Mode` says whose evaluation is the grade. Owner decision,
+2026-11-23: "let the LLM do the final grade, lets see how close it gets, make a human grader an option; both as single of
+either, or average of both". Human grading is therefore per exam, not mandatory.
+
+| Mode | The grade | After AI grading | A human grade |
+|---|---|---|---|
+| `AiOnly` (new exams) | The AI's scores | Finalized → Published by the system (`AiOnlyGrading`), audited, Finalize and Publish approval records with the system as actor; an attempt held for instructor review is finalized but waits for a person to publish | Optional second opinion once the grade is final: recorded and compared, never changes the grade or its status |
+| `HumanOnly` | The human's scores | Human Review Pending, then the usual approval and publication | Required; the AI's grade has no weight and is compared only |
+| `Combined` (exams that existed before GAD-T703) | AI × AiWeight + human × HumanWeight (an even average unless the exam sets weights) | Human Review Pending, reconciliation, approval, publication, as below | Required |
+
+AI grading runs in every mode, so wherever a human grade exists the workspace's score comparison shows each objective's AI
+and human levels and scores and an overall agreement figure (`AiHumanAgreement`: same level, within one level, mean level
+difference and quadratic weighted kappa, the statistic panel calibration uses). Outside `Combined` a difference never sends
+the grade to reconciliation; it is recorded as a closed comparison. Blind grading and anonymous marking hold for whoever
+grades by hand: under `AiOnly`, where no human step precedes publication, the AI's evaluation and the student's name stay
+hidden from graders until a human grade is in. A gated, uncalibrated panel (GAD-T427) cannot carry an `AiOnly` grade: the
+session is graded `HumanOnly`. Two hooks mark the moments other features build on: `GradingEvents.AiGradingFinishedAsync`
+(every objective graded, any mode) and `GradingEvents.GradePublishedAsync` (published by a person or by the system).
+
+The `Combined` flow:
 
 ```mermaid
 sequenceDiagram
@@ -413,14 +438,15 @@ sequenceDiagram
 
 Rules that hold at every step:
 
-- **Policy.** Weights sum to 1, the human weight is never 0, thresholds are ordered (`GradingPolicyRules.Validate`);
+- **Policy.** Weights sum to 1, the human weight is never 0 in `Combined` mode (an exam where only the AI counts chooses
+  `AiOnly`), thresholds are ordered (`GradingPolicyRules.Validate`);
   the policy is locked at publication and snapshotted (`FinalGrade.PolicyJson`) when AI grading starts, so a
   later policy change cannot rescore a finished examination without an approved `GradingPolicyChange`.
 - **Scoring.** Per objective, combined = AI × AIWeight + Human × HumanWeight, exact decimal; examination
   percentage = objective-weighted mean of combined / max (`CombinedScoring.Calculate`). Differences are
   measured in percentage points of the objective's maximum. Defaults 10 / 20 points are illustrative and
   configurable per assessment.
-- **No automatic finalization.** Approval is refused while a mandatory-band disagreement is open
+- **No automatic finalization outside `AiOnly`.** Approval is refused while a mandatory-band disagreement is open
   (checked again inside `ApproveAsync`), while any objective lacks either evaluation, or when the status
   machine forbids the move.
 - **Separation.** Entering a human score (Examiner, Instructor) and approving the final grade

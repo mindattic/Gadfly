@@ -114,7 +114,7 @@ public sealed record AssessmentReport
             SessionId = w.Session.Id, StudentName = w.StudentName, ExamTitle = w.ExamTitle, Attempt = w.Session.Attempt, EndedAt = w.Session.EndedAt,
             Status = w.Status is { } s ? GradeStatusMachine.Label(s) : "Not started",
             FinalPercent = w.AiVisible ? w.Grade?.FinalPercent : null, Label = w.AiVisible ? w.Grade?.LetterOrLabel : null,
-            Policy = $"AI {Pct(p.AiWeight * 100)} / human {Pct(p.HumanWeight * 100)}; additional review at {p.AdditionalReviewAt.ToString("0.##", ci)} points, " +
+            Policy = $"{Assessments.PolicySnapshot.ModeLabel(p.Mode, p.AiWeight, p.HumanWeight)}; additional review at {p.AdditionalReviewAt.ToString("0.##", ci)} points, " +
                      $"reconciliation at {p.MandatoryReconciliationAt.ToString("0.##", ci)} points; {(p.BlindHumanGrading ? "blind" : "open")} human grading ({w.Policy.Source}).",
             Objectives = objectives, KnowledgeGaps = gaps,
             Approvals = w.Approvals.Where(a => !forStudent || a.Record.Action is ApprovalAction.Finalize or ApprovalAction.Publish or ApprovalAction.Amend or ApprovalAction.AppealResolved)

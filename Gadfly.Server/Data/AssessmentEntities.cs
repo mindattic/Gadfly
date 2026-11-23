@@ -73,8 +73,14 @@ public sealed class GradingPolicy : ITenantOwned
 {
     public Guid ExamId { get; set; }
     public Guid OrganizationId { get; set; }
-    public decimal AiWeight { get; set; } = 0.4m;
-    public decimal HumanWeight { get; set; } = 0.6m;
+    /// <summary>
+    /// GAD-T703: whose evaluation is the grade. New exams grade AI-only (owner decision 2026-11-23); exams that existed before
+    /// keep Combined with their stored weights (the migration's column default).
+    /// </summary>
+    public GradingMode Mode { get; set; } = GradingMode.AiOnly;
+    /// <summary>Used by <see cref="GradingMode.Combined"/>; an even average unless the exam sets otherwise (owner: "average of both").</summary>
+    public decimal AiWeight { get; set; } = 0.5m;
+    public decimal HumanWeight { get; set; } = 0.5m;
     public decimal AdditionalReviewAt { get; set; } = 10m;
     public decimal MandatoryReconciliationAt { get; set; } = 20m;
     public bool BlindHumanGrading { get; set; } = true;
@@ -89,7 +95,7 @@ public sealed class GradingPolicy : ITenantOwned
 
     public GradingPolicyRules ToRules() => new()
     {
-        AiWeight = AiWeight, HumanWeight = HumanWeight, AdditionalReviewAt = AdditionalReviewAt,
+        Mode = Mode, AiWeight = AiWeight, HumanWeight = HumanWeight, AdditionalReviewAt = AdditionalReviewAt,
         MandatoryReconciliationAt = MandatoryReconciliationAt, BlindHumanGrading = BlindHumanGrading, AnonymousMarking = AnonymousMarking,
     };
 }

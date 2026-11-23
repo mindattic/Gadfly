@@ -146,10 +146,17 @@ public static class GradeStatusMachine
         [GradeStatus.Amended] = [GradeStatus.Published, GradeStatus.UnderAppeal],
     };
 
-    public static bool CanMove(GradeStatus from, GradeStatus to) => Allowed.TryGetValue(from, out var next) && next.Contains(to);
+    /// <summary>
+    /// Whether the grade may move. One move depends on the exam's grading mode: under <see cref="GradingMode.AiOnly"/> the
+    /// AI's grade is final, so AI Grading Pending may go straight to Finalized (by the system, then on to Published) without
+    /// human review (owner decision 2026-11-23, GAD-T703). No other mode has that path.
+    /// </summary>
+    public static bool CanMove(GradeStatus from, GradeStatus to, GradingMode mode = GradingMode.Combined) =>
+        Allowed.TryGetValue(from, out var next) && next.Contains(to)
+        || mode == GradingMode.AiOnly && from == GradeStatus.AiGradingPending && to == GradeStatus.Finalized;
 
-    public static GradeStatus Move(GradeStatus from, GradeStatus to) =>
-        CanMove(from, to) ? to : throw new InvalidStateTransitionException($"A grade cannot go from {Label(from)} to {Label(to)}.");
+    public static GradeStatus Move(GradeStatus from, GradeStatus to, GradingMode mode = GradingMode.Combined) =>
+        CanMove(from, to, mode) ? to : throw new InvalidStateTransitionException($"A grade cannot go from {Label(from)} to {Label(to)}.");
 
     /// <summary>A student may see the grade only in these statuses.</summary>
     public static bool IsVisibleToStudent(GradeStatus s) => s is GradeStatus.Published or GradeStatus.UnderAppeal or GradeStatus.Amended;

@@ -200,6 +200,15 @@ public class GradeStatusMachineTests
         Assert.That(GradeStatusMachine.CanMove(G.AiGradingPending, G.AwaitingFinalApproval), Is.False);
         Assert.That(GradeStatusMachine.CanMove(G.AiGradingPending, G.Finalized), Is.False);
         Assert.That(GradeStatusMachine.CanMove(G.AiGradingPending, G.Published), Is.False);
+        Assert.That(GradeStatusMachine.CanMove(G.AiGradingPending, G.Finalized, GradingMode.HumanOnly), Is.False);
+    }
+
+    [Test]
+    public void AiOnlyGrading_FinalizesWithoutHumanReview()
+    {
+        // Owner decision 2026-11-23 (GAD-T703): under AI-only grading the AI's grade is final.
+        Assert.That(GradeStatusMachine.CanMove(G.AiGradingPending, G.Finalized, GradingMode.AiOnly), Is.True);
+        Assert.That(GradeStatusMachine.CanMove(G.AiGradingPending, G.Published, GradingMode.AiOnly), Is.False);
     }
 
     [Test]

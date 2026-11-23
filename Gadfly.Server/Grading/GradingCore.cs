@@ -119,10 +119,11 @@ internal static class GradingAudit
 /// </summary>
 internal static class GradeLifecycle
 {
-    public static void Move(GadflyDbContext db, FinalGrade grade, GradeStatus to, GradingActor actor, DateTimeOffset at, string? reason = null)
+    public static void Move(GadflyDbContext db, FinalGrade grade, GradeStatus to, GradingActor actor, DateTimeOffset at, string? reason = null,
+        GradingMode mode = GradingMode.Combined)
     {
         var from = grade.Status;
-        grade.Status = GradeStatusMachine.Move(from, to);
+        grade.Status = GradeStatusMachine.Move(from, to, mode);
         grade.UpdatedAt = at;
         GradingAudit.Add(db, grade.OrganizationId, actor, "grade.status.changed", "FinalGrade", grade.SessionId.ToString(), grade.SessionId, at,
             new { status = from.ToString() }, new { status = to.ToString() }, reason);
@@ -140,4 +141,71 @@ internal static class GradeLifecycle
         await db.SaveChangesAsync(ct);
         return grade;
     }
+}
+
+/// <summary>
+/// The two moments other features hang work on (GAD-T703; GAD-T702 posts them to the student's inbox). Each is called once
+/// per occurrence, adds its rows to <paramref name="db"/> and leaves saving to the caller.
+/// </summary>
+internal static class GradingEvents
+{
+    /// <summary>AI grading has recorded every objective of the session, in any grading mode, before the grade moves on.</summary>
+    public static Task AiGradingFinishedAsync(GadflyDbContext db, FinalGrade grade, PolicySnapshot policy, DateTimeOffset at, CancellationToken ct)
+    {
+        GradingAudit.Add(db, grade.OrganizationId, GradingActor.System, "grade.ai.completed", "FinalGrade", grade.SessionId.ToString(), grade.SessionId, at,
+            after: new { mode = policy.Rules.Mode.ToString() });
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The grade was published to the student: by a person (GradingService.PublishAsync) or by the system under AI-only grading.</summary>
+    public static Task GradePublishedAsync(GadflyDbContext db, FinalGrade grade, GradingActor actor, DateTimeOffset at, CancellationToken ct)
+    {
+        GradingAudit.Add(db, grade.OrganizationId, actor, "grade.published", "FinalGrade", grade.SessionId.ToString(), grade.SessionId, at,
+            after: new { finalPercent = grade.FinalPercent });
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>
+/// AI-only grading (GAD-T703, owner decision 2026-11-23): once the AI has graded every objective its levels are the final
+/// grade. The system finalizes it (AI Grading Pending → Finalized, a move <see cref="GradeStatusMachine"/> allows only in
+/// this mode) and publishes it (Finalized → Published), with an approval record and an audit row for each step, so the
+/// student's results page shows it. An attempt held for instructor review (GAD-T603) is finalized but waits for a person
+/// to publish it.
+/// </summary>
+internal static class AiOnlyGrading
+{
+    /// <summary>Stands in for a person on the approval records the system writes (ApprovalRecord.ActorUserId is required).</summary>
+    public static readonly Guid SystemActorId = Guid.Empty;
+
+    public static async Task FinalizeAsync(GadflyDbContext db, ExamSession session, FinalGrade grade, PolicySnapshot policy,
+        IReadOnlyList<LearningObjective> objectives, DateTimeOffset at, CancellationToken ct)
+    {
+        var ai = (await db.AiObjectiveGrades.AsNoTracking().Where(a => a.SessionId == session.Id && a.OrganizationId == session.OrganizationId).ToListAsync(ct))
+            .GroupBy(a => a.ObjectiveId).ToDictionary(g => g.Key, g => g.OrderByDescending(a => a.CreatedAt).First());
+        var (result, excluded) = GradingService.TryCompute(policy,
+            objectives.Select(o => (o, ai.GetValueOrDefault(o.Id), (HumanObjectiveGrade?)null, (GradeReconciliation?)null)).ToList());
+        if (result?.FinalPercent is null)
+            throw new InvalidOperationException("The AI-only grade could not be computed (check the objectives' maximum scores and weights).");
+        grade.FinalPercent = result.FinalPercent;
+        grade.ResultJson = GradingJson.Write(new StoredResult(result, [.. excluded], at));
+
+        const string why = "AI-only grading: the AI's grade is final (owner decision 2026-11-23).";
+        GradeLifecycle.Move(db, grade, GradeStatus.Finalized, GradingActor.System, at, why, GradingMode.AiOnly);
+        AddApproval(db, session, ApprovalAction.Finalize, why, at);
+        GradingAudit.Add(db, grade.OrganizationId, GradingActor.System, "grade.approved", "FinalGrade", grade.SessionId.ToString(), grade.SessionId, at,
+            after: new { finalPercent = grade.FinalPercent, mode = nameof(GradingMode.AiOnly) }, reason: why);
+        if (await Review.InstructorReview.IsHeldAsync(db, session.OrganizationId, session.Id, ct)) return;
+
+        GradeLifecycle.Move(db, grade, GradeStatus.Published, GradingActor.System, at, "AI-only grading: published to the student.", GradingMode.AiOnly);
+        AddApproval(db, session, ApprovalAction.Publish, "AI-only grading: published automatically.", at);
+        await GradingEvents.GradePublishedAsync(db, grade, GradingActor.System, at, ct);
+    }
+
+    private static void AddApproval(GadflyDbContext db, ExamSession session, ApprovalAction action, string note, DateTimeOffset at) =>
+        db.ApprovalRecords.Add(new ApprovalRecord
+        {
+            OrganizationId = session.OrganizationId, SessionId = session.Id, Action = action, ActorUserId = SystemActorId,
+            ActorRole = GradingActor.System.Role!, Note = note, At = at,
+        });
 }

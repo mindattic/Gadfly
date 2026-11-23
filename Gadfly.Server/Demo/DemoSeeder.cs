@@ -341,7 +341,8 @@ public static class DemoSeeder
 
         db.GradingPolicies.Add(new GradingPolicy
         {
-            ExamId = exam.Id, OrganizationId = org, AiWeight = 0.4m, HumanWeight = 0.6m, AdditionalReviewAt = 10m,
+            // The demo walks the full human grading workflow (blind grading, reconciliation, approval), so it grades combined (GAD-T703).
+            ExamId = exam.Id, OrganizationId = org, Mode = Gadfly.Assessment.GradingMode.Combined, AiWeight = 0.4m, HumanWeight = 0.6m, AdditionalReviewAt = 10m,
             MandatoryReconciliationAt = 20m, BlindHumanGrading = true, InconclusiveProcedure = InconclusiveProcedure.HumanReview,
             AllowAssistedEvidence = false, LockedAt = now, LockedByUserId = teacherId,
         });

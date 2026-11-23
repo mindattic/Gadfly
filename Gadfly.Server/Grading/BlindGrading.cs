@@ -36,12 +36,14 @@ public static class BlindGrading
         var examIds = sessions.Select(s => s.ExamId).Distinct().ToList();
         var policies = (await db.GradingPolicies.AsNoTracking().Where(p => p.OrganizationId == organizationId && examIds.Contains(p.ExamId)).ToListAsync(ct))
             .GroupBy(p => p.ExamId).ToDictionary(g => g.Key, g => g.First());
+        var humanGraded = (await db.HumanObjectiveGrades.AsNoTracking().Where(h => h.OrganizationId == organizationId && ids.Contains(h.SessionId))
+            .Select(h => h.SessionId).Distinct().ToListAsync(ct)).ToHashSet();
         foreach (var s in sessions)
         {
             grades.TryGetValue(s.Id, out var grade);
             if (grade is null && s.State != SessionState.Ended) continue;
             var policy = GradingJson.Read<PolicySnapshot>(grade?.PolicyJson) ?? PolicySnapshot.From(policies.GetValueOrDefault(s.ExamId), now);
-            if (!GradingService.AiVisible(policy, grade?.Status)) blind.Add(s.Id);
+            if (!GradingService.AiVisible(policy, grade?.Status, humanGraded.Contains(s.Id))) blind.Add(s.Id);
         }
         return blind;
     }

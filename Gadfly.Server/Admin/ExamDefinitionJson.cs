@@ -71,6 +71,8 @@ public sealed class ExamSettingsDefinition
 /// <summary>The grading policy with weights as fractions (0.4 / 0.6), as <see cref="PolicySnapshot"/>.</summary>
 public sealed class GradingPolicyDefinition
 {
+    /// <summary>GAD-T703: "AiOnly", "HumanOnly" or "Combined"; left out, a new exam grades AI-only.</summary>
+    public string? Mode { get; set; }
     public decimal? AiWeight { get; set; }
     public decimal? HumanWeight { get; set; }
     public decimal? AdditionalReviewAt { get; set; }
@@ -186,6 +188,7 @@ public static class ExamDefinitionJson
                 },
                 GradingPolicy = new GradingPolicyDefinition
                 {
+                    Mode = g.Mode.ToString(),
                     AiWeight = g.AiWeight,
                     HumanWeight = g.HumanWeight,
                     AdditionalReviewAt = g.AdditionalReviewAt,
@@ -394,7 +397,8 @@ public static class ExamDefinitionJson
         return new PolicySnapshot(g.AiWeight ?? d.AiWeight, g.HumanWeight ?? d.HumanWeight, g.AdditionalReviewAt ?? d.AdditionalReviewAt,
             g.MandatoryReconciliationAt ?? d.MandatoryReconciliationAt, g.BlindHumanGrading ?? d.BlindHumanGrading,
             Enum.TryParse<InconclusiveProcedure>(g.InconclusiveProcedure, true, out var proc) && Enum.IsDefined(proc) ? proc : d.InconclusiveProcedure,
-            g.AllowAssistedEvidence ?? d.AllowAssistedEvidence, g.AnonymousMarking ?? d.AnonymousMarking);
+            g.AllowAssistedEvidence ?? d.AllowAssistedEvidence, g.AnonymousMarking ?? d.AnonymousMarking,
+            Enum.TryParse<GradingMode>(g.Mode, true, out var mode) && Enum.IsDefined(mode) ? mode : d.Mode);
     }
 
     /// <summary>An enum value by name, or <paramref name="fallback"/> when the text is blank.</summary>

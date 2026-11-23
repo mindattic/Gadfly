@@ -41,7 +41,9 @@ human grading accountability; functional correctness; maintainability; performan
 - **Grading model.** "AI recommends, instructor finalizes" (decision D13) is replaced by AI preliminary
   scores per learning objective, independent (blind) human scores, an approved AI/human weighting,
   disagreement thresholds, reconciliation with a second reviewer, and an authorized approval before
-  publication, under an explicit grade-status state machine.
+  publication, under an explicit grade-status state machine. Since GAD-T703 (owner decision 2026-11-23) the human part is
+  per exam, not mandatory: each exam grades AI only (the default for new exams; the AI's grade is finalized and published
+  by the system), human only, or both combined; the AI always grades, so its grade is compared with any human grade.
 - **Assessment model.** Concepts become *suggested* learning objectives; teachers own courses, subjects,
   topics, objectives, rubric criteria on the Part 5.1 dimensions and level descriptors 0–5, where level 0
   is Insufficient Evidence and never zero understanding.

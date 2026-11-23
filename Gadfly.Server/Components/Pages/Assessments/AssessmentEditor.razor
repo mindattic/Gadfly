@@ -677,6 +677,19 @@ else
 
     private RenderFragment PolicyFields(PolicyDraft p, string prefix) => __builder =>
     {
+        @* GAD-T703: whose grade counts (owner decision 2026-11-23). The AI grades every attempt in every mode, for comparison. *@
+        <fieldset class="eb-list">
+            <legend>Grading</legend>
+            @foreach (var (mode, label, hint) in GradingModes)
+            {
+                <label class="eb-check">
+                    <input type="radio" name="@(prefix)-grading-mode" value="@mode" checked="@(p.Mode == mode)" @onchange="() => p.Mode = mode" />
+                    <span><strong>@label</strong>: @hint</span>
+                </label>
+            }
+        </fieldset>
+        @if (p.Mode == GradingMode.Combined)
+        {
         <fieldset class="eb-list">
             <legend>Weights (must total 100%)</legend>
             <div class="as-two">
@@ -685,6 +698,7 @@ else
             </div>
             <p class="hint @(p.AiWeightPercent + p.HumanWeightPercent == 100 ? "" : "error")" aria-live="polite">Total: @((p.AiWeightPercent + p.HumanWeightPercent).ToString("0.##"))%</p>
         </fieldset>
+        }
         <fieldset class="eb-list">
             <legend>Disagreement thresholds (percentage points of an objective's maximum)</legend>
             <div class="as-two">
@@ -711,6 +725,13 @@ else
             <span><strong>Allow assisted evidence</strong>: answers given after instructional help (Learning mode) may count as examination evidence. Off unless your institution has a rule allowing it.</span>
         </label>
     };
+
+    private static readonly (GradingMode Mode, string Label, string Hint)[] GradingModes =
+    [
+        (GradingMode.AiOnly, "AI only", "the AI's grade is final and released to the student when grading finishes. A human may still grade as a second opinion; it is compared with the AI's but does not change the grade."),
+        (GradingMode.HumanOnly, "Human only", "a human examiner's grade is the grade. The AI still grades, for comparison only."),
+        (GradingMode.Combined, "Both, averaged", "the AI's and the human examiner's grades are combined with the weights below, and large differences are reconciled."),
+    ];
 
     private static void SetAi(PolicyDraft p, ChangeEventArgs e)
     {

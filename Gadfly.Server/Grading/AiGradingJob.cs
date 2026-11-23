@@ -14,9 +14,10 @@ public sealed record AiGradingPayload(Guid SessionId);
 /// <summary>
 /// AI preliminary grading of an ended session (GAD-T94, Part 11.1 Stages 3-5). Status path:
 /// Examination Completed → Transcript Verification Pending (a response needs a human; grading waits) →
-/// AI Grading Pending → per-objective <see cref="AiObjectiveGrade"/> rows → Human Review Pending. Every
-/// move is audited. Idempotent: objectives already graded for the session are not graded again, so a retry
-/// continues where a failed attempt stopped. The AI grade is never final.
+/// AI Grading Pending → per-objective <see cref="AiObjectiveGrade"/> rows → Human Review Pending, or, when the exam
+/// grades AI-only (GAD-T703), → Finalized → Published by the system (<see cref="AiOnlyGrading"/>). Every move is
+/// audited. Idempotent: objectives already graded for the session are not graded again, so a retry continues where
+/// a failed attempt stopped. Outside AI-only grading the AI grade is never final.
 /// </summary>
 public sealed class AiGradingJob(GadflyDbContext db, ISocraticVotingClient panel, TimeProvider clock, ILogger<AiGradingJob> log,
     PanelModelInventory models, IConfiguration config) : IJobHandler
@@ -107,8 +108,14 @@ public sealed class AiGradingJob(GadflyDbContext db, ISocraticVotingClient panel
                 objective.Key, session.Id, result.Level, result.Score, result.MaxScore, result.Confidence);
         }
 
-        GradeLifecycle.Move(db, grade, GradeStatus.HumanReviewPending, GradingActor.System, clock.GetUtcNow(),
-            "AI preliminary grades recorded; a human examiner grades next.");
+        var finished = clock.GetUtcNow();
+        await GradingEvents.AiGradingFinishedAsync(db, grade, policy, finished, ct);
+        if (policy.Rules.Mode == GradingMode.AiOnly)
+            await AiOnlyGrading.FinalizeAsync(db, session, grade, policy, objectives, finished, ct);
+        else
+            GradeLifecycle.Move(db, grade, GradeStatus.HumanReviewPending, GradingActor.System, finished, policy.Rules.Mode == GradingMode.HumanOnly
+                ? "AI grades recorded for comparison; under human-only grading the human examiner's grade is the grade."
+                : "AI preliminary grades recorded; a human examiner grades next.");
         await db.SaveChangesAsync(ct);
     }
 }

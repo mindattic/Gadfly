@@ -85,11 +85,13 @@ public sealed record ObjectiveView(Guid Id, string Key, string Title, string? De
     public string? OpeningQuestion { get; init; }
 }
 
-/// <summary>The grading policy as the teacher edits it: weights as percentages (40/60), thresholds in percentage points.</summary>
+/// <summary>The grading policy as the teacher edits it: weights as percentages (50/50), thresholds in percentage points.</summary>
 public sealed class PolicyDraft
 {
-    public decimal AiWeightPercent { get; set; } = 40m;
-    public decimal HumanWeightPercent { get; set; } = 60m;
+    /// <summary>GAD-T703: AI only by default for new exams (owner decision 2026-11-23); the weights apply to Combined.</summary>
+    public GradingMode Mode { get; set; } = GradingMode.AiOnly;
+    public decimal AiWeightPercent { get; set; } = 50m;
+    public decimal HumanWeightPercent { get; set; } = 50m;
     public decimal AdditionalReviewAt { get; set; } = 10m;
     public decimal MandatoryReconciliationAt { get; set; } = 20m;
     public bool BlindHumanGrading { get; set; } = true;
@@ -99,10 +101,11 @@ public sealed class PolicyDraft
     public bool AllowAssistedEvidence { get; set; }
 
     public PolicySnapshot ToSnapshot() => new(Math.Round(AiWeightPercent / 100m, 4), Math.Round(HumanWeightPercent / 100m, 4),
-        AdditionalReviewAt, MandatoryReconciliationAt, BlindHumanGrading, InconclusiveProcedure, AllowAssistedEvidence, AnonymousMarking);
+        AdditionalReviewAt, MandatoryReconciliationAt, BlindHumanGrading, InconclusiveProcedure, AllowAssistedEvidence, AnonymousMarking, Mode);
 
     public static PolicyDraft From(PolicySnapshot s) => new()
     {
+        Mode = s.Mode,
         AiWeightPercent = s.AiWeight * 100m,
         HumanWeightPercent = s.HumanWeight * 100m,
         AdditionalReviewAt = s.AdditionalReviewAt,
@@ -116,21 +119,23 @@ public sealed class PolicyDraft
 
 /// <summary>A grading policy's values (fractions for weights): what audit records and change requests store.</summary>
 public sealed record PolicySnapshot(decimal AiWeight, decimal HumanWeight, decimal AdditionalReviewAt, decimal MandatoryReconciliationAt,
-    bool BlindHumanGrading, InconclusiveProcedure InconclusiveProcedure, bool AllowAssistedEvidence, bool AnonymousMarking = false)
+    bool BlindHumanGrading, InconclusiveProcedure InconclusiveProcedure, bool AllowAssistedEvidence, bool AnonymousMarking = false,
+    GradingMode Mode = GradingMode.Combined)
 {
     public static PolicySnapshot Default { get; } = Of(new GradingPolicy());
 
     public static PolicySnapshot Of(GradingPolicy p) => new(p.AiWeight, p.HumanWeight, p.AdditionalReviewAt, p.MandatoryReconciliationAt,
-        p.BlindHumanGrading, p.InconclusiveProcedure, p.AllowAssistedEvidence, p.AnonymousMarking);
+        p.BlindHumanGrading, p.InconclusiveProcedure, p.AllowAssistedEvidence, p.AnonymousMarking, p.Mode);
 
     public GradingPolicyRules ToRules() => new()
     {
-        AiWeight = AiWeight, HumanWeight = HumanWeight, AdditionalReviewAt = AdditionalReviewAt,
+        Mode = Mode, AiWeight = AiWeight, HumanWeight = HumanWeight, AdditionalReviewAt = AdditionalReviewAt,
         MandatoryReconciliationAt = MandatoryReconciliationAt, BlindHumanGrading = BlindHumanGrading, AnonymousMarking = AnonymousMarking,
     };
 
     public void ApplyTo(GradingPolicy p)
     {
+        p.Mode = Mode;
         p.AiWeight = AiWeight;
         p.HumanWeight = HumanWeight;
         p.AdditionalReviewAt = AdditionalReviewAt;
@@ -142,8 +147,16 @@ public sealed record PolicySnapshot(decimal AiWeight, decimal HumanWeight, decim
     }
 
     public string Describe() =>
-        $"AI {AiWeight * 100m:0.##}% / human {HumanWeight * 100m:0.##}%, review at {AdditionalReviewAt:0.##} pts, reconcile at {MandatoryReconciliationAt:0.##} pts, " +
+        $"{ModeLabel(Mode, AiWeight, HumanWeight)}, review at {AdditionalReviewAt:0.##} pts, reconcile at {MandatoryReconciliationAt:0.##} pts, " +
         $"{(BlindHumanGrading ? "blind" : "non-blind")}{(AnonymousMarking ? ", anonymous" : "")} human grading, inconclusive → {InconclusiveProcedure}, assisted evidence {(AllowAssistedEvidence ? "allowed" : "not allowed")}";
+
+    /// <summary>The grading mode in words (GAD-T703), with the weights when both evaluations count.</summary>
+    public static string ModeLabel(GradingMode mode, decimal aiWeight, decimal humanWeight) => mode switch
+    {
+        GradingMode.AiOnly => "AI grade only",
+        GradingMode.HumanOnly => "human grade only",
+        _ => $"AI {aiWeight * 100m:0.##}% / human {humanWeight * 100m:0.##}%",
+    };
 }
 
 public sealed record PolicyChangeView(Guid Id, PolicySnapshot Before, PolicySnapshot After, string Reason, Guid RequestedByUserId, string RequestedBy,

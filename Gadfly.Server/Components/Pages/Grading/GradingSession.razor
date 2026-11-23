@@ -49,7 +49,7 @@ else
     <div class="gr-summary" data-tour="grading-summary">
         <div><span class="hint">Status</span>@if (status is { } st) { <span class="gr-status s-@st">@GradeStatusMachine.Label(st)</span> } else { <span>Not started</span> }</div>
         <div><span class="hint">Combined grade</span>@(w.AiVisible && w.Grade?.FinalPercent is { } fp ? AssessmentReport.Pct(fp) : "—")@(w.AiVisible && w.Grade?.LetterOrLabel is { } lbl ? $" ({lbl})" : "")</div>
-        <div><span class="hint">Policy</span>AI @Pct(w.Policy.Rules.AiWeight) · human @Pct(w.Policy.Rules.HumanWeight) · reconcile at @w.Policy.Rules.MandatoryReconciliationAt.ToString("0.##") pts@(w.Policy.Rules.BlindHumanGrading ? " · blind" : "")@(w.Policy.Rules.AnonymousMarking ? " · anonymous" : "")</div>
+        <div><span class="hint">Policy</span>@ModeWords(w.Policy.Rules) · reconcile at @w.Policy.Rules.MandatoryReconciliationAt.ToString("0.##") pts@(w.Policy.Rules.BlindHumanGrading ? " · blind" : "")@(w.Policy.Rules.AnonymousMarking ? " · anonymous" : "")</div>
         <div><span class="hint">Panel</span>@PanelCalibrationWording.Describe(w.Policy.Panel)@(w.Policy.Gate is { Applied: true } gate ? " " + gate.Reason : "")</div>
         <div><span class="hint">Ended</span>@(w.Session.EndedAt?.UtcDateTime.ToString("yyyy-MM-dd HH:mm") ?? "—") UTC</div>
         <div><span class="hint">Report</span><a href="grading/@w.Session.Id/report">view</a> · <a href="@GradingSetup.ReportMarkdownPath(w.Session.Id)" download data-enhance-nav="false">Markdown</a> · <a href="@GradingSetup.ReportCsvPath(w.Session.Id)" download data-enhance-nav="false">CSV</a></div>
@@ -101,9 +101,13 @@ else
                 <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.ProceedWithUnresolvedAsync(SessionId, proceedReason))">Proceed with unresolved responses flagged</button>
             </div>
             break;
-        case GradeStatus.HumanReviewPending:
+        case GradeStatus humanStep when humanStep == GradeStatus.HumanReviewPending || SecondOpinionOpen:
             <div class="panel" data-tour="grading-evaluate">
                 <h2>Your evaluation</h2>
+                @if (SecondOpinionOpen)
+                {
+                    <p class="hint">AI-only grading: the AI's grade is final. You may grade the attempt as a second opinion; it is recorded and compared with the AI's, and does not change the grade.</p>
+                }
                 @if (!w.AiVisible)
                 {
                     <p class="gr-hidden">Blind grading: the AI's preliminary evaluation is hidden until you submit scores for every objective (Part 8.3). Grade from the transcript, the evidence and the rubric below.</p>
@@ -143,12 +147,17 @@ else
             break;
     }
 
-    @if (status is GradeStatus.ReconciliationRequired or GradeStatus.AwaitingFinalApproval or GradeStatus.Finalized or GradeStatus.Published or GradeStatus.UnderAppeal or GradeStatus.Amended)
+    @if (w.AiVisible && status is GradeStatus.ReconciliationRequired or GradeStatus.AwaitingFinalApproval or GradeStatus.Finalized or GradeStatus.Published or GradeStatus.UnderAppeal or GradeStatus.Amended)
     {
         <h2 class="gr-section" data-tour="grading-compare">Score comparison</h2>
+        @* GAD-T703: how close the AI came to the human examiner, in every grading mode. *@
+        @if (AiHumanAgreement.Of(w.Objectives.Where(o => o.Ai is not null && o.Human is not null).Select(o => (o.Ai!.Row.Level, o.Human!.Level)).ToList()) is { } agree)
+        {
+            <p data-tour="grading-agreement"><strong>AI and human agreement:</strong> same level on @agree.ExactLevels of @agree.Objectives objective@(agree.Objectives == 1 ? "" : "s") (@agree.ExactShare.ToString("P0")), within one level on @agree.WithinOneLevel; the AI averages @agree.MeanLevelDifference.ToString("+0.##;-0.##;0") level@(Math.Abs(agree.MeanLevelDifference) == 1 ? "" : "s") against the human@(agree.Kappa is { } k ? $"; weighted kappa {k:0.00}" : "").</p>
+        }
         <div class="gr-table-wrap">
             <table class="grid">
-                <thead><tr><th>Objective</th><th>Max</th><th>Weight</th><th>AI</th><th>Human</th><th>Difference</th><th>Combined</th></tr></thead>
+                <thead><tr><th>Objective</th><th>Max</th><th>Weight</th><th>AI</th><th>Human</th><th>Levels (AI / human)</th><th>Difference</th><th>@(w.Policy.Rules.Mode == GradingMode.Combined ? "Combined" : "Grade")</th></tr></thead>
                 <tbody>
                     @foreach (var o in w.Objectives)
                     {
@@ -159,6 +168,7 @@ else
                             <td>@o.Objective.Weight.ToString("0.##")</td>
                             <td>@(o.AiExcluded ? "insufficient evidence" : N(c?.AiScore))@if (o.Ai?.Row.IsMock == true) { <text> </text><span class="gr-mock">MOCK</span> }</td>
                             <td>@N(c?.HumanScore)</td>
+                            <td>@if (o.Ai is { } la && o.Human is { } lh) { <span>@((int)la.Row.Level) / @((int)lh.Level)@((int)la.Row.Level - (int)lh.Level is var ld && ld != 0 ? $" ({ld:+0;-0})" : "")</span> } else { <span class="hint">—</span> }</td>
                             <td>@if (c?.DifferencePoints is { } d) { <span class="gr-band-@c.Band">@d.ToString("0.##") pts · @BandLabel(c.Band)</span> } else { <span class="hint">—</span> }</td>
                             <td>@N(c?.Combined)</td>
                         </tr>
@@ -168,7 +178,18 @@ else
         </div>
         @if (w.Combined?.FinalPercent is { } total)
         {
-            <p>Weighted combined grade: <strong>@AssessmentReport.Pct(total)</strong> <span class="hint">(AI × @w.Policy.Rules.AiWeight.ToString("0.##") + human × @w.Policy.Rules.HumanWeight.ToString("0.##") per objective, then weighted by objective)</span></p>
+            @switch (w.Policy.Rules.Mode)
+            {
+                case GradingMode.AiOnly:
+                    <p>AI-only grade: <strong>@AssessmentReport.Pct(total)</strong> <span class="hint">(the AI's scores, weighted by objective; a human grade is compared but not counted)</span></p>
+                    break;
+                case GradingMode.HumanOnly:
+                    <p>Human-only grade: <strong>@AssessmentReport.Pct(total)</strong> <span class="hint">(the human examiner's scores, weighted by objective; the AI's are compared but not counted)</span></p>
+                    break;
+                default:
+                    <p>Weighted combined grade: <strong>@AssessmentReport.Pct(total)</strong> <span class="hint">(AI × @w.Policy.Rules.AiWeight.ToString("0.##") + human × @w.Policy.Rules.HumanWeight.ToString("0.##") per objective, then weighted by objective)</span></p>
+                    break;
+            }
         }
         @if (w.Objectives.Any(o => o.AiExcluded))
         {
@@ -681,6 +702,17 @@ else
     };
 
     private bool Can(Permission p) => Tenant.UserId is not null && PermissionMatrix.Has(Tenant.Role, p);
+
+    /// <summary>GAD-T703: an AI-only grade is final; a grader who has not graded it yet may add a second opinion.</summary>
+    private bool SecondOpinionOpen => w is { Policy.Rules.Mode: GradingMode.AiOnly, ViewerScoredHuman: false }
+                                      && w.Status is GradeStatus.Finalized or GradeStatus.Published or GradeStatus.UnderAppeal or GradeStatus.Amended;
+
+    private string ModeWords(GradingPolicyRules r) => r.Mode switch
+    {
+        GradingMode.AiOnly => "AI only (final without a human)",
+        GradingMode.HumanOnly => "human only (AI compared, not counted)",
+        _ => $"AI {Pct(r.AiWeight)} · human {Pct(r.HumanWeight)}",
+    };
 
     private HumanForm Form(Guid objectiveId)
     {

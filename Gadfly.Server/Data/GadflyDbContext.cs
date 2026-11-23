@@ -145,6 +145,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
         c.Properties<DeliveryStatus>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<UsageKind>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<JobState>().HaveConversion<string>().HaveMaxLength(32);
+        c.Properties<Gadfly.Assessment.GradingMode>().HaveConversion<string>().HaveMaxLength(32);
         c.Properties<EmailLogStatus>().HaveConversion<string>().HaveMaxLength(32);   // GAD-T310
         c.Properties<decimal>().HavePrecision(18, 6);
         c.Properties<Gadfly.Assessment.MasteryLevel>().HaveConversion<string>().HaveMaxLength(40);

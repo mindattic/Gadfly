@@ -20,10 +20,14 @@ public static class AnonymousMarking
         return $"Session {hex[..4]}-{hex[4..8]}";
     }
 
-    /// <summary>True while the student's name is hidden: the policy asks for anonymous marking and the human score is not in yet.</summary>
-    public static bool Hides(PolicySnapshot policy, GradeStatus? status) =>
-        policy.Rules.AnonymousMarking && status is null or GradeStatus.ExaminationInProgress or GradeStatus.ExaminationCompleted
-            or GradeStatus.TranscriptVerificationPending or GradeStatus.AiGradingPending or GradeStatus.HumanReviewPending;
+    /// <summary>
+    /// True while the student's name is hidden: the policy asks for anonymous marking and the human score is not in yet. Under
+    /// AI-only grading (GAD-T703) the grade is published without a human, so the name stays hidden until a human grade exists.
+    /// </summary>
+    public static bool Hides(PolicySnapshot policy, GradeStatus? status, bool humanGraded = false) =>
+        policy.Rules.AnonymousMarking && (policy.Rules.Mode == GradingMode.AiOnly ? !humanGraded
+            : status is null or GradeStatus.ExaminationInProgress or GradeStatus.ExaminationCompleted
+                or GradeStatus.TranscriptVerificationPending or GradeStatus.AiGradingPending or GradeStatus.HumanReviewPending);
 
     /// <summary>The name to show: the real one, or the session code while anonymous marking hides it.</summary>
     public static string NameOrCode(bool hidden, Guid sessionId, string? name) => hidden ? Code(sessionId) : name ?? "(unknown student)";
@@ -46,11 +50,13 @@ public static class AnonymousMarking
         var grades = (await db.FinalGrades.AsNoTracking().Where(g => g.OrganizationId == organizationId && ids.Contains(g.SessionId))
                 .Select(g => new { g.SessionId, g.Status, g.PolicyJson }).ToListAsync(ct))
             .ToDictionary(g => g.SessionId);
+        var humanGraded = (await db.HumanObjectiveGrades.AsNoTracking().Where(h => h.OrganizationId == organizationId && ids.Contains(h.SessionId))
+            .Select(h => h.SessionId).Distinct().ToListAsync(ct)).ToHashSet();
         foreach (var s in sessions)
         {
             grades.TryGetValue(s.Id, out var grade);
             var policy = GradingJson.Read<PolicySnapshot>(grade?.PolicyJson) ?? PolicySnapshot.From(policies.GetValueOrDefault(s.ExamId), now);
-            if (Hides(policy, grade?.Status)) hidden.Add(s.Id);
+            if (Hides(policy, grade?.Status, humanGraded.Contains(s.Id))) hidden.Add(s.Id);
         }
         return hidden;
     }

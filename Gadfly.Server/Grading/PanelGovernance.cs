@@ -147,7 +147,8 @@ public sealed class PanelGovernanceService(GadflyDbContext db, ITenantContext te
             : "its last calibration did not meet the thresholds";
         return policy with
         {
-            Rules = policy.Rules with { AiWeight = 0m, HumanWeight = 1m },
+            // An uncalibrated panel cannot carry the grade alone either: an AI-only exam falls back to human-only (GAD-T703).
+            Rules = policy.Rules with { AiWeight = 0m, HumanWeight = 1m, Mode = policy.Rules.Mode == GradingMode.AiOnly ? GradingMode.HumanOnly : policy.Rules.Mode },
             Gate = new PanelGateNote(true, $"Human-only grading: the exam gives the panel weight only once a calibration is accepted, and {why}."),
         };
     }

@@ -183,7 +183,7 @@ public static class GradingActionEndpoints
                 // GAD-T444: whether the caller reconciled this grade, and so may not approve it.
                 youReconciledThisGrade = w.ReconcilerApproval.Applies, blocksYourApproval = w.ReconcilerBlocksViewerApproval },
             finalPercent = visible ? w.Grade?.FinalPercent : null, label = visible ? w.Grade?.LetterOrLabel : null,
-            policy = new { aiWeight = p.AiWeight, humanWeight = p.HumanWeight, additionalReviewAt = p.AdditionalReviewAt,
+            policy = new { mode = p.Mode.ToString(), aiWeight = p.AiWeight, humanWeight = p.HumanWeight, additionalReviewAt = p.AdditionalReviewAt,
                 mandatoryReconciliationAt = p.MandatoryReconciliationAt, blindHumanGrading = p.BlindHumanGrading, source = w.Policy.Source },
             aiGradingJob = new { state = w.JobState, error = w.JobError },
             responsesNeedingHuman = w.ResponsesNeedingHuman,

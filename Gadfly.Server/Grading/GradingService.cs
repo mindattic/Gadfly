@@ -288,7 +288,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
     public async Task<bool> IsSecondMarkerAsync(Guid sessionId, CancellationToken ct = default) =>
         tenant.OrganizationId is { } org && Actor.UserId is { } me && await SecondMarkerBlindness.IsSecondMarkerAsync(db, org, sessionId, me, ct);
 
-    internal async Task<GradingWorkspace?> LoadAsync(Guid sessionId, CancellationToken ct)
+    internal async Task<GradingWorkspace?> LoadAsync(Guid sessionId, CancellationToken ct, bool forStudent = false)
     {
         var org = Org;
         var session = await db.ExamSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == org, ct);
@@ -298,8 +298,10 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var grade = await db.FinalGrades.AsNoTracking().FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == org, ct);
         var policy = GradingJson.Read<PolicySnapshot>(grade?.PolicyJson)
                      ?? PolicySnapshot.From(await db.GradingPolicies.AsNoTracking().FirstOrDefaultAsync(p => p.ExamId == session.ExamId && p.OrganizationId == org, ct), Now);
-        var aiVisible = AiVisible(policy, grade?.Status);
-        var anonymous = AnonymousMarking.Hides(policy, grade?.Status);   // GAD-T439
+        // Blind and anonymous rules guard whoever grades by hand; the student reading their own published result is not one (GAD-T703).
+        var humanGraded = forStudent || await db.HumanObjectiveGrades.AsNoTracking().AnyAsync(h => h.SessionId == sessionId && h.OrganizationId == org, ct);
+        var aiVisible = AiVisible(policy, grade?.Status, humanGraded);
+        var anonymous = AnonymousMarking.Hides(policy, grade?.Status, humanGraded);   // GAD-T439
 
         var turns = await db.SessionTurns.AsNoTracking().Where(t => t.SessionId == sessionId && t.OrganizationId == org)
             .Select(t => new { t.Id, t.Index, t.ConceptKey, t.Question }).ToDictionaryAsync(t => t.Id, ct);
@@ -371,7 +373,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         {
             Session = session, ExamTitle = exam?.Title ?? "(deleted exam)", StudentName = studentName, StudentAnonymous = anonymous,
             Grade = grade, Policy = policy, AiVisible = aiVisible, Responses = responseViews, Objectives = objectiveViews, Combined = combined,
-            Approvals = approvals.Select(a => (a, names.GetValueOrDefault(a.ActorUserId) ?? "(unknown)")).ToList(),
+            Approvals = approvals.Select(a => (a, a.ActorUserId == AiOnlyGrading.SystemActorId ? "Gadfly" : names.GetValueOrDefault(a.ActorUserId) ?? "(unknown)")).ToList(),
             Appeals = appeals.Select(a => (a, anonymous && a.StudentUserId == session.StudentUserId ? studentName : names.GetValueOrDefault(a.StudentUserId) ?? "(unknown)")).ToList(),
             // Blind grading: the AI-grade audit entries carry its scores, so they stay hidden with the grades.
             // Blind double marking (GAD-T428, GAD-T480): a second mark's level and comment never show on the grading page, or the first
@@ -424,10 +426,14 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
 
     private sealed record SecondReviewRequest(Guid ReviewerUserId);
 
-    /// <summary>Blind grading (Part 8.3): the AI's evaluation stays hidden until the human evaluation is submitted.</summary>
-    public static bool AiVisible(PolicySnapshot policy, GradeStatus? status) =>
+    /// <summary>
+    /// Blind grading (Part 8.3): the AI's evaluation stays hidden until the human evaluation is submitted. Under AI-only grading
+    /// (GAD-T703) the grade moves on without a human, so for whoever grades by hand it stays hidden until a human grade exists.
+    /// </summary>
+    public static bool AiVisible(PolicySnapshot policy, GradeStatus? status, bool humanGraded = false) =>
         !policy.Rules.BlindHumanGrading
-        || status is not (null or GradeStatus.ExaminationInProgress or GradeStatus.ExaminationCompleted or GradeStatus.TranscriptVerificationPending
+        || policy.Rules.Mode == GradingMode.AiOnly && humanGraded
+        || policy.Rules.Mode != GradingMode.AiOnly && status is not (null or GradeStatus.ExaminationInProgress or GradeStatus.ExaminationCompleted or GradeStatus.TranscriptVerificationPending
             or GradeStatus.AiGradingPending or GradeStatus.HumanReviewPending);
 
     /// <summary>The current human grade of an objective: the newest one no later grade supersedes.</summary>
@@ -460,7 +466,8 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             decimal? ai = s.Rec?.ResolvedAiScore;
             if (ai is null)
             {
-                if (s.Ai is null || s.Ai.Level == MasteryLevel.InsufficientEvidence) { excluded.Add(s.Objective.Key); ai = human; }
+                // Under AI-only grading there is no human score to fall back on: the AI's own Level 0 grade stands (GAD-T703).
+                if (s.Ai is null || s.Ai.Level == MasteryLevel.InsufficientEvidence && policy.Rules.Mode != GradingMode.AiOnly) { excluded.Add(s.Objective.Key); ai = human; }
                 else ai = s.Ai.Score;
             }
             scores.Add(new ObjectiveScores(s.Objective.Key, s.Objective.MaxScore, s.Objective.Weight, ai, human));
@@ -530,7 +537,9 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             var r = result.Objectives.FirstOrDefault(x => x.ObjectiveKey == s.Objective.Key);
             if (r?.DifferencePoints is not { } diff || r.Band is not { } band || excluded.Contains(s.Objective.Key)) continue;
             var panelLevels = s.Ai is null ? [] : AiGradeView.From(s.Ai).Voters.Select(v => (int)v.Level).ToList();
-            var triggers = reconciledObjectives.Contains(s.Objective.Id) ? [] : ReconciliationTriggers.Evaluate(r, panelLevels, policy.Rules);
+            // Only a combined grade is reconciled; otherwise the row records the AI-human comparison and closes at once (GAD-T703).
+            var combinedMode = policy.Rules.Mode == GradingMode.Combined;
+            var triggers = reconciledObjectives.Contains(s.Objective.Id) || !combinedMode ? [] : ReconciliationTriggers.Evaluate(r, panelLevels, policy.Rules);
             if (triggers.Count > 0 && band != DisagreementBand.MandatoryReconciliation)
             {
                 band = DisagreementBand.MandatoryReconciliation;
@@ -539,7 +548,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
             var d = new GradeDisagreement
             {
                 OrganizationId = Org, SessionId = sessionId, ObjectiveId = s.Objective.Id, AiScore = r.AiScore!.Value, HumanScore = r.HumanScore!.Value,
-                DifferencePoints = diff, Band = band, DetectedAt = Now, ResolvedAt = band == DisagreementBand.Standard ? Now : null,
+                DifferencePoints = diff, Band = band, DetectedAt = Now, ResolvedAt = band == DisagreementBand.Standard || !combinedMode ? Now : null,
             };
             db.GradeDisagreements.Add(d);
             GradingAudit.Add(db, Org, Actor, "grade.disagreement.detected", "GradeDisagreement", d.Id.ToString(), sessionId, Now,
@@ -563,9 +572,13 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var grade = await db.FinalGrades.FirstOrDefaultAsync(g => g.SessionId == sessionId && g.OrganizationId == Org, ct);
         if (session is null) await db.RefuseForeignAsync(OwnershipScope.Kind.Session, sessionId, "Opening a session for grading", ct);
         if (session is null || grade is null) return GradingResult.Fail("That session has no grade record in this organization.");
-        if (grade.Status != GradeStatus.HumanReviewPending)
-            return GradingResult.Fail($"Human scores are entered while the grade is Human Review Pending (it is {GradeStatusMachine.Label(grade.Status)}).");
         var policy = GradingJson.Read<PolicySnapshot>(grade.PolicyJson) ?? new PolicySnapshot { TakenAt = Now };
+        // GAD-T703: under AI-only grading a human grade is an optional second opinion, entered once the AI's grade is final;
+        // it is recorded and compared but never changes the grade or its status.
+        var secondOpinion = policy.Rules.Mode == GradingMode.AiOnly
+                            && grade.Status is GradeStatus.Finalized or GradeStatus.Published or GradeStatus.UnderAppeal or GradeStatus.Amended;
+        if (grade.Status != GradeStatus.HumanReviewPending && !secondOpinion)
+            return GradingResult.Fail($"Human scores are entered while the grade is Human Review Pending (it is {GradeStatusMachine.Label(grade.Status)}).");
         var objectives = await GradingInputs.LoadObjectivesAsync(db, session.ExamId, Org, ct);
         if (objectives.Count == 0) return GradingResult.Fail("This exam has no learning objectives to grade.");
 
@@ -598,6 +611,11 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         }
 
         var (result, excluded, states) = await ComputeAsync(session, policy, ct);
+        if (secondOpinion)
+        {
+            RecordDisagreements(sessionId, result, excluded, states, "A human second opinion on an AI-only grade.", policy, new HashSet<Guid>());
+            return await SaveAsync(ct) ?? GradingResult.Done("Human grades recorded as a second opinion beside the AI's. Under AI-only grading the AI's grade stands; the comparison shows how close it came.");
+        }
         var reconciled = (await (from rec in db.GradeReconciliations.AsNoTracking()
                                  join dis in db.GradeDisagreements.AsNoTracking() on rec.DisagreementId equals dis.Id
                                  where dis.SessionId == sessionId && dis.OrganizationId == Org && rec.OrganizationId == Org
@@ -756,7 +774,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var refused = await TryMoveAsync(grade, GradeStatus.Published, Blank(note) ?? "Published to the student.", ct);
         if (refused is not null) return refused;
         AddApproval(sessionId, ApprovalAction.Publish, note);
-        GradingAudit.Add(db, Org, Actor, "grade.published", "FinalGrade", sessionId.ToString(), sessionId, Now, after: new { finalPercent = grade.FinalPercent });
+        await GradingEvents.GradePublishedAsync(db, grade, Actor, Now, ct);
         await NotifyStudentAsync(sessionId, Notifications.EmailKinds.ResultReleased, (title, orgName, name) =>
             new(orgName, name, ExamTitle: title, Score: grade.LetterOrLabel ?? (grade.FinalPercent is { } p ? $"{p:0.##}%" : null), ActionUrl: "/my-results", ActionLabel: "View my result"), ct);
         return await SaveAsync(ct) ?? GradingResult.Done("Published: the student can now see the result and the report.");
@@ -920,7 +938,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
                 await GradingAudit.DeniedAsync(db, org, Actor, Permission.ViewOwnPublishedResults, "Opening a result that is not the caller's published result", sessionId, Now, ct);
             return null;
         }
-        return await LoadAsync(sessionId, ct);
+        return await LoadAsync(sessionId, ct, forStudent: true);
     }
 
     // ================================================================== helpers
