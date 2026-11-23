@@ -3,11 +3,12 @@
 @using Gadfly.Server.Grading
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
+@inject Gadfly.Server.Localization.UiText T
 
 <PageTitle>Panel calibration · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
 <h1>Panel calibration <span>How far the AI grading panel may be trusted on each exam, checked against blind human marking</span> <HelpLink Topic="grading-guide" /></h1>
-<p><a href="grading">← Grading queue</a></p>
+<p><a href="grading">← Grading queue</a> · <a href="grading/provisional-agreement">@T["provisional.title"]</a></p>
 
 @if (rows is null)
 {

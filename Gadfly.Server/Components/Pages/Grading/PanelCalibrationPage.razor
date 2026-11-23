@@ -6,11 +6,12 @@
 @using Microsoft.EntityFrameworkCore
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
+@inject Gadfly.Server.Localization.UiText T
 
 <PageTitle>Panel calibration · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
 <h1>Panel calibration <span>@(summary?.ExamTitle ?? examTitle)</span> <HelpLink Topic="grading-guide" /></h1>
-<p><a href="grading/panel">← All exams</a> · <a href="grading/bias/@ExamId">Bias probes</a> · <a href="grading/self-preference/@ExamId">Self-preference check</a>@if (settings?.DoubleMarking == true) { <text> · </text><a href="grading/second-mark/@ExamId">Second marking</a> }</p>
+<p><a href="grading/panel">← All exams</a> · <a href="grading/bias/@ExamId">Bias probes</a> · <a href="grading/self-preference/@ExamId">Self-preference check</a> · <a href="grading/provisional-agreement/@ExamId">@T["provisional.title"]</a>@if (settings?.DoubleMarking == true) { <text> · </text><a href="grading/second-mark/@ExamId">Second marking</a> }</p>
 
 @if (message is not null)
 {

@@ -1,0 +1,119 @@
+@page "/grading/provisional-agreement"
+@page "/grading/provisional-agreement/{ExamId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Assessment
+@using Gadfly.Server.Grading
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject NavigationManager Nav
+@inject Gadfly.Server.Localization.UiText T
+
+<PageTitle>@T["provisional.pageTitle"]</PageTitle>
+<HeadContent><link rel="stylesheet" href="grading.css" /></HeadContent>
+<h1>@T["provisional.title"] <span>@(summary?.ExamTitle ?? (summary is null ? "" : T["provisional.allExams"].Value))</span> <HelpLink Topic="grading-guide" /></h1>
+<p><a href="grading/panel">← @T["provisional.backToPanel"]</a></p>
+
+@if (summary is null)
+{
+    <p class="@(loaded ? "notice" : "hint")" role="status">@(loaded ? T["provisional.notPermitted"] : T["provisional.loading"])</p>
+}
+else
+{
+    <p>@T["provisional.intro"]</p>
+    <p>
+        <label for="provisional-exam">@T["provisional.examPicker"]</label>
+        <select id="provisional-exam" value="@(ExamId?.ToString() ?? "")" @onchange="PickExam">
+            <option value="">@T["provisional.allExams"]</option>
+            @foreach (var e in summary.Exams)
+            {
+                <option value="@e.Id">@e.Title</option>
+            }
+        </select>
+    </p>
+    @if (summary.AnyMock)
+    {
+        <p class="gr-banner mock">@T["provisional.mock"]</p>
+    }
+    @if (!summary.AuditMatches)
+    {
+        <p class="gr-banner warn" role="status">@T["provisional.auditMismatch", summary.AuditedDisagreements, summary.Report.Overall.Disagreements]</p>
+    }
+    <div class="gr-summary">
+        <div><span class="hint">@T["provisional.sessions"]</span>@summary.Sessions</div>
+        <div><span class="hint">@T["provisional.sessionsWithProvisional"]</span>@summary.SessionsWithProvisional</div>
+        <div><span class="hint">@T["provisional.pendingTurns"]</span>@summary.PendingTurns</div>
+        <div><span class="hint">@T["provisional.unreadableSessions"]</span>@summary.UnreadableSessions</div>
+    </div>
+    @if (summary.Report.Overall.Turns == 0)
+    {
+        <p class="notice">@T["provisional.none"]</p>
+    }
+    else
+    {
+        <h2 class="gr-section">@T["provisional.overall"]</h2>
+        @RowsTable(T["provisional.group"], new[] { summary.Report.Overall })
+        <h2 class="gr-section">@T["provisional.bySubject"]</h2>
+        @RowsTable(T["provisional.subject"], summary.Report.BySubject)
+        <h2 class="gr-section">@T["provisional.byMove"]</h2>
+        @RowsTable(T["provisional.move"], summary.Report.ByMove)
+        <h2 class="gr-section">@T["provisional.byProviderModel"]</h2>
+        @RowsTable(T["provisional.providerModel"], summary.Report.ByProviderModel)
+        <p class="hint">@T["provisional.footnote", ProvisionalAgreement.MinTurns]</p>
+    }
+}
+
+@code {
+    [Parameter] public Guid? ExamId { get; set; }
+    private ProvisionalAgreementSummary? summary;
+    private bool loaded;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        summary = await PanelDb.RunAsync(Scopes, Tenant, sp => sp.GetRequiredService<ProvisionalAgreementService>().AnalyzeAsync(ExamId));
+        loaded = true;
+    }
+
+    private void PickExam(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        Nav.NavigateTo(Guid.TryParse(value, out var id) ? $"grading/provisional-agreement/{id}" : "grading/provisional-agreement");
+    }
+
+    private string Key(ProvisionalAgreementRow r) => r.Key switch
+    {
+        "all" => T["provisional.allTurns"],
+        "(none)" => T["provisional.noSubject"],
+        _ => r.Key
+    };
+
+    private string Rate(ProvisionalAgreementRow r) => r.DisagreementRate is not { } rate
+        ? T["provisional.na"]
+        : r.RateLow is { } lo && r.RateHigh is { } hi
+            ? T["provisional.rateInterval", T.Number(rate * 100, "0.#"), T.Number(lo * 100, "0.#"), T.Number(hi * 100, "0.#")]
+            : T["provisional.rate", T.Number(rate * 100, "0.#")];
+
+    private string Gap(double? g) => g is { } v ? T.Number(v, "+0.000;-0.000;0.000") : T["provisional.na"];
+
+    private RenderFragment RowsTable(string groupHeader, IReadOnlyList<ProvisionalAgreementRow> rows) => __builder =>
+    {
+        <div class="gr-table-wrap">
+            <table class="grid">
+                <thead><tr><th>@groupHeader</th><th>@T["provisional.turns"]</th><th>@T["provisional.compared"]</th><th>@T["provisional.disagreements"]</th><th>@T["provisional.rateHeader"]</th><th>@T["provisional.signedGap"]</th><th>@T["provisional.absoluteGap"]</th></tr></thead>
+                <tbody>
+                    @foreach (var r in rows)
+                    {
+                        <tr>
+                            <td>@Key(r)@if (r.TooFew) { <text> </text><span class="hint">@T["provisional.tooFew"]</span> }</td>
+                            <td>@r.Turns</td>
+                            <td>@r.Compared</td>
+                            <td>@r.Disagreements</td>
+                            <td>@Rate(r)</td>
+                            <td>@Gap(r.MeanSignedGap)</td>
+                            <td>@Gap(r.MeanAbsoluteGap)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    };
+}
