@@ -25,6 +25,11 @@ public sealed class UiCatalog
 
     public UiCatalog() : this(LoadEmbedded()) { }
 
+    private static readonly Lazy<UiCatalog> embedded = new(() => new UiCatalog());
+
+    /// <summary>The embedded strings, loaded once: for code with no DI scope that needs a fixed rendering (StudentText.English, GAD-T628).</summary>
+    public static UiCatalog Embedded => embedded.Value;
+
     /// <summary>A catalog over the given strings (tests).</summary>
     public UiCatalog(IReadOnlyDictionary<string, IReadOnlyDictionary<string, string>> strings) =>
         byLanguage = strings.ToFrozenDictionary(

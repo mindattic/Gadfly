@@ -19,7 +19,7 @@ public static class LocalizationSetup
     public static IServiceCollection AddGadflyLocalization(this IServiceCollection services)
     {
         services.AddLocalization();
-        services.AddSingleton<UiCatalog>();
+        services.AddSingleton(_ => UiCatalog.Embedded);
         services.AddScoped<UiText>();
         return services;
     }
