@@ -21,15 +21,15 @@ public enum VoiceMode
 /// <summary>
 /// Voice exam room settings (GAD-T53), from <c>Gadfly:Voice</c>:
 /// <c>Mode</c> (<c>off</c> | <c>mock</c> | <c>live</c>; default <c>mock</c> in Development, otherwise <c>off</c>),
-/// <c>AvatarModelUrl</c> (the GLB; default <c>/assets/avatars/mpfb.glb</c> when that file is present, else the 2D portrait),
-/// <c>PortraitUrl</c>, <c>EndOfAnswerSeconds</c> (the shortest silence that ends an answer, default 4),
+/// <c>AvatarModelUrl</c> (the GLB; default <c>/assets/avatars/mpfb.glb</c> when that file is present, else her live presence),
+/// <c>EndOfAnswerSeconds</c> (the shortest silence that ends an answer, default 4),
 /// <c>EndOfAnswerMaxSeconds</c> (the longest it may grow to as it adapts to the student's own pauses, default 12; GAD-T264),
 /// <c>EndOfAnswerCompleteSeconds</c> (the shorter silence after an answer that ends in a finished sentence, default 2; GAD-T498),
 /// <c>SpeechHangoverMs</c> (the silence after which the browser closes one stretch of speech and commits it, default 700; GAD-T498).
 /// Provider choice and keys are the libraries' own settings: <c>MindAttic:SpeechRecognition:Provider</c> and
 /// <c>MindAttic:Avatar:ElevenLabs:VoiceId</c>; the ElevenLabs key is read from Vault on the server only.
 /// </summary>
-public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, string PortraitUrl, double EndOfAnswerSeconds)
+public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, double EndOfAnswerSeconds)
 {
     public bool Available => Mode != VoiceMode.Off;
 
@@ -71,16 +71,6 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
     /// first one a student hears starts at once. <c>Gadfly:Voice:WarmPhrases</c>, default true.
     /// </summary>
     public bool WarmPhrases { get; init; } = true;
-
-    /// <summary>
-    /// Where the mouth is in the 2D portrait, as fractions of the image: centre x, centre y and width (<c>Gadfly:Voice:PortraitMouth</c>,
-    /// "x,y,w"). The browser animates a mouth there while she speaks (GAD-T303). Known for the default portrait; null for a custom
-    /// portrait without it, which then only brightens while she speaks.
-    /// </summary>
-    public string? PortraitMouth { get; init; }
-
-    /// <summary>The default portrait's mouth (the bundled <c>/assets/portrait-f.png</c>, 480 x 600).</summary>
-    public const string DefaultPortraitMouth = "0.558,0.82,0.19";
 
     /// <summary>
     /// The ElevenLabs model the examiner speaks with when <c>MindAttic:Avatar:ElevenLabs:ModelId</c> isn't set (GAD-T303):
@@ -137,8 +127,7 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
     public double PlainSpeechSpeed { get; init; } = 0.9;
 
     /// <summary>
-    /// Per-examiner overrides (GAD-T504), <c>Gadfly:Voice:Examiners:&lt;id&gt;</c> with <c>ModelUrl</c>, <c>PortraitUrl</c>,
-    /// <c>PortraitMouth</c>, <c>VoiceId</c> and <c>VoiceIds:&lt;language&gt;</c>, keyed by the examiner catalog's ids
+    /// Per-examiner overrides (GAD-T504), <c>Gadfly:Voice:Examiners:&lt;id&gt;</c> with <c>ModelUrl</c>, <c>VoiceId</c> and <c>VoiceIds:&lt;language&gt;</c>, keyed by the examiner catalog's ids
     /// (<see cref="Gadfly.Server.Student.ExaminerCatalog"/>). Unset parts keep the catalog's defaults.
     /// </summary>
     public IReadOnlyDictionary<string, ExaminerSettings> Examiners { get; init; } = new Dictionary<string, ExaminerSettings>();
@@ -225,19 +214,7 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
         return cues;
     }
 
-    /// <summary>"x,y,w" with each a fraction in (0, 1), normalized; anything else is null (no mouth drawn).</summary>
-    public static string? ParseMouth(string value)
-    {
-        var parts = value.Split(',', StringSplitOptions.TrimEntries);
-        if (parts.Length != 3) return null;
-        var n = new double[3];
-        for (var i = 0; i < 3; i++)
-            if (!double.TryParse(parts[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out n[i])
-                || !double.IsFinite(n[i]) || n[i] <= 0 || n[i] >= 1) return null;
-        return string.Join(',', n.Select(x => x.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)));
-    }
-
-    public static readonly VoiceSettings Disabled = new(VoiceMode.Off, null, "/assets/portrait-f.png", 4);
+    public static readonly VoiceSettings Disabled = new(VoiceMode.Off, null, 4);
 
     /// <summary>Reads the settings. <paramref name="webRoot"/> is checked for the default avatar model.</summary>
     public static VoiceSettings From(IConfiguration config, bool development, string? webRoot)
@@ -258,16 +235,13 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
         var complete = double.TryParse(section["EndOfAnswerCompleteSeconds"], System.Globalization.CultureInfo.InvariantCulture, out var d) && double.IsFinite(d) ? Math.Clamp(d, 1, cue) : Math.Min(2, cue);
         var hangover = int.TryParse(section["SpeechHangoverMs"], System.Globalization.CultureInfo.InvariantCulture, out var h) ? Math.Clamp(h, 300, 2000) : 700;
         var backchannel = int.TryParse(section["BackchannelMs"], System.Globalization.CultureInfo.InvariantCulture, out var b) && b > 0 ? Math.Clamp(b, 300, 3000) : 0;
-        var portrait = section["PortraitUrl"] ?? "/assets/portrait-f.png";
-        var mouth = section["PortraitMouth"] is { Length: > 0 } m ? ParseMouth(m) : portrait == "/assets/portrait-f.png" ? DefaultPortraitMouth : null;
-        return new VoiceSettings(mode, string.IsNullOrWhiteSpace(model) ? null : model, portrait, cue)
+        return new VoiceSettings(mode, string.IsNullOrWhiteSpace(model) ? null : model, cue)
         {
             EndOfAnswerMaxSeconds = max,
             EndOfAnswerCompleteSeconds = complete,
             SpeechHangoverMs = hangover,
             BackchannelMs = backchannel,
             WarmPhrases = !bool.TryParse(section["WarmPhrases"], out var warm) || warm,
-            PortraitMouth = mouth,
             TtsModel = section["TtsModel"] is { Length: > 0 } tts ? tts.Trim() : "eleven_flash_v2_5",
             TtsModels = PerLanguage(section.GetSection("TtsModels")),
             VoiceIds = PerLanguage(section.GetSection("VoiceIds")),
@@ -278,8 +252,7 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
             EslCutOffBackoffFactor = Number(section["Esl:CutOffBackoffFactor"], 1, 4, 2),
             PlainSpeechSpeed = double.TryParse(section["PlainSpeechSpeed"], System.Globalization.CultureInfo.InvariantCulture, out var sp) && double.IsFinite(sp) ? Math.Clamp(sp, 0.7, 1.2) : 0.9,
             Examiners = section.GetSection("Examiners").GetChildren().ToDictionary(e => e.Key.Trim(), e => new ExaminerSettings(
-                Blank(e["ModelUrl"]), Blank(e["PortraitUrl"]), e["PortraitMouth"] is { Length: > 0 } em ? ParseMouth(em) : null,
-                Blank(e["VoiceId"]), PerLanguage(e.GetSection("VoiceIds"))), StringComparer.Ordinal),
+                Blank(e["ModelUrl"]), Blank(e["VoiceId"]), PerLanguage(e.GetSection("VoiceIds"))), StringComparer.Ordinal),
         };
     }
 
@@ -299,9 +272,9 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
 }
 
 /// <summary>
-/// One examiner's configured overrides (GAD-T504), from <c>Gadfly:Voice:Examiners:&lt;id&gt;</c>: where the model and portrait are
-/// hosted (e.g. blob storage), the portrait's mouth ("x,y,w"), and the examiner's own ElevenLabs voice, for every language
+/// One examiner's configured overrides (GAD-T504), from <c>Gadfly:Voice:Examiners:&lt;id&gt;</c>: where the model is
+/// hosted (e.g. blob storage) and the examiner's own ElevenLabs voice, for every language
 /// (<c>VoiceId</c>) or one (<c>VoiceIds:&lt;language&gt;</c>). Voice ids are settings, not secrets.
 /// </summary>
-public sealed record ExaminerSettings(string? ModelUrl, string? PortraitUrl, string? PortraitMouth, string? VoiceId,
+public sealed record ExaminerSettings(string? ModelUrl, string? VoiceId,
     IReadOnlyDictionary<string, string> VoiceIds);

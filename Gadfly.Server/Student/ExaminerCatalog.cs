@@ -8,14 +8,10 @@ namespace Gadfly.Server.Student;
 /// <summary>One examiner a student can choose on the get-ready page (GAD-T595), and an exam or organization can fix (GAD-T504).</summary>
 /// <param name="Id">Stable id, also what an exam's AvatarId and an organization's DefaultAvatarId name.</param>
 /// <param name="NameKey">UI string key of the examiner's description ("getReady.examiner.choiceFemale").</param>
-/// <param name="ModelUrl">The 3D model, or null for the portrait only.</param>
-/// <param name="PortraitUrl">The 2D portrait (always shown first, and on devices without 3D).</param>
-/// <param name="Available">False while the examiner's model or portrait isn't installed: listed as coming soon, not choosable.</param>
-public sealed record ExaminerOption(string Id, string NameKey, string? ModelUrl, string PortraitUrl, bool Available)
+/// <param name="ModelUrl">The 3D model, or null when none is installed (the exam room then shows her live presence).</param>
+/// <param name="Available">False while the examiner's model isn't installed: listed as coming soon, not choosable.</param>
+public sealed record ExaminerOption(string Id, string NameKey, string? ModelUrl, bool Available)
 {
-    /// <summary>Where the portrait's mouth is ("x,y,w" as fractions of the image), so it can move while the examiner speaks; null: none drawn.</summary>
-    public string? PortraitMouth { get; init; }
-
     /// <summary>The examiner's own ElevenLabs voice for every language (null: the usual platform voice).</summary>
     public string? VoiceId { get; init; }
 
@@ -33,7 +29,7 @@ public sealed record ExaminerOption(string Id, string NameKey, string? ModelUrl,
 /// <summary>
 /// The examiners Gadfly offers (GAD-T595, GAD-T504): the female examiner (TalkingHead's CC0 mpfb.glb, the deployment's
 /// <c>Gadfly:Voice:AvatarModelUrl</c>) and the male counterpart (<c>wwwroot/assets/avatars/examiner-m.glb</c>, CC0, built by
-/// tools/examiner-m), each with its portrait and its own voice. A list rather than one hard-coded examiner, so adding one is a row
+/// tools/examiner-m), each with its own voice. A list rather than one hard-coded examiner, so adding one is a row
 /// here. Any part can be overridden per examiner with <c>Gadfly:Voice:Examiners:&lt;id&gt;</c> (<see cref="ExaminerSettings"/>).
 /// <para>
 /// Who chooses: an exam's <c>AvatarId</c>, else its organization's <c>DefaultAvatarId</c>, fixes the examiner for everyone taking it;
@@ -47,12 +43,8 @@ public static class ExaminerCatalog
     public const string Female = "examiner-f";
     public const string Male = "examiner-m";
 
-    /// <summary>The male examiner's files (relative to wwwroot), committed with GAD-T504.</summary>
+    /// <summary>The male examiner's model (relative to wwwroot), committed with GAD-T504.</summary>
     public const string MaleModelPath = "assets/avatars/examiner-m.glb";
-    public const string MalePortraitPath = "assets/portrait-m.png";
-
-    /// <summary>The male portrait's mouth (the bundled <c>/assets/portrait-m.png</c>, 480 x 600).</summary>
-    public const string MalePortraitMouth = "0.51,0.725,0.19";
 
     /// <summary>
     /// The male examiner's default ElevenLabs voice: "Brian", a premade voice described as deep, resonant and comforting (calm and
@@ -69,18 +61,16 @@ public static class ExaminerCatalog
         var f = voice.Examiners.GetValueOrDefault(Female);
         var m = voice.Examiners.GetValueOrDefault(Male);
         string? Local(string path) => webRoot is not null && File.Exists(Path.Combine(webRoot, path)) ? "/" + path : null;
-        var malePortrait = m?.PortraitUrl ?? Local(MalePortraitPath);
+        var maleModel = m?.ModelUrl ?? Local(MaleModelPath);
         return
         [
-            new(Female, "getReady.examiner.choiceFemale", f?.ModelUrl ?? voice.AvatarModelUrl, f?.PortraitUrl ?? voice.PortraitUrl, true)
+            new(Female, "getReady.examiner.choiceFemale", f?.ModelUrl ?? voice.AvatarModelUrl, true)
             {
-                PortraitMouth = f?.PortraitMouth ?? voice.PortraitMouth,
                 VoiceId = f?.VoiceId,
                 VoiceIds = f?.VoiceIds ?? new Dictionary<string, string>(),
             },
-            new(Male, "getReady.examiner.choiceMale", m?.ModelUrl ?? Local(MaleModelPath), malePortrait ?? "/" + MalePortraitPath, malePortrait is not null)
+            new(Male, "getReady.examiner.choiceMale", maleModel, maleModel is not null)
             {
-                PortraitMouth = m?.PortraitMouth ?? (m?.PortraitUrl is null ? MalePortraitMouth : null),
                 VoiceId = m?.VoiceId ?? MaleDefaultVoiceId,
                 VoiceIds = m?.VoiceIds ?? new Dictionary<string, string>(),
             },

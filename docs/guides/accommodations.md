@@ -35,7 +35,8 @@ These aren't accommodations, but they help many students:
   countdown.
 - **Clear and answer again** throws away what you have said so far for this answer, before it is sent. Once an answer
   is sent it is taken as heard; a reviewer sees which words the recognizer was unsure of.
-- If your device asks for **reduced motion**, the examiner is shown as a still picture instead of a moving head.
+- If your device asks for **reduced motion**, the examiner stays live but moves her head more gently; her lips still move
+  with her words.
 - **Taking the exam in a language that isn't your best?** Tell us on the get-ready page which language you speak best. The
   examiner then speaks a little more slowly and plainly and waits longer for you to finish. It is never used to grade you. See
   [Getting ready: the get-ready page and your languages](get-ready-and-languages.md).

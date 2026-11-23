@@ -685,7 +685,7 @@ else
     private ExaminerOption examiner = null!;
     private IJSObjectReference? prefsModule;
 
-    private sealed record RememberedExaminer(string? Id, string? ModelUrl, string? PortraitUrl, ExaminerCustomization? Customization);
+    private sealed record RememberedExaminer(string? Id, string? ModelUrl, ExaminerCustomization? Customization);
 
     /// <summary>The student's customization of the examiner as remembered on this device (GAD-T646), validated for the one shown;
     /// kept when the choice is saved again. None while the exam or organization fixes the examiner.</summary>
@@ -732,7 +732,7 @@ else
             prefsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/device-prefs.js");
             await prefsModule.InvokeVoidAsync("setExaminer", new
             {
-                id = examiner.Id, modelUrl = examiner.ModelUrl, portraitUrl = examiner.PortraitUrl,
+                id = examiner.Id, modelUrl = examiner.ModelUrl,
                 customization = customization.IsEmpty ? null : customization,
             });
         }

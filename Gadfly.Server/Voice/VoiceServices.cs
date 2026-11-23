@@ -75,7 +75,7 @@ public static class VoiceServices
     }
 
     /// <summary>Paths under wwwroot that never change without a new deploy also changing other things: vendored libraries, the
-    /// avatar model and portrait, sounds, and the webcam helper, so a long, immutable cache is safe (GAD-T317). Unfingerprinted
+    /// avatar models, sounds, and the webcam helper, so a long, immutable cache is safe (GAD-T317). Unfingerprinted
     /// feature CSS/JS is left to the default (short, revalidated) caching.</summary>
     private static readonly string[] LongCachePrefixes = ["/lib/", "/assets/", "/sounds/", "/webcam/"];
 

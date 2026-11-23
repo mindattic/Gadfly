@@ -8,7 +8,7 @@ namespace Gadfly.Tests.Server;
 [TestFixture]
 public class ExaminerCatalogTests
 {
-    private static readonly VoiceSettings Voice = new(VoiceMode.Mock, "/assets/avatars/mpfb.glb", "/assets/portrait-f.png", 4);
+    private static readonly VoiceSettings Voice = new(VoiceMode.Mock, "/assets/avatars/mpfb.glb", 4);
 
     [Test]
     public void TheConfiguredExaminer_IsOffered_AndTheMaleOneOnlyOnceInstalled()
@@ -20,11 +20,11 @@ public class ExaminerCatalogTests
             var options = ExaminerCatalog.For(Voice, empty);
             Assert.That(options.Select(o => o.Id), Is.EqualTo(new[] { ExaminerCatalog.Female, ExaminerCatalog.Male }));
             Assert.That(options[0].Available, Is.True);
-            Assert.That(options[0].PortraitUrl, Is.EqualTo("/assets/portrait-f.png"));
-            Assert.That(options[1].Available, Is.False, "no portrait installed yet");
+            Assert.That(options[0].ModelUrl, Is.EqualTo("/assets/avatars/mpfb.glb"));
+            Assert.That(options[1].Available, Is.False, "no model installed yet");
 
-            Directory.CreateDirectory(Path.Combine(empty, "assets"));
-            File.WriteAllBytes(Path.Combine(empty, ExaminerCatalog.MalePortraitPath), [1]);
+            Directory.CreateDirectory(Path.Combine(empty, "assets", "avatars"));
+            File.WriteAllBytes(Path.Combine(empty, ExaminerCatalog.MaleModelPath), [1]);
             Assert.That(ExaminerCatalog.For(Voice, empty)[1].Available, Is.True);
         }
         finally { Directory.Delete(empty, recursive: true); }
@@ -39,10 +39,9 @@ public class ExaminerCatalogTests
         Assert.That(ExaminerCatalog.Pick(options, ExaminerCatalog.Female).Id, Is.EqualTo(ExaminerCatalog.Female));
     }
     [Test]
-    public void TheMaleExaminer_HasHisOwnPortraitMouthAndVoice_AndSettingsOverrideThem()
+    public void TheMaleExaminer_HasHisOwnVoice_AndSettingsOverrideThem()
     {
         var male = ExaminerCatalog.For(Voice, webRoot: null)[1];
-        Assert.That(male.PortraitMouth, Is.EqualTo(ExaminerCatalog.MalePortraitMouth));
         Assert.That(male.VoiceIdFor("en"), Is.EqualTo(ExaminerCatalog.MaleDefaultVoiceId));
         Assert.That(male.VoiceIdFor("ko"), Is.EqualTo(ExaminerCatalog.MaleDefaultVoiceId), "the premade voice speaks Korean too");
         Assert.That(ExaminerCatalog.For(Voice, webRoot: null)[0].VoiceIdFor("en"), Is.Null, "hers stays the platform voice");
@@ -51,13 +50,12 @@ public class ExaminerCatalogTests
         {
             Examiners = new Dictionary<string, ExaminerSettings>
             {
-                [ExaminerCatalog.Male] = new("https://cdn.example/m.glb", "https://cdn.example/m.png", null, "maleVoice0123456789",
+                [ExaminerCatalog.Male] = new("https://cdn.example/m.glb", "maleVoice0123456789",
                     new Dictionary<string, string> { ["ko"] = "koreanMaleVoice0123" }),
             },
         };
         var m = ExaminerCatalog.For(configured, webRoot: null)[1];
-        Assert.That((m.ModelUrl, m.PortraitUrl, m.Available), Is.EqualTo(("https://cdn.example/m.glb", "https://cdn.example/m.png", true)));
-        Assert.That(m.PortraitMouth, Is.Null, "a hosted portrait's mouth is unknown unless configured");
+        Assert.That((m.ModelUrl, m.Available), Is.EqualTo(("https://cdn.example/m.glb", true)));
         Assert.That((m.VoiceIdFor("en"), m.VoiceIdFor("ko")), Is.EqualTo(("maleVoice0123456789", "koreanMaleVoice0123")));
     }
 
@@ -65,10 +63,10 @@ public class ExaminerCatalogTests
     public void AnExamOrOrganizationExaminer_IsFixed_OtherwiseTheStudentsChoiceStands()
     {
         var empty = Path.Combine(Path.GetTempPath(), "gadfly-examiners-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path.Combine(empty, "assets"));
+        Directory.CreateDirectory(Path.Combine(empty, "assets", "avatars"));
         try
         {
-            File.WriteAllBytes(Path.Combine(empty, ExaminerCatalog.MalePortraitPath), [1]);
+            File.WriteAllBytes(Path.Combine(empty, ExaminerCatalog.MaleModelPath), [1]);
             var options = ExaminerCatalog.For(Voice, empty);
             Assert.That(ExaminerCatalog.Fixed(options, null, null), Is.Null);
             Assert.That(ExaminerCatalog.Resolve(options, null, null, ExaminerCatalog.Male).Id, Is.EqualTo(ExaminerCatalog.Male));
@@ -125,10 +123,10 @@ public class ExaminerCatalogTests
     public void Resolve_CarriesTheValidatedCustomization_UnlessTheExaminerIsFixed()
     {
         var empty = Path.Combine(Path.GetTempPath(), "gadfly-examiners-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path.Combine(empty, "assets"));
+        Directory.CreateDirectory(Path.Combine(empty, "assets", "avatars"));
         try
         {
-            File.WriteAllBytes(Path.Combine(empty, ExaminerCatalog.MalePortraitPath), [1]);
+            File.WriteAllBytes(Path.Combine(empty, ExaminerCatalog.MaleModelPath), [1]);
             var options = ExaminerCatalog.For(Voice, empty);
             var chosen = new ExaminerCustomization(Voice: "onwK4e9ZLuTAKqWW03F9", Hair: "grey", Attire: "spacesuit");
 

@@ -12,6 +12,3 @@
 The other sample avatars in the TalkingHead repository (`brunette*.glb` from Ready Player Me, `avaturn.glb`,
 `avatarsdk.glb`, `vroid.glb`) are licensed for non-commercial use only. They are **not** included here and must not
 be added.
-
-`portrait.png` (in the parent folder) is a render of this avatar made with this package, for the 2D fallback. It
-inherits the CC0 status.

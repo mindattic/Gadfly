@@ -5,7 +5,7 @@
 
   The 36.8 MB default avatar (mpfb.glb, CC0) is NOT committed: Gadfly.Server.csproj copies it into
   wwwroot/assets/avatars at build time when the Avatar repo is next to this one (see MindAtticAvatarRoot),
-  and the exam room falls back to the 2D portrait when it is absent (e.g. on CI). In production host the
+  and the exam room shows her live presence when it is absent (e.g. on CI). In production host the
   model on blob storage/CDN and set Gadfly:Voice:AvatarModelUrl.
 #>
 param(
@@ -42,8 +42,7 @@ Copy-To (Join-Path $nm '@microsoft\signalr\dist\browser\signalr.min.js') 'signal
 Get-ChildItem (Join-Path $Avatar 'web\dist') -Filter *.js -File | ForEach-Object { Copy-To $_.FullName "avatar\$($_.Name)" }
 Get-ChildItem (Join-Path $Speech 'web\dist') -Filter *.js -File | ForEach-Object { Copy-To $_.FullName "speech\$($_.Name)" }
 
-# The avatar's licence note (small); the GLB itself is copied at build time. assets/portrait-f.png is not copied: it is Gadfly's own
-# render of her in the blue look (avatar-look.js, GAD-T687), not the library's untinted portrait.
+# The avatar's licence note (small); the GLB itself is copied at build time.
 New-Item -ItemType Directory -Force (Join-Path $root 'assets\avatars') | Out-Null
 Copy-Item (Join-Path $Avatar 'web\assets\avatars\LICENSE.md') (Join-Path $root 'assets\avatars\LICENSE.md') -Force
 '{0} MB written to {1}' -f [math]::Round((Get-ChildItem $out -Recurse -File | Measure-Object Length -Sum).Sum / 1MB, 2), $out

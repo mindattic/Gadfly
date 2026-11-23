@@ -292,7 +292,7 @@ server with the matching seeder (`-Password` chooses the account password). The 
 | `Gadfly:Voice:BackchannelMs` | A soft "Mm-hm." after a finished sentence and this much silence, without ending the turn (0 = off, the default; else 300 to 3000). |
 | `Gadfly:Voice:WaitTypingShare` | Share of sessions given the old typing sound instead of the thinking gesture during the judging wait, for an A/B test (0, the default, turns it off). |
 | `Gadfly:Voice:TtsModels:<lang>`, `Gadfly:Voice:VoiceIds:<lang>` | The examiner's ElevenLabs model and platform voice for one exam language (for example `TtsModels:ko`, `TtsModels:es`); unset uses the usual model and voice, which speak Korean and Spanish. |
-| `Gadfly:Voice:Examiners:<id>` | Overrides part of an examiner in the catalog (`examiner-f`, `examiner-m`): model, portrait, portrait mouth or voice. |
+| `Gadfly:Voice:Examiners:<id>` | Overrides part of an examiner in the catalog (`examiner-f`, `examiner-m`): model or voice. |
 | `Gadfly:Voice:PlainSpeechSpeed` | The examiner's speed for a second-language speaker (0.7 to 1.2, default 0.9; 1 turns it off). |
 | `Gadfly:Voice:Esl:EndOfAnswerSeconds`, `:EndOfAnswerMaxSeconds`, `:EndOfAnswerCompleteSeconds`, `:CompleteAfterAnswers`, `:CutOffBackoffFactor` | End-of-answer silences for a second-language speaker (defaults 6 s, 15 s, 3.5 s after 3 uncut answers, cut-off backoff doubled). |
 | `Gadfly:Demo:Password`, `Gadfly:Demo:ApiKey` | Chosen password and API key for the seeded demo accounts. |

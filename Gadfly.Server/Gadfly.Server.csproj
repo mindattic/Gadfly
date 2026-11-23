@@ -68,7 +68,7 @@
   </ItemGroup>
 
   <!-- The default examiner avatar (mpfb.glb, CC0, 36.8 MB) is not committed: it is copied from the MindAttic.Avatar checkout next to
-       this repo when present (a dev box). Without it (CI) the exam room shows the 2D portrait; in production host the model on
+       this repo when present (a dev box). Without it (CI) the exam room shows her live presence; in production host the model on
        blob storage or a CDN and set Gadfly:Voice:AvatarModelUrl. See tools/sync-voice-assets.ps1 (GAD-T53). -->
   <PropertyGroup>
     <MindAtticAvatarRoot Condition="'$(MindAtticAvatarRoot)' == ''">$(MSBuildThisFileDirectory)..\..\MindAttic.Avatar</MindAtticAvatarRoot>

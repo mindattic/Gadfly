@@ -7,7 +7,7 @@ using NUnit.Framework;
 
 namespace Gadfly.Tests.Server;
 
-/// <summary>The examiner's delivery (GAD-T303): speaking styles, the mock voice's timing data and the portrait settings. No provider.</summary>
+/// <summary>The examiner's delivery (GAD-T303): speaking styles, the mock voice's timing data and the voice settings. No provider.</summary>
 [TestFixture]
 public class ExaminerDeliveryTests
 {
@@ -56,16 +56,13 @@ public class ExaminerDeliveryTests
     }
 
     [Test]
-    public void The_portrait_mouth_is_known_for_the_default_portrait_and_validated_when_configured()
+    public void Voice_settings_read_their_defaults_and_ignore_an_old_portrait_setting()
     {
         static IConfiguration Config(params (string, string?)[] values) =>
             new ConfigurationBuilder().AddInMemoryCollection(values.Select(v => new KeyValuePair<string, string?>(v.Item1, v.Item2))).Build();
 
-        Assert.That(VoiceSettings.From(Config(), true, null).PortraitMouth, Is.EqualTo(VoiceSettings.DefaultPortraitMouth));
-        Assert.That(VoiceSettings.From(Config(("Gadfly:Voice:PortraitUrl", "/me.png")), true, null).PortraitMouth, Is.Null, "unknown for a custom portrait");
-        Assert.That(VoiceSettings.From(Config(("Gadfly:Voice:PortraitUrl", "/me.png"), ("Gadfly:Voice:PortraitMouth", "0.5, 0.7, 0.2")), true, null).PortraitMouth, Is.EqualTo("0.5,0.7,0.2"));
-        Assert.That(VoiceSettings.ParseMouth("0.5,1.2,0.2"), Is.Null);
-        Assert.That(VoiceSettings.ParseMouth("nonsense"), Is.Null);
+        Assert.That(VoiceSettings.From(Config(("Gadfly:Voice:PortraitUrl", "/me.png"), ("Gadfly:Voice:PortraitMouth", "0.5,0.7,0.2")), true, null).Mode,
+            Is.EqualTo(VoiceMode.Mock), "an old portrait setting is ignored");
         Assert.That(VoiceSettings.From(Config(), true, null).TtsModel, Is.EqualTo("eleven_flash_v2_5"));
         Assert.That(VoiceSettings.From(Config(("Gadfly:Voice:WarmPhrases", "false")), true, null).WarmPhrases, Is.False);
     }

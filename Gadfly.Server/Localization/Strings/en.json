@@ -106,7 +106,6 @@
   "getReady.eyes.neverGrade": "Reminders never change your grade, and nothing ends your exam automatically.",
   "getReady.eyes.off": "This exam doesn't use the eye-contact check.",
   "getReady.examiner.title": "Meet your examiner",
-  "getReady.examiner.portraitAlt": "Your AI examiner",
   "getReady.examiner.intro": "Your examiner is an AI. She speaks each question, listens to your answer, and asks a follow-up built from your own words.",
   "getReady.examiner.intro.male": "Your examiner is an AI. He speaks each question, listens to your answer, and asks a follow-up built from your own words.",
   "getReady.examiner.line": "Hello, I'm your examiner. I'm an AI, so take your time: there's no rush, and it's fine to say you don't know.",

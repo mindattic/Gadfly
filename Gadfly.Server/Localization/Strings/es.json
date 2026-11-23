@@ -106,7 +106,6 @@
   "getReady.eyes.neverGrade": "Los recordatorios nunca cambian su calificación, y nada termina su examen automáticamente.",
   "getReady.eyes.off": "Este examen no usa la comprobación de contacto visual.",
   "getReady.examiner.title": "Conozca a la IA examinadora",
-  "getReady.examiner.portraitAlt": "Su IA examinadora",
   "getReady.examiner.intro": "Su examinadora es una IA. Ella hace cada pregunta en voz alta, escucha su respuesta y le hace una pregunta de seguimiento a partir de sus propias palabras.",
   "getReady.examiner.intro.male": "Su examinador es una IA. Él hace cada pregunta en voz alta, escucha su respuesta y le hace una pregunta de seguimiento a partir de sus propias palabras.",
   "getReady.examiner.line": "Hola. Soy una IA y voy a hacerle las preguntas de este examen. Tómese su tiempo: no hay prisa, y está bien decir que no lo sabe.",

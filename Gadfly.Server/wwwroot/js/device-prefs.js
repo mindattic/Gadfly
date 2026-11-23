@@ -52,7 +52,7 @@ export async function open(kind, base) {
     }
 }
 
-// The examiner the student chose on the get-ready page (GAD-T595): { id, modelUrl, portraitUrl, customization } from the server's
+// The examiner the student chose on the get-ready page (GAD-T595): { id, modelUrl, customization } from the server's
 // examiner catalog (Gadfly.Server/Student/ExaminerCatalog.cs), under localStorage "gadfly.examiner". The exam room shows that examiner
 // when it is set and still offered; otherwise its own default.
 //
@@ -76,14 +76,14 @@ function cleanCustomization(c) {
     return any ? out : null;
 }
 
-/** The chosen examiner ({ id, modelUrl, portraitUrl, customization }) or null. */
+/** The chosen examiner ({ id, modelUrl, customization }) or null. */
 export function getExaminer() {
     try {
         const v = localStorage.getItem(EXAMINER_KEY);
         if (!v) return null;
         const e = JSON.parse(v);
         if (!e || typeof e !== "object") return null;
-        return { id: e.id || null, modelUrl: e.modelUrl || null, portraitUrl: e.portraitUrl || null, customization: cleanCustomization(e.customization) };
+        return { id: e.id || null, modelUrl: e.modelUrl || null, customization: cleanCustomization(e.customization) };
     } catch { return null; }
 }
 
@@ -91,7 +91,7 @@ export function getExaminer() {
 export function setExaminer(examiner) {
     try {
         if (examiner && examiner.id) localStorage.setItem(EXAMINER_KEY, JSON.stringify({
-            id: examiner.id, modelUrl: examiner.modelUrl || null, portraitUrl: examiner.portraitUrl || null,
+            id: examiner.id, modelUrl: examiner.modelUrl || null,
             customization: cleanCustomization(examiner.customization),
         }));
         else localStorage.removeItem(EXAMINER_KEY);

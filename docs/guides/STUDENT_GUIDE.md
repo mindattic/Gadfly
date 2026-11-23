@@ -184,8 +184,9 @@ lines and notices are in Korean too.
 listens and lip-syncs in Spanish, and the exam room's buttons, status lines and notices are in Spanish too. "No lo sé" is an
 honest answer. As with Korean, every score on an exam taken in Spanish is approved by a person before it is released.
 
-If your device has no 3D graphics, or asks for reduced motion, you see the examiner's picture instead of the moving
-head. The questions are still spoken and shown as text.
+If your device asks for reduced motion, the examiner stays live with gentler head movement. If it has no 3D graphics, you
+see her as a glowing circuitry sphere that pulses as she speaks, instead of the moving head. The questions are still
+spoken and shown as text.
 
 ### Answering
 

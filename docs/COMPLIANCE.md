@@ -135,7 +135,7 @@ copyleft (GPL, LGPL, AGPL, MPL, SSPL) or non-commercial licence was found anywhe
 
 | Component | Where | Licence | Status |
 |---|---|---|---|
-| Avatar model `assets/avatars/mpfb.glb` and `portrait-f.png` | wwwroot, MindAttic.Avatar | CC0 1.0 (the TalkingHead v1.8.2 sample made with MPFB; `assets/avatars/LICENSE.md` records the source and hash) | **Safe.** The other TalkingHead sample avatars are non-commercial and must never be added (the notice says so) |
+| Avatar model `assets/avatars/mpfb.glb` | wwwroot, MindAttic.Avatar | CC0 1.0 (the TalkingHead v1.8.2 sample made with MPFB; `assets/avatars/LICENSE.md` records the source and hash) | **Safe.** The other TalkingHead sample avatars are non-commercial and must never be added (the notice says so) |
 | Page-turn sounds `sounds/page-turn-1.mp3`, `page-turn-2.mp3` | wwwroot | CC0 1.0 (Freesound 177867 by mmaruska and 511402 by KikeVilaplana; `sounds/NOTICE.md`) | **Safe** |
 | Webcam WASM runtime `webcam/vision_wasm_internal.*` and the bundled `@mediapipe/tasks-vision` 1.2.3 | wwwroot, served to the browser | Apache-2.0 (Google) | **Done (GAD-T465).** Apache-2.0 §4 asks for a copy of the licence and any NOTICE with each redistribution; Gadfly serves these files to every browser, which is redistribution. `wwwroot/THIRD-PARTY-NOTICES.txt` carries the full licence text (the npm package ships no NOTICE file) |
 | Face model `webcam/face_landmarker.bin` (MediaPipe `face_landmarker.task`, float16 v1) | wwwroot | Apache-2.0 per MediaPipe; no model card kept locally | Notice **done (GAD-T465)**; **the model card is still needed** (the card states intended uses and known limits, which Art. 13 instructions should reflect) |

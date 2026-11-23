@@ -43,16 +43,11 @@ export function preload(cfg) {
             import("/js/voice-room.js"),   // the exam room's own module (GAD-T317): its dependencies above were already
                                             // preloaded, but the module itself was not, so the exam room still paid for it
         ]);
-        // The portrait first, on every device: it is small, and it is who asks the first question while the 3D model is still
-        // loading (GAD-T328), or for the whole exam where 3D isn't shown.
-        if (cfg && cfg.portraitUrl) {
-            try { const r = await fetch(cfg.portraitUrl, { credentials: "same-origin" }); if (r.ok) await r.blob(); } catch { }
-        }
         const saveData = !!(navigator.connection && navigator.connection.saveData);
         if (!cfg || !cfg.modelUrl || saveData || reducedMotion() || !webgl()) return;
         try {
             (await import("/js/model-cache.js")).prefetch(cfg.modelUrl);   // into Cache Storage and this page's memory (GAD-T698)
-        } catch { /* the exam room loads it, or shows the portrait */ }
+        } catch { /* the exam room loads it, or shows her presence */ }
     })();
     return true;
 }

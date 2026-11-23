@@ -41,10 +41,11 @@ updates with the system.
   tab isn't muted (right-click the tab).
 - The question is always shown as text too, and **Repeat the question** plays it again.
 
-## The examiner shows a still picture instead of a moving head
+## The examiner shows a glowing sphere instead of a moving head
 
-Your browser has no 3D graphics available, or your device asks for reduced motion. The exam works the same: the
-questions are still spoken and shown as text. Turning on hardware acceleration in the browser's settings may bring
+Your browser has no 3D graphics available, the device can't draw her smoothly, or her 3D head couldn't load. The exam
+works the same: the sphere glows as she speaks, and the questions are still spoken and shown as text. (Reduced motion
+doesn't cause this: she stays live, just with gentler movement.) Turning on hardware acceleration in the browser's settings may bring
 the moving head back.
 
 ## The page stops responding, or the connection drops

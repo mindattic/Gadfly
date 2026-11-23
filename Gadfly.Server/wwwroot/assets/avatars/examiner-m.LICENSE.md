@@ -22,5 +22,4 @@
   the TalkingHead author), per each pack's metadata (`"license": "CC0"`).
 - **Bone orientations** copied from `mpfb.glb` (TalkingHead v1.8.2 sample): **CC0 1.0** (see `LICENSE.md`).
 
-So the model as a whole is **CC0 1.0**: no attribution is required; it is given here for provenance. `../portrait-m.png` (the 2D
-stand-in) is a headless-Chromium render of this model in the examiner's luminous blue look (`avatar-look.js`) and is CC0 too.
+So the model as a whole is **CC0 1.0**: no attribution is required; it is given here for provenance.
