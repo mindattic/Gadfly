@@ -3,9 +3,12 @@
     --mock-bg: #fff3cd; --mock-ink: #5c4400; --mock-line: #e0b84d; --mock-tag-bg: #8a5a00; --mock-tag-ink: #ffffff;
 }
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-theme="light"]) {
         --mock-bg: #3a2f10; --mock-ink: #f5dc9a; --mock-line: #8a6d1f; --mock-tag-bg: #f0c050; --mock-tag-ink: #1d1d1f;
     }
+}
+:root[data-theme="dark"] {
+    --mock-bg: #3a2f10; --mock-ink: #f5dc9a; --mock-line: #8a6d1f; --mock-tag-bg: #f0c050; --mock-tag-ink: #1d1d1f;
 }
 
 .mock-banner {

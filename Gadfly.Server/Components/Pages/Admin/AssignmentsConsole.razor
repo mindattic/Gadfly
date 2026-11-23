@@ -16,7 +16,7 @@
 <div class="page-header">
     <h1>Assignments <HelpLink Topic="admin-assignments" /></h1>
     <div class="row-actions">
-        <button type="button" class="@(assignOpen ? null : "secondary")" @onclick="ToggleAssign">Assign an exam</button>
+        <button type="button" class="@(assignOpen ? null : "secondary")" aria-expanded="@(assignOpen ? "true" : "false")" aria-controls="assign-panel" @onclick="ToggleAssign">Assign an exam</button>
         @if (!IsGrid)
         {
             <a class="button secondary" href="@PeopleExportEndpoints.AssignmentsCsv(CurrentQuery)" download data-enhance-nav="false">Export CSV</a>
@@ -43,7 +43,7 @@
 
 @if (assignOpen)
 {
-    <section class="panel people-form" aria-labelledby="assign-h">
+    <section class="panel people-form" id="assign-panel" aria-labelledby="assign-h">
         <h2 id="assign-h">Assign an exam</h2>
         <label>Exam
             <select @bind="assign.ExamId">
@@ -159,13 +159,14 @@ else
     <section class="panel console-bulk" aria-labelledby="bulk-h">
         <h2 id="bulk-h">@selected.Count assignment@(selected.Count == 1 ? "" : "s") selected <button type="button" class="link" @onclick="() => selected.Clear()">clear</button></h2>
         <div class="row-actions">
-            <button type="button" class="@(bulk == "dates" ? null : "secondary")" @onclick='() => Bulk("dates")'>Set dates</button>
-            <button type="button" class="@(bulk == "move" ? null : "secondary")" @onclick='() => Bulk("move")'>Move due date</button>
-            <button type="button" class="@(bulk == "attempt" ? null : "secondary")" @onclick='() => Bulk("attempt")'>Grant another attempt</button>
-            <button type="button" class="@(bulk == "reset" ? null : "secondary")" @onclick='() => Bulk("reset")'>Reset attempt</button>
-            <button type="button" class="@(bulk == "access" ? null : "secondary")" @onclick='() => Bulk("access")'>Accommodations</button>
-            <button type="button" class="secondary danger-text" @onclick='() => Bulk("remove")'>Unassign</button>
+            <button type="button" class="@(bulk == "dates" ? null : "secondary")" aria-expanded="@(bulk == "dates" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("dates")'>Set dates</button>
+            <button type="button" class="@(bulk == "move" ? null : "secondary")" aria-expanded="@(bulk == "move" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("move")'>Move due date</button>
+            <button type="button" class="@(bulk == "attempt" ? null : "secondary")" aria-expanded="@(bulk == "attempt" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("attempt")'>Grant another attempt</button>
+            <button type="button" class="@(bulk == "reset" ? null : "secondary")" aria-expanded="@(bulk == "reset" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("reset")'>Reset attempt</button>
+            <button type="button" class="@(bulk == "access" ? null : "secondary")" aria-expanded="@(bulk == "access" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("access")'>Accommodations</button>
+            <button type="button" class="secondary danger-text" aria-expanded="@(bulk == "remove" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("remove")'>Unassign</button>
         </div>
+        <div id="bulk-action" class="bulk-action">
         @switch (bulk)
         {
             case "dates":
@@ -222,6 +223,7 @@ else
                 <button type="button" class="danger" @onclick="UnassignAsync" disabled="@(busy || string.IsNullOrWhiteSpace(form.Reason))">Unassign</button>
                 break;
         }
+        </div>
     </section>
 }
 
