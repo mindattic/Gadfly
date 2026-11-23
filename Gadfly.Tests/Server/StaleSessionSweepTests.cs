@@ -12,6 +12,11 @@ namespace Gadfly.Tests.Server;
 /// A session nobody ever comes back to closes itself once it has sat well past its own deadline plus the sweep's grace
 /// window (GAD-T306); a session staff are actively holding is left alone for them to resolve (GAD-T299).
 /// </summary>
+/// <remarks>
+/// The sweep is cross-organization on purpose, and every server test shares one database for the run, so a sweep here
+/// also closes Running sessions other tests left behind (GAD-T581, GAD-T591). Each test therefore asserts only on its own
+/// session (its state and its own auto-close audit), never on the sweep's total count.
+/// </remarks>
 [TestFixture]
 public class StaleSessionSweepTests : ServerTest
 {
@@ -31,6 +36,13 @@ public class StaleSessionSweepTests : ServerTest
         return (w, id);
     }
 
+    /// <summary>How many times the sweep closed this one session (its auto-close audits).</summary>
+    private static async Task<int> AutoClosuresOfAsync(Guid sessionId)
+    {
+        await using var db = SystemDb();
+        return await db.AuditEvents.AsNoTracking().CountAsync(a => a.SessionId == sessionId && a.Action == LiveSessionService.AutoClosedAction);
+    }
+
     [Test]
     public async Task AbandonedSession_PastItsDeadlinePlusGrace_IsClosedAndAudited()
     {
@@ -39,7 +51,8 @@ public class StaleSessionSweepTests : ServerTest
 
         var closed = await Sweep.SweepAsync();
 
-        Assert.That(closed, Is.EqualTo(1));
+        Assert.That(closed, Is.GreaterThanOrEqualTo(1), "at least this session (others' leftovers in the shared database may close too)");
+        Assert.That(await AutoClosuresOfAsync(id), Is.EqualTo(1), "this session closed exactly once");
         await using var db = SystemDb();
         var row = await db.ExamSessions.AsNoTracking().FirstAsync(s => s.Id == id);
         Assert.That(row.State, Is.EqualTo(SessionState.Ended));
@@ -56,9 +69,9 @@ public class StaleSessionSweepTests : ServerTest
         // Past its own deadline, but well inside the grace window: not yet counted as abandoned.
         Clock.Advance(ShortExam.TimeBudget + TimeSpan.FromMinutes(5));
 
-        var closed = await Sweep.SweepAsync();
+        await Sweep.SweepAsync();
 
-        Assert.That(closed, Is.EqualTo(0));
+        Assert.That(await AutoClosuresOfAsync(id), Is.EqualTo(0));
         await using var db = SystemDb();
         var row = await db.ExamSessions.AsNoTracking().FirstAsync(s => s.Id == id);
         Assert.That(row.State, Is.Not.EqualTo(SessionState.Ended));
@@ -71,9 +84,9 @@ public class StaleSessionSweepTests : ServerTest
         await Orchestrator.StaffStepAsync(w.Org, id, w.StudentId, (s, now) => s.Hold(now));
         Clock.Advance(ShortExam.TimeBudget + StaleSessionSweep.Grace + TimeSpan.FromHours(2));
 
-        var closed = await Sweep.SweepAsync();
+        await Sweep.SweepAsync();
 
-        Assert.That(closed, Is.EqualTo(0), "a staff pause is a deliberate, visible action (GAD-T299), not an abandonment");
+        Assert.That(await AutoClosuresOfAsync(id), Is.EqualTo(0), "a staff pause is a deliberate, visible action (GAD-T299), not an abandonment");
         await using var db = SystemDb();
         var row = await db.ExamSessions.AsNoTracking().FirstAsync(s => s.Id == id);
         Assert.That(row.State, Is.EqualTo(SessionState.Paused));
