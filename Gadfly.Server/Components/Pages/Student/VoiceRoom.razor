@@ -481,11 +481,9 @@
                 hangoverMs = Settings.SpeechHangoverMs,
                 // The listening "Mm-hm." after a finished sentence (GAD-T496); 0 is off.
                 backchannelMs = Settings.BackchannelMs,
-                // The attempt's examiner (GAD-T504): his or her model and portrait.
+                // The attempt's examiner (GAD-T504): her model. No picture of her is ever shown: where 3D can't run, her live
+                // presence stands in (GAD-T694).
                 modelUrl = examiner.ModelUrl,
-                portraitUrl = examiner.PortraitUrl,
-                // Where the portrait's mouth is, so it can move while she speaks in portrait mode (GAD-T303).
-                portraitMouth = examiner.PortraitMouth,
                 // The student's customization (GAD-T646, GAD-T649), validated in ExaminerAsync: colours and framing for her 3D model.
                 examinerLook = new { skinTone = examinerCustomization.SkinTone, hair = examinerCustomization.Hair, attire = examinerCustomization.Attire, look = examinerCustomization.Look },
                 // Typed answers (GAD-T260): the examiner and the camera without a microphone.
@@ -915,14 +913,14 @@
         noTalkingHead = mode == "none";
         avatarNote = mode switch
         {
-            "portrait" => T[reason switch
+            // Her live presence instead of the 3D head (GAD-T694). Reduced motion keeps her in 3D, only calmer.
+            "presence" => T[reason switch
             {
-                "no-webgl" => "examRoom.avatar.portrait.noWebgl",
-                "reduced-motion" => "examRoom.avatar.portrait.reducedMotion",
-                "load-failed" => "examRoom.avatar.portrait.loadFailed",
-                "slow-device" => "examRoom.avatar.portrait.slowDevice",
-                "graphics-lost" => "examRoom.avatar.portrait.graphicsLost",
-                _ => "examRoom.avatar.portrait",
+                "no-webgl" => "examRoom.avatar.presence.noWebgl",
+                "load-failed" => "examRoom.avatar.presence.loadFailed",
+                "slow-device" => "examRoom.avatar.presence.slowDevice",
+                "graphics-lost" => "examRoom.avatar.presence.graphicsLost",
+                _ => "examRoom.avatar.presence",
             }],
             // voice-room.js sends its own line, already in the page's language (examRoom.js.avatar.none).
             "none" => reason.Length > 0 ? reason : T["examRoom.avatar.none"],

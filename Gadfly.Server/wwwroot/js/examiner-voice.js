@@ -7,20 +7,21 @@
 //     her audio actually starts, on a clock that stops while she is paused.
 //   - Speaking style: a fixed server-side style per kind of question (Voice/ExaminerStyle.cs) played as a small head tilt and brow
 //     lift on the 3D head. No style carries valence: all share the same mild baseline, so her face never hints at the grade.
-//   - The 2D portrait's mouth: in portrait mode a mouth drawn over the picture opens and closes with the same word timings (one
-//     opening per syllable), so the fallback still visibly speaks.
+//   - Her presence speaking (GAD-T694): while the 3D head is not showing (still loading, or a fallback) the room shows her live
+//     presence (live-examiner.js mountPresence), never a picture of her, and its glow follows the same word timings (one swell per
+//     syllable), so she still visibly speaks.
 //   - Quality tiers: the 3D examiner's frame rate is watched and, on a slow device, her render resolution and animation rate are
-//     lowered step by step; if it is still too slow she becomes the portrait (between utterances, never mid-sentence). The tier is
+//     lowered step by step; if it is still too slow she becomes the presence (between utterances, never mid-sentence). The tier is
 //     remembered for this tab, so a reload starts where it ended.
-//   - Graphics failures: a lost WebGL context shows the portrait at once (her voice carries on) and finishes the switch when she
+//   - Graphics failures: a lost WebGL context shows the presence at once (her voice carries on) and finishes the switch when she
 //     next stops speaking.
 //   - Pause and resume: hiding the tab mid-sentence pauses her voice, mouth and captions together, and showing it resumes them.
-//   - Speech fallback: when the voice provider fails, the browser's own speech reads the question (captions and the mouth follow
+//   - Speech fallback: when the voice provider fails, the browser's own speech reads the question (captions and the presence follow
 //     its word boundaries); with no browser speech the question stays on screen as text.
 //
 //   - The exam language (GAD-T531): in a Korean exam her 3D head lip-syncs Korean (lipsync-ko.js, registered on the head once it
-//     has loaded), the portrait mouth opens once per Hangul syllable, and the browser-speech fallback reads with a Korean voice.
-//     An English exam is unchanged. A Spanish exam (GAD-T608) lip-syncs with lipsync-es.js the same way, the portrait mouth counts
+//     has loaded), the presence swells once per Hangul syllable, and the browser-speech fallback reads with a Korean voice.
+//     An English exam is unchanged. A Spanish exam (GAD-T608) lip-syncs with lipsync-es.js the same way, the presence counts
 //     accented vowels as vowels, and the fallback reads with a Spanish voice (a Latin American one first).
 //
 // Gaps in the library that this works around are filed as MindAttic.Avatar tickets (see docs/VOICE.md).
@@ -55,8 +56,9 @@ const safe = (fn) => { try { return fn(); } catch { return undefined; } };
 
 /**
  * Wires the delivery helpers to one examiner. `avatar` is the <ma-avatar> element (or null when the avatar failed: captions still
- * work), `stage` its container, `caption` the caption element. `cfg.portraitMouth` is "x,y,w" (fractions of the portrait) or null.
- * `onPortrait(reason)` is called when this module switches the examiner to the portrait (slow device, lost graphics).
+ * work), `stage` its container, `caption` the caption element. `cfg.presence` is the room's presence handle
+ * ({ setLevel }) or null. `onPortrait(reason)` is called when this module drops the 3D head for the presence (slow device, lost
+ * graphics); "portrait" is the library's name for that mode, and no picture is ever shown in it.
  */
 export function createPresenter(avatar, stage, caption, cfg, onPortrait) {
     const p = {
@@ -64,7 +66,7 @@ export function createPresenter(avatar, stage, caption, cfg, onPortrait) {
         avatar, stage, caption, cfg: cfg || {}, onPortrait: onPortrait || (() => { }),
         tokens: [], spans: [], words: [], lit: -1,
         clock: { running: false, startedAt: 0, pausedAt: 0, pausedTotal: 0, paused: false },
-        raf: 0, mouth: null, mouthGeo: null, fallbackActive: false, tier: readTier(), fps: null, portraitPending: null, disposed: false,
+        raf: 0, fallbackActive: false, tier: readTier(), fps: null, portraitPending: null, disposed: false,
         listeners: [],
     };
     const on = (target, type, fn, opts) => { if (!target) return; target.addEventListener(type, fn, opts); p.listeners.push(() => target.removeEventListener(type, fn, opts)); };
@@ -73,15 +75,8 @@ export function createPresenter(avatar, stage, caption, cfg, onPortrait) {
     // Made while the tab is hidden (the 3D examiner taking over from the portrait in a background tab, or a page opened there):
     // starts paused, or her next question played unheard behind the tab and showing it again resumed nothing (GAD-T316).
     if (document.hidden) pause(p, "hidden");
-    on(window, "resize", () => { p.mouthGeo = null; });
-    // The stage also changes size without the window doing so: it fills the height the exam room leaves it (GAD-T416).
-    if (stage && typeof ResizeObserver === "function") {
-        const ro = new ResizeObserver(() => { p.mouthGeo = null; });
-        ro.observe(stage);
-        p.listeners.push(() => ro.disconnect());
-    }
     if (avatar) {
-        on(avatar, "fallback", () => { p.mouthGeo = null; stopFps(p); });
+        on(avatar, "fallback", () => stopFps(p));
         // The library's 'ready' fires for the 3D model and for the portrait alike.
         on(avatar, "ready", () => afterReady(p));
         if (avatar.mode && avatar.mode !== "loading") afterReady(p);
@@ -241,7 +236,7 @@ function stopLoop(p) {
     p.raf = 0;
 }
 
-/** How open the portrait's mouth is at time t inside word w: one opening per syllable, eased at the edges of the word. */
+/** How open her mouth is (the presence's swell) at time t inside word w: one opening per syllable, eased at the edges of the word. */
 function mouthOpen(w, t) {
     const syl = syllables(w.word);
     const x = Math.min(1, Math.max(0, (t - w.startMs) / w.durationMs));
@@ -307,62 +302,14 @@ function applyStyle(p, style, ms) {
     });
 }
 
-// ---------------------------------------------------------------------------------------------------------- portrait mouth
+// ------------------------------------------------------------------------------------------------------ presence level (GAD-T694)
 
-function ensureMouth(p) {
-    if (p.mouth || !p.stage || !p.cfg.portraitMouth) return p.mouth;
-    const m = document.createElement("div");
-    m.className = "voice-mouth";
-    m.setAttribute("aria-hidden", "true");
-    p.stage.appendChild(m);
-    p.mouth = m;
-    return m;
-}
-
-/** Where the mouth is on screen: the portrait is scaled and centred in the stage, with object-fit cover (the library's default) or
- * contain (the 16:9 exam room shows the whole portrait, GAD-T501). */
-function mouthGeometry(p) {
-    if (p.mouthGeo) return p.mouthGeo;
-    const parts = String(p.cfg.portraitMouth || "").split(",").map(Number);
-    const img = p.avatar && p.avatar.shadowRoot && p.avatar.shadowRoot.querySelector(".portrait");
-    if (parts.length !== 3 || parts.some((x) => !Number.isFinite(x)) || !img || !img.naturalWidth || !p.stage) return null;
-    const W = p.avatar.clientWidth, H = p.avatar.clientHeight, w = img.naturalWidth, h = img.naturalHeight;
-    if (!W || !H) return null;
-    const contain = safe(() => getComputedStyle(img).objectFit) === "contain";
-    const sc = contain ? Math.min(W / w, H / h) : Math.max(W / w, H / h);
-    const ox = (W - w * sc) / 2 + p.avatar.offsetLeft, oy = (H - h * sc) / 2 + p.avatar.offsetTop;
-    // The framing's scale about her eyes (voice.css, GAD-T671): the same transform and origin, read from the portrait itself, so
-    // the moving mouth stays on her mouth at any framing.
-    const k = portraitScale(img), cx = p.avatar.offsetLeft + k.ox, cy = p.avatar.offsetTop + k.oy;
-    const width = parts[2] * w * sc * k.s;
-    p.mouthGeo = { x: cx + (ox + parts[0] * w * sc - cx) * k.s, y: cy + (oy + parts[1] * h * sc - cy) * k.s, w: width, h: width * 0.45 };
-    return p.mouthGeo;
-}
-
-/** The portrait's uniform scale and its origin (px within the image box) from its computed transform; 1 when untransformed. */
-function portraitScale(img) {
-    const st = safe(() => getComputedStyle(img));
-    const one = { s: 1, ox: 0, oy: 0 };
-    if (!st || !st.transform || st.transform === "none" || typeof DOMMatrixReadOnly !== "function") return one;
-    const m = safe(() => new DOMMatrixReadOnly(st.transform));
-    if (!m || !Number.isFinite(m.a) || m.a <= 0) return one;
-    const [ox, oy] = String(st.transformOrigin || "").split(" ").map(parseFloat);
-    return { s: m.a, ox: Number.isFinite(ox) ? ox : 0, oy: Number.isFinite(oy) ? oy : 0 };
-}
-
+/** Her speaking level on the presence, while the 3D head is not what the student sees (loading, a fallback, or no avatar at all). */
 function setMouth(p, open) {
-    const portrait = p.avatar && p.avatar.mode === "portrait";
-    if (!portrait) { if (p.mouth) p.mouth.dataset.open = "false"; return; }
-    const m = ensureMouth(p);
-    if (!m) return;
-    const g = mouthGeometry(p);
-    if (!g) return;
-    m.style.left = `${g.x - g.w / 2}px`;
-    m.style.top = `${g.y - g.h / 2}px`;
-    m.style.width = `${g.w}px`;
-    m.style.height = `${g.h}px`;
-    m.style.setProperty("--open", String(Math.max(0, Math.min(1, open))));
-    m.dataset.open = open > 0.02 ? "true" : "false";
+    const presence = p.cfg.presence;
+    if (!presence) return;
+    const live3d = p.avatar && p.avatar.mode === "3d";
+    safe(() => presence.setLevel(live3d ? 0 : Math.max(0, Math.min(1, open))));
 }
 
 // ---------------------------------------------------------------------------------------------------- quality and failures
@@ -377,7 +324,6 @@ function saveTier(t) { safe(() => sessionStorage.setItem(TIER_KEY, String(t))); 
 function afterReady(p) {
     const el = p.avatar;
     if (!el || p.disposed) return;
-    p.mouthGeo = null;
     if (el.mode !== "3d" || !el.head) return;
     useLanguage(p, el);
     applyTier(p, p.tier);
@@ -452,8 +398,7 @@ function toPortrait(p, reason) {
     if (!el || el.mode !== "3d" || p.portraitPending) return;
     p.portraitPending = reason;
     stopFps(p);
-    el.dataset.mode = "portrait";   // the library's styles show the portrait image and hide the 3D stage
-    p.mouthGeo = null;
+    el.dataset.mode = "portrait";   // the library hides the 3D stage; the room shows her presence over it (voice-room.js)
     p.onPortrait(reason);
     if (el.state !== "speaking") completePortrait(p);
 }
@@ -556,6 +501,5 @@ function dispose(p) {
     stopBrowser(p);
     p.listeners.forEach((off) => safe(off));
     p.listeners = [];
-    safe(() => p.mouth && p.mouth.remove());
-    p.mouth = null;
+    setMouth(p, 0);
 }

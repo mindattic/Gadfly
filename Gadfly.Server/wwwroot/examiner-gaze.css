@@ -26,10 +26,10 @@
 .examiner-fade[data-active="false"] { visibility: hidden; transition: opacity var(--fade-ms, 350ms) ease-out, visibility 0s linear var(--fade-ms, 350ms); }
 @media (prefers-reduced-motion: reduce) { .examiner-fade { transition: none; } }
 
-/* Step 1 on the 2D portrait (GAD-T561): the smallest slow tilt toward the student, then back. The 3D examiner moves her own head. */
-.voice-stage[data-gaze-nudge] ma-avatar { animation: gaze-nudge 2s ease-in-out 1; transform-origin: 50% 70%; }
-@keyframes gaze-nudge { 0%, 100% { transform: none; } 35%, 65% { transform: rotate(1.2deg) scale(1.012); } }
-@media (prefers-reduced-motion: reduce) { .voice-stage[data-gaze-nudge] ma-avatar { animation: none; } }
+/* Step 1 on her presence (GAD-T561, GAD-T694): the smallest slow swell toward the student, then back. The 3D examiner moves her own head. */
+.voice-stage[data-gaze-nudge][data-presence="on"] .examiner-presence { animation: gaze-nudge 2s ease-in-out 1; }
+@keyframes gaze-nudge { 0%, 100% { transform: none; } 35%, 65% { transform: scale(1.03); } }
+@media (prefers-reduced-motion: reduce) { .voice-stage[data-gaze-nudge] .examiner-presence { animation: none; } }
 
 /* The explanation, folded to one link (GAD-T416) and opened over the page so the exam room never grows. */
 .examiner-gaze { position: relative; }

@@ -128,7 +128,7 @@ export const GAZE = Object.freeze({
     /** The corner dots sit this share of the page in from each edge. */
     calibEdge: 0.08,
     /**
-     * Where the examiner's eyes are when they can't be measured (no avatar yet, an unknown portrait): this share of her stage's
+     * Where the examiner's eyes are when they can't be measured (no avatar and no presence shown): this share of her stage's
      * height down from its top, centred. Normally the point between her eyes is taken from what is drawn (GAD-T509, faceShare).
      */
     faceAnchorY: 0.4,
@@ -517,8 +517,8 @@ function faceOf(g, r) {
 
 /**
  * The point between the examiner's eyes as shares of her stage (0..1 each way), measured from what is actually rendered
- * (GAD-T509): the 3D examiner's eye bones projected through her three.js camera, or the portrait's known eye point mapped through
- * its object-fit. Cached for GAZE.faceRefreshMs (a resize re-measures at once) and eased by GAZE.faceSmoothing; the old fixed
+ * (GAD-T509): the 3D examiner's eye bones projected through her three.js camera, or the centre of her presence's sphere while
+ * the 3D head isn't shown (GAD-T694). Cached for GAZE.faceRefreshMs (a resize re-measures at once) and eased by GAZE.faceSmoothing; the old fixed
  * fraction when neither can be measured. Kept as shares so scrolling moves it with the stage for free.
  */
 function faceShare(g, r) {
@@ -527,7 +527,7 @@ function faceShare(g, r) {
     const same = !!c && Math.abs(c.w - r.width) < 1 && Math.abs(c.h - r.height) < 1;
     if (same && now - c.at < GAZE.faceRefreshMs) return c;
     const m = measureFace(r) || { x: 0.5, y: GAZE.faceAnchorY, source: "stage" };
-    // Eased only within one source at one size: a swap (portrait to 3D) or a resize takes the new point at once.
+    // Eased only within one source at one size: a swap (presence to 3D) or a resize takes the new point at once.
     const ease = same && c.source === m.source;
     const k = GAZE.faceSmoothing;
     const next = {
@@ -551,8 +551,7 @@ function shownAvatar() {
 function measureFace(r) {
     try {
         const a = shownAvatar();
-        if (!a) return null;
-        const p = a.mode === "3d" ? eyes3d(a) : a.mode === "portrait" ? eyesPortrait(a) : null;
+        const p = a && a.mode === "3d" ? eyes3d(a) : eyesPresence();
         if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return null;
         const x = (p.x - r.left) / r.width, y = (p.y - r.top) / r.height;
         // Off her stage (a camera mid-reframe, a model not yet posed) is no measurement, and neither is the student's own inset:
@@ -577,53 +576,16 @@ function eyes3d(a) {
 }
 
 /**
- * The point between the examiner's eyes on each known portrait, as shares of the image, measured once from the asset: the iris
- * centres of /assets/portrait-f.png (480 x 600) are near (224, 365) and (341, 379). A portrait not listed has no eye point.
+ * Her presence (GAD-T694), shown while the 3D examiner is loading or can't be drawn: the centre of the glowing sphere, which
+ * live-examiner.js draws centred in the stage's .examiner-presence (the CSS orb without WebGL is centred the same way). It has no
+ * eyes, so its centre is where the student looks at her; null when the presence isn't shown, and the fixed fraction applies.
  */
-const PORTRAIT_EYES = Object.freeze({ "/assets/portrait-f.png": Object.freeze({ x: 0.589, y: 0.62 }) });
-
-function portraitEyesFor(src) {
-    if (!src) return null;
-    let path = "";
-    try { path = new URL(src, document.baseURI).pathname; } catch { return null; }
-    const key = Object.keys(PORTRAIT_EYES).find((k) => path === k || path.endsWith(k));
-    return key ? PORTRAIT_EYES[key] : null;
-}
-
-/** The portrait (stand-in or fallback): its known eye point mapped through the image's object-fit and object-position, in page px. */
-function eyesPortrait(a) {
-    const img = a.img || (a.shadowRoot && a.shadowRoot.querySelector(".portrait"));
-    if (!img || !img.naturalWidth || !img.naturalHeight) return null;
-    const eyes = portraitEyesFor(img.currentSrc || img.src || a.getAttribute("portrait"));
-    if (!eyes) return null;
-    const box = img.getBoundingClientRect();
-    if (!box.width || !box.height) return null;
-    const st = getComputedStyle(img);
-    const w = img.naturalWidth, h = img.naturalHeight;
-    let sx, sy;
-    switch (st.objectFit) {
-        case "contain": sx = sy = Math.min(box.width / w, box.height / h); break;
-        case "cover": sx = sy = Math.max(box.width / w, box.height / h); break;
-        case "none": sx = sy = 1; break;
-        case "scale-down": sx = sy = Math.min(1, box.width / w, box.height / h); break;
-        default: sx = box.width / w; sy = box.height / h;   // fill
-    }
-    const [px, py] = objectPosition(st.objectPosition);
-    return { x: box.left + px(box.width - w * sx) + eyes.x * w * sx, y: box.top + py(box.height - h * sy) + eyes.y * h * sy, source: "portrait" };
-}
-
-/** object-position as two functions of the free space (computed style gives lengths or percentages; centred otherwise). */
-function objectPosition(value) {
-    const centre = (free) => free / 2;
-    const one = (t) => {
-        const v = parseFloat(t);
-        if (!t || !Number.isFinite(v)) return centre;
-        if (t.endsWith("%")) return (free) => (free * v) / 100;
-        if (t.endsWith("px")) return () => v;
-        return centre;
-    };
-    const parts = String(value || "").trim().split(/\s+/);
-    return [one(parts[0]), one(parts[1])];
+function eyesPresence() {
+    const stage = document.querySelector("[data-voice-stage]");
+    const el = stage && stage.getAttribute("data-presence") === "on" ? stage.querySelector(".examiner-presence") : null;
+    const box = el && el.getBoundingClientRect();
+    if (!box || !box.width || !box.height) return null;
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2, source: "presence" };
 }
 
 /** Whether a page point lies on the student's own camera inset (the self-view in the stage's corner). */
@@ -1072,12 +1034,11 @@ function restoreLadder(g, now) {
 /**
  * Step 1 of the ladder (GAD-T561): the examiner herself re-orients the student, the best-supported cue (Bartram et al. 2003; Oh et
  * al. 2018): a slight, slow head tilt and raised brows, her eyes on the camera. No sound and no screen change. The 3D examiner moves
- * through the avatar's own animation queue; the portrait gets a very small CSS tilt (none when reduced motion is asked for).
+ * through the avatar's own animation queue; her presence gets a very small CSS swell (none when reduced motion is asked for).
  */
 function gesture(g) {
     const a = shownAvatar();
-    if (!a) return;
-    if (a.mode === "3d" && typeof a.animate === "function") {
+    if (a && a.mode === "3d" && typeof a.animate === "function") {
         try { typeof a.holdGaze === "function" && a.holdGaze(); } catch { }
         try {
             a.animate("gadfly-reminder", [700, 900, 700], {
