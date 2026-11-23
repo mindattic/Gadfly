@@ -34,7 +34,7 @@ The examiner speaks each step, with captions. The same advice is shown under her
 4. **Eye contact and the screen fade.** While you answer, look at her, as you would with a person. She has you look away
    for a few seconds mid-answer so you can see the screen slowly fade with **Please look at the examiner**, and clear as
    soon as you look back. Keep looking away and she asks you out loud to look at her. Short glances while you think are
-   fine. See [Eye contact and the screen fade](eye-contact-and-the-screen-fade.md).
+   fine. See [Eye contact and gentle reminders](eye-contact-and-the-screen-fade.md).
 5. **If the microphone or camera stops.** If either stops working, or the connection drops, the exam shows **The exam
    is paused** with what went wrong and how to fix it; you fix it and press **Try again**, and she asks the question
    again. The clock stops while you are paused, for up to 10 minutes in all. You can try it: unplug your microphone or

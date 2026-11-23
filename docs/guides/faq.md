@@ -18,11 +18,12 @@ No. The picture stays on your screen. The eye-contact check runs on your device,
 The sound isn't kept. It is streamed to a speech-to-text service to make the transcript, and the transcript is
 what is kept, for your organization's retention period.
 
-### The screen went dark. Did I do something wrong?
+### The screen went dim. Did I do something wrong?
 
-No. The screen fades when you look away from the examiner for a while during an answer; look back and it clears at
-once. It is a reminder, not a penalty, and never part of your grade. See
-[Eye contact and the screen fade](eye-contact-and-the-screen-fade.md).
+No. Looking away to think is normal and never counts against you. Only a long look off the screen while you are speaking
+gets a gentle reminder: the examiner reacts, then everything but the examiner dims a little; look back and it clears at once.
+It is a reminder, not a penalty, and never part of your grade. See
+[Eye contact and gentle reminders](eye-contact-and-the-screen-fade.md).
 
 ### Will looking away while I think count against me?
 

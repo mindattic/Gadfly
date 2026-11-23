@@ -79,19 +79,31 @@ inside the exam room or the practice interview.
 ### Practise first: meet your examiner
 
 At the top of **My exams** is **Meet your examiner (practice)**, a five-minute run-through with the talking examiner,
-open at any time, even before you have an exam. She has you try answering out loud, saying "I don't know", keeping eye
+open at any time, even before you have an exam. The examiner has you try answering out loud, saying "I don't know", keeping eye
 contact (and seeing the screen fade), and what happens if your microphone or camera stops. Nothing from it is kept,
 graded or counted as an attempt. See [Practice interview](practice-interview.md).
 
 ## The get-ready page
 
-Press **Start**. The get-ready page has three steps. Nothing is recorded on this page, and no attempt is used
-until you press **Begin exam**: if you leave now, you can come back later.
+Press **Start**. Everything for your exam is on one screen, in your language. Nothing is recorded on this page, and no attempt
+is used until you press **Begin exam**: if you leave now, you can come back later.
+[Getting ready: the get-ready page and your languages](get-ready-and-languages.md) explains each part in detail.
 
-### 1. System check
+### Your languages
 
-Every exam is spoken and on camera, so the page checks your setup. Allow your **microphone and camera** when your
-browser asks. You see your own camera picture and a microphone level meter; **say a few words** so the meter moves.
+Gadfly exams can be taken in **English or Korean**, whichever your instructor offers for the exam (Spanish is planned, not
+available yet). The page asks which languages you speak, which one you speak best, and which language to take this exam in.
+Choosing the exam language switches the page, the rules, the notice and the examiner to it at once; it is fixed when you press
+**Begin exam**. Your answers are never used to grade you and nothing is worked out about you from your voice or name. If you
+take the exam in a language that isn't your best, the examiner speaks a little more slowly and plainly and waits longer for you
+to finish each answer.
+
+### Camera and microphone
+
+Every exam is spoken and on camera, so the page checks your setup. Allow your **microphone and camera** when your browser
+asks, and **pick the camera and microphone** you want from the lists (your choice is remembered on this device). You see your
+camera picture and a microphone level meter; **say a few words** so the meter moves. The microphone test also warns about a
+noisy room, a microphone that is too loud, or an echo.
 
 | Check | What it needs |
 |---|---|
@@ -108,20 +120,37 @@ anything marked ✗ the page says how to fix it. Fix it, then press **Check agai
 every check passes. If something won't pass, see [microphone problems](troubleshooting-microphone.md),
 [camera problems](troubleshooting-camera.md) or [browser problems](troubleshooting-browser.md).
 
-### 2. How Socratic questioning works
+The page also says plainly what the camera is for: during the exam it checks only that you are there, on your own, and
+looking at the screen, on your own device. It never grades you and never decides anything.
+
+### Help the examiner hear you (optional)
+
+Read one short sentence aloud three times in each language you'll use. It helps the speech recognizer get used to your pace.
+Only a few numbers are kept (reading speed, pauses, how sure the recognizer was), never a recording or your words. You can skip
+it, stop it or redo it.
+
+### Meet your examiner
+
+Choose your examiner: a female or a male examiner, who ask questions in exactly the same way and both speak English and
+Korean (if your instructor or organization set the examiner for this exam, only that one is shown). Press **Hear her say
+hello** for a preview in your browser's voice, and, if you like, open a **free practice run** with this exam's own examiner:
+ungraded, unlimited, nothing kept. See [Practice interview](practice-interview.md).
+
+### How Socratic questioning works
 
 A short explanation of the method (open **Why it works this way** for the research behind it) and one practice
 question: *"in your own words, what is a habit?"* Say your answer out loud and press **I've said my answer**, or
 try **I don't know** to see what happens. The practice isn't recorded or graded, and you don't have to do it.
 
-### 3. Before you begin: the notice
+### Before you begin: the notice
 
 A plain-language notice for this exam: what is recorded, what isn't, how long it is kept, who decides your
 result, and the rules for pauses and time. Read it, tick **I have read this notice and agree to take the exam on
 these terms**, and press **Begin exam** (it says **Continue to the exam** if you already started an attempt).
 
-A fingerprint of the exact wording you agreed to is saved with your exam, so there is a record of what you were
-told. If you don't want to agree, simply leave the page: nothing is started and no attempt is used.
+A fingerprint of the exact wording you agreed to, in the language you read it in, is saved with your exam, so there is a
+record of what you were told. If you change the exam language after ticking the box, the notice is rebuilt and you tick it
+again. If you don't want to agree, simply leave the page: nothing is started and no attempt is used.
 
 ## In the exam room
 
@@ -131,12 +160,17 @@ examiner** (browsers need one click before a page can speak).
 
 What you see:
 
-- **The examiner**, who speaks each question aloud with captions, and **your own camera** beside it, labelled
-  "only you see this". The picture stays on your screen; it is not recorded or sent.
-- The **question as text**, with the topic it is about.
+- **The examiner**, large in the middle like a video call, who speaks each question aloud with captions right under the examiner's face.
+- **Not yourself.** Your own camera picture is hidden during the exam (watching yourself while being examined is distracting
+  and tiring). A small **Camera on** indicator shows the camera is running; **Show my camera** opens a small preview for a few
+  seconds. No picture is recorded or sent.
 - The **countdown** (it turns red in the last two minutes) and **Topics finished X of Y**.
-- A **Transcript** that fills in as you go: each question, and each answer as it was heard.
+- A **Transcript** that reads like a chat: the examiner's lines on the left, yours on the right, newest at the bottom. While you
+  answer it is tucked away so you can focus on the examiner; it comes back when your answer is in.
 - **Response delay**: how long you took to start speaking. It is shown for your information.
+
+**In Korean.** If you chose Korean, the examiner asks, listens and lip-syncs in Korean. Most of the exam room's buttons and
+status lines are still in English while their Korean version is finished.
 
 If your device has no 3D graphics, or asks for reduced motion, you see the examiner's picture instead of the moving
 head. The questions are still spoken and shown as text.
@@ -151,7 +185,12 @@ under **What I heard** as you speak.
   seconds and adjusts to how you speak (more if you have extra time). You can also press **Done answering**.
 - **Clear and answer again** throws away what you've said so far for this answer, so you can start over.
 - **Repeat the question** has the examiner say it again.
-- **Switch to hold-to-talk** if your room is noisy: then only what you say while holding **Hold to talk** counts.
+- **Say it another way** has the examiner reword the question, if the wording got in your way. Use it as often as you like; it is never
+  scored, and the words you have already said are kept.
+- **Wait before sending my answer** lets you choose how long a silence must last before your answer is sent: standard, longer,
+  much longer, or only when you press **Done answering**. Your choice is kept on this device.
+- **Switch to hold-to-talk** if your room is noisy: then only what you say while holding **Hold to talk** (or Space or
+  Enter) counts.
   **Switch to hands-free** goes back.
 - **I don't know** is a real answer. Socrates called that moment *aporia*: honest puzzlement, the start of real
   learning. The examiner notes it and tries another angle or moves on.
@@ -171,18 +210,29 @@ If a word was misheard, you don't need to do anything: a person reviewing your e
 recognizer was unsure of, and graders are told to ignore recognition errors that don't change your meaning. If the
 next question shows the examiner misunderstood you, say so in your next answer and put it again in your own words.
 
-After each answer the examiner takes a few seconds to think ("Thinking about your answer…"). Keep the page open.
-You won't see any scores during the exam.
+When your answer is in, the examiner acknowledges it with a short neutral word ("Mm, okay.", "I see."), which never means
+right or wrong. If the next question takes a moment, the examiner glances aside as if thinking and may say a short line such as
+"Let me think about that". Keep the page open. Usually the next question starts within a few seconds: the examiner begins
+speaking it while it is still being written. You won't see any scores during the exam.
 
 ### Eye contact
 
-While you answer, keep your eyes on the examiner, as you would with a person. If you look away for a while, the
-screen slowly fades and the examiner may ask you to look back; look at the examiner and it clears at once. Short
-glances while you think are fine, and you get extra time at the start of an answer. A short note of when it
-happened is kept for a person to read alongside your answer; it is never a verdict and never part of your grade.
-[Eye contact and the screen fade](eye-contact-and-the-screen-fade.md) explains exactly how it works. If you can't
-keep eye contact (for example because of a disability), ask your instructor for the eye-contact
-[accommodation](accommodations.md) before the exam.
+While you answer, look at the examiner, as you would on a video call. **Looking away to think is completely normal**: nothing
+happens while you think before you start speaking, anywhere on the screen counts as looking at the screen, and short glances
+away while you speak are fine. Only a long look **off the screen** while you speak gets a reminder, and it is gentle: the examiner tilts
+their head, then the room around the examiner dims a little (the face stays bright), and at most a short, kind line at a pause. A short note
+is kept for a person to read alongside your answer; it is never a verdict, never part of your grade, and nothing ends your exam.
+[Eye contact and gentle reminders](eye-contact-and-the-screen-fade.md) explains exactly how it works. If you can't keep eye
+contact (for example because of a disability), ask your instructor for the eye-contact [accommodation](accommodations.md) before
+the exam.
+
+### If you leave the exam window
+
+If you switch to another window, tab or app, the exam pauses: the examiner stops, your words so far are kept and nothing is sent
+while you are away. When you come back, the examiner repeats the end of the question and you carry on. The clock keeps running. If the
+window is left three or more times, or once for a minute or more, your instructor is asked to look at the attempt and you may
+leave an explanation. Your exam is never cancelled automatically and your answers are always kept. See
+[Leaving the exam window](leaving-the-exam-window.md).
 
 ### If the microphone, camera or connection stops
 
@@ -216,7 +266,9 @@ When the exam ends you see **Your answers were submitted** and why it ended. Pre
 | Every question, and a transcript of your spoken answers, as they were heard | Video: no camera picture ever leaves your device |
 | When each question was asked and when you started and finished answering | Audio: your voice is sent to a speech-to-text service to make the transcript, and not kept |
 | How you spoke: pace, pauses, hesitations, how sure the speech recognizer was, and whether more than one voice was heard | Your screen |
-| Short notes about eye contact while you answered (when you looked away, how long, and whether the screen faded) | |
+| Short notes about eye contact while you answered (a long look off the screen, how long, and how far the reminders went) | |
+| When you left the exam window, for how long and during which question, and any explanation you gave | |
+| The languages you said you speak and your best language (never used to grade you), and, if you did the voice calibration, a few numbers about your reading pace and pauses (never audio) | |
 | The AI panel's preliminary judgment of each answer | |
 | Integrity notes for a person to read, such as an answer that reads very differently from your others | |
 | Browser notes, unless your instructor turned them off: switching to another tab or window (and for how long), copying the question, and on some exams leaving full screen or having a second screen connected | |

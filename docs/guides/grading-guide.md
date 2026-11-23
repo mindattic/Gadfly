@@ -117,6 +117,18 @@ student's own words, which are the record, and offer **Show a machine translatio
 its original, labelled as machine translation; it is never saved with the record or put in a download. Grade the original
 against the English rubric, as the AI panel does: understanding counts, not accent, grammar or fluency. If a translation decides
 a grade, ask someone who reads the language. You are not shown the student's primary language: it is not evidence (GAD-T548).
+More in [Exams in English and Korean](exams-in-other-languages.md).
+
+## Attempts marked Needs instructor review
+
+An attempt is marked **Needs instructor review** when the student left the exam window three or more times or once for a
+minute or more (unless a window-absence accommodation changes that), or when it was taken in Korean and the AI panel is not
+yet calibrated on Korean answers. The review list and the grading queue show the badge with its reason and can be filtered to
+marked attempts; the review and grading pages show a panel with the reason, each absence (time, length, question) and the
+student's explanation. Under blind grading the absences and the explanation stay hidden until your own score is in. The
+result is held, and **Publish** is refused, until someone who approves final grades clears the mark with a note or approves
+the grade with a note; both are audited. Nothing was cancelled and the mark is never a finding on its own. See
+[Attempts marked for instructor review](attempts-marked-for-review.md).
 
 ## Second marking
 

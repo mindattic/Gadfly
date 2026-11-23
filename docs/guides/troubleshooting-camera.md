@@ -52,7 +52,7 @@ And in the operating system:
 - A message that the eye-contact check couldn't start means your device lacks a feature it needs; the exam carries
   on without it.
 
-See [Eye contact and the screen fade](eye-contact-and-the-screen-fade.md).
+See [Eye contact and gentle reminders](eye-contact-and-the-screen-fade.md).
 
 ## If the camera stops during the exam
 

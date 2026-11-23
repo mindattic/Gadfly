@@ -90,7 +90,13 @@ machine-translated draft** writes a first version from the English (in mock mode
 is called); read each text against the English shown beside it, correct it, then **Save and approve**. Until you approve,
 students who choose that language see the draft with a note that it was machine-translated. The source material, rubric and
 grading policy are never translated: answers in every language are judged against the same standard. Every change is in the
-audit log. See [LOCALIZATION.md](../LOCALIZATION.md).
+audit log. See [Exams in English and Korean](exams-in-other-languages.md) and [LOCALIZATION.md](../LOCALIZATION.md).
+
+Attempts whose student left the exam window repeatedly or for long, and attempts taken in Korean while the panel is not yet
+calibrated on Korean, are marked **Needs instructor review** (a badge on the desk's assignments, the review list and the
+grading queue) and held until someone who approves final grades decides: see
+[Attempts marked for instructor review](attempts-marked-for-review.md). An instructor can change when leaving the window marks
+an attempt, per student, with the [window-absence accommodation](accommodations.md) on the exam's Assignments page.
 
 ## Live sessions
 
@@ -511,7 +517,8 @@ The fairness section can also group by **exam language** (the language each atte
 primary language** (what the student told us before the attempt, never inferred; "Primary language not stated" when they
 gave none), with the same withholding; the analytics CSV repeats the score gaps and path drivers both ways, and the panel
 calibration page checks the panel's systematic difference by either (GAD-T549). A gap by language is a reason to look at the
-examiner, the recognizer, the judges and the graders, not a finding about the students.
+examiner, the recognizer, the judges and the graders, not a finding about the students. See
+[Exams in English and Korean](exams-in-other-languages.md).
 
 - **Speech recognition accuracy by group** (everyone with analytics). Word error rate needs a reference: what was actually
   said. Spoken answers are no longer read back to the student, so newer answers have one only once a person has transcribed

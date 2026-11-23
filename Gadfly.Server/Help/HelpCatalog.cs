@@ -91,6 +91,18 @@ public static class HelpTopics
     public const string EyeContact = "eye-contact-and-the-screen-fade";
     public const string Accommodations = "accommodations";
     public const string PracticeInterview = "practice-interview";
+    /// <summary>The get-ready page and the student's languages (GAD-T592), and its Korean version.</summary>
+    public const string GetReady = "get-ready-and-languages";
+    public const string GetReadyKorean = "get-ready-and-languages-ko";
+    /// <summary>Eye contact and gentle reminders in Korean (GAD-T592).</summary>
+    public const string EyeContactKorean = "eye-contact-ko";
+    /// <summary>What happens when a student leaves the exam window (GAD-T592), and its Korean version.</summary>
+    public const string LeavingTheWindow = "leaving-the-exam-window";
+    public const string LeavingTheWindowKorean = "leaving-the-exam-window-ko";
+    /// <summary>For staff: exam languages, translated texts, second-language speakers, grading and fairness by language (GAD-T592).</summary>
+    public const string ExamLanguages = "exams-in-other-languages";
+    /// <summary>For staff: attempts marked Needs instructor review and how to decide them (GAD-T592).</summary>
+    public const string MarkedForReview = "attempts-marked-for-review";
 
     public const string Microphone = "troubleshooting-microphone";
     public const string Camera = "troubleshooting-camera";
@@ -168,9 +180,24 @@ public static class HelpCatalog
         new(HelpTopics.HowTheExaminerAsks, "how-the-examiner-asks-questions.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
             "How the examiner asks questions", "Why each question follows from your last answer, the kinds of question, and how to answer well.",
             "socratic follow-up probe clarify counterexample i don't know aporia read back"),
+        new(HelpTopics.GetReady, "get-ready-and-languages.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
+            "Getting ready: the get-ready page and your languages", "Your languages, camera and microphone, voice calibration, choosing your examiner and the free practice run.",
+            "get ready language korean english primary second language esl camera microphone device calibration examiner male female practice notice"),
+        new(HelpTopics.GetReadyKorean, "get-ready-and-languages-ko.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
+            "시험 준비와 언어(한국어)", "사용 언어, 카메라와 마이크, 목소리 맞추기, 시험관 고르기, 무료 연습 시험 (Getting ready, in Korean).",
+            "korean 한국어 시험 준비 언어 카메라 마이크 목소리 맞추기 시험관 연습 get ready"),
         new(HelpTopics.EyeContact, "eye-contact-and-the-screen-fade.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
-            "Eye contact and the screen fade", "Why the screen dims when you look away for a while, and what it does and does not mean.",
-            "gaze looking away dim fade screen dark examiner eyes camera"),
+            "Eye contact and gentle reminders", "Looking away to think is normal; only a long look off the screen while you speak gets a gentle reminder, never part of your grade.",
+            "gaze looking away thinking dim fade screen examiner eyes camera reminder self-view"),
+        new(HelpTopics.EyeContactKorean, "eye-contact-ko.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
+            "시선 맞추기와 부드러운 알림(한국어)", "생각하느라 시선을 돌려도 괜찮아요. 알림은 언제 나오고 무엇을 뜻하지 않는지 (Eye contact, in Korean).",
+            "korean 한국어 시선 맞추기 알림 카메라 eye contact gaze"),
+        new(HelpTopics.LeavingTheWindow, "leaving-the-exam-window.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
+            "Leaving the exam window", "The exam pauses and your words are kept; a person, never the computer, decides whether anything needs following up.",
+            "window tab focus switch leave away pause absence review cancel explanation accommodation"),
+        new(HelpTopics.LeavingTheWindowKorean, "leaving-the-exam-window-ko.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
+            "시험 창을 벗어나면(한국어)", "시험이 일시 정지되고 하던 말은 남아요. 판단은 컴퓨터가 아니라 사람이 해요 (Leaving the exam window, in Korean).",
+            "korean 한국어 시험 창 탭 일시 정지 검토 window focus"),
         new(HelpTopics.Accommodations, "accommodations.md", HelpAudience.Public, HelpSectionId.TakingAnExam,
             "Accommodations", "Typed answers, eye-contact changes and other adjustments, and how to ask for them.",
             "accessibility disability typing typed extra time adjustment speech hearing"),
@@ -215,6 +242,12 @@ public static class HelpCatalog
         new(HelpTopics.IntegrityNotes, "integrity-notes.md", HelpAudience.Instructor, HelpSectionId.TeachingAndGrading,
             "Reading integrity notes", "What each note means, how weak the evidence is, and why none of it is ever a verdict or part of a grade.",
             "integrity flags gaze camera voice measurements text style tab switch cheating proctoring low confidence"),
+        new(HelpTopics.MarkedForReview, "attempts-marked-for-review.md", HelpAudience.Grader, HelpSectionId.TeachingAndGrading,
+            "Attempts marked for instructor review", "Why an attempt is marked (window absences, uncalibrated Korean scores), where you see it, and how to clear it or approve with a note.",
+            "needs instructor review flag marked held window absence explanation cross-lingual uncalibrated korean clear approve note publish"),
+        new(HelpTopics.ExamLanguages, "exams-in-other-languages.md", HelpAudience.Grader, HelpSectionId.TeachingAndGrading,
+            "Exams in English and Korean (for staff)", "Offering languages, approving translated exam texts, second-language speakers, grading a Korean attempt and fairness by language.",
+            "language languages korean english translation machine translation approve draft esl second language primary language fairness calibration"),
 
         // Running your organization
         new(HelpTopics.AdminGuide, "ADMIN_GUIDE.md", HelpAudience.Admin, HelpSectionId.RunningYourOrganization,

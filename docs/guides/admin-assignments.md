@@ -72,7 +72,7 @@ Accommodations are granted per student and per exam, by staff only: a student ca
 
 - **Extra time** applies from the student's next attempt.
 - **No eye contact expected** stops the screen fade for that student, from their next answer. See
-  [Eye contact and the screen fade](eye-contact-and-the-screen-fade.md).
+  [Eye contact and gentle reminders](eye-contact-and-the-screen-fade.md).
 - **Typed answers** lets that one student type their answers on that one exam; the camera, the spoken questions and the
   eye-contact check stay. It applies the next time they open the exam room.
 

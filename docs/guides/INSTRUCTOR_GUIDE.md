@@ -46,7 +46,7 @@ typing; only staff can grant typed answers, as an accommodation (see [Accommodat
    marked for your review instead). They see the topic, a countdown and "Topics finished X
    of Y", never scores. They can say or press **I don't know**.
 4. While answering, they keep eye contact with the examiner; looking away for a while fades the screen (see
-   [Eye contact and the screen fade](eye-contact-and-the-screen-fade.md)).
+   [Eye contact and gentle reminders](eye-contact-and-the-screen-fade.md)).
 5. If the microphone, camera or connection stops, the exam pauses and the clock stops, for up to 10 minutes in all.
 6. The exam ends when every objective is closed, the question limit is reached, time runs out, or they press
    **Finish and leave the exam** (which uses up the attempt). Reloading returns them to the same question.
@@ -125,7 +125,8 @@ Once the assessment exists, the **Languages** panel below the details sets the l
 Korean by default) and holds the Korean title, instructions and objective titles: generate a machine-translated draft, check
 each text against the English beside it, then **Save and approve**. The source material and rubric stay in English; a Korean
 answer is judged against the same rubric. You can correct these texts after publishing, since they change only what a student
-reads. See [LOCALIZATION.md](../LOCALIZATION.md).
+reads. See [Exams in English and Korean](exams-in-other-languages.md) for the whole picture, including what changes for
+students taking an exam in a second language, and [LOCALIZATION.md](../LOCALIZATION.md).
 
 ### 2. Objectives
 
@@ -210,7 +211,8 @@ admin invites them). The exam appears under the student's **My exams**, and each
 **Exam assigned** email (when your organization's email is on and an email sender is configured).
 
 The **Assignments** table shows each student's window, attempts used, extra time, answers (spoken or typed), eye
-contact, EU/EEA residence, the
+contact, leaving the window (the [window-absence accommodation](accommodations.md): when leaving the exam window marks an
+attempt for review, or never), EU/EEA residence, the
 latest session's state (opened, consented, in progress, paused, ended, failed) and results ("Grade and publish in
 Grading" links to the grading queue). Above the table, **Download class summary (PDF)** saves a one-exam overview:
 the score distribution (mean, median, a histogram), each learning objective's class average and a plain list of
@@ -245,6 +247,12 @@ top says which language it was, with **Show a machine translation into English**
 original, labelled as machine translation. Grade the original; a translation can be wrong, so check one that matters with
 someone who reads the language. Translations are never saved with the session or put in any download. The student's primary
 language is not shown here on purpose (GAD-T548).
+
+**An attempt marked Needs instructor review.** An attempt whose student left the exam window repeatedly or for long, and
+every attempt taken in Korean while the AI panel is not yet calibrated on Korean, carries a **Needs instructor review**
+badge here and in the grading queue, and its result is held: **Publish** is refused until someone who approves final grades
+clears the mark with a note or approves the grade with a note. The panel on the page shows the reason, each absence and the
+student's explanation. See [Attempts marked for instructor review](attempts-marked-for-review.md).
 
 **The timeline** lists every question in order, with:
 
