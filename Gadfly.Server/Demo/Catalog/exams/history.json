@@ -1,0 +1,536 @@
+// Catalog exams for History (GAD-T681). Format as in life-sciences.json (GAD-T659): title, category, subject, topic,
+// instructions, passage (one paragraph per entry), objectives (key, title, description, concept, definition, facts,
+// misconceptions) and translations ({ "ko": { "title", "instructions", "objectives": { "<key>": "<title>" } }, "es": { ... } },
+// Spanish neutral Latin American with usted), seeded as approved localizations so the exams offer en, ko and es.
+[
+  {
+    "title": "The Neolithic Revolution",
+    "category": "history",
+    "subject": "World History",
+    "topic": "The origins of farming",
+    "instructions": "The examiner will talk with you about the beginnings of farming and what changed because of it. Explain causes and consequences in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The Neolithic Revolution is the shift from foraging, living by hunting and gathering, to farming and herding. It began roughly 11,500 years ago, around 9500 BCE, in the Fertile Crescent of Southwest Asia, an arc running from the Levant through southeastern Anatolia to the Zagros Mountains. There people domesticated wheat, barley, lentils, sheep, goats, cattle and pigs.",
+      "Farming was not invented once and then spread everywhere. It arose independently in several regions: rice along the Yangtze and millet along the Yellow River in China, maize, beans and squash in Mesoamerica, potatoes and quinoa in the Andes, taro and bananas in New Guinea, and sorghum and other crops in sub-Saharan Africa. Domestication was gradual, taking centuries to millennia, as people selected plants and animals with useful traits.",
+      "Farming let people live in permanent settlements and feed more people from the same land, so populations grew. Early villages such as Jericho and Catalhoyuk held hundreds to a few thousand people. Stored surpluses allowed some people to specialize as craftworkers, priests or leaders, and over time societies became more unequal, with property, inheritance and, later, cities and states.",
+      "The change had costs. Skeletons of early farmers often show shorter stature, more tooth decay and more signs of malnutrition than those of foragers, because diets narrowed to a few crops and crop failures could cause famine. Living close together and near animals spread infectious diseases. Historians therefore debate whether farming improved individual lives, even though it supported far larger populations."
+    ],
+    "objectives": [
+      { "key": "definition-origins", "title": "Explain what the Neolithic Revolution was and where it began", "description": "Defines the shift from foraging to farming and places its earliest center in time and space.",
+        "concept": "The Neolithic Revolution", "definition": "The gradual shift from foraging to farming and herding, beginning about 11,500 years ago in the Fertile Crescent.",
+        "facts": ["It was the shift from hunting and gathering to farming and herding.", "It began around 9500 BCE in the Fertile Crescent.", "Early domesticates there included wheat, barley, sheep and goats."],
+        "misconceptions": ["Farming began in Europe.", "People switched to farming in a single generation."] },
+      { "key": "independent-centers", "title": "Explain that farming arose independently in several regions", "description": "Names several separate centers of domestication and their crops.",
+        "concept": "Independent centers of domestication", "definition": "Farming was invented separately in several regions, each with its own crops and animals.",
+        "facts": ["China domesticated rice and millet.", "Mesoamerica domesticated maize, beans and squash.", "The Andes domesticated potatoes and quinoa.", "Domestication took centuries to millennia."],
+        "misconceptions": ["All farming spread from the Middle East.", "Domestication was a single deliberate invention."] },
+      { "key": "social-change", "title": "Explain how farming changed societies", "description": "Connects surplus and settlement to population growth, specialization and inequality.",
+        "concept": "Social consequences of farming", "definition": "Settled farming produced surpluses that supported larger populations, specialized roles and growing inequality.",
+        "facts": ["Farming supported permanent settlements.", "Populations grew because land fed more people.", "Surpluses allowed specialized roles.", "Property and inheritance increased inequality."],
+        "misconceptions": ["Foragers had no social organization at all."] },
+      { "key": "costs", "title": "Weigh the costs of the shift to farming", "description": "Uses evidence on health and disease to explain why historians debate whether farming improved lives.",
+        "concept": "Costs of the agricultural transition", "definition": "Early farmers often had poorer health than foragers because of narrow diets, famine risk and infectious disease.",
+        "facts": ["Early farmers' skeletons often show shorter stature and more tooth decay.", "Narrow diets and crop failures caused malnutrition and famine.", "Crowding and contact with animals spread disease."],
+        "misconceptions": ["Farming made everyone healthier right away.", "Progress in technology always means better individual lives."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "신석기 혁명",
+        "instructions": "시험관이 농경의 시작과 그로 인해 바뀐 점에 대해 이야기할 것입니다. 원인과 결과를 자신의 말로 설명해 주세요. 모르면 \"모르겠습니다\"라고 말해 주세요.",
+        "objectives": {
+          "definition-origins": "신석기 혁명이 무엇이며 어디에서 시작되었는지 설명하기",
+          "independent-centers": "농경이 여러 지역에서 독립적으로 생겨났음을 설명하기",
+          "social-change": "농경이 사회를 어떻게 바꾸었는지 설명하기",
+          "costs": "농경으로의 전환이 가져온 대가를 평가하기"
+        }
+      },
+      "es": {
+        "title": "La revolución neolítica",
+        "instructions": "El examinador conversará con usted sobre los inicios de la agricultura y lo que cambió a causa de ella. Explique las causas y las consecuencias con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "definition-origins": "Explicar qué fue la revolución neolítica y dónde comenzó",
+          "independent-centers": "Explicar que la agricultura surgió de forma independiente en varias regiones",
+          "social-change": "Explicar cómo la agricultura transformó las sociedades",
+          "costs": "Evaluar los costos del paso a la agricultura"
+        }
+      }
+    }
+  },
+  {
+    "title": "The Qin and Han Unification of China",
+    "category": "history",
+    "subject": "World History",
+    "topic": "Early imperial China",
+    "instructions": "The examiner will talk with you about how China was unified under the Qin and Han dynasties. Explain what each dynasty did and why it mattered, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "During the Warring States period (475-221 BCE), rival kingdoms fought for control of China. In 221 BCE the state of Qin conquered the last of its rivals, and its king took the new title Shi Huangdi, First Emperor. Qin governed by Legalism, a philosophy of strict laws, harsh punishments and rewards for service to the state.",
+      "The Qin replaced hereditary lords with commanderies and counties run by officials the emperor appointed and could remove. It standardized the written script, weights and measures, coinage and even axle widths, built roads and canals, and linked earlier frontier walls into a long northern defense. It also suppressed dissent, ordering in 213 BCE that many books outside approved subjects be burned. Heavy taxes and forced labor bred resentment, and after the First Emperor died in 210 BCE the dynasty collapsed within a few years.",
+      "Liu Bang, a commoner who rose in the rebellions, founded the Han dynasty in 202 BCE. The Han kept the Qin's centralized system of officials but softened its laws and lowered taxes. Under Emperor Wu (ruled 141-87 BCE), Confucian teaching became the official learning of the state, and an imperial academy trained officials in the Confucian classics, an early step toward choosing officials for learning rather than birth.",
+      "Emperor Wu also expanded Han power. He sent the envoy Zhang Qian to Central Asia, and the contacts that followed helped open the overland trade routes later called the Silk Roads. The Han lasted, with a brief interruption under Wang Mang (9-23 CE), until 220 CE. Its model of a unified empire run by a trained bureaucracy shaped Chinese government for two thousand years, and the majority ethnic group in China still calls itself Han."
+    ],
+    "objectives": [
+      { "key": "qin-unification", "title": "Explain how and when Qin unified China", "description": "Places the unification after the Warring States period and names the First Emperor and Legalism.",
+        "concept": "Qin unification", "definition": "In 221 BCE Qin conquered its rivals, ending the Warring States period, and ruled through Legalism.",
+        "facts": ["Qin unified China in 221 BCE.", "Its ruler took the title First Emperor.", "Qin governed by Legalism: strict laws and harsh punishments."],
+        "misconceptions": ["China had always been one unified state before the Qin.", "The Qin dynasty lasted for centuries."] },
+      { "key": "qin-centralization", "title": "Explain how the Qin centralized power", "description": "Describes appointed officials, standardization and suppression, and why the dynasty fell quickly.",
+        "concept": "Qin centralization", "definition": "The Qin replaced hereditary lords with appointed officials, standardized key systems and suppressed dissent, but harshness caused its quick collapse.",
+        "facts": ["Appointed officials replaced hereditary lords.", "Script, weights, measures and coinage were standardized.", "Harsh taxes and forced labor caused resentment.", "The dynasty collapsed soon after 210 BCE."],
+        "misconceptions": ["The Qin built the whole Great Wall as it stands today."] },
+      { "key": "han-continuity", "title": "Explain what the Han kept and what it changed", "description": "Shows the Han kept Qin centralization but softened laws and made Confucianism the state's learning.",
+        "concept": "Han continuity and change", "definition": "The Han kept the Qin's centralized bureaucracy but eased its laws and adopted Confucian learning for training officials.",
+        "facts": ["Liu Bang founded the Han in 202 BCE.", "The Han kept centralized rule by officials.", "Emperor Wu made Confucian learning official.", "An imperial academy trained officials in the classics."],
+        "misconceptions": ["The Han abolished everything the Qin had built."] },
+      { "key": "han-legacy", "title": "Explain the Han dynasty's expansion and legacy", "description": "Connects Zhang Qian and the Silk Roads to Han expansion, and explains its lasting model of government.",
+        "concept": "Han legacy", "definition": "Han expansion helped open the Silk Roads, and its bureaucratic empire became the model for later Chinese states.",
+        "facts": ["Zhang Qian's missions opened contact with Central Asia.", "The Silk Roads grew from these contacts.", "The Han lasted until 220 CE.", "China's majority ethnic group calls itself Han."],
+        "misconceptions": ["The Silk Road was a single paved road built by the Han."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "진·한의 중국 통일",
+        "instructions": "시험관이 진나라와 한나라 아래에서 중국이 어떻게 통일되었는지 이야기할 것입니다. 각 왕조가 한 일과 그 의미를 자신의 말로 설명해 주세요. 모르면 \"모르겠습니다\"라고 말해 주세요.",
+        "objectives": {
+          "qin-unification": "진나라가 언제 어떻게 중국을 통일했는지 설명하기",
+          "qin-centralization": "진나라가 권력을 어떻게 중앙에 집중시켰는지 설명하기",
+          "han-continuity": "한나라가 무엇을 이어받고 무엇을 바꾸었는지 설명하기",
+          "han-legacy": "한나라의 팽창과 유산을 설명하기"
+        }
+      },
+      "es": {
+        "title": "La unificación de China bajo los Qin y los Han",
+        "instructions": "El examinador conversará con usted sobre cómo se unificó China bajo las dinastías Qin y Han. Explique con sus propias palabras qué hizo cada dinastía y por qué fue importante. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "qin-unification": "Explicar cómo y cuándo los Qin unificaron China",
+          "qin-centralization": "Explicar cómo los Qin centralizaron el poder",
+          "han-continuity": "Explicar qué conservaron y qué cambiaron los Han",
+          "han-legacy": "Explicar la expansión y el legado de la dinastía Han"
+        }
+      }
+    }
+  },
+  {
+    "title": "The Fall of the Roman Republic",
+    "category": "history",
+    "subject": "World History",
+    "topic": "Ancient Rome",
+    "instructions": "The examiner will talk with you about how the Roman Republic gave way to rule by one man. Explain the causes and turning points in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "By the second century BCE the Roman Republic ruled the Mediterranean, but conquest strained it. Wealthy families bought up land and worked it with enslaved captives, while many small farmers who served as soldiers lost their farms. In 133 BCE the tribune Tiberius Gracchus proposed redistributing public land to the poor; he was killed by a group of senators and their supporters. His brother Gaius met a similar end in 121 BCE. Political violence had entered Roman politics.",
+      "Gaius Marius, consul several times from 107 BCE, opened the legions to landless volunteers. Soldiers now looked to their generals for pay and land when they retired, so armies grew loyal to commanders rather than to the Senate. In 88 BCE Sulla marched his army on Rome itself, and he later ruled as dictator, purging his enemies through proscription lists.",
+      "In 60 BCE Julius Caesar, Pompey and Crassus formed an informal alliance, the First Triumvirate, to get around the Senate. Caesar's conquest of Gaul gave him a rich, loyal army. When the Senate ordered him to give up command, he crossed the Rubicon River into Italy with his troops in 49 BCE, starting a civil war. He won, was named dictator for life, and was assassinated by senators on the Ides of March, 44 BCE.",
+      "Caesar's death did not restore the Republic. His adopted heir Octavian allied with Mark Antony and Lepidus, then defeated Antony and Cleopatra at Actium in 31 BCE. In 27 BCE the Senate gave him the name Augustus. He kept the Senate, consuls and elections in form while holding real power through the army and his offices, calling himself princeps, first citizen. Historians date the Roman Empire from his rule."
+    ],
+    "objectives": [
+      { "key": "social-strains", "title": "Explain the social strains that weakened the Republic", "description": "Connects conquest, land loss and the Gracchi to the rise of political violence.",
+        "concept": "Social strains in the late Republic", "definition": "Conquest enriched elites and ruined small farmers, and the killing of the reforming Gracchi brothers brought violence into politics.",
+        "facts": ["Wealthy families built large estates worked by enslaved people.", "Small farmers who served as soldiers lost their land.", "Tiberius Gracchus was killed in 133 BCE over land reform."],
+        "misconceptions": ["The Republic fell suddenly because of one assassination."] },
+      { "key": "armies", "title": "Explain how armies became loyal to generals", "description": "Explains Marius's reforms and Sulla's march on Rome.",
+        "concept": "Personal armies", "definition": "Recruiting landless volunteers who depended on their generals for rewards made armies loyal to commanders rather than the state.",
+        "facts": ["Marius recruited landless volunteers.", "Soldiers depended on generals for pay and land.", "Sulla marched his army on Rome in 88 BCE."],
+        "misconceptions": ["Roman soldiers were always professional volunteers."] },
+      { "key": "caesar", "title": "Explain Julius Caesar's rise and death", "description": "Covers the First Triumvirate, the Rubicon, dictatorship and the assassination.",
+        "concept": "Caesar and civil war", "definition": "Caesar used a loyal army to win a civil war, became dictator for life and was assassinated in 44 BCE.",
+        "facts": ["The First Triumvirate formed in 60 BCE.", "Caesar crossed the Rubicon in 49 BCE.", "He was named dictator for life.", "Senators assassinated him in 44 BCE."],
+        "misconceptions": ["Julius Caesar was the first Roman emperor."] },
+      { "key": "augustus", "title": "Explain how Augustus ended the Republic", "description": "Explains Actium and how Augustus kept republican forms while holding real power.",
+        "concept": "The principate of Augustus", "definition": "After Actium, Augustus kept republican institutions in form while controlling the army and the state as princeps.",
+        "facts": ["Octavian defeated Antony and Cleopatra at Actium in 31 BCE.", "He took the name Augustus in 27 BCE.", "He kept the Senate and elections in form.", "Real power rested on his control of the army."],
+        "misconceptions": ["Augustus openly abolished the Senate and declared himself king."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "로마 공화정의 몰락",
+        "instructions": "시험관이 로마 공화정이 어떻게 한 사람의 통치로 넘어갔는지 이야기할 것입니다. 원인과 전환점을 자신의 말로 설명해 주세요. 모르면 \"모르겠습니다\"라고 말해 주세요.",
+        "objectives": {
+          "social-strains": "공화정을 약화시킨 사회적 긴장을 설명하기",
+          "armies": "군대가 어떻게 장군에게 충성하게 되었는지 설명하기",
+          "caesar": "율리우스 카이사르의 부상과 죽음을 설명하기",
+          "augustus": "아우구스투스가 어떻게 공화정을 끝냈는지 설명하기"
+        }
+      },
+      "es": {
+        "title": "La caída de la República romana",
+        "instructions": "El examinador conversará con usted sobre cómo la República romana dio paso al gobierno de un solo hombre. Explique las causas y los momentos decisivos con sus propias palabras. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "social-strains": "Explicar las tensiones sociales que debilitaron la República",
+          "armies": "Explicar cómo los ejércitos se volvieron leales a sus generales",
+          "caesar": "Explicar el ascenso y la muerte de Julio César",
+          "augustus": "Explicar cómo Augusto puso fin a la República"
+        }
+      }
+    }
+  },
+  {
+    "title": "The Mali Empire and Trans-Saharan Trade",
+    "category": "history",
+    "subject": "World History",
+    "topic": "West African empires",
+    "instructions": "The examiner will talk with you about the Mali Empire and the trade that made it rich. Explain how trade, rulers and religion were connected, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The Mali Empire grew in the upper Niger River region of West Africa in the thirteenth century. According to oral tradition preserved by griots, the hereditary storytellers and historians of the Mande peoples, its founder Sundiata Keita defeated the Sosso king Sumanguru at the battle of Kirina around 1235. At its height Mali stretched from the Atlantic coast deep into the interior, larger than any earlier West African state.",
+      "Mali's wealth came from trans-Saharan trade. West Africa had rich goldfields, while the Sahara had salt, which was scarce in the farming lands to the south. Camel caravans, organized largely by North African and Saharan merchants, crossed the desert carrying salt, cloth, copper and horses south and gold, ivory and enslaved people north. Mali's rulers taxed this trade and controlled the routes and market towns.",
+      "Islam came to West Africa mainly through merchants. Mali's rulers and many townspeople became Muslim, which eased ties with North African traders and brought literate scholars into government. Many rural people kept older religious practices, and rulers often blended Islamic and traditional roles. Timbuktu grew into a center of trade and Islamic scholarship, with mosques and libraries of manuscripts.",
+      "The best-known ruler, Mansa Musa (ruled about 1312-1337), made the pilgrimage to Mecca in 1324. Arabic writers reported that he spent and gave away so much gold in Cairo that its value there fell for years. His journey made Mali famous in the Mediterranean world, and a 1375 European map shows him holding a gold nugget. Mali declined in the fifteenth century as provinces broke away and the Songhay Empire rose. Historians reconstruct its past from Arabic accounts, such as that of Ibn Battuta, who visited in 1352-1353, from griot traditions and from archaeology."
+    ],
+    "objectives": [
+      { "key": "founding", "title": "Explain how the Mali Empire arose", "description": "Places Mali in time and space and explains the role of Sundiata and griot tradition.",
+        "concept": "Founding of Mali", "definition": "Mali arose in the upper Niger region in the thirteenth century; tradition credits Sundiata Keita's victory around 1235.",
+        "facts": ["Mali grew along the upper Niger in the 1200s.", "Sundiata Keita is remembered as its founder.", "Griots preserved its history in oral tradition."],
+        "misconceptions": ["Africa had no large states before European colonization.", "Oral traditions are worthless as historical evidence."] },
+      { "key": "trade", "title": "Explain how trans-Saharan trade made Mali rich", "description": "Identifies the goods exchanged and how Mali's rulers profited.",
+        "concept": "Trans-Saharan gold and salt trade", "definition": "Caravans exchanged Saharan salt and northern goods for West African gold, and Mali's rulers taxed and controlled the trade.",
+        "facts": ["West Africa had goldfields; the Sahara had salt.", "Camel caravans crossed the desert.", "Gold, ivory and enslaved people went north.", "Mali's rulers taxed the trade."],
+        "misconceptions": ["Gold was the only thing traded across the Sahara."] },
+      { "key": "islam", "title": "Explain how Islam spread in Mali", "description": "Explains the role of merchants, the rulers' conversion and the persistence of older practices.",
+        "concept": "Islam in West Africa", "definition": "Islam spread mainly through trade; rulers and townspeople adopted it while many rural people kept older practices.",
+        "facts": ["Islam arrived mainly through merchants.", "Mali's rulers were Muslim.", "Many rural people kept traditional religions.", "Timbuktu became a center of Islamic scholarship."],
+        "misconceptions": ["Islam spread to Mali mainly through military conquest."] },
+      { "key": "mansa-musa", "title": "Explain the significance of Mansa Musa's pilgrimage", "description": "Explains what happened in 1324 and how it shaped outside views of Mali.",
+        "concept": "Mansa Musa's hajj", "definition": "Mansa Musa's 1324 pilgrimage displayed Mali's gold so lavishly that it made the empire famous across the Mediterranean world.",
+        "facts": ["Mansa Musa went on pilgrimage to Mecca in 1324.", "His spending lowered the value of gold in Cairo.", "European maps came to show him holding gold."],
+        "misconceptions": ["Mansa Musa founded the Mali Empire."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "말리 제국과 사하라 횡단 무역",
+        "instructions": "시험관이 말리 제국과 그 제국을 부유하게 만든 무역에 대해 이야기할 것입니다. 무역, 통치자, 종교가 어떻게 연결되었는지 자신의 말로 설명해 주세요. 모르면 \"모르겠습니다\"라고 말해 주세요.",
+        "objectives": {
+          "founding": "말리 제국이 어떻게 일어났는지 설명하기",
+          "trade": "사하라 횡단 무역이 어떻게 말리를 부유하게 했는지 설명하기",
+          "islam": "말리에서 이슬람이 어떻게 퍼졌는지 설명하기",
+          "mansa-musa": "만사 무사의 성지 순례가 지닌 의미를 설명하기"
+        }
+      },
+      "es": {
+        "title": "El Imperio de Malí y el comercio transahariano",
+        "instructions": "El examinador conversará con usted sobre el Imperio de Malí y el comercio que lo enriqueció. Explique con sus propias palabras cómo se relacionaban el comercio, los gobernantes y la religión. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "founding": "Explicar cómo surgió el Imperio de Malí",
+          "trade": "Explicar cómo el comercio transahariano enriqueció a Malí",
+          "islam": "Explicar cómo se difundió el islam en Malí",
+          "mansa-musa": "Explicar la importancia de la peregrinación de Mansa Musa"
+        }
+      }
+    }
+  },
+  {
+    "title": "The Mongol Empire",
+    "category": "history",
+    "subject": "World History",
+    "topic": "Eurasian empires",
+    "instructions": "The examiner will talk with you about the rise and impact of the Mongol Empire. Explain both its destruction and its connections across Eurasia, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "In 1206 an assembly of steppe leaders proclaimed the Mongol chief Temujin as Chinggis (Genghis) Khan, ruler of the peoples of the Mongolian steppe. He reorganized his army into units of ten, a hundred, a thousand and ten thousand, mixing men from different tribes to weaken old loyalties and promoting commanders for ability and loyalty rather than birth. Mongol armies were mounted archers, highly mobile, and well coordinated.",
+      "Chinggis Khan and his successors built the largest land empire in history. They conquered northern China, Central Asia, Persia and the Rus principalities, and raided into Poland and Hungary in 1241. In 1258 Hulegu sacked Baghdad and ended the Abbasid Caliphate. Cities that resisted were often destroyed and their people massacred, and the conquests killed very large numbers of people. The Mongol advance into the Middle East was stopped by the Mamluks of Egypt at Ain Jalut in 1260.",
+      "By the 1260s the empire had divided into four khanates: the Yuan dynasty in China, founded by Kublai Khan, who completed the conquest of the Song in 1279; the Golden Horde on the western steppe and Rus; the Ilkhanate in Persia; and the Chagatai Khanate in Central Asia. Mongol rulers often adopted the religions and administrative practices of the people they ruled: the Ilkhans became Muslim, and the Yuan used Chinese forms of government.",
+      "Once conquest ended, Mongol rule linked Eurasia. A relay system of post stations, the yam, carried messages and officials quickly across vast distances, and protected routes helped merchants, missionaries and envoys travel, such as the Venetian Marco Polo. Mongol rulers generally tolerated many religions. Historians call this period the Pax Mongolica. The same connections probably helped the Black Death spread from Central Asia toward the Mediterranean in the 1340s."
+    ],
+    "objectives": [
+      { "key": "rise", "title": "Explain how Chinggis Khan built Mongol power", "description": "Explains his proclamation in 1206 and the army reforms that made the Mongols effective.",
+        "concept": "Rise of the Mongols", "definition": "Chinggis Khan united the steppe peoples in 1206 and built a mobile, merit-based army organized in decimal units.",
+        "facts": ["Temujin was proclaimed Chinggis Khan in 1206.", "The army was organized in units of 10, 100, 1,000 and 10,000.", "Mixing tribes in units weakened old loyalties.", "Commanders were promoted for ability and loyalty."],
+        "misconceptions": ["The Mongols won only because of overwhelming numbers."] },
+      { "key": "conquest", "title": "Explain the extent and cost of the Mongol conquests", "description": "Names major conquests, Baghdad and Ain Jalut, and acknowledges the destruction.",
+        "concept": "Mongol conquests", "definition": "The Mongols built the largest contiguous land empire, at a great cost in lives and cities, until checked at Ain Jalut.",
+        "facts": ["They conquered China, Central Asia, Persia and Rus.", "Hulegu sacked Baghdad in 1258.", "Resisting cities were often massacred.", "The Mamluks defeated the Mongols at Ain Jalut in 1260."],
+        "misconceptions": ["The Mongols conquered all of Europe."] },
+      { "key": "khanates", "title": "Explain how the empire divided and how its rulers governed", "description": "Names the four khanates and explains how rulers adapted to local cultures.",
+        "concept": "The four khanates", "definition": "The empire split into the Yuan, Golden Horde, Ilkhanate and Chagatai Khanate, whose rulers often adopted local religions and administration.",
+        "facts": ["Kublai Khan founded the Yuan dynasty in China.", "The Golden Horde ruled the western steppe and Rus.", "The Ilkhans in Persia became Muslim.", "The Yuan used Chinese forms of government."],
+        "misconceptions": ["The Mongol Empire remained one unified state for centuries."] },
+      { "key": "pax-mongolica", "title": "Explain the Pax Mongolica and its effects", "description": "Connects the yam, protected trade and religious tolerance to exchange, including the spread of disease.",
+        "concept": "Pax Mongolica", "definition": "Mongol rule connected Eurasia through protected routes and relay stations, aiding trade, travel and the spread of ideas and disease.",
+        "facts": ["The yam relay system carried messages across the empire.", "Protected routes helped merchants and travelers like Marco Polo.", "Mongol rulers tolerated many religions.", "The routes probably helped spread the Black Death."],
+        "misconceptions": ["Mongol rule brought only destruction and no exchange."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "몽골 제국",
+        "instructions": "시험관이 몽골 제국의 부상과 그 영향에 대해 이야기할 것입니다. 파괴와 유라시아 전역의 연결을 모두 자신의 말로 설명해 주세요. 모르면 \"모르겠습니다\"라고 말해 주세요.",
+        "objectives": {
+          "rise": "칭기즈 칸이 몽골의 힘을 어떻게 쌓았는지 설명하기",
+          "conquest": "몽골 정복의 범위와 대가를 설명하기",
+          "khanates": "제국이 어떻게 나뉘었고 통치자들이 어떻게 다스렸는지 설명하기",
+          "pax-mongolica": "팍스 몽골리카와 그 영향을 설명하기"
+        }
+      },
+      "es": {
+        "title": "El Imperio mongol",
+        "instructions": "El examinador conversará con usted sobre el ascenso y el impacto del Imperio mongol. Explique con sus propias palabras tanto su destrucción como las conexiones que creó en Eurasia. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "rise": "Explicar cómo Gengis Kan construyó el poder mongol",
+          "conquest": "Explicar el alcance y el costo de las conquistas mongolas",
+          "khanates": "Explicar cómo se dividió el imperio y cómo gobernaron sus soberanos",
+          "pax-mongolica": "Explicar la Pax Mongolica y sus efectos"
+        }
+      }
+    }
+  },
+  {
+    "title": "The Columbian Exchange",
+    "category": "history",
+    "subject": "World History",
+    "topic": "Atlantic world",
+    "instructions": "The examiner will talk with you about the Columbian Exchange after 1492. Explain what crossed the Atlantic and what difference it made, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The Columbian Exchange is the transfer of plants, animals, people, diseases and ideas between the Americas and Afro-Eurasia that followed Christopher Columbus's voyage of 1492. The historian Alfred Crosby coined the term in 1972. For thousands of years the two hemispheres had developed separately, so the exchange reshaped ecosystems, diets and populations on both sides of the Atlantic.",
+      "Crops from the Americas, including maize, potatoes, sweet potatoes, cassava, tomatoes, chili peppers, cacao and tobacco, spread around the world. Potatoes became a staple in northern Europe, cassava and maize in parts of Africa, and maize and sweet potatoes in China, where they could grow on land unsuited to rice. These calorie-rich crops helped populations grow in the following centuries. From Afro-Eurasia came wheat, rice, sugarcane, coffee, and animals the Americas had lacked, such as horses, cattle, pigs and sheep. Horses transformed life on the Great Plains and the pampas.",
+      "The deadliest part of the exchange was disease. Indigenous Americans had no prior exposure to smallpox, measles, influenza and other Afro-Eurasian diseases, and epidemics killed a large majority of the population in many regions within a century of contact. Estimates of the total loss vary widely, but the collapse made conquest and colonization far easier than weapons alone would have.",
+      "Labor shortages and the profits of sugar, a crop that demanded intense work, drove European colonists to import enslaved Africans. Roughly 12.5 million Africans were forced onto ships in the Atlantic slave trade between the sixteenth and nineteenth centuries, and about 10.7 million survived the crossing. The exchange thus moved people as well as plants, and created the mixed societies of the modern Americas."
+    ],
+    "objectives": [
+      { "key": "definition", "title": "Explain what the Columbian Exchange was", "description": "Defines the exchange, dates it to after 1492 and explains why it was so transformative.",
+        "concept": "The Columbian Exchange", "definition": "The transfer of plants, animals, people, diseases and ideas between the Americas and Afro-Eurasia after 1492.",
+        "facts": ["It followed Columbus's voyage of 1492.", "The two hemispheres had developed separately for millennia.", "Alfred Crosby named it in 1972."],
+        "misconceptions": ["The exchange only involved trade goods sold for money."] },
+      { "key": "crops-animals", "title": "Explain how crops and animals moved and mattered", "description": "Names crops and animals going each way and their effects on diets and populations.",
+        "concept": "Exchange of crops and animals", "definition": "American crops boosted food supplies worldwide, while Afro-Eurasian crops and livestock transformed the Americas.",
+        "facts": ["Maize, potatoes and cassava came from the Americas.", "American crops helped populations grow in Europe, Africa and China.", "Horses, cattle, pigs and wheat came to the Americas.", "Horses transformed life on the Great Plains."],
+        "misconceptions": ["Potatoes and tomatoes were native to Europe.", "Horses were native to the Americas when Europeans arrived."] },
+      { "key": "disease", "title": "Explain the role of disease", "description": "Explains why epidemics were so deadly and how they shaped conquest.",
+        "concept": "Epidemic disease", "definition": "Afro-Eurasian diseases, to which Indigenous Americans had no prior exposure, killed a large majority of the population in many regions and eased conquest.",
+        "facts": ["Smallpox, measles and influenza were brought from Afro-Eurasia.", "Indigenous Americans had no prior exposure.", "Epidemics killed most of the population in many regions.", "The collapse made conquest easier."],
+        "misconceptions": ["Europeans won mainly because of superior weapons.", "Most deaths were caused by deliberate infection."] },
+      { "key": "slavery", "title": "Explain the link between the exchange and the Atlantic slave trade", "description": "Connects labor shortages and sugar plantations to the forced migration of Africans.",
+        "concept": "Forced migration and the Atlantic slave trade", "definition": "Labor shortages and sugar profits led colonists to enslave about 12.5 million Africans, who were shipped across the Atlantic.",
+        "facts": ["Population collapse created labor shortages.", "Sugar plantations demanded intense labor.", "About 12.5 million Africans were forced onto ships.", "About 10.7 million survived the crossing."],
+        "misconceptions": ["Most people who crossed the Atlantic before 1800 were European."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "콜럼버스의 교환",
+        "instructions": "시험관이 1492년 이후의 콜럼버스의 교환에 대해 이야기할 것입니다. 무엇이 대서양을 건넜고 그것이 어떤 차이를 만들었는지 자신의 말로 설명해 주세요. 모르면 \"모르겠습니다\"라고 말해 주세요.",
+        "objectives": {
+          "definition": "콜럼버스의 교환이 무엇이었는지 설명하기",
+          "crops-animals": "작물과 동물이 어떻게 이동했고 왜 중요했는지 설명하기",
+          "disease": "질병의 역할을 설명하기",
+          "slavery": "콜럼버스의 교환과 대서양 노예 무역의 관계를 설명하기"
+        }
+      },
+      "es": {
+        "title": "El intercambio colombino",
+        "instructions": "El examinador conversará con usted sobre el intercambio colombino después de 1492. Explique con sus propias palabras qué cruzó el Atlántico y qué cambios produjo. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "definition": "Explicar qué fue el intercambio colombino",
+          "crops-animals": "Explicar cómo se trasladaron los cultivos y los animales y por qué fue importante",
+          "disease": "Explicar el papel de las enfermedades",
+          "slavery": "Explicar la relación entre el intercambio y la trata atlántica de esclavos"
+        }
+      }
+    }
+  },
+  {
+    "title": "The Haitian Revolution",
+    "category": "history",
+    "subject": "World History",
+    "topic": "Age of revolutions",
+    "instructions": "The examiner will talk with you about the Haitian Revolution. Explain why it began, how it unfolded and why it mattered, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "In the 1780s the French colony of Saint-Domingue, on the western part of the island of Hispaniola, was the most profitable colony in the world, producing much of Europe's sugar and coffee. Its wealth rested on slavery: around 500,000 enslaved people, most born in Africa, worked under brutal conditions, alongside roughly 30,000 to 40,000 white colonists and about 28,000 free people of color, many of whom owned property but faced legal discrimination.",
+      "The French Revolution of 1789, with its Declaration of the Rights of Man and of the Citizen, set off conflict in the colony over who those rights applied to. In August 1791 enslaved people in the Northern Plain rose in a massive, coordinated revolt. In 1793 French commissioners in the colony declared emancipation to win the support of the insurgents against Spain and Britain, and in 1794 the National Convention in Paris abolished slavery in all French colonies.",
+      "Toussaint Louverture, a formerly enslaved man, emerged as the leading general. He fought off Spanish and British forces and by 1801 controlled the whole island, issuing a constitution that made him governor for life while keeping the colony nominally French. In 1802 Napoleon Bonaparte sent a large army under General Leclerc to restore French control, and in the same year France reinstated slavery in its other colonies. Toussaint was seized and deported to France, where he died in prison in 1803.",
+      "Jean-Jacques Dessalines led the renewed war. Yellow fever devastated the French troops, and after defeat at Vertieres in November 1803 they withdrew. On 1 January 1804 Dessalines declared the independence of Haiti, the second independent nation in the Americas after the United States and the first founded by a successful revolt of enslaved people. Slaveholding powers refused to recognize Haiti for decades, and in 1825 France forced it to pay a large indemnity for recognition, a debt that burdened the country for generations."
+    ],
+    "objectives": [
+      { "key": "colony", "title": "Explain the society of Saint-Domingue before the revolution", "description": "Describes the colony's wealth, its basis in slavery and its social groups.",
+        "concept": "Colonial Saint-Domingue", "definition": "A hugely profitable French sugar and coffee colony built on the labor of about 500,000 enslaved people, with tensions among whites and free people of color.",
+        "facts": ["Saint-Domingue was France's richest colony.", "It produced sugar and coffee.", "About 500,000 people were enslaved there.", "Free people of color faced legal discrimination."],
+        "misconceptions": ["Saint-Domingue was a poor, unimportant colony."] },
+      { "key": "outbreak", "title": "Explain how the revolution began and led to abolition", "description": "Connects the French Revolution, the 1791 uprising and the abolition decrees of 1793-1794.",
+        "concept": "Outbreak and abolition", "definition": "Revolutionary ideals and conflict in France helped trigger the 1791 uprising, which led to emancipation in 1793 and French abolition in 1794.",
+        "facts": ["The French Revolution raised the question of who had rights.", "Enslaved people rose in the Northern Plain in August 1791.", "France abolished slavery in its colonies in 1794."],
+        "misconceptions": ["France abolished slavery first, and the revolt followed."] },
+      { "key": "toussaint", "title": "Explain the role of Toussaint Louverture", "description": "Explains his rise, his 1801 constitution and his capture under Napoleon.",
+        "concept": "Toussaint Louverture", "definition": "A formerly enslaved general who took control of the colony and issued a constitution, before Napoleon's forces captured him in 1802.",
+        "facts": ["Toussaint defeated Spanish and British forces.", "His 1801 constitution made him governor for life.", "Napoleon sent Leclerc's army in 1802.", "Toussaint died in a French prison in 1803."],
+        "misconceptions": ["Toussaint Louverture declared Haiti's independence."] },
+      { "key": "independence", "title": "Explain how Haiti won independence and why it mattered", "description": "Explains Dessalines, yellow fever, 1804 and the hostile response of other powers.",
+        "concept": "Haitian independence", "definition": "Haiti became independent in 1804 as the first nation founded by a successful revolt of enslaved people, and faced isolation and a crushing indemnity.",
+        "facts": ["Dessalines led the final war.", "Yellow fever devastated the French army.", "Haiti declared independence on 1 January 1804.", "France demanded an indemnity in 1825."],
+        "misconceptions": ["Haiti was the first independent nation in the Americas."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "아이티 혁명",
+        "instructions": "시험관이 아이티 혁명에 대해 이야기할 것입니다. 혁명이 왜 시작되었고, 어떻게 전개되었으며, 왜 중요했는지 자신의 말로 설명해 주세요. 모르면 \"모르겠습니다\"라고 말해 주세요.",
+        "objectives": {
+          "colony": "혁명 이전 생도맹그 사회를 설명하기",
+          "outbreak": "혁명이 어떻게 시작되어 노예제 폐지로 이어졌는지 설명하기",
+          "toussaint": "투생 루베르튀르의 역할을 설명하기",
+          "independence": "아이티가 어떻게 독립했으며 그것이 왜 중요했는지 설명하기"
+        }
+      },
+      "es": {
+        "title": "La Revolución haitiana",
+        "instructions": "El examinador conversará con usted sobre la Revolución haitiana. Explique con sus propias palabras por qué comenzó, cómo se desarrolló y por qué fue importante. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "colony": "Explicar la sociedad de Saint-Domingue antes de la revolución",
+          "outbreak": "Explicar cómo comenzó la revolución y cómo condujo a la abolición",
+          "toussaint": "Explicar el papel de Toussaint Louverture",
+          "independence": "Explicar cómo Haití obtuvo su independencia y por qué fue importante"
+        }
+      }
+    }
+  },
+  {
+    "title": "The Meiji Restoration",
+    "category": "history",
+    "subject": "World History",
+    "topic": "Modern Japan",
+    "instructions": "The examiner will talk with you about how Japan changed during the Meiji Restoration. Explain why it happened and what the new government did, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "From 1603 the Tokugawa shoguns ruled Japan from Edo, while the emperor in Kyoto held only ceremonial status. The shogunate strictly limited contact with the outside world: Japanese could not travel abroad, Christianity was banned, and European trade was confined to the Dutch at Dejima in Nagasaki harbor. Society was divided into hereditary status groups, with samurai at the top.",
+      "In 1853 the American commodore Matthew Perry arrived with steam-powered warships and demanded that Japan open its ports. The shogunate signed the Treaty of Kanagawa in 1854, and in 1858 agreed to treaties with the United States and European powers that fixed low tariffs and gave foreigners extraterritoriality, the right to be tried under their own laws. Many Japanese saw these unequal treaties as humiliating, and the shogunate's weakness fed opposition.",
+      "Young samurai from the domains of Satsuma and Choshu led the movement against the shogunate under the slogan of restoring the emperor's rule. In late 1867 the last shogun, Tokugawa Yoshinobu, resigned, and in January 1868 imperial rule was proclaimed in the name of the young Emperor Meiji. The Boshin War of 1868-1869 defeated the shogunate's remaining supporters. Real power lay with a small group of oligarchs who governed in the emperor's name.",
+      "The new government transformed Japan within a generation. It abolished the domains and created prefectures in 1871, ended the samurai's privileges, and introduced universal male conscription in 1873. It built railways, telegraphs and state-backed industries, created a national school system, and sent the Iwakura Mission (1871-1873) to study Western countries. The Meiji Constitution of 1889, modeled partly on Prussia's, created a parliament with limited powers. Japan adopted Western techniques selectively while promoting loyalty to the emperor, and its victories over China in 1895 and Russia in 1905 made it a major power. By 1911 it had ended the unequal treaties."
+    ],
+    "objectives": [
+      { "key": "tokugawa", "title": "Explain how Tokugawa Japan was governed", "description": "Describes the shogun's power, the emperor's role and the limits on foreign contact.",
+        "concept": "Tokugawa Japan", "definition": "From 1603 Tokugawa shoguns ruled while the emperor was ceremonial, and foreign contact was tightly restricted.",
+        "facts": ["The Tokugawa shoguns ruled from 1603.", "The emperor held ceremonial status.", "European trade was limited to the Dutch at Dejima.", "Society was divided into hereditary status groups."],
+        "misconceptions": ["Japan had no foreign contact at all under the Tokugawa."] },
+      { "key": "opening", "title": "Explain how Western pressure weakened the shogunate", "description": "Explains Perry's arrival and the unequal treaties.",
+        "concept": "Opening of Japan and the unequal treaties", "definition": "Perry's 1853 arrival forced Japan to open ports, and the unequal treaties that followed exposed the shogunate's weakness.",
+        "facts": ["Perry arrived in 1853 with warships.", "The Treaty of Kanagawa was signed in 1854.", "The 1858 treaties fixed tariffs and granted extraterritoriality.", "The treaties fed opposition to the shogunate."],
+        "misconceptions": ["Japan was colonized by a Western power."] },
+      { "key": "restoration", "title": "Explain how the shogunate fell and who held power after", "description": "Explains Satsuma and Choshu, 1868 and the role of the oligarchs.",
+        "concept": "The Meiji Restoration", "definition": "In 1868, samurai leaders from Satsuma and Choshu overthrew the shogunate and restored rule in the emperor's name, with oligarchs holding real power.",
+        "facts": ["Samurai from Satsuma and Choshu led the opposition.", "The last shogun resigned in 1867.", "Imperial rule was proclaimed in 1868.", "Oligarchs governed in the emperor's name."],
+        "misconceptions": ["Emperor Meiji personally ran the government.", "The restoration was led by peasants."] },
+      { "key": "reforms", "title": "Explain the Meiji reforms and their results", "description": "Describes key reforms and explains how Japan modernized selectively and became a major power.",
+        "concept": "Meiji reforms", "definition": "The Meiji state centralized power, ended samurai privileges, industrialized and adopted a constitution, borrowing Western methods selectively.",
+        "facts": ["Domains were replaced by prefectures in 1871.", "Conscription began in 1873.", "The Meiji Constitution was issued in 1889.", "Japan defeated China in 1895 and Russia in 1905."],
+        "misconceptions": ["Japan simply copied the West and abandoned its traditions."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "메이지 유신",
+        "instructions": "시험관이 메이지 유신 동안 일본이 어떻게 변했는지 이야기할 것입니다. 왜 일어났고 새 정부가 무엇을 했는지 자신의 말로 설명해 주세요. 모르면 \"모르겠습니다\"라고 말해 주세요.",
+        "objectives": {
+          "tokugawa": "도쿠가와 시대 일본이 어떻게 통치되었는지 설명하기",
+          "opening": "서양의 압력이 어떻게 막부를 약화시켰는지 설명하기",
+          "restoration": "막부가 어떻게 무너졌고 그 후 누가 권력을 잡았는지 설명하기",
+          "reforms": "메이지 개혁과 그 결과를 설명하기"
+        }
+      },
+      "es": {
+        "title": "La Restauración Meiji",
+        "instructions": "El examinador conversará con usted sobre cómo cambió Japón durante la Restauración Meiji. Explique con sus propias palabras por qué ocurrió y qué hizo el nuevo gobierno. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "tokugawa": "Explicar cómo se gobernaba el Japón Tokugawa",
+          "opening": "Explicar cómo la presión occidental debilitó al shogunato",
+          "restoration": "Explicar cómo cayó el shogunato y quién tuvo el poder después",
+          "reforms": "Explicar las reformas Meiji y sus resultados"
+        }
+      }
+    }
+  },
+  {
+    "title": "The Causes of the First World War",
+    "category": "history",
+    "subject": "World History",
+    "topic": "Twentieth-century Europe",
+    "instructions": "The examiner will talk with you about why the First World War broke out in 1914. Distinguish long-term causes from the crisis that triggered the war, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "By 1914 Europe's great powers were divided into two blocs. Germany, Austria-Hungary and Italy formed the Triple Alliance of 1882. France and Russia were allied from 1894, and Britain, though not formally bound, drew close to them through the Entente Cordiale with France in 1904 and an agreement with Russia in 1907, forming the Triple Entente. These arrangements meant a local conflict could quickly involve several powers.",
+      "Other long-term tensions added to the danger. Militarism showed in growing armies, detailed mobilization plans and an Anglo-German naval race after Britain launched HMS Dreadnought in 1906. Imperial rivalries outside Europe produced crises over Morocco in 1905 and 1911. Nationalism threatened multiethnic empires: Serbia hoped to unite South Slavs, many of whom lived in Austria-Hungary, which had annexed Bosnia in 1908. The Balkan Wars of 1912-1913 left the region unstable.",
+      "On 28 June 1914 Gavrilo Princip, a Bosnian Serb nationalist linked to a secret Serbian group called the Black Hand, assassinated Archduke Franz Ferdinand, heir to the Austro-Hungarian throne, in Sarajevo. Germany assured Austria-Hungary of its support, the so-called blank cheque. Austria-Hungary sent Serbia a harsh ultimatum on 23 July and declared war on 28 July. Russia ordered general mobilization in support of Serbia, Germany declared war on Russia on 1 August and on France on 3 August, and German troops invaded neutral Belgium under the Schlieffen Plan. Britain declared war on Germany on 4 August, citing Belgian neutrality. Italy stayed neutral and joined the Entente in 1915.",
+      "Who bears responsibility remains debated. The Treaty of Versailles of 1919 placed responsibility on Germany and its allies. In the 1960s the historian Fritz Fischer argued that Germany's leaders pursued aggressive aims, while others stress shared responsibility; Christopher Clark's The Sleepwalkers (2012) argues that leaders in several capitals made choices that together brought war. Most historians agree that no single cause explains the war: long-term tensions made it possible, and decisions in the July Crisis made it happen."
+    ],
+    "objectives": [
+      { "key": "alliances", "title": "Explain the alliance system", "description": "Identifies the two blocs and explains how they could widen a local conflict.",
+        "concept": "Alliance system", "definition": "The Triple Alliance and Triple Entente divided Europe so that a local conflict could draw in several great powers.",
+        "facts": ["Germany, Austria-Hungary and Italy formed the Triple Alliance.", "France and Russia were allied, and Britain drew close through ententes.", "Alliances could turn a local war into a general one."],
+        "misconceptions": ["Britain was formally bound by treaty to defend France and Russia in any war.", "Alliances alone caused the war automatically."] },
+      { "key": "long-term", "title": "Explain the long-term causes of the war", "description": "Explains militarism, imperial rivalry and nationalism with examples.",
+        "concept": "Long-term causes", "definition": "Militarism, imperial rivalry and nationalism created tensions that made a major war more likely.",
+        "facts": ["The great powers built up armies and mobilization plans.", "Britain and Germany ran a naval race.", "Crises over Morocco reflected imperial rivalry.", "South Slav nationalism threatened Austria-Hungary."],
+        "misconceptions": ["The war broke out suddenly with no earlier tensions."] },
+      { "key": "july-crisis", "title": "Explain how the July Crisis turned an assassination into a world war", "description": "Traces the assassination, the blank cheque, the ultimatum, mobilization and the invasion of Belgium.",
+        "concept": "The July Crisis", "definition": "After the Sarajevo assassination, German backing, Austria's ultimatum, Russian mobilization and the invasion of Belgium escalated a local crisis into a general war.",
+        "facts": ["Franz Ferdinand was assassinated on 28 June 1914.", "Germany promised Austria-Hungary support.", "Austria-Hungary declared war on Serbia on 28 July.", "Germany invaded Belgium, and Britain declared war on 4 August."],
+        "misconceptions": ["The assassination by itself made a world war inevitable."] },
+      { "key": "responsibility", "title": "Evaluate the debate over responsibility", "description": "Compares the Versailles verdict, the Fischer thesis and shared-responsibility views.",
+        "concept": "Historiography of war guilt", "definition": "Historians debate whether Germany bears chief responsibility or whether leaders in several countries shared it.",
+        "facts": ["The Treaty of Versailles blamed Germany and its allies.", "Fritz Fischer stressed German aggressive aims.", "Christopher Clark stressed shared responsibility.", "Most historians reject a single-cause explanation."],
+        "misconceptions": ["Historians all agree that one country alone caused the war."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "제1차 세계 대전의 원인",
+        "instructions": "시험관이 1914년에 제1차 세계 대전이 왜 일어났는지 이야기할 것입니다. 장기적 원인과 전쟁을 촉발한 위기를 구분하여 자신의 말로 설명해 주세요. 모르면 \"모르겠습니다\"라고 말해 주세요.",
+        "objectives": {
+          "alliances": "동맹 체제를 설명하기",
+          "long-term": "전쟁의 장기적 원인을 설명하기",
+          "july-crisis": "7월 위기가 어떻게 암살 사건을 세계 대전으로 바꾸었는지 설명하기",
+          "responsibility": "전쟁 책임에 관한 논쟁을 평가하기"
+        }
+      },
+      "es": {
+        "title": "Las causas de la Primera Guerra Mundial",
+        "instructions": "El examinador conversará con usted sobre por qué estalló la Primera Guerra Mundial en 1914. Distinga con sus propias palabras las causas de largo plazo de la crisis que desencadenó la guerra. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "alliances": "Explicar el sistema de alianzas",
+          "long-term": "Explicar las causas de largo plazo de la guerra",
+          "july-crisis": "Explicar cómo la crisis de julio convirtió un asesinato en una guerra mundial",
+          "responsibility": "Evaluar el debate sobre la responsabilidad de la guerra"
+        }
+      }
+    }
+  },
+  {
+    "title": "Indian Independence and Partition",
+    "category": "history",
+    "subject": "World History",
+    "topic": "Decolonization in South Asia",
+    "instructions": "The examiner will talk with you about how British India became independent in 1947 and why it was partitioned. Explain the movement, the causes of Partition and its human cost, in your own words. Say \"I don't know\" if you don't.",
+    "passage": [
+      "By the late nineteenth century most of South Asia was ruled by Britain, directly or through hundreds of princely states. The Indian National Congress, founded in 1885, began by seeking a larger voice for Indians in government and grew into a mass movement demanding self-rule. The All-India Muslim League was founded in 1906 to represent Muslim interests, and from 1909 Britain gave Muslims separate electorates, a policy critics say deepened religious divisions in politics.",
+      "Mohandas Gandhi, who returned to India from South Africa in 1915, led Congress campaigns of nonviolent mass resistance, which he called satyagraha. These included the Non-Cooperation Movement of 1920-1922, the Salt March of 1930 against the British salt tax, and the Quit India Movement of 1942, after which most Congress leaders were jailed for much of the Second World War. Many others, including Jawaharlal Nehru, B. R. Ambedkar and revolutionary groups, shaped the struggle in different ways.",
+      "Muslim League leader Muhammad Ali Jinnah came to argue that Hindus and Muslims were two nations, and in 1940 the League called for independent Muslim-majority states, the demand that became Pakistan. After the war a weakened Britain sought to leave. The 1946 Cabinet Mission plan for a united, loosely federal India failed, and Direct Action Day in August 1946 set off mass killings in Calcutta. The last viceroy, Lord Mountbatten, brought the date of withdrawal forward to August 1947.",
+      "Pakistan became independent on 14 August and India on 15 August 1947. The provinces of Punjab and Bengal were divided along a boundary drawn by Cyril Radcliffe in a few weeks and announced only after independence. Around 15 million people crossed the new borders, and communal violence killed somewhere between several hundred thousand and two million people. The princely state of Kashmir became the object of war between India and Pakistan in 1947-1948, a dispute still unresolved, and Gandhi was assassinated by a Hindu nationalist in January 1948. East Pakistan later became Bangladesh in 1971."
+    ],
+    "objectives": [
+      { "key": "nationalism", "title": "Explain the rise of the Indian national movement", "description": "Explains the Congress, the Muslim League and separate electorates.",
+        "concept": "Indian nationalism", "definition": "The Indian National Congress grew into a mass movement for self-rule, while the Muslim League represented Muslim interests under separate electorates.",
+        "facts": ["The Indian National Congress was founded in 1885.", "The Muslim League was founded in 1906.", "Britain introduced separate electorates for Muslims in 1909."],
+        "misconceptions": ["Indians accepted British rule without organized opposition until 1947."] },
+      { "key": "gandhi", "title": "Explain Gandhi's methods and campaigns", "description": "Explains satyagraha and names major campaigns, while noting other leaders' roles.",
+        "concept": "Nonviolent mass resistance", "definition": "Gandhi led nonviolent campaigns such as Non-Cooperation, the Salt March and Quit India that turned nationalism into a mass movement.",
+        "facts": ["Gandhi called his method satyagraha.", "The Salt March of 1930 challenged the salt tax.", "The Quit India Movement began in 1942.", "Other leaders and groups also shaped the struggle."],
+        "misconceptions": ["Gandhi alone won independence.", "Nonviolent resistance means doing nothing."] },
+      { "key": "partition-causes", "title": "Explain why India was partitioned", "description": "Weighs the two-nation demand, British policy, failed compromises and rising violence.",
+        "concept": "Causes of Partition", "definition": "Partition resulted from the Muslim League's demand for Pakistan, the failure of compromise plans, British policies and a hasty British withdrawal amid violence.",
+        "facts": ["Jinnah argued that Hindus and Muslims were two nations.", "The League demanded Muslim-majority states in 1940.", "The 1946 Cabinet Mission plan failed.", "Mountbatten brought the withdrawal forward to 1947."],
+        "misconceptions": ["Partition was caused by one single person or decision.", "Hindus and Muslims had always lived in constant conflict."] },
+      { "key": "consequences", "title": "Explain the consequences of Partition", "description": "Explains the Radcliffe Line, mass migration, violence and lasting conflicts.",
+        "concept": "Consequences of Partition", "definition": "Partition divided Punjab and Bengal, displaced about 15 million people, killed hundreds of thousands or more, and left lasting disputes such as Kashmir.",
+        "facts": ["Pakistan and India became independent on 14 and 15 August 1947.", "Radcliffe drew the boundary in a few weeks.", "Around 15 million people were displaced.", "Kashmir became a lasting dispute."],
+        "misconceptions": ["Partition was a peaceful and orderly transfer of population."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "인도의 독립과 분할",
+        "instructions": "시험관이 영국령 인도가 1947년에 어떻게 독립했고 왜 분할되었는지 이야기할 것입니다. 독립운동, 분할의 원인, 그리고 그 인간적 대가를 자신의 말로 설명해 주세요. 모르면 \"모르겠습니다\"라고 말해 주세요.",
+        "objectives": {
+          "nationalism": "인도 민족 운동의 성장을 설명하기",
+          "gandhi": "간디의 방법과 운동을 설명하기",
+          "partition-causes": "인도가 왜 분할되었는지 설명하기",
+          "consequences": "분할의 결과를 설명하기"
+        }
+      },
+      "es": {
+        "title": "La independencia y la partición de la India",
+        "instructions": "El examinador conversará con usted sobre cómo la India británica se independizó en 1947 y por qué fue dividida. Explique con sus propias palabras el movimiento independentista, las causas de la partición y su costo humano. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": {
+          "nationalism": "Explicar el surgimiento del movimiento nacional indio",
+          "gandhi": "Explicar los métodos y las campañas de Gandhi",
+          "partition-causes": "Explicar por qué se dividió la India",
+          "consequences": "Explicar las consecuencias de la partición"
+        }
+      }
+    }
+  }
+]
