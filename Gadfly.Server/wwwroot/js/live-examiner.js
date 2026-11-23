@@ -4,7 +4,8 @@
 // tens of megabytes), stops drawing while off screen or in a hidden tab, and is released when the component goes away. No audio is
 // ever fed to her.
 //
-// Until she is up, and wherever she can't be (no WebGL, reduced motion, a data saver, a model that fails to load), the examiner's
+// Under reduced motion she is still live, only calmer (GAD-T694: TalkingHead's head movement cut to a third, blinking kept).
+// Until she is up, and wherever she can't be (no WebGL, a data saver, a model that fails to load), the examiner's
 // presence stands in: a slowly turning blue sphere with glowing circuitry (three.js, already loaded for the avatar), or, without
 // WebGL, the CSS orb under it (live-examiner.css). It is not figurative. <ExaminerPresence> mounts it alone; the exam room's
 // fallback can drive it with her voice's level: `element.examinerPresence.setLevel(0..1)`.
@@ -242,19 +243,32 @@ export function disposePresence(el) {
     el && el.examinerPresence && el.examinerPresence.dispose();
 }
 
+/** Reduced motion: TalkingHead's idle and speaking head movement cut to a third; blinking, eyes and lip sync untouched. */
+export function calm(head) {
+    try {
+        for (const mode of ["idle", "speaking"]) {
+            for (const alt of (head?.animTemplateEyes?.[mode]?.alt || [])) {
+                const hm = alt.vs && alt.vs.headMove;
+                if (Array.isArray(hm)) alt.vs.headMove = hm.map((v) => (typeof v === "number" ? v / 3 : v));
+            }
+        }
+    } catch { }
+}
+
 // ---- the live examiner -----------------------------------------------------------------------------------------------------------
 
 /**
  * Mounts the live examiner in `host` (the component's `.live-examiner`). `cfg`: { modelUrl, look: { skinTone, hair, attire, look },
  * framing ("head-and-shoulders" | "close" | "seated", over look.look), loading (the screen-reader status while she loads) }.
- * Returns `{ dispose() }`.
+ * Returns `{ update(cfg), dispose() }`: `update` takes a new `{ modelUrl, look, framing }`; another model replaces her, while a new
+ * look or framing restyles the one already loaded in place (no reload).
  */
 export function mount(host, cfg) {
     cfg = cfg || {};
     const stage = host.querySelector(".live-examiner-stage");
     const presenceEl = host.querySelector(".examiner-presence");
     const status = host.querySelector(".live-examiner-status");
-    let disposed = false, started = false, visible = false, avatar = null, presence = null;
+    let disposed = false, started = false, visible = false, avatar = null, presence = null, run = 0;
     const say = (text) => { if (status && status.textContent !== text) status.textContent = text; };
 
     const pause = () => {
@@ -268,11 +282,38 @@ export function mount(host, cfg) {
         host.setAttribute("data-mode", "presence");
     };
 
+    const lookOf = () => {
+        const look = { ...(cfg.look || {}) };
+        if (cfg.framing) look.look = cfg.framing;
+        return look;
+    };
+    let shownLook = "";
+
+    /** Restyles the loaded model in the current look: every material's look is cleared and applied again; the camera follows. */
+    const restyle = async (el) => {
+        if (!el || el.mode !== "3d") return;
+        const look = lookOf(), key = JSON.stringify(look);
+        if (key === shownLook) return;
+        try {
+            const { applyExaminerLook, customLookOptions, framingOf } = await import("./avatar-look.js");
+            if (disposed || avatar !== el) return;
+            shownLook = key;
+            el.setAttribute("view", framingOf(look).view);
+            const root = el.head && el.head.armature;
+            root && root.traverse((mesh) => {
+                if (!mesh.isMesh) return;
+                for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) if (m && m.userData) m.userData.gadflyLook = false;
+            });
+            applyExaminerLook(el, customLookOptions(look));
+        } catch { /* the look she has stays */ }
+    };
+
     const start = async () => {
         started = true;
+        const mine = ++run;
         showPresence();
         const saveData = !!(navigator.connection && navigator.connection.saveData);
-        if (!cfg.modelUrl || !stage || saveData || reducedMotion() || !webgl()) return;
+        if (!cfg.modelUrl || !stage || saveData || !webgl()) return;
         say(cfg.loading || "");
         host.setAttribute("data-mode", "loading");
         try {
@@ -281,27 +322,30 @@ export function mount(host, cfg) {
                 import(`${LIB}/avatar/index.js`),
                 resolveModelUrl(cfg.modelUrl),
             ]);
-            if (disposed) return;
-            const look = { ...(cfg.look || {}) };
-            if (cfg.framing) look.look = cfg.framing;
+            if (disposed || mine !== run) return;
+            const look = lookOf();
+            shownLook = JSON.stringify(look);
             const el = document.createElement("ma-avatar");
             el.setAttribute("src", src);
             el.setAttribute("view", framingOf(look).view);
             el.setAttribute("camera-x", "0");
             el.setAttribute("aria-hidden", "true");
+            el.setAttribute("motion", "always");
             useExaminerLook(el, customLookOptions(look));
             avatar = el;
             stage.appendChild(el);
             await el.ready;
             if (disposed || avatar !== el) return;
             if (el.mode !== "3d") throw new Error(el.mode);
+            if (reducedMotion()) calm(el.head);
+            void restyle(el);   // the look changed while she loaded
             say("");
             host.setAttribute("data-mode", "live");
             pause();
             // The sphere has done its job: release its GPU context once she has faded in over it.
             setTimeout(() => { if (!disposed && avatar === el && presence) { presence.dispose(); presence = null; } }, 700);
         } catch {
-            if (disposed) return;
+            if (disposed || mine !== run) return;
             try { avatar && avatar.remove(); } catch { }
             avatar = null;
             say("");
@@ -316,6 +360,18 @@ export function mount(host, cfg) {
     });
 
     return {
+        update(next) {
+            if (disposed || !next) return;
+            const model = (next.modelUrl || null) !== (cfg.modelUrl || null);
+            cfg = { ...cfg, ...next };
+            if (!model) { void restyle(avatar); return; }
+            run++;
+            try { avatar && avatar.remove(); } catch { }
+            avatar = null;
+            shownLook = "";
+            say("");
+            if (visible) void start(); else { started = false; showPresence(); }
+        },
         dispose() {
             if (disposed) return;
             disposed = true;

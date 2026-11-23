@@ -1,54 +1,52 @@
 /* The get-ready studio (GAD-T506): one screen with the checks, the camera promise, the eye-contact rules, the examiner preview,
    the language questions (GAD-T552/T546), devices (GAD-T593), voice calibration (GAD-T594) and the notice. Spacing from app.css. */
-.ready-intro { max-width: 760px; margin: 0 0 var(--space-3); }
-.camera-promise { margin-top: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-left: 4px solid var(--ok); border-radius: var(--radius); display: grid; gap: var(--space-2); }
+.ready-intro { max-width: var(--measure); margin: 0 0 var(--space-3); }
+.camera-promise { margin-top: var(--space-4); padding: var(--space-3) var(--space-4); border: var(--border); border-left: 4px solid var(--ok); border-radius: var(--radius-md); display: grid; gap: var(--space-2); }
 .ready-rules { display: grid; gap: var(--space-2); margin: var(--space-2) 0 0; }
 
 .examiner-preview-row { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: flex-start; }
-/* The portrait in a frame that shows the student's choices (GAD-T663): framing by scale, a clothing tint, skin and hair dots. */
-.examiner-preview-figure { position: relative; width: 160px; max-width: 40%; aspect-ratio: 3 / 4; overflow: hidden; border-radius: var(--radius); background: var(--line); }
-.examiner-preview-portrait { display: block; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 30%; transition: transform 200ms ease; }
-.examiner-preview-figure.look-close .examiner-preview-portrait { transform: scale(1.3); }
-.examiner-preview-figure.look-seated .examiner-preview-portrait { transform: scale(.82); }
-.examiner-attire-band { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: var(--swatch); mix-blend-mode: color; pointer-events: none; }
-.examiner-look-dots { position: absolute; top: .4rem; right: .4rem; display: flex; gap: .25rem; }
-.examiner-look-dots i { width: .8rem; height: .8rem; border-radius: 50%; background: var(--swatch); border: 1px solid rgba(255, 255, 255, .85); box-shadow: 0 0 0 1px rgba(0, 0, 0, .25); }
-@media (prefers-reduced-motion: reduce) { .examiner-preview-portrait { transition: none; } }
+/* The examiner, live (GAD-T693): <LiveExaminer> fills this box at 4:5; no portrait and no tint overlays. */
+.examiner-preview-figure { flex: 0 1 16rem; max-width: 100%; }
 .examiner-preview-body { flex: 1 1 18rem; display: grid; gap: var(--space-2); min-width: 0; }
-.examiner-preview-caption { font-size: 1.05rem; font-weight: 600; line-height: 1.5; }
+.examiner-preview-caption { font-size: var(--text-lg); font-weight: 600; line-height: var(--leading); }
 .examiner-preview-caption .preview-word { opacity: .55; transition: opacity 120ms linear; }
 .examiner-preview-caption .preview-word.lit { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .examiner-preview-caption .preview-word { transition: none; } }
 .practice-link { margin-top: var(--space-3); }
-.examiner-choices { display: flex; flex-wrap: wrap; gap: var(--space-3); border: 0; padding: 0; margin: 0 0 var(--space-3); }
-.examiner-choice { display: flex; gap: var(--space-2); align-items: center; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); min-height: var(--target-min); }
-.examiner-choice:has(input:checked) { border-color: var(--accent); }
-.examiner-choice[aria-disabled="true"] { opacity: .6; }
-.examiner-choice img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+/* The examiner choice (GAD-T595, GAD-T693): labelled radio cards, a name and a short description each. */
+.examiner-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: var(--space-3); border: 0; padding: 0; margin: 0 0 var(--space-4); }
+.examiner-choices legend { padding: 0; margin-bottom: var(--space-2); }
+.examiner-choice { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4); border: var(--border-strong); border-radius: var(--radius-md); cursor: pointer; }
+.examiner-choice input { flex: none; margin-top: var(--space-1); }
+.examiner-choice:has(input:checked) { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); background: var(--accent-tint); }
+.examiner-choice[aria-disabled="true"] { opacity: .6; cursor: not-allowed; }
+.examiner-choice-text { display: grid; gap: var(--space-1); min-width: 0; }
+.examiner-choice-name { font-weight: 600; }
+.examiner-choice-desc { font-size: var(--text-sm); color: var(--muted); }
 
 /* Languages (GAD-T552, GAD-T546). */
 .language-panel fieldset { border: 0; padding: 0; margin: 0 0 var(--space-3); }
 .language-panel legend { font-weight: 600; margin-bottom: var(--space-2); }
 .language-options { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
-.language-options label { display: inline-flex; gap: .4rem; align-items: center; min-height: var(--target-min); }
+.language-options label { display: inline-flex; gap: var(--space-2); align-items: center; min-height: var(--target-min); }
 .language-panel select { min-height: var(--target-min); }
 .exam-language-lock { margin-top: var(--space-2); }
 
 /* Devices (GAD-T593). */
 .device-pickers { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); margin: var(--space-2) 0; }
-.device-pickers label { display: grid; gap: .25rem; flex: 1 1 14rem; min-width: 0; }
+.device-pickers label { display: grid; gap: var(--space-1); flex: 1 1 14rem; min-width: 0; }
 .device-pickers select { min-height: var(--target-min); max-width: 100%; }
 
 /* Voice calibration (GAD-T594). */
-.calibration { border: 1px dashed var(--line); border-radius: var(--radius); padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-2); }
-.calibration-text { font-size: 1.15rem; font-weight: 600; }
-.calibration-progress { display: flex; gap: .4rem; }
+.calibration { border: 1px dashed var(--line); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-2); }
+.calibration-text { font-size: var(--text-lg); font-weight: 600; }
+.calibration-progress { display: flex; gap: var(--space-2); }
 .calibration-progress i { width: .8rem; height: .8rem; border-radius: 50%; border: 1px solid var(--accent); }
 .calibration-progress i.done { background: var(--accent); }
 
-/* Make the examiner your own (GAD-T663). Swatch colours are shared by the choices and the portrait's tint and dots. */
-.examiner-customize { margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--line); display: grid; gap: var(--space-2); }
-.customize-voice { display: grid; gap: .25rem; max-width: 22rem; }
+/* Make the examiner your own (GAD-T663). The swatch colours match avatar-look.js SKIN_TONES, HAIR_COLOURS and ATTIRES. */
+.examiner-customize { margin-top: var(--space-4); padding-top: var(--space-3); border-top: var(--border); display: grid; gap: var(--space-2); }
+.customize-voice { display: grid; gap: var(--space-1); max-width: 22rem; }
 .customize-voice select { min-height: var(--target-min); }
 .customize-group { border: 0; padding: 0; margin: 0; }
 .customize-group legend { font-weight: 600; margin-bottom: var(--space-2); }
@@ -59,11 +57,11 @@
 .swatch-default { background: repeating-linear-gradient(45deg, var(--line) 0 4px, transparent 4px 8px); }
 .swatch-choice:has(input:checked) .swatch { outline: 3px solid var(--accent); outline-offset: 2px; }
 .swatch-choice:has(input:focus-visible) .swatch { outline: 3px dashed var(--accent); outline-offset: 2px; }
-.segmented { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.segmented { display: inline-flex; flex-wrap: wrap; border: var(--border-strong); border-radius: var(--radius-md); overflow: hidden; }
 .segmented label { display: inline-flex; align-items: center; min-height: var(--target-min); padding: 0 var(--space-3); cursor: pointer; border-right: 1px solid var(--line); }
 .segmented label:last-child { border-right: 0; }
 .segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.segmented label:has(input:checked) { background: var(--accent); color: #fff; }
+.segmented label:has(input:checked) { background: var(--accent); color: var(--accent-ink); }
 .segmented label:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: -3px; }
 [data-skin="light"] { --swatch: #f3d9c6; }
 [data-skin="medium-light"] { --swatch: #e0b593; }

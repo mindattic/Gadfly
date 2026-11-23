@@ -232,3 +232,65 @@ screen reader.
    motion; switch the OS to dark mode.
 4. Contrast for a new colour: compute it against both `--bg` and `--panel` in both themes before adding it, and prefer an
    existing token.
+
+## Public site pass (GAD-T692)
+
+Pages: landing, how it works, science, pricing, security, contact, privacy, terms, accessibility, 404, and the
+`PublicLayout` header and footer (`site.css`, `site.js`).
+
+- **One palette.** `.site`'s `--paper`, `--sheet`, `--rule`, `--rule-strong`, `--oxblood` and `--oxblood-ink` are now
+  aliases of app.css's `--bg`, `--panel`, `--line`, `--line-strong`, `--accent` and `--accent-ink`; the site's own copies
+  of `--ink`, `--muted`, `--error`, `--ok`, `--measure` and `--gutter` are gone, so the app's values (and its contrast
+  table) apply. Only the hero plate's slate colours stay site-specific (`--slate-*`, now including the two divider
+  colours that were hard-coded). The serif headings and the 72rem page width keep the site editorial.
+- **Tokens.** Spacing, radii, borders and small type use `--space-*`, `--radius-sm`, `--border`/`--border-strong` and
+  `--text-xs`..`--text-xl`; the site's own `:focus-visible` rule is gone, so the global 3px `--focus-color` ring applies.
+  The display sizes of the serif headings and the bands' fluid padding stay as they were.
+- **Targets.** Header links, language links, footer links and the brand link are at least `--target-min`; buttons and the
+  contact form's controls `--target-touch`.
+- **Status.** The contact form's success and error notices use the `--ok`/`--error` border on their tints, as app.css's
+  `.notice.ok`/`.error`; the wording says which it is, so colour isn't the only signal.
+- **The live examiner.** The landing hero's plate shows `<LiveExaminer Framing="head-and-shoulders">` instead of the
+  portrait image; its accessible name is `site.landing.plate.alt` ("One of Gadfly's two examiners, shown live and
+  silent"). These pages are static (no circuit), so `LiveExaminer` writes its mount config into `data-live-examiner` when
+  rendered statically and `site.js` mounts her; she loads only once scrolled into view. The hero stacks below 820px with
+  the plate after the headline, lede and actions, and below 40rem the examiner sits above the exchange at most 14rem wide,
+  so the h1 is the first thing on a phone screen.
+- **Statement.** `/accessibility` now states WCAG 2.2 AA as the target for every page, explicitly not a conformance claim,
+  and describes the live examiner's accessible name and her reduced-motion stand-in.
+- **Not changed.** The statement's lines about the exam room's still-portrait fallback (`support.motion`,
+  `limits.avatar`) describe the exam room, which this pass didn't touch; reconcile them when the exam room's fallback
+  changes.
+
+## Student pages (GAD-T693)
+
+- **Get ready (`StartExam`).** The examiner choice is a visible-legend `fieldset` of radio cards (name plus a short
+  description, tied to its radio with `aria-describedby`), with no portrait; the selected card is marked by border,
+  inset ring and tint, not colour alone. The preview is one `<LiveExaminer>` in the student's examiner,
+  customization and framing: another examiner loads the other model (once per browser, model-cache.js), a new
+  customization or framing restyles the loaded model in place (`live-examiner.js` handle `update`). The still
+  portrait, its clothing-tint band and its skin and hair dots are gone, with their CSS; the voice preload no longer
+  fetches the portrait. `get-ready.css` spacing, type sizes, radii and borders now come from the tokens; the selected
+  look segment uses `--accent-ink` instead of a hard-coded white.
+- **Shared student CSS.** `student.css` (outside the exam room's rules, which GAD-T694 owns), `practice.css` and
+  `exams.css` spacing and type sizes moved to `--space-*` / `--text-*`; the practice tag uses `--radius-pill`.
+- **Not done in this pass.** A markup-level audit of My exams, Exam catalog, My notifications, My research, Practice gaze
+  and My result (heading order, `.page-header`, `.table-scroll`, status roles) is filed as a follow-up.
+
+## Exam room (GAD-T694)
+
+- **The examiner is only ever live.** The loading stand-in and every 2D fallback (no WebGL, model failed to load, slow device,
+  lost graphics, no avatar at all) show her presence (`live-examiner.js` `mountPresence`, the `<ExaminerPresence>` sphere) over
+  the stage, `aria-hidden` like the 3D head; its glow follows her voice syllable by syllable, so she still visibly speaks. The
+  room no longer reads `PortraitUrl`/`PortraitMouth` and never shows `portrait-f.png`/`portrait-m.png`. The fallback notes say
+  "live presence" instead of "picture" (`examRoom.avatar.presence.*`, en/ko/es).
+- **Reduced motion keeps her live** (WCAG 2.3.3 is about non-essential motion; her lip sync is essential content). Under
+  `prefers-reduced-motion` the 3D examiner still loads, with TalkingHead's head movement cut to a third, blinking and lip sync
+  kept, no camera moves; the presence turns no more and its fades and the gaze nudge are off. `<LiveExaminer>` follows the same rule.
+- **Gaze target.** The eye-contact check (examiner-gaze.js `faceShare`) uses her projected eye bones in 3D and, while the
+  presence is shown, the centre of the sphere (the centre of `.examiner-presence`), the natural point a student looks at; with
+  neither it keeps the fixed fraction of the stage as before.
+- **Layout.** A phone on its side (landscape, at most 32rem tall) keeps her beside the controls and lets her take most of the
+  height; portrait phones stack her, controls and transcript as before.
+- **Not done in this pass.** A token sweep of voice.css (it still has its own spacing and the dark stage colour), and a review of
+  how often the polite status line (`data-voice-status`) changes, are follow-ups.

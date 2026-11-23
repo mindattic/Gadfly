@@ -1,7 +1,9 @@
 @* The examiner, live (GAD-T691): the 3D examiner muted and idle, in the blue look and the student's customization, as the exam
    room shows her (wwwroot/js/live-examiner.js). Never a static picture: while she loads, and where 3D can't run, the examiner's
    presence (<ExaminerPresence>) stands in. She starts loading only when scrolled into view and stops drawing off screen. Fills its
-   container's width at a 4:5 aspect ratio (live-examiner.css, --live-examiner-ratio). Plays no audio.
+   container's width at a 4:5 aspect ratio (live-examiner.css, --live-examiner-ratio). Plays no audio. A new examiner loads the other
+   model; a new customization or framing restyles the one already loaded, in place.
+   On a statically rendered page (the public site, GAD-T692) site.js mounts her from the data-live-examiner config instead.
    <LiveExaminer ExaminerId="@ExaminerCatalog.Female" Customization="@look" /> *@
 @using Gadfly.Server.Student
 @implements IAsyncDisposable
@@ -10,7 +12,7 @@
 @inject IWebHostEnvironment Env
 @inject Gadfly.Server.Localization.UiText T
 
-<div class="live-examiner @Class" data-mode="presence" @ref="host">
+<div class="live-examiner @Class" data-mode="presence" data-live-examiner="@StaticConfig" @ref="host">
     <div class="live-examiner-view" role="img" aria-label="@(Label ?? T[male ? "liveExaminer.label.male" : "liveExaminer.label"])">
         <ExaminerPresence AutoStart="false" />
         <div class="live-examiner-stage" aria-hidden="true"></div>
@@ -38,6 +40,8 @@
     private string? modelUrl;
     private bool male;
     private bool disposed;
+    /// <summary>The model, look and framing last handed to the script, to tell when they change.</summary>
+    private string? sent;
 
     protected override void OnParametersSet()
     {
@@ -51,25 +55,44 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender) return;
         try
         {
+            if (!firstRender)
+            {
+                if (handle is not null && Key() != sent) { sent = Key(); await handle.InvokeVoidAsync("update", MountConfig()); }
+                return;
+            }
             module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/live-examiner.js");
             if (disposed) { await module.DisposeAsync(); module = null; return; }
-            var c = Customization;
-            handle = await module.InvokeAsync<IJSObjectReference>("mount", host, new
-            {
-                modelUrl,
-                look = new { skinTone = c?.SkinTone, hair = c?.Hair, attire = c?.Attire, look = c?.Look },
-                framing = Framing,
-                loading = T[male ? "liveExaminer.loading.male" : "liveExaminer.loading"].Value,
-            });
-            if (disposed) await DisposeAsync();
+            sent = Key();
+            handle = await module.InvokeAsync<IJSObjectReference>("mount", host, MountConfig());
+            if (disposed) { await DisposeAsync(); return; }
+            if (Key() != sent) { sent = Key(); await handle.InvokeVoidAsync("update", MountConfig()); }
         }
         catch (JSDisconnectedException) { }
         catch (TaskCanceledException) { }
         catch (JSException) { }   // the presence's CSS orb stays
     }
+
+    private object MountConfig()
+    {
+        var c = Customization;
+        return new
+        {
+            modelUrl,
+            look = new { skinTone = c?.SkinTone, hair = c?.Hair, attire = c?.Attire, look = c?.Look },
+            framing = Framing,
+            loading = T[male ? "liveExaminer.loading.male" : "liveExaminer.loading"].Value,
+        };
+    }
+
+    private string Key() =>
+        string.Join('|', modelUrl, Customization?.SkinTone, Customization?.Hair, Customization?.Attire, Customization?.Look, Framing);
+
+    /// <summary>On a statically rendered page (the public site) no circuit runs OnAfterRenderAsync, so the mount config goes in
+    /// the markup and site.js mounts her; null on an interactive page, prerendered or not.</summary>
+    private string? StaticConfig => RendererInfo.IsInteractive || AssignedRenderMode is not null ? null
+        : System.Text.Json.JsonSerializer.Serialize(MountConfig(), System.Text.Json.JsonSerializerOptions.Web);
 
     public async ValueTask DisposeAsync()
     {

@@ -264,36 +264,25 @@ else
             @if (examiners.Count > 1)
             {
             <fieldset class="examiner-choices">
-                <legend class="visually-hidden">@T["getReady.examiner.choose"]</legend>
+                <legend>@T["getReady.examiner.choose"]</legend>
                 @foreach (var x in examiners)
                 {
                     <label class="examiner-choice" aria-disabled="@(x.Available ? null : "true")">
                         <input type="radio" name="examiner" value="@x.Id" checked="@(x.Id == examiner.Id)" disabled="@(!x.Available)"
-                               @onchange="() => ChooseExaminerAsync(x)" />
-                        @if (x.Available)
-                        {
-                            <img src="@x.PortraitUrl" alt="" />
-                        }
-                        <span>@T[x.NameKey]@(x.Available ? "" : " " + T["getReady.examiner.comingSoon"].Value)</span>
+                               aria-describedby="examiner-choice-@x.Id" @onchange="() => ChooseExaminerAsync(x)" />
+                        <span class="examiner-choice-text">
+                            <span class="examiner-choice-name">@T[x.NameKey]@(x.Available ? "" : " " + T["getReady.examiner.comingSoon"].Value)</span>
+                            <span class="examiner-choice-desc" id="examiner-choice-@x.Id">@T[x.NameKey + ".desc"]</span>
+                        </span>
                     </label>
                 }
             </fieldset>
             }
             <div class="examiner-preview-row">
-                @* The portrait shows the student's choices (GAD-T663): the framing, a tint over the clothing, and small skin and hair dots. *@
-                <div class="examiner-preview-figure look-@(customization.Look ?? ExaminerCustomization.Looks[0])">
-                    <img class="examiner-preview-portrait" src="@examiner.PortraitUrl" alt="@T["getReady.examiner.portraitAlt"]" />
-                    @if (customization.Attire is { } attire)
-                    {
-                        <span class="examiner-attire-band" data-attire="@attire" aria-hidden="true"></span>
-                    }
-                    @if (customization.SkinTone is not null || customization.Hair is not null)
-                    {
-                        <span class="examiner-look-dots" aria-hidden="true">
-                            @if (customization.SkinTone is { } skin) { <i data-skin="@skin"></i> }
-                            @if (customization.Hair is { } hair) { <i data-hair="@hair"></i> }
-                        </span>
-                    }
+                @* The examiner herself, live, in the student's choices (GAD-T663, GAD-T693): another examiner loads the other model; a
+                   customization restyles the one shown, in place. *@
+                <div class="examiner-preview-figure">
+                    <LiveExaminer ExaminerId="@examiner.Id" Customization="@customization" Framing="@(customization.Look ?? ExaminerCustomization.Looks[0])" />
                 </div>
                 <div class="examiner-preview-body">
                     <p>@Ex("getReady.examiner.intro")</p>
@@ -1027,7 +1016,7 @@ else
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             await using var preload = await JS.InvokeAsync<IJSObjectReference>("import", cts.Token, "./js/voice-preload.js");
-            await preload.InvokeAsync<bool>("preload", cts.Token, new { modelUrl = examiner.ModelUrl, portraitUrl = examiner.PortraitUrl });
+            await preload.InvokeAsync<bool>("preload", cts.Token, new { modelUrl = examiner.ModelUrl });
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
         {
