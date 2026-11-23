@@ -17,6 +17,11 @@ public sealed record RecitationFlag
     public int LongestCopiedWords { get; init; }
     /// <summary>True when the answer closely matches the source material's wording.</summary>
     public bool MatchesSource { get; init; }
+    /// <summary>
+    /// True when the close match was with a machine translation of the source into the exam language, not the English source itself
+    /// (GAD-T600: a Korean or Spanish answer recited from a translation of the notes).
+    /// </summary>
+    public bool MatchesTranslatedSource { get; init; }
     /// <summary>True when the answer was long and fluent and started after a long silent wait.</summary>
     public bool ReadOutPattern { get; init; }
     /// <summary>The longest copied stretch, as the student said it (clipped); null when nothing was copied.</summary>
@@ -73,10 +78,20 @@ public static class RecitationCheck
     public const double FluentHesitationsPer100 = 2;
 
     /// <summary>
-    /// Checks <paramref name="turn"/>'s answer against <paramref name="sourceText"/> and its delivery; null when it reads as the
-    /// student's own (or there is no answer).
+    /// Hangul syllables per comparison run for a Korean answer against a Korean translation of the source (GAD-T600): Korean words
+    /// carry particles and endings and their spacing varies, so a Korean answer is compared syllable by syllable with spaces and
+    /// punctuation dropped. 15 syllables is about the <see cref="RunWords"/> English words (2.5 syllables per English word, as
+    /// <see cref="LanguageText.WordCount"/> counts).
     /// </summary>
-    public static RecitationFlag? Check(SocraticSession session, Turn turn, string? sourceText)
+    public const int RunSyllables = 15;
+
+    /// <summary>
+    /// Checks <paramref name="turn"/>'s answer against <paramref name="sourceText"/> and its delivery; null when it reads as the
+    /// student's own (or there is no answer). <paramref name="translatedSource"/>, when given, is the same source machine-translated
+    /// into the exam language (GAD-T600): a Korean or Spanish answer recited from a translation of the notes shares no words with the
+    /// English source, so it is compared with the translation too, and the closer of the two comparisons is the one reported.
+    /// </summary>
+    public static RecitationFlag? Check(SocraticSession session, Turn turn, string? sourceText, string? translatedSource = null)
     {
         ArgumentNullException.ThrowIfNull(session);
         if (turn.Answer is not { } answer || string.IsNullOrWhiteSpace(answer.Text)) return null;
@@ -84,6 +99,13 @@ public static class RecitationCheck
 
         var (overlap, longest, start) = Compare(words, Words(sourceText));
         var matches = words.Count >= MinWordsForSourceMatch && (overlap >= SourceOverlapCue || longest >= LongestCopiedCue);
+        var copied = longest >= RunWords ? string.Join(' ', words.Skip(start).Take(longest)) : null;
+        var translated = false;
+        if (!matches && !string.IsNullOrWhiteSpace(translatedSource)
+            && CompareTranslated(answer.Text, translatedSource) is { } t && (t.Matches || t.Overlap > overlap))
+        {
+            (overlap, longest, copied, matches, translated) = (t.Overlap, t.Longest, t.Copied, t.Matches, t.Matches);
+        }
 
         // The timing half is skipped when the exam switched it off or the student has an accommodation (GAD-T272).
         var readOutReason = session.Policy.ReadOutCheckActive ? ReadOutReason(session, turn,
@@ -93,12 +115,15 @@ public static class RecitationCheck
         if (!matches && !readOut) return null;
         var reasons = new List<string>();
         if (matches)
-            reasons.Add($"closely follows the source material's wording ({Num(overlap * 100)}% of its word runs verbatim, longest copied stretch {longest} words)");
+            reasons.Add(translated
+                ? $"closely follows a machine translation of the source material's wording ({Num(overlap * 100)}% of its runs verbatim, longest copied stretch about {longest} words)"
+                : $"closely follows the source material's wording ({Num(overlap * 100)}% of its word runs verbatim, longest copied stretch {longest} words)");
         if (readOutReason is not null) reasons.Add(readOutReason);
         return new RecitationFlag
         {
             SourceOverlap = Math.Round(overlap, 2), LongestCopiedWords = longest, MatchesSource = matches, ReadOutPattern = readOut,
-            CopiedText = longest >= RunWords ? Clip(string.Join(' ', words.Skip(start).Take(longest)), 240) : null,
+            MatchesTranslatedSource = translated,
+            CopiedText = copied is null ? null : Clip(copied, 240),
             Reason = string.Join("; ", reasons),
         };
     }
@@ -169,32 +194,66 @@ public static class RecitationCheck
     /// Share of <paramref name="answer"/>'s word runs found in <paramref name="source"/>, the longest verbatim stretch in words,
     /// and where that stretch starts in the answer.
     /// </summary>
-    internal static (double Overlap, int Longest, int Start) Compare(IReadOnlyList<string> answer, IReadOnlyList<string> source)
+    internal static (double Overlap, int Longest, int Start) Compare(IReadOnlyList<string> answer, IReadOnlyList<string> source,
+        int runLength = RunWords)
     {
-        if (answer.Count < RunWords || source.Count < RunWords) return (0, 0, 0);
+        if (answer.Count < runLength || source.Count < runLength) return (0, 0, 0);
         var runs = new HashSet<string>(StringComparer.Ordinal);
-        for (var i = 0; i + RunWords <= source.Count; i++) runs.Add(Run(source, i));
-        int total = answer.Count - RunWords + 1, found = 0, longest = 0, start = 0, current = 0, currentStart = 0;
+        for (var i = 0; i + runLength <= source.Count; i++) runs.Add(Run(source, i, runLength));
+        int total = answer.Count - runLength + 1, found = 0, longest = 0, start = 0, current = 0, currentStart = 0;
         for (var i = 0; i < total; i++)
         {
-            if (runs.Contains(Run(answer, i)))
+            if (runs.Contains(Run(answer, i, runLength)))
             {
                 found++;
                 if (current == 0) currentStart = i;
                 current++;
-                // Consecutive matching runs overlap: n runs in a row cover n + RunWords - 1 words.
-                if (current + RunWords - 1 > longest) { longest = current + RunWords - 1; start = currentStart; }
+                // Consecutive matching runs overlap: n runs in a row cover n + runLength - 1 tokens.
+                if (current + runLength - 1 > longest) { longest = current + runLength - 1; start = currentStart; }
             }
             else current = 0;
         }
         return ((double)found / total, longest, start);
     }
 
+    /// <summary>
+    /// A non-English answer against the source machine-translated into the exam language (GAD-T600). A Korean answer is compared in
+    /// runs of <see cref="RunSyllables"/> letters with spaces and punctuation dropped (its longest stretch reported in English-word
+    /// units); any other answer in runs of <see cref="RunWords"/> words, as the English check. Null when either side is too short.
+    /// </summary>
+    internal static (double Overlap, int Longest, string? Copied, bool Matches)? CompareTranslated(string answer, string translated)
+    {
+        if (!LanguageText.HasHangul(answer))
+        {
+            var words = Words(answer);
+            if (words.Count < MinWordsForSourceMatch) return null;
+            var (o, l, s) = Compare(words, Words(translated));
+            return (o, l, l >= RunWords ? string.Join(' ', words.Skip(s).Take(l)) : null, o >= SourceOverlapCue || l >= LongestCopiedCue);
+        }
+        if (LanguageText.WordCount(answer) < MinWordsForSourceMatch) return null;
+        var (a, at) = Letters(answer);
+        var (src, _) = Letters(translated);
+        var (overlap, run, start) = Compare(a, src, RunSyllables);
+        var longest = (int)Math.Round(run / 2.5, MidpointRounding.AwayFromZero);
+        var copied = run >= RunSyllables ? answer[at[start]..(at[start + run - 1] + 1)] : null;
+        return (overlap, longest, copied, overlap >= SourceOverlapCue || longest >= LongestCopiedCue);
+    }
+
+    /// <summary>The lower-cased letters and digits of <paramref name="text"/>, one per entry, and where each is in the text.</summary>
+    private static (IReadOnlyList<string> Letters, IReadOnlyList<int> At) Letters(string text)
+    {
+        var letters = new List<string>();
+        var at = new List<int>();
+        for (var i = 0; i < text.Length; i++)
+            if (char.IsLetterOrDigit(text[i])) { letters.Add(char.ToLowerInvariant(text[i]).ToString()); at.Add(i); }
+        return (letters, at);
+    }
+
     /// <summary>Lower-cased words with punctuation dropped, so wording is compared, not formatting.</summary>
     internal static IReadOnlyList<string> Words(string? text) => string.IsNullOrWhiteSpace(text) ? []
         : Word.Matches(text.ToLowerInvariant()).Select(m => m.Value.Replace("'", "").Replace("’", "")).Where(w => w.Length > 0).ToList();
 
-    private static string Run(IReadOnlyList<string> words, int at) => string.Join(' ', Enumerable.Range(at, RunWords).Select(i => words[i]));
+    private static string Run(IReadOnlyList<string> words, int at, int length) => string.Join(' ', Enumerable.Range(at, length).Select(i => words[i]));
 
     private static string Num(double v) => v.ToString(v >= 10 ? "0" : "0.#", CultureInfo.InvariantCulture);
 
