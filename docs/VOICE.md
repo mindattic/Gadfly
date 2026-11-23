@@ -724,6 +724,14 @@ deliberately.
 Refresh with `tools/sync-voice-assets.ps1`. The 36.8 MB default avatar `mpfb.glb` (CC0) is **not** committed: the project
 copies it from a sibling `MindAttic.Avatar` checkout at build time when present (gitignored); without it the portrait is
 shown. For production, host the model on blob storage or a CDN and set `AvatarModelUrl`.
+The model is downloaded once per browser (GAD-T698): `wwwroot/js/model-cache.js` keeps it in Cache Storage
+(`gadfly-models-v1`, keyed by its absolute URL) and hands `<ma-avatar>` one blob object URL per page lifetime, so the
+get-ready page's prefetch (`voice-preload.js`), the exam room and the live examiner share it across Blazor navigations.
+Both examiners' models stay cached, so switching examiner downloads the other one only the first time. A replaced model is
+noticed by one HEAD request per browser session comparing its ETag/Last-Modified/Content-Length with the cached copy's; a
+hosted copy needs CORS for HEAD and GET. Any failure falls back to the plain URL. The server sends `.glb` as
+`public, no-cache` (revalidated) and, when the URL carries `?v=`, as `public, max-age=31536000, immutable`; the CSP allows
+`connect-src blob:` for the object URL.
 `App.razor` carries the import map the avatar needs. No Content-Security-Policy is sent on exam pages today; if one is
 added it needs `worker-src blob:` (the microphone worklet), `connect-src 'self' wss:` and `wasm-unsafe-eval`.
 

@@ -1,6 +1,6 @@
 // Gets the talking examiner ready while the student is still on the get-ready page (GAD-T303), so the exam room shows her and she
 // speaks without a long first load. Blazor moves from the get-ready page to the exam room inside the same document, so modules
-// imported here are already loaded there; the avatar model is fetched into the browser's HTTP cache, where the 3D loader finds it.
+// imported here are already loaded there; the avatar model is read into model-cache.js, where the exam room picks it up.
 // Everything is best effort and quiet: a failure here only means the exam room loads it itself, as before.
 
 const LIB = "/lib/voice";
@@ -51,8 +51,7 @@ export function preload(cfg) {
         const saveData = !!(navigator.connection && navigator.connection.saveData);
         if (!cfg || !cfg.modelUrl || saveData || reducedMotion() || !webgl()) return;
         try {
-            const r = await fetch(cfg.modelUrl, { credentials: "same-origin", priority: "low" });
-            if (r.ok) await r.arrayBuffer();   // read to the end so the whole file lands in the cache
+            (await import("/js/model-cache.js")).prefetch(cfg.modelUrl);   // into Cache Storage and this page's memory (GAD-T698)
         } catch { /* the exam room loads it, or shows the portrait */ }
     })();
     return true;

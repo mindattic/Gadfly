@@ -93,7 +93,13 @@ public static class VoiceServices
             OnPrepareResponse = ctx =>
             {
                 var path = ctx.Context.Request.Path.Value ?? "";
-                if (LongCachePrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+                // The avatar models (GAD-T698): a URL carrying ?v= names one version and is cached for a year; a plain URL is kept but
+                // revalidated, so a replaced model is noticed (model-cache.js keeps its own copy in Cache Storage either way).
+                if (path.EndsWith(".glb", StringComparison.OrdinalIgnoreCase))
+                    ctx.Context.Response.Headers.CacheControl = ctx.Context.Request.Query.ContainsKey("v")
+                        ? "public, max-age=31536000, immutable"
+                        : "public, no-cache";
+                else if (LongCachePrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
                     ctx.Context.Response.Headers.CacheControl = "public, max-age=604800, immutable";
             },
         };

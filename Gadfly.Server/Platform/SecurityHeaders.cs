@@ -30,8 +30,9 @@ public static class SecurityHeadersMiddleware
         "img-src 'self' data: blob:; " +
         "font-src 'self'; " +
         "media-src 'self' blob:; " +
-        // {1}: the examiner avatar's storage origin when Gadfly:Voice:AvatarModelUrl points off-site (GAD-T493).
-        "connect-src 'self' wss:{1}; " +
+        // {1}: the examiner avatar's storage origin when Gadfly:Voice:AvatarModelUrl points off-site (GAD-T493). blob: is the
+        // model read back from Cache Storage (model-cache.js, GAD-T698), which the 3D loader fetches.
+        "connect-src 'self' wss: blob:{1}; " +
         "worker-src 'self' blob:; " +
         "object-src 'none'; " +
         "base-uri 'self'; " +

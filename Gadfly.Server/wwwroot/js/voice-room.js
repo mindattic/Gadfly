@@ -28,6 +28,7 @@
 import { VoiceAcoustics } from "./voice-acoustics.js";
 import * as VoiceDraft from "./voice-draft.js";
 import { useExaminerLook, customLookOptions, framingOf, attireCss } from "./avatar-look.js";
+import { getModelUrl } from "./model-cache.js";
 // Every line this module writes is in the attempt's language (GAD-T606): the exam room renders <UiTextData Prefix="examRoom.js." />
 // in ExamSession.Language, and each call names the English as its fallback.
 import { t } from "./ui-text.js";
@@ -309,7 +310,8 @@ async function start() {
         const pkg = await import(`${LIB}/avatar/index.js`);
         if (S !== s || !s.running) return;
         const standIn = !!(s.cfg.modelUrl && s.cfg.portraitUrl) && hasWebGl() && !prefersReducedMotion();
-        const el = createAvatar(s, standIn ? null : s.cfg.modelUrl);
+        const el = createAvatar(s, standIn ? null : await getModelUrl(s.cfg.modelUrl));
+        if (S !== s || !s.running) return;
         stage.appendChild(el);
         s.avatar = el;
         s.presenter = await createPresenter(s, el);
@@ -450,8 +452,10 @@ function presenterFor(s, el) {
  * Loads the 3D examiner out of sight behind the portrait that stands in for her (GAD-T328). Invisible but laid out at full size,
  * so the 3D scene is framed for the stage it will fill. A model that can't load leaves the portrait where it is, with the usual note.
  */
-function load3d(s, stage) {
-    const el = createAvatar(s, s.cfg.modelUrl);
+async function load3d(s, stage) {
+    const src = await getModelUrl(s.cfg.modelUrl);   // once per browser, from Cache Storage after that (GAD-T698)
+    if (S !== s || !s.running) return;
+    const el = createAvatar(s, src);
     el.gadflyRole = "loading";
     el.style.cssText = "position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .45s ease";
     stage.appendChild(el);
