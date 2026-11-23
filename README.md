@@ -150,7 +150,9 @@ Gadfly Exams, the web platform (`Gadfly.Server`):
   calibration and speech-recognition accuracy can be grouped by exam language and by stated primary language.
 - **The get-ready studio.** One screen in the student's language: choose the exam language, your languages, your
   camera and microphone (with checks and a microphone test), and your examiner, a woman or a man, each with their
-  own voice and lip-sync (unless the exam or organization fixes one); an optional voice calibration (reading a short sentence three times, keeping only timing and confidence numbers,
+  own voice and lip-sync (unless the exam or organization fixes one), which the student can make their own (an allowlisted
+  voice, skin tone, hair colour, clothing and framing; eyes, brows and mouth never change and the face always stays in view,
+  so eye contact is unaffected; remembered on the device, never seen by graders, see [VOICE.md](docs/VOICE.md)); an optional voice calibration (reading a short sentence three times, keeping only timing and confidence numbers,
   never audio); a plain statement that the camera checks presence and never grades or decides; and a free practice run
   with the same examiner and room, which stores nothing.
 - **Attention, from the evidence.** No reminder in the thinking gap before the first word; anywhere on the screen

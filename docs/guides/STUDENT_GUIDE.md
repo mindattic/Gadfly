@@ -132,8 +132,17 @@ it, stop it or redo it.
 
 Choose your examiner: a female or a male examiner, who ask questions in exactly the same way and both speak English, Korean
 and Spanish (if your instructor or organization set the examiner for this exam, only that one is shown). Press **Hear her say
-hello** for a preview in your browser's voice, and, if you like, open a **free practice run** with this exam's own examiner:
-ungraded, unlimited, nothing kept. See [Practice interview](practice-interview.md).
+hello** for a preview in your browser's voice.
+
+If you like, **make the examiner your own**: under the preview you can change the examiner's **voice**, **skin tone**, **hair
+colour**, **clothing** and **framing** (head and shoulders, close, or seated), picking from the choices shown; **Reset to
+default** puts everything back. Your choices are remembered on this device, **never affect your grade**, and graders don't see
+them. Only colours change: the examiner's eyes, eyebrows and mouth stay the same and every framing keeps the face in full view,
+so eye contact works exactly as usual. If your instructor or organization set the examiner for this exam, it appears as they
+set it and these choices aren't shown. See [Getting ready](get-ready-and-languages.md#meet-your-examiner).
+
+Then, if you like, open a **free practice run** with this exam's own examiner: ungraded, unlimited, nothing kept. See
+[Practice interview](practice-interview.md).
 
 ### How Socratic questioning works
 
