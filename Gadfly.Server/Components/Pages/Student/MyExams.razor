@@ -95,6 +95,12 @@ else
     </div>
 }
 
+@* Every exam the student can take, by category (GAD-T658); after the open assignments are made above. *@
+@if (rows is not null)
+{
+    <ExamCatalog />
+}
+
 @code {
     private IReadOnlyList<StudentAssignmentView>? rows;
     private IReadOnlyList<Gadfly.Server.Grading.StudentResultRow> published = [];

@@ -1,0 +1,92 @@
+@using Gadfly.Server.Student
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject IConfiguration Config
+@inject Gadfly.Server.Localization.UiText T
+
+@* Browse by category (GAD-T658): every exam the student can take, grouped by category in the student's language, with a
+   category filter, a title search and each exam's offered languages. Each exam starts by exam (GAD-T669): the start page
+   finds or makes the student's assignment and hands over to its get-ready page. *@
+@if (groups is { Count: > 0 })
+{
+    <section class="catalog" aria-labelledby="catalog-heading">
+        <h2 id="catalog-heading">@T["myExams.catalog.heading"]</h2>
+        <p class="hint">@T["myExams.catalog.what"]</p>
+        <div class="catalog-filters">
+            <label>
+                <span>@T["myExams.catalog.category"]</span>
+                <select @bind="categoryFilter">
+                    <option value="">@T["myExams.catalog.allCategories"]</option>
+                    @foreach (var g in groups)
+                    {
+                        <option value="@Key(g)">@Name(g)</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>@T["myExams.catalog.search"]</span>
+                <input type="search" @bind="search" @bind:event="oninput" placeholder="@T["myExams.catalog.searchPlaceholder"]" />
+            </label>
+        </div>
+        @{ var shown = Shown().ToList(); }
+        @if (shown.Count == 0)
+        {
+            <p class="notice" role="status">@T["myExams.catalog.none"]</p>
+        }
+        else
+        {
+            <p class="hint" role="status">@T["myExams.catalog.count", shown.Sum(g => g.Exams.Count)]</p>
+            @foreach (var g in shown)
+            {
+                <section class="catalog-group" aria-label="@Name(g)">
+                    <h3>@Name(g) <span class="hint">(@g.Exams.Count)</span></h3>
+                    <ul class="catalog-list">
+                        @foreach (var e in g.Exams)
+                        {
+                            <li class="catalog-exam">
+                                <a href="my-exams/exam/@e.ExamId/start">@e.Title</a>
+                                <span class="hint" title="@T["myExams.catalog.languages"]">
+                                    @T["myExams.catalog.languages"]: @string.Join(", ", e.Languages.Select(Gadfly.Engine.ExamLanguage.NativeName))
+                                </span>
+                                @if (e.Assigned)
+                                {
+                                    <span class="badge">@T["myExams.catalog.assigned"]</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                </section>
+            }
+        }
+    </section>
+}
+
+@code {
+    private IReadOnlyList<CatalogCategory>? groups;
+    private string categoryFilter = "";
+    private string search = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
+        groups = await StudentCatalog.ListAsync(Scopes, org, user, Config.GetValue<bool>(StudentExams.OpenExamsSetting), T.Language);
+    }
+
+    private static string Key(CatalogCategory g) => g.Id?.ToString("N") ?? "none";
+
+    private string Name(CatalogCategory g) => g.Id is null ? T["myExams.catalog.uncategorized"] : g.Name;
+
+    private IEnumerable<CatalogCategory> Shown()
+    {
+        var q = search.Trim();
+        foreach (var g in groups ?? [])
+        {
+            if (categoryFilter.Length > 0 && Key(g) != categoryFilter) continue;
+            if (q.Length == 0) { yield return g; continue; }
+            // A search matches an exam's title, or every exam of a category whose name matches.
+            if (Name(g).Contains(q, StringComparison.CurrentCultureIgnoreCase)) { yield return g; continue; }
+            var hits = g.Exams.Where(e => e.Title.Contains(q, StringComparison.CurrentCultureIgnoreCase)).ToList();
+            if (hits.Count > 0) yield return g with { Exams = hits };
+        }
+    }
+}

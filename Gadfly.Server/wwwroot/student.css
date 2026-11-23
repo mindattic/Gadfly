@@ -108,3 +108,10 @@ textarea { width: 100%; resize: vertical; }
 .recorded-answer { margin: 0; padding: .6rem .85rem; border-left: 3px solid var(--line); background: var(--panel); white-space: pre-wrap; overflow-wrap: anywhere; }
 .last-answer { display: grid; gap: .6rem; margin-top: 1rem; }
 .last-answer .notice { margin: 0; }
+/* Browse by category (GAD-T658). */
+.catalog { max-width: 760px; margin-top: var(--space-4); display: grid; gap: var(--space-3); }
+.catalog-filters { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.catalog-filters label { display: grid; gap: .25rem; flex: 1 1 220px; }
+.catalog-group h3 { font-size: 1.05rem; margin: 0 0 .4rem; }
+.catalog-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .4rem; }
+.catalog-exam { display: flex; flex-wrap: wrap; gap: .25rem 1rem; align-items: baseline; padding: .4rem 0; border-bottom: 1px solid var(--line); }
