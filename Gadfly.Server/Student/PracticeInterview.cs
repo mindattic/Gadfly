@@ -209,6 +209,88 @@ public sealed class PracticeInterview
     /// <summary>The Korean of <see cref="AnsweredThanks"/>.</summary>
     public const string KoreanAnsweredThanks = "고마워요. 알고 있었든 아니든, 잘 모르겠어요는 언제나 허용되는 답이라는 걸 기억해 주세요.";
 
+    // ------------------------------------------------------------------------------------------ the practice in Spanish (GAD-T612)
+    // The same steps and lines in neutral Latin American Spanish with usted, following docs/LOCALIZATION.md's Spanish glossary. The
+    // examiner speaks of herself as "la IA" so the lines fit either examiner. Change all languages together.
+
+    public static readonly IReadOnlyList<PracticeStep> SpanishSteps =
+    [
+        new(Welcome, "Responder en voz alta",
+        [
+            "Responda en voz alta, con sus propias palabras. Lo que dice aparece en \"Lo que escuché\" mientras habla.",
+            "Si deja de hablar, aparece una breve cuenta regresiva. Cuando termina, su respuesta se envía. Si vuelve a hablar, se cancela, así que puede hacer una pausa para pensar.",
+            "\"Terminé de responder\" la envía de inmediato. \"Repetir la pregunta\" hace que la IA examinadora la diga otra vez.",
+        ], true),
+        new(AsHeard, "Su respuesta se toma tal como se oyó",
+        [
+            "La IA examinadora no le lee su respuesta de vuelta. Una vez enviada, se toma tal como se oyó y el examen sigue, como una conversación con una persona.",
+            "Después no puede cambiar una respuesta, así que diga lo que quiere decir antes de que termine la cuenta regresiva. Hasta entonces puede seguir hablando o presionar \"Borrar y responder de nuevo\" para empezar otra vez.",
+            "Si se entiende mal una palabra, no tiene que hacer nada: la persona que califica su examen ve de qué palabras no estaba seguro el reconocimiento de voz.",
+            "Pruébelo: empiece a responder, presione \"Borrar y responder de nuevo\" y responda otra vez.",
+        ], true),
+        new(DontKnow, "Decir \"No lo sé\"",
+        [
+            "Después de cada respuesta, la IA examinadora se toma un momento. Puede que la vea mirar a un lado, como hacen las personas al pensar, y que oiga una frase corta como \"Déjeme pensar\". No dice nada sobre cómo le fue con su respuesta.",
+            "\"No lo sé\" es una respuesta real y honesta. Por sí sola nunca le hace reprobar: la IA examinadora intenta otro enfoque o sigue adelante.",
+            "Pruébelo: si no sabe la respuesta a esta pregunta, simplemente diga \"No lo sé\".",
+        ], true),
+        new(EyeContact, "Contacto visual y recordatorios amables",
+        [
+            "Mientras responde, mire a la IA examinadora como miraría a una persona; no hace falta fijar la vista. Su cámara lo comprueba solo en su dispositivo; no se graba ni se envía video.",
+            "Apartar la mirada para pensar es normal: no pasa nada antes de que empiece a hablar, las miradas breves mientras habla están bien y cualquier punto de la pantalla cuenta como mirarla.",
+            "Solo una mirada larga fuera de la pantalla mientras habla (unos 8 segundos) trae un recordatorio, primero el más suave: la IA examinadora inclina un poco la cabeza; luego la pantalla a su alrededor se oscurece un poco y se aclara en cuanto usted vuelve a mirar; como mucho, en una pausa, una frase corta y amable. Nada parpadea y no aparece ningún texto de advertencia.",
+            "Pruébelo si quiere: describa la habitación y siga hablando mientras aparta la mirada de la pantalla unos 15 segundos; luego vuelva a mirar.",
+        ], true),
+        new(Pause, "Si el micrófono o la cámara se detienen",
+        [
+            "Si su micrófono o su cámara dejan de funcionar, o se corta la conexión, el examen muestra \"El examen está en pausa\" con lo que falló y cómo resolverlo.",
+            "Resuélvalo y presione \"Intentar de nuevo\": la IA examinadora vuelve a hacer la pregunta.",
+            "Una vez hecha la primera pregunta, el reloj se detiene mientras el examen está en pausa, hasta 10 minutos en total. Si lo prueba, observe el reloj de práctica de arriba.",
+            "Pruébelo si quiere: desconecte su micrófono o apague su cámara, vuelva a conectarlos y presione \"Intentar de nuevo\". Cuando termine, diga \"terminé\".",
+        ], true),
+        new(Ready, "Ya tiene todo listo",
+        [
+            "En su examen real, las preguntas son sobre su curso, y cada una parte de su respuesta anterior.",
+            "Su micrófono y su cámara deben estar encendidos durante todo el examen. Solo su docente puede darle una adaptación de respuestas escritas o de contacto visual.",
+            "Puede volver a hacer esta práctica cuando quiera desde Mis exámenes.",
+        ], false),
+    ];
+
+    private static readonly IReadOnlyDictionary<string, string> SpanishLines = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        [Welcome] = "Hola. Soy la IA que le hará sus exámenes. Esto es solo una práctica: nada de lo que diga aquí se guarda, se califica ni cuenta como intento. "
+            + "Yo hago cada pregunta en voz alta, y usted responde en voz alta, con sus propias palabras. Probemos una. "
+            + "En una o dos frases, ¿qué está estudiando en este momento? Cuando deje de hablar, una breve cuenta regresiva enviará su respuesta.",
+        [AsHeard] = "Gracias. Fíjese en que no le leí su respuesta de vuelta. En el examen, una vez que su respuesta se envía, se toma tal como la oí, "
+            + "y seguimos adelante, igual que al hablar con una persona. Después no puede cambiarla, así que diga lo que quiere decir antes de que termine la cuenta regresiva. "
+            + "Hasta entonces puede seguir hablando, o presionar Borrar y responder de nuevo para empezar otra vez. Probémoslo. "
+            + "Cuénteme sobre algo que disfrute hacer y, a mitad de camino, presione Borrar y responder de nuevo y empiece otra vez.",
+        [DontKnow] = "Gracias. Mientras pensaba hace un momento, quizá me vio mirar a un lado y me oyó decir algo breve. "
+            + "Es solo que me tomo un momento, como hacen las personas. No dice nada sobre cómo le fue con su respuesta. "
+            + "Lo siguiente: no saber. A veces le preguntaré algo que no pueda responder. Decir no lo sé es honesto, y está bien. "
+            + "Pruébelo ahora. ¿Cuál es la capital de Burkina Faso? Si no lo sabe con certeza, simplemente diga no lo sé.",
+        [EyeContact] = "Ahora, el contacto visual. Mientras responde, háblele a la pantalla como le hablaría a una persona. No hace falta fijar la vista. "
+            + "Su cámara lo comprueba solo en su dispositivo. No se graba ni se envía video. "
+            + "Apartar la mirada para pensar es normal: no pasa nada mientras piensa su respuesta, y las miradas breves mientras habla están bien. "
+            + "Solo si mira fuera de la pantalla durante mucho tiempo mientras habla, inclino un poco la cabeza, la pantalla a mi alrededor se oscurece un poco "
+            + "y se aclara en cuanto vuelve a mirar, y en una pausa puedo decir una frase corta y amable. "
+            + "Pruébelo: describa la habitación en la que está. Si quiere ver el recordatorio, siga hablando mientras aparta la mirada de la pantalla unos quince segundos.",
+        [Pause] = "Si me vio reaccionar, o la pantalla se oscureció un poco, se aclaró en cuanto volvió a mirar. Aquí no se guarda nada de eso. "
+            + "Lo último: si su micrófono o su cámara dejan de funcionar, o se corta su conexión, el examen se pausa. "
+            + "La pantalla le dice qué falló. Resuélvalo, presione Intentar de nuevo y volveré a hacer la pregunta. "
+            + "El reloj se detiene mientras está en pausa, hasta diez minutos en total. "
+            + "Si quiere, pruébelo ahora: desconecte su micrófono o apague su cámara, vuelva a conectarlos y presione Intentar de nuevo. "
+            + "Cuando quiera terminar, simplemente diga terminé.",
+        [Ready] = "Eso es todo. En su examen real, las preguntas serán sobre su curso, y cada una parte de su respuesta anterior. "
+            + "Tómese su tiempo, responda con sus propias palabras y diga no lo sé cuando no lo sepa. Ya tiene todo listo. Mucho éxito.",
+    };
+
+    /// <summary>The Spanish of <see cref="AporiaThanks"/>.</summary>
+    public const string SpanishAporiaThanks = "Esa fue una respuesta honesta, y decirlo es exactamente lo correcto. Yo simplemente intentaría otro enfoque o seguiría adelante.";
+
+    /// <summary>The Spanish of <see cref="AnsweredThanks"/>.</summary>
+    public const string SpanishAnsweredThanks = "Gracias. Supiera o no la respuesta, recuerde que no lo sé siempre es una respuesta permitida.";
+
     /// <summary>A throwaway id for this practice. It names no exam session or any other row; it only arms the voice hubs.</summary>
     public Guid Id { get; } = Guid.NewGuid();
 
@@ -229,8 +311,9 @@ public sealed class PracticeInterview
 
     public PracticeStep Current => StepsFor(Language)[StepIndex];
 
-    /// <summary>The steps in <paramref name="language"/> (GAD-T544): Korean when the practice runs in Korean, else English. Same keys and order.</summary>
-    public static IReadOnlyList<PracticeStep> StepsFor(string? language) => Gadfly.Engine.ExamLanguage.IsKorean(language) ? KoreanSteps : Steps;
+    /// <summary>The steps in <paramref name="language"/> (GAD-T544, GAD-T612): Korean or Spanish when the practice runs in it, else English. Same keys and order.</summary>
+    public static IReadOnlyList<PracticeStep> StepsFor(string? language) =>
+        Gadfly.Engine.ExamLanguage.IsKorean(language) ? KoreanSteps : Gadfly.Engine.ExamLanguage.IsSpanish(language) ? SpanishSteps : Steps;
 
     public bool IsFinished => StepIndex == Steps.Count - 1;
 
@@ -243,19 +326,22 @@ public sealed class PracticeInterview
     /// <summary>The examiner's words for a step; the eye-contact step starts with her reaction to the "I don't know" step.</summary>
     public static string LineFor(string key, bool saidIDontKnow) => LineFor(key, saidIDontKnow, null);
 
-    /// <summary>The examiner's words for a step in <paramref name="language"/> (GAD-T544): Korean, else English.</summary>
+    /// <summary>The examiner's words for a step in <paramref name="language"/> (GAD-T544, GAD-T612): Korean or Spanish, else English.</summary>
     public static string LineFor(string key, bool saidIDontKnow, string? language)
     {
         var korean = Gadfly.Engine.ExamLanguage.IsKorean(language);
-        var lines = korean ? KoreanLines : Lines;
+        var spanish = Gadfly.Engine.ExamLanguage.IsSpanish(language);
+        var lines = korean ? KoreanLines : spanish ? SpanishLines : Lines;
         if (key != EyeContact) return lines[key];
-        var reaction = saidIDontKnow ? (korean ? KoreanAporiaThanks : AporiaThanks) : (korean ? KoreanAnsweredThanks : AnsweredThanks);
+        var reaction = saidIDontKnow
+            ? (korean ? KoreanAporiaThanks : spanish ? SpanishAporiaThanks : AporiaThanks)
+            : (korean ? KoreanAnsweredThanks : spanish ? SpanishAnsweredThanks : AnsweredThanks);
         return reaction + " " + lines[key];
     }
 
-    /// <summary>Every line the examiner could say in a practice (the step lines with both reactions), in English and Korean.</summary>
+    /// <summary>Every line the examiner could say in a practice (the step lines with both reactions), in English, Korean and Spanish.</summary>
     public static IEnumerable<string> AllLines() =>
-        new string?[] { null, Gadfly.Engine.ExamLanguage.Korean }.SelectMany(lang => Steps.SelectMany(s => s.Key == EyeContact
+        new string?[] { null, Gadfly.Engine.ExamLanguage.Korean, Gadfly.Engine.ExamLanguage.Spanish }.SelectMany(lang => Steps.SelectMany(s => s.Key == EyeContact
             ? new[] { LineFor(s.Key, true, lang), LineFor(s.Key, false, lang) }
             : new[] { LineFor(s.Key, false, lang) }));
 
@@ -307,7 +393,7 @@ public sealed class PracticeInterview
     /// </summary>
     public string? Remark(VoiceGrants grants, Guid user, string? kind)
     {
-        // In the student's language (GAD-T532): Korean lines when the practice runs in Korean, English otherwise.
+        // In the student's language (GAD-T532, GAD-T612): Korean or Spanish lines when the practice runs in it, English otherwise.
         if (kind is null || Voice.ExaminerFiller.Remark(kind, Language) is not { } text) return null;
         // A reminder (GAD-T561) is a warm line, never the same twice in one practice; once all are said she starts over.
         if (kind is "look-away" or "reading")
@@ -339,7 +425,8 @@ public sealed class PracticeInterview
         string[] phrases = ["don't know", "dont know", "do not know", "no idea", "not sure", "no clue", "can't remember", "cannot remember", "don't remember",
             // Korean (GAD-T544): 모르겠어요, 몰라요, 모릅니다, 잘 모르, 기억이 안 나요
             "모르겠", "몰라", "모릅니다", "잘 모르", "기억이 안", "기억 안"];
-        return phrases.Any(t.Contains);
+        // Spanish (GAD-T612): no lo sé, no sé, no me acuerdo, ni idea...
+        return phrases.Any(t.Contains) || Gadfly.Engine.LanguageText.SaysDontKnowSpanish(heard);
     }
 }
 

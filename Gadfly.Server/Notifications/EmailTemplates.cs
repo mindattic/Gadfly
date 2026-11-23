@@ -37,16 +37,22 @@ public static class EmailTemplates
     private const string Line = "#dedbd2";
 
     /// <param name="language">
-    /// The recipient's language (GAD-T544): "ko" renders the student emails in Korean (the staff-only test email stays English);
-    /// anything else, English as before.
+    /// The recipient's language (GAD-T544): "ko" renders the student emails in Korean and "es" in Spanish (GAD-T612; the staff-only
+    /// test email stays English); anything else, English as before.
     /// </param>
     public static RenderedEmail Render(string kind, EmailData d, string? language = null)
     {
         if (Gadfly.Engine.ExamLanguage.IsKorean(language) && Korean(kind, d) is { } ko)
         {
-            var koHtml = Wrap(d.OrganizationName, ko.Lead, ko.Body, ko.Action.Label ?? d.ActionLabel, ko.Action.Url ?? d.ActionUrl, korean: true);
+            var koHtml = Wrap(d.OrganizationName, ko.Lead, ko.Body, ko.Action.Label ?? d.ActionLabel, ko.Action.Url ?? d.ActionUrl, language: "ko");
             var koText = PlainText(d.OrganizationName, ko.Lead, ko.Body, ko.Action.Label ?? d.ActionLabel, ko.Action.Url ?? d.ActionUrl);
             return new RenderedEmail(ko.Subject, koHtml, koText);
+        }
+        if (Gadfly.Engine.ExamLanguage.IsSpanish(language) && Spanish(kind, d) is { } es)
+        {
+            var esHtml = Wrap(d.OrganizationName, es.Lead, es.Body, es.Action.Label ?? d.ActionLabel, es.Action.Url ?? d.ActionUrl, language: "es");
+            var esText = PlainText(d.OrganizationName, es.Lead, es.Body, es.Action.Label ?? d.ActionLabel, es.Action.Url ?? d.ActionUrl);
+            return new RenderedEmail(es.Subject, esHtml, esText);
         }
         var (subject, lead, body, action) = kind switch
         {
@@ -214,6 +220,72 @@ public static class EmailTemplates
         };
     }
 
+    /// <summary>
+    /// The student emails in Spanish (GAD-T612): the same facts and the same single action, in neutral Latin American Spanish with
+    /// usted; terminology per docs/LOCALIZATION.md. Null for a kind with no Spanish version (it is then sent in English).
+    /// </summary>
+    private static (string Subject, string Lead, string Body, (string? Label, string? Url) Action)? Spanish(string kind, EmailData d)
+    {
+        string Title() => string.IsNullOrWhiteSpace(d.ExamTitle) ? "su examen" : d.ExamTitle!;
+        string EsWhen(DateTimeOffset at) => at.UtcDateTime.ToString("d 'de' MMMM 'de' yyyy, HH:mm", System.Globalization.CultureInfo.GetCultureInfo("es-419")) + " UTC";
+        return kind switch
+        {
+            EmailKinds.ExamAssigned => (
+                $"Se le asignó un examen: {Title()}",
+                $"{d.OrganizationName} le asignó un examen.",
+                Paragraphs(
+                    $"<strong>{Esc(Title())}</strong> ya está en su lista de exámenes.",
+                    d.DueAtUtc is { } due ? $"Fecha límite: {EsWhen(due)}." : null,
+                    d.AttemptsAllowed is { } n ? $"Tiene {n} {(n == 1 ? "intento" : "intentos")}." : null),
+                ("Abrir Mis exámenes", d.ActionUrl)),
+            EmailKinds.Reminder => (
+                $"Recordatorio: se acerca la fecha límite de {Title()}",
+                $"Un recordatorio de {d.OrganizationName}.",
+                Paragraphs(
+                    $"La fecha límite de <strong>{Esc(Title())}</strong> es {(d.DueAtUtc is { } due ? EsWhen(due) : "pronto")}, y todavía no ha terminado el examen.",
+                    "Si ya lo presentó, no necesita hacer nada."),
+                ("Abrir Mis exámenes", d.ActionUrl)),
+            EmailKinds.ResultReleased => (
+                $"Su resultado de {Title()} está disponible",
+                $"{d.OrganizationName} publicó su resultado.",
+                Paragraphs(
+                    $"Ya puede ver su resultado de <strong>{Esc(Title())}</strong>.",
+                    d.Score is { } sc ? $"Resultado: <strong>{Esc(sc)}</strong>" : null,
+                    "Si cree que algo no es correcto, puede apelar desde la página del resultado."),
+                ("Ver mi resultado", d.ActionUrl)),
+            EmailKinds.AppealReceived => (
+                $"Recibimos su apelación de {Title()}",
+                "Su apelación se envió.",
+                Paragraphs(
+                    $"Su apelación sobre <strong>{Esc(Title())}</strong> se recibió y espera la revisión de su docente.",
+                    "Mientras se revisa, puede seguir viendo el resultado publicado. Le avisaremos por correo cuando haya una decisión."),
+                (null, null)),
+            EmailKinds.AppealDecided => (
+                $"Hay una decisión sobre su apelación de {Title()}",
+                "Su apelación tiene una decisión.",
+                Paragraphs(
+                    $"Decisión sobre su apelación de <strong>{Esc(Title())}</strong>: <strong>{Esc(d.AppealOutcome ?? "resuelta")}</strong>",
+                    d.AppealResolution is { Length: > 0 } res ? Esc(res) : null),
+                ("Ver mi resultado", d.ActionUrl)),
+            EmailKinds.AttemptReset => (
+                $"Se restablecieron sus intentos de {Title()}",
+                $"{d.OrganizationName} restableció un examen.",
+                Paragraphs(
+                    $"Su organización restableció sus intentos de <strong>{Esc(Title())}</strong>. Sus respuestas, puntuaciones y calificaciones anteriores ya no cuentan.",
+                    "Puede presentar el examen de nuevo desde el principio."),
+                ("Abrir Mis exámenes", d.ActionUrl)),
+            EmailKinds.LmsLink => (
+                "Vincule su inicio de sesión del LMS con su cuenta de Gadfly",
+                $"{d.OrganizationName}: confirme que es usted.",
+                Paragraphs(
+                    "Alguien abrió un examen de Gadfly desde el sistema de gestión del aprendizaje (LMS) de su institución con esta dirección de correo y pidió usar la cuenta de Gadfly que usted ya tiene en lugar de crear una nueva.",
+                    "Si fue usted, abra el enlace de abajo <strong>en el mismo navegador</strong> dentro de las próximas 24 horas. A partir de entonces, al abrir Gadfly desde su curso entrará con esta cuenta.",
+                    "Si no fue usted, puede ignorar este correo. No cambiará nada y el enlace vencerá por sí solo."),
+                ("Vincular mi inicio de sesión del LMS", d.ActionUrl)),
+            _ => ((string Subject, string Lead, string Body, (string? Label, string? Url) Action)?)null,
+        };
+    }
+
     private static string Req(string? s) => string.IsNullOrWhiteSpace(s) ? "your exam" : s;
     private static string Esc(string s) => WebUtility.HtmlEncode(s);
     private static string When(DateTimeOffset at) => at.UtcDateTime.ToString("d MMM yyyy HH:mm") + " UTC";
@@ -222,11 +294,14 @@ public static class EmailTemplates
         string.Join("", lines.Where(l => !string.IsNullOrWhiteSpace(l))
             .Select(l => $"<p style=\"margin:0 0 .9em;color:{Ink};font-size:15px;line-height:1.55\">{l}</p>"));
 
-    private static string Wrap(string organizationName, string lead, string bodyHtml, string? actionLabel, string? actionUrl, bool korean = false)
+    private static string Wrap(string organizationName, string lead, string bodyHtml, string? actionLabel, string? actionUrl, string language = "en")
     {
-        var footer = korean
-            ? $"이 메일은 {Esc(organizationName)}을(를) 대신해 Gadfly가 자동으로 보낸 메일입니다. 받을 예정이 없었다면 무시하셔도 됩니다."
-            : $"This is an automated message from Gadfly on behalf of {Esc(organizationName)}. If you weren't expecting it, you can ignore it.";
+        var footer = language switch
+        {
+            "ko" => $"이 메일은 {Esc(organizationName)}을(를) 대신해 Gadfly가 자동으로 보낸 메일입니다. 받을 예정이 없었다면 무시하셔도 됩니다.",
+            "es" => $"Este es un mensaje automático de Gadfly en nombre de {Esc(organizationName)}. Si no lo esperaba, puede ignorarlo.",
+            _ => $"This is an automated message from Gadfly on behalf of {Esc(organizationName)}. If you weren't expecting it, you can ignore it.",
+        };
         var button = actionLabel is { Length: > 0 } && actionUrl is { Length: > 0 }
             ? $"""
                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:1.1em 0 .2em">
@@ -238,7 +313,7 @@ public static class EmailTemplates
             : "";
         return $"""
                 <!doctype html>
-                <html lang="{(korean ? "ko" : "en")}">
+                <html lang="{language}">
                 <body style="margin:0;padding:0;background:{Bg};font-family:-apple-system,'Segoe UI',system-ui,sans-serif">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{Bg};padding:24px 0">
                     <tr><td align="center">

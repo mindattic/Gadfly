@@ -42,7 +42,7 @@ public sealed class EmailDeliveryJob(GadflyDbContext db, AuthEmailStatus emailSt
         if (toEmail is null && payload.ToUserId is { } userId)
             toEmail = await db.AuthUsers.AsNoTracking().Where(u => u.Id == userId).Select(u => u.Email).FirstOrDefaultAsync(ct);
 
-        // In the recipient's language (GAD-T544): Korean only when the student said Korean is the language they speak best in this
+        // In the recipient's language (GAD-T544, Spanish GAD-T612): Korean or Spanish only when the student said it is the language they speak best in this
         // organization (their language profile, asked on the get-ready page, never inferred); everyone else gets English as before.
         string? language = null;
         if (payload.ToUserId is { } recipient)

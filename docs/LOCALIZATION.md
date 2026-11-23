@@ -251,6 +251,47 @@ How the interface text is localized, how a student chooses a language, and the K
 | help | 도움말 | |
 | settings / preferences | 설정 | |
 
+### Spanish (GAD-T612)
+
+The student interface, the exam room, the integrity notes, the report, the research question, the refusals, the consent notice,
+the practice, the emails and the get-ready page exist in Spanish (`es`), chosen like Korean: the language switch offers
+Español, the cookie culture is `es-419` (Latin American dates and numbers: "1 de diciembre de 2026"), and a student whose stated
+primary language is Spanish gets Spanish emails. The voice calibration reads "El veloz murciélago hindú comía feliz cardillo y
+kiwi." three times (9 words, 20 syllables). `Gadfly.Tests/Server/SpanishLocalizationTests.cs` checks key parity across en, ko
+and es, placeholders, usted, the notice, the practice, the emails and the culture.
+
+**Spanish style.** Neutral Latin American Spanish understood in every Spanish-speaking country: no vosotros, no regional slang,
+computadora not ordenador. The student is always usted, never tú. Short, warm sentences; buttons are infinitives or noun
+phrases ("Comenzar el examen", "Repetir la pregunta"). Opening ¿ and ¡. The student is never gendered (estudiante is epicene;
+no listo/lista or seguro/segura about the student; "Le damos la bienvenida"). The examiner: where English has a `.male` twin,
+the base key is feminine (la examinadora, ella) and the `.male` key masculine (el examinador, él); everywhere else the text says
+"la IA examinadora" or is phrased so it fits either examiner, and the examiner's own spoken lines say "la IA". Spanish never
+adds a `.male` key English lacks.
+
+| English | Spanish | Notes |
+|---|---|---|
+| exam / my exams | examen / Mis exámenes | |
+| attempt | intento | |
+| examiner (the AI) | la examinadora / el examinador / la IA examinadora | see above |
+| grader (a person who grades) | la persona que califica / quien califica | never examinadora, which is the AI |
+| instructor | su docente | epicene |
+| student | estudiante | |
+| begin exam / resume | Comenzar el examen / Continuar | |
+| practice run | examen de práctica | |
+| question / answer / follow-up | pregunta / respuesta / pregunta de seguimiento | |
+| I don't know | No lo sé | button and spoken phrase |
+| eye contact / eye tracking | contacto visual / seguimiento de la mirada | |
+| voice calibration | ajuste de voz | |
+| accommodation | adaptación | |
+| result / grade / score | resultado / calificación / puntuación | |
+| appeal | apelación | |
+| paused | en pausa | |
+| integrity note | nota de integridad | never trampa |
+| transcript | transcripción | |
+| source material | material de estudio | |
+| primary language / exam language | el idioma que mejor habla / idioma del examen | |
+| an automatic fail | un reprobado automático | Latin American; not suspenso |
+
 ## Ticket breakdown (GAD-T526), in build order
 
 | Order | Ticket | What | State, 22 Nov 2026 |
