@@ -27,7 +27,7 @@
 
 import { VoiceAcoustics } from "./voice-acoustics.js";
 import * as VoiceDraft from "./voice-draft.js";
-import { useExaminerLook, customLookOptions, framingOf } from "./avatar-look.js";
+import { useExaminerLook, customLookOptions, framingOf, attireCss } from "./avatar-look.js";
 // Every line this module writes is in the attempt's language (GAD-T606): the exam room renders <UiTextData Prefix="examRoom.js." />
 // in ExamSession.Language, and each call names the English as its fallback.
 import { t } from "./ui-text.js";
@@ -305,6 +305,7 @@ async function start() {
     // loads out of sight behind it; the 3D examiner takes over between sentences once she is ready (promote3d).
     try {
         const stage = q("stage");
+        portraitLook(s, stage);
         const pkg = await import(`${LIB}/avatar/index.js`);
         if (S !== s || !s.running) return;
         const standIn = !!(s.cfg.modelUrl && s.cfg.portraitUrl) && hasWebGl() && !prefersReducedMotion();
@@ -376,6 +377,18 @@ function fail(kind, message, s) {
 
 function prefersReducedMotion() {
     try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; }
+}
+
+/**
+ * The student's framing and clothing on the portrait (GAD-T671): the framing's bounded scale about her eyes and the clothing tint
+ * band, both drawn by voice.css (the tint only while the avatar is the portrait). Nothing customized leaves the portrait as it is.
+ */
+function portraitLook(s, stage) {
+    if (!stage) return;
+    stage.style.setProperty("--portrait-scale", String(framingOf(s.cfg.examinerLook).portraitScale));
+    const attire = attireCss(s.cfg.examinerLook);
+    if (attire) { stage.style.setProperty("--portrait-attire", attire); stage.setAttribute("data-portrait-attire", ""); }
+    else { stage.style.removeProperty("--portrait-attire"); stage.removeAttribute("data-portrait-attire"); }
 }
 
 /**

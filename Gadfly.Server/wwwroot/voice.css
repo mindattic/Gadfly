@@ -26,6 +26,20 @@
 .voice-stage ma-avatar { display: block; width: 100%; height: 100%; min-height: 0; }
 /* The portrait stand-in is 4:5: shown whole in the 16:9 stage (examiner-voice.js places her moving mouth for either fit). */
 .voice-stage ma-avatar::part(portrait) { object-fit: contain; background: #19212c; }
+/* The student's framing on the portrait (GAD-T671): voice-room.js sets --portrait-scale on the stage from avatar-look.js FRAMINGS
+   (close 1.15, seated 0.86) and the portrait scales about her eyes (the eye line of the 4:5 portraits sits at about 55% of the
+   contained image's height, centred), so her eyes stay where they were and close only trims the top of her hair, never her face.
+   examiner-voice.js mouthGeometry reads this transform, and examiner-gaze.js eyesPortrait measures the scaled box, so her moving
+   mouth and the eye-contact target follow. */
+.voice-stage ma-avatar::part(portrait) { transform: scale(var(--portrait-scale, 1)); transform-origin: 50% 55%; }
+/* The chosen clothing on the portrait: a colour tint over the bottom ~24% of the 4:5 portrait box (the same box, scaled the same
+   way), faded in at its top edge so the chin keeps its own colour. Only while the avatar is the portrait; the 3D model has its own. */
+.voice-stage[data-portrait-attire] ma-avatar[data-mode="portrait"]::after {
+    content: ""; position: absolute; z-index: 1; left: 50%; transform: translateX(-50%); pointer-events: none;
+    bottom: calc(45% * (1 - var(--portrait-scale, 1))); height: calc(24% * var(--portrait-scale, 1)); aspect-ratio: 10 / 3;
+    background: var(--portrait-attire); mix-blend-mode: color; opacity: .6;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 40%); mask-image: linear-gradient(to bottom, transparent, #000 40%);
+}
 .voice-self { position: absolute; z-index: 2; right: .6rem; bottom: .6rem; width: clamp(88px, 23%, 300px); }
 .voice-self-frame {
     position: relative; aspect-ratio: 16 / 9; border-radius: 8px; overflow: hidden; background: #10151d;

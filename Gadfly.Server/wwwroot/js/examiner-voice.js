@@ -331,9 +331,23 @@ function mouthGeometry(p) {
     const contain = safe(() => getComputedStyle(img).objectFit) === "contain";
     const sc = contain ? Math.min(W / w, H / h) : Math.max(W / w, H / h);
     const ox = (W - w * sc) / 2 + p.avatar.offsetLeft, oy = (H - h * sc) / 2 + p.avatar.offsetTop;
-    const width = parts[2] * w * sc;
-    p.mouthGeo = { x: ox + parts[0] * w * sc, y: oy + parts[1] * h * sc, w: width, h: width * 0.45 };
+    // The framing's scale about her eyes (voice.css, GAD-T671): the same transform and origin, read from the portrait itself, so
+    // the moving mouth stays on her mouth at any framing.
+    const k = portraitScale(img), cx = p.avatar.offsetLeft + k.ox, cy = p.avatar.offsetTop + k.oy;
+    const width = parts[2] * w * sc * k.s;
+    p.mouthGeo = { x: cx + (ox + parts[0] * w * sc - cx) * k.s, y: cy + (oy + parts[1] * h * sc - cy) * k.s, w: width, h: width * 0.45 };
     return p.mouthGeo;
+}
+
+/** The portrait's uniform scale and its origin (px within the image box) from its computed transform; 1 when untransformed. */
+function portraitScale(img) {
+    const st = safe(() => getComputedStyle(img));
+    const one = { s: 1, ox: 0, oy: 0 };
+    if (!st || !st.transform || st.transform === "none" || typeof DOMMatrixReadOnly !== "function") return one;
+    const m = safe(() => new DOMMatrixReadOnly(st.transform));
+    if (!m || !Number.isFinite(m.a) || m.a <= 0) return one;
+    const [ox, oy] = String(st.transformOrigin || "").split(" ").map(parseFloat);
+    return { s: m.a, ox: Number.isFinite(ox) ? ox : 0, oy: Number.isFinite(oy) ? oy : 0 };
 }
 
 function setMouth(p, open) {
