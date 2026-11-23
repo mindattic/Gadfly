@@ -20,7 +20,7 @@ public static class GadflyEndpoints
 
     /// <summary>Every route a signed-out visitor may reach.</summary>
     public static readonly IReadOnlyList<string> AnonymousRoutes =
-        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "healthz/ready", "launch", "error", "openapi/{documentName}.json", "transcripts/verify", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p),
+        ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "healthz/ready", "healthz/version", "launch", "error", "openapi/{documentName}.json", "transcripts/verify", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p),
          "payments/stripe/webhook",   // Stripe calls it server to server; authenticated by its Stripe signature, not a session (GAD-T372)
          // LTI 1.3 (GAD-T312): the LMS starts the OIDC login and posts the signed launch before any Gadfly session exists; each
          // checks the platform's signed token or single-use state, and the JWKS is the tool's public key the platform fetches.
@@ -60,6 +60,10 @@ public static class GadflyEndpoints
         app.MapHealthChecks("/healthz").AllowAnonymous();
         // Readiness (GAD-T356): the system status page's checks; 503 when one fails. Names and states only, so anonymous.
         Admin.SystemReadinessService.MapReady(app).AllowAnonymous();
+        // Build identity (GAD-T336): "V<N> <commit>" as plain text. tools/deploy-azure.ps1 -Promote reads it from the staging
+        // slot to know which build it is swapping into production. The version is already in every page header; no data.
+        app.MapGet("/healthz/version", () => Results.Text((AppVersion.Label + " " + AppVersion.Commit).TrimEnd()))
+            .AllowAnonymous();
         app.MapGet("/healthz/providers", (Gadfly.Socrates.LegionVotingClient panel) => Results.Json(panel.Health.Snapshot()))
             .RequireAuthorization(GadflyPolicies.SuperAdmin);
         // Outside-call durations on live exams (GAD-T413): /healthz/call-timings?session=<id>&limit=200, staff-only.

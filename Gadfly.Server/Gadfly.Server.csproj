@@ -104,6 +104,11 @@
         <_Parameter1>GadflyVersion</_Parameter1>
         <_Parameter2>$(GadflyVersionLabel)</_Parameter2>
       </AssemblyAttribute>
+      <!-- The commit a deploy was built from (/p:GadflyCommit=<sha>, GAD-T336), served by /healthz/version. -->
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute" Condition="'$(GadflyCommit)' != ''">
+        <_Parameter1>GadflyCommit</_Parameter1>
+        <_Parameter2>$(GadflyCommit)</_Parameter2>
+      </AssemblyAttribute>
     </ItemGroup>
   </Target>
 
