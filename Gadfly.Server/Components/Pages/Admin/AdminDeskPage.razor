@@ -55,6 +55,28 @@
         <button type="button" @onclick="CreateExamAsync" disabled="@busy">Create exam</button>
     </details>
 
+    @* GAD-T641: one click drafts Korean texts for every published exam; each exam's texts still need an instructor's review and approval. *@
+    @if (IsStaff)
+    {
+        <details class="panel desk-form">
+            <summary><strong>Korean for all published exams</strong></summary>
+            <p class="hint">Drafts the title, instructions and objective titles in Korean for every published exam that has no approved Korean texts,
+                and offers Korean on each exam's Languages list. Live, this calls the model and spends tokens (mock mode calls none).
+                Drafts are not shown to students until an instructor reviews and approves each exam's texts.</p>
+            <button type="button" @onclick="DraftKoreanAllAsync" disabled="@busy">Draft Korean for all published exams</button>
+            @if (draftAll is not null)
+            {
+                <p role="status" class="desk-message @(draftAll.Ok ? "ok" : "error")">@draftAll.Message</p>
+                <ul class="hint">
+                    @foreach (var x in draftAll.Exams)
+                    {
+                        <li>@x.Title: @x.Outcome.ToString().ToLowerInvariant(), @x.Message</li>
+                    }
+                </ul>
+            }
+        </details>
+    }
+
     @if (exams is null)
     {
         <p class="hint" role="status">Loading…</p>
@@ -463,6 +485,32 @@ else
             var r = await desk.ArchiveExamAsync(e.Id);
             return new DeskResult(r.Ok, r.Message, r.Id);
         });
+    }
+
+    private Gadfly.Server.Translation.DraftAllResult? draftAll;
+
+    private async Task DraftKoreanAllAsync()
+    {
+        if (busy) return;
+        if (!await JS.InvokeAsync<bool>("confirm",
+                "Draft Korean texts for every published exam without approved Korean texts? Live, this calls the model and spends tokens. Instructors must still review and approve each exam's texts.")) return;
+        busy = true;
+        try
+        {
+            var r = await Gadfly.Server.Translation.LanguageOps.RunAsync(Scopes, Tenant, async s =>
+            {
+                var res = await s.DraftAllPublishedAsync("ko");
+                foreach (var x in res.Exams.Where(x => x.Outcome != Gadfly.Server.Translation.ExamDraftOutcome.Fail))
+                {
+                    var v = await s.GetAsync(x.ExamId);
+                    if (v is { CanEdit: true } && !v.Offered.Contains("ko")) await s.SetOfferedAsync(x.ExamId, [.. v.Offered, "ko"]);
+                }
+                return res;
+            });
+            draftAll = r;
+            ok = r.Ok;
+        }
+        finally { busy = false; }
     }
 
     private async Task EditAsync(Guid examId)

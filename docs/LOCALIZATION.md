@@ -59,6 +59,14 @@ means a prompt rule block, heuristics, a voice check, a lip-sync module, a strin
 - **Students only see offered languages.** Student pages read `ExamLanguageService.Offered(exam.Languages)`; the get-ready
   picker and the session start must offer and accept only those (GAD-T546, in progress).
 
+## Drafting Korean for every published exam (GAD-T641)
+
+The admin desk's Exams tab has a **Korean for all published exams** panel: its button runs
+`ExamLanguageService.DraftAllPublishedAsync("ko")` after a confirm that warns a live run calls the model and spends tokens
+(mock mode calls none), then offers Korean on each drafted or skipped exam's Languages list and lists each exam's outcome.
+Drafts stay machine drafts: an instructor still reviews and approves each exam's texts. The page is a staff page, so it
+stays in English and adds no `Strings/*.ko.json` entries.
+
 ## Localized exam texts (GAD-T540)
 
 - **Machine draft.** "Generate a machine-translated draft" translates the English title, instructions and objective titles
