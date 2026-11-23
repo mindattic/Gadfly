@@ -974,7 +974,7 @@ else
         }
         catch (SessionRefusedException ex)
         {
-            error = ex.Message;
+            error = ex.In(T.For(examLanguage));   // in the exam's language (GAD-T628)
             starting = false;
         }
     }

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Gadfly.Assessment;
 using Gadfly.Engine;
 using Gadfly.Server.Data;
+using Gadfly.Server.Localization;
 using Gadfly.Server.Sources;
 using Gadfly.Server.Tenancy;
 using Gadfly.Server.Verification;
@@ -62,7 +63,21 @@ public sealed record SessionStep
 }
 
 /// <summary>Why a session could not be started or advanced, in words a student can read.</summary>
-public sealed class SessionRefusedException(string message) : Exception(message);
+public sealed class SessionRefusedException : Exception
+{
+    /// <summary>A refusal in free text (not keyed): the student reads <see cref="Exception.Message"/>.</summary>
+    public SessionRefusedException(string message) : base(message) { }
+
+    /// <summary>A keyed refusal (GAD-T628): <see cref="Exception.Message"/> is its English, byte for byte the earlier literal (logs, the
+    /// staff live monitor, SessionHub); a student page shows <see cref="Student"/> in the attempt's language.</summary>
+    public SessionRefusedException(StudentText text) : base(text.English) => Student = text;
+
+    /// <summary>The refusal as keyed text, or null for a free-text one.</summary>
+    public StudentText? Student { get; }
+
+    /// <summary>The refusal in <paramref name="text"/>'s language (the English message for a free-text one).</summary>
+    public string In(UiText text) => Student?.In(text) ?? Message;
+}
 
 /// <summary>
 /// Runs live exam sessions on the server (GAD-T44). Each session's <see cref="SourceExamEngine"/> is
@@ -140,7 +155,7 @@ public sealed partial class SessionOrchestrator(
         var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
         var assignment = await db.ExamAssignments.Include(a => a.Exam)
             .FirstOrDefaultAsync(a => a.Id == assignmentId && a.OrganizationId == organizationId && a.StudentUserId == studentUserId, ct)
-            ?? throw new SessionRefusedException("That exam is not assigned to you.");
+            ?? throw new SessionRefusedException(new StudentText("refusal.notAssigned"));
         var exam = assignment.Exam!;
         // An attempt already in progress can always be resumed, even if the exam was archived meanwhile.
         var inProgress = await db.ExamSessions.Where(s => s.AssignmentId == assignmentId && s.OrganizationId == organizationId
@@ -148,10 +163,10 @@ public sealed partial class SessionOrchestrator(
             .Select(s => (Guid?)s.Id).FirstOrDefaultAsync(ct);
         if (inProgress is { } resume) return resume;
         if (exam.Status != ExamStatus.Published) throw new SessionRefusedException(
-            exam.Status == ExamStatus.Archived ? "That exam is closed to new attempts." : "That exam is not open yet.");
+            new StudentText(exam.Status == ExamStatus.Archived ? "refusal.archived" : "refusal.notOpenYet"));
         var now = clock.GetUtcNow();
-        if (assignment.OpensAt is { } opens && now < opens) throw new SessionRefusedException($"That exam opens at {opens:u}.");
-        if (assignment.ClosesAt is { } closes && now > closes) throw new SessionRefusedException("That exam has closed.");
+        if (assignment.OpensAt is { } opens && now < opens) throw new SessionRefusedException(new StudentText("refusal.opensAt", opens.ToUniversalTime()));
+        if (assignment.ClosesAt is { } closes && now > closes) throw new SessionRefusedException(new StudentText("refusal.closed"));
 
         var sessions = await db.ExamSessions.Where(s => s.AssignmentId == assignmentId && s.OrganizationId == organizationId)
             .OrderBy(s => s.Attempt).ToListAsync(ct);
@@ -159,12 +174,12 @@ public sealed partial class SessionOrchestrator(
         var usedAttempts = sessions.Count(s => s.EndReason != nameof(EndReason.PromptSetChanged));
         var active = sessions.FirstOrDefault(s => s.State is not (SessionState.Ended or SessionState.Failed));
         if (active is not null) return active.Id;
-        if (usedAttempts >= assignment.AttemptsAllowed) throw new SessionRefusedException("You have used every attempt for this exam.");
+        if (usedAttempts >= assignment.AttemptsAllowed) throw new SessionRefusedException(new StudentText("refusal.attemptsUsed"));
         var (spent, quota) = await meter.MonthAsync(db, organizationId, ct);
         if (quota is { } q && spent >= q)
-            throw new SessionRefusedException("Your organization has reached its monthly usage limit. Please contact your instructor.");
-        var (planOk, planMessage) = await plans.CheckExamAllowanceAsync(db, organizationId, ct);
-        if (!planOk) throw new SessionRefusedException(planMessage!);
+            throw new SessionRefusedException(new StudentText("refusal.usageLimit"));
+        var (planOk, planRefusal) = await plans.CheckExamAllowanceAsync(db, organizationId, ct);
+        if (!planOk) throw new SessionRefusedException(planRefusal!);
 
         var collection = await db.SourceCollections.AsNoTracking()
             .FirstAsync(c => c.Id == exam.CollectionId && c.OrganizationId == organizationId, ct);
@@ -216,7 +231,7 @@ public sealed partial class SessionOrchestrator(
         var offered = ExamLanguage.ParseList(exam.Languages);
         return offered.Contains(tag) || tag == ExamLanguage.English && !offered.Any()
             ? tag
-            : throw new SessionRefusedException("This exam is not offered in that language.");
+            : throw new SessionRefusedException(new StudentText("refusal.languageNotOffered"));
     }
 
     /// <summary>The student's self-declared primary language in this organization (GAD-T552), or null when they gave none.</summary>
@@ -263,7 +278,7 @@ public sealed partial class SessionOrchestrator(
         var tag = OfferedLanguage(exam, language);
         if (tag == row.Language) return tag;
         if (row.TranscriptJson is { Length: > 0 } || row.State is not (SessionState.Created or SessionState.ConsentGiven) || _live.ContainsKey(sessionId))
-            throw new SessionRefusedException("The exam has begun; its language can't be changed now.");
+            throw new SessionRefusedException(new StudentText("refusal.languageFixed"));
         row.Language = tag;
         row.PromptSetSha256 = ExamPromptLanguages.For(ExamPrompts.Set, new AttemptLanguage(tag, row.PrimaryLanguage)).Sha256;
         FlagCrossLingual(row, clock.GetUtcNow());
@@ -281,8 +296,8 @@ public sealed partial class SessionOrchestrator(
         StepAsync(organizationId, sessionId, studentUserId, async live =>
         {
             var s = live.Engine.Session;
-            if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
-            if (s.OpenTurn is null) throw new SessionRefusedException("There is no question to say another way right now.");
+            if (s.IsEnded) throw new SessionRefusedException(new StudentText("refusal.ended"));
+            if (s.OpenTurn is null) throw new SessionRefusedException(new StudentText("refusal.noQuestionToRephrase"));
             live.Rephrased = await live.Engine.RephraseAsync(ct);
             return s.OpenTurn;
         }, ct);
@@ -363,7 +378,7 @@ public sealed partial class SessionOrchestrator(
         StepAsync(organizationId, sessionId, studentUserId, live =>
         {
             var s = live.Engine.Session;
-            if (s.IsEnded) throw new SessionRefusedException("This exam has already ended.");
+            if (s.IsEnded) throw new SessionRefusedException(new StudentText("refusal.alreadyEnded"));
             act(s, clock.GetUtcNow());
             return Task.FromResult(s.IsEnded ? null : s.OpenTurn);
         }, ct);
@@ -388,7 +403,7 @@ public sealed partial class SessionOrchestrator(
     private void ResumeOnActivity(Live live)
     {
         var s = live.Engine.Session;
-        if (s.IsHeld) throw new SessionRefusedException(HeldByStaffMessage);
+        if (s.IsHeld) throw new SessionRefusedException(new StudentText("refusal.heldByStaff"));
         if (s.ResumeClock(clock.GetUtcNow()))
             log.LogInformation("Exam clock resumed; {Credit} of paused time added back in all.", s.PausedTotal);
     }
@@ -419,7 +434,7 @@ public sealed partial class SessionOrchestrator(
             {
                 // A duplicate of the answer that ended the exam: the exam's end is the current state, not an error.
                 if (expectedTurn is not null) return null;
-                throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+                throw new SessionRefusedException(new StudentText("refusal.ended"));
             }
             if (expectedTurn is { } expected && IsStaleAnswer(s, expected))
             {
@@ -433,7 +448,7 @@ public sealed partial class SessionOrchestrator(
                 await live.Engine.SubmitAnswerAsync(null, ct);
                 return await live.Engine.NextQuestionAsync(ct);
             }
-            var open = s.OpenTurn ?? throw new SessionRefusedException("There is no question waiting for an answer.");
+            var open = s.OpenTurn ?? throw new SessionRefusedException(new StudentText("refusal.noOpenQuestion"));
             // The server's clock is the authority: an answer arriving well after time ran out is not judged.
             if (TooLate(live))
             {
@@ -445,12 +460,12 @@ public sealed partial class SessionOrchestrator(
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             var ledger = new ResponseLedger(db, clock);
             var turnId = await TurnIdAsync(db, s.Id, open.Index, ct)
-                ?? throw new SessionRefusedException("Your question is still being saved; please submit again.");
+                ?? throw new SessionRefusedException(new StudentText("refusal.questionSaving"));
             if (await ledger.PendingAsync(s.Id, turnId, ct) is not null)
             {
                 // The same answer sent twice: the first is waiting on its confirmation, which is the current state (GAD-T321).
                 if (expectedTurn is not null) return open;
-                throw new SessionRefusedException("Please answer the request about your last answer first.");
+                throw new SessionRefusedException(new StudentText("refusal.answerRequestFirst"));
             }
 
             // An answer given while the clock is still held (the examiner-speaks signal never arrived) releases it where it stands,
@@ -487,7 +502,7 @@ public sealed partial class SessionOrchestrator(
         ResolveAsync(organizationId, sessionId, studentUserId, responseId, ClarificationType.Meaning, (live, ledger, p) =>
         {
             var text = (reply ?? "").Trim();
-            if (text.Length > 5000) throw new SessionRefusedException("That clarification is too long.");
+            if (text.Length > 5000) throw new SessionRefusedException(new StudentText("refusal.clarificationTooLong"));
             if (text.Length == 0 || ResponseVerifier.IsAporiaWord(text))
             {
                 ledger.Answer(p.Request!, p.Response, text.Length == 0 ? null : text, studentUserId, "The student did not clarify.");
@@ -528,10 +543,10 @@ public sealed partial class SessionOrchestrator(
         StepAsync(organizationId, sessionId, studentUserId, async live =>
         {
             var s = live.Engine.Session;
-            if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            if (s.IsEnded) throw new SessionRefusedException(new StudentText("refusal.ended"));
             ResumeOnActivity(live);
             var text = (corrected ?? "").Trim();
-            if (text.Length == 0 || text.Length > 20_000) throw new SessionRefusedException("The corrected answer needs text.");
+            if (text.Length == 0 || text.Length > 20_000) throw new SessionRefusedException(new StudentText("refusal.correctionNeedsText"));
             // A step failed between recording and judging: finish judging what was recorded first (it is the answer on record).
             if (s.OpenTurn is null && s.AwaitingJudgment is not null) return await NextAsync(live, ct);
             using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
@@ -544,9 +559,9 @@ public sealed partial class SessionOrchestrator(
             {
                 // A request left over from before GAD-T405 on a spoken answer: it is taken as heard, never corrected.
                 if (p.Response.Modality == "voice")
-                    throw new SessionRefusedException("A spoken answer is kept as it was heard; it can't be corrected.");
+                    throw new SessionRefusedException(new StudentText("refusal.spokenNotCorrected"));
                 if (CorrectionRules.Check(p.Response.VerifiedText, text, voice: false) is { Allowed: false } refused)
-                    throw new SessionRefusedException(refused.Reason);
+                    throw new SessionRefusedException(new StudentText(refused.ReasonKey!, refused.ReasonArgs));
                 if (TooLate(live)) return await ExpireAsync(live, db, ledger, p, open, ct);
                 if (p.Request is { } request)
                     ledger.Answer(request, p.Response, request.Type == ClarificationType.Transcription ? text : null, studentUserId,
@@ -564,11 +579,11 @@ public sealed partial class SessionOrchestrator(
             // 2. The last judged answer: a typo fix after the fact (verified text for grading; the live judgment stays on version 1).
             var (response, _) = await LastJudgedAsync(live, db, ledger, ct);
             if (response.Modality == "voice")
-                throw new SessionRefusedException("A spoken answer is kept as it was heard; it can't be corrected afterwards.");
+                throw new SessionRefusedException(new StudentText("refusal.spokenNotCorrectedAfter"));
             if (response.VerificationState != VerificationState.Captured)
-                throw new SessionRefusedException("That answer was already confirmed or clarified, so it can't be edited. Use \"I want to change my answer\" instead.");
+                throw new SessionRefusedException(new StudentText("refusal.alreadyConfirmed"));
             if (CorrectionRules.Check(response.VerifiedText, text, voice: response.Modality == "voice") is { Allowed: false } no)
-                throw new SessionRefusedException(no.Reason);
+                throw new SessionRefusedException(new StudentText(no.ReasonKey!, no.ReasonArgs));
             ledger.MovePath(response, "The student asked to correct a typo in their answer.", studentUserId, OrgRoles.Student,
                 VerificationState.VerificationRequired, VerificationState.AwaitingStudentConfirmation);
             ledger.AddVersion(response, text, CorrectionKind.Transcription, "student", studentUserId);
@@ -589,30 +604,30 @@ public sealed partial class SessionOrchestrator(
         StepAsync(organizationId, sessionId, studentUserId, async live =>
         {
             var s = live.Engine.Session;
-            if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            if (s.IsEnded) throw new SessionRefusedException(new StudentText("refusal.ended"));
             ResumeOnActivity(live);
             var text = (revised ?? "").Trim();
-            if (text.Length == 0 || text.Length > 20_000) throw new SessionRefusedException("Your changed answer needs text.");
+            if (text.Length == 0 || text.Length > 20_000) throw new SessionRefusedException(new StudentText("refusal.changeNeedsText"));
             // A step failed between recording and judging: finish judging that answer before anything can be changed.
             if (s.OpenTurn is null && s.AwaitingJudgment is not null) return await NextAsync(live, ct);
-            if (TooLate(live)) throw new SessionRefusedException("Time is up, so answers can no longer be changed.");
+            if (TooLate(live)) throw new SessionRefusedException(new StudentText("refusal.timeUp"));
             using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             var ledger = new ResponseLedger(db, clock);
             if (s.OpenTurn is { } open && await TurnIdAsync(db, s.Id, open.Index, ct) is { } openId && await ledger.PendingAsync(s.Id, openId, ct) is not null)
-                throw new SessionRefusedException("Please answer the request about your last answer first.");
+                throw new SessionRefusedException(new StudentText("refusal.answerRequestFirst"));
             var (original, turnId) = await LastJudgedAsync(live, db, ledger, ct);
             // No do-over for a spoken answer (GAD-T407, owner decision 2026-11-22): it was taken as heard, and a second, considered pass
             // would change the Socratic exchange. A typed answer (GAD-T260) can still be changed.
             if (original.Modality == "voice")
-                throw new SessionRefusedException("A spoken answer is kept as it was heard; it can't be changed afterwards.");
+                throw new SessionRefusedException(new StudentText("refusal.spokenNotChanged"));
             var revisions = await db.StudentResponses.Where(r => r.TurnId == turnId && r.Kind == ResponseKind.SubstantiveRevision)
                 .OrderBy(r => r.Sequence).ToListAsync(ct);
             if (revisions.Count >= ResponseLedger.MaxRevisionsPerTurn)
-                throw new SessionRefusedException($"You've already changed this answer {revisions.Count} times.");
+                throw new SessionRefusedException(new StudentText("refusal.changeLimit", revisions.Count));
             var latest = revisions.LastOrDefault() ?? original;
             if (string.Equals(latest.OriginalText.Trim(), text, StringComparison.Ordinal))
-                throw new SessionRefusedException("That is the same as your answer on record.");
+                throw new SessionRefusedException(new StudentText("refusal.sameAsRecord"));
             await ledger.CaptureAsync(live.OrganizationId, s.Id, turnId, studentUserId,
                 new Answer { Text = text, Mode = "text", CompletedAt = clock.GetUtcNow() }, ResponseKind.SubstantiveRevision, latest.Id, ct);
             await db.SaveChangesAsync(ct);
@@ -698,9 +713,9 @@ public sealed partial class SessionOrchestrator(
     {
         var s = live.Engine.Session;
         // Judged provisionally counts (GAD-T508): the panel's full judgment of it may still be on its way.
-        var judged = s.Turns.LastOrDefault(t => SocraticSession.SteeringJudgment(t) is not null) ?? throw new SessionRefusedException("You haven't answered a question yet.");
-        var turnId = await TurnIdAsync(db, s.Id, judged.Index, ct) ?? throw new SessionRefusedException("Your last answer is still being saved; try again.");
-        var original = await ledger.OriginalForTurnAsync(s.Id, turnId, ct) ?? throw new SessionRefusedException("Your last answer can't be changed here.");
+        var judged = s.Turns.LastOrDefault(t => SocraticSession.SteeringJudgment(t) is not null) ?? throw new SessionRefusedException(new StudentText("refusal.noAnswerYet"));
+        var turnId = await TurnIdAsync(db, s.Id, judged.Index, ct) ?? throw new SessionRefusedException(new StudentText("refusal.lastAnswerSaving"));
+        var original = await ledger.OriginalForTurnAsync(s.Id, turnId, ct) ?? throw new SessionRefusedException(new StudentText("refusal.lastAnswerNotHere"));
         return (original, turnId);
     }
 
@@ -792,17 +807,17 @@ public sealed partial class SessionOrchestrator(
         StepAsync(organizationId, sessionId, studentUserId, async live =>
         {
             var s = live.Engine.Session;
-            if (s.IsEnded) throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+            if (s.IsEnded) throw new SessionRefusedException(new StudentText("refusal.ended"));
             ResumeOnActivity(live);
             // A step failed between recording and judging: the request was already resolved, so finish judging and move on.
             if (s.OpenTurn is null && s.AwaitingJudgment is not null) return await NextAsync(live, ct);
-            var open = s.OpenTurn ?? throw new SessionRefusedException("There is nothing waiting for you to confirm.");
+            var open = s.OpenTurn ?? throw new SessionRefusedException(new StudentText("refusal.nothingToConfirm"));
             using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             var ledger = new ResponseLedger(db, clock);
             var p = await TurnIdAsync(db, s.Id, open.Index, ct) is { } openId ? await ledger.PendingAsync(s.Id, openId, ct) : null;
             if (p is not { Request: { } request } pending || pending.Response.Id != responseId || request.Type != type)
-                throw new SessionRefusedException("That request has already been answered.");
+                throw new SessionRefusedException(new StudentText("refusal.requestAnswered"));
             if (TooLate(live)) return await ExpireAsync(live, db, ledger, pending, open, ct);
             var judgeText = await resolve(live, ledger, pending);
             await db.SaveChangesAsync(ct);
@@ -886,7 +901,7 @@ public sealed partial class SessionOrchestrator(
         catch (DbUpdateConcurrencyException)
         {
             _live.TryRemove(sessionId, out _);
-            throw new SessionRefusedException("This exam was advanced from another window; reload to continue.");
+            throw new SessionRefusedException(new StudentText("refusal.otherWindow"));
         }
         finally
         {
@@ -963,8 +978,8 @@ public sealed partial class SessionOrchestrator(
             using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(organizationId));
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             var row = await Owned(db, organizationId, sessionId, studentUserId, ct);
-            if (row.State == SessionState.Created) throw new SessionRefusedException("Please read and accept the exam notice first.");
-            if (row.State == SessionState.Failed) throw new SessionRefusedException("This exam session could not continue; ask your instructor to reset it.");
+            if (row.State == SessionState.Created) throw new SessionRefusedException(new StudentText("refusal.noticeFirst"));
+            if (row.State == SessionState.Failed) throw new SessionRefusedException(new StudentText("refusal.failed"));
 
             var exam = await db.Exams.AsNoTracking().FirstAsync(e => e.Id == row.ExamId && e.OrganizationId == organizationId, ct);
             // Pinned subject (GAD-T72): a session runs on the concept map and rubrics it started with.
@@ -992,7 +1007,7 @@ public sealed partial class SessionOrchestrator(
                 {
                     // An attempt that already ended keeps its own end reason and end time: it can't resume, and it isn't rewritten.
                     if (row.State == SessionState.Ended)
-                        throw new SessionRefusedException("This exam has ended; your answers were submitted.");
+                        throw new SessionRefusedException(new StudentText("refusal.ended"));
                     // Started under older wording: it can never resume. End it cleanly (not a used attempt) so the student can start afresh (GAD-T235).
                     var endedAt = clock.GetUtcNow();
                     await db.ExamSessions.Where(x => x.Id == sessionId && x.OrganizationId == organizationId
@@ -1002,7 +1017,7 @@ public sealed partial class SessionOrchestrator(
                             .SetProperty(x => x.EndedAt, endedAt), ct);
                     log.LogWarning("Ended exam session {SessionId}: it ran prompt set {Old}, this build has {New}.",
                         sessionId, session.PromptSetSha256[..12], subject.PromptSet.Sha256[..12]);
-                    throw new SessionRefusedException("The exam was updated while your attempt was open, so that attempt could not continue and does not count against your attempts. Please start the exam again.");
+                    throw new SessionRefusedException(new StudentText("refusal.promptSetChanged"));
                 }
                 engine = await SourceExamEngine.ResumeAsync(panel, subject, session, ClaimLedger.FromJson(row.LedgerJson), clock, ct);
                 log.LogInformation("Resumed exam session {SessionId} at turn {Turn}.", sessionId, session.Turns.Count);
@@ -1052,7 +1067,7 @@ public sealed partial class SessionOrchestrator(
         if (_subjects.TryGetValue((collectionId, version), out var cached)) return cached;
         var id = collectionId.ToString();
         var maps = new SqlConceptMapStore(db, organizationId);
-        var map = await maps.LoadMapAsync(id, ct) ?? throw new SessionRefusedException("This exam's source material is still being prepared.");
+        var map = await maps.LoadMapAsync(id, ct) ?? throw new SessionRefusedException(new StudentText("refusal.materialPreparing"));
         var rubrics = await maps.LoadRubricsAsync(id, ct);
         var passages = await new SqlSourceStore(db, organizationId, Guid.Empty, clock).GetPassagesAsync(id, ct);
         var subject = new SourceMaterialSubject(title, map, rubrics, new GroundingRetriever(passages));
@@ -1064,7 +1079,7 @@ public sealed partial class SessionOrchestrator(
 
     private static async Task<ExamSession> Owned(GadflyDbContext db, Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct) =>
         await db.ExamSessions.FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == organizationId && s.StudentUserId == studentUserId, ct)
-        ?? throw new SessionRefusedException("That exam session was not found.");
+        ?? throw new SessionRefusedException(new StudentText("refusal.sessionNotFound"));
 
     /// <summary>Writes the engine's state to SQL: the resume point plus the review rows for every turn not yet stored.</summary>
     private async Task PersistAsync(Live live, Guid studentUserId, IReadOnlyList<Gadfly.Socrates.PanelCall> calls, CancellationToken ct)

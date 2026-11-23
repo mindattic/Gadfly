@@ -555,7 +555,7 @@
         }
         catch (SessionRefusedException ex)
         {
-            error = ex.Message;
+            error = ex.In(T.Text);   // in the attempt's language (GAD-T628)
             phase = previous == Phase.Answering ? Phase.Answering : Phase.Error;
             ran = false;
         }

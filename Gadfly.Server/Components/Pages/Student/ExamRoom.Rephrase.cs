@@ -31,7 +31,7 @@ public partial class ExamRoom
         }
         catch (SessionRefusedException ex)
         {
-            error = ex.Message;
+            error = ex.In(T.Text);   // in the attempt's language (GAD-T628)
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

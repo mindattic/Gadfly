@@ -1,3 +1,4 @@
+using Gadfly.Server.Localization;
 using Gadfly.Server.Data;
 using Gadfly.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -73,16 +74,14 @@ public sealed class PlanEnforcement(TimeProvider clock)
             settings.MonthlyExamAllowance, examsUsed, periodStart, periodEnd, settings.TrialStartedAt, settings.PlanRenewsAt, settings.PlanNote);
     }
 
-    /// <summary>Call before starting a new exam attempt, alongside the cost-quota check (GAD-T47).</summary>
-    public async Task<(bool Ok, string? Message)> CheckExamAllowanceAsync(GadflyDbContext db, Guid organizationId, CancellationToken ct = default)
+    /// <summary>Call before starting a new exam attempt, alongside the cost-quota check (GAD-T47). The refusal is keyed text (GAD-T628).</summary>
+    public async Task<(bool Ok, StudentText? Refusal)> CheckExamAllowanceAsync(GadflyDbContext db, Guid organizationId, CancellationToken ct = default)
     {
         var status = await StatusAsync(db, organizationId, ct);
         if (status.TrialExpired)
-            return (false, "Your organization's trial has ended. Ask your organization's owner to choose a plan.");
+            return (false, new StudentText("refusal.plan.trialEnded"));
         if (status.ExamsBlocked)
-            return (false, status.IsTrial
-                ? "Your organization has used every exam attempt included in its trial. Ask your organization's owner to choose a plan."
-                : "Your organization has reached its monthly exam limit. Please contact your instructor.");
+            return (false, new StudentText(status.IsTrial ? "refusal.plan.trialUsed" : "refusal.plan.monthlyLimit"));
         return (true, null);
     }
 

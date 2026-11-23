@@ -1,3 +1,4 @@
+using Gadfly.Server.Localization;
 using System.Text.Json;
 using Gadfly.Assessment;
 using Gadfly.Engine;
@@ -51,9 +52,9 @@ public sealed class RubricApprovalService(GadflyDbContext db, ITenantContext ten
     /// Why a new attempt may not start, or null when it may: a summative exam whose approved concept map or rubric has changed
     /// since. An exam published before approval was required (no approval recorded) keeps running, flagged on its page.
     /// </summary>
-    public static string? AttemptRefusal(AssessmentMode mode, SessionPolicy policy, int currentVersion) =>
+    public static StudentText? AttemptRefusal(AssessmentMode mode, SessionPolicy policy, int currentVersion) =>
         IsRequired(mode) && policy.RubricApproval is { } a && a.ConceptMapVersion != currentVersion
-            ? "This exam's marking guide was changed and is waiting for your instructor to approve it again. Please try again later."
+            ? new StudentText("refusal.rubricChanged")
             : null;
 
     /// <summary>
