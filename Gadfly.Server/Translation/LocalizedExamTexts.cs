@@ -16,6 +16,16 @@ public sealed record LocalizedExamTexts(string Language, string Title, string? I
     public string ObjectiveTitle(string key, string fallback) => ObjectiveTitles.GetValueOrDefault(key) ?? fallback;
 
     /// <summary>
+    /// What a student may read (GAD-T630): the approved texts in <paramref name="language"/>, and the English whenever the language's
+    /// texts are only an unapproved machine draft, so a draft is never shown to a student. Staff pages use <see cref="ForAsync"/>.
+    /// </summary>
+    public static async Task<LocalizedExamTexts?> ForStudentAsync(GadflyDbContext db, Guid organizationId, Guid examId, string? language, CancellationToken ct = default)
+    {
+        var texts = await ForAsync(db, organizationId, examId, language, ct);
+        return texts is { MachineDraft: true } ? await ForAsync(db, organizationId, examId, ExamLanguage.English, ct) : texts;
+    }
+
+    /// <summary>
     /// Reads an exam's texts in <paramref name="language"/> (English reads the exam row itself). Tenant-filtered; null when the exam
     /// is not visible.
     /// </summary>

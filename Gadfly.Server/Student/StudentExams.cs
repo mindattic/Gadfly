@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Gadfly.Server.Data;
 using Gadfly.Server.Tenancy;
+using Gadfly.Server.Translation;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gadfly.Server.Student;
@@ -73,10 +74,18 @@ public static class StudentExams
 
     public static Task<IReadOnlyList<StudentAssignmentView>> ListAsync(
         IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, DateTimeOffset now, CancellationToken ct = default) =>
-        WithDbAsync(scopes, organizationId, db => ListAsync(db, organizationId, studentUserId, now, ct));
+        ListAsync(scopes, organizationId, studentUserId, now, null, ct);
+
+    /// <summary>
+    /// The student's assignments with each exam's title, instructions and objective titles in <paramref name="language"/> (the page's
+    /// language) when its approved texts exist; the English otherwise, never an unapproved machine draft (GAD-T630).
+    /// </summary>
+    public static Task<IReadOnlyList<StudentAssignmentView>> ListAsync(
+        IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, DateTimeOffset now, string? language, CancellationToken ct = default) =>
+        WithDbAsync(scopes, organizationId, db => ListAsync(db, organizationId, studentUserId, now, language, ct));
 
     private static async Task<IReadOnlyList<StudentAssignmentView>> ListAsync(
-        GadflyDbContext db, Guid organizationId, Guid studentUserId, DateTimeOffset now, CancellationToken ct)
+        GadflyDbContext db, Guid organizationId, Guid studentUserId, DateTimeOffset now, string? language, CancellationToken ct)
     {
         var assignments = await db.ExamAssignments.AsNoTracking().Include(a => a.Exam)
             .Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId)
@@ -133,11 +142,15 @@ public static class StudentExams
                     result = new ReleasedResult(grade?.Grade, grade?.Comment, Gadfly.Server.Review.ReportedLevels.FromReportJson(report?.ReportJson), released);
             }
 
+            var texts = a.Exam is null || Gadfly.Engine.ExamLanguage.IsEnglish(language) ? null
+                : await StudentExamTexts.ForAsync(db, organizationId, a.ExamId, language, ct);
+            if (texts is not null && result is not null)
+                result = result with { Levels = result.Levels.Select(l => l with { Title = texts.ObjectiveTitle(l.Title) }).ToList() };
             rows.Add(new StudentAssignmentView
             {
                 AssignmentId = a.Id,
-                ExamTitle = a.Exam?.Title ?? "Exam",
-                Instructions = a.Exam?.Instructions,
+                ExamTitle = texts?.Title ?? a.Exam?.Title ?? "Exam",
+                Instructions = texts is not null ? texts.Instructions : a.Exam?.Instructions,
                 Mode = a.Exam?.Mode ?? ExamMode.Text,
                 Integrity = a.Exam?.IntegrityLevel ?? IntegrityLevel.Standard,
                 OpensAt = a.OpensAt,
@@ -229,8 +242,8 @@ public static class StudentExams
 
     /// <summary>One of the student's own assignments, or null when it isn't theirs.</summary>
     public static async Task<StudentAssignmentView?> FindAsync(
-        IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, Guid assignmentId, DateTimeOffset now, CancellationToken ct = default) =>
-        (await ListAsync(scopes, organizationId, studentUserId, now, ct)).FirstOrDefault(r => r.AssignmentId == assignmentId);
+        IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, Guid assignmentId, DateTimeOffset now, string? language = null, CancellationToken ct = default) =>
+        (await ListAsync(scopes, organizationId, studentUserId, now, language, ct)).FirstOrDefault(r => r.AssignmentId == assignmentId);
 
     private static AssignmentStanding StandingOf(ExamAssignment a, bool hasActive, int used, DateTimeOffset now)
     {
@@ -283,11 +296,11 @@ public static class StudentExams
     {
         var row = await db.ExamSessions.AsNoTracking()
             .Where(s => s.Id == sessionId && s.OrganizationId == organizationId && s.StudentUserId == studentUserId)
-            .Select(s => new { s.State, s.AssignmentId, s.ExamId })
+            .Select(s => new { s.State, s.AssignmentId, s.ExamId, s.Language })
             .FirstOrDefaultAsync(ct);
         if (row is null) return ((SessionState, Guid, string)?)null;
-        var title = await db.Exams.AsNoTracking().Where(e => e.Id == row.ExamId && e.OrganizationId == organizationId)
-            .Select(e => e.Title).FirstOrDefaultAsync(ct);
+        // The attempt's language (GAD-T630): the approved localized title, else the English one.
+        var title = (await LocalizedExamTexts.ForStudentAsync(db, organizationId, row.ExamId, row.Language, ct))?.Title;
         return ((SessionState, Guid, string)?)(row.State, row.AssignmentId, title ?? "Exam");
     });
 
@@ -332,14 +345,16 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
     /// and pasting into the answer box is noted. Without it the wording is unchanged.
     /// </param>
     /// <param name="language">
-    /// The page's language (GAD-T544): "ko" gives the Korean notice, the same terms in natural formal Korean; anything else the
-    /// English, unchanged. The hash covers the exact words shown, so the record says which language the student read.
+    /// The page's language (GAD-T544): "ko" gives the Korean notice, the same terms in natural formal Korean, and "es" the Spanish
+    /// one (GAD-T612, neutral Latin American Spanish, usted); anything else the English, unchanged. The hash covers the exact words shown, so the record says which language the student read.
     /// </param>
     public static ConsentNotice For(string organizationName, string examTitle, int retentionDays, ExamMode mode,
         IntegrityLevel integrity = IntegrityLevel.Standard, bool typedAnswers = false, string? language = null)
     {
         if (Gadfly.Server.Localization.UiCatalog.Normalize(language) == Gadfly.Server.Localization.UiCatalog.Korean)
             return KoreanFor(organizationName, examTitle, retentionDays, integrity, typedAnswers);
+        if (Gadfly.Server.Localization.UiCatalog.Normalize(language) == Gadfly.Server.Localization.UiCatalog.Spanish)
+            return SpanishFor(organizationName, examTitle, retentionDays, integrity, typedAnswers);
         var paragraphs = new List<string>
         {
             $"This is an oral-style exam for {organizationName}: \"{examTitle}\". An AI examiner asks you questions and follows up on your own answers to see how well you understand the material.",
@@ -448,6 +463,56 @@ public sealed record ConsentNotice(string Title, IReadOnlyList<string> Paragraph
               + "\"두 번째 목소리가 들림\" 같은 기록은 담당 교수자가 약한 증거로 참고할 뿐, 자동으로 불합격 처리되지 않습니다. "
               + string.Format(pause, "마이크나 카메라"));
         return new ConsentNotice("시작하기 전에", paragraphs);
+    }
+
+    /// <summary>
+    /// The Spanish notice (GAD-T612): the same terms, paragraph for paragraph, in neutral Latin American Spanish addressing the
+    /// student as usted. Wording follows docs/LOCALIZATION.md's Spanish glossary (la IA examinadora, intento, transcripción, su docente).
+    /// </summary>
+    private static ConsentNotice SpanishFor(string organizationName, string examTitle, int retentionDays, IntegrityLevel integrity, bool typedAnswers)
+    {
+        const string pause = "Si {0} deja de funcionar durante el examen, el examen se pausa hasta que vuelva a activarlo, y el tiempo se detiene mientras está en pausa (hasta 10 minutos en total, o la mitad del tiempo del examen si eso es menos; después, el tiempo sigue corriendo). Su tiempo empieza cuando la IA examinadora hace la primera pregunta.";
+        var paragraphs = new List<string>
+        {
+            $"Este es un examen de tipo oral de {organizationName}: \"{examTitle}\". Una IA examinadora le hace preguntas y retoma sus propias respuestas para ver qué tan bien comprende el material.",
+            typedAnswers
+                ? "Qué se registra: cada pregunta y las respuestas que usted escribe (con las correcciones que haga), cuándo se hizo y se respondió cada pregunta, y señales de integridad, como una respuesta que parece texto copiado. Son notas para que una persona las revise, nunca un reprobado automático."
+                : "Qué se registra: cada pregunta y una transcripción de sus respuestas habladas (con las correcciones que haga), cuándo se hizo y se respondió cada pregunta, y señales de integridad, como una respuesta que parece texto copiado. Son notas para que una persona las revise, nunca un reprobado automático.",
+            "Qué no se registra: no se guarda video ni audio. Su cámara le muestra en su propia pantalla junto a la IA examinadora; la imagen no se graba ni se envía.",
+            $"Cuánto tiempo se conserva: {organizationName} conserva sus respuestas y transcripciones durante {retentionDays} días y luego las elimina.",
+            "Quién decide: la IA solo da una evaluación preliminar. Las personas califican sus respuestas, quien revisa concilia cualquier desacuerdo importante con la IA, y una persona autorizada aprueba y publica su resultado. Puede apelar un resultado publicado.",
+            "Su decisión: puede salir del examen en cualquier momento con \"Terminar\". Salir antes envía lo que haya respondido hasta ese momento y usa este intento.",
+        };
+        if (integrity != IntegrityLevel.Off)
+        {
+            var what = "cuando cambia a otra pestaña o ventana"
+                + (typedAnswers ? ", cuando pega texto en el cuadro de respuesta" : "")
+                + (integrity == IntegrityLevel.Strict
+                    ? ", cuando copia la pregunta, cuando sale de la pantalla completa y cuando hay más de una pantalla conectada (su navegador puede pedirle permiso para detectar pantallas; puede rechazarlo)"
+                    : " y cuando copia la pregunta");
+            paragraphs.Insert(2, $"Durante el examen, su navegador también anota {what}: cuándo ocurrió y por cuánto tiempo. No se bloquea nada; son notas para que su docente las revise, nunca un reprobado automático.");
+        }
+        if (integrity == IntegrityLevel.Strict)
+        {
+            paragraphs.RemoveAll(p => p.StartsWith("Qué no se registra:", StringComparison.Ordinal));
+            paragraphs.InsertRange(paragraphs.FindIndex(p => p.StartsWith("Cuánto tiempo se conserva:", StringComparison.Ordinal)),
+            [
+                "Cámara: este examen usa su cámara. Su navegador le pedirá permiso. La imagen de la cámara se analiza solo en su propio dispositivo. No se graba, guarda ni envía ningún video, foto, captura de pantalla, audio ni imagen de su rostro, y los datos faciales que se usan para las comprobaciones se mantienen en la memoria de su navegador y se descartan cuando termina el examen.",
+                "Qué se envía y se conserva de la cámara: solo notas breves de eventos, cada una con un tipo, una hora de inicio y de fin, un nivel de confianza y una frase sencilla, por ejemplo \"no hubo un rostro a la vista durante 12 segundos\", \"apareció un segundo rostro\", \"miró hacia la izquierda durante 8 segundos\", \"movimientos de los ojos como si leyera algo fuera de la pantalla\" o \"no se usó la cámara\". El dispositivo también comprueba que el mismo rostro siga frente a la cámara; si pudo haber cambiado, se envía una nota que lo indica, como las demás, pero los datos faciales usados para la comprobación nunca salen de su dispositivo. Las miradas breves hacia otro lado mientras piensa se anotan como algo normal. No se saca ninguna conclusión sobre sus emociones, su estado de ánimo ni su honestidad: la cámara no se usa para juzgar nada de eso.",
+                "Las notas de la cámara son para que su docente las lea junto con sus respuestas, como evidencia de baja confianza, nunca un reprobado automático. La cámara debe estar encendida para presentar este examen: sin ella, el examen no puede comenzar, y se pausa si la cámara deja de funcionar.",
+            ]);
+        }
+        paragraphs.Add(typedAnswers
+            ? "Su docente le ha dado una adaptación: usted escribe sus respuestas en lugar de decirlas. La IA examinadora sigue diciendo cada pregunta en voz alta y la muestra en pantalla. "
+              + "Su cámara debe estar encendida durante todo el examen, con la misma comprobación de contacto visual que el resto de estudiantes, salvo que también tenga la adaptación de contacto visual. No se usa su micrófono. "
+              + "Cada respuesta se conserva tal como la escribió, y pegar texto en el cuadro de respuesta se anota para que su docente lo revise (nunca se bloquea ni es un reprobado automático). "
+              + string.Format(pause, "su cámara")
+            : "Este examen es hablado, y su micrófono y su cámara deben estar encendidos durante todo el examen. La IA examinadora dice las preguntas y usted responde en voz alta; no hay respuestas escritas. "
+              + "El audio de su micrófono se transmite a un servicio de voz a texto para hacer una transcripción, y el audio en sí no se graba ni se conserva. "
+              + "Lo que se conserva es la transcripción (con el nivel de confianza del reconocimiento), cómo se habló (ritmo, pausas, titubeos y si se oyó más de una voz) y lo que usted confirma. "
+              + "Notas como \"se oyó una segunda voz\" son para que su docente las lea como evidencia débil, nunca un reprobado automático. "
+              + string.Format(pause, "su micrófono o su cámara"));
+        return new ConsentNotice("Antes de comenzar", paragraphs);
     }
 
     /// <summary>The exact text the student accepted, as hashed.</summary>

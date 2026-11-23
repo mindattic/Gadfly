@@ -111,6 +111,9 @@ else
     {
         w = await GradingDb.RunAsync(Scopes, Tenant, g => g.StudentWorkspaceAsync(SessionId));
         report = w is null ? null : AssessmentReport.Build(w, forStudent: true);
+        // GAD-T630: the exam and objective titles in the attempt's language (approved texts only), else the English.
+        if (report is not null && Tenant.OrganizationId is { } org)
+            report = await Gadfly.Server.Student.StudentExamTexts.LocalizeAsync(Scopes, org, w!.Session.ExamId, w.Session.Language, report);
         // Read only when the student's own published result loaded; the loader re-checks ownership and publication itself.
         integrity = w is null ? null : await Gadfly.Server.Integrity.StudentIntegrityRecord.LoadForCallerAsync(Scopes, Tenant, SessionId, text: T);
     }

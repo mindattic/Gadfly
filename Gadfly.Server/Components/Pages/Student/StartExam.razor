@@ -680,7 +680,7 @@ else
         examiner = ExaminerCatalog.Pick(examiners, null);
         if (Tenant.OrganizationId is { } org && Tenant.UserId is { } user)
         {
-            assignment = await StudentExams.FindAsync(Scopes, org, user, AssignmentId, Clock.GetUtcNow());
+            assignment = await StudentExams.FindAsync(Scopes, org, user, AssignmentId, Clock.GetUtcNow(), T.Language);
             if (assignment is not null)
             {
                 // An exam's or its organization's examiner (GAD-T504) is the only one offered; otherwise the student chooses.
