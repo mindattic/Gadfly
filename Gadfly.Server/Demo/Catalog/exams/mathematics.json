@@ -1,0 +1,374 @@
+// Catalog exams for Mathematics (GAD-T679). Same format as life-sciences.json; spoken, conceptual topics a student can explain
+// aloud without written calculation. Each exam carries approved Korean and Spanish texts (neutral Latin American, usted).
+[
+  {
+    "title": "Limits and Continuity",
+    "category": "mathematics",
+    "subject": "Calculus",
+    "topic": "Limits",
+    "instructions": "The examiner will ask you to explain what a limit is and how it describes continuity. Use your own words and simple examples; you will not need to write anything down. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The limit of a function f(x) as x approaches a number a is the value that f(x) gets arbitrarily close to when x is taken close enough to a, but not equal to a. The limit describes the behavior of the function near a; it does not depend on the value of f at a, or even on whether f is defined there.",
+      "For example, f(x) = (x squared minus 1) divided by (x minus 1) is undefined at x = 1, yet for every other x it equals x + 1, so its values approach 2 as x approaches 1. The limit is 2 even though f(1) does not exist.",
+      "A limit exists only if the function approaches the same value from both sides. If f approaches one value from the left and a different value from the right, as a step function does at its jump, the two one-sided limits differ and the two-sided limit does not exist. A function can also fail to have a finite limit by growing without bound, as 1/x does near 0.",
+      "A function is continuous at a when three conditions hold: f(a) is defined, the limit of f(x) as x approaches a exists, and that limit equals f(a). Informally, the graph has no hole, jump or break there. Polynomials are continuous everywhere. The intermediate value theorem says that a function continuous on a closed interval takes every value between its values at the endpoints."
+    ],
+    "objectives": [
+      { "key": "limit-meaning", "title": "Explain what a limit means", "description": "Describes a limit as the value approached near a point, independent of the value at the point.",
+        "concept": "Limit of a function", "definition": "The value f(x) gets arbitrarily close to as x gets close to a, without x equaling a.",
+        "facts": ["A limit describes behavior near a point, not at it.", "The limit can exist where the function is undefined.", "The value f(a) does not determine the limit."],
+        "misconceptions": ["The limit is always just f(a).", "A function never reaches its limit."] },
+      { "key": "one-sided", "title": "Explain when a limit fails to exist", "description": "Uses one-sided limits and unbounded growth to explain non-existence.",
+        "concept": "One-sided limits and non-existence", "definition": "A two-sided limit exists only if the left and right limits exist and agree.",
+        "facts": ["Left and right limits must be equal for the limit to exist.", "A jump makes the one-sided limits differ.", "A function growing without bound has no finite limit."],
+        "misconceptions": ["If a function is undefined at a point, its limit there cannot exist."] },
+      { "key": "continuity", "title": "Define continuity at a point", "description": "States the three conditions and links them to holes, jumps and breaks in a graph.",
+        "concept": "Continuity", "definition": "f is continuous at a if f(a) is defined, the limit at a exists, and the two are equal.",
+        "facts": ["f(a) must be defined.", "The limit as x approaches a must exist.", "The limit must equal f(a).", "A hole or jump in the graph breaks continuity."],
+        "misconceptions": ["A function defined at a point is automatically continuous there."] },
+      { "key": "ivt", "title": "Explain the intermediate value theorem", "description": "States the theorem and why continuity is needed for it.",
+        "concept": "Intermediate value theorem", "definition": "A function continuous on [a, b] takes every value between f(a) and f(b).",
+        "facts": ["The function must be continuous on a closed interval.", "Every value between the endpoint values is reached.", "It can show a root exists when the function changes sign."],
+        "misconceptions": ["The theorem tells you where the value is reached.", "It applies to functions with jumps."] }
+    ],
+    "translations": {
+      "ko": { "title": "극한과 연속성", "instructions": "시험관이 극한이 무엇인지, 그리고 극한이 연속성을 어떻게 설명하는지 설명해 달라고 할 것입니다. 자신의 말과 간단한 예를 사용하세요. 아무것도 적을 필요는 없습니다. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "limit-meaning": "극한의 의미 설명하기", "one-sided": "극한이 존재하지 않는 경우 설명하기", "continuity": "한 점에서의 연속성 정의하기", "ivt": "중간값 정리 설명하기" } },
+      "es": { "title": "Límites y continuidad", "instructions": "El examinador le pedirá que explique qué es un límite y cómo describe la continuidad. Use sus propias palabras y ejemplos sencillos; no necesitará escribir nada. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "limit-meaning": "Explicar qué significa un límite", "one-sided": "Explicar cuándo un límite no existe", "continuity": "Definir la continuidad en un punto", "ivt": "Explicar el teorema del valor intermedio" } }
+    }
+  },
+  {
+    "title": "The Derivative as a Rate of Change",
+    "category": "mathematics",
+    "subject": "Calculus",
+    "topic": "Derivatives",
+    "instructions": "The examiner will ask you what a derivative means and how to read it from a graph. Explain ideas rather than computing; you will not need to write anything down. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The average rate of change of a function f between x = a and x = b is the change in f divided by the change in x, which is the slope of the secant line through the two points on the graph. If a car travels 120 kilometers in 2 hours, its average speed is 60 kilometers per hour, whatever it did along the way.",
+      "The derivative f'(a) is the instantaneous rate of change at a: the limit of the average rate of change over smaller and smaller intervals starting at a. Geometrically it is the slope of the tangent line to the graph at that point. For a position function, the derivative is velocity; for velocity, it is acceleration.",
+      "The sign of the derivative tells how the function moves: where f' is positive, f is increasing; where f' is negative, f is decreasing. Where a smooth function reaches a local maximum or minimum, the tangent is horizontal, so f' = 0. The converse fails: f(x) = x cubed has f'(0) = 0 but no maximum or minimum there.",
+      "A function that is differentiable at a point is continuous there, but continuity does not guarantee a derivative. The absolute value function |x| is continuous at 0 but has a sharp corner there: the slope is -1 from the left and +1 from the right, so no single tangent slope exists."
+    ],
+    "objectives": [
+      { "key": "average-instant", "title": "Distinguish average and instantaneous rate of change", "description": "Explains the secant slope and how the derivative arises as its limit.",
+        "concept": "Derivative as a limit", "definition": "The derivative is the limit of the average rate of change as the interval shrinks to zero.",
+        "facts": ["Average rate of change is change in f over change in x.", "It is the slope of a secant line.", "The derivative is the limit of these slopes as the interval shrinks."],
+        "misconceptions": ["The derivative is the average rate over the whole domain."] },
+      { "key": "tangent", "title": "Interpret the derivative as a slope and a rate", "description": "Connects the tangent slope to physical rates such as velocity.",
+        "concept": "Tangent slope and rates", "definition": "f'(a) is the slope of the tangent line at a and the instantaneous rate of change of f there.",
+        "facts": ["The derivative is the slope of the tangent line.", "The derivative of position is velocity.", "The derivative of velocity is acceleration."],
+        "misconceptions": ["The derivative gives the value of the function rather than how fast it changes."] },
+      { "key": "sign-extrema", "title": "Use the derivative's sign to describe a function", "description": "Links positive and negative derivatives to increase and decrease, and zero derivatives to possible extrema.",
+        "concept": "Derivative sign and extrema", "definition": "f' > 0 means f increases, f' < 0 means f decreases; smooth extrema occur where f' = 0.",
+        "facts": ["Positive derivative means increasing.", "Negative derivative means decreasing.", "At a smooth local maximum or minimum the derivative is zero.", "A zero derivative does not guarantee an extremum, as x cubed shows."],
+        "misconceptions": ["Every point where f' = 0 is a maximum or minimum."] },
+      { "key": "differentiability", "title": "Relate differentiability and continuity", "description": "Explains why differentiable implies continuous but not the reverse.",
+        "concept": "Differentiability and continuity", "definition": "Differentiability at a point implies continuity there; a continuous function can still lack a derivative.",
+        "facts": ["Differentiable functions are continuous.", "|x| is continuous at 0 but not differentiable there.", "A corner gives different slopes from the left and right."],
+        "misconceptions": ["Every continuous function has a derivative everywhere."] }
+    ],
+    "translations": {
+      "ko": { "title": "변화율로서의 도함수", "instructions": "시험관이 도함수가 무엇을 의미하는지, 그리고 그래프에서 도함수를 어떻게 읽는지 물을 것입니다. 계산보다 개념을 설명하세요. 아무것도 적을 필요는 없습니다. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "average-instant": "평균 변화율과 순간 변화율 구분하기", "tangent": "도함수를 기울기와 변화율로 해석하기", "sign-extrema": "도함수의 부호로 함수 설명하기", "differentiability": "미분 가능성과 연속성의 관계 설명하기" } },
+      "es": { "title": "La derivada como razón de cambio", "instructions": "El examinador le preguntará qué significa una derivada y cómo leerla en una gráfica. Explique las ideas en lugar de calcular; no necesitará escribir nada. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "average-instant": "Distinguir la razón de cambio promedio de la instantánea", "tangent": "Interpretar la derivada como pendiente y como razón de cambio", "sign-extrema": "Usar el signo de la derivada para describir una función", "differentiability": "Relacionar la derivabilidad con la continuidad" } }
+    }
+  },
+  {
+    "title": "The Fundamental Theorem of Calculus",
+    "category": "mathematics",
+    "subject": "Calculus",
+    "topic": "Integration",
+    "instructions": "The examiner will ask you what a definite integral measures and why integration and differentiation are linked. Explain the ideas in words; you will not need to write anything down. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The definite integral of a function f from a to b measures the accumulated quantity, which for a positive function is the area between its graph and the x-axis over that interval. It is defined as the limit of Riemann sums: divide the interval into thin strips, add up the areas of rectangles whose heights are values of f, and let the strips become infinitely thin.",
+      "Area below the x-axis counts as negative, so the definite integral is a signed area. If f is a velocity, its integral over a time interval is the net change in position, the displacement, not the total distance traveled.",
+      "The first part of the fundamental theorem of calculus says that if f is continuous and F(x) is the integral of f from a fixed point a up to x, then F is differentiable and F'(x) = f(x). Accumulating a quantity and then asking how fast the accumulation grows gives back the original rate.",
+      "The second part says that if F is any antiderivative of a continuous function f, meaning F' = f, then the integral of f from a to b equals F(b) minus F(a). This turns the hard problem of computing a limit of sums into the easier problem of finding an antiderivative, and it shows that differentiation and integration are inverse processes."
+    ],
+    "objectives": [
+      { "key": "definite-integral", "title": "Explain what a definite integral measures", "description": "Describes accumulation, area and the Riemann sum definition.",
+        "concept": "Definite integral", "definition": "The limit of Riemann sums, measuring accumulated quantity or signed area over an interval.",
+        "facts": ["Rectangles approximate the area under a curve.", "The integral is the limit as the rectangles become infinitely thin.", "For a positive function it is the area under the graph."],
+        "misconceptions": ["An integral is just the antiderivative formula with no meaning of its own."] },
+      { "key": "signed-area", "title": "Interpret signed area and net change", "description": "Explains negative area and why integrating velocity gives displacement.",
+        "concept": "Signed area and net change", "definition": "Area below the axis counts negatively, so the integral of a rate gives net change.",
+        "facts": ["Area below the x-axis counts as negative.", "The integral of velocity is displacement.", "Displacement can differ from total distance."],
+        "misconceptions": ["The integral of velocity always equals the total distance traveled."] },
+      { "key": "ftc-part1", "title": "Explain the first part of the fundamental theorem", "description": "Explains why the derivative of an accumulation function is the original function.",
+        "concept": "Fundamental theorem, part 1", "definition": "If F(x) is the integral of continuous f from a to x, then F'(x) = f(x).",
+        "facts": ["An accumulation function adds up f from a fixed start to x.", "Its rate of growth at x is f(x).", "It requires f to be continuous."],
+        "misconceptions": ["The derivative of the accumulation function depends on the starting point a."] },
+      { "key": "ftc-part2", "title": "Explain the second part of the fundamental theorem", "description": "Explains how antiderivatives evaluate definite integrals and why that matters.",
+        "concept": "Fundamental theorem, part 2", "definition": "If F' = f with f continuous, the integral of f from a to b equals F(b) - F(a).",
+        "facts": ["Any antiderivative works; the constant cancels.", "It replaces a limit of sums with an antiderivative.", "It shows differentiation and integration are inverse processes."],
+        "misconceptions": ["Different antiderivatives give different values of the definite integral."] }
+    ],
+    "translations": {
+      "ko": { "title": "미적분학의 기본 정리", "instructions": "시험관이 정적분이 무엇을 측정하는지, 그리고 적분과 미분이 왜 연결되어 있는지 물을 것입니다. 개념을 말로 설명하세요. 아무것도 적을 필요는 없습니다. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "definite-integral": "정적분이 측정하는 것 설명하기", "signed-area": "부호 있는 넓이와 순변화 해석하기", "ftc-part1": "기본 정리의 첫 번째 부분 설명하기", "ftc-part2": "기본 정리의 두 번째 부분 설명하기" } },
+      "es": { "title": "El teorema fundamental del cálculo", "instructions": "El examinador le preguntará qué mide una integral definida y por qué la integración y la derivación están relacionadas. Explique las ideas con palabras; no necesitará escribir nada. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "definite-integral": "Explicar qué mide una integral definida", "signed-area": "Interpretar el área con signo y el cambio neto", "ftc-part1": "Explicar la primera parte del teorema fundamental", "ftc-part2": "Explicar la segunda parte del teorema fundamental" } }
+    }
+  },
+  {
+    "title": "Proof by Mathematical Induction",
+    "category": "mathematics",
+    "subject": "Discrete Mathematics",
+    "topic": "Proof techniques",
+    "instructions": "The examiner will ask you how proof by induction works and why it is valid. Talk through the reasoning; you will not need to write anything down. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Mathematical induction proves that a statement P(n) is true for every natural number n from some starting value onward. It has two steps. The base case shows that P holds for the first value, usually n = 0 or n = 1. The inductive step shows that for every k, if P(k) is true then P(k + 1) is true.",
+      "The assumption that P(k) holds in the inductive step is called the inductive hypothesis. It is not circular: we do not assume what we want to prove for all n, only that it holds for one arbitrary k, and we show that truth carries forward from k to k + 1.",
+      "Induction is often compared to a line of dominoes. The base case knocks over the first domino; the inductive step guarantees that each falling domino knocks over the next; so every domino falls. Its validity rests on the well-ordering of the natural numbers: if some n failed, there would be a smallest failure, and the inductive step from the number before it would be contradicted.",
+      "A classic example is that 1 + 2 + ... + n equals n(n + 1)/2. Both steps are needed. A statement can hold for the first million cases and still fail later, so checking many examples is not a proof; and an inductive step without a true base case proves nothing, since the chain never starts. Strong induction lets the inductive step assume P for all values up to k, not only k itself."
+    ],
+    "objectives": [
+      { "key": "structure", "title": "Describe the two steps of an induction proof", "description": "Names and explains the base case and the inductive step.",
+        "concept": "Structure of induction", "definition": "Prove P for the first value, then prove that P(k) implies P(k + 1) for every k.",
+        "facts": ["The base case proves the first value.", "The inductive step proves P(k) implies P(k + 1).", "Together they prove P for all values from the start onward."],
+        "misconceptions": ["The inductive step alone is enough."] },
+      { "key": "hypothesis", "title": "Explain why the inductive hypothesis is not circular", "description": "Distinguishes assuming P(k) for one k from assuming the whole claim.",
+        "concept": "Inductive hypothesis", "definition": "The assumption that P(k) holds for an arbitrary k, used to prove P(k + 1).",
+        "facts": ["The hypothesis is about one arbitrary k.", "The step proves an implication, not the statement itself.", "It does not assume the result for all n."],
+        "misconceptions": ["Induction assumes what it is trying to prove."] },
+      { "key": "validity", "title": "Explain why induction is valid", "description": "Uses the domino picture or well-ordering to justify the method.",
+        "concept": "Validity of induction", "definition": "Induction is valid because the natural numbers are well-ordered: a smallest counterexample would contradict the steps.",
+        "facts": ["Each true case forces the next to be true.", "A smallest counterexample would contradict the inductive step or the base case.", "Strong induction may assume all earlier cases."],
+        "misconceptions": ["Induction is a form of guessing from patterns."] },
+      { "key": "examples-not-proof", "title": "Explain why examples are not a proof", "description": "Explains why many checked cases do not prove a statement for all n.",
+        "concept": "Examples versus proof", "definition": "Checking finitely many cases cannot rule out a later counterexample; a proof covers every case.",
+        "facts": ["A statement can hold for many cases and fail later.", "Induction covers infinitely many cases with two finite arguments.", "Without a true base case the chain never starts."],
+        "misconceptions": ["If a pattern holds for the first hundred numbers it must always hold."] }
+    ],
+    "translations": {
+      "ko": { "title": "수학적 귀납법에 의한 증명", "instructions": "시험관이 귀납법에 의한 증명이 어떻게 작동하며 왜 타당한지 물을 것입니다. 추론 과정을 말로 설명하세요. 아무것도 적을 필요는 없습니다. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "structure": "귀납법 증명의 두 단계 설명하기", "hypothesis": "귀납 가정이 순환 논리가 아닌 이유 설명하기", "validity": "귀납법이 타당한 이유 설명하기", "examples-not-proof": "예시가 증명이 아닌 이유 설명하기" } },
+      "es": { "title": "Demostración por inducción matemática", "instructions": "El examinador le preguntará cómo funciona la demostración por inducción y por qué es válida. Explique el razonamiento en voz alta; no necesitará escribir nada. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "structure": "Describir los dos pasos de una demostración por inducción", "hypothesis": "Explicar por qué la hipótesis inductiva no es circular", "validity": "Explicar por qué la inducción es válida", "examples-not-proof": "Explicar por qué los ejemplos no son una demostración" } }
+    }
+  },
+  {
+    "title": "Proof by Contradiction",
+    "category": "mathematics",
+    "subject": "Discrete Mathematics",
+    "topic": "Proof techniques",
+    "instructions": "The examiner will ask you how proof by contradiction works, using classic examples. Explain each step of the argument aloud; you will not need to write anything down. Say \"I don't know\" if you don't.",
+    "passage": [
+      "A proof by contradiction establishes a statement by assuming that it is false and showing that this assumption leads to something impossible, such as a claim that is both true and false. Since a correct chain of reasoning from a true starting point cannot reach a contradiction, the assumption must be false, so the original statement is true.",
+      "The square root of 2 is irrational. Suppose instead that it equals a fraction p/q in lowest terms. Squaring gives p squared = 2 q squared, so p squared is even, and therefore p is even. Writing p = 2r gives q squared = 2 r squared, so q is even too. Then p and q share the factor 2, contradicting lowest terms. So no such fraction exists.",
+      "Euclid proved that there are infinitely many primes. Suppose there were only finitely many, and multiply them all together and add 1. The resulting number leaves remainder 1 when divided by any prime on the list, so none of them divides it. But every whole number greater than 1 has a prime factor, so there is a prime not on the list, contradicting the assumption that the list was complete.",
+      "Proof by contradiction differs from proof by contrapositive. To prove 'if A then B', the contrapositive method proves 'if not B then not A', which is logically equivalent. A contradiction proof instead assumes A and not B together and derives any impossibility. Note that Euclid's number need not itself be prime; it only has a prime factor missing from the list."
+    ],
+    "objectives": [
+      { "key": "method", "title": "Explain the logic of proof by contradiction", "description": "Explains why reaching an impossibility shows the assumption was false.",
+        "concept": "Proof by contradiction", "definition": "Assume the statement is false, derive an impossibility, and conclude the statement is true.",
+        "facts": ["The proof begins by assuming the negation.", "Valid reasoning leads to a contradiction.", "So the negation is false and the statement is true."],
+        "misconceptions": ["Finding one example that works proves the statement."] },
+      { "key": "root-two", "title": "Explain why the square root of 2 is irrational", "description": "Walks through the lowest-terms argument and where the contradiction arises.",
+        "concept": "Irrationality of the square root of 2", "definition": "Assuming it equals p/q in lowest terms forces both p and q to be even, a contradiction.",
+        "facts": ["The fraction is assumed to be in lowest terms.", "p squared = 2 q squared makes p even.", "Then q must be even too.", "Both even contradicts lowest terms."],
+        "misconceptions": ["The square root of 2 is irrational because its decimal looks random."] },
+      { "key": "primes", "title": "Explain Euclid's proof that primes are infinite", "description": "Explains the product-plus-one construction and what it does and does not show.",
+        "concept": "Infinitude of primes", "definition": "Any finite list of primes misses a prime factor of their product plus one.",
+        "facts": ["Multiply all listed primes and add 1.", "No listed prime divides the result.", "The result has some prime factor not on the list."],
+        "misconceptions": ["The product of the first primes plus one is always prime."] },
+      { "key": "contrapositive", "title": "Distinguish contradiction from contrapositive", "description": "Explains how the two methods differ and why the contrapositive is equivalent.",
+        "concept": "Contrapositive", "definition": "'If not B then not A' is logically equivalent to 'if A then B'.",
+        "facts": ["The contrapositive is equivalent to the original statement.", "The converse 'if B then A' is not equivalent.", "Contradiction assumes A and not B and derives any impossibility."],
+        "misconceptions": ["The converse of a true statement is always true."] }
+    ],
+    "translations": {
+      "ko": { "title": "귀류법에 의한 증명", "instructions": "시험관이 고전적인 예를 들어 귀류법이 어떻게 작동하는지 물을 것입니다. 논증의 각 단계를 말로 설명하세요. 아무것도 적을 필요는 없습니다. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "method": "귀류법의 논리 설명하기", "root-two": "2의 제곱근이 무리수인 이유 설명하기", "primes": "소수가 무한히 많다는 유클리드의 증명 설명하기", "contrapositive": "귀류법과 대우 증명법 구분하기" } },
+      "es": { "title": "Demostración por contradicción", "instructions": "El examinador le preguntará cómo funciona la demostración por contradicción, con ejemplos clásicos. Explique en voz alta cada paso del argumento; no necesitará escribir nada. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "method": "Explicar la lógica de la demostración por contradicción", "root-two": "Explicar por qué la raíz cuadrada de 2 es irracional", "primes": "Explicar la demostración de Euclides de que hay infinitos primos", "contrapositive": "Distinguir la contradicción del contrarrecíproco" } }
+    }
+  },
+  {
+    "title": "Basic Probability",
+    "category": "mathematics",
+    "subject": "Probability",
+    "topic": "Probability rules",
+    "instructions": "The examiner will ask you about sample spaces, independence and conditional probability. Explain your reasoning with everyday examples such as coins, dice and cards; you will not need to write anything down. Say \"I don't know\" if you don't.",
+    "passage": [
+      "A probability experiment has a sample space, the set of all possible outcomes, and an event is a subset of it. Every probability lies between 0 and 1, and the probabilities of all outcomes add to 1. When outcomes are equally likely, the probability of an event is the number of favorable outcomes divided by the total number: a fair die shows an even number with probability 3/6 = 1/2.",
+      "The complement of an event A is everything not in A, and its probability is 1 minus P(A). The addition rule says P(A or B) = P(A) + P(B) - P(A and B); the overlap is subtracted so it is not counted twice. If A and B are mutually exclusive, they cannot both happen, so P(A and B) = 0.",
+      "The conditional probability of A given B is P(A and B) divided by P(B): the chance of A once we know B happened. Events are independent when knowing one does not change the probability of the other, so P(A and B) = P(A) times P(B). Two coin flips are independent; drawing two cards without replacement is not, because the first draw changes what remains.",
+      "Independence and mutual exclusivity are different ideas: two events with positive probability that are mutually exclusive cannot be independent, because learning that one happened tells you the other did not. The gambler's fallacy is the belief that past independent outcomes change future ones, such as thinking heads is due after five tails; each flip still has probability 1/2."
+    ],
+    "objectives": [
+      { "key": "sample-space", "title": "Explain sample spaces, events and equally likely outcomes", "description": "Defines the terms and computes simple probabilities by counting.",
+        "concept": "Sample space and events", "definition": "The sample space is all possible outcomes; an event is a set of outcomes; with equally likely outcomes, probability is favorable over total.",
+        "facts": ["Probabilities lie between 0 and 1.", "All outcome probabilities sum to 1.", "Equally likely outcomes give favorable over total."],
+        "misconceptions": ["Every sum of two dice is equally likely."] },
+      { "key": "addition", "title": "Use complements and the addition rule", "description": "Explains why the overlap is subtracted and what mutually exclusive means.",
+        "concept": "Addition rule and complements", "definition": "P(A or B) = P(A) + P(B) - P(A and B); P(not A) = 1 - P(A).",
+        "facts": ["The complement has probability 1 minus P(A).", "The overlap is subtracted to avoid double counting.", "Mutually exclusive events have no overlap."],
+        "misconceptions": ["P(A or B) is always P(A) + P(B)."] },
+      { "key": "conditional", "title": "Explain conditional probability and independence", "description": "Defines both and contrasts sampling with and without replacement.",
+        "concept": "Conditional probability and independence", "definition": "P(A given B) = P(A and B) / P(B); A and B are independent if P(A and B) = P(A) P(B).",
+        "facts": ["Conditioning restricts attention to outcomes where B happened.", "Independent events do not change each other's probabilities.", "Draws without replacement are dependent."],
+        "misconceptions": ["P(A given B) equals P(B given A)."] },
+      { "key": "fallacies", "title": "Distinguish independence from mutual exclusivity and spot the gambler's fallacy", "description": "Explains why exclusive events are dependent and why streaks do not change fair odds.",
+        "concept": "Common probability errors", "definition": "Mutually exclusive events with positive probability are dependent; independent trials have no memory.",
+        "facts": ["Mutually exclusive events with positive probability are not independent.", "Coin flips have no memory.", "After five tails, heads still has probability 1/2."],
+        "misconceptions": ["Mutually exclusive means the same as independent.", "After a run of tails, heads becomes more likely."] }
+    ],
+    "translations": {
+      "ko": { "title": "기초 확률", "instructions": "시험관이 표본 공간, 독립성, 조건부 확률에 대해 물을 것입니다. 동전, 주사위, 카드 같은 일상적인 예로 추론을 설명하세요. 아무것도 적을 필요는 없습니다. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "sample-space": "표본 공간, 사건, 같은 가능성의 결과 설명하기", "addition": "여사건과 덧셈 법칙 사용하기", "conditional": "조건부 확률과 독립성 설명하기", "fallacies": "독립과 배반을 구분하고 도박사의 오류 알아보기" } },
+      "es": { "title": "Probabilidad básica", "instructions": "El examinador le preguntará sobre espacios muestrales, independencia y probabilidad condicional. Explique su razonamiento con ejemplos cotidianos como monedas, dados y cartas; no necesitará escribir nada. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "sample-space": "Explicar espacios muestrales, eventos y resultados igualmente probables", "addition": "Usar el complemento y la regla de la suma", "conditional": "Explicar la probabilidad condicional y la independencia", "fallacies": "Distinguir la independencia de la exclusión mutua y reconocer la falacia del jugador" } }
+    }
+  },
+  {
+    "title": "Functions and Their Inverses",
+    "category": "mathematics",
+    "subject": "Algebra",
+    "topic": "Functions",
+    "instructions": "The examiner will ask you what a function is and when it has an inverse. Explain the ideas with simple examples; you will not need to write anything down. Say \"I don't know\" if you don't.",
+    "passage": [
+      "A function from a set A to a set B is a rule that assigns to each element of A exactly one element of B. The set A is the domain, the set of allowed inputs; B is the codomain; and the range is the set of outputs actually produced. Squaring, as a function from the real numbers to the real numbers, has range only the non-negative numbers.",
+      "On a graph, a relation is a function of x exactly when every vertical line meets the graph at most once, since two intersection points would mean one input with two outputs. A circle is not the graph of a function of x.",
+      "A function is one-to-one, or injective, if different inputs always give different outputs; graphically, every horizontal line meets the graph at most once. It is onto, or surjective, if every element of the codomain is an output. A function that is both is a bijection. Squaring on all real numbers is not one-to-one, because 2 and -2 both give 4.",
+      "A function has an inverse, defined on its range, exactly when it is one-to-one, so that each output comes from exactly one input. The inverse undoes the function: f inverse of f(x) returns x. Its graph is the reflection of the original graph across the line y = x. Restricting the domain can create an inverse: squaring on the non-negative numbers is one-to-one, and its inverse is the square root."
+    ],
+    "objectives": [
+      { "key": "definition", "title": "Define a function, its domain and its range", "description": "States the exactly-one-output rule and distinguishes codomain and range.",
+        "concept": "Function", "definition": "A rule assigning each input in the domain exactly one output in the codomain.",
+        "facts": ["Each input has exactly one output.", "The domain is the set of allowed inputs.", "The range is the set of outputs actually produced."],
+        "misconceptions": ["A function cannot give the same output for two different inputs."] },
+      { "key": "vertical-line", "title": "Explain the vertical line test", "description": "Explains why the test detects whether a graph is a function of x.",
+        "concept": "Vertical line test", "definition": "A graph is a function of x if no vertical line meets it more than once.",
+        "facts": ["Two intersections would mean one input with two outputs.", "A circle fails the test.", "A parabola opening up passes it."],
+        "misconceptions": ["The vertical line test checks whether a function is one-to-one."] },
+      { "key": "injective", "title": "Distinguish one-to-one and onto functions", "description": "Defines injective, surjective and bijective, with the horizontal line test.",
+        "concept": "Injective, surjective, bijective", "definition": "One-to-one means distinct inputs give distinct outputs; onto means every codomain element is hit; a bijection is both.",
+        "facts": ["One-to-one functions pass the horizontal line test.", "Onto means the range equals the codomain.", "Squaring on all reals is not one-to-one."],
+        "misconceptions": ["Every function is one-to-one."] },
+      { "key": "inverse", "title": "Explain when a function has an inverse", "description": "Connects invertibility to one-to-one behavior, reflection in y = x and domain restriction.",
+        "concept": "Inverse function", "definition": "The function that undoes f; it exists when each output comes from exactly one input.",
+        "facts": ["The inverse undoes the function.", "Its graph is the reflection across y = x.", "Restricting the domain can make a function invertible.", "The square root inverts squaring on non-negative numbers."],
+        "misconceptions": ["The inverse function f inverse means 1 divided by f."] }
+    ],
+    "translations": {
+      "ko": { "title": "함수와 역함수", "instructions": "시험관이 함수가 무엇인지, 그리고 언제 역함수를 가지는지 물을 것입니다. 간단한 예로 개념을 설명하세요. 아무것도 적을 필요는 없습니다. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "definition": "함수, 정의역, 치역 정의하기", "vertical-line": "수직선 판정법 설명하기", "injective": "단사 함수와 전사 함수 구분하기", "inverse": "함수가 역함수를 가지는 경우 설명하기" } },
+      "es": { "title": "Las funciones y sus inversas", "instructions": "El examinador le preguntará qué es una función y cuándo tiene inversa. Explique las ideas con ejemplos sencillos; no necesitará escribir nada. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "definition": "Definir una función, su dominio y su rango", "vertical-line": "Explicar la prueba de la recta vertical", "injective": "Distinguir funciones inyectivas y sobreyectivas", "inverse": "Explicar cuándo una función tiene inversa" } }
+    }
+  },
+  {
+    "title": "Countable and Uncountable Infinity",
+    "category": "mathematics",
+    "subject": "Set Theory",
+    "topic": "Cardinality",
+    "instructions": "The examiner will ask you how mathematicians compare the sizes of infinite sets. Explain the arguments in words; you will not need to write anything down. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Two sets have the same size, or cardinality, when their elements can be paired off exactly, with a one-to-one correspondence that leaves nothing out on either side. For finite sets this matches counting. Georg Cantor used the same idea in the 1870s and 1880s to compare infinite sets.",
+      "A set is countably infinite if it can be paired with the natural numbers 1, 2, 3 and so on, meaning its elements can be listed in a sequence. Surprisingly, the even numbers are countable, even though they are a proper part of the natural numbers: pair each n with 2n. The integers are countable too, listed as 0, 1, -1, 2, -2 and so on. So is the set of all fractions, which can be listed by walking through a grid of numerators and denominators.",
+      "Cantor's diagonal argument shows that the real numbers between 0 and 1 are not countable. Suppose they could all be listed. Build a new number whose first decimal digit differs from the first number's first digit, whose second digit differs from the second number's second digit, and so on. This number differs from every number on the list in at least one place, so the list was not complete. No list can contain all of them.",
+      "So there are different sizes of infinity: the reals are strictly larger than the natural numbers. For infinite sets, being a proper subset does not make a set smaller, which is why size is defined by pairing rather than by containment. Cantor's theorem goes further: the set of all subsets of any set is always strictly larger than the set itself, so there is no largest infinity."
+    ],
+    "objectives": [
+      { "key": "cardinality", "title": "Explain how sizes of sets are compared", "description": "Defines equal cardinality by one-to-one correspondence.",
+        "concept": "Cardinality", "definition": "Two sets have the same cardinality when a one-to-one correspondence pairs all their elements.",
+        "facts": ["Same size means an exact pairing exists.", "For finite sets this agrees with counting.", "The definition also applies to infinite sets."],
+        "misconceptions": ["All infinite sets are the same size."] },
+      { "key": "countable", "title": "Explain what makes a set countable", "description": "Uses listing to show the evens, integers and fractions are countable.",
+        "concept": "Countable sets", "definition": "A set is countably infinite if it can be paired with the natural numbers, that is, listed in a sequence.",
+        "facts": ["The even numbers pair with the naturals by n to 2n.", "The integers can be listed 0, 1, -1, 2, -2 and so on.", "The rational numbers are countable."],
+        "misconceptions": ["A proper subset of an infinite set must be smaller.", "There are more fractions than natural numbers."] },
+      { "key": "diagonal", "title": "Explain Cantor's diagonal argument", "description": "Walks through building a number that is missing from any supposed list.",
+        "concept": "Diagonal argument", "definition": "From any list of reals, build a number differing from the nth entry in its nth digit, so the list is incomplete.",
+        "facts": ["The argument assumes a complete list exists.", "The new number differs from each listed number in some digit.", "So no list contains every real number in the interval."],
+        "misconceptions": ["Adding the diagonal number to the list fixes the problem."] },
+      { "key": "sizes", "title": "Explain why there are different sizes of infinity", "description": "Compares naturals and reals and states Cantor's theorem on subsets.",
+        "concept": "Sizes of infinity", "definition": "The reals are uncountable, strictly larger than the naturals; the set of subsets of any set is strictly larger than the set.",
+        "facts": ["The reals are uncountable.", "The power set of a set is always larger.", "There is no largest infinity."],
+        "misconceptions": ["Infinity is a single number that cannot be compared."] }
+    ],
+    "translations": {
+      "ko": { "title": "가산 무한과 비가산 무한", "instructions": "시험관이 수학자들이 무한 집합의 크기를 어떻게 비교하는지 물을 것입니다. 논증을 말로 설명하세요. 아무것도 적을 필요는 없습니다. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "cardinality": "집합의 크기를 비교하는 방법 설명하기", "countable": "가산 집합의 조건 설명하기", "diagonal": "칸토어의 대각선 논법 설명하기", "sizes": "무한의 크기가 서로 다른 이유 설명하기" } },
+      "es": { "title": "Infinitos numerables y no numerables", "instructions": "El examinador le preguntará cómo comparan los matemáticos el tamaño de los conjuntos infinitos. Explique los argumentos con palabras; no necesitará escribir nada. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "cardinality": "Explicar cómo se compara el tamaño de los conjuntos", "countable": "Explicar qué hace que un conjunto sea numerable", "diagonal": "Explicar el argumento diagonal de Cantor", "sizes": "Explicar por qué hay distintos tamaños de infinito" } }
+    }
+  },
+  {
+    "title": "Vectors and Linear Independence",
+    "category": "mathematics",
+    "subject": "Linear Algebra",
+    "topic": "Vector spaces",
+    "instructions": "The examiner will ask you about vectors, linear combinations, span and linear independence. Describe the ideas geometrically where you can; you will not need to write anything down. Say \"I don't know\" if you don't.",
+    "passage": [
+      "A vector in the plane or in space can be pictured as an arrow with a length and a direction, or written as a list of coordinates. Vectors are added tip to tail, or coordinate by coordinate, and multiplied by numbers called scalars, which stretch, shrink or reverse them.",
+      "A linear combination of vectors is a sum of scalar multiples of them. The span of a set of vectors is the set of all their linear combinations. In three-dimensional space, the span of one nonzero vector is a line through the origin, and the span of two vectors that do not lie on a common line is a plane through the origin.",
+      "Vectors are linearly independent if none of them is a linear combination of the others; equivalently, the only way to combine them to get the zero vector is with all scalars equal to zero. If one vector can be built from the others, the set is linearly dependent, and that vector adds nothing new to the span. Any set containing the zero vector is dependent.",
+      "A basis of a space is a linearly independent set that spans it, so every vector in the space can be written as a combination of basis vectors in exactly one way. All bases of a space have the same number of vectors, called its dimension: the plane has dimension 2 and ordinary space has dimension 3. So in the plane, any three vectors must be linearly dependent."
+    ],
+    "objectives": [
+      { "key": "operations", "title": "Explain vector addition and scalar multiplication", "description": "Describes both operations geometrically and in coordinates.",
+        "concept": "Vector operations", "definition": "Vectors add tip to tail or coordinate-wise; scalars stretch, shrink or reverse them.",
+        "facts": ["Vectors add tip to tail.", "Addition works coordinate by coordinate.", "A negative scalar reverses direction."],
+        "misconceptions": ["Adding vectors means adding their lengths."] },
+      { "key": "span", "title": "Explain linear combinations and span", "description": "Describes the span of one and two vectors as a line and a plane.",
+        "concept": "Span", "definition": "The set of all linear combinations of a set of vectors.",
+        "facts": ["A linear combination is a sum of scalar multiples.", "One nonzero vector spans a line through the origin.", "Two non-parallel vectors span a plane through the origin."],
+        "misconceptions": ["Two vectors in space always span all of space."] },
+      { "key": "independence", "title": "Explain linear independence", "description": "Gives both equivalent definitions and an example of dependence.",
+        "concept": "Linear independence", "definition": "No vector in the set is a combination of the others; only the all-zero combination gives the zero vector.",
+        "facts": ["Independent vectors each add a new direction.", "A dependent vector adds nothing to the span.", "A set containing the zero vector is dependent."],
+        "misconceptions": ["Vectors are independent as long as no two are equal."] },
+      { "key": "basis", "title": "Explain basis and dimension", "description": "Explains unique representation and why dimension limits independent sets.",
+        "concept": "Basis and dimension", "definition": "A basis is an independent spanning set; dimension is the number of vectors in any basis.",
+        "facts": ["Every vector has exactly one representation in a basis.", "All bases of a space have the same size.", "Three vectors in the plane must be dependent."],
+        "misconceptions": ["A space has only one basis."] }
+    ],
+    "translations": {
+      "ko": { "title": "벡터와 선형 독립", "instructions": "시험관이 벡터, 일차결합, 생성, 선형 독립에 대해 물을 것입니다. 가능하면 기하학적으로 개념을 설명하세요. 아무것도 적을 필요는 없습니다. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "operations": "벡터의 덧셈과 스칼라배 설명하기", "span": "일차결합과 생성 설명하기", "independence": "선형 독립 설명하기", "basis": "기저와 차원 설명하기" } },
+      "es": { "title": "Vectores e independencia lineal", "instructions": "El examinador le preguntará sobre vectores, combinaciones lineales, espacio generado e independencia lineal. Describa las ideas de forma geométrica cuando pueda; no necesitará escribir nada. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "operations": "Explicar la suma de vectores y la multiplicación por un escalar", "span": "Explicar las combinaciones lineales y el espacio generado", "independence": "Explicar la independencia lineal", "basis": "Explicar la base y la dimensión" } }
+    }
+  },
+  {
+    "title": "Exponential Growth and Logarithms",
+    "category": "mathematics",
+    "subject": "Algebra",
+    "topic": "Exponential and logarithmic functions",
+    "instructions": "The examiner will ask you how exponential functions behave and what logarithms are. Explain the ideas with examples rather than calculation; you will not need to write anything down. Say \"I don't know\" if you don't.",
+    "passage": [
+      "An exponential function has the form f(x) = a times b to the power x, with a positive base b not equal to 1. Its key property is that equal steps in x multiply the output by the same factor. A linear function adds a constant amount in each step; an exponential function multiplies by a constant factor. When b is greater than 1 the function grows, and when b is between 0 and 1 it decays.",
+      "Exponential growth eventually outpaces any polynomial, however slow it starts. A quantity growing by a fixed percentage per period, such as money at compound interest or an unchecked population, grows exponentially. Its doubling time is constant: if it doubles in 10 years, it doubles again in the next 10. Likewise a radioactive substance has a constant half-life.",
+      "The logarithm is the inverse of the exponential. The logarithm base b of y is the exponent to which b must be raised to give y: log base 10 of 1000 is 3 because 10 cubed is 1000. Logarithms are defined only for positive numbers, and log base b of 1 is 0 for every base.",
+      "Logarithms turn multiplication into addition: the log of a product is the sum of the logs, the log of a quotient is the difference, and the log of x to the power n is n times the log of x. That is why logarithmic scales such as decibels and the pH scale compress huge ranges: each step of 1 on a base-10 scale is a factor of 10. The natural logarithm uses the base e, about 2.718."
+    ],
+    "objectives": [
+      { "key": "exponential", "title": "Contrast exponential and linear change", "description": "Explains multiplying by a constant factor versus adding a constant amount.",
+        "concept": "Exponential function", "definition": "A function a times b to the x, which multiplies its output by b for each unit step in x.",
+        "facts": ["Linear change adds a constant amount per step.", "Exponential change multiplies by a constant factor per step.", "A base above 1 gives growth; between 0 and 1 gives decay."],
+        "misconceptions": ["Exponential growth just means growing fast."] },
+      { "key": "doubling", "title": "Explain doubling time and half-life", "description": "Explains why percentage growth has a constant doubling time.",
+        "concept": "Doubling time and half-life", "definition": "Exponential growth doubles in a fixed time; exponential decay halves in a fixed time.",
+        "facts": ["Fixed percentage growth is exponential.", "The doubling time stays constant.", "Radioactive decay has a constant half-life.", "Exponential growth eventually exceeds any polynomial."],
+        "misconceptions": ["After two half-lives a radioactive sample is completely gone."] },
+      { "key": "logarithm", "title": "Explain what a logarithm is", "description": "Defines the logarithm as an exponent and as the inverse of the exponential.",
+        "concept": "Logarithm", "definition": "log base b of y is the exponent x such that b to the x equals y.",
+        "facts": ["The logarithm is the inverse of the exponential function.", "log base 10 of 1000 is 3.", "Logarithms are defined only for positive numbers.", "The log of 1 is 0 in any base."],
+        "misconceptions": ["The log of a negative number is a negative number."] },
+      { "key": "log-rules", "title": "Explain the laws of logarithms and log scales", "description": "Explains why logs turn products into sums and how that compresses scales.",
+        "concept": "Laws of logarithms", "definition": "log(xy) = log x + log y, log(x/y) = log x - log y, log(x to the n) = n log x.",
+        "facts": ["Logs turn multiplication into addition.", "Each step of 1 on a base-10 scale is a factor of 10.", "Decibels and pH are logarithmic scales."],
+        "misconceptions": ["The log of a sum is the sum of the logs."] }
+    ],
+    "translations": {
+      "ko": { "title": "지수적 성장과 로그", "instructions": "시험관이 지수함수가 어떻게 변하는지, 그리고 로그가 무엇인지 물을 것입니다. 계산보다 예를 들어 개념을 설명하세요. 아무것도 적을 필요는 없습니다. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "exponential": "지수적 변화와 선형적 변화 비교하기", "doubling": "배가 시간과 반감기 설명하기", "logarithm": "로그가 무엇인지 설명하기", "log-rules": "로그 법칙과 로그 척도 설명하기" } },
+      "es": { "title": "Crecimiento exponencial y logaritmos", "instructions": "El examinador le preguntará cómo se comportan las funciones exponenciales y qué son los logaritmos. Explique las ideas con ejemplos en lugar de cálculos; no necesitará escribir nada. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "exponential": "Contrastar el cambio exponencial con el lineal", "doubling": "Explicar el tiempo de duplicación y la vida media", "logarithm": "Explicar qué es un logaritmo", "log-rules": "Explicar las leyes de los logaritmos y las escalas logarítmicas" } }
+    }
+  }
+]
