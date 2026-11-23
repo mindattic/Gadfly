@@ -374,3 +374,22 @@ status (`Pages/Admin/*`), `OrgMembers`, `Platform*`; stylesheets `admin*.css`, `
   students directory and console show their open state by fill as well as by the panel that opens, with no
   `aria-expanded` yet; the sign-in, password-reset and invitation pages were already covered by GAD-T507 and only
   checked.
+
+### Inbox (GAD-T701)
+
+`/inbox` (Components/Pages/Inbox.razor, `inbox.css`) and the top bar's Inbox link, built on the design system:
+
+- **Structure.** One h1 in a `.page-header` with its actions (Mark all as read, Email preferences); the list is a `<ul>`
+  named "Messages"; an opened message is an `<article>` labelled by its h2, with a "Back to inbox" link first.
+- **Not by colour alone.** An unread message carries the word "Unread" (a badge), a bold title and an accent edge; the
+  count line above the list says "2 unread of 5".
+- **Top bar.** The Inbox link reads "Inbox, 2 unread" to a screen reader (visually hidden text; the number pill is
+  `aria-hidden`), and below 40rem the Menu toggle shows the same count so it isn't hidden in the closed menu. The count
+  is read on load, on each navigation and when the inbox marks messages read, never on a timer.
+- **Status.** Marking read and failures are announced through a `role="status"` line, worded "Marked as read." /
+  "That didn't work: ...".
+- **Controls.** Each "Mark as read" button is named with its message's title; targets meet `--target-min`; dates are
+  `<time datetime>`.
+- **Reflow.** Each row wraps (badge, title, date, then the button) and long titles and bodies break anywhere, so
+  320px has no sideways scroll; the body keeps its line breaks (`pre-line`) at text-spacing overrides.
+- **Links.** A message's "Open" button follows only app-relative links.
