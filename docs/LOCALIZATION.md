@@ -139,8 +139,9 @@ How the interface text is localized, how a student chooses a language, and the K
 
 - **Strings.** Every interface string a student sees lives in `Gadfly.Server/Localization/Strings/<lang>.json`: a flat JSON
   object of stable dotted keys (`getReady.title`, `examRoom.paused`) to text. `en.json` is the source and the fallback, so a key
-  Korean has not translated yet shows in English, never as a raw key. Keys starting with `_` are comments. The files are embedded
-  in the app and read once at startup (`UiCatalog`).
+  Korean has not translated yet shows in English, never as a raw key. Keys starting with `_` are comments. An area may keep its
+  own pair of files, `<area>.<lang>.json` (the exam room's `examRoom.en.json` / `examRoom.ko.json`); all files of a language are
+  merged. The files are embedded in the app and read once at startup (`UiCatalog`).
 - **In a component.** `@inject UiText T`, then `@T["key"]` or `@T["key", arg0, arg1]` (formatted with the language's culture).
   Dates: `T.DateTime(t)`, `T.Date(t)`; numbers: `T.Number(n)`. `UiText` is scoped per circuit.
 - **Choosing the language.** Students get a language switch in the top bar (English / 한국어). It writes ASP.NET Core's
@@ -153,9 +154,17 @@ How the interface text is localized, how a student chooses a language, and the K
 - **Per attempt.** An attempt is conducted in its own language (`ExamSession.Language`, GAD-T534), whatever the switch says.
   `T.For(language)` gives the text of a fixed language; the exam room uses the attempt's language. The switch is hidden in the
   exam room.
-- **Scripts.** A JS module that writes text of its own fetches its strings: `GET /ui-strings/{lang}?prefix=examRoom.` returns
-  a flat JSON object (English filling gaps), or `import("./js/ui-language.js").strings(lang, prefix)`. A component can also pass
-  `T.Dictionary("examRoom.")` to its module.
+- **Scripts.** The page renders `<UiTextData Prefix="getReady.js." />` (a hidden element with the strings under that prefix,
+  in the page's language, re-rendered on a live switch) and a module calls `t("getReady.js.mic.quiet", "English fallback", vars)`
+  from `js/ui-text.js` (`{name}` slots filled from `vars`). The microphone test and the eye-tracking setup work this way. A script
+  can also fetch `GET /ui-strings/{lang}?prefix=examRoom.` (a flat JSON object, English filling gaps).
+- **Emails.** Student emails (assigned, reminder, result, appeals, reset, LMS link) are rendered in Korean when the recipient's
+  language profile says Korean is the language they speak best in that organization (`EmailTemplates.Render(kind, data,
+  language)`); everyone else gets English as before.
+- **Consent notice.** `ConsentNotice.For(..., language)` gives the Korean notice, paragraph for paragraph; the stored hash
+  records the exact words, so the record says which language the student read. Changing the page language on get-ready
+  rebuilds the notice and clears the agreement box.
+- **Help.** `docs/guides/quick-start-student-ko.md` (topic `quick-start-student-ko`) is the student essentials in Korean.
 - **Accessibility.** `<html lang>` is the page's language (WCAG 3.1.1) and the switch keeps it in step. Text in another
   language than the page (a language's own name in a picker, the Korean pangram on an English page) carries its own `lang`
   attribute (WCAG 3.1.2).
@@ -187,6 +196,7 @@ How the interface text is localized, how a student chooses a language, and the K
 | my exams | 내 시험 | top bar and page title |
 | attempt | 응시 | "attempt 2" = 2회차 응시; "attempts used 1 of 3" = 응시 1/3회 |
 | examiner (the AI) | 시험관 | never 감독관 (that is a proctor) |
+| examiner / grader (a person who grades) | 채점자 | never 시험관, which is the AI |
 | AI examiner | AI 시험관 | |
 | instructor | 담당 교수자 | 교수자 alone where short |
 | student | 학생 | |
@@ -200,6 +210,7 @@ How the interface text is localized, how a student chooses a language, and the K
 | I don't know | 잘 모르겠어요 | the button and the spoken phrase |
 | eye contact | 시선 맞추기 | |
 | eye tracking | 시선 추적 | |
+| voice calibration ("help the examiner hear you") | 목소리 맞추기 | the pangram reading on get-ready |
 | look away | 시선을 돌리다 | |
 | camera / webcam | 카메라 | |
 | microphone | 마이크 | |
@@ -218,6 +229,8 @@ How the interface text is localized, how a student chooses a language, and the K
 | source material | 학습 자료 | |
 | language you speak best (primary language) | 주 사용 언어 | |
 | exam language | 시험 언어 | |
+| languages you speak | 할 수 있는 언어 / 사용 언어 | "Your languages" heading = 사용 언어 |
+| practice run | 연습 시험 | |
 | help | 도움말 | |
 | settings / preferences | 설정 | |
 
