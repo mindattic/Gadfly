@@ -448,7 +448,9 @@
             // chosen here, enforced by VoiceHubFilter.
             var voice = await ExaminerVoiceAsync();
             if (voice is not null) Grants.SetVoice(user, SessionId, voice);
-            if (voice is not null || !speech.IsDefault) Warmup.Warm(FixedLines(), voice, Tts.For(speech));
+            // A session with its own voice, languages or voice tier (GAD-T616) has its fixed lines prepared in that voice and model too.
+            var profile = Tts.For(speech);
+            if (voice is not null || !speech.IsDefault || profile is not null) Warmup.Warm(FixedLines(), voice, profile);
             module = await JS.InvokeAsync<IJSObjectReference>("import", startupBound.Token, "./js/voice-room.js");
             self = DotNetObjectReference.Create(this);
             var caps = await module.InvokeAsync<Capabilities>("init", startupBound.Token, self, new
