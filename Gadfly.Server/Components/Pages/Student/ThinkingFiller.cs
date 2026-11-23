@@ -22,9 +22,10 @@ public static class ThinkingFiller
     private static readonly Counter<long> Waits = Meter.CreateCounter<long>("gadfly.examroom.waits", null, "Judging waits, by filler arm.");
 
     /// <summary>The arm for a session: stable for the whole attempt (from its id), typing for <paramref name="typingShare"/> of sessions.</summary>
-    public static string ArmFor(Guid session, double typingShare)
+    public static string ArmFor(Guid session, double typingShare, bool abTest = true)
     {
-        if (!(typingShare > 0)) return Gesture;
+        // The practice interview (abTest false) always shows the gesture it teaches, never the typing arm (GAD-T627).
+        if (!abTest || !(typingShare > 0)) return Gesture;
         var bucket = (BitConverter.ToUInt32(session.ToByteArray(), 0) % 10_000) / 10_000.0;
         return bucket < Math.Min(1, typingShare) ? Typing : Gesture;
     }

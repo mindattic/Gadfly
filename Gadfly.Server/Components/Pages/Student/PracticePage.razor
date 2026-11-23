@@ -14,7 +14,7 @@
 
 @* "Meet your examiner" (GAD-T294): an ungraded practice interview any student can take from My exams at any time. It runs the
    real exam room's pieces (VoiceRoom: the talking examiner, captions, microphone, self-view, transcript, the judging-wait filler
-   and typing sound, the pause on a lost device; and the eye-contact check with its fade, PracticeGaze) against fixed, built-in
+   and her thinking gesture with a short line, the pause on a lost device; and the gentle eye-contact reminders, PracticeGaze) against fixed, built-in
    practice lines (Student/PracticeInterview.cs). Nothing is stored: no session, attempt, turn, grade, report, integrity note or
    audit row; the practice lives in this page's memory and is gone when it closes. The examiner's lines are fixed text, so a
    practice never calls the AI panel; in live mode it costs only her voice and the speech recognizer. *@
@@ -87,7 +87,7 @@
         @* The talking examiner's own lines (voice-room.js, examiner-gaze.js) in the page's language (GAD-T606). *@
         <UiTextData Prefix="examRoom.js." />
         <VoiceRoom SessionId="practice.Id" VoiceFromAssignment="Assignment" TurnIndex="practice.Turn" Question="@practice.Line" CanAnswer="CanAnswer"
-                   Active="voiceOn" ActiveChanged="OnVoiceActive" OnAnswer="OnAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaks" Pondering="pondering" />
+                   Active="voiceOn" ActiveChanged="OnVoiceActive" OnAnswer="OnAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaks" Pondering="pondering" AllowWaitAbTest="false" />
 
         <section class="panel wide exam-card practice-card" aria-labelledby="practice-step-title">
             @if (!voiceOn && !practice.IsFinished)
@@ -199,8 +199,8 @@
     }
 
     /// <summary>
-    /// A spoken answer, taken as heard as in an exam (GAD-T405): the examiner "thinks" for a moment (her filler line and the
-    /// typing sound, GAD-T290/GAD-T409/GAD-T502), then moves to the next step. The words are only checked for "I don't know", then dropped.
+    /// A spoken answer, taken as heard as in an exam (GAD-T405): the examiner "thinks" for a moment (her thinking gesture and a short
+    /// line, GAD-T559; never the typing arm of the wait A/B test, GAD-T627), then moves to the next step. The words are only checked for "I don't know", then dropped.
     /// </summary>
     /// <remarks>Returns whether the answer was taken (GAD-T473): not taken, the browser keeps the words and sends them again once
     /// an answer is wanted, or drops them when the practice has moved to another step.</remarks>

@@ -105,7 +105,7 @@ public sealed class PracticeInterview
             + "That's just me taking a moment, the way people do. It says nothing about how your answer went. "
             + "Next: not knowing. Sometimes I'll ask something you can't answer. Saying I don't know is honest, and it's fine. "
             + "Try it now. What is the capital city of Burkina Faso? If you're not sure, just say I don't know.",
-        [EyeContact] = "Now, eye contact. While you answer, look at me, as you would with a person. There's no need to stare. "
+        [EyeContact] = "Now, eye contact. While you answer, just talk to me the way you would with a person. There's no need to stare. "
             + "Your camera checks this on your device only. No video is recorded or sent. "
             + "Looking away to think is normal: nothing happens while you work out your answer, and short glances while you talk are fine. "
             + "Only if you look off the screen for a long time while you speak, I tilt my head a little, the screen around me dims slightly "
@@ -187,7 +187,7 @@ public sealed class PracticeInterview
             + "그건 사람들이 그러듯 제가 잠시 생각하는 것일 뿐, 답이 어땠는지와는 아무 관계가 없어요. "
             + "다음은 모를 때예요. 가끔은 답할 수 없는 질문을 할 수도 있어요. 잘 모르겠다고 말하는 건 솔직한 답이고, 괜찮아요. "
             + "지금 해 볼까요? 부르키나파소의 수도는 어디일까요? 잘 모르겠으면 그냥 잘 모르겠어요라고 말해 주세요.",
-        [EyeContact] = "이제 시선 맞추기예요. 답하는 동안에는 사람과 이야기하듯 저를 봐 주세요. 뚫어지게 볼 필요는 없어요. "
+        [EyeContact] = "이제 시선 맞추기예요. 답하는 동안에는 사람과 이야기하듯 편하게 말씀해 주세요. 뚫어지게 볼 필요는 없어요. "
             + "카메라는 이 기기 안에서만 확인하고, 영상은 기록되거나 전송되지 않아요. "
             + "생각하느라 다른 곳을 보는 건 자연스러운 일이에요. 답을 생각하는 동안에는 아무 일도 없고, 말하다가 잠깐 시선을 돌려도 괜찮아요. "
             + "말하는 중에 화면 밖을 오래 볼 때만, 제가 고개를 살짝 기울이고, 제 주변 화면이 살짝 어두워졌다가 다시 보면 바로 돌아와요. "

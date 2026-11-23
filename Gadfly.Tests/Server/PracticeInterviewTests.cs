@@ -52,6 +52,9 @@ public class PracticeInterviewTests
             .Concat(PracticeInterview.Steps.Concat(PracticeInterview.KoreanSteps).SelectMany(s => s.Points.Append(s.Title))).ToList();
         string[] old = ["pages turning", "Please look at the examiner", "screen slowly fades", "screen fade", "시험관을 봐 주세요", "흐려", "조용한 소리"];
         foreach (var o in old) Assert.That(all, Has.None.Contains(o), o);
+        // GAD-T627: no command to look at her, in any language (docs/research/attention-and-gaze.md; GAD-T561/T605).
+        foreach (var o in new[] { "look at me", "저를 봐", "míreme", "mírame" })
+            Assert.That(all.Any(l => l.Contains(o, StringComparison.OrdinalIgnoreCase)), Is.False, o);
         Assert.That(all.Any(l => l.Contains("glance aside")), Is.True);
         Assert.That(PracticeInterview.ThinkingPause, Is.GreaterThan(Gadfly.Server.Voice.ExaminerFiller.FirstAfter + TimeSpan.FromSeconds(2)));
     }

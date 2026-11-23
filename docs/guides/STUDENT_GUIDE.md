@@ -80,7 +80,7 @@ inside the exam room or the practice interview.
 
 At the top of **My exams** is **Meet your examiner (practice)**, a five-minute run-through with the talking examiner,
 open at any time, even before you have an exam. The examiner has you try answering out loud, saying "I don't know", keeping eye
-contact (and seeing the screen fade), and what happens if your microphone or camera stops. Nothing from it is kept,
+contact (the gentle reminders), her short thinking pause, and what happens if your microphone or camera stops. Nothing from it is kept,
 graded or counted as an attempt. See [Practice interview](practice-interview.md).
 
 ## The get-ready page

@@ -44,7 +44,7 @@ for you; nothing is saved).
 ## During the exam, remember
 
 - Speak in your own words. Pausing to think is fine: start talking again and the answer continues.
-- Look at the examiner while you answer. If the screen fades, just look back.
+- Look at the examiner while you answer. Looking away to think is normal; if you look away from the screen for a long while, the examiner tilts her head, then the space around her dims slightly (it clears as soon as you look back), then at most once she says a warm line at a pause.
 - "I don't know" is an honest answer, and a better one than a guess dressed up.
 - Each answer is taken as heard: there is no read-back or do-over, so finish your thought before the countdown sends it.
 - If the exam pauses, fix what it says and press **Try again**. The clock stops for up to 10 minutes in all.

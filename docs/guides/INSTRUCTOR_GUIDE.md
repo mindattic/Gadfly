@@ -45,7 +45,7 @@ typing; only staff can grant typed answers, as an accommodation (see [Accommodat
    each answer is taken as heard, with no read-back, correction or do-over (the words the recognizer was unsure of are
    marked for your review instead). They see the topic, a countdown and "Topics finished X
    of Y", never scores. They can say or press **I don't know**.
-4. While answering, they keep eye contact with the examiner; looking away for a while fades the screen (see
+4. While answering, they keep eye contact with the examiner; looking away to think is fine; only a long look off-screen while speaking brings gentle reminders (see
    [Eye contact and gentle reminders](eye-contact-and-the-screen-fade.md)).
 5. If the microphone, camera or connection stops, the exam pauses and the clock stops, for up to 10 minutes in all.
 6. The exam ends when every objective is closed, the question limit is reached, time runs out, or they press
@@ -224,7 +224,7 @@ awaiting grading or release is counted but never named.
 | Accommodation | Where | Effect |
 |---|---|---|
 | **Extra time** | **Extra time (accommodation)** when assigning | Multiplies the time limit, and lengthens the pause before an answer is taken as finished. |
-| **Eye contact not expected** | **Declare accommodation** / **Withdraw** in the **Eye contact** column | The screen doesn't fade and the examiner doesn't ask the student to look at it (face presence is still noticed). Applies from their next answer. Use it for, for example, autism, low vision, nystagmus or a cultural norm. |
+| **Eye contact not expected** | **Declare accommodation** / **Withdraw** in the **Eye contact** column | The examiner's head tilt, the slight dim and her warm line don't happen (face presence is still noticed). Applies from their next answer. Use it for, for example, autism, low vision, nystagmus or a cultural norm. |
 | **Typed answers** | **Grant typed answers** / **Withdraw** in the **Answers** column | The student types each answer instead of speaking it; the examiner still speaks the questions, the camera stays on and the eye-contact check still applies. Typed answers are marked as typed for reviewers, and a paste into the answer box is noted for review. Only for a documented speech, hearing or anxiety need. Applies the next time the student opens the exam. |
 | **Lives in the EU/EEA** | **Mark as EU/EEA** / **Unmark** in **Lives in EU/EEA** | Voice measurements are off for this student unless your organization turned them on for everyone. |
 
