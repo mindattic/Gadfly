@@ -30,7 +30,7 @@
         @if (started)
         {
             <div class="exam-bar">
-                <PracticeGaze Practice="practice" />
+                <PracticeGaze Practice="practice" MaleExaminer="maleExaminer" />
             </div>
             <div class="exam-status">
                 <span class="timer" role="timer" aria-live="off" title="@UiLanguage["practice.clockTitle"]">@Format(practice.Clock.Remaining(Clock.GetUtcNow()))</span>

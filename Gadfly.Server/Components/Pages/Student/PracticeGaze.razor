@@ -11,8 +11,6 @@
 @inject IJSRuntime JS
 @inject ILogger<PracticeGaze> Log
 @inject Gadfly.Server.Localization.UiText Ui
-@inject VoiceSettings VoiceConfig
-@inject IWebHostEnvironment Env
 
 <HeadContent><link rel="stylesheet" href="examiner-gaze.css" /></HeadContent>
 
@@ -30,10 +28,16 @@
 @code {
     [Parameter, EditorRequired] public PracticeInterview Practice { get; set; } = default!;
 
-    private bool started, maleExaminer;
+    /// <summary>
+    /// The practice's examiner is the male one (GAD-T672): PracticePage resolves it once, with the assignment's fixed examiner, so the
+    /// remarks' pronouns match the examiner actually shown rather than the student's own pick alone.
+    /// </summary>
+    [Parameter] public bool MaleExaminer { get; set; }
 
-    /// <summary>The page's language, with the pronouns of the examiner the student chose (GAD-T606).</summary>
-    private ExamRoomText T => new(Ui, maleExaminer);
+    private bool started;
+
+    /// <summary>The page's language, with the pronouns of the practice's examiner (GAD-T606, GAD-T672).</summary>
+    private ExamRoomText T => new(Ui, MaleExaminer);
     private Guid user;
     private IJSObjectReference? module;
     private DotNetObjectReference<PracticeGaze>? self;
@@ -43,11 +47,6 @@
     {
         if (!firstRender || started) return;
         started = true;
-        if (await ExamRoomText.MaleExaminerAsync(JS, ExaminerCatalog.For(VoiceConfig, Env.WebRootPath), null, null, stop.Token))
-        {
-            maleExaminer = true;
-            StateHasChanged();
-        }
         if (Tenant.UserId is not { } u) return;
         user = u;
         try
