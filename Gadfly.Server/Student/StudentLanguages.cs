@@ -118,10 +118,14 @@ public static class StudentLanguages
     /// <summary>The sentence read for voice calibration in one language: a pangram, with its word and syllable counts.</summary>
     public sealed record CalibrationText(string Language, string Text, int Words, int Syllables);
 
-    /// <summary>The calibration sentence per language: English "The quick brown fox…", Korean "다람쥐 헌 쳇바퀴에 타고파" (each Hangul block a syllable).</summary>
+    /// <summary>
+    /// The calibration sentence per language: English "The quick brown fox…", Korean "다람쥐 헌 쳇바퀴에 타고파" (each Hangul block a
+    /// syllable), Spanish "El veloz murciélago hindú comía feliz cardillo y kiwi." (GAD-T612: 9 words, 20 syllables).
+    /// </summary>
     public static CalibrationText CalibrationFor(string language) => ExamLanguage.Normalize(language) switch
     {
         ExamLanguage.Korean => new(ExamLanguage.Korean, "다람쥐 헌 쳇바퀴에 타고파.", 4, 11),
+        ExamLanguage.Spanish => new(ExamLanguage.Spanish, "El veloz murciélago hindú comía feliz cardillo y kiwi.", 9, 20),
         _ => new(ExamLanguage.English, "The quick brown fox jumps over the lazy dog.", 9, 11),
     };
 

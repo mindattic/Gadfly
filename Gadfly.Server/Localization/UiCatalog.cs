@@ -17,9 +17,11 @@ public sealed class UiCatalog
     public const string English = "en";
     /// <summary>Korean (GAD-T526): the first translated language.</summary>
     public const string Korean = "ko";
+    /// <summary>Spanish (GAD-T596, GAD-T612): neutral Latin American Spanish, the student addressed as usted.</summary>
+    public const string Spanish = "es";
 
     /// <summary>The UI languages, in the order a picker lists them.</summary>
-    public static readonly IReadOnlyList<string> Languages = [English, Korean];
+    public static readonly IReadOnlyList<string> Languages = [English, Korean, Spanish];
 
     private readonly FrozenDictionary<string, FrozenDictionary<string, string>> byLanguage;
 
@@ -52,6 +54,7 @@ public sealed class UiCatalog
     public static CultureInfo CultureFor(string? language) => Normalize(language) switch
     {
         Korean => CultureInfo.GetCultureInfo("ko-KR"),
+        Spanish => CultureInfo.GetCultureInfo("es-419"),   // Latin American Spanish dates and numbers
         _ => CultureInfo.GetCultureInfo("en-US"),
     };
 
@@ -59,6 +62,7 @@ public sealed class UiCatalog
     public static string NativeName(string? language) => Normalize(language) switch
     {
         Korean => "한국어",
+        Spanish => "Español",
         _ => "English",
     };
 
