@@ -18,6 +18,7 @@ public static class GradingSetup
         services.AddScoped<PanelGovernanceService>();   // calibration gate and double-marking settings (GAD-T427, GAD-T428)
         services.AddScoped<DoubleMarkingService>();   // blind second marking and the in-app calibration set (GAD-T428)
         services.AddScoped<SelfPreferenceService>();   // graders vs. the authors of the questions (GAD-T431)
+        services.AddScoped<ProvisionalAgreementService>();   // the live turn's fast model vs. the full panel (GAD-T645)
         services.AddScoped<BiasProbeService>();   // panel and human bias probes, started by a person (GAD-T432)
         services.AddJobHandler<BiasProbeJob>();
         services.AddScoped<ClassSummaryService>();   // class summary PDF for instructors (GAD-T311/GAD-T378)
