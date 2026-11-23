@@ -586,8 +586,9 @@ counters above.
   `examiner-m`; an unknown id fixes nothing); otherwise the student chooses on the get-ready page, remembered on the device
   (device-prefs.js `getExaminer`). The exam room resolves it again on the server (`ExaminerCatalog.Resolve`), so the browser's
   choice is only a preference among what the exam allows, and shows that examiner's model, portrait and portrait mouth. Each
-  examiner can have **his or her own voice**: in live mode the order is the exam's voice, then the examiner's own voice for the
-  exam language, then the organization's default, then the platform voice for the language. The male examiner's default is
+  examiner can have **his or her own voice**: in live mode the order is the exam's voice, then the student's chosen voice (see
+  [Making the examiner your own](#making-the-examiner-your-own-gad-t505-gad-t646-gad-t663-gad-t649-gad-t671)), then the examiner's
+  own voice for the exam language, then the organization's default, then the platform voice for the language. The male examiner's default is
   ElevenLabs' premade "Brian" (`nPczCjzI2devNBz1zQrb`: deep, calm and warm; premade voices speak Korean through
   `eleven_flash_v2_5`/`eleven_multilingual_v2`); the female keeps the platform voice. The model was built with MPFB like hers
   (`tools/examiner-m`, provenance in `assets/avatars/examiner-m.LICENSE.md`): same Mixamo bone names and frames, LeftEye/RightEye
@@ -596,6 +597,55 @@ counters above.
 - The transcript reaches Gadfly through the student's browser (server to browser to server), the same trust model as the
   existing `SessionHub.Answer`. The metrics and verification advice are recomputed on the server from the relayed words.
   A server-side tap on the recognizer (so the browser never carries the text) would need a hook in the speech library.
+
+## Making the examiner your own (GAD-T505, GAD-T646, GAD-T663, GAD-T649, GAD-T671)
+
+When the student chooses the examiner (the exam and organization don't fix one), the get-ready page's **Make the examiner your
+own** panel lets them change her or his voice, skin tone, hair colour, clothing and framing, so they sit an exam with someone they
+are comfortable speaking to. It is optional, never graded and never sent to graders or the AI panel.
+
+**Only bounded choices, never free text.** `Gadfly.Server/Student/ExaminerCustomization.cs` is a record of five values, each one of
+a fixed list (or null, the examiner's own default):
+
+| Choice | Values |
+|---|---|
+| Voice | An ElevenLabs premade voice from the examiner's allowlist (below). |
+| Skin tone | `light`, `medium-light`, `medium`, `medium-dark`, `dark` |
+| Hair colour | `black`, `dark-brown`, `brown`, `auburn`, `blonde`, `grey` |
+| Clothing | `navy-blazer`, `charcoal-suit`, `cardigan`, `white-shirt` (plain and professional, no logos or text) |
+| Framing | `head-and-shoulders` (default), `close`, `seated` |
+
+**Allowlisted voices.** Only ElevenLabs *premade* voices are offered, because they speak every language of the multilingual models
+(English, Korean and Spanish) and Gadfly has listened to them:
+
+- Female examiner: Rachel `21m00Tcm4TlvDq8ikWAM`, Sarah `EXAVITQu4vr4xnSDxMaL`, Charlotte `XB0fDUnXU5powFXDhCwa`, Alice
+  `Xb7hH8MSUJpSbSDYk0k2`, Matilda `XrExE9yKIg1WjnnlVkGX`, Lily `pFZP5JQG7iQjIQuC4Bku`.
+- Male examiner: Brian `nPczCjzI2devNBz1zQrb` (his default), Daniel `onwK4e9ZLuTAKqWW03F9`, George `JBFqnCBsd6RMkjVDRZzb`, Chris
+  `iP95p4xoKVk53GoZ742B`, Eric `cjVigY5qzO86Huf0OWal`, Liam `TX3LPaxmHKxFdv7VOQHJ`.
+
+A language can be given its own list per examiner (`LanguageVoices`; none yet). A voice is only ever offered for the examiner it
+belongs to, so his voices never speak for her. The get-ready preview speaks with the browser's own voice (the line is replayed when
+the voice changes); the chosen voice is heard in the exam room and the practice interview, in live mode only (mock mode's fake voice
+is unchanged). The voice order becomes: the exam's voice, then the student's chosen voice, then the examiner's own voice for the
+language, then the organization's default, then the platform voice. An exam that names its own voice therefore always keeps it.
+
+**Integrity limits.** Customization must never make the examiner something the gaze check (`examiner-gaze.js`, GAD-T240) or the
+student can't hold eye contact with:
+
+- The examiner stays a recognizably human face: no free colours, no masks, glasses, hats or props, nothing that covers the face.
+- Colour changes reach only the skin, hair and clothing materials (`avatar-look.js` `customLookOptions`): the chosen colour replaces
+  that part's blue and becomes its own inner glow. The eyes (sclera and iris), brows, lashes, lips, mouth and the silhouette rim are
+  never changed, so lip sync and the eyes read exactly as with the default look.
+- Every framing keeps the face and eyes in view (`FRAMINGS`: `upper`, `head`, `mid` on `<ma-avatar view>`). The portrait fallback
+  gets a bounded scale about her eyes (`--portrait-scale`, 1.15 close and 0.86 seated, never enough to crop the face), and the
+  moving portrait mouth follows that scale; in portrait mode the clothing colour is a tint band over the bottom of the portrait only.
+- When the exam or organization fixes the examiner (GAD-T504), there is no panel and the examiner is shown exactly as configured.
+
+**Trust.** The choice is remembered on the device with the examiner (device-prefs.js `setExaminer`/`getExaminer`), so the server
+treats it as a preference: `ExaminerCustomization.Validate` drops any value not on a list (compared ignoring case and spaces,
+returned in its canonical form) on the get-ready page and again in the exam room (`ExaminerCatalog.Resolve`), and the voice is
+checked once more against the exam language (`ResolvedExaminer.VoiceIdFor`) before it reaches the student's voice grant, which
+`VoiceHubFilter` enforces on every `Speak`. Nothing about the customization is stored on the server or in the session record.
 
 ## Voice quality vs. latency (GAD-T415, GAD-T616, GAD-T617)
 

@@ -99,6 +99,18 @@ seguimiento a partir de sus propias palabras.
   la IA examinadora de este examen, la página solo muestra esa.
 - **Escuche su saludo.** La muestra usa la voz de su navegador, y las palabras se iluminan a medida que se dicen. En el examen,
   la IA examinadora habla con su propia voz.
+- **Personalice a la IA examinadora (opcional).** Debajo de la muestra puede cambiar su **voz**, **tono de piel**, **color de
+  cabello**, **vestimenta** y **encuadre** (cabeza y hombros, de cerca o plano medio), para hacer el examen con alguien con
+  quien se sienta cómodo hablando. Elija entre las opciones que se muestran; **Restablecer valores predeterminados** lo deja
+  todo como estaba. Al elegir una voz, el saludo vuelve a sonar, todavía con la voz de su navegador: la voz elegida se oye en
+  la sala del examen y en la práctica. Sus elecciones se recuerdan en este dispositivo junto con la IA examinadora y **nunca
+  afectan su calificación**; quienes califican no las ven.
+  - **Lo que no cambia, y por qué.** Solo cambian los colores de la piel, el cabello y la ropa. Los ojos, las cejas, los labios
+    y la boca nunca cambian, y todos los encuadres dejan la cara y los ojos a la vista, así que siempre puede mirar a la IA
+    examinadora a los ojos y la comprobación del contacto visual funciona igual que siempre. No hay máscaras, sombreros, lentes
+    ni nada que cubra la cara, y cada voz ha sido revisada en inglés, coreano y español.
+  - Si su docente o su organización eligió la IA examinadora de este examen, aparece tal como se configuró y este panel no se
+    muestra. Si el examen tiene su propia voz, se usa esa voz en lugar de la que usted eligió.
 - **Haga un examen de práctica gratis.** El enlace abre la [practice interview](practice-interview.md) (en inglés) con la voz
   de la IA examinadora de este examen. No se califica, no tiene límite y no se guarda nada. Un ensayo completo es la mejor
   manera de calmar los nervios.

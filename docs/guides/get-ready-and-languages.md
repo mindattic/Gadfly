@@ -91,6 +91,17 @@ words.
   exam, the page shows only that one.
 - **Hear a hello.** The preview uses your browser's own voice, with the words lighting up as they are said. In the exam the
   examiner speaks with their own voice.
+- **Make the examiner your own (optional).** Under the preview you can change the examiner's **voice**, **skin tone**, **hair
+  colour**, **clothing** and **framing** (head and shoulders, close, or seated), so you sit the exam with someone you are
+  comfortable talking to. Pick from the choices shown; **Reset to default** puts everything back. When you pick a voice the
+  hello plays again, still in your browser's voice: the voice you chose is heard in the exam room and the practice run. Your
+  choices are remembered on this device with your examiner and **never affect your grade**; graders don't see them.
+  - **What stays the same, and why.** Only the skin, hair and clothing colours change. The examiner's eyes, eyebrows, lips and
+    mouth are never changed, and every framing keeps the face and eyes in full view, so you can always look the examiner in the
+    eye and the eye-contact check works exactly as usual. There are no masks, hats, glasses or anything that covers the face,
+    and every voice is one Gadfly has checked in English, Korean and Spanish.
+  - If your instructor or organization has set the examiner for this exam, the examiner appears exactly as they set it and
+    this panel is not shown. If the exam has its own voice, that voice is used instead of the one you chose.
 - **Try a free practice run.** The link opens the [practice interview](practice-interview.md) with this exam's own examiner
   voice. It is ungraded, unlimited and nothing from it is kept. A full rehearsal is the best way to calm nerves.
 
