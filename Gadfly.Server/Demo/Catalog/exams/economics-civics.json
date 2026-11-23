@@ -1,0 +1,432 @@
+// Catalog exams: Economics and Civics (GAD-T682). Format as in life-sciences.json; ko and es texts are approved translations.
+[
+  {
+    "title": "Supply, Demand and Market Equilibrium",
+    "category": "economics-civics",
+    "subject": "Economics",
+    "topic": "Markets",
+    "instructions": "The examiner will talk with you about supply, demand and how prices are set in a market. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "A market brings together buyers and sellers of a good. The law of demand states that, other things equal, buyers want to purchase a smaller quantity of a good when its price rises. The law of supply states that, other things equal, sellers offer a larger quantity when the price rises, because higher prices make production more profitable.",
+      "A change in the good's own price moves buyers and sellers along their curves; this is a change in quantity demanded or quantity supplied. A change in anything else shifts the whole curve. Demand shifts with income, tastes, the prices of substitutes and complements, expectations and the number of buyers. Supply shifts with input costs, technology, expectations and the number of sellers.",
+      "The equilibrium price is the price at which quantity demanded equals quantity supplied. Above it there is a surplus, and sellers cut prices to clear unsold goods; below it there is a shortage, and buyers bid prices up. If demand rises while supply stays the same, both the equilibrium price and quantity rise. If supply rises while demand stays the same, the price falls and the quantity rises.",
+      "Governments sometimes set legal limits on prices. A price ceiling set below the equilibrium price, such as a cap on rents, creates a shortage because more is demanded than supplied at the capped price. A price floor set above equilibrium, such as a minimum price for a crop, creates a surplus. A ceiling above equilibrium or a floor below it has no effect, because it does not bind."
+    ],
+    "objectives": [
+      { "key": "laws", "title": "Explain the laws of demand and supply", "description": "States both laws and gives the reason behind each.",
+        "concept": "Laws of demand and supply", "definition": "Other things equal, quantity demanded falls and quantity supplied rises as a good's price rises.",
+        "facts": ["Quantity demanded falls as price rises, other things equal.", "Quantity supplied rises as price rises, other things equal.", "Higher prices make production more profitable, so sellers offer more."],
+        "misconceptions": ["When the price of a good rises, demand for it rises.", "The laws hold even when income or tastes change at the same time."] },
+      { "key": "shifts", "title": "Distinguish shifts from movements along a curve", "description": "Explains which changes move along a curve and which shift it, with examples.",
+        "concept": "Shifts versus movements", "definition": "A change in the good's own price moves along a curve; a change in any other factor shifts the curve.",
+        "facts": ["A change in the good's own price changes quantity demanded, not demand.", "Income, tastes and the prices of related goods shift demand.", "Input costs and technology shift supply."],
+        "misconceptions": ["A fall in a good's price shifts its demand curve to the right."] },
+      { "key": "equilibrium", "title": "Explain equilibrium and how it changes", "description": "Explains why price moves toward equilibrium and predicts the effect of a shift.",
+        "concept": "Market equilibrium", "definition": "The price at which quantity demanded equals quantity supplied; surpluses and shortages push the market toward it.",
+        "facts": ["At equilibrium, quantity demanded equals quantity supplied.", "A surplus pushes the price down; a shortage pushes it up.", "A rise in demand raises both equilibrium price and quantity.", "A rise in supply lowers price and raises quantity."],
+        "misconceptions": ["At equilibrium every buyer who wants the good gets it at any price."] },
+      { "key": "price-controls", "title": "Explain the effects of price ceilings and floors", "description": "Says when a control binds and what shortage or surplus it causes.",
+        "concept": "Price controls", "definition": "A binding ceiling below equilibrium causes a shortage; a binding floor above equilibrium causes a surplus.",
+        "facts": ["A price ceiling below equilibrium causes a shortage.", "A price floor above equilibrium causes a surplus.", "A control that does not bind has no effect."],
+        "misconceptions": ["A price ceiling always makes a good more available to buyers."] }
+    ],
+    "translations": {
+      "ko": { "title": "수요, 공급과 시장 균형",
+        "instructions": "시험관이 수요와 공급, 그리고 시장에서 가격이 어떻게 정해지는지에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "laws": "수요의 법칙과 공급의 법칙 설명하기", "shifts": "곡선의 이동과 곡선 위의 이동 구별하기", "equilibrium": "균형과 그 변화 설명하기", "price-controls": "가격 상한제와 가격 하한제의 효과 설명하기" } },
+      "es": { "title": "Oferta, demanda y equilibrio de mercado",
+        "instructions": "El examinador conversará con usted sobre la oferta, la demanda y cómo se fijan los precios en un mercado. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "laws": "Explicar las leyes de la demanda y de la oferta", "shifts": "Distinguir los desplazamientos de los movimientos a lo largo de una curva", "equilibrium": "Explicar el equilibrio y cómo cambia", "price-controls": "Explicar los efectos de los precios máximos y mínimos" } }
+    }
+  },
+  {
+    "title": "Market Structures and Competition",
+    "category": "economics-civics",
+    "subject": "Economics",
+    "topic": "Market structures",
+    "instructions": "The examiner will talk with you about how the number of firms and the kind of product shape competition in a market. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Economists sort markets into structures by the number of sellers, how alike their products are, and how easily new firms can enter. The four standard structures are perfect competition, monopolistic competition, oligopoly and monopoly.",
+      "In perfect competition many small firms sell an identical product, buyers and sellers are well informed, and entry and exit are free. No single firm can affect the market price, so each is a price taker. If firms earn economic profits, new firms enter and drive the price down until, in the long run, economic profit is zero and the price equals the lowest average cost of production.",
+      "A monopoly is a single seller of a product with no close substitutes, protected by barriers to entry such as control of a key resource, patents, government licenses or large economies of scale. A monopolist is a price maker: it chooses the output where marginal revenue equals marginal cost and charges the highest price buyers will pay for that output. Compared with a competitive market it produces less and charges more, causing a deadweight loss, a loss of gains from trade that no one receives.",
+      "In monopolistic competition many firms sell differentiated products, such as restaurants or clothing brands, so each has some control over its price, but free entry pushes long-run economic profit toward zero. In an oligopoly a few large firms dominate, such as in commercial aircraft manufacturing. Because each firm's best choice depends on what its rivals do, oligopolists are interdependent. They can gain by colluding to restrict output and raise prices, but each member of a cartel is tempted to cheat by producing more, and in many countries such agreements are illegal."
+    ],
+    "objectives": [
+      { "key": "perfect-competition", "title": "Explain perfect competition", "description": "Names its conditions and explains why long-run economic profit is zero.",
+        "concept": "Perfect competition", "definition": "Many firms sell an identical product with free entry, so each is a price taker and long-run economic profit is zero.",
+        "facts": ["Firms sell an identical product and are price takers.", "Entry and exit are free.", "Entry by new firms drives long-run economic profit to zero."],
+        "misconceptions": ["Zero economic profit means the firm's owners earn nothing at all."] },
+      { "key": "monopoly", "title": "Explain how a monopoly sets price and output", "description": "Names barriers to entry and compares monopoly output and price with competition.",
+        "concept": "Monopoly", "definition": "A single seller protected by barriers to entry restricts output and raises price, causing a deadweight loss.",
+        "facts": ["Barriers to entry include patents, licenses, key resources and economies of scale.", "A monopolist produces where marginal revenue equals marginal cost.", "A monopoly produces less and charges more than a competitive market.", "The lost gains from trade are a deadweight loss."],
+        "misconceptions": ["A monopolist can charge any price it likes and still sell the same quantity."] },
+      { "key": "oligopoly", "title": "Explain interdependence and collusion in oligopoly", "description": "Explains why oligopolists watch rivals and why cartels tend to break down.",
+        "concept": "Oligopoly", "definition": "A few dominant firms whose best choices depend on each other's, with an incentive to collude and an incentive to cheat.",
+        "facts": ["A few firms dominate an oligopoly.", "Each firm's best choice depends on its rivals' choices.", "Collusion can raise joint profit, but each member is tempted to cheat."],
+        "misconceptions": ["Oligopoly firms always cooperate because it is best for all of them."] },
+      { "key": "monopolistic-competition", "title": "Explain monopolistic competition", "description": "Explains how product differentiation gives price power and why entry limits profit.",
+        "concept": "Monopolistic competition", "definition": "Many firms sell differentiated products, giving each some price power, while free entry pushes long-run profit toward zero.",
+        "facts": ["Products are differentiated, such as restaurants or brands.", "Each firm has some control over its price.", "Free entry pushes long-run economic profit toward zero."],
+        "misconceptions": ["Monopolistic competition is the same as monopoly."] }
+    ],
+    "translations": {
+      "ko": { "title": "시장 구조와 경쟁",
+        "instructions": "시험관이 기업의 수와 상품의 성격이 시장의 경쟁을 어떻게 형성하는지에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "perfect-competition": "완전 경쟁 설명하기", "monopoly": "독점 기업이 가격과 생산량을 정하는 방식 설명하기", "oligopoly": "과점의 상호 의존성과 담합 설명하기", "monopolistic-competition": "독점적 경쟁 설명하기" } },
+      "es": { "title": "Estructuras de mercado y competencia",
+        "instructions": "El examinador conversará con usted sobre cómo el número de empresas y el tipo de producto determinan la competencia en un mercado. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "perfect-competition": "Explicar la competencia perfecta", "monopoly": "Explicar cómo un monopolio fija el precio y la producción", "oligopoly": "Explicar la interdependencia y la colusión en el oligopolio", "monopolistic-competition": "Explicar la competencia monopolística" } }
+    }
+  },
+  {
+    "title": "Comparative Advantage and Trade",
+    "category": "economics-civics",
+    "subject": "Economics",
+    "topic": "International trade",
+    "instructions": "The examiner will talk with you about opportunity cost, comparative advantage and why people and countries trade. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Every choice has an opportunity cost: the value of the best alternative given up. A worker who spends an hour making cloth gives up whatever else that hour could have produced. Opportunity cost, not money price alone, is the key to understanding why trade pays.",
+      "A producer has an absolute advantage in a good if it can make more of it with the same resources. It has a comparative advantage if it can make the good at a lower opportunity cost than others. David Ricardo set out the idea in 1817 using England and Portugal trading cloth and wine: Portugal could make both goods with less labor, yet both countries gained by specializing and trading.",
+      "Suppose a worker in country A can make 10 tons of wheat or 5 bolts of cloth in a month, and a worker in country B can make 4 tons of wheat or 4 bolts of cloth. A has an absolute advantage in both goods. But one bolt of cloth costs A 2 tons of wheat and costs B only 1 ton, so B has the comparative advantage in cloth and A has it in wheat. If each specializes in its comparative-advantage good and they trade at a price between 1 and 2 tons of wheat per bolt, both can consume more than they could alone.",
+      "Gains from trade for a country as a whole do not mean everyone gains. When a country opens to imports, consumers and exporting industries usually benefit, while workers and firms in industries that compete with imports can lose. Whether and how to help those who lose is a policy question that the theory itself does not settle."
+    ],
+    "objectives": [
+      { "key": "opportunity-cost", "title": "Explain opportunity cost", "description": "Defines opportunity cost and applies it to a production choice.",
+        "concept": "Opportunity cost", "definition": "The value of the best alternative given up when a choice is made.",
+        "facts": ["Every choice has an opportunity cost.", "Opportunity cost is the best alternative given up, not every alternative.", "Producing more of one good means producing less of another."],
+        "misconceptions": ["Opportunity cost is just the money price paid."] },
+      { "key": "absolute-comparative", "title": "Distinguish absolute and comparative advantage", "description": "Defines both and identifies them in a numerical example.",
+        "concept": "Absolute and comparative advantage", "definition": "Absolute advantage is producing more with the same resources; comparative advantage is producing at a lower opportunity cost.",
+        "facts": ["Absolute advantage means more output from the same resources.", "Comparative advantage means a lower opportunity cost.", "A producer with an absolute advantage in everything still lacks a comparative advantage in something."],
+        "misconceptions": ["A country with an absolute advantage in every good has nothing to gain from trade."] },
+      { "key": "gains-from-trade", "title": "Explain how specialization and trade create gains", "description": "Works an example and says what range of trading prices benefits both sides.",
+        "concept": "Gains from trade", "definition": "When each side specializes in its comparative-advantage good and trades at a price between their opportunity costs, both can consume more.",
+        "facts": ["Each side should specialize in the good with the lower opportunity cost.", "Trade benefits both sides at a price between their opportunity costs.", "Ricardo used England and Portugal trading cloth and wine."],
+        "misconceptions": ["Trade is a zero-sum game in which one side's gain is the other's loss."] },
+      { "key": "distribution", "title": "Explain who gains and who loses from trade", "description": "Explains why national gains can coexist with losses for some groups.",
+        "concept": "Distribution of gains from trade", "definition": "Trade can raise a country's total income while some groups, such as import-competing workers, lose.",
+        "facts": ["Consumers and exporting industries usually gain from trade.", "Import-competing workers and firms can lose.", "Overall gains do not mean every individual gains."],
+        "misconceptions": ["If trade benefits a country overall, it benefits every person in it."] }
+    ],
+    "translations": {
+      "ko": { "title": "비교 우위와 무역",
+        "instructions": "시험관이 기회비용, 비교 우위, 그리고 사람과 국가가 왜 교역하는지에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "opportunity-cost": "기회비용 설명하기", "absolute-comparative": "절대 우위와 비교 우위 구별하기", "gains-from-trade": "특화와 교역이 이득을 만드는 방식 설명하기", "distribution": "무역으로 이득을 보는 쪽과 손해를 보는 쪽 설명하기" } },
+      "es": { "title": "Ventaja comparativa y comercio",
+        "instructions": "El examinador conversará con usted sobre el costo de oportunidad, la ventaja comparativa y por qué las personas y los países comercian. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "opportunity-cost": "Explicar el costo de oportunidad", "absolute-comparative": "Distinguir la ventaja absoluta de la ventaja comparativa", "gains-from-trade": "Explicar cómo la especialización y el comercio generan ganancias", "distribution": "Explicar quién gana y quién pierde con el comercio" } }
+    }
+  },
+  {
+    "title": "Measuring the Economy: GDP",
+    "category": "economics-civics",
+    "subject": "Economics",
+    "topic": "Macroeconomic measurement",
+    "instructions": "The examiner will talk with you about how gross domestic product is defined, measured and used. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Gross domestic product, or GDP, is the market value of all final goods and services produced within a country in a given period, usually a quarter or a year. It is the most widely used measure of the size of an economy.",
+      "Only final goods count. The steel and tires sold to a carmaker are intermediate goods: their value is already included in the price of the finished car, so counting them separately would count the same production twice. GDP also leaves out sales of used goods, which were counted when first produced, purely financial transactions such as buying shares, and government transfer payments such as pensions, because none of these is new production.",
+      "GDP can be measured by adding up spending on final output: consumption by households (C), investment by firms in equipment, buildings and inventories (I), government purchases of goods and services (G), and net exports, exports minus imports (NX). So GDP = C + I + G + NX. Imports are subtracted because they were produced in other countries.",
+      "Nominal GDP values output at current prices, so it can rise just because prices rise. Real GDP values output at the prices of a fixed base year, so it changes only when the quantity of output changes; growth in real GDP is the usual measure of economic growth. GDP per person is a rough guide to average living standards, but it leaves out unpaid household work, leisure, environmental damage and how income is distributed."
+    ],
+    "objectives": [
+      { "key": "definition", "title": "Define GDP and explain what it excludes", "description": "States the definition and explains why intermediate goods, used goods and transfers are left out.",
+        "concept": "Gross domestic product", "definition": "The market value of all final goods and services produced within a country in a period.",
+        "facts": ["GDP counts final goods and services only.", "Intermediate goods are excluded to avoid double counting.", "Used goods, financial transactions and transfer payments are not new production."],
+        "misconceptions": ["GDP counts every sale made in the economy.", "Pension payments are part of government purchases in GDP."] },
+      { "key": "expenditure", "title": "Explain the expenditure approach", "description": "Names the four components and explains why imports are subtracted.",
+        "concept": "Expenditure approach", "definition": "GDP equals consumption plus investment plus government purchases plus net exports.",
+        "facts": ["GDP = C + I + G + NX.", "Investment means spending on equipment, buildings and inventories.", "Net exports are exports minus imports.", "Imports are subtracted because they were produced abroad."],
+        "misconceptions": ["Investment in GDP includes buying shares on the stock market."] },
+      { "key": "real-nominal", "title": "Distinguish real and nominal GDP", "description": "Explains why real GDP is used to measure growth.",
+        "concept": "Real and nominal GDP", "definition": "Nominal GDP uses current prices; real GDP uses base-year prices, so it changes only with quantities.",
+        "facts": ["Nominal GDP can rise just because prices rise.", "Real GDP holds prices at a base year.", "Growth in real GDP measures economic growth."],
+        "misconceptions": ["A rise in nominal GDP always means the economy produced more."] },
+      { "key": "limits", "title": "Explain the limits of GDP as a measure of well-being", "description": "Names what GDP per person leaves out.",
+        "concept": "Limits of GDP", "definition": "GDP per person roughly tracks living standards but omits non-market work, leisure, environmental costs and distribution.",
+        "facts": ["Unpaid household work is not counted.", "Leisure and environmental damage are not counted.", "GDP per person says nothing about how income is distributed."],
+        "misconceptions": ["Higher GDP per person proves that most people in a country are better off."] }
+    ],
+    "translations": {
+      "ko": { "title": "경제 측정: 국내총생산(GDP)",
+        "instructions": "시험관이 국내총생산이 어떻게 정의되고 측정되며 활용되는지에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "definition": "GDP를 정의하고 제외되는 것 설명하기", "expenditure": "지출 접근법 설명하기", "real-nominal": "실질 GDP와 명목 GDP 구별하기", "limits": "복지 척도로서 GDP의 한계 설명하기" } },
+      "es": { "title": "Medir la economía: el PIB",
+        "instructions": "El examinador conversará con usted sobre cómo se define, se mide y se usa el producto interno bruto. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "definition": "Definir el PIB y explicar qué excluye", "expenditure": "Explicar el enfoque del gasto", "real-nominal": "Distinguir el PIB real del PIB nominal", "limits": "Explicar los límites del PIB como medida de bienestar" } }
+    }
+  },
+  {
+    "title": "Inflation and the Price Level",
+    "category": "economics-civics",
+    "subject": "Economics",
+    "topic": "Inflation",
+    "instructions": "The examiner will talk with you about what inflation is, how it is measured, what causes it and whom it affects. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "Inflation is a sustained rise in the general level of prices, so that each unit of money buys less. A rise in the price of one good, such as fuel, is not by itself inflation; inflation means prices across the economy are rising on average. A sustained fall in the general price level is deflation.",
+      "Inflation is commonly measured with a consumer price index, or CPI. Statisticians price a fixed basket of goods and services that a typical household buys and compare its cost with its cost in a base year. The inflation rate is the percentage change in the index over a period: if the CPI rises from 200 to 206 in a year, inflation is 3 percent.",
+      "In the short run, inflation can rise when total spending grows faster than the economy's capacity to produce, called demand-pull inflation, or when production costs such as energy rise sharply, called cost-push inflation. Over the long run, economists widely agree that sustained high inflation results from the money supply growing much faster than real output. Extreme cases, with prices rising more than 50 percent a month, are called hyperinflation.",
+      "Inflation matters because nominal values, measured in money, can mislead. The real interest rate is approximately the nominal interest rate minus the inflation rate. Unexpected inflation transfers purchasing power from lenders to borrowers, because loans are repaid in money worth less than expected, and it hurts people whose incomes are fixed in money terms. Inflation also imposes costs of changing prices and makes planning harder."
+    ],
+    "objectives": [
+      { "key": "definition", "title": "Define inflation and deflation", "description": "Distinguishes a general rise in prices from a rise in one price.",
+        "concept": "Inflation", "definition": "A sustained rise in the general price level, which lowers the purchasing power of money.",
+        "facts": ["Inflation is a rise in the general price level, not one price.", "Inflation lowers the purchasing power of money.", "Deflation is a sustained fall in the general price level."],
+        "misconceptions": ["Any increase in the price of a single good is inflation."] },
+      { "key": "cpi", "title": "Explain how inflation is measured", "description": "Explains the CPI basket and computes an inflation rate.",
+        "concept": "Consumer price index", "definition": "The cost of a fixed basket of household goods and services relative to a base year; its percentage change is the inflation rate.",
+        "facts": ["The CPI prices a fixed basket of goods and services.", "It compares the basket's cost with a base year.", "The inflation rate is the percentage change in the index."],
+        "misconceptions": ["A CPI of 110 means prices rose 110 percent."] },
+      { "key": "causes", "title": "Explain the causes of inflation", "description": "Distinguishes demand-pull and cost-push and explains the long-run role of money.",
+        "concept": "Causes of inflation", "definition": "Excess spending or rising costs can raise inflation in the short run; sustained high inflation comes from money growing much faster than output.",
+        "facts": ["Demand-pull inflation comes from spending growing faster than capacity.", "Cost-push inflation comes from rising production costs.", "Sustained high inflation results from money growth far above output growth."],
+        "misconceptions": ["Printing more money makes a country richer without raising prices."] },
+      { "key": "effects", "title": "Explain who gains and loses from inflation", "description": "Uses real and nominal interest rates and explains effects on lenders, borrowers and fixed incomes.",
+        "concept": "Effects of inflation", "definition": "Unexpected inflation shifts purchasing power from lenders to borrowers and erodes fixed money incomes.",
+        "facts": ["The real interest rate is about the nominal rate minus inflation.", "Unexpected inflation helps borrowers and hurts lenders.", "People on fixed money incomes lose purchasing power."],
+        "misconceptions": ["Inflation hurts borrowers because they owe more money."] }
+    ],
+    "translations": {
+      "ko": { "title": "인플레이션과 물가 수준",
+        "instructions": "시험관이 인플레이션이 무엇인지, 어떻게 측정되는지, 원인은 무엇이며 누구에게 영향을 주는지에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "definition": "인플레이션과 디플레이션 정의하기", "cpi": "인플레이션 측정 방법 설명하기", "causes": "인플레이션의 원인 설명하기", "effects": "인플레이션으로 이득을 보는 쪽과 손해를 보는 쪽 설명하기" } },
+      "es": { "title": "La inflación y el nivel de precios",
+        "instructions": "El examinador conversará con usted sobre qué es la inflación, cómo se mide, qué la causa y a quién afecta. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "definition": "Definir la inflación y la deflación", "cpi": "Explicar cómo se mide la inflación", "causes": "Explicar las causas de la inflación", "effects": "Explicar quién gana y quién pierde con la inflación" } }
+    }
+  },
+  {
+    "title": "Central Banks and Monetary Policy",
+    "category": "economics-civics",
+    "subject": "Economics",
+    "topic": "Monetary policy",
+    "instructions": "The examiner will talk with you about what central banks do and how monetary policy affects the economy. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "A central bank manages a country's or a currency area's money and banking system. Most central banks are charged with keeping prices stable, often defined as a low inflation target such as 2 percent a year, and many are also asked to support employment and the stability of the financial system. Monetary policy is the central bank's use of interest rates and the money supply to pursue these goals. It is distinct from fiscal policy, which is government decisions about spending and taxation.",
+      "The main tool of most central banks is a short-term policy interest rate, the rate at which banks borrow and lend reserves overnight. The central bank steers it with tools such as open market operations: buying government bonds adds reserves to the banking system and pushes short-term rates down, while selling bonds drains reserves and pushes rates up. It can also change the interest rate it pays on banks' reserves.",
+      "Lower interest rates make borrowing cheaper, encouraging households and firms to spend and invest; this is expansionary policy, used when the economy is weak. Higher rates discourage borrowing and spending and are used to bring inflation down; this is contractionary policy. Monetary policy works with long and variable lags, often a year or more, so central banks must act on forecasts rather than wait for the full effect.",
+      "Many countries give their central banks operational independence from day-to-day politics. The reasoning is that elected officials may be tempted to stimulate the economy before an election at the cost of higher inflation later, and that a central bank trusted to keep inflation low can hold inflation expectations steady. Independent central banks remain accountable through their legal mandates, public reporting and appointments made by elected governments."
+    ],
+    "objectives": [
+      { "key": "goals", "title": "Explain the goals of a central bank", "description": "Names price stability and related goals and distinguishes monetary from fiscal policy.",
+        "concept": "Central bank mandate", "definition": "A central bank uses monetary policy mainly to keep prices stable, often alongside employment and financial stability.",
+        "facts": ["Price stability is a central goal, often a low inflation target.", "Many central banks also support employment and financial stability.", "Fiscal policy is government spending and taxation, not central bank action."],
+        "misconceptions": ["The central bank decides the government's taxes and spending."] },
+      { "key": "tools", "title": "Explain how a central bank changes interest rates", "description": "Explains the policy rate and how open market operations move it.",
+        "concept": "Monetary policy tools", "definition": "The central bank steers a short-term policy rate, for example by buying or selling bonds to change bank reserves.",
+        "facts": ["The policy rate is a short-term interest rate between banks.", "Buying bonds adds reserves and lowers short-term rates.", "Selling bonds drains reserves and raises rates."],
+        "misconceptions": ["When the central bank buys bonds, interest rates rise."] },
+      { "key": "transmission", "title": "Explain expansionary and contractionary policy", "description": "Traces how rate changes affect spending and inflation and why lags matter.",
+        "concept": "Monetary transmission", "definition": "Lower rates encourage borrowing and spending; higher rates restrain them and reduce inflation, with long and variable lags.",
+        "facts": ["Lower rates encourage borrowing, spending and investment.", "Higher rates are used to bring inflation down.", "Policy acts with long and variable lags, so it relies on forecasts."],
+        "misconceptions": ["A change in interest rates changes inflation the next day."] },
+      { "key": "independence", "title": "Explain why central banks are often independent", "description": "Gives the reasoning for independence and how accountability is kept.",
+        "concept": "Central bank independence", "definition": "Shielding monetary policy from short-term political pressure helps keep inflation and inflation expectations low, under a legal mandate.",
+        "facts": ["Short-term political pressure can favor stimulus at the cost of later inflation.", "A credible central bank keeps inflation expectations steady.", "Independent central banks stay accountable through mandates, reporting and appointments."],
+        "misconceptions": ["An independent central bank answers to no one."] }
+    ],
+    "translations": {
+      "ko": { "title": "중앙은행과 통화 정책",
+        "instructions": "시험관이 중앙은행이 하는 일과 통화 정책이 경제에 영향을 주는 방식에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "goals": "중앙은행의 목표 설명하기", "tools": "중앙은행이 금리를 바꾸는 방식 설명하기", "transmission": "확장적 통화 정책과 긴축적 통화 정책 설명하기", "independence": "중앙은행이 흔히 독립적인 이유 설명하기" } },
+      "es": { "title": "Los bancos centrales y la política monetaria",
+        "instructions": "El examinador conversará con usted sobre lo que hacen los bancos centrales y cómo la política monetaria afecta la economía. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "goals": "Explicar los objetivos de un banco central", "tools": "Explicar cómo un banco central modifica las tasas de interés", "transmission": "Explicar la política monetaria expansiva y la contractiva", "independence": "Explicar por qué los bancos centrales suelen ser independientes" } }
+    }
+  },
+  {
+    "title": "Externalities and Public Goods",
+    "category": "economics-civics",
+    "subject": "Economics",
+    "topic": "Market failure",
+    "instructions": "The examiner will talk with you about externalities, public goods and why markets sometimes fail to produce the best outcome. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "A market failure occurs when a market left to itself does not produce an efficient outcome. Two important sources of market failure are externalities and public goods.",
+      "An externality is a cost or benefit that falls on people outside a transaction. A factory whose smoke harms nearby residents creates a negative externality: because the factory does not pay that cost, its product is overproduced relative to the efficient amount. A person who is vaccinated also protects others from infection, a positive externality: because the person does not capture that benefit, vaccination tends to be underconsumed.",
+      "Remedies try to make decision-makers count the external effects. A corrective, or Pigouvian, tax set equal to the external cost raises the private cost of a harmful activity; a subsidy can encourage an activity with external benefits. Regulation can set limits directly, and tradable permits cap total pollution while letting firms trade the right to pollute. Ronald Coase argued that if property rights are clear and bargaining is cheap, the affected parties can negotiate an efficient outcome themselves, though this often fails when many people are involved.",
+      "Goods can be classified by whether they are rival, meaning one person's use reduces what is left for others, and excludable, meaning people who do not pay can be kept from using them. A public good, such as national defense or street lighting, is non-rival and non-excludable. Because people can benefit without paying, each has an incentive to be a free rider, so private markets tend to supply too little and such goods are often funded through taxes. A common resource, such as an ocean fishery, is rival but non-excludable, which leads to overuse, a problem Garrett Hardin called the tragedy of the commons in 1968."
+    ],
+    "objectives": [
+      { "key": "externalities", "title": "Explain negative and positive externalities", "description": "Gives an example of each and explains why the market produces too much or too little.",
+        "concept": "Externalities", "definition": "Costs or benefits that fall on third parties, causing overproduction of activities with external costs and underproduction of those with external benefits.",
+        "facts": ["An externality affects people outside the transaction.", "Goods with negative externalities are overproduced.", "Goods with positive externalities are underproduced."],
+        "misconceptions": ["Externalities are always harmful."] },
+      { "key": "remedies", "title": "Explain remedies for externalities", "description": "Explains corrective taxes, subsidies, regulation, permits and the Coase argument.",
+        "concept": "Correcting externalities", "definition": "Taxes, subsidies, regulation, tradable permits or private bargaining can make decision-makers account for external effects.",
+        "facts": ["A Pigouvian tax equals the external cost of an activity.", "Tradable permits cap total pollution and let firms trade allowances.", "Coase: with clear property rights and cheap bargaining, parties can reach an efficient outcome."],
+        "misconceptions": ["The efficient amount of pollution is always zero."] },
+      { "key": "public-goods", "title": "Explain public goods and the free-rider problem", "description": "Uses rivalry and excludability to define public goods and explains underprovision.",
+        "concept": "Public goods", "definition": "Goods that are non-rival and non-excludable, which private markets underprovide because of free riding.",
+        "facts": ["Public goods are non-rival and non-excludable.", "Free riders benefit without paying.", "Public goods are often funded through taxes."],
+        "misconceptions": ["Any good provided by the government is a public good in the economic sense."] },
+      { "key": "commons", "title": "Explain the tragedy of the commons", "description": "Explains why common resources are overused.",
+        "concept": "Common resources", "definition": "Rival but non-excludable goods that each user overuses because no one bears the full cost of depletion.",
+        "facts": ["Common resources are rival but non-excludable.", "Each user ignores the cost their use imposes on others.", "Overfishing is a standard example."],
+        "misconceptions": ["Common resources are the same as public goods."] }
+    ],
+    "translations": {
+      "ko": { "title": "외부 효과와 공공재",
+        "instructions": "시험관이 외부 효과, 공공재, 그리고 시장이 때때로 최선의 결과를 내지 못하는 이유에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "externalities": "부정적 외부 효과와 긍정적 외부 효과 설명하기", "remedies": "외부 효과의 해결 방안 설명하기", "public-goods": "공공재와 무임승차 문제 설명하기", "commons": "공유지의 비극 설명하기" } },
+      "es": { "title": "Externalidades y bienes públicos",
+        "instructions": "El examinador conversará con usted sobre las externalidades, los bienes públicos y por qué los mercados a veces no logran el mejor resultado. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "externalities": "Explicar las externalidades negativas y positivas", "remedies": "Explicar las soluciones a las externalidades", "public-goods": "Explicar los bienes públicos y el problema del polizón", "commons": "Explicar la tragedia de los comunes" } }
+    }
+  },
+  {
+    "title": "Separation of Powers and Checks and Balances",
+    "category": "economics-civics",
+    "subject": "Civics",
+    "topic": "Structure of government",
+    "instructions": "The examiner will talk with you about how governments divide power among branches and how the branches limit each other. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The separation of powers divides government authority among distinct branches so that no single person or body holds all of it. The idea is old, but its best-known statement is Montesquieu's The Spirit of the Laws (1748), which argued that liberty is at risk when the power to make laws, the power to carry them out and the power to judge are held by the same hands.",
+      "The legislative branch, such as a parliament or congress, makes laws, approves taxes and spending, and oversees the government. The executive branch, led by a president or a prime minister and cabinet, carries out the laws and runs the administration. The judicial branch, the courts, interprets the law and applies it to individual cases. Judicial independence, protected for example by secure tenure for judges, lets courts decide cases without pressure from the other branches.",
+      "Checks and balances give each branch some means to restrain the others. Common examples are an executive veto over legislation that the legislature may override with a larger majority; legislative approval of budgets, treaties or senior appointments; the legislature's power to remove officials for serious wrongdoing; and judicial review, the power of courts in many countries to set aside laws or actions that conflict with the constitution.",
+      "Systems differ in how sharply they separate the branches. In a presidential system the executive is elected separately from the legislature for a fixed term and cannot normally be removed by a vote of no confidence. In a parliamentary system the executive is drawn from the legislature and stays in office only while it keeps the legislature's confidence, a closer fusion of executive and legislative power. Both rely on independent courts, elections and other checks to limit power."
+    ],
+    "objectives": [
+      { "key": "purpose", "title": "Explain the purpose of separating powers", "description": "States the idea and Montesquieu's argument for it.",
+        "concept": "Separation of powers", "definition": "Dividing lawmaking, executive and judicial power among distinct bodies so that no one holds all power, to protect liberty.",
+        "facts": ["Government power is divided among distinct branches.", "Montesquieu set out the idea in The Spirit of the Laws (1748).", "Concentrating all powers in the same hands puts liberty at risk."],
+        "misconceptions": ["Separation of powers means the branches never interact."] },
+      { "key": "branches", "title": "Describe the three branches and their roles", "description": "Explains what the legislature, executive and judiciary each do and why judicial independence matters.",
+        "concept": "Branches of government", "definition": "The legislature makes laws, the executive carries them out and the judiciary interprets and applies them.",
+        "facts": ["The legislature makes laws and approves taxes and spending.", "The executive carries out laws and runs the administration.", "The courts interpret law and apply it to cases.", "Secure tenure helps protect judicial independence."],
+        "misconceptions": ["The executive branch makes the laws and the legislature only advises."] },
+      { "key": "checks", "title": "Explain checks and balances with examples", "description": "Gives examples of how each branch can restrain another.",
+        "concept": "Checks and balances", "definition": "Mechanisms that let each branch limit the others, such as vetoes, overrides, approvals and judicial review.",
+        "facts": ["An executive veto can be overridden by a larger legislative majority.", "Legislatures approve budgets and often senior appointments.", "Judicial review lets courts set aside unconstitutional laws or actions."],
+        "misconceptions": ["Checks and balances exist only to slow government down for no purpose."] },
+      { "key": "systems", "title": "Compare presidential and parliamentary systems", "description": "Explains how the executive is chosen and removed in each.",
+        "concept": "Presidential and parliamentary systems", "definition": "A presidential executive is separately elected for a fixed term; a parliamentary executive depends on the legislature's confidence.",
+        "facts": ["A president is elected separately for a fixed term.", "A prime minister and cabinet come from and answer to the legislature.", "A parliamentary government can fall on a vote of no confidence."],
+        "misconceptions": ["Parliamentary systems have no separation of powers at all."] }
+    ],
+    "translations": {
+      "ko": { "title": "권력 분립과 견제와 균형",
+        "instructions": "시험관이 정부가 권력을 여러 부로 나누는 방식과 각 부가 서로를 제한하는 방식에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "purpose": "권력 분립의 목적 설명하기", "branches": "세 부와 그 역할 설명하기", "checks": "견제와 균형을 예를 들어 설명하기", "systems": "대통령제와 의원내각제 비교하기" } },
+      "es": { "title": "Separación de poderes y pesos y contrapesos",
+        "instructions": "El examinador conversará con usted sobre cómo los gobiernos dividen el poder entre ramas y cómo cada rama limita a las demás. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "purpose": "Explicar el propósito de la separación de poderes", "branches": "Describir las tres ramas del poder y sus funciones", "checks": "Explicar los pesos y contrapesos con ejemplos", "systems": "Comparar los sistemas presidencial y parlamentario" } }
+    }
+  },
+  {
+    "title": "The Rule of Law and Constitutional Government",
+    "category": "economics-civics",
+    "subject": "Civics",
+    "topic": "Rule of law",
+    "instructions": "The examiner will talk with you about the rule of law, due process and how constitutions limit government. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "The rule of law is the principle that everyone, including government officials and lawmakers, is subject to the law, and that power must be exercised according to known rules rather than the personal will of those who hold it. No one is above the law.",
+      "For law to rule, it must have certain qualities. Laws should be made public, so people can know them; general, applying to classes of people rather than singling out individuals; prospective, governing future conduct rather than punishing acts that were legal when done; reasonably clear and stable; and applied equally by independent courts. Rule of law differs from rule by law, in which rulers use laws as tools to control others while placing themselves beyond legal limits.",
+      "Due process means the state must follow fair, established procedures before taking away a person's life, liberty or property. Typical elements include being told the charges, a fair hearing before an impartial judge, the chance to present evidence and respond to the other side, the presumption of innocence in criminal cases, and the right to appeal.",
+      "Constitutionalism is the idea that government's powers are defined and limited by a fundamental law. A constitution, written or partly unwritten, sets out how officials are chosen, what powers they hold and what rights they may not violate. Many constitutions are entrenched, meaning they are harder to amend than ordinary laws, for example requiring a supermajority or a referendum, so that basic rules and rights are not changed by a temporary majority."
+    ],
+    "objectives": [
+      { "key": "principle", "title": "Explain the principle of the rule of law", "description": "States the principle and why it applies to officials too.",
+        "concept": "Rule of law", "definition": "Everyone, including those who govern, is subject to the law, and power is exercised by known rules, not personal will.",
+        "facts": ["No one, including officials, is above the law.", "Power must follow known rules, not personal will.", "Courts apply the law equally to all."],
+        "misconceptions": ["The rule of law means simply that a country has many laws."] },
+      { "key": "qualities", "title": "Explain the qualities law must have", "description": "Names qualities such as publicity, generality and prospectivity and contrasts rule of law with rule by law.",
+        "concept": "Qualities of law", "definition": "Laws should be public, general, prospective, clear, stable and applied by independent courts.",
+        "facts": ["Laws must be public so people can know them.", "Laws should govern future conduct, not punish past legal acts.", "Rule by law uses law as a tool while rulers stay above it."],
+        "misconceptions": ["Any order issued by a ruler is law in the sense the rule of law requires."] },
+      { "key": "due-process", "title": "Explain due process", "description": "Names the main elements of a fair procedure and why they matter.",
+        "concept": "Due process", "definition": "The state must follow fair, established procedures before depriving a person of life, liberty or property.",
+        "facts": ["A person must be told the charges against them.", "A fair hearing takes place before an impartial judge.", "Criminal defendants are presumed innocent until proven guilty.", "Decisions can usually be appealed."],
+        "misconceptions": ["Due process protects only people who are innocent."] },
+      { "key": "constitutionalism", "title": "Explain constitutionalism and entrenchment", "description": "Explains how a constitution limits power and why it is harder to amend.",
+        "concept": "Constitutionalism", "definition": "Government power is defined and limited by a fundamental law, often entrenched against easy amendment.",
+        "facts": ["A constitution sets out how officials are chosen and what powers they hold.", "Constitutions protect rights that officials may not violate.", "Entrenchment makes a constitution harder to amend than ordinary law."],
+        "misconceptions": ["A country without a single written constitution document cannot have constitutional government."] }
+    ],
+    "translations": {
+      "ko": { "title": "법의 지배와 입헌 정부",
+        "instructions": "시험관이 법의 지배, 적법 절차, 그리고 헌법이 정부를 제한하는 방식에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "principle": "법의 지배 원칙 설명하기", "qualities": "법이 갖추어야 할 성질 설명하기", "due-process": "적법 절차 설명하기", "constitutionalism": "입헌주의와 헌법의 경성 설명하기" } },
+      "es": { "title": "El Estado de derecho y el gobierno constitucional",
+        "instructions": "El examinador conversará con usted sobre el Estado de derecho, el debido proceso y cómo las constituciones limitan al gobierno. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "principle": "Explicar el principio del Estado de derecho", "qualities": "Explicar las cualidades que debe tener la ley", "due-process": "Explicar el debido proceso", "constitutionalism": "Explicar el constitucionalismo y la rigidez constitucional" } }
+    }
+  },
+  {
+    "title": "Electoral Systems and Representation",
+    "category": "economics-civics",
+    "subject": "Civics",
+    "topic": "Elections",
+    "instructions": "The examiner will talk with you about the main ways democracies turn votes into seats and the trade-offs between them. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "An electoral system is the set of rules that turns citizens' votes into seats in a legislature or into the choice of an office-holder. Democracies use many different systems, and the choice affects how many parties win seats, how closely seats match votes and how governments are formed.",
+      "In a plurality system, often called first-past-the-post, the country is divided into single-member districts and the candidate with the most votes in each district wins, even without a majority. It gives each district a clear local representative and often produces single-party majorities, but a party can win a large share of the national vote and few seats if its support is spread thinly, and votes for losing candidates elect no one. Some systems instead require a majority, using a second round between the top candidates or ranked ballots.",
+      "Under proportional representation, or PR, districts elect several members and seats are shared among parties roughly in proportion to their votes; in party-list PR voters mainly choose a party. Many PR systems set a minimum threshold, such as 5 percent of the vote, for a party to win seats. PR makes seats match votes more closely and lets smaller parties win representation, but it more often leads to coalition governments and can weaken the link between a voter and one local representative. Mixed systems combine district seats with list seats to balance these aims.",
+      "Political scientist Maurice Duverger observed that plurality rule in single-member districts tends to favor two-party systems, partly because voters avoid wasting votes on small parties and small parties struggle to win any district, while PR tends to sustain more parties. This is a tendency, not a law without exceptions. No system is best on every measure: each trades off goals such as proportionality, local representation, simplicity and stable government."
+    ],
+    "objectives": [
+      { "key": "plurality", "title": "Explain plurality and majority systems", "description": "Explains how first-past-the-post works and its main strengths and weaknesses.",
+        "concept": "Plurality voting", "definition": "In single-member districts the candidate with the most votes wins, even without a majority.",
+        "facts": ["Each single-member district elects one representative.", "The candidate with the most votes wins, even without a majority.", "A party with thinly spread support can win few seats.", "Majority systems use a second round or ranked ballots."],
+        "misconceptions": ["Under first-past-the-post a winner always has more than half the votes."] },
+      { "key": "proportional", "title": "Explain proportional representation", "description": "Explains how PR allocates seats, what thresholds do, and its trade-offs.",
+        "concept": "Proportional representation", "definition": "Multi-member districts share seats among parties roughly in proportion to their votes.",
+        "facts": ["Seats are shared roughly in proportion to votes.", "Thresholds keep very small parties from winning seats.", "PR more often leads to coalition governments."],
+        "misconceptions": ["Proportional representation always matches seats to votes exactly."] },
+      { "key": "party-systems", "title": "Explain how electoral systems shape party systems", "description": "States Duverger's observation and the reasons behind it.",
+        "concept": "Duverger's law", "definition": "Plurality rule in single-member districts tends to favor two parties; PR tends to sustain more parties.",
+        "facts": ["Plurality rule tends to favor two-party systems.", "Voters avoid wasting votes on parties unlikely to win.", "PR tends to sustain more parties.", "It is a tendency with exceptions."],
+        "misconceptions": ["Duverger's law guarantees exactly two parties in every plurality system."] },
+      { "key": "trade-offs", "title": "Weigh the trade-offs between systems", "description": "Compares systems on proportionality, local representation and stable government.",
+        "concept": "Electoral trade-offs", "definition": "Each system balances proportionality, local representation, simplicity and stable government differently.",
+        "facts": ["Plurality systems favor local representation and single-party majorities.", "PR favors proportionality and smaller-party representation.", "Mixed systems combine district and list seats."],
+        "misconceptions": ["One electoral system is the most democratic on every measure."] }
+    ],
+    "translations": {
+      "ko": { "title": "선거 제도와 대표",
+        "instructions": "시험관이 민주 국가들이 표를 의석으로 바꾸는 주요 방식과 그 사이의 장단점에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "plurality": "다수대표제와 과반 선거제 설명하기", "proportional": "비례대표제 설명하기", "party-systems": "선거 제도가 정당 체계를 형성하는 방식 설명하기", "trade-offs": "선거 제도 사이의 장단점 비교하기" } },
+      "es": { "title": "Sistemas electorales y representación",
+        "instructions": "El examinador conversará con usted sobre las principales formas en que las democracias convierten votos en escaños y las ventajas y desventajas de cada una. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "plurality": "Explicar los sistemas de mayoría relativa y de mayoría absoluta", "proportional": "Explicar la representación proporcional", "party-systems": "Explicar cómo los sistemas electorales moldean los sistemas de partidos", "trade-offs": "Sopesar las ventajas y desventajas de cada sistema" } }
+    }
+  },
+  {
+    "title": "Federalism and Levels of Government",
+    "category": "economics-civics",
+    "subject": "Civics",
+    "topic": "Federal and unitary systems",
+    "instructions": "The examiner will talk with you about how states divide power between national and regional governments. Answer in your own words and explain why, not only what. Say \"I don't know\" if you don't.",
+    "passage": [
+      "States differ in how they divide power between a national government and regional or local governments. In a unitary state, sovereignty rests with the national government; regional and local bodies exist, but their powers are granted by the center and can be changed or withdrawn by it. In a federal state, a constitution divides powers between the national government and constituent units, such as states or provinces, and neither level can abolish the other or take away its constitutional powers on its own.",
+      "Federal constitutions usually assign some powers to the national level, such as defense, foreign relations and currency; leave others, such as education or policing in many federations, to the constituent units; and let both levels act in some shared areas. Because the division is constitutional, disputes over which level holds a power are often settled by courts, and changing the division usually requires a special amendment process that involves the constituent units.",
+      "Many unitary states practice devolution or decentralization, transferring substantial powers to regional or local governments by ordinary law. The difference from federalism is legal rather than a matter of how much power regions hold in practice: devolved powers can, in principle, be taken back by the national legislature, while federal powers are protected by the constitution.",
+      "Supporters of federalism argue that it lets policy fit local conditions, keeps government closer to citizens, accommodates regions with distinct languages or identities, and allows units to try different policies and learn from one another. Critics point to unequal public services between regions, duplication of effort, and difficulty coordinating national responses. Whether a federal or unitary design works better depends on a country's size, diversity and history."
+    ],
+    "objectives": [
+      { "key": "unitary-federal", "title": "Distinguish unitary and federal states", "description": "Explains where sovereignty rests in each and whether regional powers can be withdrawn.",
+        "concept": "Unitary and federal states", "definition": "In a unitary state the center grants and can withdraw regional powers; in a federal state a constitution divides powers between levels.",
+        "facts": ["In a unitary state, regional powers come from the national government.", "In a federal state, the constitution divides powers between levels.", "Neither federal level can abolish the other on its own."],
+        "misconceptions": ["Unitary states have no regional or local governments."] },
+      { "key": "division", "title": "Explain how federal constitutions divide powers", "description": "Gives examples of national, regional and shared powers and how disputes are resolved.",
+        "concept": "Division of powers", "definition": "Federal constitutions assign some powers nationally, some regionally and some to both, with courts settling disputes.",
+        "facts": ["Defense, foreign relations and currency are usually national.", "Some powers belong to the constituent units.", "Some powers are shared by both levels.", "Courts often settle disputes over which level holds a power."],
+        "misconceptions": ["In a federation the national government can change regional powers by an ordinary law."] },
+      { "key": "devolution", "title": "Distinguish devolution from federalism", "description": "Explains why devolution is a legal rather than practical difference.",
+        "concept": "Devolution", "definition": "A unitary state's transfer of powers to regions by ordinary law, which the center can in principle take back.",
+        "facts": ["Devolution transfers powers by ordinary law.", "Devolved powers can in principle be withdrawn by the national legislature.", "Federal powers are protected by the constitution."],
+        "misconceptions": ["A country with powerful regional governments must be federal."] },
+      { "key": "evaluation", "title": "Weigh the arguments for and against federalism", "description": "Gives arguments on both sides and what the choice depends on.",
+        "concept": "Evaluating federalism", "definition": "Federalism offers local fit, diversity and policy experimentation at the cost of unevenness, duplication and coordination problems.",
+        "facts": ["Federalism lets policy fit local conditions.", "It can accommodate regions with distinct identities.", "Units can experiment with different policies.", "Critics cite unequal services and coordination problems."],
+        "misconceptions": ["Federalism is always better than a unitary system, or always worse."] }
+    ],
+    "translations": {
+      "ko": { "title": "연방제와 정부의 층위",
+        "instructions": "시험관이 국가가 중앙 정부와 지역 정부 사이에 권력을 나누는 방식에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지도 설명하세요. 모르면 \"모르겠습니다\"라고 말하세요.",
+        "objectives": { "unitary-federal": "단일 국가와 연방 국가 구별하기", "division": "연방 헌법이 권한을 나누는 방식 설명하기", "devolution": "권한 이양과 연방제 구별하기", "evaluation": "연방제에 대한 찬반 논거 비교하기" } },
+      "es": { "title": "El federalismo y los niveles de gobierno",
+        "instructions": "El examinador conversará con usted sobre cómo los Estados dividen el poder entre el gobierno nacional y los gobiernos regionales. Responda con sus propias palabras y explique por qué, no solo qué. Diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "unitary-federal": "Distinguir los Estados unitarios de los federales", "division": "Explicar cómo las constituciones federales reparten las competencias", "devolution": "Distinguir la descentralización del federalismo", "evaluation": "Sopesar los argumentos a favor y en contra del federalismo" } }
+    }
+  }
+]
