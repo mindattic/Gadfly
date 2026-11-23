@@ -52,20 +52,48 @@ export async function open(kind, base) {
     }
 }
 
-// The examiner the student chose on the get-ready page (GAD-T595): { id, modelUrl, portraitUrl } from the server's examiner
-// catalog (Gadfly.Server/Student/ExaminerCatalog.cs), under localStorage "gadfly.examiner". The exam room shows that examiner when
-// it is set and still offered; otherwise its own default.
+// The examiner the student chose on the get-ready page (GAD-T595): { id, modelUrl, portraitUrl, customization } from the server's
+// examiner catalog (Gadfly.Server/Student/ExaminerCatalog.cs), under localStorage "gadfly.examiner". The exam room shows that examiner
+// when it is set and still offered; otherwise its own default.
+//
+// customization (GAD-T646) is { voice, skinTone, hair, attire, look }, each a value from the server's fixed lists
+// (Gadfly.Server/Student/ExaminerCustomization.cs) or null for the examiner's default. It is only a preference: the server validates
+// it again in the exam room (dropping anything it doesn't offer) and ignores it when the exam or organization fixes the examiner.
 export const EXAMINER_KEY = "gadfly.examiner";
 
-/** The chosen examiner ({ id, modelUrl, portraitUrl }) or null. */
-export function getExaminer() {
-    try { const v = localStorage.getItem(EXAMINER_KEY); return v ? JSON.parse(v) : null; } catch { return null; }
+const CUSTOMIZATION_FIELDS = ["voice", "skinTone", "hair", "attire", "look"];
+
+/** Only the known customization fields, each a short string or null; null when nothing is set. */
+function cleanCustomization(c) {
+    if (!c || typeof c !== "object") return null;
+    const out = {};
+    let any = false;
+    for (const f of CUSTOMIZATION_FIELDS) {
+        const v = typeof c[f] === "string" && c[f].trim() && c[f].length <= 64 ? c[f].trim() : null;
+        out[f] = v;
+        if (v) any = true;
+    }
+    return any ? out : null;
 }
 
-/** Remembers the chosen examiner (null forgets it). */
+/** The chosen examiner ({ id, modelUrl, portraitUrl, customization }) or null. */
+export function getExaminer() {
+    try {
+        const v = localStorage.getItem(EXAMINER_KEY);
+        if (!v) return null;
+        const e = JSON.parse(v);
+        if (!e || typeof e !== "object") return null;
+        return { id: e.id || null, modelUrl: e.modelUrl || null, portraitUrl: e.portraitUrl || null, customization: cleanCustomization(e.customization) };
+    } catch { return null; }
+}
+
+/** Remembers the chosen examiner and its customization (null forgets it). */
 export function setExaminer(examiner) {
     try {
-        if (examiner && examiner.id) localStorage.setItem(EXAMINER_KEY, JSON.stringify({ id: examiner.id, modelUrl: examiner.modelUrl || null, portraitUrl: examiner.portraitUrl || null }));
+        if (examiner && examiner.id) localStorage.setItem(EXAMINER_KEY, JSON.stringify({
+            id: examiner.id, modelUrl: examiner.modelUrl || null, portraitUrl: examiner.portraitUrl || null,
+            customization: cleanCustomization(examiner.customization),
+        }));
         else localStorage.removeItem(EXAMINER_KEY);
     } catch { /* storage blocked: the default examiner */ }
 }

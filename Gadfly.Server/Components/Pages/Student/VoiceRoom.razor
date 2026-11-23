@@ -454,7 +454,7 @@
             var language = speech.RecognizerLanguage(policyLanguage);
             Grants.SetVocabulary(user, SessionId, language, vocabulary);
             // Which examiner (GAD-T504): fixed by the exam or organization, else the one the student chose on the get-ready page.
-            examiner = await ExaminerAsync(startupBound.Token);
+            (examiner, examinerCustomization) = await ExaminerAsync(startupBound.Token);
             // The exam's voice, else the examiner's own, else the organization's default, else the platform's (GAD-T475, GAD-T504):
             // chosen here, enforced by VoiceHubFilter.
             var voice = await ExaminerVoiceAsync();
@@ -597,14 +597,18 @@
     /// <summary>The examiner this attempt shows (set before the room starts; the configured one until then).</summary>
     private ExaminerOption examiner = null!;
 
-    private sealed record RememberedExaminer(string? Id);
+    /// <summary>The student's validated customization of <see cref="examiner"/> (GAD-T646); none when the exam or organization fixes it.</summary>
+    private ExaminerCustomization examinerCustomization = ExaminerCustomization.None;
+
+    private sealed record RememberedExaminer(string? Id, ExaminerCustomization? Customization);
 
     /// <summary>
     /// This attempt's examiner (GAD-T504, <see cref="ExaminerCatalog.Resolve"/>): the exam's AvatarId, else the organization's
     /// default, else the one the student chose on the get-ready page (remembered on this device), else the first available. The
-    /// browser's choice is only a preference among what the exam allows; any failure reading it gives the first available.
+    /// browser's choice is only a preference among what the exam allows; any failure reading it gives the first available. The
+    /// student's customization (GAD-T646) comes with it, validated here, and is off when the examiner is fixed.
     /// </summary>
-    private async Task<ExaminerOption> ExaminerAsync(CancellationToken ct)
+    private async Task<(ExaminerOption, ExaminerCustomization)> ExaminerAsync(CancellationToken ct)
     {
         var options = ExaminerCatalog.For(Settings, Env.WebRootPath);
         (string? Exam, string? Organization) fixedBy = (null, null);
@@ -622,18 +626,24 @@
         {
             Log.LogDebug(ex, "The examiner settings could not be read for session {SessionId}.", SessionId);
         }
-        string? remembered = null;
+        RememberedExaminer? remembered = null;
         if (ExaminerCatalog.Fixed(options, fixedBy.Exam, fixedBy.Organization) is null)
         {
             try
             {
                 await using var prefs = await JS.InvokeAsync<IJSObjectReference>("import", ct, "./js/device-prefs.js");
-                remembered = (await prefs.InvokeAsync<RememberedExaminer?>("getExaminer", ct))?.Id;
+                remembered = await prefs.InvokeAsync<RememberedExaminer?>("getExaminer", ct);
             }
-            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or InvalidOperationException) { }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or InvalidOperationException
+                                           or System.Text.Json.JsonException) { }
         }
-        return ExaminerCatalog.Resolve(options, fixedBy.Exam, fixedBy.Organization, remembered);
+        var resolved = ExaminerCatalog.Resolve(options, fixedBy.Exam, fixedBy.Organization, remembered?.Id, remembered?.Customization);
+        return (resolved.Option, resolved.Customization);
     }
+
+    /// <summary>The examiner's own voice for <paramref name="language"/>: the student's chosen one (GAD-T646), re-validated for that
+    /// language, else the examiner's default.</summary>
+    private string? ExaminerVoiceIdFor(string? language) => new ResolvedExaminer(examiner, examinerCustomization).VoiceIdFor(language);
 
     /// <summary>This session's examiner voice id (GAD-T475), or null for the platform voice (always null outside live mode, or when
     /// it can't be read).</summary>
@@ -653,10 +663,10 @@
                                        select e.VoiceId).FirstOrDefaultAsync(stop.Token);
                 var orgVoice = await db.OrganizationSettings.AsNoTracking().Where(o => o.OrganizationId == org)
                     .Select(o => o.DefaultVoiceId).FirstOrDefaultAsync(stop.Token);
-                return ExaminerVoice.Choose(Settings.Mode, examVoice, examiner.VoiceIdFor(speech.Language), orgVoice, Settings.VoiceIdFor(speech.Language));
+                return ExaminerVoice.Choose(Settings.Mode, examVoice, ExaminerVoiceIdFor(speech.Language), orgVoice, Settings.VoiceIdFor(speech.Language));
             }
             return await ExaminerVoice.ForSessionAsync(db, Settings.Mode, org, SessionId, Log, stop.Token, Settings.VoiceIdFor(speech.Language),
-                examiner.VoiceIdFor(speech.Language));
+                ExaminerVoiceIdFor(speech.Language));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

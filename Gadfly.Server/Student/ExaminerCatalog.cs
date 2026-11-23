@@ -110,6 +110,20 @@ public static class ExaminerCatalog
     public static ExaminerOption Resolve(IReadOnlyList<ExaminerOption> options, string? examAvatarId, string? organizationAvatarId, string? rememberedId) =>
         Fixed(options, examAvatarId, organizationAvatarId) ?? Pick(options, rememberedId);
 
+    /// <summary>
+    /// The examiner for an attempt with the student's customization of it (GAD-T646): as <see cref="Resolve(IReadOnlyList{ExaminerOption}, string?, string?, string?)"/>,
+    /// plus <paramref name="customization"/> (remembered in the browser, so untrusted) passed through
+    /// <see cref="ExaminerCustomization.Validate"/> for the examiner it resolved to. Customization is off when the exam or organization
+    /// fixes the examiner (GAD-T504): that examiner is shown and heard exactly as configured.
+    /// </summary>
+    public static ResolvedExaminer Resolve(IReadOnlyList<ExaminerOption> options, string? examAvatarId, string? organizationAvatarId,
+        string? rememberedId, ExaminerCustomization? customization)
+    {
+        if (Fixed(options, examAvatarId, organizationAvatarId) is { } fixedExaminer) return new(fixedExaminer, ExaminerCustomization.None);
+        var option = Pick(options, rememberedId);
+        return new(option, customization?.Validate(option.Id) ?? ExaminerCustomization.None);
+    }
+
     /// <summary>The exam's AvatarId and its organization's DefaultAvatarId for one assignment, tenant-scoped (both null when unknown).</summary>
     public static async Task<(string? Exam, string? Organization)> AvatarIdsForAssignmentAsync(
         IServiceScopeFactory scopes, Guid organizationId, Guid assignmentId, CancellationToken ct = default)

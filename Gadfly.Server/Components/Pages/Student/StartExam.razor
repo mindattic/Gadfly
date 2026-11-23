@@ -639,7 +639,11 @@ else
     private ExaminerOption examiner = null!;
     private IJSObjectReference? prefsModule;
 
-    private sealed record RememberedExaminer(string? Id, string? ModelUrl, string? PortraitUrl);
+    private sealed record RememberedExaminer(string? Id, string? ModelUrl, string? PortraitUrl, ExaminerCustomization? Customization);
+
+    /// <summary>The student's customization of the examiner as remembered on this device (GAD-T646), validated for the one shown;
+    /// kept when the choice is saved again. None while the exam or organization fixes the examiner.</summary>
+    private ExaminerCustomization customization = ExaminerCustomization.None;
 
     /// <summary>A sentence about the examiner, its pronouns following the one chosen (GAD-T606: "her", or "him" for the male examiner).</summary>
     private string Ex(string key) => new ExamRoomText(T, examiner is { Id: ExaminerCatalog.Male })[key];
@@ -652,6 +656,7 @@ else
             prefsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/device-prefs.js");
             var remembered = await prefsModule.InvokeAsync<RememberedExaminer?>("getExaminer");
             var pick = ExaminerCatalog.Pick(examiners, remembered?.Id);
+            if (examiners.Count > 1) customization = remembered?.Customization?.Validate(pick.Id) ?? ExaminerCustomization.None;
             if (pick.Id != examiner.Id) { examiner = pick; StateHasChanged(); }
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
@@ -662,10 +667,15 @@ else
     {
         if (!choice.Available) return;
         examiner = choice;
+        customization = customization.Validate(choice.Id);
         try
         {
             prefsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/device-prefs.js");
-            await prefsModule.InvokeVoidAsync("setExaminer", new { id = choice.Id, modelUrl = choice.ModelUrl, portraitUrl = choice.PortraitUrl });
+            await prefsModule.InvokeVoidAsync("setExaminer", new
+            {
+                id = choice.Id, modelUrl = choice.ModelUrl, portraitUrl = choice.PortraitUrl,
+                customization = customization.IsEmpty ? null : customization,
+            });
             if (previewModule is not null) await previewModule.InvokeVoidAsync("stop");
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
