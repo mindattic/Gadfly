@@ -170,6 +170,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
         {
             e.HasKey(x => x.OrganizationId);
             e.Property(x => x.Plan).HasMaxLength(32);   // as the PlanLimits migration created it (GAD-T369, GAD-T491)
+            e.Property(x => x.VoiceTier).HasMaxLength(Gadfly.Server.Voice.VoiceTier.MaxIdLength);   // GAD-T616
         });
         // EmailLog and StudentNotificationPreference as the PlanLimits migration created them (GAD-T310, GAD-T491).
         b.Entity<EmailLog>(e =>
@@ -228,6 +229,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.Property(x => x.Title).HasMaxLength(300);
             e.Property(x => x.VoiceId).HasMaxLength(100);
             e.Property(x => x.AvatarId).HasMaxLength(100);
+            e.Property(x => x.VoiceTier).HasMaxLength(Gadfly.Server.Voice.VoiceTier.MaxIdLength);   // GAD-T616
             e.Property(x => x.PromptSetId).HasMaxLength(60);
             e.HasOne<SourceCollection>().WithMany().HasForeignKey(x => x.CollectionId);
             e.HasIndex(x => new { x.OrganizationId, x.Status });

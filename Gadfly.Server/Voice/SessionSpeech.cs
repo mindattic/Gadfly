@@ -35,6 +35,13 @@ public sealed record SessionSpeech(string ExamLanguage, string? PrimaryLanguage,
     public bool IsDefault => Engine.ExamLanguage.IsEnglish(Language) && !NonNative;
 
     /// <summary>
+    /// The examiner's voice tier for this attempt (GAD-T415, GAD-T616, <see cref="Voice.VoiceTier"/>): the exam's, else the
+    /// organization's; null when neither sets a known one (the deployment's model). It is not part of <see cref="IsDefault"/>, which is
+    /// about languages: <see cref="ExaminerTts"/> reads it for every attempt, so an explicit tier applies to an English exam too.
+    /// </summary>
+    public string? VoiceTier { get; init; }
+
+    /// <summary>
     /// The language the recognizer is told to expect (GAD-T529, GAD-T554). A non-English exam: the exam language (Scribe
     /// <c>language_code</c>, Whisper <c>language</c>, e.g. "ko"). An English exam by a non-native speaker: "en" always, so a Korean
     /// accent, or a Korean word or two, never makes the recognizer switch to transcribing Korean (auto-detection is what mishears an
@@ -58,12 +65,21 @@ public sealed record SessionSpeech(string ExamLanguage, string? PrimaryLanguage,
     /// </summary>
     public static async Task<SessionSpeech> ForSessionAsync(GadflyDbContext db, Guid org, Guid session, CancellationToken ct)
     {
-        var row = await db.ExamSessions.AsNoTracking()
-            .Where(s => s.Id == session && s.OrganizationId == org)
-            .Select(s => new { s.Language, s.PrimaryLanguage, s.StudentUserId }).FirstOrDefaultAsync(ct);
+        var row = await (from s in db.ExamSessions.AsNoTracking()
+                         where s.Id == session && s.OrganizationId == org
+                         join e in db.Exams.AsNoTracking().Where(e => e.OrganizationId == org) on s.ExamId equals e.Id into exams
+                         from e in exams.DefaultIfEmpty()
+                         select new { s.Language, s.PrimaryLanguage, s.StudentUserId, ExamTier = e == null ? null : e.VoiceTier }).FirstOrDefaultAsync(ct);
         if (row is null) return Default;
+        // The voice tier is read before the default case returns (GAD-T616): an exam or organization may pick one for an English exam too.
+        var organizationTier = Voice.VoiceTier.Find(row.ExamTier) is null
+            ? await db.OrganizationSettings.AsNoTracking().Where(o => o.OrganizationId == org).Select(o => o.VoiceTier).FirstOrDefaultAsync(ct)
+            : null;
         var speech = new SessionSpeech(Engine.ExamLanguage.Normalize(row.Language),
-            string.IsNullOrWhiteSpace(row.PrimaryLanguage) ? null : Engine.ExamLanguage.Normalize(row.PrimaryLanguage));
+            string.IsNullOrWhiteSpace(row.PrimaryLanguage) ? null : Engine.ExamLanguage.Normalize(row.PrimaryLanguage))
+        {
+            VoiceTier = Voice.VoiceTier.Resolve(row.ExamTier, organizationTier)?.Id,
+        };
         if (speech.IsDefault) return speech;
         var profile = await db.StudentLanguageProfiles.AsNoTracking()
             .Where(p => p.OrganizationId == org && p.UserId == row.StudentUserId).FirstOrDefaultAsync(ct);

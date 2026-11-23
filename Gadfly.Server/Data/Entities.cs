@@ -31,6 +31,11 @@ public sealed class OrganizationSettings
     public string? DefaultVoiceId { get; set; }
     public string? DefaultAvatarId { get; set; }
     /// <summary>
+    /// GAD-T415, GAD-T616: the examiner's voice quality/speed tier for this organization's voice exams (<see cref="Gadfly.Server.Voice.VoiceTier"/>
+    /// id, e.g. "fast", "quality"); an exam's own tier wins. Null: the deployment's model (Gadfly:Voice:TtsModels / TtsModel).
+    /// </summary>
+    public string? VoiceTier { get; set; }
+    /// <summary>
     /// Decision D18 (GAD-T170). True (the default): an Instructor sees and manages only the courses, collections and
     /// assessments they created, and the assignments, sessions, grading and analytics under them; Owner and Admin keep
     /// the whole organization. False restores the earlier behavior where every Instructor sees everything.
@@ -255,6 +260,8 @@ public sealed class Exam : ITenantOwned
     public IntegrityLevel IntegrityLevel { get; set; } = IntegrityLevel.Standard;
     public string? VoiceId { get; set; }
     public string? AvatarId { get; set; }
+    /// <summary>GAD-T415, GAD-T616: this exam's examiner voice tier (<see cref="Gadfly.Server.Voice.VoiceTier"/> id); null = the organization's, else the deployment's.</summary>
+    public string? VoiceTier { get; set; }
     public string PromptSetId { get; set; } = "exam";
     public int PromptSetVersion { get; set; }
     public ExamStatus Status { get; set; }
