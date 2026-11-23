@@ -60,6 +60,22 @@ public class ExamRoomLocalizationTests
             Assert.That(Catalog.Find("en", "examRoom.js.gaze." + state), Is.Not.Null, state);
     }
 
+    /// <summary>GAD-T638: VoiceRoom builds its voice-line measure keys from the feature name; every one exists in every UI language.</summary>
+    [Test]
+    public void VoiceLineFeatureKeys_ExistInEveryLanguage()
+    {
+        string[] features = [Gadfly.Server.Voice.VoiceStrain.Pitch, Gadfly.Server.Voice.VoiceStrain.PitchVariability, Gadfly.Server.Voice.VoiceStrain.Jitter,
+            Gadfly.Server.Voice.VoiceStrain.Loudness, Gadfly.Server.Voice.VoiceStrain.Rate, Gadfly.Server.Voice.VoiceStrain.Pauses];
+        foreach (var feature in features)
+        {
+            var en = Catalog.Find(UiCatalog.English, VoiceRoom.VoiceFeatureKey + feature);
+            Assert.That(en, Is.Not.Null, feature);
+            // Find falls back to English, so a translation must differ from it (none of these words is the same in Korean or Spanish).
+            foreach (var lang in UiCatalog.Languages.Where(l => l != UiCatalog.English))
+                Assert.That(Catalog.Find(lang, VoiceRoom.VoiceFeatureKey + feature), Is.Not.EqualTo(en), $"{lang}: {feature}");
+        }
+    }
+
     [Test]
     public void ScriptSlots_AreKeptInEveryTranslation()
     {

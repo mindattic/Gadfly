@@ -357,11 +357,18 @@
     /// The answer's voice line for the student's transcript (GAD-T232, GAD-T259): English exactly as <see cref="VoiceStrainReading.Brief"/>
     /// words it; another language from the room's strings, naming the measures beyond the usual range (never a named state).
     /// </summary>
+    /// <summary>
+    /// The prefix of the voice line's measure names, completed by <see cref="VoiceStrainIndicator.Feature"/> (pitch, pitchVariability,
+    /// jitter, loudness, rate, pauses). A constant, so the localization scanner does not read the built key as a missing literal one;
+    /// every built key is checked by name in ExamRoomLocalizationTests (GAD-T638).
+    /// </summary>
+    public const string VoiceFeatureKey = "examRoom.voiceLine.feature.";
+
     private string VoiceLine(VoiceStrainReading reading)
     {
         if (T.Text.IsEnglish) return reading.Brief;
         if (reading.IsBaseline) return T["examRoom.voiceLine.baseline"];
-        var notable = reading.Indicators.Where(i => i.Notable).Select(i => T["examRoom.voiceLine.feature." + i.Feature]).Distinct().ToList();
+        var notable = reading.Indicators.Where(i => i.Notable).Select(i => T[VoiceFeatureKey + i.Feature]).Distinct().ToList();
         return notable.Count == 0 ? T["examRoom.voiceLine.close"] : T["examRoom.voiceLine.against", string.Join(", ", notable)];
     }
 
