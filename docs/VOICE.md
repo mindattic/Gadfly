@@ -348,6 +348,9 @@ by a student whose primary language is English (or unknown) behaves exactly as b
   first (es-419, es-MX, es-US...), then any Spanish one.
 - **Fillers (GAD-T532).** `ExaminerFiller.For(language)`: Korean acknowledgements, wait fillers, backchannels and
   eye-contact remarks, reviewed as non-evaluative; prepared per voice and language in the phrase cache.
+  Spanish (GAD-T609), with usted: acknowledgements Mm., Ajá., Entiendo., De acuerdo., Gracias. (never correcto, bien, muy
+  bien, exacto, perfecto, claro), wait lines such as "Un momento, por favor.", and the gentle reminders and camera remarks
+  (`WebcamIntegrityRecorder.GentleRemindersSpanish`), never a request to look at her and with no gendered adjective.
 
 ## Get-ready microphone test (GAD-T359)
 

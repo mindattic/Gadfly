@@ -96,6 +96,27 @@ public static class ExaminerFiller
             ["second-face"] = "카메라에 다른 사람이 보여요. 혼자서 답변하고 있는지 확인해 주세요.",
         });
 
+    /// <summary>
+    /// The Spanish set (GAD-T609), neutral Latin American Spanish with usted, reviewed as non-evaluative: "Mm." and "Ajá." are receipt,
+    /// "Entiendo." is "I see", "De acuerdo." is "understood" (said to every answer alike, never "I agree"), "Gracias." is "thank you".
+    /// Never correcto ("correct"), bien / muy bien ("good"), exacto / exactamente ("exactly"), perfecto, excelente, claro ("of
+    /// course", which can read as agreement), eso es ("that's it") or interesante. The backchannels are non-words.
+    /// </summary>
+    public static readonly Lines Spanish = new(
+        First: ["Permítame pensarlo un momento.", "Un momento, por favor.", "Mm, un momento.", "Déjeme pensar.", "Deme un momento.",
+            "Voy a pensarlo un momento."],
+        Again: ["Un momento más, por favor.", "Ya casi está.", "Sigo pensando. Un momento."],
+        Acknowledgements: ["Mm.", "Ajá.", "Entiendo.", "De acuerdo.", "Gracias.", "Mm, entiendo.", "De acuerdo, gracias."],
+        Backchannels: ["Mm.", "Mm-hm."],
+        Remarks: new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            // Like English and Korean (GAD-T605): the first two gentle reminders, warm, never a request to look at her.
+            ["look-away"] = Integrity.WebcamIntegrityRecorder.GentleRemindersSpanish[0],
+            ["reading"] = Integrity.WebcamIntegrityRecorder.GentleRemindersSpanish[1],
+            ["face-absent"] = "No veo su rostro. Por favor, vuelva a ponerse frente a la cámara mientras responde.",
+            ["second-face"] = "Veo a otra persona en la cámara. Por favor, asegúrese de responder sin ayuda de nadie.",
+        });
+
     /// <summary>The English set: the lists above and the exam room's eye-contact remarks.</summary>
     public static readonly Lines English = new(First, Again, Acknowledgements, Backchannels, Integrity.WebcamIntegrityRecorder.ExaminerRemarks);
 
@@ -103,6 +124,7 @@ public static class ExaminerFiller
     public static Lines For(string? language) => Gadfly.Engine.ExamLanguage.Normalize(language) switch
     {
         Gadfly.Engine.ExamLanguage.Korean => Korean,
+        Gadfly.Engine.ExamLanguage.Spanish => Spanish,
         _ => English,
     };
 

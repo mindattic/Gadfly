@@ -160,4 +160,57 @@ public class SpanishSpeechTests
         var times = r.GetProperty("times").EnumerateArray().Select(x => x.GetDouble()).ToArray();
         Assert.That(times.Zip(times.Skip(1)).All(p => p.Second > p.First), Is.True, "visemes in time order");
     }
+
+    // ------------------------------------------------------------------------------------------------- fillers (GAD-T609)
+
+    [Test]
+    public void Spanish_fixed_lines_never_judge_the_answer()
+    {
+        // "correct" (correct-), "good / very good" (bien), "exactly" (exact-), "perfect", "excellent", "great" (genial), "of course"
+        // (claro), "that's it" (eso es), "interesting", "right?" (¿verdad?), "wrong" (incorrect-, equivoc-, mal): none may appear in a line
+        // she says to every answer.
+        var judging = new[] { "correct", "bien", "exact", "perfect", "excelent", "genial", "claro", "eso es", "interesante", "verdad", "incorrect", "equivoc", "mal" };
+        var es = ExaminerFiller.Spanish;
+        foreach (var line in es.Acknowledgements.Concat(es.Backchannels).Concat(es.First).Concat(es.Again))
+            Assert.That(judging.Where(w => line.Contains(w, StringComparison.OrdinalIgnoreCase)), Is.Empty, line);
+        Assert.That(es.Acknowledgements, Does.Contain("Mm.").And.Contain("Ajá.").And.Contain("Entiendo.").And.Contain("De acuerdo.").And.Contain("Gracias."));
+        Assert.That(es.Remarks.Keys, Is.EquivalentTo(ExaminerFiller.English.Remarks.Keys), "every eye-contact remark exists in Spanish");
+        Assert.That(ExaminerFiller.For("es-MX"), Is.SameAs(ExaminerFiller.Spanish));
+        Assert.That(ExaminerFiller.For("ko"), Is.SameAs(ExaminerFiller.Korean), "Korean unchanged");
+        // Usted, never tú: no tú-form imperatives or pronouns in what she says.
+        var all = ExaminerFiller.FixedLines("es", backchannels: true).ToArray();
+        foreach (var tu in new[] { " tú ", "dime", "piensa", "cuéntame", "tómate", "continúa", " te " })
+            Assert.That(all.Where(l => (" " + l.ToLowerInvariant() + " ").Contains(tu, StringComparison.Ordinal)), Is.Empty, tu);
+    }
+
+    [Test]
+    public void Spanish_eye_contact_remarks_never_ask_the_student_to_look_at_her_and_gentle_reminders_are_warmed()
+    {
+        foreach (var kind in new[] { "look-away", "reading" })
+            Assert.That(ExaminerFiller.Remark(kind, "es"), Does.Not.Contain("míreme").And.Not.Contain("mire").And.Not.Contain("mírame"), kind);
+        Assert.That(ExaminerFiller.Remark("look-away", "es"), Is.EqualTo(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleRemindersSpanish[0]));
+        Assert.That(Gadfly.Server.Integrity.WebcamIntegrityRecorder.RemindersFor("es-419"), Is.SameAs(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleRemindersSpanish));
+        Assert.That(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleRemindersSpanish, Has.Count.EqualTo(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleReminders.Count));
+        var es = ExaminerFiller.FixedLines("es", false).ToArray();
+        Assert.That(es, Is.SupersetOf(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleRemindersSpanish));
+        Assert.That(es, Is.Unique);
+    }
+
+    [Test]
+    public void Spanish_acknowledgements_and_fillers_are_picked_from_the_Spanish_set_and_vary()
+    {
+        var random = new Random(5);
+        string? lastAck = null, lastFirst = null;
+        for (var i = 0; i < 100; i++)
+        {
+            var ack = ExaminerFiller.PickAcknowledgement(random, lastAck, "es");
+            Assert.That(ExaminerFiller.Spanish.Acknowledgements, Does.Contain(ack));
+            Assert.That(ack, Is.Not.EqualTo(lastAck));
+            lastAck = ack;
+            var (first, again) = ExaminerFiller.Pick(random, lastFirst, "es");
+            Assert.That(ExaminerFiller.Spanish.First, Does.Contain(first));
+            Assert.That(ExaminerFiller.Spanish.Again, Does.Contain(again));
+            lastFirst = first;
+        }
+    }
 }
