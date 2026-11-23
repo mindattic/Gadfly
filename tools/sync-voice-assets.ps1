@@ -42,8 +42,8 @@ Copy-To (Join-Path $nm '@microsoft\signalr\dist\browser\signalr.min.js') 'signal
 Get-ChildItem (Join-Path $Avatar 'web\dist') -Filter *.js -File | ForEach-Object { Copy-To $_.FullName "avatar\$($_.Name)" }
 Get-ChildItem (Join-Path $Speech 'web\dist') -Filter *.js -File | ForEach-Object { Copy-To $_.FullName "speech\$($_.Name)" }
 
-# The 2D fallback portrait and the avatar's licence note (small); the GLB itself is copied at build time.
+# The avatar's licence note (small); the GLB itself is copied at build time. assets/portrait-f.png is not copied: it is Gadfly's own
+# render of her in the blue look (avatar-look.js, GAD-T687), not the library's untinted portrait.
 New-Item -ItemType Directory -Force (Join-Path $root 'assets\avatars') | Out-Null
-Copy-Item (Join-Path $Avatar 'web\assets\portrait.png') (Join-Path $root 'assets\portrait.png') -Force
 Copy-Item (Join-Path $Avatar 'web\assets\avatars\LICENSE.md') (Join-Path $root 'assets\avatars\LICENSE.md') -Force
 '{0} MB written to {1}' -f [math]::Round((Get-ChildItem $out -Recurse -File | Measure-Object Length -Sum).Sum / 1MB, 2), $out

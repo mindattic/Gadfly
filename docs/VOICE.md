@@ -687,8 +687,8 @@ measurements yet"; `/healthz/call-timings` lists the rows too.
 | Setting | Meaning |
 |---|---|
 | `Gadfly:Voice:Mode` | `off`, `mock` or `live`. Default `mock` in Development, `off` elsewhere. |
-| `Gadfly:Voice:AvatarModelUrl` | The avatar GLB. Default `/assets/avatars/mpfb.glb` when the file exists, otherwise the 2D portrait. |
-| `Gadfly:Voice:PortraitUrl` | 2D fallback image (default `/assets/portrait.png`). |
+| `Gadfly:Voice:AvatarModelUrl` | The avatar GLB. Default `/assets/avatars/mpfb.glb` when the file exists, otherwise the 2D portrait. The examiner everywhere is this one model in the blue look (`avatar-look.js`, GAD-T687): set it only to a hosted copy of the same `mpfb.glb` (e.g. blob storage), never another model. |
+| `Gadfly:Voice:PortraitUrl` | 2D stand-in and fallback image (default `/assets/portrait-f.png`, Gadfly's own render of the blue examiner, GAD-T687; `tools/sync-voice-assets.ps1` no longer overwrites it with the library's untinted portrait). Leave it unset. |
 | `Gadfly:Voice:Examiners:<id>:ModelUrl`, `:PortraitUrl`, `:PortraitMouth` | One examiner's model, portrait and portrait mouth (`examiner-f`, `examiner-m`; GAD-T504). Unset: hers are the settings above, his the committed `/assets/avatars/examiner-m.glb` and `/assets/portrait-m.png`. |
 | `Gadfly:Voice:Examiners:<id>:VoiceId` / `:VoiceIds:<lang>` | That examiner's own ElevenLabs voice, for every language or one (live only). Unset: the male examiner's is `nPczCjzI2devNBz1zQrb` ("Brian"), hers the platform voice. |
 | `Gadfly:Voice:PortraitMouth` | Where the portrait's mouth is, "x,y,w" as fractions of the image (set for the default portrait; unset for a custom one means no drawn mouth). |

@@ -8,7 +8,7 @@ namespace Gadfly.Tests.Server;
 [TestFixture]
 public class ExaminerCatalogTests
 {
-    private static readonly VoiceSettings Voice = new(VoiceMode.Mock, "/assets/avatars/mpfb.glb", "/assets/portrait.png", 4);
+    private static readonly VoiceSettings Voice = new(VoiceMode.Mock, "/assets/avatars/mpfb.glb", "/assets/portrait-f.png", 4);
 
     [Test]
     public void TheConfiguredExaminer_IsOffered_AndTheMaleOneOnlyOnceInstalled()
@@ -20,7 +20,7 @@ public class ExaminerCatalogTests
             var options = ExaminerCatalog.For(Voice, empty);
             Assert.That(options.Select(o => o.Id), Is.EqualTo(new[] { ExaminerCatalog.Female, ExaminerCatalog.Male }));
             Assert.That(options[0].Available, Is.True);
-            Assert.That(options[0].PortraitUrl, Is.EqualTo("/assets/portrait.png"));
+            Assert.That(options[0].PortraitUrl, Is.EqualTo("/assets/portrait-f.png"));
             Assert.That(options[1].Available, Is.False, "no portrait installed yet");
 
             Directory.CreateDirectory(Path.Combine(empty, "assets"));

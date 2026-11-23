@@ -28,7 +28,7 @@ Summary
   @mindattic/avatar (MindAttic LLC)            lib/voice/avatar/**                              MIT
   @mindattic/speechrecognition 1.0.0           lib/voice/speech/**                              MIT
     (MindAttic LLC)
-  Avatar model "mpfb.glb" (TalkingHead         assets/avatars/mpfb.glb, assets/portrait.png     CC0 1.0
+  Avatar model "mpfb.glb" (TalkingHead         assets/avatars/mpfb.glb, assets/portrait-f.png   CC0 1.0
     sample made with MPFB / MakeHuman)
   Page-turn sound effects (Freesound)          sounds/page-turn-1.mp3, sounds/page-turn-2.mp3   CC0 1.0
 
@@ -443,7 +443,7 @@ Avatar model: assets/avatars/mpfb.glb
   The "avatars/mpfb.glb" sample of TalkingHead (https://github.com/met4citizen/TalkingHead) at tag v1.8.2,
   unmodified. Made with Blender and the MPFB extension (MakeHuman assets). Licensed CC0 per the TalkingHead README.
   SHA-256 63c645a2a863b9972e9a9c2ed576a1de4c390b8475508e1473e69c87a3ee299c
-  assets/portrait.png is a render of this model and is also CC0.
+  assets/portrait-f.png is a render of this model in Gadfly's blue look and is also CC0.
   The other sample avatars in the TalkingHead repository are licensed for non-commercial use only and are not used.
 
 Page-turn sound 1: sounds/page-turn-1.mp3

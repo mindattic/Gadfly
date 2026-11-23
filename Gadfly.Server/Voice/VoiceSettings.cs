@@ -79,8 +79,8 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
     /// </summary>
     public string? PortraitMouth { get; init; }
 
-    /// <summary>The default portrait's mouth (the bundled <c>/assets/portrait.png</c>, 480 x 600).</summary>
-    public const string DefaultPortraitMouth = "0.59,0.768,0.19";
+    /// <summary>The default portrait's mouth (the bundled <c>/assets/portrait-f.png</c>, 480 x 600).</summary>
+    public const string DefaultPortraitMouth = "0.558,0.82,0.19";
 
     /// <summary>
     /// The ElevenLabs model the examiner speaks with when <c>MindAttic:Avatar:ElevenLabs:ModelId</c> isn't set (GAD-T303):
@@ -237,7 +237,7 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
         return string.Join(',', n.Select(x => x.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)));
     }
 
-    public static readonly VoiceSettings Disabled = new(VoiceMode.Off, null, "/assets/portrait.png", 4);
+    public static readonly VoiceSettings Disabled = new(VoiceMode.Off, null, "/assets/portrait-f.png", 4);
 
     /// <summary>Reads the settings. <paramref name="webRoot"/> is checked for the default avatar model.</summary>
     public static VoiceSettings From(IConfiguration config, bool development, string? webRoot)
@@ -258,8 +258,8 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
         var complete = double.TryParse(section["EndOfAnswerCompleteSeconds"], System.Globalization.CultureInfo.InvariantCulture, out var d) && double.IsFinite(d) ? Math.Clamp(d, 1, cue) : Math.Min(2, cue);
         var hangover = int.TryParse(section["SpeechHangoverMs"], System.Globalization.CultureInfo.InvariantCulture, out var h) ? Math.Clamp(h, 300, 2000) : 700;
         var backchannel = int.TryParse(section["BackchannelMs"], System.Globalization.CultureInfo.InvariantCulture, out var b) && b > 0 ? Math.Clamp(b, 300, 3000) : 0;
-        var portrait = section["PortraitUrl"] ?? "/assets/portrait.png";
-        var mouth = section["PortraitMouth"] is { Length: > 0 } m ? ParseMouth(m) : portrait == "/assets/portrait.png" ? DefaultPortraitMouth : null;
+        var portrait = section["PortraitUrl"] ?? "/assets/portrait-f.png";
+        var mouth = section["PortraitMouth"] is { Length: > 0 } m ? ParseMouth(m) : portrait == "/assets/portrait-f.png" ? DefaultPortraitMouth : null;
         return new VoiceSettings(mode, string.IsNullOrWhiteSpace(model) ? null : model, portrait, cue)
         {
             EndOfAnswerMaxSeconds = max,

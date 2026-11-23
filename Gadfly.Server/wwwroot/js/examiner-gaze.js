@@ -578,9 +578,9 @@ function eyes3d(a) {
 
 /**
  * The point between the examiner's eyes on each known portrait, as shares of the image, measured once from the asset: the iris
- * centres of /assets/portrait.png (480 x 600) are near (230, 328) and (350, 338). A portrait not listed has no eye point.
+ * centres of /assets/portrait-f.png (480 x 600) are near (224, 365) and (341, 379). A portrait not listed has no eye point.
  */
-const PORTRAIT_EYES = Object.freeze({ "/assets/portrait.png": Object.freeze({ x: 0.6, y: 0.555 }) });
+const PORTRAIT_EYES = Object.freeze({ "/assets/portrait-f.png": Object.freeze({ x: 0.589, y: 0.62 }) });
 
 function portraitEyesFor(src) {
     if (!src) return null;

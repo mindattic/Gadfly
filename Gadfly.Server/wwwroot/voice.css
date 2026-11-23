@@ -130,7 +130,7 @@
 .voice-caption[data-timed="true"] .voice-word-said { color: var(--ink); }
 /* The 2D portrait's mouth: drawn over the lips and opened with her word timings. Hidden while closed. */
 .voice-mouth { --open: 0; position: absolute; pointer-events: none; border-radius: 50%; opacity: 0;
-  background: radial-gradient(ellipse at 50% 45%, rgba(46, 14, 16, .92) 0 38%, rgba(92, 34, 36, .55) 58%, rgba(120, 60, 60, 0) 72%);
+  background: radial-gradient(ellipse at 50% 45%, rgba(24, 48, 112, .85) 0 38%, rgba(48, 92, 178, .5) 58%, rgba(90, 140, 220, 0) 72%);
   transform: scaleY(calc(.12 + .88 * var(--open))) scaleX(calc(.82 + .18 * var(--open))); transform-origin: 50% 35%; }
 .voice-mouth[data-open="true"] { opacity: calc(.35 + .65 * var(--open)); }
 @media (prefers-reduced-motion: reduce) { .voice-caption[data-timed="true"] .voice-word { transition: none; } }
