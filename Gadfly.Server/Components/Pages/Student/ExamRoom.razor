@@ -239,7 +239,7 @@
                 }
                 @if (step?.Notice is { } note && error is null)
                 {
-                    <p class="ok" role="status">@note</p>
+                    <p class="ok" role="status">@(step.NoticeKey is { } noteKey ? T[noteKey] : note)</p>
                 }
                 @if (error is not null && lastMode == LastMode.None)
                 {

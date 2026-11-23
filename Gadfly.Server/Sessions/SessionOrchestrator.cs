@@ -39,6 +39,8 @@ public sealed record SessionStep
     public LastAnswer? LastAnswer { get; init; }
     /// <summary>A one-line confirmation of what the student's last action did, e.g. "Your correction was saved."</summary>
     public string? Notice { get; init; }
+    /// <summary>The key of <see cref="Notice"/> in the exam room's string files (examRoom.notice.*); <see cref="Notice"/> stays the English text for the API, staff and older clients (GAD-T629).</summary>
+    public string? NoticeKey { get; init; }
     /// <summary>
     /// The open question said another way, after the student asked for it (GAD-T555); the examiner says this, while
     /// <see cref="Question"/> stays the question as first asked. Null on every other step.
@@ -86,6 +88,9 @@ public sealed partial class SessionOrchestrator(
         public AssessmentMode Mode { get; } = mode;
         /// <summary>Set by a step for the view it returns (cleared on every step).</summary>
         public string? Notice { get; set; }
+        /// <summary>The key of <see cref="Notice"/> in the exam room's string files, so the room shows it in the attempt's language (GAD-T629).</summary>
+        public string? NoticeKey { get; set; }
+        public void SetNotice(string key, string english) { NoticeKey = key; Notice = english; }
         /// <summary>The rewording a "say it another way" step produced (cleared on every step, GAD-T555).</summary>
         public string? Rephrased { get; set; }
         public SourceExamEngine Engine { get; set; } = engine;
@@ -488,13 +493,13 @@ public sealed partial class SessionOrchestrator(
                 ledger.Answer(p.Request!, p.Response, text.Length == 0 ? null : text, studentUserId, "The student did not clarify.");
                 ledger.MovePath(p.Response, "The student chose not to clarify; the ambiguity goes to a human reviewer.", studentUserId, OrgRoles.Student,
                     VerificationState.Unresolved, VerificationState.FlaggedForHumanReview);
-                live.Notice = "No problem. Your answer was kept exactly as you wrote it.";
+                live.SetNotice("examRoom.notice.declined", "No problem. Your answer was kept exactly as you wrote it.");
                 return Task.FromResult(Compose(p.Response.VerifiedText, null, null));
             }
             ledger.Answer(p.Request!, p.Response, text, studentUserId, "The student clarified their meaning.");
             ledger.AddVersion(p.Response, text, CorrectionKind.MeaningClarification, "student", studentUserId);
             ledger.Move(p.Response, VerificationState.Clarified, "The student clarified their meaning.", studentUserId, OrgRoles.Student);
-            live.Notice = "Thanks. Your clarification was saved alongside your answer.";
+            live.SetNotice("examRoom.notice.clarified", "Thanks. Your clarification was saved alongside your answer.");
             return Task.FromResult(Compose(p.Response.VerifiedText, p.Request!.Question, text));
         }, ct);
 
@@ -551,7 +556,7 @@ public sealed partial class SessionOrchestrator(
                 ledger.AddVersion(p.Response, text, CorrectionKind.Transcription, "student", studentUserId);
                 ledger.Move(p.Response, VerificationState.Corrected, "Transcription correction by the student.", studentUserId, OrgRoles.Student);
                 await db.SaveChangesAsync(ct);
-                live.Notice = "Your correction was saved. Your original answer is kept on record too.";
+                live.SetNotice("examRoom.notice.correction", "Your correction was saved. Your original answer is kept on record too.");
                 await JudgePendingAsync(live, ledger, p.Response, Compose(p.Response.VerifiedText, null, null), ct);
                 return await live.Engine.NextQuestionAsync(ct);
             }
@@ -571,7 +576,7 @@ public sealed partial class SessionOrchestrator(
                 "Transcription correction after judging: graders use the corrected text; the live examiner saw version 1. Never a score penalty.",
                 studentUserId, OrgRoles.Student);
             await db.SaveChangesAsync(ct);
-            live.Notice = "Your typo fix was saved. Your original answer is kept on record too.";
+            live.SetNotice("examRoom.notice.typo", "Your typo fix was saved. Your original answer is kept on record too.");
             return await live.Engine.NextQuestionAsync(ct);
         }, ct);
 
@@ -611,7 +616,7 @@ public sealed partial class SessionOrchestrator(
             await ledger.CaptureAsync(live.OrganizationId, s.Id, turnId, studentUserId,
                 new Answer { Text = text, Mode = "text", CompletedAt = clock.GetUtcNow() }, ResponseKind.SubstantiveRevision, latest.Id, ct);
             await db.SaveChangesAsync(ct);
-            live.Notice = "Your changed answer was recorded as a new answer. Your original stays on record and your instructor sees both.";
+            live.SetNotice("examRoom.notice.changed", "Your changed answer was recorded as a new answer. Your original stays on record and your instructor sees both.");
             return await live.Engine.NextQuestionAsync(ct);
         }, ct);
 
@@ -857,6 +862,7 @@ public sealed partial class SessionOrchestrator(
         {
             Turn? question;
             live.Notice = null;
+            live.NoticeKey = null;
             live.Rephrased = null;
             using var usage = Gadfly.Socrates.PanelUsage.Track(out var calls);
             try
@@ -936,6 +942,7 @@ public sealed partial class SessionOrchestrator(
             Verification = pending,
             LastAnswer = last,
             Notice = live.Notice,
+            NoticeKey = live.NoticeKey,
             Rephrased = live.Rephrased,
             Language = live.Engine.Subject.Language.Exam,
             ClockStarted = !s.ClockHeld,

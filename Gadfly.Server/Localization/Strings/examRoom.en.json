@@ -219,5 +219,10 @@
   "examRoom.voiceLine.feature.jitter": "voice steadiness",
   "examRoom.voiceLine.feature.loudness": "loudness",
   "examRoom.voiceLine.feature.rate": "speaking rate",
-  "examRoom.voiceLine.feature.pauses": "pauses"
+  "examRoom.voiceLine.feature.pauses": "pauses",
+  "examRoom.notice.declined": "No problem. Your answer was kept exactly as you wrote it.",
+  "examRoom.notice.clarified": "Thanks. Your clarification was saved alongside your answer.",
+  "examRoom.notice.correction": "Your correction was saved. Your original answer is kept on record too.",
+  "examRoom.notice.typo": "Your typo fix was saved. Your original answer is kept on record too.",
+  "examRoom.notice.changed": "Your changed answer was recorded as a new answer. Your original stays on record and your instructor sees both."
 }
