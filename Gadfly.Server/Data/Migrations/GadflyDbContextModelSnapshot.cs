@@ -706,6 +706,9 @@ namespace Gadfly.Server.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("CollectionId")
                         .HasColumnType("uniqueidentifier");
 
@@ -786,6 +789,8 @@ namespace Gadfly.Server.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CategoryId");
+
                     b.HasIndex("CollectionId");
 
                     b.HasIndex("CourseId");
@@ -858,6 +863,49 @@ namespace Gadfly.Server.Data.Migrations
                     b.HasIndex("OrganizationId", "StudentUserId");
 
                     b.ToTable("ExamAssignments", "gadfly");
+                });
+
+            modelBuilder.Entity("Gadfly.Server.Data.ExamCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DisplayNamesJson")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "Slug")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "SortOrder");
+
+                    b.ToTable("ExamCategories", "gadfly");
                 });
 
             modelBuilder.Entity("Gadfly.Server.Data.ExamLocalization", b =>
@@ -3651,6 +3699,11 @@ namespace Gadfly.Server.Data.Migrations
 
             modelBuilder.Entity("Gadfly.Server.Data.Exam", b =>
                 {
+                    b.HasOne("Gadfly.Server.Data.ExamCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Gadfly.Server.Data.SourceCollection", null)
                         .WithMany()
                         .HasForeignKey("CollectionId")

@@ -77,6 +77,34 @@
         </details>
     }
 
+    @* GAD-T656: the organization's exam categories; each exam's category is chosen in its row below. *@
+    <details class="panel desk-form">
+        <summary><strong>Exam categories</strong>@(categories.Count > 0 ? $" ({categories.Count})" : "")</summary>
+        @if (categories.Count > 0)
+        {
+            <ul class="hint">
+                @foreach (var c in categories)
+                {
+                    <li>@c.Name <span class="hint">(@c.Slug · order @c.SortOrder · @c.Exams exam@(c.Exams == 1 ? "" : "s")@(c.DisplayNames.Count > 0 ? " · " + string.Join(", ", c.DisplayNames.Select(d => $"{d.Key}: {d.Value}")) : ""))</span></li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="hint">No categories yet.</p>
+        }
+        <div class="desk-row">
+            <label>Name <input @bind="newCategory.Name" placeholder="Biology" maxlength="@ExamCategory.MaxNameLength" /></label>
+            <label>Slug <span class="hint">(optional)</span> <input @bind="newCategory.Slug" placeholder="biology" maxlength="@ExamCategory.MaxSlugLength" /></label>
+            <label>Sort order <input type="number" @bind="newCategory.SortOrder" /></label>
+        </div>
+        <div class="desk-row">
+            <label>Korean name <span class="hint">(optional)</span> <input @bind="newCategoryKo" maxlength="@ExamCategory.MaxNameLength" /></label>
+            <label>Spanish name <span class="hint">(optional)</span> <input @bind="newCategoryEs" maxlength="@ExamCategory.MaxNameLength" /></label>
+        </div>
+        <button type="button" @onclick="CreateCategoryAsync" disabled="@busy">Create category</button>
+    </details>
+
     @if (exams is null)
     {
         <p class="hint" role="status">Loading…</p>
@@ -93,7 +121,20 @@
                 @foreach (var e in exams)
                 {
                     <tr>
-                        <td><strong>@e.Title</strong><br /><span class="hint">@e.Subject@(e.Topic.Length > 0 ? " · " + e.Topic : "") · @e.DurationMinutes min</span></td>
+                        <td><strong>@e.Title</strong><br /><span class="hint">@e.Subject@(e.Topic.Length > 0 ? " · " + e.Topic : "") · @e.DurationMinutes min</span>
+                            @if (categories.Count > 0)
+                            {
+                                <br /><label class="hint">Category
+                                    <select value="@(examCategories.TryGetValue(e.Id, out var cid) ? cid.ToString() : "")" @onchange="ev => SetCategoryAsync(e.Id, ev)" disabled="@busy">
+                                        <option value="">(uncategorized)</option>
+                                        @foreach (var c in categories)
+                                        {
+                                            <option value="@c.Id">@c.Name</option>
+                                        }
+                                    </select>
+                                </label>
+                            }
+                        </td>
                         <td>@(e.Voice ? "Voice" : "Text")</td>
                         <td>@e.Status</td>
                         <td>@(e.Processing ?? (e.CollectionStatus == ProcessingStatus.Ready ? "Ready" : e.CollectionStatus.ToString()))</td>
@@ -395,6 +436,11 @@ else
             {
                 case "exams":
                     exams = await desk.ExamsAsync();
+                    await RunAdminAsync(async admin =>
+                    {
+                        categories = await admin.CategoriesAsync();
+                        examCategories = await admin.ExamCategoryIdsAsync();
+                    });
                     break;
                 case "students":
                     students = await desk.StudentsAsync();
@@ -435,6 +481,52 @@ else
         await using var scope = Scopes.CreateAsyncScopeFor(DeskAccess.Elevated(Tenant));
         await work(new DeskService(scope.ServiceProvider));
     }
+
+    /// <summary>Runs one exam-admin operation (GAD-T656: categories) in its own elevated scope, after the same desk check as <see cref="RunAsync"/>.</summary>
+    private async Task RunAdminAsync(Func<Gadfly.Server.Admin.ExamAdminService, Task> work)
+    {
+        var user = (await Auth.GetAuthenticationStateAsync()).User;
+        if (!DeskAccess.IsDeskAdmin(user, Tenant, Config)) return;
+        await using var scope = Scopes.CreateAsyncScopeFor(DeskAccess.Elevated(Tenant));
+        await work(ActivatorUtilities.CreateInstance<Gadfly.Server.Admin.ExamAdminService>(scope.ServiceProvider));
+    }
+
+    // ------------------------------------------------------------------ exam categories (GAD-T656)
+
+    private IReadOnlyList<Gadfly.Server.Admin.ExamCategoryRow> categories = [];
+    private IReadOnlyDictionary<Guid, Guid> examCategories = new Dictionary<Guid, Guid>();
+    private Gadfly.Server.Admin.ExamCategoryForm newCategory = new();
+    private string newCategoryKo = "", newCategoryEs = "";
+
+    private Task CreateCategoryAsync() => ActAsync(async _ =>
+    {
+        newCategory.DisplayNames["ko"] = newCategoryKo;
+        newCategory.DisplayNames["es"] = newCategoryEs;
+        DeskResult? r = null;
+        await RunAdminAsync(async admin =>
+        {
+            var res = await admin.CreateCategoryAsync(newCategory);
+            r = new DeskResult(res.Ok, res.Message, res.Id);
+        });
+        if (r is { Ok: true })
+        {
+            newCategory = new();
+            newCategoryKo = newCategoryEs = "";
+        }
+        return r ?? new DeskResult(false, "The admin desk is not available to you.");
+    });
+
+    private Task SetCategoryAsync(Guid examId, ChangeEventArgs e) => ActAsync(async _ =>
+    {
+        var chosen = Guid.TryParse(e.Value?.ToString(), out var g) ? g : (Guid?)null;
+        DeskResult? r = null;
+        await RunAdminAsync(async admin =>
+        {
+            var res = await admin.SetCategoryAsync(examId, chosen);
+            r = new DeskResult(res.Ok, res.Message, res.Id);
+        });
+        return r ?? new DeskResult(false, "The admin desk is not available to you.");
+    });
 
     private async Task ActAsync(Func<DeskService, Task<DeskResult>> work, bool reload = true)
     {

@@ -6,6 +6,7 @@
 @inject IOrganizationDirectory Directory
 @inject TimeProvider Clock
 @inject NavigationManager Nav
+@using Gadfly.Server.Admin
 
 <PageTitle>@(Id is null ? "New exam" : draft?.Title ?? "Exam") · Gadfly Exams</PageTitle>
 <h1>@(Id is null ? "New exam" : draft?.Title ?? "Exam") @if (draft?.Id is not null) { <span>· @draft.Status</span> }</h1>
@@ -28,6 +29,31 @@ else
             This exam is @draft.Status.ToString().ToLowerInvariant()@(draft.PublishedAt is { } at ? $" (published {at:yyyy-MM-dd})" : ""),
             so its settings are frozen. Saving changes creates a copy as a new draft; this exam stays as it is.
         </p>
+    }
+
+    @if (draft.Id is not null && admin.CanManage)
+    {
+        @* GAD-T656: the category is how the exam is listed, not a frozen setting, so it can change on published exams too. *@
+        <div class="panel">
+            <h2>Category</h2>
+            <label>Category
+                <select value="@(categoryId?.ToString() ?? "")" @onchange="CategoryChangedAsync" disabled="@busy">
+                    <option value="">(uncategorized)</option>
+                    @foreach (var c in categories)
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </select>
+            </label>
+            @if (categories.Count == 0)
+            {
+                <p class="hint">This organization has no exam categories yet. Create them on the admin desk's Exams tab.</p>
+            }
+            @if (categoryMessage is not null)
+            {
+                <p role="status" class="@(categoryOk ? "ok" : "error")">@categoryMessage</p>
+            }
+        </div>
     }
 
     <div class="panel">
@@ -171,7 +197,40 @@ else
 
     private bool Frozen => draft is { Id: not null, Status: not ExamStatus.Draft };
 
-    protected override void OnInitialized() => svc = new ExamService(Db, Tenant, Directory, Clock);
+    // GAD-T656: exam categories.
+    private ExamAdminService admin = default!;
+    private IReadOnlyList<ExamCategoryRow> categories = [];
+    private Guid? categoryId;
+    private string? categoryMessage;
+    private bool categoryOk;
+
+    protected override void OnInitialized()
+    {
+        svc = new ExamService(Db, Tenant, Directory, Clock);
+        admin = new ExamAdminService(Db, Tenant, Directory, Clock);
+    }
+
+    private async Task LoadCategoryAsync(Guid examId)
+    {
+        categories = await admin.CategoriesAsync();
+        categoryId = (await admin.ExamCategoryIdsAsync()).TryGetValue(examId, out var c) ? c : null;
+    }
+
+    private async Task CategoryChangedAsync(ChangeEventArgs e)
+    {
+        if (draft?.Id is not { } id || busy) return;
+        var chosen = Guid.TryParse(e.Value?.ToString(), out var g) ? g : (Guid?)null;
+        busy = true;
+        await gate.WaitAsync();
+        try
+        {
+            var r = await admin.SetCategoryAsync(id, chosen);
+            categoryOk = r.Ok;
+            categoryMessage = r.Message;
+            await LoadCategoryAsync(id);
+        }
+        finally { gate.Release(); busy = false; }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -198,6 +257,7 @@ else
                 notFound = true;
                 return;
             }
+            await LoadCategoryAsync(id);
         }
         else if (draft?.Id is not null || draft is null)
         {

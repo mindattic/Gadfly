@@ -67,6 +67,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     public DbSet<ConceptCitation> ConceptCitations => Set<ConceptCitation>();
     public DbSet<RubricPoint> RubricPoints => Set<RubricPoint>();
     public DbSet<Exam> Exams => Set<Exam>();
+    public DbSet<ExamCategory> ExamCategories => Set<ExamCategory>();   // an organization's exam categories (GAD-T656)
     public DbSet<ExamAssignment> ExamAssignments => Set<ExamAssignment>();
     public DbSet<ExamSession> ExamSessions => Set<ExamSession>();
     public DbSet<SessionTurn> SessionTurns => Set<SessionTurn>();
@@ -233,6 +234,15 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.Property(x => x.PromptSetId).HasMaxLength(60);
             e.HasOne<SourceCollection>().WithMany().HasForeignKey(x => x.CollectionId);
             e.HasIndex(x => new { x.OrganizationId, x.Status });
+            e.HasOne<ExamCategory>().WithMany().HasForeignKey(x => x.CategoryId);   // GAD-T656
+        });
+        b.Entity<ExamCategory>(e =>   // GAD-T656
+        {
+            e.Property(x => x.Name).HasMaxLength(ExamCategory.MaxNameLength);
+            e.Property(x => x.Slug).HasMaxLength(ExamCategory.MaxSlugLength);
+            e.Property(x => x.DisplayNamesJson).HasMaxLength(4000);
+            e.HasIndex(x => new { x.OrganizationId, x.Slug }).IsUnique();
+            e.HasIndex(x => new { x.OrganizationId, x.SortOrder });
         });
         b.Entity<ExamAssignment>(e =>
         {

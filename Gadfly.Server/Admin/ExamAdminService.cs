@@ -66,6 +66,24 @@ public sealed record ExamExport(string FileName, string Json);
 
 public sealed record CourseOption(Guid Id, string Title);
 
+/// <summary>One of the organization's exam categories (GAD-T656), with how many exams are filed under it.</summary>
+public sealed record ExamCategoryRow(Guid Id, string Name, string Slug, int SortOrder, IReadOnlyDictionary<string, string> DisplayNames, int Exams)
+{
+    /// <summary>The category's name in the given language (primary tag, e.g. "ko"), falling back to <see cref="Name"/>.</summary>
+    public string DisplayName(string? language) =>
+        language is { Length: > 0 } && DisplayNames.TryGetValue(language.Split('-')[0].ToLowerInvariant(), out var n) && n.Length > 0 ? n : Name;
+}
+
+/// <summary>The create-category form (GAD-T656). Slug is optional (made from the name when blank).</summary>
+public sealed class ExamCategoryForm
+{
+    public string Name { get; set; } = "";
+    public string? Slug { get; set; }
+    public int SortOrder { get; set; }
+    /// <summary>Optional display names by primary language tag (e.g. "ko", "es"); blank entries are dropped.</summary>
+    public Dictionary<string, string> DisplayNames { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}
+
 /// <summary>
 /// The admin exams manager (GAD-T297): every exam with its counts, duplicating (a deep copy of the exam, its objectives, rubric
 /// criteria and level descriptors, hint ladders, session settings and grading policy, never its assignments or attempts), archiving
@@ -648,6 +666,120 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
             reason: d.CollectionTitle is { Length: > 0 } from ? $"Imported from a file exported on \"{from}\"." : "Imported from a file.");
         await SaveAsync(ct);
         return new(true, $"Imported \"{exam.Title}\" as a draft.{(warnings.Count > 0 ? " Read the notes below before publishing." : "")}", exam.Id, [], warnings);
+    }
+
+    // ================================================================== categories (GAD-T656)
+
+    /// <summary>The organization's exam categories, by sort order then name, each with its exam count.</summary>
+    public async Task<IReadOnlyList<ExamCategoryRow>> CategoriesAsync(CancellationToken ct = default)
+    {
+        if (!CanManage) return [];
+        var org = Org;
+        var categories = await db.ExamCategories.AsNoTracking().Where(c => c.OrganizationId == org)
+            .OrderBy(c => c.SortOrder).ThenBy(c => c.Name).ToListAsync(ct);
+        if (categories.Count == 0) return [];
+        var counts = await db.Exams.AsNoTracking().Where(e => e.OrganizationId == org && e.CategoryId != null)
+            .GroupBy(e => e.CategoryId!.Value).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.Count, ct);
+        return categories.Select(c => new ExamCategoryRow(c.Id, c.Name, c.Slug, c.SortOrder, ReadDisplayNames(c.DisplayNamesJson),
+            counts.GetValueOrDefault(c.Id))).ToList();
+    }
+
+    /// <summary>Each exam's category (exam id to category id), for exams that have one.</summary>
+    public async Task<IReadOnlyDictionary<Guid, Guid>> ExamCategoryIdsAsync(CancellationToken ct = default)
+    {
+        if (!CanManage) return new Dictionary<Guid, Guid>();
+        var org = Org;
+        return await db.Exams.AsNoTracking().Where(e => e.OrganizationId == org && e.CategoryId != null)
+            .ToDictionaryAsync(e => e.Id, e => e.CategoryId!.Value, ct);
+    }
+
+    /// <summary>Creates a category. The slug (made from the name when blank) must be unique in the organization. Audited as exam.category.created.</summary>
+    public async Task<AssessmentResult> CreateCategoryAsync(ExamCategoryForm form, CancellationToken ct = default)
+    {
+        if (!await guard.RequireAsync(Permission.ManageAssessments, "Creating an exam category", "ExamCategory", null, ct))
+            return new(false, AssessmentGuard.Denied(Permission.ManageAssessments));
+        var name = (form.Name ?? "").Trim();
+        if (name.Length == 0) return new(false, "Give the category a name.");
+        if (name.Length > ExamCategory.MaxNameLength) return new(false, $"Keep the name to {ExamCategory.MaxNameLength} characters.");
+        var slug = Slugify(string.IsNullOrWhiteSpace(form.Slug) ? name : form.Slug);
+        if (slug.Length == 0) return new(false, "The name needs at least one letter or digit.");
+        var org = Org;
+        if (await db.ExamCategories.AnyAsync(c => c.OrganizationId == org && c.Slug == slug, ct))
+            return new(false, $"A category with the slug \"{slug}\" already exists.");
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (lang, text) in form.DisplayNames ?? new())
+        {
+            if (string.IsNullOrWhiteSpace(lang) || string.IsNullOrWhiteSpace(text)) continue;
+            var v = text.Trim();
+            names[lang.Trim().Split('-')[0].ToLowerInvariant()] = v.Length > ExamCategory.MaxNameLength ? v[..ExamCategory.MaxNameLength] : v;
+        }
+        var category = new ExamCategory
+        {
+            OrganizationId = org, Name = name, Slug = slug, SortOrder = form.SortOrder,
+            DisplayNamesJson = JsonSerializer.Serialize(names), CreatedByUserId = User, CreatedAt = clock.GetUtcNow(),
+        };
+        db.ExamCategories.Add(category);
+        guard.Audit("exam.category.created", "ExamCategory", category.Id.ToString(), after: new { category.Name, category.Slug, category.SortOrder, DisplayNames = names });
+        await SaveAsync(ct);
+        return new(true, $"Created the category \"{name}\".", category.Id);
+    }
+
+    /// <summary>
+    /// Files an exam under a category, or none (null). Allowed on published exams too: a category is how the exam is listed,
+    /// not one of its frozen settings. Audited as exam.category.set with before and after.
+    /// </summary>
+    public async Task<AssessmentResult> SetCategoryAsync(Guid examId, Guid? categoryId, CancellationToken ct = default)
+    {
+        if (!await guard.RequireAsync(Permission.ManageAssessments, "Changing an exam's category", "Exam", examId.ToString(), ct))
+            return new(false, AssessmentGuard.Denied(Permission.ManageAssessments));
+        var org = Org;
+        var exam = await db.Exams.FirstOrDefaultAsync(e => e.Id == examId && e.OrganizationId == org, ct);
+        if (exam is null) return new(false, "That exam no longer exists.");
+        if (exam.CategoryId == categoryId) return new(true, "No change.", exam.Id);
+        string? categoryName = null;
+        if (categoryId is { } id)
+        {
+            categoryName = await db.ExamCategories.AsNoTracking().Where(c => c.Id == id && c.OrganizationId == org).Select(c => c.Name).FirstOrDefaultAsync(ct);
+            if (categoryName is null) return new(false, "That category no longer exists.");
+        }
+        var before = exam.CategoryId;
+        exam.CategoryId = categoryId;
+        guard.Audit("exam.category.set", "Exam", exam.Id.ToString(), new { CategoryId = before }, new { CategoryId = categoryId, Category = categoryName });
+        await SaveAsync(ct);
+        return new(true, categoryName is null ? "Removed the exam's category." : $"Filed under \"{categoryName}\".", exam.Id);
+    }
+
+    /// <summary>Reads a category's display-name JSON (language tag to name); an empty map when blank or malformed.</summary>
+    public static IReadOnlyDictionary<string, string> ReadDisplayNames(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new Dictionary<string, string>();
+        try
+        {
+            var map = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+            return map is null ? new Dictionary<string, string>() : new Dictionary<string, string>(map, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (JsonException) { return new Dictionary<string, string>(); }
+    }
+
+    /// <summary>Lower-case letters and digits joined by single hyphens, at most <see cref="ExamCategory.MaxSlugLength"/> long.</summary>
+    public static string Slugify(string? text)
+    {
+        var sb = new System.Text.StringBuilder();
+        var pendingHyphen = false;
+        foreach (var ch in (text ?? "").Normalize(System.Text.NormalizationForm.FormD))
+        {
+            if (char.GetUnicodeCategory(ch) == System.Globalization.UnicodeCategory.NonSpacingMark) continue;
+            var c = char.ToLowerInvariant(ch);
+            if (c is (>= 'a' and <= 'z') or (>= '0' and <= '9'))
+            {
+                if (pendingHyphen && sb.Length > 0) sb.Append('-');
+                pendingHyphen = false;
+                sb.Append(c);
+            }
+            else pendingHyphen = true;
+            if (sb.Length >= ExamCategory.MaxSlugLength) break;
+        }
+        return sb.Length > ExamCategory.MaxSlugLength ? sb.ToString(0, ExamCategory.MaxSlugLength).TrimEnd('-') : sb.ToString().TrimEnd('-');
     }
 
     // ================================================================== helpers

@@ -273,6 +273,32 @@ public sealed class Exam : ITenantOwned
     /// Korean and Spanish by default (GAD-T611). The source material and rubric stay in their own language; LanguageEntities.cs holds the per-language texts.
     /// </summary>
     public string Languages { get; set; } = Gadfly.Engine.ExamLanguage.DefaultOffered;
+    /// <summary>GAD-T656: the organization's category this exam is filed under (<see cref="ExamCategory"/>); null = uncategorized.</summary>
+    public Guid? CategoryId { get; set; }
+}
+
+/// <summary>
+/// An organization's exam category (GAD-T656), e.g. "Biology" or "Midterms": a name, a URL-safe slug unique within the
+/// organization, a sort order for lists, and optional per-language display names. Exams point at it through
+/// <see cref="Exam.CategoryId"/>.
+/// </summary>
+public sealed class ExamCategory : ITenantOwned
+{
+    public const int MaxNameLength = 100;
+    public const int MaxSlugLength = 100;
+
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid OrganizationId { get; set; }
+    /// <summary>The category's name in English (the default shown when no display name exists for a language).</summary>
+    public string Name { get; set; } = "";
+    /// <summary>Lower-case letters, digits and hyphens; unique within the organization.</summary>
+    public string Slug { get; set; } = "";
+    /// <summary>Lists show categories by this, lowest first, then by name.</summary>
+    public int SortOrder { get; set; }
+    /// <summary>JSON object: BCP-47 primary language tag (lower case, e.g. "ko") to the category's name in that language.</summary>
+    public string DisplayNamesJson { get; set; } = "{}";
+    public Guid CreatedByUserId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 public sealed class ExamAssignment : ITenantOwned
