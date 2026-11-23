@@ -69,7 +69,7 @@ else
 {
     <p class="hint"><a href="@($"grading/exam/{ExamId:D}/class-summary.pdf")" download data-enhance-nav="false">Download class summary (PDF)</a>: score distribution, per-objective average and who hasn't completed, over this exam's released results.</p>
     <table class="grid">
-        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Answers</th><th>Eye contact</th><th>Lives in EU/EEA</th><th>Latest session</th><th>Results</th></tr></thead>
+        <thead><tr><th>Student</th><th>Window</th><th>Attempts</th><th>Extra time</th><th>Answers</th><th>Eye contact</th><th>Leaving the window</th><th>Lives in EU/EEA</th><th>Latest session</th><th>Results</th></tr></thead>
         <tbody>
             @foreach (var r in rows)
             {
@@ -90,6 +90,24 @@ else
                         @if (CanAssign)
                         {
                             <button type="button" class="link" disabled="@busy" @onclick="() => GazeAccommodationAsync(r, !r.GazeAccommodation)">@(r.GazeAccommodation ? "Withdraw" : "Declare accommodation")</button>
+                        }
+                    </td>
+                    <td>
+                        @{ var wa = r.WindowAbsence ?? Gadfly.Server.Integrity.WindowAbsenceRule.Standard; }
+                        @if (CanAssign)
+                        {
+                            <select aria-label="When leaving the exam window marks @r.StudentName's attempt for review" disabled="@busy" value="@WindowPreset(wa)"
+                                    @onchange="e => WindowAbsenceAsync(r, e.Value?.ToString())">
+                                @foreach (var (key, label, _, _, _) in WindowPresets)
+                                {
+                                    <option value="@key">@label</option>
+                                }
+                                @if (WindowPreset(wa) == "custom") { <option value="custom">@wa.Describe()</option> }
+                            </select>
+                        }
+                        else
+                        {
+                            <span>@(wa.IsStandard ? "standard" : wa.Describe())</span>
                         }
                     </td>
                     <td title="GAD-T259: by default a student living in the EU/EEA gets no voice measurements in voice exams (EU AI Act Art. 5(1)(f)).">
@@ -120,6 +138,7 @@ else
     </table>
     <p class="hint">Answers: exams are spoken. Grant typed answers only to a student with a documented speech, hearing or anxiety need: they then type each answer instead of speaking it. Their camera stays on, the examiner still speaks the questions and the eye-contact check still applies (unless you also declare the eye-contact accommodation). Their typed answers are marked as typed for reviewers, and pasting into the answer box is noted for review. Students can't turn this on themselves; every grant and withdrawal is recorded in the audit log. It applies the next time the student opens the exam.</p>
     <p class="hint">Eye contact: in the voice interview, looking away from the examiner while answering fades the screen and the examiner asks for eye contact. Declare the accommodation for a student who should not be held to eye contact (for example autism, low vision, nystagmus or a cultural norm): the screen won't fade and the examiner won't ask. It applies from their next answer.</p>
+    <p class="hint">Leaving the window: the exam pauses whenever a student leaves the exam window, and three absences or one of a minute mark the attempt for your review (nothing is cancelled). For a student whose assistive technology takes the focus, or who has a documented need to step away, raise the thresholds or turn the review mark off. Absences are still noted and the exam still pauses. Every change is recorded in the audit log and applies from the next absence.</p>
     <p class="hint">Results reach a student only through Grading: AI and human grades, reconciliation when they disagree, then an authorized approval and publication.</p>
     @if (!CanAssign && message is not null)
     {
@@ -234,6 +253,44 @@ else
             ExamResult r;
             if (Gate is { } g) await g.WaitAsync();
             try { r = await Service.SetTypedAnswerAccommodationAsync(row.Id, on); }
+            finally { Gate?.Release(); }
+            ok = r.Ok;
+            message = r.Ok ? $"{row.StudentName}: {r.Message}" : r.Message;
+            await LoadLockedAsync();
+        }
+        finally { busy = false; }
+    }
+
+    /// <summary>The window-absence accommodation's choices (GAD-T604): key, label, off, absences, seconds.</summary>
+    private static readonly (string Key, string Label, bool Off, int? Count, int? Seconds)[] WindowPresets =
+    [
+        ("standard", "standard (3 absences or 1 min)", false, null, null),
+        ("raised", "raised (6 absences or 5 min)", false, 6, 300),
+        ("high", "raised (10 absences or 15 min)", false, 10, 900),
+        ("off", "never marks for review", true, null, null),
+    ];
+
+    private static string WindowPreset(Gadfly.Server.Integrity.WindowAbsenceRule rule)
+    {
+        if (rule.Off) return "off";
+        foreach (var p in WindowPresets)
+            if (!p.Off && rule == Gadfly.Server.Integrity.WindowAbsenceRule.For(false, p.Count, p.Seconds)) return p.Key;
+        return "custom";
+    }
+
+    private async Task WindowAbsenceAsync(AssignmentRow row, string? key)
+    {
+        if (busy) return;   // one operation at a time on the shared DbContext (GAD-T189)
+        var preset = WindowPresets.FirstOrDefault(p => p.Key == key);
+        if (preset.Key is null) return;
+        if (preset.Key != "standard" && !await JS.InvokeAsync<bool>("confirm",
+                $"Change when leaving the exam window marks {row.StudentName}'s attempt for review to: {preset.Label}? Use this for assistive technology or a documented need. Absences are still noted, and this is recorded in the audit log.")) { await LoadLockedAsync(); return; }
+        busy = true;
+        try
+        {
+            ExamResult r;
+            if (Gate is { } g) await g.WaitAsync();
+            try { r = await Service.SetWindowAbsenceAccommodationAsync(row.Id, preset.Off, preset.Count, preset.Seconds); }
             finally { Gate?.Release(); }
             ok = r.Ok;
             message = r.Ok ? $"{row.StudentName}: {r.Message}" : r.Message;

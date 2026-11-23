@@ -12,6 +12,31 @@ namespace Gadfly.Server.Integrity;
 public sealed record WindowAbsence(int Count, TimeSpan Longest, bool NeedsReview, bool NewlyFlagged, bool Exempt);
 
 /// <summary>
+/// When absences from the exam window mark an attempt for review (GAD-T604): the standard thresholds, raised ones from the
+/// window-absence accommodation, or never (<see cref="Off"/>).
+/// </summary>
+public sealed record WindowAbsenceRule(bool Off, int ReviewAfterCount, TimeSpan ReviewAfterLong)
+{
+    public static readonly WindowAbsenceRule Standard = new(false, WindowFocusRecorder.ReviewAfterCount, WindowFocusRecorder.ReviewAfterLong);
+
+    /// <summary>The assignment's rule: the accommodation's values, never below the standard ones.</summary>
+    public static WindowAbsenceRule For(bool off, int? count, int? seconds) => new(off,
+        Math.Max(WindowFocusRecorder.ReviewAfterCount, count ?? 0),
+        TimeSpan.FromSeconds(Math.Max(WindowFocusRecorder.ReviewAfterLong.TotalSeconds, seconds ?? 0)));
+
+    public bool IsStandard => !Off && ReviewAfterCount == WindowFocusRecorder.ReviewAfterCount && ReviewAfterLong == WindowFocusRecorder.ReviewAfterLong;
+
+    /// <summary>Whether <paramref name="count"/> absences with the longest <paramref name="longest"/> mark the attempt.</summary>
+    public bool Flags(int count, TimeSpan longest) => !Off && (count >= ReviewAfterCount || longest >= ReviewAfterLong);
+
+    /// <summary>The rule in plain words, for staff.</summary>
+    public string Describe() => Off
+        ? "never marks the attempt for review (accommodation)"
+        : $"marks the attempt for review after {ReviewAfterCount} absences or one of {WindowFocusRecorder.Duration(ReviewAfterLong)}"
+          + (IsStandard ? "" : " (accommodation)");
+}
+
+/// <summary>
 /// Leaving the exam window (GAD-T511, docs/research/attention-and-gaze.md 4.4). The exam room pauses at once (the examiner stops and
 /// the answer waits) and says so neutrally when the student is back; every absence of a second or more is noted here with how long it
 /// lasted and the question it fell in. Three or more absences, or one of a minute or more, mark the attempt as needing an
@@ -60,9 +85,10 @@ public sealed class WindowFocusRecorder(GadflyDbContext db, TimeProvider clock, 
             || (session.State == SessionState.Ended && session.EndedAt is { } ended && now - ended <= LateGrace);
         if (!accepting) return null;
 
-        var exempt = await db.ExamAssignments.AsNoTracking()
-            .Where(a => a.Id == session.AssignmentId && a.OrganizationId == organizationId)
-            .Select(a => a.TypedAnswerAccommodation || a.GazeAccommodation).FirstOrDefaultAsync(ct);
+        // GAD-T604: the window-absence accommodation decides (it replaced GAD-T511's stopgap, which exempted the typed-answer and
+        // eye-contact accommodations: those are about the answer channel and the gaze, not about leaving the window).
+        var rule = await RuleAsync(db, organizationId, session.AssignmentId, ct);
+        var exempt = rule.Off;
 
         var end = now;
         var start = end - duration;
@@ -77,7 +103,7 @@ public sealed class WindowFocusRecorder(GadflyDbContext db, TimeProvider clock, 
         {
             OrganizationId = organizationId, SessionId = sessionId, Source = Source, Type = AbsenceType,
             StartedAt = start, EndedAt = end, TurnId = turn?.Id, Confidence = 0.9,
-            Severity = span >= ReviewAfterLong ? IntegritySeverity.Low : IntegritySeverity.Info,
+            Severity = span >= rule.ReviewAfterLong && !rule.Off ? IntegritySeverity.Low : IntegritySeverity.Info,
             Summary = Describe(span, turn?.Index, exempt),
         });
 
@@ -88,7 +114,7 @@ public sealed class WindowFocusRecorder(GadflyDbContext db, TimeProvider clock, 
         var longest = prior.Select(p => (p.EndedAt ?? p.StartedAt) - p.StartedAt).Append(span).Max();
 
         var newly = false;
-        if (!exempt && !session.NeedsInstructorReview && (count >= ReviewAfterCount || longest >= ReviewAfterLong))
+        if (!session.NeedsInstructorReview && rule.Flags(count, longest))
         {
             session.NeedsInstructorReview = true;
             session.ReviewFlaggedAt = now;
@@ -107,6 +133,15 @@ public sealed class WindowFocusRecorder(GadflyDbContext db, TimeProvider clock, 
         }
         if (newly) log.LogInformation("Session {SessionId} marked for instructor review after {Count} absences from the exam window.", sessionId, count);
         return new WindowAbsence(count, longest, session.NeedsInstructorReview, newly, exempt);
+    }
+
+    /// <summary>The window-absence rule for one assignment (GAD-T604); the standard one when the assignment is gone.</summary>
+    public static async Task<WindowAbsenceRule> RuleAsync(GadflyDbContext db, Guid organizationId, Guid assignmentId, CancellationToken ct)
+    {
+        var a = await db.ExamAssignments.AsNoTracking()
+            .Where(x => x.Id == assignmentId && x.OrganizationId == organizationId)
+            .Select(x => new { x.WindowAbsenceFlagOff, x.WindowAbsenceReviewAfterCount, x.WindowAbsenceReviewAfterSeconds }).FirstOrDefaultAsync(ct);
+        return a is null ? WindowAbsenceRule.Standard : WindowAbsenceRule.For(a.WindowAbsenceFlagOff, a.WindowAbsenceReviewAfterCount, a.WindowAbsenceReviewAfterSeconds);
     }
 
     /// <summary>
@@ -147,7 +182,7 @@ public sealed class WindowFocusRecorder(GadflyDbContext db, TimeProvider clock, 
         + "Browser focus events have innocent causes too (a notification, a system dialog, assistive technology)."
         + (exempt ? " The student has an accommodation, so absences are noted but never mark the attempt for review." : "");
 
-    private static string Duration(TimeSpan t) =>
+    public static string Duration(TimeSpan t) =>
         t.TotalMinutes >= 1 ? $"{(int)t.TotalMinutes} min {t.Seconds} s" : $"{Math.Max(1, (int)Math.Round(t.TotalSeconds))} s";
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max];

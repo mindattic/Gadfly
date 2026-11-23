@@ -45,7 +45,7 @@ public sealed record StudentOption(Guid UserId, string UserName, string? Email);
 public sealed record AssignmentRow(Guid Id, Guid StudentUserId, string StudentName, DateTimeOffset? OpensAt, DateTimeOffset? ClosesAt,
     int AttemptsAllowed, int AttemptsUsed, SessionState? LatestState, DateTimeOffset? LatestEndedAt, DateTimeOffset AssignedAt,
     DateTimeOffset? ResultsReleasedAt, decimal TimeMultiplier = 1m, bool GazeAccommodation = false, bool StudentInEuropeanUnion = false,
-    bool TypedAnswerAccommodation = false);
+    bool TypedAnswerAccommodation = false, Gadfly.Server.Integrity.WindowAbsenceRule? WindowAbsence = null);
 
 /// <summary>
 /// Exam builder and assignments (GAD-T50): drafts, publishing (which freezes the policy), archiving,
@@ -363,6 +363,49 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
             : "Typed-answer accommodation off: this student answers out loud again from the next time they open the exam.", a.ExamId);
     }
 
+    /// <summary>Most absences the window-absence accommodation may wait for, and the longest single absence (one hour).</summary>
+    public const int MaxWindowAbsenceCount = 50;
+    public const int MaxWindowAbsenceSeconds = 3600;
+
+    /// <summary>
+    /// Sets the window-absence accommodation on one assignment (GAD-T604): leaving the exam window then marks this student's attempt
+    /// for instructor review only after more absences or a longer one than the standard (3, or one of 60 s), or never
+    /// (<paramref name="off"/>). It can only raise the thresholds, never lower them; null for both and <paramref name="off"/> false is
+    /// the standard rule again. Absences are still noted and the exam still pauses. Only staff who may assign exams can change it, so a
+    /// student never can; every change is audited. It applies from the next absence, including in an attempt already open.
+    /// </summary>
+    public async Task<ExamResult> SetWindowAbsenceAccommodationAsync(Guid assignmentId, bool off, int? reviewAfterCount, int? reviewAfterSeconds,
+        CancellationToken ct = default)
+    {
+        var org = Org;
+        var a = await db.ExamAssignments.FirstOrDefaultAsync(x => x.Id == assignmentId && x.OrganizationId == org, ct);
+        if (await DeniedAsync(Permission.AssignExaminations, "Changing a window-absence accommodation", "Exam", a?.ExamId, ct) is { } denied) return denied;
+        if (a is null) return new(false, "That assignment no longer exists.");
+        if (off) { reviewAfterCount = null; reviewAfterSeconds = null; }
+        if (reviewAfterCount is { } c && (c < Integrity.WindowFocusRecorder.ReviewAfterCount || c > MaxWindowAbsenceCount))
+            return new(false, $"The number of absences must be {Integrity.WindowFocusRecorder.ReviewAfterCount} to {MaxWindowAbsenceCount}: the accommodation can only raise it.");
+        var standardSeconds = (int)Integrity.WindowFocusRecorder.ReviewAfterLong.TotalSeconds;
+        if (reviewAfterSeconds is { } sec && (sec < standardSeconds || sec > MaxWindowAbsenceSeconds))
+            return new(false, $"The length of one absence must be {standardSeconds} seconds to {MaxWindowAbsenceSeconds / 60} minutes: the accommodation can only raise it.");
+        if (reviewAfterCount == Integrity.WindowFocusRecorder.ReviewAfterCount) reviewAfterCount = null;   // the standard: stored as none
+        if (reviewAfterSeconds == standardSeconds) reviewAfterSeconds = null;
+        if (a.WindowAbsenceFlagOff == off && a.WindowAbsenceReviewAfterCount == reviewAfterCount && a.WindowAbsenceReviewAfterSeconds == reviewAfterSeconds)
+            return new(true, "The window-absence accommodation is already set that way.", a.ExamId);
+        var before = new { a.WindowAbsenceFlagOff, a.WindowAbsenceReviewAfterCount, a.WindowAbsenceReviewAfterSeconds };
+        a.WindowAbsenceFlagOff = off;
+        a.WindowAbsenceReviewAfterCount = reviewAfterCount;
+        a.WindowAbsenceReviewAfterSeconds = reviewAfterSeconds;
+        var rule = Integrity.WindowAbsenceRule.For(off, reviewAfterCount, reviewAfterSeconds);
+        Guard.Audit(rule.IsStandard ? "assessment.accommodation.window-absence.withdrawn" : "assessment.accommodation.window-absence.granted",
+            "ExamAssignment", a.Id.ToString(), before: before,
+            after: new { a.WindowAbsenceFlagOff, a.WindowAbsenceReviewAfterCount, a.WindowAbsenceReviewAfterSeconds, a.StudentUserId, a.ExamId });
+        await db.SaveChangesAsync(ct);
+        db.ChangeTracker.Clear();
+        return new(true, rule.IsStandard
+            ? "Window-absence accommodation off: leaving the exam window " + rule.Describe() + "."
+            : "Window-absence accommodation on: leaving the exam window " + rule.Describe() + ". Absences are still noted and the exam still pauses.", a.ExamId);
+    }
+
     /// <summary>
     /// Marks or unmarks one assignment's student as living in the EU/EEA (GAD-T259). Under the organization's default setting their
     /// voice is then not measured in voice exams (EU AI Act Art. 5(1)(f)); it takes effect from the next spoken answer. Audited.
@@ -405,7 +448,8 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
                 var list = sessions.GetValueOrDefault(a.Id) ?? [];
                 var latest = list.FirstOrDefault();
                 return new AssignmentRow(a.Id, a.StudentUserId, names.GetValueOrDefault(a.StudentUserId, "(unknown user)"), a.OpensAt, a.ClosesAt,
-                    a.AttemptsAllowed, list.Count(x => x.EndReason != nameof(Gadfly.Engine.EndReason.PromptSetChanged)), latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier, a.GazeAccommodation, a.StudentInEuropeanUnion, a.TypedAnswerAccommodation);
+                    a.AttemptsAllowed, list.Count(x => x.EndReason != nameof(Gadfly.Engine.EndReason.PromptSetChanged)), latest?.State, latest?.EndedAt, a.AssignedAt, a.ResultsReleasedAt, a.TimeMultiplier, a.GazeAccommodation, a.StudentInEuropeanUnion, a.TypedAnswerAccommodation,
+                    Gadfly.Server.Integrity.WindowAbsenceRule.For(a.WindowAbsenceFlagOff, a.WindowAbsenceReviewAfterCount, a.WindowAbsenceReviewAfterSeconds));
             })
             .OrderBy(r => r.StudentName, StringComparer.OrdinalIgnoreCase).ToList();
     }

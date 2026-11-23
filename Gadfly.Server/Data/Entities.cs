@@ -305,6 +305,22 @@ public sealed class ExamAssignment : ITenantOwned
     /// <see cref="GazeAccommodation"/> is also on): only the answer channel changes, and each typed answer is stored as typed.
     /// </summary>
     public bool TypedAnswerAccommodation { get; set; }
+    /// <summary>
+    /// Accommodation (GAD-T604): leaving the exam window never marks this student's attempts for instructor review (for example
+    /// assistive technology or a screen reader that takes focus, or a documented need to step away). Absences are still noted, and
+    /// the exam still pauses. Granted only by staff who may assign exams, for one student on one assignment, and audited.
+    /// </summary>
+    public bool WindowAbsenceFlagOff { get; set; }
+    /// <summary>
+    /// Accommodation (GAD-T604): a raised count of absences from the exam window that marks the attempt for review (null: the
+    /// standard <see cref="Integrity.WindowFocusRecorder.ReviewAfterCount"/>). Never lower than the standard.
+    /// </summary>
+    public int? WindowAbsenceReviewAfterCount { get; set; }
+    /// <summary>
+    /// Accommodation (GAD-T604): a raised length, in seconds, of one absence that marks the attempt for review (null: the standard
+    /// <see cref="Integrity.WindowFocusRecorder.ReviewAfterLong"/>). Never shorter than the standard.
+    /// </summary>
+    public int? WindowAbsenceReviewAfterSeconds { get; set; }
 }
 
 public enum SessionState { Created, ConsentGiven, Running, Paused, Ended, Failed }

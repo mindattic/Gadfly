@@ -837,6 +837,15 @@ namespace Gadfly.Server.Data.Migrations
                     b.Property<bool>("TypedAnswerAccommodation")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("WindowAbsenceFlagOff")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("WindowAbsenceReviewAfterCount")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("WindowAbsenceReviewAfterSeconds")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExamId", "StudentUserId")
