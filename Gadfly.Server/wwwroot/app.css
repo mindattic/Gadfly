@@ -228,6 +228,8 @@ legend { padding: 0 var(--space-1); font-weight: 600; }
 /* Help (GAD-T292): the top-bar Help link and the small "?" a page puts next to its title (<HelpLink>). */
 .nav-help { padding: .35rem .65rem; border-radius: 6px; text-decoration: none; color: var(--ink); }
 .nav-help:hover, .nav-help:focus-visible { color: var(--accent); }
+/* The inbox's unread count (GAD-T701): a pill in the link's own colour, so it reads on the active (accent) link too. */
+.nav-count { margin-left: var(--space-1); border-color: currentColor; color: inherit; font-weight: 700; font-variant-numeric: tabular-nums; }
 .help-link { display: inline-flex; align-items: center; gap: .35rem; vertical-align: middle; margin-left: .35rem; font-size: .85rem; font-weight: 600; text-decoration: none; color: var(--accent); }
 .help-link-mark { display: inline-grid; place-items: center; width: var(--target-min); height: var(--target-min); border: 1.5px solid currentColor; border-radius: 50%; font-size: .8rem; line-height: 1; }
 .help-link:hover .help-link-mark, .help-link:focus-visible .help-link-mark { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }

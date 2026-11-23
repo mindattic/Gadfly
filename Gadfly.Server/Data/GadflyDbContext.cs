@@ -87,6 +87,7 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
     public DbSet<ApiCallTiming> ApiCallTimings => Set<ApiCallTiming>();   // outside-call durations on live exams (GAD-T413)
     public DbSet<StudentNotificationPreference> StudentNotificationPreferences => Set<StudentNotificationPreference>();   // reminder opt-out (GAD-T310)
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();   // every notification email queued or sent (GAD-T310)
+    public DbSet<InboxMessage> InboxMessages => Set<InboxMessage>();   // the in-app inbox (GAD-T701)
     public DbSet<ExamLocalization> ExamLocalizations => Set<ExamLocalization>();   // per-language exam texts (GAD-T534, GAD-T540)
     public DbSet<StudentLanguageProfile> StudentLanguageProfiles => Set<StudentLanguageProfile>();   // a student's languages (GAD-T534, GAD-T552)
 
@@ -181,6 +182,15 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.HasIndex(x => new { x.Kind, x.RelatedId });
         });
         b.Entity<StudentNotificationPreference>().HasIndex(x => new { x.OrganizationId, x.UserId }).IsUnique();
+        b.Entity<InboxMessage>(e =>
+        {
+            e.Property(x => x.Kind).HasMaxLength(64);
+            e.Property(x => x.Title).HasMaxLength(300);
+            e.Property(x => x.LinkUrl).HasMaxLength(500);
+            e.HasIndex(x => new { x.RecipientUserId, x.ReadAt });
+            // A retried job posts the same message again; this keeps one (GAD-T701).
+            e.HasIndex(x => new { x.Kind, x.SessionId, x.RecipientUserId }).IsUnique();
+        });
 
         b.Entity<SourceCollection>(e =>
         {

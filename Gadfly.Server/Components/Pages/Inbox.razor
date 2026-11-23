@@ -1,0 +1,149 @@
+@page "/inbox"
+@page "/inbox/{MessageId:guid}"
+@attribute [Authorize(Policy = GadflyPolicies.Member)]
+@using Gadfly.Server.Data
+@using Gadfly.Server.Inbox
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject InboxBadgeSignal Badge
+@inject Gadfly.Server.Localization.UiText T
+
+@* The in-app inbox (GAD-T701): grade results arrive here (GAD-T702). Opening a message marks it read. *@
+
+<HeadContent><link rel="stylesheet" href="inbox.css" /></HeadContent>
+<PageTitle>@T["inbox.pageTitle"]</PageTitle>
+
+<div class="page-header">
+    <h1>@T["inbox.title"]</h1>
+    <div class="page-header-actions cluster">
+        @if (Selected is null && UnreadCount > 0)
+        {
+            <button type="button" class="secondary" disabled="@busy" @onclick="MarkAllReadAsync">@T["inbox.markAllRead"]</button>
+        }
+        @if (Tenant.Role == OrgRoles.Student)
+        {
+            <a class="button ghost" href="my-notifications">@T["inbox.emailPrefs"]</a>
+        }
+    </div>
+</div>
+
+<p role="status" class="@(status is null ? "visually-hidden" : ok ? "notice ok" : "notice error")">@status</p>
+
+@if (messages is null)
+{
+    <p class="hint">@T["common.loading"]</p>
+}
+else if (MessageId is not null)
+{
+    <p><a href="inbox">&larr; @T["inbox.back"]</a></p>
+    @if (Selected is null)
+    {
+        <p class="notice warn">@T["inbox.notFound"]</p>
+    }
+    else
+    {
+        <article class="panel panel-wide inbox-message" aria-labelledby="inbox-message-title">
+            <h2 id="inbox-message-title">@Selected.Title</h2>
+            <p class="hint"><time datetime="@Selected.CreatedAt.ToString("o")">@T["inbox.received", Selected.CreatedAt.ToString("yyyy-MM-dd HH:mm")]</time></p>
+            <div class="prose inbox-body">@Selected.Body</div>
+            @if (SafeLink(Selected.LinkUrl) is { } link)
+            {
+                <p class="form-actions"><a class="button" href="@link">@T["inbox.open"]</a></p>
+            }
+        </article>
+    }
+}
+else if (messages.Count == 0)
+{
+    <div class="empty-state"><p>@T["inbox.empty"]</p></div>
+}
+else
+{
+    <p class="hint">@T["inbox.unreadSummary", UnreadCount, messages.Count]</p>
+    <ul class="inbox-list" aria-label="@T["inbox.listLabel"]">
+        @foreach (var m in messages)
+        {
+            var unread = m.ReadAt is null;
+            <li class="inbox-item @(unread ? "is-unread" : null)" @key="m.Id">
+                <a class="inbox-item-link" href="inbox/@m.Id">
+                    @if (unread)
+                    {
+                        <span class="badge badge-accent inbox-flag">@T["inbox.unread"]</span>
+                    }
+                    <span class="inbox-item-title">@m.Title</span>
+                    <time class="inbox-item-date" datetime="@m.CreatedAt.ToString("o")">@m.CreatedAt.ToString("yyyy-MM-dd HH:mm") UTC</time>
+                </a>
+                @if (unread)
+                {
+                    <button type="button" class="link inbox-item-mark" disabled="@busy" @onclick="() => MarkReadAsync(m.Id)"
+                            aria-label="@($"{T["inbox.markRead"]}: {m.Title}")">@T["inbox.markRead"]</button>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter] public Guid? MessageId { get; set; }
+
+    private List<InboxMessage>? messages;
+    private bool busy, ok;
+    private string? status;
+
+    private InboxMessage? Selected => MessageId is { } id ? messages?.FirstOrDefault(m => m.Id == id) : null;
+    private int UnreadCount => messages?.Count(m => m.ReadAt is null) ?? 0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        status = null;
+        await LoadAsync();
+        if (Selected is { ReadAt: null } opened) await MarkReadAsync(opened.Id, announce: false);
+    }
+
+    private async Task LoadAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me) { messages = []; return; }
+        messages = await RunAsync(inbox => inbox.ListAsync(org, me));
+    }
+
+    private async Task MarkReadAsync(Guid id, bool announce = true)
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me || busy) return;
+        await ChangeAsync(() => RunAsync(inbox => inbox.MarkReadAsync(org, me, id)), announce ? T["inbox.marked"] : null);
+    }
+
+    private async Task MarkAllReadAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me || busy) return;
+        await ChangeAsync(() => RunAsync(inbox => inbox.MarkAllReadAsync(org, me)), T["inbox.allMarked"]);
+    }
+
+    private async Task ChangeAsync(Func<Task> change, string? done)
+    {
+        busy = true;
+        try
+        {
+            await change();
+            await LoadAsync();
+            ok = true;
+            status = done;
+            Badge.Raise();
+        }
+        catch (Exception ex)
+        {
+            ok = false;
+            status = T["inbox.failed", ex.Message];
+        }
+        finally { busy = false; }
+    }
+
+    private async Task<TResult> RunAsync<TResult>(Func<InboxService, Task<TResult>> work)
+    {
+        await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
+        return await work(scope.ServiceProvider.GetRequiredService<InboxService>());
+    }
+
+    /// <summary>Only app-relative links are followed: a message never sends anyone off site.</summary>
+    private static string? SafeLink(string? url) =>
+        url is { Length: > 0 } && url.StartsWith('/') && !url.StartsWith("//") && !url.StartsWith("/\\") ? url : null;
+}

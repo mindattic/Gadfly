@@ -87,6 +87,27 @@ public sealed class StudentNotificationPreference : ITenantOwned
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
+/// <summary>
+/// One message in a user's in-app inbox (GAD-T701), posted by Inbox/InboxService (the grading job's preliminary and final
+/// results, GAD-T702). At most one per (Kind, SessionId, RecipientUserId) when SessionId is set, so job retries don't repeat it.
+/// </summary>
+public sealed class InboxMessage : ITenantOwned
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid OrganizationId { get; set; }
+    public Guid RecipientUserId { get; set; }
+    /// <summary>What it is about, dotted: one of Inbox/InboxKinds.cs (grade.preliminary, grade.final).</summary>
+    public string Kind { get; set; } = "";
+    public string Title { get; set; } = "";
+    /// <summary>Plain text; line breaks are kept when shown.</summary>
+    public string Body { get; set; } = "";
+    /// <summary>An app-relative link to where the message leads (a result page), if any.</summary>
+    public string? LinkUrl { get; set; }
+    public Guid? SessionId { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? ReadAt { get; set; }
+}
+
 /// <summary>One notification email Gadfly queued or sent (GAD-T310): every send is recorded, whether delivered or not.</summary>
 public enum EmailLogStatus { Queued, Sent, Failed, Skipped }
 

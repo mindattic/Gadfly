@@ -22,6 +22,8 @@ public static class GradingSetup
         services.AddScoped<BiasProbeService>();   // panel and human bias probes, started by a person (GAD-T432)
         services.AddJobHandler<BiasProbeJob>();
         services.AddScoped<ClassSummaryService>();   // class summary PDF for instructors (GAD-T311/GAD-T378)
+        services.AddScoped<Inbox.InboxService>();   // where grade results reach the student (GAD-T701/T702)
+        services.AddScoped<Inbox.InboxBadgeSignal>();
         services.AddJobHandler<AiGradingJob>();
         services.AddHostedService<GradingSweeper>();
         return services;

@@ -1,0 +1,14 @@
+/* The in-app inbox (GAD-T701): a list of messages and one message's view, on the GAD-T689 tokens. */
+.inbox-list { list-style: none; margin: 0; padding: 0; border-top: var(--border); }
+.inbox-item { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) 0; border-bottom: var(--border); }
+.inbox-item-link { flex: 1 1 18rem; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); min-height: var(--target-min); color: var(--ink); text-decoration: none; }
+.inbox-item-link:hover .inbox-item-title { text-decoration: underline; }
+.inbox-item-title { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; }
+/* Unread is told three ways: the "Unread" badge (words), a heavier title, and the accent edge. */
+.inbox-item.is-unread { box-shadow: inset 3px 0 0 var(--accent); padding-left: var(--space-3); }
+.inbox-item.is-unread .inbox-item-title { font-weight: 700; }
+.inbox-item-date { font-size: var(--text-sm); color: var(--muted); white-space: nowrap; }
+.inbox-flag { flex: none; }
+.inbox-item-mark { flex: none; font-size: var(--text-sm); }
+.inbox-message h2 { margin-top: 0; overflow-wrap: anywhere; }
+.inbox-body { white-space: pre-line; overflow-wrap: anywhere; }

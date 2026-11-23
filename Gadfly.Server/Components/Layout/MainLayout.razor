@@ -4,6 +4,7 @@
 @inject IConfiguration Config
 @inject NavigationManager Nav
 @inject Gadfly.Server.Localization.UiText T
+@inject Gadfly.Server.Inbox.InboxBadgeSignal InboxBadge
 @implements IDisposable
 
 <div class="shell">
@@ -17,7 +18,8 @@
         @* Below 40rem the nav and account controls fold into this disclosure (GAD-T689, app.css .nav-menu); a new key per
            navigation closes it after a link is followed. *@
         <details class="nav-menu" @key="menuKey">
-            <summary class="nav-menu-toggle"><span class="nav-menu-icon" aria-hidden="true"></span>@T["layout.menu"]</summary>
+            <summary class="nav-menu-toggle"><span class="nav-menu-icon" aria-hidden="true"></span>@T["layout.menu"]@if (unread > 0)
+                {<span class="visually-hidden">, @T["layout.inbox"]: @T["layout.inboxUnread", unread]</span><span class="badge nav-count" aria-hidden="true">@unread</span>}</summary>
             <div class="nav-menu-body">
                 <AuthorizeView>
                     <Authorized>
@@ -43,6 +45,18 @@
                             @if (Tenant.IsSuperAdmin)
                             {
                                 <NavLink href="platform/organizations">Organizations</NavLink>
+                            }
+                            @if (Tenant.OrganizationId is not null)
+                            {
+                                @* The in-app inbox (GAD-T701): the count is words to a screen reader ("Inbox, 2 unread"), a badge to the eye. *@
+                                <NavLink href="inbox" class="nav-inbox">
+                                    @T["layout.inbox"]
+                                    @if (unread > 0)
+                                    {
+                                        <span class="visually-hidden">, @T["layout.inboxUnread", unread]</span>
+                                        <span class="badge nav-count" aria-hidden="true">@unread</span>
+                                    }
+                                </NavLink>
                             }
                         </nav>
                         <div class="who">
@@ -99,15 +113,31 @@
     {
         T.Changed += OnLanguageChanged;
         Nav.LocationChanged += OnLocationChanged;
+        InboxBadge.Changed += OnInboxChanged;
     }
     private void OnLanguageChanged() => _ = InvokeAsync(StateHasChanged);
     private int menuKey;
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
-        _ = InvokeAsync(() => { menuKey++; StateHasChanged(); });
+        _ = InvokeAsync(async () => { menuKey++; await CountUnreadAsync(); StateHasChanged(); });
+    private void OnInboxChanged() => _ = InvokeAsync(async () => { await CountUnreadAsync(); StateHasChanged(); });
+
+    // Recounted once per navigation and when a page marks messages read, never on a timer (GAD-T701).
+    private int unread;
+    private async Task CountUnreadAsync()
+    {
+        if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } uid) { unread = 0; return; }
+        try
+        {
+            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
+            unread = await scope.ServiceProvider.GetRequiredService<Gadfly.Server.Inbox.InboxService>().UnreadCountAsync(org, uid);
+        }
+        catch (Exception) { }   // a badge is never worth breaking the page over
+    }
     public void Dispose()
     {
         T.Changed -= OnLanguageChanged;
         Nav.LocationChanged -= OnLocationChanged;
+        InboxBadge.Changed -= OnInboxChanged;
     }
 
     private bool OrgAdmin => Gadfly.Server.Admin.AdminArea.IsOrgAdmin(Tenant.Role);
@@ -141,5 +171,6 @@
             var directory = scope.ServiceProvider.GetRequiredService<IOrganizationDirectory>();
             orgNames = (await directory.MembershipsOfAsync(uid)).Select(m => (m.Org.Id, m.Org.Name, m.Role)).ToList();
         }
+        await CountUnreadAsync();
     }
 }
