@@ -6,7 +6,13 @@ namespace Gadfly.Server.Grading;
 
 /// <summary>One row of the grading queue.</summary>
 public sealed record GradingQueueRow(Guid SessionId, string StudentName, string ExamTitle, int Attempt, DateTimeOffset? EndedAt,
-    GradeStatus? Status, decimal? FinalPercent, int OpenDisagreements, bool OpenAppeal, string? JobState, string? JobError, bool IsMock);
+    GradeStatus? Status, decimal? FinalPercent, int OpenDisagreements, bool OpenAppeal, string? JobState, string? JobError, bool IsMock)
+{
+    /// <summary>GAD-T603: held for an instructor's review (the result is not released until a person decides).</summary>
+    public bool NeedsInstructorReview { get; init; }
+    public string? ReviewReason { get; init; }
+    public string Language { get; init; } = Gadfly.Engine.ExamLanguage.English;
+}
 
 /// <summary>One response with its full history (Part 8.2: verified responses, originals, versions, clarifications).</summary>
 public sealed record ResponseView(StudentResponse Response, int TurnIndex, string ConceptKey, string Question,

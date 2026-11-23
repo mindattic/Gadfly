@@ -60,6 +60,9 @@ else
         <p class="hint">This exam has no grading policy of its own, so the platform defaults apply (frozen for this session when AI grading began).</p>
     }
 
+    @* GAD-T603: held for an instructor's review; publishing waits until the mark is cleared or the grade is approved with a note. *@
+    <Gadfly.Server.Components.Pages.Review.InstructorReviewPanel SessionId="w.Session.Id" HideIntegrity="@(!w.AiVisible)" Changed="LoadAsync" />
+
     @if (message is not null)
     {
         <p role="status" class="gr-banner @(ok ? "" : "warn")"><span class="@(ok ? "ok" : "error")">@message</span></p>
@@ -292,7 +295,7 @@ else
             }
             <div class="gr-form-row">
                 <label>Grade label (optional) <input @bind="approveLabel" placeholder="A, Pass, Distinction…" /></label>
-                <label>Approval note <input @bind="approveNote" /></label>
+                <label>Approval note@(w.Session.NeedsInstructorReview ? " (required: this attempt needs instructor review, and approving decides it)" : "") <input @bind="approveNote" /></label>
             </div>
             <div class="gr-actions">
                 <button type="button" disabled="@(busy || w.SeparationBlocksViewer || w.ReconcilerBlocksViewerApproval)" @onclick="() => RunAsync(g => g.ApproveAsync(SessionId, approveLabel, approveNote))">Approve final grade</button>

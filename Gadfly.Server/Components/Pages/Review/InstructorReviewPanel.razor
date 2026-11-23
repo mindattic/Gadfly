@@ -1,0 +1,116 @@
+@using Gadfly.Server.Review
+@inject IServiceScopeFactory Scopes
+@inject ITenantContext Tenant
+@inject TimeProvider Clock
+
+@* GAD-T603: an attempt held for an instructor's review (window absences GAD-T511, cross-lingual scores GAD-T536): the reason, each
+   absence with its time and length, the student's explanation, the calibration reason, and clearing the mark with a required note.
+   Used on the review page and the grading workspace. Loads in its own scope, never the page's shared DbContext. *@
+@if (view is { Any: true } v)
+{
+    <section class="notice @(v.Held ? "warn" : "") instructor-review" aria-labelledby="instructor-review-@SessionId.ToString("N")" data-held="@v.Held.ToString().ToLowerInvariant()">
+        <h2 id="instructor-review-@SessionId.ToString("N")" class="section">
+            @if (v.Held) { <span class="tag warn">@InstructorReview.Badge</span> } else { <span class="tag">Review mark cleared</span> }
+        </h2>
+        @if (v.Held)
+        {
+            <p>The result is held: it is not released to the student or sent to the LMS until a person decides. Clear the mark below, or approve the final grade with a note in Grading.</p>
+        }
+        @if (v.Reason is { } reason)
+        {
+            <p><strong>Reason:</strong> @reason@(v.FlaggedAt is { } at ? $" (marked {at.UtcDateTime:yyyy-MM-dd HH:mm} UTC)" : "")</p>
+        }
+        @if (v.CalibrationReason is { } cal && cal != v.Reason)
+        {
+            <p><strong>Language:</strong> @cal</p>
+        }
+        @if (v.UncalibratedObjectives > 0)
+        {
+            <p class="hint">@v.UncalibratedObjectives AI objective grade@(v.UncalibratedObjectives == 1 ? " is" : "s are") marked cross-lingual and uncalibrated: check them against the answers before approving.</p>
+        }
+        @if (v.DetailsHidden)
+        {
+            <p class="hint">The absences from the exam window and the student's explanation are hidden until your blind human score is submitted.</p>
+        }
+        @if (v.WindowAbsences)
+        {
+            <p><strong>Absences from the exam window</strong> <span class="hint">(the exam paused each time; for this student leaving the window @v.WindowRule)</span></p>
+            <ul class="absences">
+                @foreach (var a in v.Absences)
+                {
+                    <li>@a.At.UtcDateTime.ToString("HH:mm:ss") UTC · @InstructorReview.Length(a.Length)@(a.Question is { } q ? $" · during question {q}" : "")</li>
+                }
+            </ul>
+        }
+        @if (v.Explanations.Count > 0)
+        {
+            <p><strong>The student's explanation</strong></p>
+            @foreach (var e in v.Explanations)
+            {
+                <blockquote>@e.Text <span class="hint">(@e.At.UtcDateTime.ToString("HH:mm") UTC)</span></blockquote>
+            }
+        }
+        else if (v.WindowAbsences)
+        {
+            <p class="hint">The student left no explanation.</p>
+        }
+        @if (v.LastDecision is { } d)
+        {
+            <p class="hint">@d.By @d.How on @d.At.UtcDateTime.ToString("yyyy-MM-dd HH:mm") UTC: “@d.Note”</p>
+        }
+        @if (v.Held && InstructorReview.CanDecide(Tenant.Role))
+        {
+            <form class="clear-review" @onsubmit="ClearAsync" @onsubmit:preventDefault>
+                <label for="clear-note-@SessionId.ToString("N")">Clear the mark: what did you look at, and why does the attempt stand? (required, kept in the audit log)</label>
+                <textarea id="clear-note-@SessionId.ToString("N")" rows="3" maxlength="@InstructorReview.MaxNote" @bind="note" @bind:event="oninput" disabled="@busy"></textarea>
+                <button type="submit" disabled="@(busy || string.IsNullOrWhiteSpace(note))">Clear review mark</button>
+            </form>
+        }
+        @if (message is not null)
+        {
+            <p class="@(ok ? "hint" : "error")" role="status">@message</p>
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public Guid SessionId { get; set; }
+    /// <summary>Blind grading hides the integrity details (absences, explanation) from this viewer for now.</summary>
+    [Parameter] public bool HideIntegrity { get; set; }
+    /// <summary>Raised after the mark is cleared, so the page can reload.</summary>
+    [Parameter] public EventCallback Changed { get; set; }
+
+    private InstructorReviewView? view;
+    private string note = "";
+    private bool busy, ok;
+    private string? message;
+
+    protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (Tenant.OrganizationId is not { } org) return;
+        view = await Gadfly.Server.Components.Pages.Admin.AdminDb.RunAsync(Scopes, Tenant,
+            (_, db) => InstructorReview.LoadAsync(db, org, SessionId, HideIntegrity, CancellationToken.None));
+    }
+
+    private async Task ClearAsync()
+    {
+        if (busy || Tenant.OrganizationId is not { } org) return;
+        busy = true;
+        try
+        {
+            var (done, text) = await Gadfly.Server.Components.Pages.Admin.AdminDb.RunAsync(Scopes, Tenant,
+                (_, db) => InstructorReview.ClearAsync(db, org, Tenant.UserId, Tenant.Role, SessionId, note, Clock.GetUtcNow(), CancellationToken.None));
+            ok = done;
+            message = text;
+            if (done)
+            {
+                note = "";
+                await LoadAsync();
+                await Changed.InvokeAsync();
+            }
+        }
+        finally { busy = false; }
+    }
+}

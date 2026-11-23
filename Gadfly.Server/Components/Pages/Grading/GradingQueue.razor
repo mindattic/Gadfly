@@ -28,6 +28,7 @@ else
             </select>
         </label>
         <label class="check"><input type="checkbox" @bind="showUnstarted" @bind:after="ApplyFiltersAsync" /> Include ended sessions not started</label>
+        <label class="check"><input type="checkbox" @bind="needsInstructorReview" @bind:after="ApplyFiltersAsync" /> @Gadfly.Server.Review.InstructorReview.Badge</label>
     </div>
     @if (message is not null)
     {
@@ -69,6 +70,11 @@ else
                             <td>
                                 @if (r.OpenDisagreements > 0) { <span class="gr-band-MandatoryReconciliation">@r.OpenDisagreements to reconcile</span> }
                                 @if (r.OpenAppeal) { <span class="gr-band-MandatoryReconciliation">appeal open</span> }
+                                @if (r.NeedsInstructorReview)
+                                {
+                                    @* GAD-T603: held; publishing waits for a person's decision. *@
+                                    <span class="gr-band-MandatoryReconciliation" title="@(r.ReviewReason ?? "Marked for an instructor's review"). The result is held until you clear the mark or approve with a note.">@Gadfly.Server.Review.InstructorReview.Badge: @Gadfly.Server.Review.InstructorReview.ShortReason(r.ReviewReason, r.Language)</span>
+                                }
                                 @if (r.JobState is "Failed") { <span class="error" title="@r.JobError">AI grading failed</span> }
                                 else if (r.JobState is "Queued" or "Running") { <span class="hint">AI grading @r.JobState.ToLowerInvariant()</span> }
                             </td>
@@ -105,7 +111,7 @@ else
 
     private IReadOnlyList<GradingQueueRow>? rows;
     private string StatusFilter { get; set; } = "";
-    private bool showUnstarted = true, denied, busy, ok;
+    private bool showUnstarted = true, needsInstructorReview, denied, busy, ok;
     private string? message;
     // Not named with a "page" prefix: a bare "@page..." reference in the markup above is parsed as the @page directive.
     private int currentPage = 1;
@@ -127,7 +133,7 @@ else
     private async Task LoadAsync()
     {
         GradeStatus? status = Enum.TryParse<GradeStatus>(StatusFilter, out var s) ? s : null;
-        rows = await GradingDb.RunAsync(Scopes, Tenant, g => g.QueueAsync(status, showUnstarted));
+        rows = await GradingDb.RunAsync(Scopes, Tenant, g => g.QueueAsync(status, showUnstarted, needsInstructorReview));
         denied = rows is null;
         currentPage = Math.Clamp(currentPage, 1, TotalPages);
     }

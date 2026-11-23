@@ -161,7 +161,11 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
     // ================================================================== queue
 
     /// <summary>Sessions with a grade record, plus ended sessions not yet started, newest first.</summary>
-    public async Task<IReadOnlyList<GradingQueueRow>?> QueueAsync(GradeStatus? status, bool includeUnstarted, CancellationToken ct = default)
+    public async Task<IReadOnlyList<GradingQueueRow>?> QueueAsync(GradeStatus? status, bool includeUnstarted, CancellationToken ct = default) =>
+        await QueueAsync(status, includeUnstarted, needsInstructorReviewOnly: false, ct);
+
+    /// <summary>The queue; <paramref name="needsInstructorReviewOnly"/> keeps only attempts held for instructor review (GAD-T603).</summary>
+    public async Task<IReadOnlyList<GradingQueueRow>?> QueueAsync(GradeStatus? status, bool includeUnstarted, bool needsInstructorReviewOnly, CancellationToken ct = default)
     {
         if (!await RequireAsync(Permission.ViewTranscripts, "Opening the grading queue", null, ct)) return null;
         var org = Org;
@@ -169,14 +173,16 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (status is { } st) grades = grades.Where(g => g.Status == st);
         var graded = await (from g in grades
                             join s in db.ExamSessions.AsNoTracking() on g.SessionId equals s.Id
+                            where !needsInstructorReviewOnly || s.NeedsInstructorReview
                             orderby s.EndedAt descending
-                            select new { g.SessionId, g.Status, g.FinalPercent, s.ExamId, s.StudentUserId, s.Attempt, s.EndedAt })
+                            select new { g.SessionId, g.Status, g.FinalPercent, s.ExamId, s.StudentUserId, s.Attempt, s.EndedAt, s.NeedsInstructorReview, s.ReviewReason, s.Language })
             .Take(500).ToListAsync(ct);
         var unstarted = !includeUnstarted || status is not null ? []
             : await db.ExamSessions.AsNoTracking()
                 .Where(s => s.OrganizationId == org && s.State == SessionState.Ended && !db.FinalGrades.Any(g => g.SessionId == s.Id))
+                .Where(s => !needsInstructorReviewOnly || s.NeedsInstructorReview)
                 .OrderByDescending(s => s.EndedAt).Take(200)
-                .Select(s => new { s.Id, s.ExamId, s.StudentUserId, s.Attempt, s.EndedAt }).ToListAsync(ct);
+                .Select(s => new { s.Id, s.ExamId, s.StudentUserId, s.Attempt, s.EndedAt, s.NeedsInstructorReview, s.ReviewReason, s.Language }).ToListAsync(ct);
 
         var ids = graded.Select(g => g.SessionId).ToList();
         var examIds = graded.Select(g => g.ExamId).Concat(unstarted.Select(u => u.ExamId)).Distinct().ToList();
@@ -196,9 +202,11 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
 
         var rows = graded.Select(g => new GradingQueueRow(g.SessionId, AnonymousMarking.NameOrCode(anonymous.Contains(g.SessionId), g.SessionId, names.GetValueOrDefault(g.StudentUserId)),
                 exams.GetValueOrDefault(g.ExamId) ?? "(deleted exam)", g.Attempt, g.EndedAt, g.Status, g.FinalPercent, open.GetValueOrDefault(g.SessionId),
-                appeals.Contains(g.SessionId), jobs.GetValueOrDefault(g.SessionId).State, jobs.GetValueOrDefault(g.SessionId).Error, mock.Contains(g.SessionId)))
+                appeals.Contains(g.SessionId), jobs.GetValueOrDefault(g.SessionId).State, jobs.GetValueOrDefault(g.SessionId).Error, mock.Contains(g.SessionId))
+                { NeedsInstructorReview = g.NeedsInstructorReview, ReviewReason = g.ReviewReason, Language = g.Language })
             .Concat(unstarted.Select(u => new GradingQueueRow(u.Id, AnonymousMarking.NameOrCode(anonymous.Contains(u.Id), u.Id, names.GetValueOrDefault(u.StudentUserId)),
-                exams.GetValueOrDefault(u.ExamId) ?? "(deleted exam)", u.Attempt, u.EndedAt, null, null, 0, false, null, null, false)))
+                exams.GetValueOrDefault(u.ExamId) ?? "(deleted exam)", u.Attempt, u.EndedAt, null, null, 0, false, null, null, false)
+                { NeedsInstructorReview = u.NeedsInstructorReview, ReviewReason = u.ReviewReason, Language = u.Language }))
             .OrderByDescending(r => r.EndedAt).ToList();
         return rows;
     }
@@ -715,6 +723,15 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (label is { Length: > 40 }) return GradingResult.Fail("Keep the grade label under 40 characters.");
         if (await SeparationOfDutiesAsync(sessionId, "Approving a final grade", ct) is { } separated) return separated;
         if (await ReconcilerApproverAsync(sessionId, ct) is { } reconciler) return reconciler;   // GAD-T444
+        // GAD-T603: an attempt marked for instructor review (window absences, cross-lingual scores) is decided by a person here: the
+        // approval clears the mark, so it needs a note saying what was looked at; the decision is audited beside the approval.
+        if (session.NeedsInstructorReview)
+        {
+            if (Blank(note) is null)
+                return GradingResult.Fail($"This attempt is marked \"{Review.InstructorReview.Badge}\": add a note saying what you looked at (the reason, the absences and the student's explanation) before approving.");
+            var tracked = await db.ExamSessions.FirstAsync(s => s.Id == sessionId && s.OrganizationId == Org, ct);
+            Review.InstructorReview.Decide(db, Org, Actor, tracked, Review.InstructorReview.DecidedByApprovalAction, note!.Trim(), Now);
+        }
         StoreResult(grade, result, excluded);
         grade.LetterOrLabel = Blank(label);
         var refused = await TryMoveAsync(grade, GradeStatus.Finalized, Blank(note) ?? "Final grade approved.", ct);
@@ -733,6 +750,9 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (grade is null) return GradingResult.Fail("That session has no grade record in this organization.");
         if (!await db.ApprovalRecords.AnyAsync(a => a.SessionId == sessionId && a.OrganizationId == Org && a.Action == ApprovalAction.Finalize, ct))
             return await RefuseAsync(grade, GradeStatus.Published, "No final-approval record exists for this grade.", ct);
+        // GAD-T603: held until a person decides (clears the review mark, or approves with a note).
+        if (await Review.InstructorReview.IsHeldAsync(db, Org, sessionId, ct))
+            return await RefuseAsync(grade, GradeStatus.Published, $"The attempt is marked \"{Review.InstructorReview.Badge}\": clear the mark (with a note) or approve the grade again with a note before publishing.", ct);
         var refused = await TryMoveAsync(grade, GradeStatus.Published, Blank(note) ?? "Published to the student.", ct);
         if (refused is not null) return refused;
         AddApproval(sessionId, ApprovalAction.Publish, note);
@@ -875,7 +895,7 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         var rows = await (from g in db.FinalGrades.AsNoTracking()
                           join s in db.ExamSessions.AsNoTracking() on g.SessionId equals s.Id
                           join e in db.Exams.AsNoTracking() on s.ExamId equals e.Id
-                          where g.OrganizationId == org && s.StudentUserId == me
+                          where g.OrganizationId == org && s.StudentUserId == me && !s.NeedsInstructorReview   // GAD-T603: held
                                 && (g.Status == GradeStatus.Published || g.Status == GradeStatus.UnderAppeal || g.Status == GradeStatus.Amended)
                           select new { g.SessionId, s.AssignmentId, e.Title, s.Attempt, g.Status, g.FinalPercent, g.LetterOrLabel }).ToListAsync(ct);
         var ids = rows.Select(r => r.SessionId).ToList();

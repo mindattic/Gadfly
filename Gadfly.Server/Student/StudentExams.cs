@@ -86,12 +86,12 @@ public static class StudentExams
         var ids = assignments.Select(a => a.Id).ToList();
         var sessions = await db.ExamSessions.AsNoTracking()
             .Where(s => s.OrganizationId == organizationId && s.StudentUserId == studentUserId && ids.Contains(s.AssignmentId))
-            .Select(s => new { s.Id, s.AssignmentId, s.Attempt, s.State, s.EndedAt, s.EndReason })
+            .Select(s => new { s.Id, s.AssignmentId, s.Attempt, s.State, s.EndedAt, s.EndReason, s.NeedsInstructorReview })
             .ToListAsync(ct);
 
-        // Results only for assignments the instructor released.
+        // Results only for assignments the instructor released, and never for an attempt held for instructor review (GAD-T603).
         var releasedIds = assignments.Where(a => a.ResultsReleasedAt is not null).Select(a => a.Id).ToHashSet();
-        var releasedSessionIds = sessions.Where(s => releasedIds.Contains(s.AssignmentId)).Select(s => s.Id).ToList();
+        var releasedSessionIds = sessions.Where(s => releasedIds.Contains(s.AssignmentId) && !s.NeedsInstructorReview).Select(s => s.Id).ToList();
         var grades = releasedSessionIds.Count == 0 ? [] : await db.GradeDecisions.AsNoTracking()
             .Where(g => g.OrganizationId == organizationId && releasedSessionIds.Contains(g.SessionId))
             .ToListAsync(ct);
@@ -125,9 +125,9 @@ public static class StudentExams
             if (a.ResultsReleasedAt is { } released)
             {
                 // The decided attempt: the latest one the instructor graded, else the latest finished one.
-                var mineIds = mine.Select(s => s.Id).ToHashSet();
+                var mineIds = mine.Where(s => !s.NeedsInstructorReview).Select(s => s.Id).ToHashSet();
                 var grade = grades.Where(g => mineIds.Contains(g.SessionId)).OrderByDescending(g => g.DecidedAt).FirstOrDefault();
-                var sessionId = grade?.SessionId ?? mine.Where(s => s.State == SessionState.Ended).OrderByDescending(s => s.Attempt).Select(s => (Guid?)s.Id).FirstOrDefault();
+                var sessionId = grade?.SessionId ?? mine.Where(s => s.State == SessionState.Ended && !s.NeedsInstructorReview).OrderByDescending(s => s.Attempt).Select(s => (Guid?)s.Id).FirstOrDefault();
                 var report = reports.Where(r => r.SessionId == sessionId).OrderByDescending(r => r.CreatedAt).FirstOrDefault();
                 if (grade is not null || report is not null)
                     result = new ReleasedResult(grade?.Grade, grade?.Comment, Gadfly.Server.Review.ReportedLevels.FromReportJson(report?.ReportJson), released);

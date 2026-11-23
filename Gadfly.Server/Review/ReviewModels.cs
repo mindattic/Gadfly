@@ -31,12 +31,17 @@ public sealed record ReviewListRow(
     public IReadOnlyList<ObjectiveLevel> AiLevels { get; init; } = [];
     /// <summary>The attempt's language (GAD-T548), a BCP-47 tag; "en" for every attempt before localization.</summary>
     public string Language { get; init; } = Gadfly.Engine.ExamLanguage.English;
+    /// <summary>GAD-T603: the attempt is held for an instructor's review (<see cref="ExamSession.NeedsInstructorReview"/>).</summary>
+    public bool NeedsInstructorReview { get; init; }
+    /// <summary>Why it is held, in plain words (<see cref="ExamSession.ReviewReason"/>).</summary>
+    public string? ReviewReason { get; init; }
     public bool IsGraded => LatestGrade is not null;
     public bool NeedsGrade => State == SessionState.Ended && LatestGrade is null;
 }
 
 /// <summary>The filters on the /review list.</summary>
-public sealed record ReviewListFilter(Guid? ExamId = null, bool NeedsGradeOnly = false, bool NeedsHumanReviewOnly = false);
+public sealed record ReviewListFilter(Guid? ExamId = null, bool NeedsGradeOnly = false, bool NeedsHumanReviewOnly = false,
+    bool NeedsInstructorReviewOnly = false);
 
 /// <summary>A source passage a criterion cites, resolved to its text and location.</summary>
 public sealed record CitedPassage(string ChunkId, string? Quote, string? Text, string? Document, string? Location)

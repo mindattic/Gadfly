@@ -21,6 +21,7 @@
     </label>
     <label class="check"><input type="checkbox" @bind="needsGrade" @bind:after="ApplyFiltersAsync" /> Needs a grade</label>
     <label class="check"><input type="checkbox" @bind="needsReview" @bind:after="ApplyFiltersAsync" /> Judges disagreed</label>
+    <label class="check"><input type="checkbox" @bind="needsInstructorReview" @bind:after="ApplyFiltersAsync" /> @InstructorReview.Badge</label>
 </div>
 
 @if (rows is null)
@@ -30,7 +31,7 @@
 else if (rows.Count == 0)
 {
     <p class="notice">
-        @if (ExamFilter.Length > 0 || needsGrade || needsReview)
+        @if (ExamFilter.Length > 0 || needsGrade || needsReview || needsInstructorReview)
         {
             <text>No sessions match these filters.</text>
         }
@@ -54,7 +55,14 @@ else
             @foreach (var r in PagedRows)
             {
                 <tr>
-                    <td><a href="review/@r.SessionId">@r.StudentName</a></td>
+                    <td>
+                        <a href="review/@r.SessionId">@r.StudentName</a>
+                        @if (r.NeedsInstructorReview)
+                        {
+                            @* GAD-T603: held until a person decides; the result is not released meanwhile. *@
+                            <span class="tag warn" title="@(r.ReviewReason ?? "Marked for an instructor's review"). Results stay held until you clear the mark or approve with a note.">@InstructorReview.Badge: @InstructorReview.ShortReason(r.ReviewReason, r.Language)</span>
+                        }
+                    </td>
                     <td>@r.ExamTitle@if (!Gadfly.Engine.ExamLanguage.IsEnglish(r.Language)) { <span class="tag" title="Taken in @Gadfly.Engine.ExamLanguage.EnglishName(r.Language): the review page shows the original with a machine translation on demand"> @Gadfly.Engine.ExamLanguage.EnglishName(r.Language)</span> }</td>
                     <td>@r.Attempt</td>
                     <td>@r.State</td>
@@ -115,7 +123,7 @@ else
     private IReadOnlyList<(Guid Id, string Title)> exams = [];
     private IReadOnlyList<ReviewListRow>? rows;
     private string ExamFilter { get; set; } = "";
-    private bool needsGrade, needsReview;
+    private bool needsGrade, needsReview, needsInstructorReview;
     // Not named with a "page" prefix: a bare "@page..." reference in the markup above is parsed as the @page directive.
     private int currentPage = 1;
 
@@ -149,7 +157,7 @@ else
     private async Task LoadAsync()
     {
         var mine = ++loadSequence;
-        var filter = new ReviewListFilter(Guid.TryParse(ExamFilter, out var id) ? id : null, needsGrade, needsReview);
+        var filter = new ReviewListFilter(Guid.TryParse(ExamFilter, out var id) ? id : null, needsGrade, needsReview, needsInstructorReview);
         var result = await InScopeAsync(s => s.ListAsync(filter));
         if (mine != loadSequence) return;
         rows = result;

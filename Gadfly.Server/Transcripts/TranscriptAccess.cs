@@ -75,9 +75,13 @@ public static class TranscriptAccess
         return (await AnonymousMarking.HiddenSessionsAsync(db, org, [sessionId], now, ct)).Contains(sessionId);
     }
 
-    /// <summary>For an API caller asking for the student copy: only once the result has been published with approval.</summary>
+    /// <summary>
+    /// For an API caller asking for the student copy: only once the result has been published with approval, and never while the
+    /// attempt is marked for instructor review (GAD-T603). The LMS grade passback, the certificate and the class summary use this too.
+    /// </summary>
     public static async Task<bool> PublishedToStudentAsync(GadflyDbContext db, Guid org, Guid sessionId, CancellationToken ct)
     {
+        if (await Review.InstructorReview.IsHeldAsync(db, org, sessionId, ct)) return false;
         var status = await db.FinalGrades.AsNoTracking().Where(g => g.SessionId == sessionId && g.OrganizationId == org).Select(g => (GradeStatus?)g.Status).FirstOrDefaultAsync(ct);
         if (status is not (GradeStatus.Published or GradeStatus.UnderAppeal or GradeStatus.Amended)) return false;
         var actions = await db.ApprovalRecords.AsNoTracking().Where(a => a.SessionId == sessionId && a.OrganizationId == org

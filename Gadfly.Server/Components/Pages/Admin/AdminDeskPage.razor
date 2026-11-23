@@ -259,7 +259,14 @@ else
                             @(a.TypedAnswers ? "typed (accommodation)" : "spoken")
                             <button class="link" type="button" disabled="@busy" @onclick="() => TypedAnswersAsync(a, !a.TypedAnswers)">@(a.TypedAnswers ? "Withdraw" : "Grant typed answers")</button>
                         </td>
-                        <td>@a.Status</td>
+                        <td>
+                            @a.Status
+                            @if (a.HeldSessionId is { } held)
+                            {
+                                @* GAD-T603: held until a person decides; open the review to see why and clear it. *@
+                                <a class="tag warn" href="review/@held" title="@(a.ReviewReason ?? "Marked for an instructor's review"). The result is held until someone clears the mark or approves with a note.">@Gadfly.Server.Review.InstructorReview.Badge: @Gadfly.Server.Review.InstructorReview.ShortReason(a.ReviewReason, a.HeldLanguage)</a>
+                            }
+                        </td>
                         <td>@(a.LatestScore ?? "—")</td>
                         <td>
                             @if (a.LatestSessionId is { } sid)

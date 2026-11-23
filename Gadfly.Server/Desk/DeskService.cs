@@ -149,7 +149,13 @@ public sealed record DeskExam(Guid Id, string Title, string Subject, string Topi
 public sealed record DeskStudent(Guid UserId, string UserName, string? DisplayName, string? Email, bool Active, int Assigned, DateTime? LastLogin);
 
 public sealed record DeskAssignment(Guid Id, Guid ExamId, string ExamTitle, bool Voice, Guid StudentUserId, string StudentName, int AttemptsAllowed,
-    int AttemptsUsed, string Status, Guid? LatestSessionId, string? LatestScore, DateTimeOffset AssignedAt, bool TypedAnswers = false);
+    int AttemptsUsed, string Status, Guid? LatestSessionId, string? LatestScore, DateTimeOffset AssignedAt, bool TypedAnswers = false)
+{
+    /// <summary>GAD-T603: an attempt of this assignment is held for an instructor's review (its result is not released meanwhile).</summary>
+    public Guid? HeldSessionId { get; init; }
+    public string? ReviewReason { get; init; }
+    public string? HeldLanguage { get; init; }
+}
 
 public sealed record DeskTurn(int Index, string ConceptKey, string Question, string? Answer, string? AnswerMode);
 
@@ -489,7 +495,7 @@ public sealed class DeskService(IServiceProvider sp)
         var exams = await db.Exams.AsNoTracking().Where(e => e.OrganizationId == org)
             .Select(e => new { e.Id, e.Title, e.Mode }).ToDictionaryAsync(e => e.Id, ct);
         var sessions = (await db.ExamSessions.AsNoTracking().Where(s => s.OrganizationId == org)
-                .Select(s => new { s.Id, s.AssignmentId, s.Attempt, s.State, s.EndReason }).ToListAsync(ct))
+                .Select(s => new { s.Id, s.AssignmentId, s.Attempt, s.State, s.EndReason, s.NeedsInstructorReview, s.ReviewReason, s.Language }).ToListAsync(ct))
             .GroupBy(s => s.AssignmentId).ToDictionary(g => g.Key, g => g.OrderByDescending(s => s.Attempt).ToList());
         var latestIds = sessions.Values.Select(l => l[0].Id).ToList();
         var finals = await db.FinalGrades.AsNoTracking().Where(g => g.OrganizationId == org && latestIds.Contains(g.SessionId))
@@ -515,7 +521,12 @@ public sealed class DeskService(IServiceProvider sp)
                 var exam = exams.GetValueOrDefault(a.ExamId);
                 return new DeskAssignment(a.Id, a.ExamId, exam?.Title ?? "(missing exam)", exam?.Mode == ExamMode.Voice, a.StudentUserId,
                     names.GetValueOrDefault(a.StudentUserId, "(unknown user)"), a.AttemptsAllowed, used, status, latest?.Id, score, a.AssignedAt,
-                    a.TypedAnswerAccommodation);
+                    a.TypedAnswerAccommodation)
+                {
+                    HeldSessionId = list.FirstOrDefault(s => s.NeedsInstructorReview)?.Id,
+                    ReviewReason = list.FirstOrDefault(s => s.NeedsInstructorReview)?.ReviewReason,
+                    HeldLanguage = list.FirstOrDefault(s => s.NeedsInstructorReview)?.Language,
+                };
             })
             .OrderBy(r => r.StudentName, StringComparer.OrdinalIgnoreCase).ThenBy(r => r.ExamTitle, StringComparer.OrdinalIgnoreCase).ToList();
     }
