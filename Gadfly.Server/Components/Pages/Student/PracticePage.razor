@@ -7,6 +7,10 @@
 @inject TimeProvider Clock
 @inject ILogger<PracticePage> Log
 @inject Gadfly.Server.Localization.UiText UiLanguage
+@inject IJSRuntime JS
+@inject IWebHostEnvironment Env
+@inject ITenantContext Tenant
+@inject IServiceScopeFactory Scopes
 
 @* "Meet your examiner" (GAD-T294): an ungraded practice interview any student can take from My exams at any time. It runs the
    real exam room's pieces (VoiceRoom: the talking examiner, captions, microphone, self-view, transcript, the judging-wait filler
@@ -58,7 +62,7 @@
     else if (!started)
     {
         <section class="panel wide practice-intro">
-            <p>@UiLanguage["practice.intro"]</p>
+            <p>@(new ExamRoomText(UiLanguage, maleExaminer)["practice.intro"])</p>
             <ol class="practice-steps">
                 @foreach (var s in PracticeInterview.StepsFor(UiLanguage.Language))
                 {
@@ -80,6 +84,8 @@
     }
     else
     {
+        @* The talking examiner's own lines (voice-room.js, examiner-gaze.js) in the page's language (GAD-T606). *@
+        <UiTextData Prefix="examRoom.js." />
         <VoiceRoom SessionId="practice.Id" VoiceFromAssignment="Assignment" TurnIndex="practice.Turn" Question="@practice.Line" CanAnswer="CanAnswer"
                    Active="voiceOn" ActiveChanged="OnVoiceActive" OnAnswer="OnAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaks" Pondering="pondering" />
 
@@ -122,6 +128,30 @@
 </div>
 
 @code {
+    /// <summary>The examiner the student will meet is the male one (GAD-T606): the introduction's pronouns follow.</summary>
+    private bool maleExaminer, examinerRead;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || examinerRead) return;
+        examinerRead = true;
+        (string? Exam, string? Organization) fixedBy = (null, null);
+        try
+        {
+            if (Assignment is { } a && Tenant.OrganizationId is { } org)
+                fixedBy = await ExaminerCatalog.AvatarIdsForAssignmentAsync(Scopes, org, a);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.LogDebug(ex, "The practice's examiner could not be read.");
+        }
+        if (await ExamRoomText.MaleExaminerAsync(JS, ExaminerCatalog.For(Settings, Env.WebRootPath), fixedBy.Exam, fixedBy.Organization, CancellationToken.None))
+        {
+            maleExaminer = true;
+            StateHasChanged();
+        }
+    }
+
     /// <summary>
     /// Opened from an exam's get-ready page (GAD-T560): my-exams/practice?assignment={id} runs the free practice with that exam's own
     /// examiner voice, so the student rehearses with the same examiner. Only the student's own assignment is honoured.

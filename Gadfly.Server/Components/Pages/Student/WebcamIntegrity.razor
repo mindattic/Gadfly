@@ -34,6 +34,13 @@
 @code {
     [Parameter, EditorRequired] public Guid SessionId { get; set; }
 
+    /// <summary>The exam room's text, in the attempt's language (GAD-T606).</summary>
+    [CascadingParameter] public ExamRoomText? Room { get; set; }
+
+    [Inject] private Gadfly.Server.Localization.UiText Ui { get; set; } = default!;
+
+    private ExamRoomText T => Room ?? new ExamRoomText(Ui);
+
     private ElementReference video;
     private IJSObjectReference? module;
     private DotNetObjectReference<WebcamIntegrity>? self;
@@ -46,20 +53,20 @@
 
     private string Label => state switch
     {
-        "on" => "Camera on. Checks run on this device; no video is recorded or sent.",
-        "unavailable" => "Camera not in use. The exam continues normally.",
-        "stopped" => "Camera off.",
-        "off" => "Camera checks are off for this attempt.",
-        _ => "Camera starting. Your browser may ask to use it.",
+        "on" => T["examRoom.webcam.on"],
+        "unavailable" => T["examRoom.webcam.unavailable"],
+        "stopped" => T["examRoom.webcam.stopped"],
+        "off" => T["examRoom.webcam.off"],
+        _ => T["examRoom.webcam.starting"],
     };
 
     private string? Hint => state != "on" ? null : hintCode switch
     {
-        "no-face" => "We can't see your face. Check that the camera is pointing at you.",
-        "low-light" => "It's quite dark. A light in front of you would help.",
-        "too-small" => "You look far from the camera. Move a little closer.",
-        "cut-off" => "Part of your face is out of frame.",
-        "off-center" => "Try centering your face in the camera.",
+        "no-face" => T["examRoom.webcam.hint.noFace"],
+        "low-light" => T["examRoom.webcam.hint.lowLight"],
+        "too-small" => T["examRoom.webcam.hint.tooSmall"],
+        "cut-off" => T["examRoom.webcam.hint.cutOff"],
+        "off-center" => T["examRoom.webcam.hint.offCenter"],
         _ => null,
     };
 

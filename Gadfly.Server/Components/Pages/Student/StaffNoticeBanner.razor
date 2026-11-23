@@ -7,7 +7,7 @@
 @inject TimeProvider Clock
 @inject NavigationManager Nav
 @inject ILogger<StaffNoticeBanner> Log
-@inject Gadfly.Server.Localization.UiText T
+@inject Gadfly.Server.Localization.UiText Ui
 
 @*
     What staff do from the live monitor, shown in the student's exam room (GAD-T299): a short notice, a pause (the exam waits, the clock
@@ -40,7 +40,7 @@
                 }
                 @if (message is not null)
                 {
-                    <p>@message</p>
+                    <p>@StaffActionMessage.Render(message, T)</p>
                 }
             </div>
             @if (!ended)
@@ -58,6 +58,11 @@
     /// the microphone while held, so nothing is captured or sent while answers are refused, and opens it again on release.
     /// </summary>
     [Parameter] public EventCallback<bool> HeldChanged { get; set; }
+
+    /// <summary>The exam room's text, in the attempt's language (GAD-T606); the page's language without one.</summary>
+    [CascadingParameter] public ExamRoomText? Room { get; set; }
+
+    private Gadfly.Server.Localization.UiText T => Room?.Text ?? Ui;
 
     private bool owned, held, ended;
     private StaffNotice? notice;

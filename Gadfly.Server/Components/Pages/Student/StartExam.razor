@@ -244,7 +244,7 @@ else
                and helps; reminders only on a long look away from the screen while answering, from the examiner first, never on the grade. *@
             <h2 id="ready-eyes-title">@T["getReady.eyes.title"]</h2>
             <ul class="ready-rules">
-                <li>@T["getReady.eyes.look"]</li>
+                <li>@Ex("getReady.eyes.look")</li>
                 <li><strong>@T["getReady.eyes.thinkingOk"]</strong> @T["getReady.eyes.thinkingWhy"]</li>
                 <li>@T["getReady.eyes.reminder"]</li>
                 <li>@T["getReady.eyes.neverGrade"]</li>
@@ -280,16 +280,16 @@ else
             <div class="examiner-preview-row">
                 <img class="examiner-preview-portrait" src="@examiner.PortraitUrl" alt="@T["getReady.examiner.portraitAlt"]" />
                 <div class="examiner-preview-body">
-                    <p>@T["getReady.examiner.intro"]</p>
+                    <p>@Ex("getReady.examiner.intro")</p>
                     <p class="examiner-preview-caption" @ref="previewCaption" aria-live="polite">@T["getReady.examiner.line"]</p>
                     <div class="actions">
-                        <button type="button" class="secondary" @onclick="PlayPreviewAsync">@T["getReady.examiner.play"]</button>
+                        <button type="button" class="secondary" @onclick="PlayPreviewAsync">@Ex("getReady.examiner.play")</button>
                     </div>
                     @if (previewSilent)
                     {
-                        <p class="hint" role="status">@T["getReady.examiner.noSpeech"]</p>
+                        <p class="hint" role="status">@Ex("getReady.examiner.noSpeech")</p>
                     }
-                    <p class="hint">@T["getReady.examiner.voiceNote"]</p>
+                    <p class="hint">@Ex("getReady.examiner.voiceNote")</p>
                 </div>
             </div>
             @* A full practice run with the same examiner (GAD-T560): the best-supported way to feel calm on the day. *@
@@ -640,6 +640,9 @@ else
     private IJSObjectReference? prefsModule;
 
     private sealed record RememberedExaminer(string? Id, string? ModelUrl, string? PortraitUrl);
+
+    /// <summary>A sentence about the examiner, its pronouns following the one chosen (GAD-T606: "her", or "him" for the male examiner).</summary>
+    private string Ex(string key) => new ExamRoomText(T, examiner is { Id: ExaminerCatalog.Male })[key];
 
     /// <summary>Shows the examiner the student chose last time on this device, if still offered.</summary>
     private async Task LoadExaminerChoiceAsync()

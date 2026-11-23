@@ -29,39 +29,39 @@
    the same way, but no microphone is opened and the spoken-answer controls are hidden; the exam room shows the answer box. *@
 <HeadContent><link rel="stylesheet" href="voice.css" /></HeadContent>
 
-<section class="voice-room" aria-label="The examiner" data-state="@state.ToString().ToLowerInvariant()">
+<section class="voice-room" aria-label="@T["examRoom.voice.regionLabel"]" data-state="@state.ToString().ToLowerInvariant()">
     @if (state == VoiceState.Off || state == VoiceState.Failed)
     {
         <div class="voice-offer">
             @if (Settings.Mode == VoiceMode.Mock)
             {
-                <p class="notice" role="note">Practice voice: speech recognition is simulated here, so your words will appear as the placeholder "speech".</p>
+                <p class="notice" role="note">@T["examRoom.voice.mock"]</p>
             }
             @if (!supported)
             {
-                <p class="error" role="alert">@(notice ?? "This browser can't run the spoken exam.")</p>
-                <p class="hint">@(TypedAnswers ? "This exam needs a camera, and sound to hear the examiner." : "This exam is spoken and needs a microphone and a camera.") Use a current Chrome, Edge, Firefox or Safari on a secure connection, then reload this page.</p>
+                <p class="error" role="alert">@(notice ?? T["examRoom.voice.unsupported"])</p>
+                <p class="hint">@T[TypedAnswers ? "examRoom.voice.unsupportedHint.typed" : "examRoom.voice.unsupportedHint"]</p>
                 @* GAD-T320: help appears only in these states, when the examiner is not on screen and no answer is being given, and
                    opens in a new tab so the exam page stays where it is. Never while the examiner is speaking or listening. *@
-                <p class="hint"><HelpLink Topic="troubleshooting-browser" Label="Help with browsers and connections" /></p>
+                <p class="hint"><HelpLink Topic="troubleshooting-browser" Label="@T["examRoom.help.browsers"]" /></p>
             }
             else if (state == VoiceState.Failed)
             {
-                <p class="error" role="alert"><strong>@(needsClick ? "One click to go." : "The exam is paused.")</strong> @notice</p>
-                <button type="button" data-voice-action="start">@(needsClick ? "Continue to the examiner" : "Try again")</button>
-                <p class="hint">@(TypedAnswers ? "Your camera must stay on for the whole exam: you type your answers, and your camera stays on during the exam (you won't see yourself unless you open the small preview)." : "Your microphone and camera must stay on for the whole exam: you answer the examiner out loud, and your camera stays on (you won't see yourself unless you open the small preview).") Once the first question has been asked, the clock stops while the exam is paused, for up to 10 minutes in all.</p>
+                <p class="error" role="alert"><strong>@T[needsClick ? "examRoom.voice.oneClick" : "examRoom.voice.paused"]</strong> @notice</p>
+                <button type="button" data-voice-action="start">@T[needsClick ? "examRoom.voice.continue" : "examRoom.tryAgain"]</button>
+                <p class="hint">@T[TypedAnswers ? "examRoom.voice.failedHint.typed" : "examRoom.voice.failedHint"]</p>
                 @if (!needsClick)
                 {
                     @* The exam is paused here (the clock is stopped), so a help link opening in a new tab pulls no one away mid-answer. *@
                     <p class="hint">
-                        @if (!TypedAnswers) { <HelpLink Topic="troubleshooting-microphone" Label="Microphone help" /> <text> · </text> }
-                        <HelpLink Topic="troubleshooting-camera" Label="Camera help" />
+                        @if (!TypedAnswers) { <HelpLink Topic="troubleshooting-microphone" Label="@T["examRoom.help.microphone"]" /> <text> · </text> }
+                        <HelpLink Topic="troubleshooting-camera" Label="@T["examRoom.help.camera"]" />
                     </p>
                 }
             }
             else
             {
-                <p class="hint" role="status">@(TypedAnswers ? "Connecting you to the examiner… Your browser may ask to use your camera: allow it." : "Connecting you to the examiner… Your browser may ask to use your microphone and camera: allow both.")</p>
+                <p class="hint" role="status">@T[TypedAnswers ? "examRoom.voice.connecting.typed" : "examRoom.voice.connecting"]</p>
             }
         </div>
     }
@@ -75,7 +75,7 @@
             <div class="voice-pip">
                 <figure class="voice-party voice-examiner">
                     <div class="voice-stage" data-voice-stage></div>
-                    <figcaption>Examiner</figcaption>
+                    <figcaption>@T["examRoom.voice.examiner"]</figcaption>
                 </figure>
                 @* No self-view during the exam (GAD-T510, docs/research/attention-and-gaze.md 4.3): watching yourself while answering under
                    evaluation costs attention and raises appearance anxiety. The camera stream stays in this element (the eye-contact
@@ -83,9 +83,9 @@
                    which closes itself after a few seconds. *@
                 <figure class="voice-party voice-self" data-self-state="@selfState" data-preview="@(previewOpen ? "on" : "off")" aria-hidden="@(previewOpen ? "false" : "true")">
                     <div class="voice-self-frame">
-                        <video data-voice-self muted playsinline autoplay aria-label="@ExamRoomText.CameraPreviewLabel"></video>
+                        <video data-voice-self muted playsinline autoplay aria-label="@T["examRoom.camera.previewLabel"]"></video>
                     </div>
-                    <figcaption>You</figcaption>
+                    <figcaption>@T["examRoom.voice.you"]</figcaption>
                 </figure>
             </div>
             @if (state is VoiceState.Starting or VoiceState.On)
@@ -98,12 +98,12 @@
         {
             @* The transcript scrolls inside its own panel (voice-room.js keeps the newest line in view); the page never grows. *@
             <section class="voice-transcript" aria-labelledby="voice-transcript-title">
-                <h2 id="voice-transcript-title" class="verify-label">Transcript</h2>
+                <h2 id="voice-transcript-title" class="verify-label">@T["examRoom.transcript.title"]</h2>
                 @* While the student answers the conversation is tucked away (GAD-T512): the question stays as the caption under her face. *@
-                <p class="hint voice-transcript-quiet">@ExamRoomText.TranscriptQuiet</p>
+                <p class="hint voice-transcript-quiet">@T["examRoom.transcript.quiet"]</p>
                 @if (transcript.Count == 0)
                 {
-                    <p class="hint">Each question and each answer you @(TypedAnswers ? "give" : "speak") will appear here as the interview goes.</p>
+                    <p class="hint">@T[TypedAnswers ? "examRoom.transcript.empty.typed" : "examRoom.transcript.empty"]</p>
                 }
                 else
                 {
@@ -112,11 +112,11 @@
                         @foreach (var line in transcript)
                         {
                             <li @key="line.Id" class="voice-line @(line.Examiner ? "voice-line-examiner" : "voice-line-you")">
-                                <span class="voice-who">@(line.Examiner ? "Examiner" : "You")</span>
+                                <span class="voice-who">@T[line.Examiner ? "examRoom.voice.examiner" : "examRoom.voice.you"]</span>
                                 <span class="voice-said">@line.Text</span>
                                 @if (line.DelaySeconds is { } delay)
                                 {
-                                    <span class="voice-line-delay">Response delay: @FormatDelay(delay)</span>
+                                    <span class="voice-line-delay">@T["examRoom.transcript.delay", FormatDelay(delay)]</span>
                                 }
                                 @if (line.Voice is { } voice)
                                 {
@@ -131,13 +131,13 @@
                 @* The camera-on indicator and the on-demand preview (GAD-T510). *@
                 <div class="voice-camera" data-self-state="@selfState">
                     <span class="voice-camera-dot" aria-hidden="true"></span>
-                    <span class="voice-camera-label">@(SelfNote ?? (selfState == "on" ? ExamRoomText.CameraOn : ExamRoomText.CameraStarting))</span>
+                    <span class="voice-camera-label">@(SelfNote ?? T[selfState == "on" ? "examRoom.camera.on" : "examRoom.camera.starting"])</span>
                     @if (selfState == "on")
                     {
-                        <button type="button" class="link" aria-pressed="@(previewOpen ? "true" : "false")" @onclick="TogglePreview">@(previewOpen ? ExamRoomText.CameraHide : ExamRoomText.CameraShow)</button>
+                        <button type="button" class="link" aria-pressed="@(previewOpen ? "true" : "false")" @onclick="TogglePreview">@T[previewOpen ? "examRoom.camera.hide" : "examRoom.camera.show"]</button>
                     }
                 </div>
-                <p class="voice-status" role="status" aria-live="polite" data-voice-status>Connecting you to the examiner…</p>
+                <p class="voice-status" role="status" aria-live="polite" data-voice-status>@T["examRoom.voice.connectingStatus"]</p>
                 <p class="voice-delay" data-voice-delay data-state="idle" aria-live="off"></p>
                 @if (!TypedAnswers)
                 {
@@ -150,23 +150,23 @@
                 @if (browserVoice)
                 {
                     @* The voice provider stopped answering and the browser's own speech reads her lines (GAD-T328). *@
-                    <p class="hint" role="status">The examiner's usual voice isn't responding right now, so your browser's own voice is reading the questions for her. Nothing is wrong with your exam, and every question is also shown on screen.</p>
+                    <p class="hint" role="status">@T["examRoom.voice.browserVoice"]</p>
                 }
                 @if (TypedAnswers)
                 {
                     @* Typed answers (GAD-T260): the answer box is the exam room's; only the question can be repeated here. *@
                     <div class="actions voice-actions">
-                        <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
+                        <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">@T["examRoom.voice.repeat"]</button>
                         @if (OnSayAnotherWay.HasDelegate)
                         {
-                            <button type="button" class="secondary" @onclick="OnSayAnotherWay" disabled="@(!CanRepeat || !CanSayAnotherWay)" title="@UiFor["examRoom.sayAnotherWay.hint"]">@UiFor["examRoom.sayAnotherWay"]</button>
+                            <button type="button" class="secondary" @onclick="OnSayAnotherWay" disabled="@(!CanRepeat || !CanSayAnotherWay)" title="@T["examRoom.sayAnotherWay.hint"]">@T["examRoom.sayAnotherWay"]</button>
                         }
                     </div>
                 }
                 else
                 {
                     <div class="voice-answer">
-                        <p class="verify-label">What I heard</p>
+                        <p class="verify-label">@T["examRoom.voice.heard"]</p>
                         @* A reload or a crash mid-answer keeps what was said as a draft (GAD-T306): filled in by voice-room.js,
                            never on its own a reason to submit anything. *@
                         <p class="hint voice-recovered" data-voice-recovered aria-live="polite"></p>
@@ -175,26 +175,26 @@
                         <div class="voice-cue" data-voice-cue data-active="false" aria-hidden="true"><i></i></div>
                     </div>
                     <div class="actions voice-actions">
-                        <button type="button" data-voice-action="done" data-voice-needs-draft disabled>Done answering</button>
-                        <button type="button" class="secondary" data-voice-action="clear" data-voice-needs-draft disabled>Clear and answer again</button>
-                        <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">Repeat the question</button>
+                        <button type="button" data-voice-action="done" data-voice-needs-draft disabled>@T["examRoom.voice.done"]</button>
+                        <button type="button" class="secondary" data-voice-action="clear" data-voice-needs-draft disabled>@T["examRoom.voice.clear"]</button>
+                        <button type="button" class="secondary" @onclick="RepeatAsync" disabled="@(!CanRepeat)">@T["examRoom.voice.repeat"]</button>
                         @* "Say it another way" (GAD-T602, GAD-T555): the same question reworded through the leak guard; free, for every student. *@
                         @if (OnSayAnotherWay.HasDelegate)
                         {
-                            <button type="button" class="secondary" @onclick="OnSayAnotherWay" disabled="@(!CanRepeat || !CanSayAnotherWay)" title="@UiFor["examRoom.sayAnotherWay.hint"]">@UiFor["examRoom.sayAnotherWay"]</button>
+                            <button type="button" class="secondary" @onclick="OnSayAnotherWay" disabled="@(!CanRepeat || !CanSayAnotherWay)" title="@T["examRoom.sayAnotherWay.hint"]">@T["examRoom.sayAnotherWay"]</button>
                         }
-                        <button type="button" class="secondary" data-voice-action="mode">Switch to hold-to-talk</button>
-                        <button type="button" class="secondary" data-voice-action="ptt" hidden aria-describedby="voice-ptt-hint">Hold to talk</button>
+                        <button type="button" class="secondary" data-voice-action="mode">@T["examRoom.voice.toPushToTalk"]</button>
+                        <button type="button" class="secondary" data-voice-action="ptt" hidden aria-describedby="voice-ptt-hint">@T["examRoom.voice.ptt"]</button>
                     </div>
-                    <p id="voice-ptt-hint" class="hint voice-ptt-hint">Hold to talk works with the mouse, a touch, or Space or Enter held down.</p>
+                    <p id="voice-ptt-hint" class="hint voice-ptt-hint">@T["examRoom.voice.pttHint"]</p>
                     @* The student's own pause before a silence sends the answer (GAD-T599, WCAG 2.2.1); kept on this device by voice-room.js. *@
                     <label class="voice-pause">
-                        @ExamRoomText.PauseLengthLabel
+                        @T["examRoom.pause.label"]
                         <select data-voice-pause>
-                            <option value="1">@ExamRoomText.PauseStandard</option>
-                            <option value="1.75">@ExamRoomText.PauseLonger</option>
-                            <option value="2.5">@ExamRoomText.PauseLongest</option>
-                            <option value="done">@ExamRoomText.PauseDone</option>
+                            <option value="1">@T["examRoom.pause.standard"]</option>
+                            <option value="1.75">@T["examRoom.pause.longer"]</option>
+                            <option value="2.5">@T["examRoom.pause.longest"]</option>
+                            <option value="done">@T["examRoom.pause.done"]</option>
                         </select>
                     </label>
                 }
@@ -261,8 +261,13 @@
     /// <summary>False while a rewording is being prepared.</summary>
     [Parameter] public bool CanSayAnotherWay { get; set; } = true;
 
-    /// <summary>The exam room's strings in the attempt's language (GAD-T543/T544).</summary>
-    private Gadfly.Server.Localization.UiText UiFor => Ui.For(speech.Language);
+    /// <summary>
+    /// The exam room's text (GAD-T606): the exam room's, in the attempt's language, when it hosts this room; otherwise (the practice)
+    /// the page's own language. The examiner's pronouns follow the examiner on screen.
+    /// </summary>
+    [CascadingParameter] public ExamRoomText? Room { get; set; }
+
+    private ExamRoomText T => Room ?? new ExamRoomText(Ui, examiner is { Id: ExaminerCatalog.Male });
 
     /// <summary>
     /// The question said another way (GAD-T602): she says it like a question (captions, lip sync), the words already said are kept and
@@ -334,15 +339,27 @@
 
     private string? SelfNote => selfState switch
     {
-        "denied" => "The camera wasn't allowed.",
-        "unavailable" => "No camera is available.",
+        "denied" => T["examRoom.camera.denied"],
+        "unavailable" => T["examRoom.camera.unavailable"],
         _ => null,
     };
 
-    private static string FormatDelay(double seconds) => seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s";
+    private static string FormatDelay(double seconds) => seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>The next transcript line's key: lines can be taken out again (an answer not taken, GAD-T473), so never the count.</summary>
     private int nextLineId;
+
+    /// <summary>
+    /// The answer's voice line for the student's transcript (GAD-T232, GAD-T259): English exactly as <see cref="VoiceStrainReading.Brief"/>
+    /// words it; another language from the room's strings, naming the measures beyond the usual range (never a named state).
+    /// </summary>
+    private string VoiceLine(VoiceStrainReading reading)
+    {
+        if (T.Text.IsEnglish) return reading.Brief;
+        if (reading.IsBaseline) return T["examRoom.voiceLine.baseline"];
+        var notable = reading.Indicators.Where(i => i.Notable).Select(i => T["examRoom.voiceLine.feature." + i.Feature]).Distinct().ToList();
+        return notable.Count == 0 ? T["examRoom.voiceLine.close"] : T["examRoom.voiceLine.against", string.Join(", ", notable)];
+    }
 
     private TranscriptLine? AddLine(bool examiner, string text, double? delaySeconds, string? voice = null)
     {
@@ -365,7 +382,7 @@
             if (built is null) return null;
             await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
             var answer = await VoiceStrain.ApplyAsync(scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>(), SessionId, built.Answer, stop.Token);
-            return VoiceStrain.Describe(answer.SpeechMetrics)?.Brief;
+            return VoiceStrain.Describe(answer.SpeechMetrics) is { } reading ? VoiceLine(reading) : null;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -470,7 +487,7 @@
             if (!caps.Microphone || !caps.AudioContext)
             {
                 supported = false;
-                notice = "This browser can't use the microphone and camera (it needs a current browser and a secure connection).";
+                notice = T["examRoom.problem.unsupported"];
                 StateHasChanged();
                 return;
             }
@@ -484,14 +501,14 @@
             // back to, and it always re-syncs from the server's current state.
             supported = false;
             Log.LogWarning("The examiner took too long to start for session {SessionId}.", SessionId);
-            notice = "That's taking too long. Check your internet connection, then reload this page to try again.";
+            notice = T["examRoom.problem.timeout"];
             StateHasChanged();
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
         {
             supported = false;
             Log.LogDebug(ex, "The examiner could not load for session {SessionId}.", SessionId);
-            notice = "The examiner could not start in this browser.";
+            notice = T["examRoom.problem.couldNotStart"];
             StateHasChanged();
         }
     }
@@ -873,17 +890,17 @@
         noTalkingHead = mode == "none";
         avatarNote = mode switch
         {
-            "portrait" => "Showing the examiner's picture instead of the 3D head" + (reason switch
+            "portrait" => T[reason switch
             {
-                "no-webgl" => " because this browser has no 3D graphics.",
-                "reduced-motion" => " because your device asks for reduced motion.",
-                "no-src" => ".",
-                "load-failed" => " because the 3D examiner could not load.",
-                "slow-device" => " because this device can't draw the 3D examiner smoothly.",
-                "graphics-lost" => " because the browser's 3D graphics stopped working.",
-                _ => ".",
-            }) + " Questions are still spoken and shown as text.",
-            "none" => reason.Length > 0 ? reason : "The examiner's picture could not start; questions are shown as text.",
+                "no-webgl" => "examRoom.avatar.portrait.noWebgl",
+                "reduced-motion" => "examRoom.avatar.portrait.reducedMotion",
+                "load-failed" => "examRoom.avatar.portrait.loadFailed",
+                "slow-device" => "examRoom.avatar.portrait.slowDevice",
+                "graphics-lost" => "examRoom.avatar.portrait.graphicsLost",
+                _ => "examRoom.avatar.portrait",
+            }],
+            // voice-room.js sends its own line, already in the page's language (examRoom.js.avatar.none).
+            "none" => reason.Length > 0 ? reason : T["examRoom.avatar.none"],
             _ => null,
         };
         StateHasChanged();
@@ -916,15 +933,15 @@
         needsClick = kind == "gesture";
         notice = kind switch
         {
-            "gesture" => "Your browser needs one click before the examiner can speak.",
-            "mic-denied" => "The microphone wasn't allowed. Allow the microphone for this site in your browser (the icon in the address bar), then press Try again.",
-            "microphone" => "The microphone couldn't be opened. Check that it is plugged in and not used by another app, then press Try again.",
-            "mic-lost" => "Your microphone stopped working. Plug it back in or allow it again, then press Try again.",
-            "camera-denied" => "The camera wasn't allowed. Allow the camera for this site in your browser (the icon in the address bar), then press Try again.",
-            "camera" => "No camera could be opened. Check that it is connected, uncovered and not used by another app, then press Try again.",
-            "camera-lost" => "Your camera stopped working. Plug it back in or allow it again, then press Try again.",
-            "hub" or "recognizer" => "The connection to the examiner was lost. Check your internet connection, then press Try again.",
-            _ => "The examiner couldn't start. Press Try again; if it keeps failing, reload the page.",
+            "gesture" => T["examRoom.problem.gesture"],
+            "mic-denied" => T["examRoom.problem.micDenied"],
+            "microphone" => T["examRoom.problem.microphone"],
+            "mic-lost" => T["examRoom.problem.micLost"],
+            "camera-denied" => T["examRoom.problem.cameraDenied"],
+            "camera" => T["examRoom.problem.camera"],
+            "camera-lost" => T["examRoom.problem.cameraLost"],
+            "hub" or "recognizer" => T["examRoom.problem.connection"],
+            _ => T["examRoom.problem.other"],
         };
         await SetStateAsync(VoiceState.Failed);
     });

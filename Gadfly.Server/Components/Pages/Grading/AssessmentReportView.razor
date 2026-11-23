@@ -1,32 +1,33 @@
 @using Gadfly.Server.Grading
+@inject Gadfly.Server.Localization.UiText Ui
 @* The assessment report body (Feature 10), shared by the reviewer and student pages. *@
 
 <div class="gr-report">
     @if (Report.IsMock)
     {
-        <p class="gr-banner mock"><span class="gr-mock">MOCK</span> AI scores in this report come from the mock panel, not a genuine AI evaluation.</p>
+        <p class="gr-banner mock"><span class="gr-mock">MOCK</span> @T["report.mock"]</p>
     }
     @if (Report.IsFormative)
     {
-        <p class="gr-banner warn">Formative scores: @Report.ScoreUseReason</p>
+        <p class="gr-banner warn">@T["report.formative"] @Report.ScoreUseReason</p>
     }
     @if (!Report.IsApproved)
     {
-        <p class="gr-banner warn">Preliminary: this grade has not been approved and is not a final grade.</p>
+        <p class="gr-banner warn">@T["report.preliminary"]</p>
     }
     <div class="gr-summary">
-        <div><span class="hint">Exam</span>@Report.ExamTitle</div>
-        <div><span class="hint">Student</span>@Report.StudentName</div>
-        <div><span class="hint">Attempt</span>@Report.Attempt@(Report.EndedAt is { } ended ? " · " + ended.UtcDateTime.ToString("yyyy-MM-dd") : "")</div>
-        <div><span class="hint">Status</span>@Report.Status</div>
-        <div><span class="hint">Final grade</span><strong>@(Report.FinalPercent is { } f ? AssessmentReport.Pct(f) : "not available")</strong>@(Report.Label is { } l ? " (" + l + ")" : "")</div>
+        <div><span class="hint">@T["report.exam"]</span>@Report.ExamTitle</div>
+        <div><span class="hint">@T["report.student"]</span>@Report.StudentName</div>
+        <div><span class="hint">@T["report.attempt"]</span>@Report.Attempt@(Report.EndedAt is { } ended ? " · " + ended.UtcDateTime.ToString("yyyy-MM-dd") : "")</div>
+        <div><span class="hint">@T["report.status"]</span>@Report.Status</div>
+        <div><span class="hint">@T["report.finalGrade"]</span><strong>@(Report.FinalPercent is { } f ? AssessmentReport.Pct(f) : T["report.notAvailable"])</strong>@(Report.Label is { } l ? " (" + l + ")" : "")</div>
     </div>
-    <p class="hint">Grading policy: @Report.Policy</p>
+    <p class="hint">@T["report.policy"] @Report.Policy</p>
 
-    <h2 class="gr-section">Learning objectives</h2>
+    <h2 class="gr-section">@T["report.objectives"]</h2>
     <div class="gr-table-wrap">
         <table class="grid">
-            <thead><tr><th>Objective</th><th>Max</th><th>Weight</th><th>AI score</th><th>Human score</th><th>Combined</th>@if (ShowFollowUps) { <th>Follow-ups</th> }</tr></thead>
+            <thead><tr><th>@T["report.objective"]</th><th>@T["report.max"]</th><th>@T["report.weight"]</th><th>@T["report.aiScore"]</th><th>@T["report.humanScore"]</th><th>@T["report.combined"]</th>@if (ShowFollowUps) { <th>Follow-ups</th> }</tr></thead>
             <tbody>
                 @foreach (var o in Report.Objectives)
                 {
@@ -34,7 +35,7 @@
                         <td>@o.Title</td>
                         <td>@o.MaxScore.ToString("0.##")</td>
                         <td>@o.Weight.ToString("0.##")</td>
-                        <td>@(o.AiExcluded ? "insufficient evidence" : o.AiScore?.ToString("0.##") ?? "—")@if (o.AiIsMock) { <text> </text><span class="gr-mock">MOCK</span> }</td>
+                        <td>@(o.AiExcluded ? T["report.insufficient"] : o.AiScore?.ToString("0.##") ?? "—")@if (o.AiIsMock) { <text> </text><span class="gr-mock">MOCK</span> }</td>
                         <td>@(o.HumanScore?.ToString("0.##") ?? "—")</td>
                         <td>@(o.Combined?.ToString("0.##") ?? "—")</td>
                         @if (ShowFollowUps) { <td>@Report.FollowUps.GetValueOrDefault(o.Key)</td> }
@@ -48,46 +49,46 @@
     {
         <div class="gr-objective">
             <h3>@o.Title</h3>
-            @if (o.HumanLevel is not null) { <p><strong>Examiner:</strong> @o.HumanLevel@(o.HumanComment is { } c ? ". " + c : "")</p> }
-            @if (o.AiLevel is not null) { <p><strong>AI (preliminary):</strong> @o.AiLevel, confidence @o.AiConfidence. @o.AiExplanation</p> }
-            @if (o.Reconciliation is not null) { <p><strong>Reconciliation:</strong> @o.Reconciliation</p> }
+            @if (o.HumanLevel is not null) { <p><strong>@T["report.grader"]</strong> @o.HumanLevel@(o.HumanComment is { } c ? ". " + c : "")</p> }
+            @if (o.AiLevel is not null) { <p><strong>@T["report.ai"]</strong> @T["report.aiLevel", o.AiLevel ?? "", o.AiConfidence ?? ""] @o.AiExplanation</p> }
+            @if (o.Reconciliation is not null) { <p><strong>@T["report.reconciliation"]</strong> @o.Reconciliation</p> }
             @if (Report.ChangeLine(o) is { } change) { <p class="hint">@change</p> }
             @if (!Report.ForStudent && Report.Paths.GetValueOrDefault(o.Key) is { } path) { <ObjectivePathNote Path="path" /> }
             @if (o.WhatWasMissing.Count > 0)
             {
-                <p><strong>What was missing</strong></p>
+                <p><strong>@T["report.missing"]</strong></p>
                 <ul>@foreach (var m in o.WhatWasMissing) { <li>@m</li> }</ul>
             }
             else if (o.Combined is { } full && full >= o.MaxScore)
             {
-                <p><strong>What was missing:</strong> nothing. Every part of this objective was shown.</p>
+                <p><strong>@T["report.missingNone"]</strong> @T["report.missingNoneMore"]</p>
             }
             @if (o.Evidence.Count > 0)
             {
-                <p><strong>Evidence</strong> <span class="hint">(verified responses)</span></p>
+                <p><strong>@T["report.evidence"]</strong> <span class="hint">@T["report.evidenceHint"]</span></p>
                 @foreach (var ev in o.Evidence)
                 {
-                    <p class="hint">Response @ev.Sequence: @ev.Question</p>
+                    <p class="hint">@T["report.response", ev.Sequence, ev.Question]</p>
                     <blockquote>@ev.VerifiedText</blockquote>
                 }
             }
         </div>
     }
 
-    <h2 class="gr-section">Knowledge gaps</h2>
+    <h2 class="gr-section">@T["report.gaps"]</h2>
     @if (Report.KnowledgeGaps.Count == 0)
     {
-        <p>None identified.</p>
+        <p>@T["report.gapsNone"]</p>
     }
     else
     {
         <ul>@foreach (var g in Report.KnowledgeGaps) { <li>@g</li> }</ul>
     }
 
-    <h2 class="gr-section">Approval</h2>
+    <h2 class="gr-section">@T["report.approval"]</h2>
     @if (Report.Approvals.Count == 0)
     {
-        <p>Not approved yet.</p>
+        <p>@T["report.notApproved"]</p>
     }
     else
     {
@@ -95,13 +96,16 @@
     }
     @if (Report.Appeals.Count > 0)
     {
-        <h2 class="gr-section">Appeals</h2>
+        <h2 class="gr-section">@T["report.appeals"]</h2>
         <ul>@foreach (var a in Report.Appeals) { <li>@a</li> }</ul>
     }
 </div>
 
 @code {
     [Parameter, EditorRequired] public AssessmentReport Report { get; set; } = default!;
+
+    /// <summary>The student's own report is in their language (GAD-T606); staff pages stay in English (docs/LOCALIZATION.md).</summary>
+    private Gadfly.Server.Localization.UiText T => Report.ForStudent ? Ui : Ui.For("en");
 
     /// <summary>Reviewers see how many follow-ups each objective got (GAD-T267); students do not.</summary>
     private bool ShowFollowUps => !Report.ForStudent && Report.FollowUps.Count > 0;

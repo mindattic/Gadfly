@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Gadfly.Server.Data;
+using Gadfly.Server.Localization;
 
 namespace Gadfly.Server.Research;
 
@@ -15,8 +16,12 @@ public sealed record ResearchConsentNotice(string Title, IReadOnlyList<string> P
     public const string Version = "2026-11-22.1";
 
     /// <summary>The invitation: what joining means, shown on the get-ready page and on the student's own research page.</summary>
-    public static ResearchConsentNotice Invitation(string organizationName, string studyTitle, string? contact, string? ethicsReference, int retentionDays)
+    /// <param name="text">The student's language (GAD-T606): the notice from research.&lt;lang&gt;.json, hashed as shown. Null or English is the
+    /// original English, word for word (the same hash as before).</param>
+    public static ResearchConsentNotice Invitation(string organizationName, string studyTitle, string? contact, string? ethicsReference, int retentionDays,
+        UiText? text = null)
     {
+        if (text is { IsEnglish: false } t) return InvitationIn(t, organizationName, studyTitle, contact, ethicsReference, retentionDays);
         var title = string.IsNullOrWhiteSpace(studyTitle) ? "a study of oral exams" : studyTitle.Trim();
         var paragraphs = new List<string>
         {
@@ -34,11 +39,30 @@ public sealed record ResearchConsentNotice(string Title, IReadOnlyList<string> P
     }
 
     /// <summary>The confirmation of a withdrawal, hashed like the invitation.</summary>
-    public static ResearchConsentNotice Withdrawal(string organizationName) => new("Withdraw from the research",
+    public static ResearchConsentNotice Withdrawal(string organizationName, UiText? text = null) => text is { IsEnglish: false } t
+        ? new(t["research.withdrawal.title"], [t["research.withdrawal.p1", organizationName], t["research.withdrawal.p2"]], ResearchConsentDecision.Withdrawn)
+        : new("Withdraw from the research",
     [
         $"You are withdrawing from {organizationName}'s research. From now on none of your exam records go into a copy for the study.",
         "A copy already given to the researchers cannot be called back; it holds no name or contact details. Your exams and grades are not affected.",
     ], ResearchConsentDecision.Withdrawn);
+
+    /// <summary>The invitation in a translated language: the same paragraphs, in the same order, as the English.</summary>
+    private static ResearchConsentNotice InvitationIn(UiText t, string organizationName, string studyTitle, string? contact, string? ethicsReference, int retentionDays)
+    {
+        var title = string.IsNullOrWhiteSpace(studyTitle) ? t["research.invitation.defaultStudy"].Value : studyTitle.Trim();
+        var paragraphs = new List<string>
+        {
+            t["research.invitation.p1", organizationName, title],
+            t["research.invitation.p2"],
+            t["research.invitation.p3"],
+            t["research.invitation.p4"],
+            t["research.invitation.p5", retentionDays],
+        };
+        if (!string.IsNullOrWhiteSpace(contact)) paragraphs.Add(t["research.invitation.contact", contact.Trim()]);
+        if (!string.IsNullOrWhiteSpace(ethicsReference)) paragraphs.Add(t["research.invitation.ethics", ethicsReference.Trim()]);
+        return new ResearchConsentNotice(t["research.invitation.title"], paragraphs, ResearchConsentDecision.Agreed);
+    }
 
     /// <summary>The exact text shown, as hashed.</summary>
     public string Text => $"Gadfly research notice {Version}\n{Title}\n" + string.Join("\n", Paragraphs);

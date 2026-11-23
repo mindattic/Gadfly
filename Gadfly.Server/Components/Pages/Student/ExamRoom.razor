@@ -17,16 +17,19 @@
 @inject IJSRuntime JS
 
 <HeadContent><link rel="stylesheet" href="student.css" /></HeadContent>
-<PageTitle>@(examTitle ?? "Exam") · Gadfly Exams</PageTitle>
+<PageTitle>@T["examRoom.pageTitle", examTitle ?? T["examRoom.defaultTitle"]]</PageTitle>
 
 @* While the examiner is on screen the room is one screen with no page scroll (GAD-T416, student.css .exam-live): the student keeps
    eye contact with her, so her stage takes the height left over and everything else stays short. *@
-<div class="exam-room @(phase is Phase.Answering or Phase.Thinking && voiceAvailable ? "exam-live" : null)">
+@* The attempt's language and examiner (GAD-T606): everything the room hosts reads its text from here. *@
+<CascadingValue Value="T" IsFixed="false">
+<UiTextData Prefix="examRoom.js." Language="@language" />
+<div class="exam-room @(phase is Phase.Answering or Phase.Thinking && voiceAvailable ? "exam-live" : null)" lang="@language">
     @* Each question or request is announced to screen readers exactly once, when the examiner begins to say it (GAD-T599, WCAG 4.1.3):
        one live region that stays on the page, since the question card is rebuilt between phases and her caption is aria-hidden. *@
     <p class="exam-announce" role="status" aria-live="polite" aria-atomic="true">@announced</p>
     <header class="exam-head">
-        <h1>@(examTitle ?? "Exam")</h1>
+        <h1>@(examTitle ?? T["examRoom.defaultTitle"])</h1>
         @* The camera, eye-contact and integrity lines share the title's row (GAD-T416), each one short line until opened. *@
         <div class="exam-bar">
             <WebcamIntegrity SessionId="SessionId" />
@@ -37,12 +40,12 @@
                 <div class="integrity-notice" role="note">
                     @* The full notice was already agreed to on the consent page. *@
                     <details>
-                        <summary>Integrity notes are on</summary>
-                        <p>@IntegrityNotice(watched, typedAnswers)</p>
+                        <summary>@T["examRoom.integrity.summary"]</summary>
+                        <p>@IntegrityNotice(watched)</p>
                     </details>
                     @if (watched.Level == IntegrityLevel.Strict && !fullscreen)
                     {
-                        <button type="button" class="secondary small" @onclick="GoFullscreenAsync">Go full screen</button>
+                        <button type="button" class="secondary small" @onclick="GoFullscreenAsync">@T["examRoom.integrity.fullscreen"]</button>
                     }
                 </div>
             }
@@ -50,9 +53,9 @@
         @if (phase is Phase.Answering or Phase.Thinking && step is not null)
         {
             <div class="exam-status">
-                <span class="timer @(TimeLeft <= TimeSpan.FromMinutes(2) ? "timer-low" : "")" role="timer" aria-live="off" title="Time left">@Format(TimeLeft)</span>
+                <span class="timer @(TimeLeft <= TimeSpan.FromMinutes(2) ? "timer-low" : "")" role="timer" aria-live="off" title="@T["examRoom.timer.title"]">@Format(TimeLeft)</span>
                 <span class="progress-line">
-                    Topics finished @step.ConceptsClosed of @step.ConceptsTotal
+                    @T["examRoom.progress", step.ConceptsClosed, step.ConceptsTotal]
                     <progress max="@Math.Max(1, step.ConceptsTotal)" value="@step.ConceptsClosed" aria-hidden="true"></progress>
                 </span>
             </div>
@@ -72,16 +75,16 @@
         }
         else
         {
-            <p class="error" role="alert">This exam is spoken, but the talking examiner isn't turned on on this server, so the exam can't go ahead. Please tell your instructor.</p>
+            <p class="error" role="alert">@T["examRoom.voiceOff"]</p>
         }
         @* Leaving the exam window (GAD-T511): a neutral line, never a strike count or a threat. *@
         @if (windowAway)
         {
-            <p class="notice exam-window" role="status">@ExamRoomText.WindowAway</p>
+            <p class="notice exam-window" role="status">@T["examRoom.window.away"]</p>
         }
         else if (windowBackNotice)
         {
-            <p class="notice exam-window" role="status">@ExamRoomText.WindowBack</p>
+            <p class="notice exam-window" role="status">@T["examRoom.window.back"]</p>
         }
     }
 
@@ -89,21 +92,21 @@
     {
         @* Several or long absences (GAD-T511): a person decides; the student is told and may explain. Nothing is cancelled. *@
         <section class="panel wide exam-review-note" aria-labelledby="review-note-title">
-            <h2 id="review-note-title" class="verify-label">@ExamRoomText.ReviewTitle</h2>
-            <p>@ExamRoomText.ReviewBody</p>
+            <h2 id="review-note-title" class="verify-label">@T["examRoom.review.title"]</h2>
+            <p>@T["examRoom.review.body"]</p>
             @if (reviewNoteSent)
             {
-                <p class="ok" role="status">@ExamRoomText.ReviewNoteThanks</p>
+                <p class="ok" role="status">@T["examRoom.review.noteThanks"]</p>
             }
             else
             {
                 <label>
-                    @ExamRoomText.ReviewNoteLabel
+                    @T["examRoom.review.noteLabel"]
                     <textarea rows="3" maxlength="1000" @bind="reviewNote" @bind:event="oninput"></textarea>
                 </label>
                 <div class="actions">
-                    <button type="button" class="secondary" disabled="@(reviewNoteSending || string.IsNullOrWhiteSpace(reviewNote))" @onclick="SendReviewNoteAsync">@ExamRoomText.ReviewNoteSend</button>
-                    <button type="button" class="link" @onclick="() => reviewNotice = false">@ExamRoomText.ReviewNoteLater</button>
+                    <button type="button" class="secondary" disabled="@(reviewNoteSending || string.IsNullOrWhiteSpace(reviewNote))" @onclick="SendReviewNoteAsync">@T["examRoom.review.noteSend"]</button>
+                    <button type="button" class="link" @onclick="() => reviewNotice = false">@T["examRoom.review.noteLater"]</button>
                 </div>
             }
         </section>
@@ -112,11 +115,11 @@
     @switch (phase)
     {
         case Phase.Loading:
-            <p class="hint" role="status">Loading your exam…</p>
+            <p class="hint" role="status">@T["examRoom.loading"]</p>
             break;
 
         case Phase.NotFound:
-            <p class="notice">That exam session isn't yours, or it no longer exists. <a href="my-exams">Back to my exams</a></p>
+            <p class="notice">@T["examRoom.notFound"] <a href="my-exams">@T["examRoom.backToMyExams"]</a></p>
             break;
 
         case Phase.Thinking:
@@ -130,12 +133,12 @@
                     <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
                     @(thinkingAbout switch
                     {
-                        ThinkingAbout.Answer => "Thinking about your answer…",
-                        ThinkingAbout.Finish => "Submitting your exam…",
-                        ThinkingAbout.Saving => "Saving…",
-                        _ => "Preparing your question…",
+                        ThinkingAbout.Answer => T["examRoom.thinking.answer"],
+                        ThinkingAbout.Finish => T["examRoom.thinking.finish"],
+                        ThinkingAbout.Saving => T["examRoom.thinking.saving"],
+                        _ => T["examRoom.thinking.question"],
                     })
-                    <span class="hint">This can take a few seconds. Please keep this page open.</span>
+                    <span class="hint">@T["examRoom.thinking.wait"]</span>
                 </div>
             </section>
             break;
@@ -147,10 +150,8 @@
                     @* No microphone, camera or examiner connection (not yet, or lost): the exam is paused (GAD-T239). The question
                        is not shown until the examiner asks it, so time before the clock starts can't be spent reading it. *@
                     <p class="notice" role="status">@(examinerHasSpoken
-                        ? (PauseStopsClock
-                            ? $"The exam is paused until {PausedDevices} working again. Follow the steps above. The clock is stopped while you do."
-                            : $"The exam is paused until {PausedDevices} working again. Follow the steps above.")
-                        : $"The examiner will ask the first question as soon as {StartDevices} working. Your time starts then.")</p>
+                        ? T[(typedAnswers ? "examRoom.paused.typed" : "examRoom.paused") + (PauseStopsClock ? ".clockStopped" : "")]
+                        : T[typedAnswers ? "examRoom.waitingToStart.typed" : "examRoom.waitingToStart"])</p>
                 }
                 else
                 {
@@ -163,50 +164,50 @@
                 {
                     @* A read-back request left over from before GAD-T405: there is nothing to confirm or correct any more. The page takes
                        the answer as heard on its own (TakeAsHeardAsync), so only a moment's status shows here. *@
-                    <p class="hint" role="status">Thinking about your answer…</p>
+                    <p class="hint" role="status">@T["examRoom.thinking.answer"]</p>
                 }
                 else if (step?.Verification is { } v)
                 {
                     @* One request at a time about the answer just given, before it is judged (GAD-T88). A spoken answer is taken as heard
                        and never gets one (GAD-T405): this is a typed answer's meaning clarification, or one left over from before. *@
                     <div class="verify" role="region" aria-labelledby="verify-title">
-                        <p class="verify-label">Your answer, as recorded</p>
+                        <p class="verify-label">@T["examRoom.verify.recorded"]</p>
                         <blockquote class="recorded-answer">@v.RecordedText</blockquote>
-                        <h2 id="verify-title" class="verify-title">A quick clarification</h2>
+                        <h2 id="verify-title" class="verify-title">@T["examRoom.verify.title"]</h2>
                         <p class="verify-prompt">@v.Prompt</p>
-                        <p class="hint">This only checks what you meant, so your answer is understood the way you intended. It doesn't mean your answer is right or wrong, and your answer stays exactly as recorded.</p>
+                        <p class="hint">@T["examRoom.verify.hint"]</p>
                         @if (typedAnswers && typoFix)
                         {
                             <label>
-                                Fix a typo in your answer
+                                @T["examRoom.verify.typoLabel"]
                                 <textarea rows="6" @bind="extraText" @bind:event="oninput" aria-describedby="typo-hint"></textarea>
                             </label>
-                            <p id="typo-hint" class="hint">Small spelling fixes only. Your original answer is kept on record, and a typo fix never lowers your score.</p>
+                            <p id="typo-hint" class="hint">@T["examRoom.verify.typoHint"]</p>
                             <div class="actions">
-                                <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="CorrectPendingAsync">Save typo fix</button>
-                                <button type="button" class="secondary" @onclick="() => typoFix = false">Back</button>
+                                <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="CorrectPendingAsync">@T["examRoom.verify.saveTypo"]</button>
+                                <button type="button" class="secondary" @onclick="() => typoFix = false">@T["examRoom.back"]</button>
                             </div>
                         }
                         else if (typedAnswers)
                         {
                             @* Typed-answer accommodation (GAD-T260): the clarification is typed too. *@
                             <label>
-                                Your clarification
-                                <textarea id="clarify-box" rows="4" @bind="extraText" @bind:event="oninput" placeholder="In your own words…"></textarea>
+                                @T["examRoom.verify.clarifyLabel"]
+                                <textarea id="clarify-box" rows="4" @bind="extraText" @bind:event="oninput" placeholder="@T["examRoom.verify.clarifyPlaceholder"]"></textarea>
                             </label>
                             <div class="actions">
-                                <button type="button" disabled="@(busy || string.IsNullOrWhiteSpace(extraText))" @onclick="() => ClarifyTypedAsync(v)">Send clarification</button>
-                                <button type="button" class="secondary" @onclick="() => ClarifyAsync(v, null)">I'd rather not add anything</button>
-                                <button type="button" class="link" @onclick="() => StartTypoFix(v.RecordedText)">Fix a typo in my answer instead</button>
+                                <button type="button" disabled="@(busy || string.IsNullOrWhiteSpace(extraText))" @onclick="() => ClarifyTypedAsync(v)">@T["examRoom.verify.send"]</button>
+                                <button type="button" class="secondary" @onclick="() => ClarifyAsync(v, null)">@T["examRoom.verify.decline"]</button>
+                                <button type="button" class="link" @onclick="() => StartTypoFix(v.RecordedText)">@T["examRoom.verify.typoInstead"]</button>
                             </div>
                         }
                         else
                         {
                             @* Left over from before GAD-T405 on a spoken answer: clarified out loud, never typed (GAD-T239), and a spoken
                                answer has no typo fix. *@
-                            <p class="hint" role="status">Answer the examiner out loud to clarify.</p>
+                            <p class="hint" role="status">@T["examRoom.verify.spoken"]</p>
                             <div class="actions">
-                                <button type="button" class="secondary" @onclick="() => ClarifyAsync(v, null)">I'd rather not add anything</button>
+                                <button type="button" class="secondary" @onclick="() => ClarifyAsync(v, null)">@T["examRoom.verify.decline"]</button>
                             </div>
                         }
                     </div>
@@ -217,22 +218,22 @@
                        by the student. The examiner still speaks the question and the camera and gaze check still run; only the answer is
                        typed, stored as typed, and a paste into this box is noted for review (integrity.js, #answer-box). *@
                     <label>
-                        Your answer
+                        @T["examRoom.typed.label"]
                         <textarea id="answer-box" rows="7" @bind="typedAnswer" @bind:event="oninput" @bind:after="OnTyped" @onkeydown="OnTypedKeyDownAsync"
-                                  placeholder="Answer in your own words…" aria-describedby="answer-hint"></textarea>
+                                  placeholder="@T["examRoom.typed.placeholder"]" aria-describedby="answer-hint"></textarea>
                     </label>
-                    <p id="answer-hint" class="hint">You have a typed-answer accommodation: type your answer, then press Submit answer (or Ctrl+Enter).</p>
+                    <p id="answer-hint" class="hint">@T["examRoom.typed.hint"]</p>
                     <div class="actions">
-                        <button type="button" @onclick="SubmitTypedAsync" disabled="@(busy || staffHeld || string.IsNullOrWhiteSpace(typedAnswer))" title="@(staffHeld ? "Your instructor paused the exam; your answer is kept until they resume." : null)">Submit answer</button>
-                        <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@(!CanSayDontKnow)" title="@DontKnowTitle">I don't know</button>
+                        <button type="button" @onclick="SubmitTypedAsync" disabled="@(busy || staffHeld || string.IsNullOrWhiteSpace(typedAnswer))" title="@(staffHeld ? T["examRoom.typed.heldTitle"] : null)">@T["examRoom.typed.submit"]</button>
+                        <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@(!CanSayDontKnow)" title="@DontKnowTitle">@T["examRoom.dontKnow"]</button>
                     </div>
                 }
                 else
                 {
                     @* Spoken answers only (GAD-T239): there is no typed answer box. *@
                     <div class="actions">
-                        <p class="hint" role="status">Answer the examiner out loud.</p>
-                        <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@(!CanSayDontKnow)" title="@DontKnowTitle">I don't know</button>
+                        <p class="hint" role="status">@T["examRoom.spoken.hint"]</p>
+                        <button type="button" class="secondary" @onclick="DontKnowAsync" disabled="@(!CanSayDontKnow)" title="@DontKnowTitle">@T["examRoom.dontKnow"]</button>
                     </div>
                 }
                 }
@@ -251,24 +252,24 @@
             @if (voiceOn && step?.Verification is null && step?.LastAnswer is { } last && last.CanCorrectTypo)
             {
                 <section class="panel wide last-answer" aria-labelledby="last-title">
-                    <p id="last-title" class="verify-label">Your last answer</p>
+                    <p id="last-title" class="verify-label">@T["examRoom.last.title"]</p>
                     @if (lastMode == LastMode.Typo)
                     {
-                        <p class="hint">Question: @last.Question</p>
+                        <p class="hint">@T["examRoom.last.question", last.Question]</p>
                         <label>
-                            Correct a typo in your last answer
+                            @T["examRoom.last.typoLabel"]
                             <textarea rows="5" @bind="extraText" @bind:event="oninput" aria-describedby="last-typo-hint"></textarea>
                         </label>
-                        <p id="last-typo-hint" class="hint">Small spelling fixes only. Your original answer stays on record, and a fix never lowers your score.</p>
+                        <p id="last-typo-hint" class="hint">@T["examRoom.last.typoHint"]</p>
                         <div class="actions">
-                            <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="CorrectLastAsync">Save fix</button>
-                            <button type="button" class="secondary" @onclick="CancelLast">Cancel</button>
+                            <button type="button" disabled="@string.IsNullOrWhiteSpace(extraText)" @onclick="CorrectLastAsync">@T["examRoom.last.save"]</button>
+                            <button type="button" class="secondary" @onclick="CancelLast">@T["examRoom.cancel"]</button>
                         </div>
                     }
                     else
                     {
                         <div class="actions">
-                            <button type="button" class="link" @onclick="() => StartLast(LastMode.Typo, last.Text)">Fix a typo in my last answer</button>
+                            <button type="button" class="link" @onclick="() => StartLast(LastMode.Typo, last.Text)">@T["examRoom.last.typoOpen"]</button>
                         </div>
                     }
                     @if (error is not null && lastMode != LastMode.None)
@@ -281,17 +282,17 @@
             <section class="finish">
                 @if (!confirmFinish)
                 {
-                    <button type="button" class="link" @onclick="() => confirmFinish = true">Finish and leave the exam</button>
+                    <button type="button" class="link" @onclick="() => confirmFinish = true">@T["examRoom.finish.open"]</button>
                 }
                 else
                 {
                     @* Moves focus here when it opens (GAD-T365): nothing else marks it modal (the page behind still
                        scrolls and takes clicks), so a screen reader needs to be put here directly to notice it at all. *@
                     <div class="notice" role="alertdialog" aria-labelledby="finish-q" tabindex="-1" @ref="confirmDialogRef">
-                        <p id="finish-q"><strong>Finish the exam now?</strong> What you've answered so far is submitted and this attempt is used up. You can't come back to it.</p>
+                        <p id="finish-q"><strong>@T["examRoom.finish.question"]</strong> @T["examRoom.finish.confirm"]</p>
                         <div class="actions">
-                            <button type="button" @onclick="FinishAsync">Yes, finish now</button>
-                            <button type="button" class="secondary" @onclick="() => confirmFinish = false">Keep going</button>
+                            <button type="button" @onclick="FinishAsync">@T["examRoom.finish.yes"]</button>
+                            <button type="button" class="secondary" @onclick="() => confirmFinish = false">@T["examRoom.finish.keepGoing"]</button>
                         </div>
                     </div>
                 }
@@ -300,31 +301,33 @@
 
         case Phase.Ended:
             <section class="panel wide exam-card">
-                <h2>Your answers were submitted</h2>
+                <h2>@T["examRoom.ended.title"]</h2>
                 @if (endNote is not null)
                 {
                     <p>@endNote</p>
                 }
-                <p>Your instructor will review your exam and release results. You'll see them on <a href="my-exams">My exams</a>.</p>
+                @{ var results = ResultsSentence(); }
+                <p>@results.Before<a href="my-exams">@T["examRoom.ended.resultsLink"]</a>@results.After</p>
                 @* GAD-T320: help sits only on the ended and error cards, never in the header while the examiner is on screen, so
                    nothing covers her or draws the student away mid-answer. *@
-                <p class="hint"><HelpLink Topic="grading-and-results" Label="How grading and results work" /></p>
-                <a class="button" href="my-exams">Back to my exams</a>
+                <p class="hint"><HelpLink Topic="grading-and-results" Label="@T["examRoom.help.grading"]" /></p>
+                <a class="button" href="my-exams">@T["examRoom.backToMyExams"]</a>
             </section>
             break;
 
         case Phase.Error:
             <section class="panel wide exam-card">
                 <p class="error" role="alert">@error</p>
-                <p class="hint"><HelpLink Topic="troubleshooting-browser" Label="Help with browser and connection problems" /></p>
+                <p class="hint"><HelpLink Topic="troubleshooting-browser" Label="@T["examRoom.help.browser"]" /></p>
                 <div class="actions">
-                    <button type="button" @onclick="RetryAsync">Try again</button>
-                    <a class="button secondary" href="my-exams">Back to my exams</a>
+                    <button type="button" @onclick="RetryAsync">@T["examRoom.tryAgain"]</button>
+                    <a class="button secondary" href="my-exams">@T["examRoom.backToMyExams"]</a>
                 </div>
             </section>
             break;
     }
 </div>
+</CascadingValue>
 
 @code {
     [Parameter] public Guid SessionId { get; set; }
@@ -379,6 +382,7 @@
     {
         if (firstRender)
         {
+            await LoadExaminerAsync();   // the examiner's pronouns (GAD-T606)
             await LoadAsync();
             StateHasChanged();
             _ = TickAsync();
@@ -426,7 +430,7 @@
                 return;
             case SessionState.Failed:
                 phase = Phase.Error;
-                error = "This exam session could not continue. Ask your instructor to reset it.";
+                error = T["examRoom.error.cantContinue"];
                 return;
         }
         if (!integrityStarted)
@@ -513,17 +517,20 @@
         catch (JSException) { fullscreen = false; }
     }
 
-    /// <summary>What is noted, in the student's words: no surprise monitoring (matches the consent notice).</summary>
-    private static string IntegrityNotice(IntegritySettings s, bool typedAnswers = false)
+    /// <summary>What is noted, in the student's words: no surprise monitoring (matches the consent notice). One whole sentence per case.</summary>
+    private string IntegrityNotice(IntegritySettings s) => T[(s.Level == IntegrityLevel.Strict, typedAnswers) switch
     {
-        var what = new List<string> { "switch to another tab or window" };
-        if (typedAnswers) what.Add("paste into the answer box");
-        what.Add("copy the question");
-        if (s.Level == IntegrityLevel.Strict) what.AddRange(["leave full screen", "have more than one screen connected"]);
-        var list = what.Count == 1 ? what[0] : string.Join(", ", what.Take(what.Count - 1)) + " or " + what[^1];
-        return $"Integrity notes are on for this exam: if you {list}, the browser notes when and for how long, for your instructor to review. "
-            + "They are notes, never an automatic fail, and nothing is blocked."
-            + (s.Level == IntegrityLevel.Strict ? " Your browser may ask to allow screen detection; you can decline." : "");
+        (true, true) => "examRoom.integrity.notice.strictTyped",
+        (true, false) => "examRoom.integrity.notice.strict",
+        (false, true) => "examRoom.integrity.notice.typed",
+        _ => "examRoom.integrity.notice",
+    }];
+
+    /// <summary>The "results on My exams" sentence around its link, whose place differs by language.</summary>
+    private (string Before, string After) ResultsSentence()
+    {
+        var parts = T["examRoom.ended.results", "\u0000"].Split('\u0000');
+        return (parts[0], parts.Length > 1 ? parts[1] : "");
     }
 
     /// <summary>
@@ -555,7 +562,7 @@
         catch (Exception ex) when (ex is not OperationCanceledException || !stop.IsCancellationRequested)
         {
             Log.LogError(ex, "Exam room step failed for session {SessionId}.", SessionId);
-            error = "Something went wrong on our side. Your progress is saved; press \"Try again\" to continue.";
+            error = T["examRoom.error.step"];
             phase = Phase.Error;
         }
         finally
@@ -575,9 +582,9 @@
             phase = Phase.Ended;
             endNote = next.EndReason switch
             {
-                nameof(EndReason.TimeUp) => "Time ran out.",
-                nameof(EndReason.Abandoned) => "You finished the exam early.",
-                nameof(EndReason.Mastery) or nameof(EndReason.Aporia) or nameof(EndReason.TurnLimit) or nameof(EndReason.EvidenceComplete) =>"The examiner has finished asking questions.",
+                nameof(EndReason.TimeUp) => T["examRoom.ended.timeUp"],
+                nameof(EndReason.Abandoned) => T["examRoom.ended.early"],
+                nameof(EndReason.Mastery) or nameof(EndReason.Aporia) or nameof(EndReason.TurnLimit) or nameof(EndReason.EvidenceComplete) => T["examRoom.ended.examinerDone"],
                 _ => null,
             };
             return;

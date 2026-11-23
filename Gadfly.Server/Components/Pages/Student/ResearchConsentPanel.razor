@@ -4,6 +4,7 @@
 @inject ITenantContext Tenant
 @inject TimeProvider Clock
 @inject Gadfly.Server.Localization.UiText T
+@implements IDisposable
 
 @* The optional research question on the get-ready page (GAD-T452). Shown only when the organization runs research and the
    student has not answered yet; never required to begin the exam. The choice is recorded when the student begins, against the
@@ -53,13 +54,27 @@ else if (status is { Enabled: true, Current: { } current })
         _ => T["research.saidWithdrawn"],
     };
 
+    /// <summary>The language the invitation on screen is in: the choice is recorded against that wording's hash (GAD-T606).</summary>
+    private Gadfly.Server.Localization.UiText shownIn = default!;
+
     protected override async Task OnInitializedAsync()
     {
+        T.Changed += OnLanguageChanged;   // the get-ready page's live language switch shows the invitation in the new language
+        await LoadAsync();
+    }
+
+    private void OnLanguageChanged() => _ = InvokeAsync(async () => { await LoadAsync(); StateHasChanged(); });
+
+    public void Dispose() => T.Changed -= OnLanguageChanged;
+
+    private async Task LoadAsync()
+    {
+        shownIn = T.For(T.Language);
         if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } me) return;
         try
         {
             await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
-            status = await new ResearchService(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), Clock).StatusAsync(org, me);
+            status = await new ResearchService(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), Clock).StatusAsync(org, me, text: shownIn);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -79,7 +94,7 @@ else if (status is { Enabled: true, Current: { } current })
         {
             await using var scope = Scopes.CreateAsyncScopeFor(Gadfly.Server.Tenancy.TenantSnapshot.Of(Tenant));
             var r = await new ResearchService(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), Clock)
-                .RecordAsync(org, me, decision, invitation.Sha256, "start-exam", sessionId, AssignmentId);
+                .RecordAsync(org, me, decision, invitation.Sha256, "start-exam", sessionId, AssignmentId, text: shownIn);
             error = r.Ok ? null : r.Message;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

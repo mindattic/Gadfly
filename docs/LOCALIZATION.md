@@ -251,23 +251,34 @@ How the interface text is localized, how a student chooses a language, and the K
 | 11 | GAD-T550 | Multilingual docs and the dissertation section | with this page |
 | 12 | GAD-T596 | Spanish, later: the same steps for a third language | later |
 
-## Exam room strings (for the exam room's owner)
+## The exam room in the attempt's language (GAD-T606)
 
-The exam room's text is in English and Korean in `Localization/Strings/examRoom.en.json` and `examRoom.ko.json` (GAD-T544,
-201 keys, merged into each language at startup). The English is the current literal, word for word, so switching to keys
-changes nothing for English students. Wherever the code builds a sentence from parts (the integrity notice's list, the paused
-line's devices, the typed or spoken variants, the 3D-picture reasons), each whole sentence has its own key: pick the key,
-don't join fragments.
+The exam room speaks the attempt's language (`ExamSession.Language`, fixed before Begin), never the site's language switch. Its
+text is in `Localization/Strings/examRoom.<lang>.json`; the English is the earlier literal, word for word, so an English attempt
+reads exactly as before. Wherever a sentence used to be built from parts (the integrity notice's list, the paused line's devices,
+the typed or spoken variants, the 3D-picture reasons), each whole sentence has its own key: pick the key, never join fragments.
 
-- **Razor:** `@inject UiText T`, then `T.For(attemptLanguage)["key"]` (the attempt's `ExamSession.Language`, not the switch;
-  VoiceRoom already has `UiFor`). Slots are `{0}`, `{1}` (`T.For(lang)["examRoom.progress", closed, total]`).
-  `examRoom.ended.results` takes the `My exams` link (`examRoom.ended.resultsLink`) as `{0}`.
-- **Scripts:** render `<UiTextData Prefix="examRoom.js." />` (in the attempt's language) and
-  `import { t } from "./ui-text.js"; t("examRoom.js.held", "Your instructor paused the exam. …", vars)`; slots are named
-  (`t("examRoom.js.delay", "Response delay: {s} s", { s: (ms / 1000).toFixed(1) })`). Pass `t("examRoom.js.gaze.skip", "Skip")` as
-  gaze-quality.js's `skipLabel`, since the exam room has no `getReady.js.` strings.
-- `fail()`/`problem()` messages in voice-room.js are not shown (VoiceRoom picks `examRoom.problem.*` by kind), so they have no
-  keys. "The examiner is speaking..." (three dots, voice-room.js) uses `examRoom.js.speaking`.
+- **How the room reads it.** `ExamRoom` reads the attempt's language before its first render (`ExamRoom.Language.cs`) and
+  cascades an `ExamRoomText` (`Components/Pages/Student/ExamRoomText.cs`): `T["examRoom.progress", closed, total]` in the
+  attempt's language. VoiceRoom, StaffNoticeBanner, WebcamIntegrity and ExaminerGaze take it as a cascading parameter; outside an
+  exam (the practice) they use the page's language. The room's `<div lang>` is the attempt's language (WCAG 3.1.2).
+- **Scripts.** The room renders `<UiTextData Prefix="examRoom.js." Language="@language" />`; voice-room.js and examiner-gaze.js
+  call `t("examRoom.js.…", "English fallback", vars)` from `js/ui-text.js` (named slots: `{s}`). The practice page renders the same
+  prefix in its own language.
+- **The examiner's pronouns.** A sentence that names the examiner with a pronoun has a male variant, the same key plus `.male`
+  (`examRoom.gaze.note.male`, `getReady.examiner.intro.male`, `practice.intro.male`); `ExamRoomText` picks it when the examiner on
+  screen is the male one (`ExaminerCatalog`: the exam's or organization's examiner, else the student's choice on get-ready). Korean
+  says 시험관 instead of a pronoun, so its two variants read the same. A new language gives both variants as its grammar needs.
+- **Staff actions.** The live monitor's pause, resume, extra time and end reach the room language-neutral
+  (`Admin/StaffActionMessage.cs`: a key and its times) and are worded there (`examRoom.staffAction.*`, `examRoom.minutes.*`).
+  A free-text notice from staff is shown as written.
+- **Elsewhere for students.** My research choice and the organization's research invitation and withdrawal notice
+  (`research.<lang>.json`; each notice is hashed as shown, so the record says which language was read; English is built exactly as
+  before), the student's report (`report.<lang>.json`; staff see it in English) and the integrity notes on the result page
+  (`integrityNote.<lang>.json`, by note type; English is IntegrityExplanations' wording, which reviewers keep reading).
+- **Checks.** `Gadfly.Tests/Server/ExamRoomLocalizationTests.cs`: every exam-room key exists in every language, every key the
+  scripts ask for exists with its fallback's slots, the pronoun variants, staff action wording, the research notice's hashes and
+  the integrity notes' English.
 
 | Keys (`examRoom.` …) | File | English starts |
 |---|---|---|

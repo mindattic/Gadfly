@@ -36,7 +36,7 @@ public partial class ExamRoom
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             Log.LogWarning(ex, "The question could not be said another way for session {SessionId}.", SessionId);
-            error = Ui["examRoom.sayAnotherWay.failed"];
+            error = T["examRoom.sayAnotherWay.failed"];
         }
         finally
         {

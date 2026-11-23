@@ -30,12 +30,6 @@ public partial class ExamRoom
         }
     }
 
-    /// <summary>The devices a pause waits for, in the student's words.</summary>
-    private string PausedDevices => typedAnswers ? "your camera and the examiner are" : "your microphone, camera and the examiner are";
-
-    /// <summary>The devices the first question waits for, in the student's words.</summary>
-    private string StartDevices => typedAnswers ? "your camera is" : "your microphone and camera are";
-
     private void OnTyped()
     {
         if (answerStartedAt is null && typedAnswer.Length > 0) answerStartedAt = Clock.GetUtcNow();

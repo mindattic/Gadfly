@@ -36,6 +36,7 @@
 // its own avatar hub connection, so it does not depend on voice-room.js internals.
 
 import { calibrate as runSetup, clearFit, dotTargets, gazePoint, loadFit, median, pxToDeg, saveFit, toPage } from "./gaze-quality.js";
+import { t } from "./ui-text.js";
 
 /** Every threshold of the eye-contact check, in one place (also read by gaze-quality.js). */
 export const GAZE = Object.freeze({
@@ -251,6 +252,11 @@ const TEXT = {
     setupCaption: "Follow the dot with your eyes and keep your head still. Esc or Skip stops.",
     setupRetry: "Not quite precise enough. Once more: sit still and look right at the centre of each dot.",
 };
+
+/** Each line in the page's language (GAD-T606: examRoom.js.gaze.<camelCase state>), TEXT's English as the fallback. */
+const say = (state) => TEXT[state]
+    ? t("examRoom.js.gaze." + state.replace(/-(\w)/g, (m, c) => c.toUpperCase()), TEXT[state])
+    : "";
 
 /** Starts watching for the examiner; the camera is used only while the examiner is on screen. */
 export function start(dotnet, options) {
@@ -740,7 +746,8 @@ async function setupDots(g) {
     try {
         r = await runSetup(g.lib, g.core, {
             targets: () => dotTargets(faceOf(g, stageRect())),
-            captions: [TEXT.setupCaption, TEXT.setupRetry],
+            captions: [say("setupCaption"), say("setupRetry")],
+            skipLabel: t("examRoom.js.gaze.skip", "Skip"),
             control,
         });
     } catch { r = null; }
@@ -1236,7 +1243,7 @@ function show(g, state) {
     if (!el) return;
     el.dataset.state = state;
     const label = el.querySelector("[data-examiner-gaze-label]");
-    if (label) label.textContent = TEXT[state] ?? "";
+    if (label) label.textContent = say(state);
     const again = el.querySelector("[data-examiner-gaze-action]");
     if (again) again.hidden = !(state === "on" || state === "unknown");
 }

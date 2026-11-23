@@ -121,7 +121,7 @@ public partial class ExamRoom
     private bool CanSayDontKnow => !busy && !staffHeld;
 
     /// <summary>Why "I don't know" is off during a staff pause (GAD-T474); no tooltip otherwise.</summary>
-    private string? DontKnowTitle => staffHeld ? "Your instructor paused the exam. You can use this again once they resume it." : null;
+    private string? DontKnowTitle => staffHeld ? T["examRoom.dontKnow.heldTitle"] : null;
 
     /// <summary>
     /// Takes only the server's clock state from <paramref name="next"/>: keep whatever this page shows now (a newer step may have
@@ -245,7 +245,7 @@ public partial class ExamRoom
         var built = VoiceAnswerBuilder.Build(payload, Clock.GetUtcNow());
         if (built is null)
         {
-            error = "I didn't catch an answer to record. Please say it again.";
+            error = T["examRoom.error.noAnswer"];
             // The browser shut the microphone when it sent this: open it again for the same question (GAD-T316). Taken, in that
             // nothing in it can be used: keeping it would only send the same unusable answer again.
             if (voiceRoom is not null) await voiceRoom.ListenAgainAsync();

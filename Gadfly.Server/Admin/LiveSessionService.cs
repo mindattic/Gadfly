@@ -202,7 +202,7 @@ public sealed class LiveSessionService(GadflyDbContext db, ITenantContext tenant
             step => added <= TimeSpan.Zero
                 ? null
                 : new { minutesRequested = minutes, minutesAdded = (int)Math.Round(added.TotalMinutes), remaining = step.Remaining.ToString(@"hh\:mm\:ss") },
-            step => $"Your instructor gave you {Minutes(added)} more. You now have {Minutes(step.Remaining)} left.",
+            step => StaffActionMessage.Encode(StaffActionMessage.Extended, added, step.Remaining),
             step => added <= TimeSpan.Zero
                 ? $"This exam already has the most extra time allowed ({Minutes(SocraticSession.MaxExtraTime)} in all); nothing was added."
                 : added < TimeSpan.FromMinutes(minutes)
@@ -217,7 +217,7 @@ public sealed class LiveSessionService(GadflyDbContext db, ITenantContext tenant
         return ActAsync(sessionId, reason, "Pausing an exam", PausedAction,
             (s, now) => changed = s.Hold(now),
             step => changed ? new { remaining = step.Remaining.ToString(@"hh\:mm\:ss") } : null,
-            _ => "Your instructor paused your exam. Your time is stopped. Please wait here; you can carry on once they resume it.",
+            _ => StaffActionMessage.Encode(StaffActionMessage.Paused),
             _ => changed ? "Paused. The student's clock is stopped until you resume it." : "That exam is already paused (or its clock has not started yet).", ct);
     }
 
@@ -228,7 +228,7 @@ public sealed class LiveSessionService(GadflyDbContext db, ITenantContext tenant
         return ActAsync(sessionId, reason, "Resuming an exam", ResumedAction,
             (s, now) => changed = s.Release(now),
             step => changed ? new { remaining = step.Remaining.ToString(@"hh\:mm\:ss") } : null,
-            step => $"Your instructor resumed your exam. You have {Minutes(step.Remaining)} left.",
+            step => StaffActionMessage.Encode(StaffActionMessage.Resumed, step.Remaining),
             step => changed ? $"Resumed. {Minutes(step.Remaining)} left." : "That exam was not paused by staff.", ct);
     }
 
@@ -247,7 +247,7 @@ public sealed class LiveSessionService(GadflyDbContext db, ITenantContext tenant
             Auditor.Audit(EndedAction, "ExamSession", sessionId.ToString(), new { state = session.State.ToString() },
                 new { state = step.State.ToString(), endReason = step.EndReason }, why, sessionId);
             await db.SaveChangesAsync(ct);
-            feed.StaffAction(Gate.Org, sessionId, "Your instructor ended your exam. Your answers so far were submitted.", clock.GetUtcNow(),
+            feed.StaffAction(Gate.Org, sessionId, StaffActionMessage.Encode(StaffActionMessage.Ended), clock.GetUtcNow(),
                 LiveSnapshot.From(Gate.Org, session.StudentUserId, step, clock.GetUtcNow()));
             return new(true, "Ended. The attempt is graded like any other: it is in the grading queue now.");
         }

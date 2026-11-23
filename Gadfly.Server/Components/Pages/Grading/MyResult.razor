@@ -112,7 +112,7 @@ else
         w = await GradingDb.RunAsync(Scopes, Tenant, g => g.StudentWorkspaceAsync(SessionId));
         report = w is null ? null : AssessmentReport.Build(w, forStudent: true);
         // Read only when the student's own published result loaded; the loader re-checks ownership and publication itself.
-        integrity = w is null ? null : await Gadfly.Server.Integrity.StudentIntegrityRecord.LoadForCallerAsync(Scopes, Tenant, SessionId);
+        integrity = w is null ? null : await Gadfly.Server.Integrity.StudentIntegrityRecord.LoadForCallerAsync(Scopes, Tenant, SessionId, text: T);
     }
 
     private async Task AppealAsync()

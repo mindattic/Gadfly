@@ -1,35 +1,66 @@
+using Gadfly.Server.Localization;
+using Gadfly.Server.Student;
+using Microsoft.JSInterop;
+
 namespace Gadfly.Server.Components.Pages.Student;
 
 /// <summary>
-/// The exam room's own new sentences (GAD-T511, GAD-T510, GAD-T512, GAD-T507 findings), kept in one place so they can move to the
-/// UI string catalog (Localization/Strings, GAD-T543) as keys under "examRoom." without hunting through the markup.
+/// The exam room's text (GAD-T606): the strings of Localization/Strings/examRoom.&lt;lang&gt;.json in the attempt's language
+/// (<c>ExamSession.Language</c>, never the site's language switch), with the examiner's pronouns following the examiner on screen.
+/// The exam room cascades one to everything it hosts (VoiceRoom, StaffNoticeBanner, WebcamIntegrity, ExaminerGaze); a component
+/// outside an exam (the practice) has none and uses the page's own language.
+/// <para>
+/// Pronouns: a sentence that names the examiner with a pronoun ("the screen around her") has a male variant under the same key plus
+/// <c>.male</c>; <see cref="this[string]"/> picks it when the examiner is the male one. Korean names the examiner 시험관 instead of
+/// using a pronoun, so its two variants read the same.
+/// </para>
 /// </summary>
-internal static class ExamRoomText
+public sealed class ExamRoomText(UiText text, bool maleExaminer = false)
 {
-    // ---- leaving the exam window (GAD-T511): neutral, never a strike count or a threat ----
-    public const string WindowAway = "The exam is paused while this window is in the background. Come back to this window to carry on.";
-    public const string WindowBack = "The exam paused while the window was in the background. The examiner will repeat the end of the question.";
-    public const string ReviewTitle = "A person will look at this attempt";
-    public const string ReviewBody = "The exam window was left several times, or for a long time. That can happen for innocent reasons, so nothing has been cancelled and your answers are all kept: your instructor will look at what happened before your result stands. If you like, you can explain here.";
-    public const string ReviewNoteLabel = "What happened (optional; only your instructor sees this)";
-    public const string ReviewNoteSend = "Send my explanation";
-    public const string ReviewNoteLater = "Not now";
-    public const string ReviewNoteThanks = "Thank you. Your explanation is with your instructor.";
+    /// <summary>The suffix of a sentence's male-examiner variant.</summary>
+    public const string MaleSuffix = ".male";
 
-    // ---- the camera during the exam (GAD-T510): no self-view, a camera-on indicator and an on-demand preview ----
-    public const string CameraOn = "Camera on";
-    public const string CameraStarting = "Camera starting";
-    public const string CameraShow = "Show my camera";
-    public const string CameraHide = "Hide my camera";
-    public const string CameraPreviewLabel = "Your camera (only you see this; it closes by itself)";
+    /// <summary>The underlying text, in the attempt's language.</summary>
+    public UiText Text { get; } = text;
 
-    // ---- the transcript (GAD-T512) ----
-    public const string TranscriptQuiet = "The conversation is tucked away while you answer. It comes back when you finish.";
+    /// <summary>The attempt's language ("en", "ko").</summary>
+    public string Language => Text.Language;
 
-    // ---- accessibility (GAD-T507 findings) ----
-    public const string PauseLengthLabel = "Wait before sending my answer";
-    public const string PauseStandard = "Standard pause";
-    public const string PauseLonger = "Longer pause";
-    public const string PauseLongest = "Much longer pause";
-    public const string PauseDone = "Only when I press Done answering";
+    /// <summary>The examiner on screen is the male one (GAD-T504): pronoun-bearing sentences use their male variant.</summary>
+    public bool MaleExaminer { get; } = maleExaminer;
+
+    public string this[string key] => Pick(key, k => Text[k]);
+
+    public string this[string key, params object[] args] => Pick(key, k => Text[k, args]);
+
+    private string Pick(string key, Func<string, Microsoft.Extensions.Localization.LocalizedString> find)
+    {
+        if (MaleExaminer && find(key + MaleSuffix) is { ResourceNotFound: false } male) return male.Value;
+        return find(key).Value;
+    }
+
+    /// <summary>
+    /// Whether the examiner the student sees is the male one: an exam's examiner (its AvatarId, else its organization's
+    /// DefaultAvatarId) when it names an available one, else the student's choice remembered on this device on the get-ready page
+    /// (device-prefs.js getExaminer, GAD-T595), else the first available. False on any failure: the female examiner is the default.
+    /// </summary>
+    public static async Task<bool> MaleExaminerAsync(IJSRuntime js, IReadOnlyList<ExaminerOption> options, string? examAvatarId, string? organizationAvatarId,
+        CancellationToken ct)
+    {
+        try
+        {
+            // The same resolution VoiceRoom uses to show the examiner (GAD-T504).
+            if (ExaminerCatalog.Fixed(options, examAvatarId, organizationAvatarId) is { } fixedExaminer) return fixedExaminer.Id == ExaminerCatalog.Male;
+            await using var prefs = await js.InvokeAsync<IJSObjectReference>("import", ct, "./js/device-prefs.js");
+            var remembered = await prefs.InvokeAsync<RememberedExaminer?>("getExaminer", ct);
+            return ExaminerCatalog.Resolve(options, examAvatarId, organizationAvatarId, remembered?.Id).Id == ExaminerCatalog.Male;
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException
+                                       or InvalidOperationException or System.Text.Json.JsonException)
+        {
+            return false;
+        }
+    }
+
+    private sealed record RememberedExaminer(string? Id);
 }

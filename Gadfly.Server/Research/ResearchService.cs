@@ -92,7 +92,8 @@ public sealed class ResearchService(GadflyDbContext db, TimeProvider clock)
     }
 
     /// <summary>The student's research status and the invitation text they would be shown.</summary>
-    public async Task<ResearchStatus> StatusAsync(Guid org, Guid student, CancellationToken ct = default)
+    /// <param name="text">The student's language for the invitation (GAD-T606); null is English.</param>
+    public async Task<ResearchStatus> StatusAsync(Guid org, Guid student, CancellationToken ct = default, Localization.UiText? text = null)
     {
         var settings = await SettingsAsync(org, ct);
         var latest = await db.ResearchConsents.AsNoTracking().Where(c => c.OrganizationId == org && c.StudentUserId == student)
@@ -100,17 +101,17 @@ public sealed class ResearchService(GadflyDbContext db, TimeProvider clock)
         var current = latest.Count == 0 ? (ResearchConsentDecision?)null : ResearchConsents.Current(latest)[student];
         var since = latest.FirstOrDefault()?.RecordedAt;
         if (settings is null) return new ResearchStatus(false, current, since, null, null);
-        var invitation = await InvitationAsync(org, settings, ct);
+        var invitation = await InvitationAsync(org, settings, ct, text);
         var code = current == ResearchConsentDecision.Agreed && settings.PseudonymKey.Length > 0
             ? ResearchExport.Pseudonym(settings.PseudonymKey, "S", student) : null;
         return new ResearchStatus(settings.Enabled, current, since, invitation, code);
     }
 
-    private async Task<ResearchConsentNotice> InvitationAsync(Guid org, ResearchSettings settings, CancellationToken ct)
+    private async Task<ResearchConsentNotice> InvitationAsync(Guid org, ResearchSettings settings, CancellationToken ct, Localization.UiText? text = null)
     {
         var name = await db.Organizations.AsNoTracking().Where(o => o.Id == org).Select(o => o.Name).FirstOrDefaultAsync(ct) ?? "Your organization";
         var days = await db.OrganizationSettings.AsNoTracking().Where(s => s.OrganizationId == org).Select(s => (int?)s.RetentionDays).FirstOrDefaultAsync(ct) ?? 90;
-        return ResearchConsentNotice.Invitation(name, settings.StudyTitle, settings.StudyContact, settings.EthicsReference, days);
+        return ResearchConsentNotice.Invitation(name, settings.StudyTitle, settings.StudyContact, settings.EthicsReference, days, text);
     }
 
     /// <summary>
@@ -118,27 +119,30 @@ public sealed class ResearchService(GadflyDbContext db, TimeProvider clock)
     /// current wording, so a choice is never recorded against text the student did not see. Agreeing or declining needs research
     /// to be on; withdrawing is always possible once agreed.
     /// </summary>
+    /// <param name="text">The language the notice was shown in (GAD-T606): its hash is checked against that language's wording, and the
+    /// reply is in it. Null is English.</param>
     public async Task<ResearchResult> RecordAsync(Guid org, Guid student, ResearchConsentDecision decision, string shownSha256, string source,
-        Guid? sessionId = null, Guid? assignmentId = null, CancellationToken ct = default)
+        Guid? sessionId = null, Guid? assignmentId = null, CancellationToken ct = default, Localization.UiText? text = null)
     {
+        string Say(string key, string english) => text is { IsEnglish: false } t ? t[key].Value : english;
         var settings = await SettingsAsync(org, ct);
-        var status = await StatusAsync(org, student, ct);
+        var status = await StatusAsync(org, student, ct, text);
         ResearchConsentNotice expected;
         if (decision == ResearchConsentDecision.Withdrawn)
         {
-            if (status.Current != ResearchConsentDecision.Agreed) return ResearchResult.Fail("You are not taking part in the research, so there is nothing to withdraw.");
+            if (status.Current != ResearchConsentDecision.Agreed) return ResearchResult.Fail(Say("research.reply.notTakingPart", "You are not taking part in the research, so there is nothing to withdraw."));
             var name = await db.Organizations.AsNoTracking().Where(o => o.Id == org).Select(o => o.Name).FirstOrDefaultAsync(ct) ?? "Your organization";
-            expected = ResearchConsentNotice.Withdrawal(name);
+            expected = ResearchConsentNotice.Withdrawal(name, text);
         }
         else
         {
-            if (settings is not { Enabled: true } || status.Invitation is null) return ResearchResult.Fail("Your organization is not running research at the moment.");
+            if (settings is not { Enabled: true } || status.Invitation is null) return ResearchResult.Fail(Say("research.reply.notRunning", "Your organization is not running research at the moment."));
             expected = status.Invitation;
         }
         if (!string.Equals(expected.Sha256, shownSha256, StringComparison.OrdinalIgnoreCase))
-            return ResearchResult.Fail("The research notice has changed since this page was opened. Reload the page and read it again.");
+            return ResearchResult.Fail(Say("research.reply.changed", "The research notice has changed since this page was opened. Reload the page and read it again."));
         if (sessionId is { } sid && !await db.ExamSessions.AsNoTracking().AnyAsync(s => s.Id == sid && s.OrganizationId == org && s.StudentUserId == student, ct))
-            return ResearchResult.Fail("That exam attempt is not yours.");
+            return ResearchResult.Fail(Say("research.reply.notYours", "That exam attempt is not yours."));
         db.ResearchConsents.Add(new ResearchConsent
         {
             OrganizationId = org, StudentUserId = student, Decision = decision, NoticeVersion = ResearchConsentNotice.Version,
@@ -147,9 +151,9 @@ public sealed class ResearchService(GadflyDbContext db, TimeProvider clock)
         await db.SaveChangesAsync(ct);
         return ResearchResult.Done(decision switch
         {
-            ResearchConsentDecision.Agreed => "Thank you. Your de-identified exam records will be included in the research.",
-            ResearchConsentDecision.Declined => "Saved. Your exam records will not be used for research.",
-            _ => "You have withdrawn. None of your exam records will go into any later copy for the research.",
+            ResearchConsentDecision.Agreed => Say("research.reply.agreed", "Thank you. Your de-identified exam records will be included in the research."),
+            ResearchConsentDecision.Declined => Say("research.reply.declined", "Saved. Your exam records will not be used for research."),
+            _ => Say("research.reply.withdrawn", "You have withdrawn. None of your exam records will go into any later copy for the research."),
         });
     }
 

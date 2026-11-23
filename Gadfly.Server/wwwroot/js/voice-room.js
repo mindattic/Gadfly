@@ -28,6 +28,9 @@
 import { VoiceAcoustics } from "./voice-acoustics.js";
 import * as VoiceDraft from "./voice-draft.js";
 import { useExaminerLook } from "./avatar-look.js";
+// Every line this module writes is in the attempt's language (GAD-T606): the exam room renders <UiTextData Prefix="examRoom.js." />
+// in ExamSession.Language, and each call names the English as its fallback.
+import { t } from "./ui-text.js";
 
 const LIB = "/lib/voice";
 const SPEECH_HUB = "/hubs/speech";
@@ -180,7 +183,7 @@ async function start() {
     if (!s || s.running) return;
     s.running = true;
     s.dotnet.invokeMethodAsync("OnVoiceStarting").catch(() => { });   // shows the stage before the avatar is created in it
-    status("Connecting you to the examiner…");
+    status(t("examRoom.js.connecting", "Connecting you to the examiner…"));
     // Typed answers (GAD-T260): no microphone at all.
     if (!s.cfg.typed) try {
         // 1. The microphone first, inside the click that asked for it.
@@ -208,7 +211,7 @@ async function start() {
                 clearCue();
                 talking(s, true);
                 studentSpeech(true);
-                status("Hearing you…");
+                status(t("examRoom.js.hearing", "Hearing you…"));
             },
             onSpeechEnd: () => {
                 s.inSpeech = false;
@@ -255,13 +258,13 @@ async function start() {
         // A connection this room has already let go (stop(), then Try again) must not act on the new one: its late close used to
         // report "lost" and pause the exam again, and a late reconnect called into a field stop() had nulled (GAD-T316).
         const current = () => S === s && s.running && s.speechConn === speechConn;
-        s.speechConn.on("partial", (t) => {
+        s.speechConn.on("partial", (said) => {
             // Stable partials (GAD-T360): the shown text only shrinks after a short hold, so a momentary correction that
             // immediately regrows never flickers the line the student is watching.
-            stablePartial(s, t || "");
+            stablePartial(s, said || "");
             // Words still arriving mean the answer is not over (GAD-T286): a final that armed the end-of-answer cue must not submit
             // while the recognizer is still hearing more, e.g. a provider-side commit in the middle of one unbroken stretch of speech.
-            if (s.partial.trim() && !s.gate && s.cueTimer) { clearCue(); status("Hearing you…"); }
+            if (s.partial.trim() && !s.gate && s.cueTimer) { clearCue(); status(t("examRoom.js.hearing", "Hearing you…")); }
             drawTranscript();
             notePartial(s);
         });
@@ -270,7 +273,7 @@ async function start() {
         // A dropped connection retries a few times on its own (GAD-T306) before this room gives up and asks the
         // student to press Try again: a clear status either way, never a silent stall. Audio and commits captured while it
         // is down are queued, not lost (GAD-T360, below): the mic keeps running and nothing the student says is dropped.
-        s.speechConn.onreconnecting(() => { if (!current()) return; s.hubUp = false; status("Reconnecting…"); });
+        s.speechConn.onreconnecting(() => { if (!current()) return; s.hubUp = false; status(t("examRoom.js.reconnecting", "Reconnecting…")); });
         s.speechConn.onreconnected(async () => {
             if (!current()) return;
             try {
@@ -320,7 +323,7 @@ async function start() {
         // A dropped connection to the examiner's own hub (previously not even noticed) retries a few times on its own
         // before this room gives up and asks the student to press Try again, the same as a dropped microphone or
         // camera (GAD-T306): without this, a lost connection here just left the examiner silent and unresponsive.
-        s.avatarConn.onreconnecting(() => { if (currentAvatar()) status("Reconnecting…"); });
+        s.avatarConn.onreconnecting(() => { if (currentAvatar()) status(t("examRoom.js.reconnecting", "Reconnecting…")); });
         // Back again: the status line said "Reconnecting…" until something else happened to replace it (GAD-T316).
         s.avatarConn.onreconnected(() => { if (currentAvatar()) status(roomStatus(s)); });
         s.avatarConn.onclose(() => { if (currentAvatar()) problem("hub", "The connection to the examiner was lost.", true); });
@@ -343,7 +346,7 @@ async function start() {
         // Without the talking head the questions are still read out by the browser's own speech, with the caption lit word by word.
         try { s.presenter?.dispose(); } catch { }
         try { s.presenter = (await import("./examiner-voice.js")).createPresenter(null, null, q("caption"), { language: s.cfg.examLanguage }, () => { }); } catch { s.presenter = null; }
-        s.dotnet.invokeMethodAsync("OnAvatarMode", "none", "The examiner's picture could not start; questions are read out by your browser and shown as text.").catch(() => { });
+        s.dotnet.invokeMethodAsync("OnAvatarMode", "none", t("examRoom.js.avatar.none", "The examiner's picture could not start; questions are read out by your browser and shown as text.")).catch(() => { });
     }
 
     // Stopped during the avatar's awaits (a lost device, Try again, the page leaving): telling the page the examiner started would
@@ -351,7 +354,7 @@ async function start() {
     if (S !== s || !s.running) return;
     if (!s.cfg.typed) watchVisibility(s);   // a closed laptop lid (GAD-T306) is caught here, not only by a track's own "ended" event
     s.gate = true;
-    status("The examiner is ready.");
+    status(t("examRoom.js.ready", "The examiner is ready."));
     // start() runs detached (void start()): a circuit that went away must not surface as an unhandled rejection (GAD-T316).
     await s.dotnet.invokeMethodAsync("OnVoiceStarted", s.mic ? (s.mic.vadKind || "energy") : "typed").catch(() => { });
 }
@@ -605,11 +608,11 @@ function begin(what, cacheable, style, turn, repeat, stream) {
     s.turn = nextTurn;
     if (!carry) {
         s.recovered = false;
-        text("recovered", dropped ? DROPPED_TEXT : "");
+        text("recovered", dropped ? DROPPED_TEXT() : "");
     }
     if (s.draftChecked && !keep && !carry) VoiceDraft.clear(s.sessionId);
     drawTranscript();
-    status("The examiner is speaking…");
+    status(t("examRoom.js.speaking", "The examiner is speaking…"));
     const token = s.speakToken = {};
     // Only the newest utterance finishes the turn: one replaced by a later speak() (Repeat the question) must not open the microphone.
     const done = () => {
@@ -617,7 +620,7 @@ function begin(what, cacheable, style, turn, repeat, stream) {
         s.speakToken = null;
         s.speaking = false;
         s.ours = null;
-        if (s.allowed) { openMic(); resendKept(s); } else status(s.held ? HELD_TEXT : "Waiting.");
+        if (s.allowed) { openMic(); resendKept(s); } else status(s.held ? HELD_TEXT() : t("examRoom.js.waiting", "Waiting."));
     };
     s.speaking = true;
     // No eye-contact remark may start from here on (examiner-gaze.js only speaks one to a listening examiner): Repeat the question
@@ -715,7 +718,7 @@ async function readWithBrowser(s, mine, what) {
     if (!mine()) return;
     if (!spoke) {
         if (s.presenter) s.presenter.plain(what); else showCaption(what);
-        status("The examiner's voice isn't available right now. The question is on the screen.");
+        status(t("examRoom.js.noVoice", "The examiner's voice isn't available right now. The question is on the screen."));
     } else s.presenter && s.presenter.ended();
 }
 
@@ -969,11 +972,11 @@ export function setAllowed(allowed, held) {
 }
 
 /** What the status line says while staff hold the exam (GAD-T471). */
-const HELD_TEXT = "Your instructor paused the exam. Anything you've already said is kept; you can carry on once they resume it.";
+const HELD_TEXT = () => t("examRoom.js.held", "Your instructor paused the exam. Anything you've already said is kept; you can carry on once they resume it.");
 
 /** The status line while no answer is wanted: a staff pause (GAD-T471), an answer kept to send again (GAD-T473), or the judging wait. */
 function waitingText(s) {
-    return s.held ? HELD_TEXT : s.kept ? KEPT_TEXT : "Thinking about your answer…";
+    return s.held ? HELD_TEXT() : s.kept ? KEPT_TEXT() : t("examRoom.js.thinking", "Thinking about your answer…");
 }
 
 /**
@@ -1004,7 +1007,7 @@ function closeGate(s) {
 // ------------------------------------------------------------------------------------------- leaving the window (GAD-T511)
 
 /** The status line while the exam window is in the background. */
-const WINDOW_AWAY_TEXT = "The exam is paused while this window is in the background.";
+const WINDOW_AWAY_TEXT = () => t("examRoom.js.windowAway", "The exam is paused while this window is in the background.");
 
 /**
  * The student left the exam window (integrity.js noticed, the exam room told us): she stops at once, nothing more is said, and the
@@ -1038,7 +1041,7 @@ export function windowPause() {
         drawTranscript();
     }
     if (s.avatar) s.avatar.state = "idle";
-    status(WINDOW_AWAY_TEXT);
+    status(WINDOW_AWAY_TEXT());
 }
 
 /**
@@ -1156,7 +1159,7 @@ function openMic() {
     showPauseChoice(s);
     // After a staff pause (GAD-T471) or Repeat the question (GAD-T474) the words already said are still in "What I heard".
     status(resuming && s.segments.length > 0 && !s.recovered
-        ? "You can carry on answering. What you'd already said is kept: keep talking, press Done answering, or Clear and answer again to start over."
+        ? t("examRoom.js.carryOn", "You can carry on answering. What you'd already said is kept: keep talking, press Done answering, or Clear and answer again to start over.")
         : listenText(s));
     if (!s.draftChecked) { s.draftChecked = true; tryRestoreDraft(s); }
 }
@@ -1175,7 +1178,7 @@ function tryRestoreDraft(s) {
     s.segments = restored.map((seg) => ({ text: seg && seg.text || "", words: (seg && seg.words) || [] }));
     s.recovered = true;
     drawTranscript();
-    text("recovered", "Recovered what you'd already said before the page reloaded. Keep talking to add more, or press “Clear and answer again” to start over.");
+    text("recovered", t("examRoom.js.recovered", "Recovered what you'd already said before the page reloaded. Keep talking to add more, or press “Clear and answer again” to start over."));
 }
 
 /**
@@ -1202,7 +1205,7 @@ function remarkHold(s, active) {
         // The final answering this commit arrives while the gate is closed: let exactly that one through (onFinal).
         if (s.inSpeech && s.speechConn) { s.remarkCommitPending = true; s.speechConn.send("Commit").catch(() => { }); }
         drawTranscript();
-        status("The examiner is speaking...");
+        status(t("examRoom.js.speaking", "The examiner is speaking..."));
     } else if (s.remarkHold) {
         const closed = s.remarkClosedGate;
         s.remarkHold = false;
@@ -1240,16 +1243,16 @@ function endRemarkWait(s) {
 
 /** What the status line says while an answer is open. */
 function listenText(s) {
-    if (s.cfg.typed) return "Type your answer in the box below.";
-    return s.mode === "push-to-talk" ? "Hold the button (or Space) and speak." : "Listening. Answer out loud.";
+    if (s.cfg.typed) return t("examRoom.js.listen.typed", "Type your answer in the box below.");
+    return s.mode === "push-to-talk" ? t("examRoom.js.listen.ptt", "Hold the button (or Space) and speak.") : t("examRoom.js.listen", "Listening. Answer out loud.");
 }
 
 /** The status line for whatever the room is doing right now (after a hub reconnect, which interrupted it). */
 function roomStatus(s) {
-    if (s.speaking || s.speakToken || s.remarkHold || s.fillPlaying) return "The examiner is speaking…";
+    if (s.speaking || s.speakToken || s.remarkHold || s.fillPlaying) return t("examRoom.js.speaking", "The examiner is speaking…");
     if (!s.gate) return listenText(s);
     if (!s.allowed) return waitingText(s);
-    return "The examiner is ready.";
+    return t("examRoom.js.ready", "The examiner is ready.");
 }
 
 /**
@@ -1319,9 +1322,9 @@ function armCue(s) {
     const cue = q("cue");
     const ms = cueMs(s);
     // The student chose to send only with Done answering (GAD-T599): nothing is sent on a silence.
-    if (ms == null) { status(DONE_ONLY_TEXT); return; }
+    if (ms == null) { status(DONE_ONLY_TEXT()); return; }
     if (cue) { cue.style.setProperty("--cue-ms", ms + "ms"); cue.dataset.active = "true"; }
-    status("Finishing your answer… keep talking to add more.");
+    status(t("examRoom.js.finishing", "Finishing your answer… keep talking to add more."));
     s.cueTimer = setTimeout(() => void submit(false), ms);
     armBackchannel(s);
 }
@@ -1382,7 +1385,7 @@ function cueMs(s) {
     return Math.round(endCueMs(s) * (Number.isFinite(k) && k >= 1 && k <= 4 ? k : 1));
 }
 
-const DONE_ONLY_TEXT = "Press Done answering when you've finished. Nothing is sent until you do.";
+const DONE_ONLY_TEXT = () => t("examRoom.js.doneOnly", "Press Done answering when you've finished. Nothing is sent until you do.");
 const PAUSE_KEY = "gadfly.voice.pause";
 
 function loadPauseChoice(s) {
@@ -1612,7 +1615,7 @@ function discard() {
     text("recovered", "");
     VoiceDraft.clear(S.sessionId);
     drawTranscript();
-    status("Cleared. Answer again whenever you're ready.");
+    status(t("examRoom.js.cleared", "Cleared. Answer again whenever you're ready."));
 }
 
 async function submit(immediate, resend) {
@@ -1636,7 +1639,7 @@ async function submit(immediate, resend) {
     // She stops listening once the answer is in (GAD-T316): left "listening" until the page's reply, the eye-contact check kept
     // treating the student as answering, and could fade the screen or start a spoken remark after the answer was already sent.
     if (s.avatar) s.avatar.state = "thinking";
-    status("Sending your answer…");
+    status(t("examRoom.js.sending", "Sending your answer…"));
     // Sent by the silence, not by "Done answering": watch the next few seconds for the student going on (GAD-T462).
     s.cutWatch = immediate ? null : performance.now();
     s.uncutAnswers = (s.uncutAnswers || 0) + 1;   // reset by a cut-off (noteCutOff)
@@ -1665,11 +1668,11 @@ async function submit(immediate, resend) {
         if (S === s) {
             s.cutWatch = null;
             // Her acknowledgement (GAD-T496) is still playing: its end opens the microphone again for this answer.
-            if (s.ackPlaying && s.allowed) { s.ackDeferredAllowed = true; status("That did not go through. Press Done answering to try again."); }
+            if (s.ackPlaying && s.allowed) { s.ackDeferredAllowed = true; status(t("examRoom.js.notThrough", "That did not go through. Press Done answering to try again.")); }
             else if (s.running && s.allowed && !s.speaking && !s.speakToken && !s.fillPlaying && !s.remarkHold) {
                 s.gate = false;
                 if (s.avatar) s.avatar.state = "listening";
-                status("That did not go through. Press Done answering to try again.");
+                status(t("examRoom.js.notThrough", "That did not go through. Press Done answering to try again."));
             }
         }
     }
@@ -1686,16 +1689,16 @@ async function submit(immediate, resend) {
 const KEPT_RETRY_MS = 1500;
 const KEPT_MAX_TRIES = 3;
 
-const KEPT_TEXT = "Your answer is kept. It will be sent as soon as the examiner is ready.";
-const KEPT_GIVE_UP_TEXT = "Your answer couldn't be sent yet, but it's still here. Press Done answering to send it, or keep talking to add more.";
-const DROPPED_TEXT = "Your last answer came in after the exam had already moved on to this question, so it wasn't recorded. Answer this question whenever you're ready.";
+const KEPT_TEXT = () => t("examRoom.js.kept", "Your answer is kept. It will be sent as soon as the examiner is ready.");
+const KEPT_GIVE_UP_TEXT = () => t("examRoom.js.keptGiveUp", "Your answer couldn't be sent yet, but it's still here. Press Done answering to send it, or keep talking to add more.");
+const DROPPED_TEXT = () => t("examRoom.js.dropped", "Your last answer came in after the exam had already moved on to this question, so it wasn't recorded. Answer this question whenever you're ready.");
 
 /** The page did not take the answer just sent: keep its words (and draft) for the same question and say so. */
 function keepAnswer(s, payload) {
     s.cutWatch = null;   // nothing was recorded for a cut-off note to belong to
     if (s.turn !== payload.turn) {
         // Another question was asked while it was on its way: never its answer.
-        if (payload.segments.length > 0) text("recovered", DROPPED_TEXT);
+        if (payload.segments.length > 0) text("recovered", DROPPED_TEXT());
         return;
     }
     if (s.segments !== payload.segments && payload.segments.length > 0) {
@@ -1707,7 +1710,7 @@ function keepAnswer(s, payload) {
     const tries = (s.kept && s.kept.turn === s.turn ? s.kept.tries : 0) + 1;
     s.kept = { turn: s.turn, tries };
     drawTranscript();
-    status(s.held ? HELD_TEXT : KEPT_TEXT);
+    status(s.held ? HELD_TEXT() : KEPT_TEXT());
     // The page's "not now" and its next "go ahead" (setAllowed) can arrive in either order: if it already wants an answer, try again
     // shortly; otherwise its next "go ahead" sends it.
     if (s.allowed) setTimeout(() => { if (S === s && s.allowed) resendKept(s); }, KEPT_RETRY_MS);
@@ -1722,7 +1725,7 @@ function resendKept(s) {
     if (kept.tries >= KEPT_MAX_TRIES) {
         // Turned away a few times running: stop sending it on our own and let the student send it (or add to it) themselves.
         s.kept = null;
-        if (!s.gate) status(KEPT_GIVE_UP_TEXT);
+        if (!s.gate) status(KEPT_GIVE_UP_TEXT());
         return;
     }
     void submit(true, true);
@@ -1733,7 +1736,7 @@ function toggleMode(button) {
     if (!s || !s.mic) return;
     s.mode = s.mode === "hands-free" ? "push-to-talk" : "hands-free";
     s.mic.setMode(s.mode);
-    button.textContent = s.mode === "hands-free" ? "Switch to hold-to-talk" : "Switch to hands-free";
+    button.textContent = s.mode === "hands-free" ? t("examRoom.js.mode.toPushToTalk", "Switch to hold-to-talk") : t("examRoom.js.mode.toHandsFree", "Switch to hands-free");
     document.querySelectorAll('[data-voice-action="ptt"]').forEach((b) => { b.hidden = s.mode !== "push-to-talk"; });
     if (!s.gate) status(listenText(s));
 }
@@ -1773,7 +1776,7 @@ function drawDelay(s) {
     if (!el || S !== s) return;
     if (s.waitStartMs == null) { el.textContent = ""; el.dataset.state = "idle"; return; }
     const ms = s.delayMs ?? (performance.now() - s.waitStartMs);
-    el.textContent = "Response delay: " + (ms / 1000).toFixed(1) + " s";
+    el.textContent = t("examRoom.js.delay", "Response delay: {s} s", { s: (ms / 1000).toFixed(1) });
     el.dataset.state = s.delayMs == null ? "counting" : "final";
 }
 

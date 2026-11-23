@@ -1,5 +1,6 @@
 using Gadfly.Assessment;
 using Gadfly.Server.Data;
+using Gadfly.Server.Localization;
 using Gadfly.Server.Review;
 using Gadfly.Server.Tenancy;
 using Microsoft.EntityFrameworkCore;
@@ -46,16 +47,17 @@ public static class StudentIntegrityRecord
     /// attempt isn't theirs, or its result isn't published to them yet.
     /// </summary>
     public static async Task<StudentIntegrityView?> LoadForCallerAsync(IServiceScopeFactory scopes, ITenantContext tenant, Guid sessionId,
-        CancellationToken ct = default)
+        CancellationToken ct = default, UiText? text = null)
     {
         if (tenant.IsSystem || tenant.UserId is not { } userId || tenant.OrganizationId is not { } orgId) return null;
         await using var scope = scopes.CreateAsyncScopeFor(TenantSnapshot.Of(tenant));
-        return await LoadAsync(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), orgId, userId, sessionId, ct);
+        return await LoadAsync(scope.ServiceProvider.GetRequiredService<GadflyDbContext>(), orgId, userId, sessionId, ct, text);
     }
 
     /// <summary>Null when the attempt isn't the student's, or its result isn't published to them yet.</summary>
+    /// <param name="text">The student's language (GAD-T606): labels, explanations and times worded in it; null or English as before.</param>
     public static async Task<StudentIntegrityView?> LoadAsync(GadflyDbContext db, Guid organizationId, Guid studentUserId, Guid sessionId,
-        CancellationToken ct = default)
+        CancellationToken ct = default, UiText? text = null)
     {
         var session = await db.ExamSessions.AsNoTracking()
             .Where(s => s.Id == sessionId && s.OrganizationId == organizationId && s.StudentUserId == studentUserId)
@@ -74,17 +76,23 @@ public static class StudentIntegrityRecord
         var questions = turnIds.Count == 0 ? new Dictionary<Guid, int>()
             : await db.SessionTurns.AsNoTracking().Where(t => t.OrganizationId == organizationId && turnIds.Contains(t.Id))
                 .ToDictionaryAsync(t => t.Id, t => t.Index + 1, ct);
-        return Build(events, questions, session.StartedAt ?? session.CreatedAt);
+        return Build(events, questions, session.StartedAt ?? session.CreatedAt, text);
     }
 
     /// <summary>Shapes stored notes for the student: ordinary, uncounted ones are only counted; the rest listed in time order.</summary>
-    public static StudentIntegrityView Build(IReadOnlyList<IntegrityEvent> events, IReadOnlyDictionary<Guid, int> questionOfTurn, DateTimeOffset start)
+    public static StudentIntegrityView Build(IReadOnlyList<IntegrityEvent> events, IReadOnlyDictionary<Guid, int> questionOfTurn, DateTimeOffset start,
+        UiText? text = null)
     {
         var notes = new List<StudentIntegrityNote>();
         var ordinary = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var e in events.OrderBy(e => e.StartedAt))
         {
             var (label, explanation, normal) = IntegrityExplanations.For(e.Type, e.Source);
+            if (text is { IsEnglish: false } lang)
+            {
+                label = Translated(lang, $"integrityNote.{e.Type}.label", label);
+                explanation = Translated(lang, $"integrityNote.{e.Type}.explanation", explanation);
+            }
             // A brief, ordinary note at the lowest level is noticed and never counted (the reviewer sees it the same way).
             if (normal && e.Severity == IntegritySeverity.Info)
             {
@@ -92,14 +100,31 @@ public static class StudentIntegrityRecord
                 continue;
             }
             int? question = e.TurnId is { } t && questionOfTurn.TryGetValue(t, out var q) ? q : null;
-            notes.Add(new StudentIntegrityNote(label, explanation, e.Summary, When(e, start), question, normal, e.Severity));
+            notes.Add(new StudentIntegrityNote(label, explanation, e.Summary, When(e, start, text), question, normal, e.Severity));
         }
         return new StudentIntegrityView(notes, ordinary.Select(kv => new StudentIntegrityOrdinary(kv.Key, kv.Value)).ToList());
     }
 
-    /// <summary>"4 min 05 s into the exam, for 12 s", from the exam's start (never negative).</summary>
-    public static string When(IntegrityEvent e, DateTimeOffset start)
+    /// <summary>The translated text, or <paramref name="english"/> when the language has none for this note type.</summary>
+    private static string Translated(UiText t, string key, string english) => t[key] is { ResourceNotFound: false } s ? s.Value : english;
+
+    /// <summary>"4 min 05 s into the exam, for 12 s", from the exam's start (never negative); in the student's language when given.</summary>
+    public static string When(IntegrityEvent e, DateTimeOffset start, UiText? language = null)
     {
+        if (language is { IsEnglish: false } t)
+        {
+            var from = e.StartedAt - start;
+            if (from < TimeSpan.Zero) from = TimeSpan.Zero;
+            var said = t["integrityNote.when.at", (int)from.TotalMinutes, from.Seconds.ToString("00")].Value;
+            if (e.EndedAt is { } until && until > e.StartedAt)
+            {
+                var lasted = until - e.StartedAt;
+                said += lasted.TotalMinutes >= 1
+                    ? t["integrityNote.when.forMinutes", (int)lasted.TotalMinutes, lasted.Seconds.ToString("00")].Value
+                    : t["integrityNote.when.forSeconds", Math.Max(1, (int)Math.Round(lasted.TotalSeconds))].Value;
+            }
+            return said;
+        }
         var at = e.StartedAt - start;
         if (at < TimeSpan.Zero) at = TimeSpan.Zero;
         var text = $"{(int)at.TotalMinutes} min {at.Seconds:00} s into the exam";

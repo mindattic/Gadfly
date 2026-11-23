@@ -27,17 +27,17 @@
     <div class="examiner-gaze" data-examiner-gaze data-state="off" role="status" aria-live="polite">
         <span class="examiner-gaze-dot" aria-hidden="true"></span>
         <span class="examiner-gaze-label" data-examiner-gaze-label></span>
-        <button type="button" class="link" data-examiner-gaze-action="calibrate" hidden>Set up eye contact again</button>
+        <button type="button" class="link" data-examiner-gaze-action="calibrate" hidden>@T["examRoom.gaze.calibrate"]</button>
         @* Folded to one link (GAD-T416): the exam room fits one screen, and the student was told all this before starting. *@
         <details class="examiner-gaze-more">
-        <summary>How this works</summary>
+        <summary>@T["examRoom.gaze.how"]</summary>
         @if (accommodated)
         {
-            <p class="examiner-gaze-note">You have an eye-contact accommodation: you don't need to look at the examiner, and the examiner won't remind you to. Your camera still checks, on your device only, that your face is in view and that you are on your own; if not, the examiner will say so. A short note of when it happened is kept for a person to review.</p>
+            <p class="examiner-gaze-note">@T["examRoom.gaze.noteAccommodated"]</p>
         }
         else
         {
-            <p class="examiner-gaze-note">Your camera checks, on your device only, where you look while you answer. Looking away to think is normal and fine: nothing happens while you work out your answer before you start speaking, and glancing at anything on the screen (the transcript, the clock) never counts. Only a long look off the screen while you speak does: then the examiner gives a small nod of the head, the screen around her may dim a little (it clears as soon as you look back), and at a pause she may say a short, friendly line. "Set up eye contact again" has you follow a dot for about 10 seconds so the camera learns your screen, which makes the check fairer. A short note of a long look away is kept for a person to review; it is never a grade and never decides anything. If you can't keep eye contact (for example for a disability), ask your instructor for the eye-contact accommodation.</p>
+            <p class="examiner-gaze-note">@T["examRoom.gaze.note"]</p>
         }
         </details>
     </div>
@@ -47,6 +47,13 @@
 
 @code {
     [Parameter, EditorRequired] public Guid SessionId { get; set; }
+
+    /// <summary>The exam room's text, in the attempt's language and with the examiner's pronouns (GAD-T606).</summary>
+    [CascadingParameter] public ExamRoomText? Room { get; set; }
+
+    [Inject] private Gadfly.Server.Localization.UiText Ui { get; set; } = default!;
+
+    private ExamRoomText T => Room ?? new ExamRoomText(Ui);
 
     private bool enabled, started, accommodated;
     private Guid org, user;

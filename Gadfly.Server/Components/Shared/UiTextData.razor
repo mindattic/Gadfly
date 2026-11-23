@@ -5,13 +5,18 @@
 @* The UI strings a page's scripts need (GAD-T543/T544), in the page's language, as a hidden element js/ui-text.js reads:
    <UiTextData Prefix="examRoom.js." /> then, in a module, t("examRoom.js.paused", "The exam is paused."). A live language
    switch re-renders it, so the next text a script writes is in the new language. English fills any untranslated key. *@
-<div hidden data-ui-text="@Json" data-ui-lang="@T.Language"></div>
+<div hidden data-ui-text="@Json" data-ui-lang="@Text.Language"></div>
 
 @code {
     /// <summary>The key prefix the page's scripts use ("getReady.js.").</summary>
     [Parameter, EditorRequired] public string Prefix { get; set; } = "";
 
-    private string Json => System.Text.Json.JsonSerializer.Serialize(T.Dictionary(Prefix));
+    /// <summary>A fixed language instead of the page's (the exam room: the attempt's language, GAD-T606).</summary>
+    [Parameter] public string? Language { get; set; }
+
+    private UiText Text => Language is null ? T : T.For(Language);
+
+    private string Json => System.Text.Json.JsonSerializer.Serialize(Text.Dictionary(Prefix));
 
     protected override void OnInitialized() => T.Changed += OnLanguageChanged;
 
