@@ -294,3 +294,35 @@ Pages: landing, how it works, science, pricing, security, contact, privacy, term
   height; portrait phones stack her, controls and transcript as before.
 - **Not done in this pass.** A token sweep of voice.css (it still has its own spacing and the dark stage colour), and a review of
   how often the polite status line (`data-voice-status`) changes, are follow-ups.
+
+### Admin, platform and members pages (GAD-T695)
+
+Pages: the admin dashboard, desk, assignments console, audit log, email preview, exam preview, exams manager, live
+sessions, LTI, API keys, plan, settings, usage, webhooks, research, student profile, students directory and system
+status (`Pages/Admin/*`), `OrgMembers`, `Platform*`; stylesheets `admin*.css`, `staff-notice.css`, `demo.css`.
+
+- **Tables.** All 38 data tables sit in a `.table-scroll` box (only the table scrolls sideways at 320px), have a
+  caption (visually hidden where a heading already names the table) and `scope="col"` on every column header.
+- **Page headers.** The pages' own title rows (`dash-head`, `xm-head`, `al-head`, `live-head`, `people-head`) are now
+  `.page-header`: h1 left, actions wrapping under it on a phone.
+- **Desk views.** The desk's Exams / Students / Student exams links claimed `role="tab"` without tab panels or arrow
+  keys; they are now plain navigation links with `aria-current="page"`, like the console's List / Grid links.
+- **Bulk changes.** The assignments console's bulk-change panel was `position: sticky` and covered the grid row with
+  focus as you tabbed down (WCAG 2.4.11); it now scrolls with the page.
+- **Messages.** Result messages use `.notice.ok` / `.notice.error` (tinted, edge-coloured, the text says what happened)
+  instead of page-specific boxes; the `people-ghost` / `people-button` buttons are the design system's `.secondary`
+  and `.button`; `sr-only` / `people-sr` are `.visually-hidden`.
+- **Targets and focus.** Admin nav, desk and console view links, the exams "Actions" menu, the erase summaries and
+  console grid cells are at least `--target-min` (and `--target-touch` for the nav under a coarse pointer). The admin
+  nav's own 2px focus outline is gone so the global ring shows; the page-local `button.danger` that put `--panel` text
+  on `--error` is gone, so danger buttons use `--danger-ink`.
+- **Tokens.** Every spacing, font size, radius and shadow in these stylesheets is a token; status edges use `--warn`
+  for "needs a look soon" (was `--accent`) and decorative borders that are a boundary use `--line-strong`. Inline
+  styles on the console message, the "To whom" fieldset and the email preview frame moved into classes
+  (`fieldset.checks`, `.email-frame`; the frame keeps a white page because it shows an email as a mail client would).
+- **Reflow.** The audit log's detail list and the filter rows stack below 40rem; the staff hold dialog scrolls inside
+  itself when the screen is shorter than its text.
+- **Not done here.** The admin pages' English-only text is unchanged (they were never localized); toggle buttons on the
+  students directory and console show their open state by fill as well as by the panel that opens, with no
+  `aria-expanded` yet; the sign-in, password-reset and invitation pages were already covered by GAD-T507 and only
+  checked.

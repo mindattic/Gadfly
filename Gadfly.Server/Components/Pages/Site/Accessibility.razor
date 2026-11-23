@@ -1,6 +1,6 @@
 @* DRAFT: have counsel review before relying on this. Written for GAD-T308 from docs/VOICE.md and the exam settings
    (extra time and the eye-contact accommodation), then updated for GAD-T307's pass across the whole app, GAD-T507's WCAG 2.2
-   checks, the exam room's keyboard and timing fixes (GAD-T599) and the languages work (GAD-T526); text in
+   checks, the exam room's keyboard and timing fixes (GAD-T599), the languages work (GAD-T526) and the live examiner (GAD-T692); text in
    Localization/Strings/site.<lang>.json (GAD-T592). It states a target and what was checked and fixed, not a conformance
    claim: no screen reader or assistive-technology testing, and no formal WCAG audit, has been done. Keep it in step with
    docs/ACCESSIBILITY.md, and update it again when that testing happens or a further pass lands. *@
@@ -56,7 +56,7 @@
 </div>
 
 @code {
-    private static readonly string[] Checked = ["keyboard", "examRoom", "contrast", "motion", "layouts", "axe", "states", "language"];
+    private static readonly string[] Checked = ["keyboard", "examRoom", "contrast", "motion", "layouts", "axe", "states", "language", "examiner"];
     private static readonly string[] Support = ["captions", "transcript", "rephrase", "pause", "motion", "speech", "secondLanguage", "gaze", "selfView", "clock", "accommodations"];
     private static readonly string[] Limits = ["spoken", "recognition", "staff", "avatar", "korean", "noAt"];
 }
