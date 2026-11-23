@@ -1,5 +1,6 @@
 @implements IAsyncDisposable
 @using Gadfly.Server.Voice
+@using Gadfly.Server.Student
 @using Gadfly.Server.Exams
 @using Microsoft.EntityFrameworkCore
 @inject IJSRuntime JS
@@ -16,6 +17,7 @@
 @inject ExaminerTts Tts
 @inject Gadfly.Server.Localization.UiText Ui
 @inject IConfiguration Config
+@inject IWebHostEnvironment Env
 
 @* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
@@ -423,7 +425,10 @@
             var (policyLanguage, vocabulary) = await VocabularyAsync();
             var language = speech.RecognizerLanguage(policyLanguage);
             Grants.SetVocabulary(user, SessionId, language, vocabulary);
-            // The exam's voice, else the organization's default, else the platform's (GAD-T475): chosen here, enforced by VoiceHubFilter.
+            // Which examiner (GAD-T504): fixed by the exam or organization, else the one the student chose on the get-ready page.
+            examiner = await ExaminerAsync(startupBound.Token);
+            // The exam's voice, else the examiner's own, else the organization's default, else the platform's (GAD-T475, GAD-T504):
+            // chosen here, enforced by VoiceHubFilter.
             var voice = await ExaminerVoiceAsync();
             if (voice is not null) Grants.SetVoice(user, SessionId, voice);
             if (voice is not null || !speech.IsDefault) Warmup.Warm(FixedLines(), voice, Tts.For(speech));
@@ -446,10 +451,11 @@
                 hangoverMs = Settings.SpeechHangoverMs,
                 // The listening "Mm-hm." after a finished sentence (GAD-T496); 0 is off.
                 backchannelMs = Settings.BackchannelMs,
-                modelUrl = Settings.AvatarModelUrl,
-                portraitUrl = Settings.PortraitUrl,
+                // The attempt's examiner (GAD-T504): his or her model and portrait.
+                modelUrl = examiner.ModelUrl,
+                portraitUrl = examiner.PortraitUrl,
                 // Where the portrait's mouth is, so it can move while she speaks in portrait mode (GAD-T303).
-                portraitMouth = Settings.PortraitMouth,
+                portraitMouth = examiner.PortraitMouth,
                 // Typed answers (GAD-T260): the examiner and the camera without a microphone.
                 typed = TypedAnswers,
                 // Per-exam language and vocabulary hints (GAD-T357, GAD-T358): computed here, on the server, from the exam
@@ -558,6 +564,47 @@
         }
     }
 
+    /// <summary>The examiner this attempt shows (set before the room starts; the configured one until then).</summary>
+    private ExaminerOption examiner = null!;
+
+    private sealed record RememberedExaminer(string? Id);
+
+    /// <summary>
+    /// This attempt's examiner (GAD-T504, <see cref="ExaminerCatalog.Resolve"/>): the exam's AvatarId, else the organization's
+    /// default, else the one the student chose on the get-ready page (remembered on this device), else the first available. The
+    /// browser's choice is only a preference among what the exam allows; any failure reading it gives the first available.
+    /// </summary>
+    private async Task<ExaminerOption> ExaminerAsync(CancellationToken ct)
+    {
+        var options = ExaminerCatalog.For(Settings, Env.WebRootPath);
+        (string? Exam, string? Organization) fixedBy = (null, null);
+        try
+        {
+            if (VoiceFromAssignment is { } assignment)
+                fixedBy = await ExaminerCatalog.AvatarIdsForAssignmentAsync(Scopes, org, assignment, ct);
+            else
+            {
+                await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
+                fixedBy = await ExaminerCatalog.AvatarIdsForSessionAsync(scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>(), org, SessionId, ct);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.LogDebug(ex, "The examiner settings could not be read for session {SessionId}.", SessionId);
+        }
+        string? remembered = null;
+        if (ExaminerCatalog.Fixed(options, fixedBy.Exam, fixedBy.Organization) is null)
+        {
+            try
+            {
+                await using var prefs = await JS.InvokeAsync<IJSObjectReference>("import", ct, "./js/device-prefs.js");
+                remembered = (await prefs.InvokeAsync<RememberedExaminer?>("getExaminer", ct))?.Id;
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or InvalidOperationException) { }
+        }
+        return ExaminerCatalog.Resolve(options, fixedBy.Exam, fixedBy.Organization, remembered);
+    }
+
     /// <summary>This session's examiner voice id (GAD-T475), or null for the platform voice (always null outside live mode, or when
     /// it can't be read).</summary>
     private async Task<string?> ExaminerVoiceAsync()
@@ -576,9 +623,10 @@
                                        select e.VoiceId).FirstOrDefaultAsync(stop.Token);
                 var orgVoice = await db.OrganizationSettings.AsNoTracking().Where(o => o.OrganizationId == org)
                     .Select(o => o.DefaultVoiceId).FirstOrDefaultAsync(stop.Token);
-                return ExaminerVoice.Choose(Settings.Mode, examVoice, orgVoice, Settings.VoiceIdFor(speech.Language));
+                return ExaminerVoice.Choose(Settings.Mode, examVoice, examiner.VoiceIdFor(speech.Language), orgVoice, Settings.VoiceIdFor(speech.Language));
             }
-            return await ExaminerVoice.ForSessionAsync(db, Settings.Mode, org, SessionId, Log, stop.Token, Settings.VoiceIdFor(speech.Language));
+            return await ExaminerVoice.ForSessionAsync(db, Settings.Mode, org, SessionId, Log, stop.Token, Settings.VoiceIdFor(speech.Language),
+                examiner.VoiceIdFor(speech.Language));
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

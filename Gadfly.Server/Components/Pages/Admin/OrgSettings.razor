@@ -49,7 +49,7 @@ else
         </label>
         <ValidationMessage For="() => form.DefaultVoiceId" class="error" />
         <label>Default avatar id
-            <InputText @bind-Value="form.DefaultAvatarId" autocomplete="off" placeholder="Platform default" />
+            <InputText @bind-Value="form.DefaultAvatarId" autocomplete="off" placeholder="Platform default (examiner-f or examiner-m)" />
         </label>
         <ValidationMessage For="() => form.DefaultAvatarId" class="error" />
         <p class="hint">The voice id is an ElevenLabs voice id (letters and digits, from the voice's page in ElevenLabs). Every exam speaks with it unless the exam sets its own; leave it empty for the platform voice. The avatar id is saved for a later release: today every exam shows the platform's examiner (GAD-T475).</p>

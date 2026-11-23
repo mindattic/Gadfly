@@ -257,7 +257,10 @@ else
 
         <section class="panel wide examiner-preview" data-tour="ready-examiner" aria-labelledby="ready-examiner-title">
             <h2 id="ready-examiner-title">@T["getReady.examiner.title"]</h2>
-            @* Choose the examiner (GAD-T595): from the examiner catalog, remembered on this device for the exam room. *@
+            @* Choose the examiner (GAD-T595): from the examiner catalog, remembered on this device for the exam room. No choice when
+               the exam or organization fixes the examiner (GAD-T504). *@
+            @if (examiners.Count > 1)
+            {
             <fieldset class="examiner-choices">
                 <legend class="visually-hidden">@T["getReady.examiner.choose"]</legend>
                 @foreach (var x in examiners)
@@ -273,6 +276,7 @@ else
                     </label>
                 }
             </fieldset>
+            }
             <div class="examiner-preview-row">
                 <img class="examiner-preview-portrait" src="@examiner.PortraitUrl" alt="@T["getReady.examiner.portraitAlt"]" />
                 <div class="examiner-preview-body">
@@ -676,6 +680,10 @@ else
             assignment = await StudentExams.FindAsync(Scopes, org, user, AssignmentId, Clock.GetUtcNow());
             if (assignment is not null)
             {
+                // An exam's or its organization's examiner (GAD-T504) is the only one offered; otherwise the student chooses.
+                var (examAvatar, orgAvatar) = await ExaminerCatalog.AvatarIdsForAssignmentAsync(Scopes, org, AssignmentId);
+                if (ExaminerCatalog.Fixed(examiners, examAvatar, orgAvatar) is { } fixedExaminer)
+                    (examiners, examiner) = ([fixedExaminer], fixedExaminer);
                 (orgName, retentionDays) = await StudentExams.OrganizationAsync(Scopes, org);
                 await LoadLanguagesAsync(org, user);
                 BuildNotice();

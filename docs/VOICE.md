@@ -508,9 +508,21 @@ counters above.
   stores it on the student's grant. `VoiceHubFilter` overwrites the `voiceId` argument of every `Speak` call with the
   grant's choice, whatever the browser sent, so `MindAttic:Avatar:Hub:AllowClientVoiceId` is switched on in live mode only
   for that filtered value. An id not shaped like an ElevenLabs voice id is skipped (logged) rather than sent. The fixed
-  examiner lines are pre-warmed per voice. Mock mode is unchanged: no id is passed and the fake voice speaks. The avatar
-  model is still the deployment's one (`Gadfly:Voice:AvatarModelUrl`); a per-exam avatar needs an avatar catalog in
-  MindAttic.Avatar.
+  examiner lines are pre-warmed per voice. Mock mode is unchanged: no id is passed and the fake voice speaks.
+- **Which examiner (GAD-T504, GAD-T595).** Two examiners are offered (`Gadfly.Server/Student/ExaminerCatalog.cs`): the female
+  examiner (`examiner-f`, the deployment's `Gadfly:Voice:AvatarModelUrl`) and the male one (`examiner-m`,
+  `wwwroot/assets/avatars/examiner-m.glb`, 9.5 MB, CC0, committed; his portrait `assets/portrait-m.png`). An exam's
+  **Examiner avatar id** (`Exams.AvatarId`), else the organization's default avatar id, fixes the examiner (`examiner-f` or
+  `examiner-m`; an unknown id fixes nothing); otherwise the student chooses on the get-ready page, remembered on the device
+  (device-prefs.js `getExaminer`). The exam room resolves it again on the server (`ExaminerCatalog.Resolve`), so the browser's
+  choice is only a preference among what the exam allows, and shows that examiner's model, portrait and portrait mouth. Each
+  examiner can have **his or her own voice**: in live mode the order is the exam's voice, then the examiner's own voice for the
+  exam language, then the organization's default, then the platform voice for the language. The male examiner's default is
+  ElevenLabs' premade "Brian" (`nPczCjzI2devNBz1zQrb`: deep, calm and warm; premade voices speak Korean through
+  `eleven_flash_v2_5`/`eleven_multilingual_v2`); the female keeps the platform voice. The model was built with MPFB like hers
+  (`tools/examiner-m`, provenance in `assets/avatars/examiner-m.LICENSE.md`): same Mixamo bone names and frames, LeftEye/RightEye
+  bones (the gaze target), all 52 ARKit shapes and the 15 Oculus visemes, the same eye texture, so `avatar-look.js` styles him
+  with the same palette.
 - The transcript reaches Gadfly through the student's browser (server to browser to server), the same trust model as the
   existing `SessionHub.Answer`. The metrics and verification advice are recomputed on the server from the relayed words.
   A server-side tap on the recognizer (so the browser never carries the text) would need a hook in the speech library.
@@ -545,6 +557,8 @@ pending that library change.
 | `Gadfly:Voice:Mode` | `off`, `mock` or `live`. Default `mock` in Development, `off` elsewhere. |
 | `Gadfly:Voice:AvatarModelUrl` | The avatar GLB. Default `/assets/avatars/mpfb.glb` when the file exists, otherwise the 2D portrait. |
 | `Gadfly:Voice:PortraitUrl` | 2D fallback image (default `/assets/portrait.png`). |
+| `Gadfly:Voice:Examiners:<id>:ModelUrl`, `:PortraitUrl`, `:PortraitMouth` | One examiner's model, portrait and portrait mouth (`examiner-f`, `examiner-m`; GAD-T504). Unset: hers are the settings above, his the committed `/assets/avatars/examiner-m.glb` and `/assets/portrait-m.png`. |
+| `Gadfly:Voice:Examiners:<id>:VoiceId` / `:VoiceIds:<lang>` | That examiner's own ElevenLabs voice, for every language or one (live only). Unset: the male examiner's is `nPczCjzI2devNBz1zQrb` ("Brian"), hers the platform voice. |
 | `Gadfly:Voice:PortraitMouth` | Where the portrait's mouth is, "x,y,w" as fractions of the image (set for the default portrait; unset for a custom one means no drawn mouth). |
 | `Gadfly:Voice:TtsModel` | The examiner's ElevenLabs voice model when `MindAttic:Avatar:ElevenLabs:ModelId` isn't set (default `eleven_flash_v2_5`, low latency). |
 | `Gadfly:Voice:WarmPhrases` | Prepare the fixed examiner lines in the phrase cache when the first exam room opens (default true). |

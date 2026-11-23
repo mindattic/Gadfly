@@ -122,7 +122,7 @@ else
             <p class="hint">Signals are evidence for you to review. Nobody is failed automatically.</p>
         </fieldset>
         <label>Examiner voice id <input @bind="draft.VoiceId" placeholder="default voice" /></label>
-        <label>Examiner avatar id <input @bind="draft.AvatarId" placeholder="default examiner" /></label>
+        <label>Examiner avatar id <input @bind="draft.AvatarId" placeholder="default examiner (examiner-f or examiner-m)" /></label>
         <p class="hint">Voice id: an ElevenLabs voice id; empty uses the organization's default voice, else the platform's. The avatar id is saved for a later release: today every exam shows the platform's examiner (GAD-T475).</p>
         <label>Instructions shown to students <textarea rows="4" @bind="draft.Instructions"></textarea></label>
 

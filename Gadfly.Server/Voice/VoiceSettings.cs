@@ -135,6 +135,13 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
     /// </summary>
     public double PlainSpeechSpeed { get; init; } = 0.9;
 
+    /// <summary>
+    /// Per-examiner overrides (GAD-T504), <c>Gadfly:Voice:Examiners:&lt;id&gt;</c> with <c>ModelUrl</c>, <c>PortraitUrl</c>,
+    /// <c>PortraitMouth</c>, <c>VoiceId</c> and <c>VoiceIds:&lt;language&gt;</c>, keyed by the examiner catalog's ids
+    /// (<see cref="Gadfly.Server.Student.ExaminerCatalog"/>). Unset parts keep the catalog's defaults.
+    /// </summary>
+    public IReadOnlyDictionary<string, ExaminerSettings> Examiners { get; init; } = new Dictionary<string, ExaminerSettings>();
+
     /// <summary>The model configured for <paramref name="language"/>, or null for the examiner's usual model.</summary>
     public string? TtsModelFor(string? language) =>
         TtsModels.TryGetValue(Gadfly.Engine.ExamLanguage.Normalize(language), out var m) && !string.IsNullOrWhiteSpace(m) ? m.Trim() : null;
@@ -269,8 +276,13 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
             EslCompleteAfterAnswers = (int)Number(section["Esl:CompleteAfterAnswers"], 0, 10, 3),
             EslCutOffBackoffFactor = Number(section["Esl:CutOffBackoffFactor"], 1, 4, 2),
             PlainSpeechSpeed = double.TryParse(section["PlainSpeechSpeed"], System.Globalization.CultureInfo.InvariantCulture, out var sp) && double.IsFinite(sp) ? Math.Clamp(sp, 0.7, 1.2) : 0.9,
+            Examiners = section.GetSection("Examiners").GetChildren().ToDictionary(e => e.Key.Trim(), e => new ExaminerSettings(
+                Blank(e["ModelUrl"]), Blank(e["PortraitUrl"]), e["PortraitMouth"] is { Length: > 0 } em ? ParseMouth(em) : null,
+                Blank(e["VoiceId"]), PerLanguage(e.GetSection("VoiceIds"))), StringComparer.Ordinal),
         };
     }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static double Number(string? value, double min, double max, double fallback) =>
         double.TryParse(value, System.Globalization.CultureInfo.InvariantCulture, out var v) && double.IsFinite(v) ? Math.Clamp(v, min, max) : fallback;
@@ -284,3 +296,11 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
         return d;
     }
 }
+
+/// <summary>
+/// One examiner's configured overrides (GAD-T504), from <c>Gadfly:Voice:Examiners:&lt;id&gt;</c>: where the model and portrait are
+/// hosted (e.g. blob storage), the portrait's mouth ("x,y,w"), and the examiner's own ElevenLabs voice, for every language
+/// (<c>VoiceId</c>) or one (<c>VoiceIds:&lt;language&gt;</c>). Voice ids are settings, not secrets.
+/// </summary>
+public sealed record ExaminerSettings(string? ModelUrl, string? PortraitUrl, string? PortraitMouth, string? VoiceId,
+    IReadOnlyDictionary<string, string> VoiceIds);

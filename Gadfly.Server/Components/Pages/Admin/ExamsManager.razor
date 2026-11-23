@@ -237,7 +237,7 @@ else
             <span class="hint">What the student is expected to speak. Also used as the recognizer's vocabulary hint language (GAD-T357).</span>
         </label>
         <label>Examiner voice id <input @bind="sv.Form.VoiceId" maxlength="100" placeholder="Platform default" /></label>
-        <label>Examiner avatar id <input @bind="sv.Form.AvatarId" maxlength="100" placeholder="Platform default" /></label>
+        <label>Examiner avatar id <input @bind="sv.Form.AvatarId" maxlength="100" placeholder="Platform default (examiner-f or examiner-m)" /></label>
         <span class="hint">Voice id: an ElevenLabs voice id; empty uses the organization's default voice, else the platform's. The avatar id is saved for a later release: today every exam shows the platform's examiner (GAD-T475).</span>
         @if (sv.StartedAttempts > 0)
         {
