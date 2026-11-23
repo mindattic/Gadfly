@@ -152,6 +152,7 @@ public sealed partial class SessionOrchestrator
                 ClaimLedger.FromJson(speculation.BaseLedger), clock, ct);
             copy.AssessTextStyle = false;
             copy.LiveTurnModel = liveModel;
+            copy.SourceTranslator = live.Engine.SourceTranslator;
             // Judged provisionally like the live step (GAD-T508); a copy never runs the panel on answers still pending.
             copy.DeferFullJudgment = live.Engine.DeferFullJudgment;
             copy.Speculative = true;
@@ -233,7 +234,7 @@ public sealed partial class SessionOrchestrator
         // The recitation check reads the answer's timing (GAD-T242): if the real timing changes its verdict, judge again from scratch.
         var turn = copy.Session.Turns[turnIndex];
         var passages = await copy.Subject.PassagesAsync(turn.ConceptId, final.Text, ct);
-        var recited = RecitationCheck.Check(copy.Session, turn, string.Join('\n', passages.Select(p => p.Text)));
+        var recited = await copy.RecitationAsync(turn, passages, ct);
         if ((recited is null) != (SocraticSession.SteeringJudgment(turn)?.Recitation is null))
         {
             log.LogInformation("Speculative next step on turn {Turn} not used: the recitation check reads the final answer differently.", turnIndex);

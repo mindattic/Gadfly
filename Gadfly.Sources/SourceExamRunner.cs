@@ -76,6 +76,13 @@ public sealed class SourceExamEngine
     /// <summary>Whether answers get the panel response analysis (GAD-T91). On by default; off only for cost-limited runs.</summary>
     public bool AnalyzeResponses { get; set; } = true;
 
+    /// <summary>
+    /// Machine-translates source text into a language (text, target exam-language tag), for the cross-lingual recitation check
+    /// (GAD-T600, GAD-T642): a Korean or Spanish answer recited from a translation of the English notes is compared with the
+    /// translated passages too. Null (the default) checks against the source alone. A failure is skipped, never failing a judgment.
+    /// </summary>
+    public Func<string, string, CancellationToken, Task<string?>>? SourceTranslator { get; set; }
+
     public SocraticSession Session { get; }
     public ClaimLedger Ledger { get; }
     public SourceMaterialSubject Subject => _subject;
@@ -353,7 +360,7 @@ public sealed class SourceExamEngine
         // Recitation check (GAD-T242): an answer that closely follows the source's wording, or a long fluent one after a long
         // silent wait, is not accepted as the student's own understanding. It is recorded for review (never a cheating verdict),
         // left out of mastery and evidence, and the next question asks for it differently, applied, or why.
-        if (passages is not null && RecitationCheck.Check(Session, turn, string.Join('\n', passages.Select(p => p.Text))) is { } recited)
+        if (passages is not null && await RecitationAsync(turn, passages, ct) is { } recited)
             judgment = WithRecitation(judgment, recited, turn);
 
         turn = Session.RecordJudgment(judgment, Estimate(turn, judgment), analysis);
@@ -420,6 +427,47 @@ public sealed class SourceExamEngine
         RubricVersion = rubricVersion,
         Summary = "The student said they do not know (aporia).",
     };
+
+    /// <summary>
+    /// The recitation check (GAD-T242) of <paramref name="turn"/>'s answer against <paramref name="passages"/> and, in a non-English
+    /// exam with a <see cref="SourceTranslator"/>, against their translation into the exam language too (GAD-T600, GAD-T642).
+    /// Reads <see cref="Session"/> for the answer's timing; null when the answer reads as the student's own.
+    /// </summary>
+    public async Task<RecitationFlag?> RecitationAsync(Turn turn, IReadOnlyList<SourcePassage> passages, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(passages);
+        var translated = await TranslatedSourceAsync(turn, passages, ct);
+        return RecitationCheck.Check(Session, turn, SourceText(passages), translated);
+    }
+
+    private static string SourceText(IReadOnlyList<SourcePassage> passages) => string.Join('\n', passages.Select(p => p.Text));
+
+    /// <summary>
+    /// <paramref name="passages"/> machine-translated into the exam language, each separately, joined by newlines;
+    /// null when there is no <see cref="SourceTranslator"/>, the exam is in English, or the answer is too short to be compared
+    /// (<see cref="RecitationCheck.MinWordsForSourceMatch"/>). A passage whose translation fails is left out: the check never
+    /// fails a judgment.
+    /// </summary>
+    private async Task<string?> TranslatedSourceAsync(Turn turn, IReadOnlyList<SourcePassage> passages, CancellationToken ct)
+    {
+        var translator = SourceTranslator;
+        var language = _subject.Language.Exam;
+        if (translator is null || language == ExamLanguage.English || passages.Count == 0
+            || LanguageText.WordCount(turn.Answer?.Text) < RecitationCheck.MinWordsForSourceMatch)
+            return null;
+        var translations = await Task.WhenAll(passages.Select(async p =>
+        {
+            if (string.IsNullOrWhiteSpace(p.Text)) return null;
+            try { return await translator(p.Text, language, ct); }
+            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+            {
+                Diagnostics?.Report($"[Recitation check: a source passage could not be translated into {language}; checked without it: {ex.Message}]");
+                return null;
+            }
+        }));
+        var parts = translations.Where(t => !string.IsNullOrWhiteSpace(t)).ToList();
+        return parts.Count == 0 ? null : string.Join('\n', parts);
+    }
 
     private AnswerJudgment WithRecitation(AnswerJudgment judgment, RecitationFlag recited, Turn turn)
     {
@@ -543,6 +591,8 @@ public sealed class SourceExamEngine
         else
         {
             var passages = await _subject.PassagesAsync(concept.Key, turn.Answer.Text, ct);
+            // The source's translation (cross-lingual recitation check, GAD-T642) runs alongside the fast judge call.
+            var translation = TranslatedSourceAsync(turn, passages, ct);
             var verdict = await _judge.JudgeWithAsync(fast, new JudgeInput
             {
                 Turn = turn, Concept = concept, Rubric = rubric, Passages = passages, EarlierClaims = Ledger.Describe(concept.Key),
@@ -550,7 +600,7 @@ public sealed class SourceExamEngine
             if (verdict is not { } v) return null;
             // As with the panel's aporia check, only a short answer can be a plain "I don't know" (a long one is an attempt).
             judgment = v.Aporia && text.Length <= 200 ? AporiaJudgment(rubric.Version) : v.Judgment;
-            if (RecitationCheck.Check(Session, turn, string.Join('\n', passages.Select(p => p.Text))) is { } recited)
+            if (RecitationCheck.Check(Session, turn, SourceText(passages), await translation) is { } recited)
                 judgment = WithRecitation(judgment, recited, turn);
         }
         var provisional = new ProvisionalJudgment
