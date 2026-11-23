@@ -486,6 +486,8 @@
                 portraitUrl = examiner.PortraitUrl,
                 // Where the portrait's mouth is, so it can move while she speaks in portrait mode (GAD-T303).
                 portraitMouth = examiner.PortraitMouth,
+                // The student's customization (GAD-T646, GAD-T649), validated in ExaminerAsync: colours and framing for her 3D model.
+                examinerLook = new { skinTone = examinerCustomization.SkinTone, hair = examinerCustomization.Hair, attire = examinerCustomization.Attire, look = examinerCustomization.Look },
                 // Typed answers (GAD-T260): the examiner and the camera without a microphone.
                 typed = TypedAnswers,
                 // Per-exam language and vocabulary hints (GAD-T357, GAD-T358): computed here, on the server, from the exam

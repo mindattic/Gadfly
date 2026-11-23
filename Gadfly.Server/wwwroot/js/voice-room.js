@@ -27,7 +27,7 @@
 
 import { VoiceAcoustics } from "./voice-acoustics.js";
 import * as VoiceDraft from "./voice-draft.js";
-import { useExaminerLook } from "./avatar-look.js";
+import { useExaminerLook, customLookOptions, framingOf } from "./avatar-look.js";
 // Every line this module writes is in the attempt's language (GAD-T606): the exam room renders <UiTextData Prefix="examRoom.js." />
 // in ExamSession.Language, and each call names the English as its fallback.
 import { t } from "./ui-text.js";
@@ -387,9 +387,12 @@ function createAvatar(s, src) {
     const el = document.createElement("ma-avatar");
     el.gadflyRole = src ? "examiner" : "stand-in";
     if (src) el.setAttribute("src", src);
-    if (src) useExaminerLook(el);   // the examiner's luminous blue look, once her 3D model is up (GAD-T503)
+    // The examiner's luminous blue look, once her 3D model is up (GAD-T503), with the student's validated skin, hair and clothing
+    // colours over it (GAD-T649); her eyes, brows and lips are never changed, so examiner-gaze.js keeps the same face to hold.
+    if (src) useExaminerLook(el, customLookOptions(s.cfg.examinerLook));
     if (s.cfg.portraitUrl) el.setAttribute("portrait", s.cfg.portraitUrl);
-    el.setAttribute("view", "upper");
+    // The student's framing (GAD-T649): every preset keeps her face and eyes in view.
+    el.setAttribute("view", framingOf(s.cfg.examinerLook).view);
     // Centred in the 16:9 stage (GAD-T501). The eye-contact check reads where her eyes are actually drawn (examiner-gaze.js
     // faceShare, GAD-T509), so a framing change here moves its target with her.
     el.setAttribute("camera-x", "0");

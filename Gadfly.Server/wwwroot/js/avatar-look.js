@@ -59,6 +59,57 @@ const DEFAULTS = {
     skinDetail: LOOK_SKIN_DETAIL, envLight: LOOK_ENV_LIGHT, irisGlow: LOOK_IRIS_GLOW, eyeRoughness: LOOK_EYE_ROUGHNESS,
 };
 
+// ---- the student's customization (GAD-T646, GAD-T649) ---------------------------------------------------------------------------
+
+// The colours behind each bounded choice (ExaminerCustomization.cs), the same ones the get-ready page's swatches show (get-ready.css).
+// A chosen colour replaces that part's blue and becomes its own inner glow, so the part reads as the colour chosen; the eyes, brows,
+// lips and the silhouette rim are never changed, so the face stays as readable as the default (and the gaze check has the same face).
+export const SKIN_TONES = {
+    "light": 0xf3d9c6, "medium-light": 0xe0b593, "medium": 0xc08a62, "medium-dark": 0x8d5a3b, "dark": 0x5a3826,
+};
+export const HAIR_COLOURS = {
+    "black": 0x1c1a1a, "dark-brown": 0x3b2a20, "brown": 0x6b4630, "auburn": 0x8a3b1f, "blonde": 0xd8b46a, "grey": 0xa7a7a7,
+};
+export const ATTIRES = {
+    "navy-blazer": 0x1f2f57, "charcoal-suit": 0x3a3d42, "cardigan": 0x8a6a4f, "white-shirt": 0xf4f4f2,
+};
+/**
+ * Framing presets to the avatar's camera view (<ma-avatar view>): every one keeps her face and eyes in view. The portrait gets the
+ * matching bounded scale about her eyes (voice.css), never enough to crop her face.
+ */
+export const FRAMINGS = {
+    "head-and-shoulders": { view: "upper", portraitScale: 1 },
+    "close": { view: "head", portraitScale: 1.15 },
+    "seated": { view: "mid", portraitScale: 0.86 },
+};
+
+const own = (table, key) => (typeof key === "string" && Object.prototype.hasOwnProperty.call(table, key) ? table[key] : undefined);
+
+/**
+ * The look options for a customization `{ skinTone, hair, attire, look }` (already validated on the server; anything not on a list
+ * is ignored here too, so the default stays). Empty when nothing is customized.
+ */
+export function customLookOptions(c) {
+    const o = {};
+    if (!c) return o;
+    const skin = own(SKIN_TONES, c.skinTone), hair = own(HAIR_COLOURS, c.hair), clothing = own(ATTIRES, c.attire);
+    if (skin !== undefined) { o.skin = skin; o.skinGlow = skin; }
+    if (hair !== undefined) { o.hair = hair; o.hairGlow = hair; }
+    if (clothing !== undefined) { o.clothing = clothing; o.clothingGlow = clothing; }
+    return o;
+}
+
+/** The framing preset for a customization's `look` (head-and-shoulders when none or unknown). */
+export function framingOf(c) {
+    return own(FRAMINGS, c && c.look) || FRAMINGS["head-and-shoulders"];
+}
+
+/** The clothing colour as a CSS hex string, for the portrait's clothing tint, or null when the clothing is the default. */
+export function attireCss(c) {
+    const v = own(ATTIRES, c && c.attire);
+    return v === undefined ? null : "#" + v.toString(16).padStart(6, "0");
+}
+
 // Where the irises are on the MPFB eye texture (brown_eye: two eyeballs on one 1024 x 1024 sheet), in UV (glTF: v runs down,
 // as three.js keeps it), and the radius taking in the dark limbal ring. Only texels inside these circles that are iris-colored
 // (reddish brown, not the white or the veins outside) are recolored; the pupil stays black and the ring stays dark.
@@ -149,20 +200,20 @@ function restyle(m, part, o) {
             // The texture stays, but only its light and shade: the blue replaces its color (tinted in the shader below), so the
             // lips, brows and creases still read while the skin is one smooth blue.
             m.color.setHex(o.skin);
-            glow(o.glow, o.glowStrength);
+            glow(o.skinGlow ?? o.glow, o.glowStrength);
             if (standard) { m.roughness = 0.55; m.metalness = 0; }
             shade(m, o, { tint: m.map ? o.skinDetail : 0, rim: true });
             break;
         case "clothing":
             m.map = null;        // the normal map stays: the folds still catch the light
             m.color.setHex(o.clothing);
-            glow(o.glow, o.glowStrength * 0.45);
+            glow(o.clothingGlow ?? o.glow, o.glowStrength * 0.45);
             if (standard) { m.roughness = 0.7; m.metalness = 0; }
             shade(m, o, { rim: true });
             break;
         case "hair":
             m.color.setHex(o.hair);
-            glow(o.glow, o.glowStrength * 0.4);
+            glow(o.hairGlow ?? o.glow, o.glowStrength * 0.4);
             if (standard) { m.roughness = 0.88; m.metalness = 0; }
             shade(m, o, { flat: true, rim: true });
             break;
