@@ -636,6 +636,11 @@ student can't hold eye contact with:
 - Colour changes reach only the skin, hair and clothing materials (`avatar-look.js` `customLookOptions`): the chosen colour replaces
   that part's blue and becomes its own inner glow. The eyes (sclera and iris), brows, lashes, lips, mouth and the silhouette rim are
   never changed, so lip sync and the eyes read exactly as with the default look.
+- The default blue look is a digital presence (`avatar-look.js` `LOOK_CIRCUIT_*`, GAD-T690): faint cyan circuit traces (right-angle
+  and 45-degree runs with small pads and vias, drawn on a canvas in the browser and tiled over the UVs) glow under the blue skin and,
+  more faintly, the clothing, with a slow light drifting along them (still under `prefers-reduced-motion`). The face carries only a
+  few fainter traces and none around the eyes, brows and mouth (masked in the model's rest pose from the eye and teeth positions);
+  the eyes, brows, lashes, teeth and tongue never carry them. A chosen skin tone or clothing drops the traces from that part.
 - Every framing keeps the face and eyes in view (`FRAMINGS`: `upper`, `head`, `mid` on `<ma-avatar view>`). The portrait fallback
   gets a bounded scale about her eyes (`--portrait-scale`, 1.15 close and 0.86 seated, never enough to crop the face), and the
   moving portrait mouth follows that scale; in portrait mode the clothing colour is a tint band over the bottom of the portrait only.

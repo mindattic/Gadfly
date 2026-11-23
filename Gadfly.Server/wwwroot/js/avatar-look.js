@@ -3,6 +3,12 @@
 // silhouette, hair and clothing in deeper blues of the same family, and green eyes. Warm and attentive rather than mighty
 // (GAD-T558, docs/research/attention-and-gaze.md 4.6): no transparency, no glow strong enough to wash out her features, and the
 // eyes, brows, lips and mouth stay readable, so lip sync shows and the student can look her in the eye.
+// She is a digital presence (GAD-T690): faint circuit traces run under the blue skin, thin board-like lines in right-angle and
+// 45-degree runs ending in small pads and vias, glowing a lighter cyan over the base glow, with a slow light drifting along them
+// (none under prefers-reduced-motion). The pattern is generated here on a canvas once and tiled over the model's UVs. The face
+// carries only a few, fainter traces and none at all around the eyes, brows and mouth; the eyes, brows, lashes, teeth and tongue
+// never carry it. The clothing carries a fainter share of it. A student's own skin tone or clothing (customLookOptions) drops the
+// traces from that part: circuitry belongs to the blue examiner only.
 // Uncanniness comes from mismatched realism, worst in the eyes (MacDorman et al. 2009; Seyama & Nagayama 2007), so every part of
 // the face is stylized to the same degree: the sclera is a clean, unglowed white with no veins, outside every glow, with a clear
 // iris-sclera edge (Kobayashi & Kohshima 2001), and the iris is a smooth stylized green with a darker limbal ring, not a
@@ -52,11 +58,28 @@ export const LOOK_ENV_LIGHT = 0.5;
 /** Eye surface roughness: low, so the light catches them (a catchlight) and they look alive. */
 export const LOOK_EYE_ROUGHNESS = 0.08;
 
+/** The circuit traces' glow: a light cyan-blue, lighter than the skin's inner glow. */
+export const LOOK_CIRCUIT_COLOR = 0x7fdcff;
+/** How bright the traces glow on the skin (emissive): present but faint, never brighter than her features. */
+export const LOOK_CIRCUIT_STRENGTH = 0.32;
+/** How many times the pattern tiles across the model's UV sheet (higher is finer). */
+export const LOOK_CIRCUIT_SCALE = 3;
+/** On the face (away from the eyes and mouth, which carry none) only the sparse main traces show, at this share of the strength. */
+export const LOOK_CIRCUIT_FACE = 0.4;
+/** The clothing's share of the traces' strength (0 turns them off there). */
+export const LOOK_CIRCUIT_CLOTHING = 0.4;
+/** The light drifting along the traces: how much brighter a trace gets as it passes (0 turns it off), and the seconds per cycle. */
+export const LOOK_CIRCUIT_PULSE = 0.7;
+export const LOOK_CIRCUIT_PULSE_SECONDS = 7;
+
 const DEFAULTS = {
     skin: LOOK_SKIN, clothing: LOOK_CLOTHING, hair: LOOK_HAIR, brows: LOOK_BROWS, iris: LOOK_IRIS, sclera: LOOK_SCLERA,
     teeth: LOOK_TEETH, tongue: LOOK_TONGUE, glow: LOOK_GLOW, rim: LOOK_RIM,
     glowStrength: LOOK_GLOW_STRENGTH, rimStrength: LOOK_RIM_STRENGTH, rimPower: LOOK_RIM_POWER,
     skinDetail: LOOK_SKIN_DETAIL, envLight: LOOK_ENV_LIGHT, irisGlow: LOOK_IRIS_GLOW, eyeRoughness: LOOK_EYE_ROUGHNESS,
+    circuitColor: LOOK_CIRCUIT_COLOR, circuitStrength: LOOK_CIRCUIT_STRENGTH, circuitScale: LOOK_CIRCUIT_SCALE,
+    circuitFace: LOOK_CIRCUIT_FACE, circuitClothing: LOOK_CIRCUIT_CLOTHING, circuitPulse: LOOK_CIRCUIT_PULSE,
+    circuitPulseSeconds: LOOK_CIRCUIT_PULSE_SECONDS,
 };
 
 // ---- the student's customization (GAD-T646, GAD-T649) ---------------------------------------------------------------------------
@@ -148,13 +171,13 @@ export function applyExaminerLook(target, options = {}) {
     const root = rootOf(target);
     if (!root) return 0;
     const o = { ...DEFAULTS, ...options };
+    const circuit = circuitOf(root);
     let count = 0;
     root.traverse((mesh) => {
         if (!mesh.isMesh) return;
-        const list = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const m of list) {
+        for (const m of materialsOf(mesh)) {
             if (!m || !m.color || (m.userData && m.userData.gadflyLook)) continue;
-            restyle(m, partOf(m, mesh), o);
+            restyle(m, partOf(m, mesh), o, circuit, mesh);
             m.userData = { ...(m.userData || {}), gadflyLook: true };
             m.needsUpdate = true;
             count++;
@@ -191,7 +214,9 @@ function keepEyesNatural(el) {
     };
 }
 
-function restyle(m, part, o) {
+const materialsOf = (mesh) => (Array.isArray(mesh.material) ? mesh.material : [mesh.material]);
+
+function restyle(m, part, o, circuit, mesh) {
     const standard = !!m.isMeshStandardMaterial;
     const glow = (hex, intensity) => { if (m.emissive) { m.emissive.setHex(hex); m.emissiveIntensity = intensity; m.emissiveMap = null; } };
     if (standard && (part === "skin" || part === "clothing" || part === "hair")) m.envMapIntensity = o.envLight;
@@ -202,14 +227,20 @@ function restyle(m, part, o) {
             m.color.setHex(o.skin);
             glow(o.skinGlow ?? o.glow, o.glowStrength);
             if (standard) { m.roughness = 0.55; m.metalness = 0; }
-            shade(m, o, { tint: m.map ? o.skinDetail : 0, rim: true });
+            // Circuitry only on the default blue skin, and only when the face could be located to keep it off the eyes and mouth.
+            shade(m, o, {
+                tint: m.map ? o.skinDetail : 0, rim: true,
+                circuit: circuit && circuit.face && o.skin === LOOK_SKIN ? { strength: o.circuitStrength, face: circuit.face } : null,
+            }, circuit, mesh);
             break;
         case "clothing":
             m.map = null;        // the normal map stays: the folds still catch the light
             m.color.setHex(o.clothing);
             glow(o.clothingGlow ?? o.glow, o.glowStrength * 0.45);
             if (standard) { m.roughness = 0.7; m.metalness = 0; }
-            shade(m, o, { rim: true });
+            shade(m, o, {
+                rim: true, circuit: circuit && o.clothing === LOOK_CLOTHING ? { strength: o.circuitStrength * o.circuitClothing } : null,
+            }, circuit, mesh);
             break;
         case "hair":
             m.color.setHex(o.hair);
@@ -244,9 +275,10 @@ function restyle(m, part, o) {
  *  - tint: the diffuse texture contributes only its brightness relative to its average, `tint` of it (0..1), times the color;
  *  - flat: the texture's color is dropped and only its alpha kept (cut-out hair stays cut out, in one uniform color);
  *  - rim: the soft bright fresnel edge, added as emissive light;
- *  - iris: the eye texture's irises are recolored to the iris green, with a faint glow on them only.
+ *  - iris: the eye texture's irises are recolored to the iris green, with a faint glow on them only;
+ *  - circuit: the circuit traces, added as emissive light (`face` masks them on the face: see circuitShader).
  */
-function shade(m, o, { tint = 0, flat = false, rim = false, iris = false }) {
+function shade(m, o, { tint = 0, flat = false, rim = false, iris = false, circuit = null }, setup = null, mesh = null) {
     if (!m.isMeshStandardMaterial) return;
     const Color = m.color.constructor;
     const u = {
@@ -255,6 +287,19 @@ function shade(m, o, { tint = 0, flat = false, rim = false, iris = false }) {
         lookIris: { value: new Color(o.iris) }, lookIrisGlow: { value: o.irisGlow }, lookSclera: { value: new Color(o.sclera) },
     };
     if (tint > 0) averageBrightness(m.map).then((v) => { if (v > 0.02) u.lookTintRef.value = v; });
+    if (circuit) {
+        const pulse = reducedMotion() ? 0 : o.circuitPulse;
+        Object.assign(u, {
+            lookCircuit: { value: setup.texture }, lookCircuitScale: { value: o.circuitScale },
+            lookCircuitColor: { value: new Color(o.circuitColor) }, lookCircuitStrength: { value: circuit.strength },
+            lookCircuitFace: { value: o.circuitFace }, lookPulse: { value: pulse }, lookPhase: circuitPhase,
+        });
+        if (circuit.face) {
+            const f = circuit.face;
+            Object.assign(u, { lookEyeL: { value: f.eyeL }, lookEyeR: { value: f.eyeR }, lookMouth: { value: f.mouth }, lookFaceSize: { value: f.size } });
+        }
+        if (pulse > 0) drivePulse(mesh, o.circuitPulseSeconds);
+    }
 
     let map = "#include <map_fragment>";
     if (flat) map += "\ndiffuseColor.rgb = diffuse;";
@@ -294,14 +339,231 @@ uniform float lookTint; uniform float lookTintRef; uniform vec3 lookIris; unifor
         if (rim) extra += `
 float lookRim = 1.0 - saturate( abs( dot( normal, normalize( vViewPosition ) ) ) );
 totalEmissiveRadiance += lookRimColor * ( pow( lookRim, lookRimPower ) * lookRimStrength );`;
+        if (circuit) extra += circuitShader(!!circuit.face);
         if (needsIrisGlow) extra += `
 #ifdef USE_MAP
 totalEmissiveRadiance += lookGreen * ( lookIrisW * lookIrisGlow );
 #endif`;
         if (extra) frag = frag.replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + extra);
+        if (circuit) {
+            frag = frag.replace("#include <common>", `#include <common>
+uniform sampler2D lookCircuit; uniform float lookCircuitScale; uniform vec3 lookCircuitColor; uniform float lookCircuitStrength;
+uniform float lookCircuitFace; uniform float lookPulse; uniform float lookPhase;
+uniform vec3 lookEyeL; uniform vec3 lookEyeR; uniform vec3 lookMouth; uniform float lookFaceSize;
+varying vec2 vLookUv; varying vec3 vLookPos;`);
+            shader.vertexShader = shader.vertexShader
+                .replace("#include <common>", "#include <common>\nvarying vec2 vLookUv; varying vec3 vLookPos;")
+                .replace("#include <begin_vertex>", "#include <begin_vertex>\nvLookUv = uv; vLookPos = position;");
+        }
         shader.fragmentShader = frag;
     };
-    m.customProgramCacheKey = () => `gadfly-look-${flat ? "f" : ""}${tint > 0 ? "t" : ""}${rim ? "r" : ""}${iris ? "i" : ""}`;
+    const c = circuit ? (circuit.face ? "cf" : "c") : "";
+    m.customProgramCacheKey = () => `gadfly-look-${flat ? "f" : ""}${tint > 0 ? "t" : ""}${rim ? "r" : ""}${iris ? "i" : ""}${c}`;
+}
+
+/**
+ * The circuit traces as emissive light. The texture holds every trace's glow in red, only the sparse main traces in green, and
+ * in blue each trace's distance along itself (0..1, wrapping), which the drifting light follows.
+ * With `face`, the mask works in the model's rest pose (the vertex `position`, before skinning and morphs, so it never slides
+ * over the face as she talks), measured in eye spacings so both examiners get the same mask: around each eye (centred a little
+ * above it, taking in the lids and brow) and around the mouth (an ellipse wider than tall, taking in the lips as they move) there
+ * are no traces; the rest of the face shows only the main traces, at LOOK_CIRCUIT_FACE, back to the full pattern past the jaw.
+ */
+function circuitShader(face) {
+    const mask = face ? `
+float lookDe = min( distance( vLookPos, lookEyeL ), distance( vLookPos, lookEyeR ) ) / lookFaceSize;
+float lookDm = length( ( vLookPos - lookMouth ) * vec3( 0.8, 1.3, 1.0 ) ) / lookFaceSize;
+float lookFaceK = 1.0 - smoothstep( 1.4, 2.2, distance( vLookPos, ( lookEyeL + lookEyeR + lookMouth ) / 3.0 ) / lookFaceSize );
+lookTrace = mix( lookC.r, lookC.g * lookCircuitFace, lookFaceK ) * smoothstep( 0.6, 1.0, lookDe ) * smoothstep( 0.55, 0.95, lookDm );` : "";
+    return `
+vec3 lookC = texture2D( lookCircuit, vLookUv * lookCircuitScale ).rgb;
+float lookTrace = lookC.r;${mask}
+float lookP = fract( lookC.b - lookPhase );
+float lookPulseK = 1.0 - smoothstep( 0.0, 0.09, min( lookP, 1.0 - lookP ) );
+totalEmissiveRadiance += lookCircuitColor * ( lookTrace * lookCircuitStrength * ( 1.0 + lookPulse * lookPulseK ) );`;
+}
+
+// The drifting light's phase (0..1), shared by every circuit material and advanced as the model renders.
+const circuitPhase = { value: 0 };
+
+function drivePulse(mesh, seconds) {
+    if (!mesh || mesh.userData.gadflyPulse) return;
+    mesh.userData.gadflyPulse = true;
+    const before = mesh.onBeforeRender;
+    mesh.onBeforeRender = function (...args) {
+        circuitPhase.value = (performance.now() / 1000 / seconds) % 1;
+        return before.apply(this, args);
+    };
+}
+
+function reducedMotion() {
+    try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { return false; }
+}
+
+/**
+ * The circuit texture and where the face is, for a loaded model: null when it has no texture to borrow three.js's Texture class
+ * from. `face` is null when the eyes or teeth can't be found, and then the skin gets no traces at all.
+ */
+function circuitOf(root) {
+    let Texture = null, body = null, eyes = null, teeth = null;
+    root.traverse((mesh) => {
+        if (!mesh.isMesh) return;
+        for (const m of materialsOf(mesh)) {
+            if (!m) continue;
+            const t = m.map || m.normalMap;
+            if (!Texture && t && t.isTexture) Texture = t.constructor;
+            const part = partOf(m, mesh);
+            if (part === "skin") body = body || mesh;
+            else if (part === "eyes") eyes = eyes || mesh;
+            else if (part === "teeth") teeth = teeth || mesh;
+        }
+    });
+    if (!Texture) return null;
+    return { texture: circuitTexture(Texture), face: faceOf(body, eyes, teeth) };
+}
+
+/** The eyes (each raised toward its brow), the mouth and the eye spacing, in the body's rest-pose space. */
+function faceOf(body, eyes, teeth) {
+    const ep = eyes && eyes.geometry && eyes.geometry.attributes.position;
+    const tp = teeth && teeth.geometry && teeth.geometry.attributes.position;
+    if (!body || !ep || !tp || !tp.count) return null;
+    const V = body.position.constructor;
+    for (const mesh of [body, eyes, teeth]) mesh.updateMatrix();
+    const toBody = body.matrix.clone().invert();
+    const p = new V(), l = new V(), r = new V(), mouth = new V();
+    let nl = 0, nr = 0;
+    for (let i = 0; i < ep.count; i++) {
+        p.fromBufferAttribute(ep, i);
+        if (p.x >= 0) { l.add(p); nl++; } else { r.add(p); nr++; }
+    }
+    for (let i = 0; i < tp.count; i++) mouth.add(p.fromBufferAttribute(tp, i));
+    if (!nl || !nr) return null;
+    l.divideScalar(nl).applyMatrix4(eyes.matrix).applyMatrix4(toBody);
+    r.divideScalar(nr).applyMatrix4(eyes.matrix).applyMatrix4(toBody);
+    mouth.divideScalar(tp.count).applyMatrix4(teeth.matrix).applyMatrix4(toBody);
+    const size = l.distanceTo(r);
+    if (!(size > 0)) return null;
+    l.y += 0.15 * size;
+    r.y += 0.15 * size;
+    return { eyeL: l, eyeR: r, mouth, size };
+}
+
+// The circuit pattern: a square tile, seamless at its edges, drawn once per page and shared by every examiner.
+const CIRCUIT_SIZE = 1024;
+const CIRCUIT_CELLS = 32;
+let circuitCache = null;
+
+function circuitTexture(Texture) {
+    if (circuitCache) return circuitCache;
+    const t = new Texture(circuitCanvas(CIRCUIT_SIZE, CIRCUIT_CELLS));
+    t.wrapS = t.wrapT = 1000;   // THREE.RepeatWrapping
+    t.anisotropy = 4;
+    t.needsUpdate = true;
+    return (circuitCache = t);
+}
+
+/**
+ * Board-like traces on a grid of `cells` (wrapping, so the tile is seamless): each starts at a free cell, runs straight in one of
+ * the four main directions, now and then turns 45 degrees (so runs go square, diagonal, square), stops before touching another
+ * trace, and ends in pads (a ring via at its start, a solid pad at its end). A few lone vias sit between. Thin bright cores with
+ * a soft halo. Channels: red is every trace's glow, green only the main traces' (about a third), blue the phase along each trace.
+ */
+function circuitCanvas(size, cells) {
+    const rnd = seeded(0x6ad7c1);
+    const step = size / cells;
+    const used = new Uint8Array(cells * cells);
+    const at = (x, y) => (((y % cells) + cells) % cells) * cells + (((x % cells) + cells) % cells);
+    const dirs = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
+    const glow = new Float32Array(size * size), main = new Float32Array(size * size), phase = new Float32Array(size * size);
+    const halfWidth = size / 800, halo = size / 170, phaseLength = size * 0.7;
+
+    const plot = (x, y, v, ph, major) => {
+        const i = (((y % size) + size) % size) * size + (((x % size) + size) % size);
+        if (v > glow[i]) { glow[i] = v; phase[i] = ph; }
+        if (major && v > main[i]) main[i] = v;
+    };
+    const shapeOf = (d, core) => Math.max(1 - smoothstep(core - 0.75, core + 0.75, d), 0.3 * Math.max(0, 1 - d / (core + halo)) ** 2);
+    const segment = (ax, ay, bx, by, ph0, ph1, major) => {
+        const reach = halfWidth + halo + 1;
+        const dx = bx - ax, dy = by - ay, len2 = dx * dx + dy * dy || 1;
+        for (let y = Math.floor(Math.min(ay, by) - reach); y <= Math.ceil(Math.max(ay, by) + reach); y++)
+            for (let x = Math.floor(Math.min(ax, bx) - reach); x <= Math.ceil(Math.max(ax, bx) + reach); x++) {
+                const k = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2));
+                const d = Math.hypot(x - ax - k * dx, y - ay - k * dy);
+                if (d < reach) plot(x, y, shapeOf(d, halfWidth), ph0 + (ph1 - ph0) * k, major);
+            }
+    };
+    const pad = (cx, cy, radius, hole, ph, major) => {
+        const reach = Math.ceil(radius + halo + 1);
+        const ring = hole > 0 ? (radius - hole) / 2 : 0;
+        for (let y = -reach; y <= reach; y++)
+            for (let x = -reach; x <= reach; x++) {
+                const r = Math.hypot(x, y);
+                const d = ring > 0 ? Math.abs(r - (radius + hole) / 2) : Math.max(0, r - radius);
+                plot(Math.round(cx) + x, Math.round(cy) + y, shapeOf(d, ring || halfWidth), ph, major);
+            }
+    };
+
+    let traces = 0;
+    for (let tries = 0; tries < 600 && traces < 64; tries++) {
+        let x = Math.floor(rnd() * cells), y = Math.floor(rnd() * cells);
+        if (used[at(x, y)]) continue;
+        let d = Math.floor(rnd() * 4) * 2;
+        const pts = [[x, y]];
+        used[at(x, y)] = 1;
+        const length = 4 + Math.floor(rnd() * 14);
+        for (let s = 0; s < length; s++) {
+            if (rnd() < (d % 2 ? 0.45 : 0.18)) d = (d + (rnd() < 0.5 ? 1 : 7)) % 8;
+            const nx = x + dirs[d][0], ny = y + dirs[d][1];
+            if (used[at(nx, ny)] || (d % 2 && used[at(x, ny)] && used[at(nx, y)])) break;
+            x = nx; y = ny;
+            used[at(x, y)] = 1;
+            pts.push([x, y]);
+        }
+        if (pts.length < 3) continue;
+        traces++;
+        const major = rnd() < 0.3;
+        let ph = rnd();
+        const px = pts.map(([cx, cy]) => [(cx + 0.5) * step, (cy + 0.5) * step]);
+        const start = ph;
+        for (let i = 1; i < px.length; i++) {
+            const [ax, ay] = px[i - 1], [bx, by] = px[i];
+            const next = ph + Math.hypot(bx - ax, by - ay) / phaseLength;
+            segment(ax, ay, bx, by, ph, next, major);
+            ph = next;
+        }
+        pad(px[0][0], px[0][1], halfWidth * 3.2, halfWidth * 1.4, start, major);
+        pad(px[px.length - 1][0], px[px.length - 1][1], halfWidth * 2.6, 0, ph, major);
+    }
+    for (let i = 0; i < 40; i++) {
+        const x = Math.floor(rnd() * cells), y = Math.floor(rnd() * cells);
+        if (!used[at(x, y)]) pad((x + 0.5) * step, (y + 0.5) * step, halfWidth * 2.2, halfWidth, rnd(), false);
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = size;
+    const g = canvas.getContext("2d");
+    const img = g.createImageData(size, size);
+    for (let i = 0; i < size * size; i++) {
+        img.data[i * 4] = Math.round(glow[i] * 255);
+        img.data[i * 4 + 1] = Math.round(main[i] * 255);
+        img.data[i * 4 + 2] = Math.round((phase[i] % 1) * 255);
+        img.data[i * 4 + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    return canvas;
+}
+
+const smoothstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+/** A small seeded random generator (mulberry32), so every page draws the same pattern. */
+function seeded(seed) {
+    return () => {
+        seed = (seed + 0x6d2b79f5) | 0;
+        let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
 }
 
 /** The texture's average brightness in linear light (what the shader samples), so the tint keeps the skin's overall blue. */
