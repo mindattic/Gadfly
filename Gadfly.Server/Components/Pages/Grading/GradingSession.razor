@@ -23,11 +23,11 @@ else if (w is null)
     @if (secondMarker)
     {
         @* GAD-T468: blind second marking. *@
-        <p class="notice">@SecondMarkerBlindness.Refusal</p>
+        <p class="notice error" role="alert">@SecondMarkerBlindness.Refusal</p>
     }
     else
     {
-        <p class="notice">This session isn't in the current organization, or your role does not include viewing transcripts (the attempt was recorded).</p>
+        <p class="notice error" role="alert">This session isn't in the current organization, or your role does not include viewing transcripts (the attempt was recorded).</p>
     }
 }
 else
@@ -38,7 +38,7 @@ else
     @if (w.StudentAnonymous)
     {
         @* GAD-T439: anonymous marking. *@
-        <p class="gr-banner">Anonymous marking: the student's name is hidden until the human score is submitted. Mark the answers, not the person.</p>
+        <p class="notice info">Anonymous marking: the student's name is hidden until the human score is submitted. Mark the answers, not the person.</p>
     }
 
     @if (w.AiVisible && w.AnyMock)
@@ -65,7 +65,7 @@ else
 
     @if (message is not null)
     {
-        <p role="status" class="gr-banner @(ok ? "" : "warn")"><span class="@(ok ? "ok" : "error")">@message</span></p>
+        <p role="status" class="notice @(ok ? "ok" : "error")">@message</p>
     }
 
     @* ------------------------------------------------------------ status actions *@
@@ -78,7 +78,7 @@ else
                 <h2>AI preliminary grading</h2>
                 @if (w.JobState is "Failed")
                 {
-                    <p class="error" role="alert">AI grading failed: @w.JobError</p>
+                    <p class="notice error" role="alert">AI grading failed: @w.JobError</p>
                     <button type="button" disabled="@busy" @onclick="() => RunAsync(g => g.StartAiGradingAsync(SessionId))">Retry AI grading</button>
                 }
                 else if (w.JobState is "Queued" or "Running")
@@ -119,7 +119,7 @@ else
                         <h3>@o.Objective.Title <span class="hint">· max @o.Objective.MaxScore.ToString("0.##") · weight @o.Objective.Weight.ToString("0.##")</span></h3>
                         <ObjectivePathNote Path="@paths.GetValueOrDefault(o.Objective.Key)" />
                         <div class="gr-form-row">
-                            <label>Level
+                            <label>Level<span class="visually-hidden"> for @o.Objective.Title</span>
                                 <select @bind="f.Level">
                                     @foreach (var l in Enum.GetValues<MasteryLevel>())
                                     {
@@ -127,11 +127,11 @@ else
                                     }
                                 </select>
                             </label>
-                            <label>Score (0–@o.Objective.MaxScore.ToString("0.##")) <input type="number" step="any" min="0" max="@o.Objective.MaxScore" @bind="f.Score" /></label>
+                            <label>Score (0–@o.Objective.MaxScore.ToString("0.##"))<span class="visually-hidden"> for @o.Objective.Title</span> <input type="number" step="any" min="0" max="@o.Objective.MaxScore" @bind="f.Score" /></label>
                         </div>
                         <div class="gr-form-row">
-                            <label>Comment <textarea rows="2" @bind="f.Comment"></textarea></label>
-                            <label>Supporting evidence (response numbers, quotes) <textarea rows="2" @bind="f.EvidenceNote"></textarea></label>
+                            <label>Comment<span class="visually-hidden"> on @o.Objective.Title</span> <textarea rows="2" @bind="f.Comment"></textarea></label>
+                            <label>Supporting evidence (response numbers, quotes)<span class="visually-hidden"> for @o.Objective.Title</span> <textarea rows="2" @bind="f.EvidenceNote"></textarea></label>
                         </div>
                     </div>
                 }
@@ -155,9 +155,10 @@ else
         {
             <p data-tour="grading-agreement"><strong>AI and human agreement:</strong> same level on @agree.ExactLevels of @agree.Objectives objective@(agree.Objectives == 1 ? "" : "s") (@agree.ExactShare.ToString("P0")), within one level on @agree.WithinOneLevel; the AI averages @agree.MeanLevelDifference.ToString("+0.##;-0.##;0") level@(Math.Abs(agree.MeanLevelDifference) == 1 ? "" : "s") against the human@(agree.Kappa is { } k ? $"; weighted kappa {k:0.00}" : "").</p>
         }
-        <div class="gr-table-wrap">
+        <div class="table-scroll">
             <table class="grid">
-                <thead><tr><th>Objective</th><th>Max</th><th>Weight</th><th>AI</th><th>Human</th><th>Levels (AI / human)</th><th>Difference</th><th>@(w.Policy.Rules.Mode == GradingMode.Combined ? "Combined" : "Grade")</th></tr></thead>
+                <caption class="visually-hidden">Score comparison by objective</caption>
+                <thead><tr><th scope="col">Objective</th><th scope="col">Max</th><th scope="col">Weight</th><th scope="col">AI</th><th scope="col">Human</th><th scope="col">Levels (AI / human)</th><th scope="col">Difference</th><th scope="col">@(w.Policy.Rules.Mode == GradingMode.Combined ? "Combined" : "Grade")</th></tr></thead>
                 <tbody>
                     @foreach (var o in w.Objectives)
                     {
@@ -200,7 +201,7 @@ else
     @if (status == GradeStatus.ReconciliationRequired || w.Objectives.Any(o => o.NeedsReconciliation))
     {
         <h2 class="gr-section">Reconciliation</h2>
-        <p class="gr-banner warn">Pending Grade Reconciliation: the AI and human scores differ by at least the institution's threshold. This grade cannot be finalized until an authorized reviewer documents a resolution (Part 10.4).</p>
+        <p class="notice warn">Pending Grade Reconciliation: the AI and human scores differ by at least the institution's threshold. This grade cannot be finalized until an authorized reviewer documents a resolution (Part 10.4).</p>
         @foreach (var o in w.Objectives.Where(o => o.NeedsReconciliation))
         {
             var d = o.Disagreement!;
@@ -214,12 +215,13 @@ else
                         {
                             <p>@ai.Row.Explanation</p>
                             <table class="grid">
-                                <thead><tr><th>Criterion</th><th>AI level</th><th>Human level</th></tr></thead>
+                                <caption class="visually-hidden">AI and human levels by criterion for @o.Objective.Title</caption>
+                                <thead><tr><th scope="col">Criterion</th><th scope="col">AI level</th><th scope="col">Human level</th></tr></thead>
                                 <tbody>
                                     @foreach (var c in ai.Criteria)
                                     {
                                         <tr class="@(o.Human is { } hh && Math.Abs((int)c.Level - (int)hh.Level) >= 2 ? "gr-dissent" : "")">
-                                            <td>@c.Criterion</td><td>@((int)c.Level) @MasteryLevels.Label(c.Level)</td><td>@(o.Human is { } h2 ? $"{(int)h2.Level} (objective)" : "—")</td>
+                                            <td>@c.Criterion</td><td>@((int)c.Level) @MasteryLevels.Label(c.Level)</td><td>@(o.Human is { } h2 ? $"{(int)h2.Level} (objective)" : "—")@if (o.Human is { } hd && Math.Abs((int)c.Level - (int)hd.Level) >= 2) { <span class="hint"> · two or more levels apart</span> }</td>
                                         </tr>
                                         <tr><td colspan="3" class="hint">@c.Rationale @foreach (var q in c.Quotes) { <q>@q</q> }</td></tr>
                                     }
@@ -255,7 +257,7 @@ else
                     @if (Can(Permission.ReconcileDisagreement) && w.SecondReviewers.Count > 0)
                     {
                         <div class="gr-form-row">
-                            <label>Second reviewer
+                            <label>Second reviewer<span class="visually-hidden"> for @o.Objective.Title</span>
                                 <select @bind="rf.Second">
                                     <option value="">Choose…</option>
                                     @foreach (var (uid, name) in w.SecondReviewers) { <option value="@uid">@name</option> }
@@ -275,17 +277,17 @@ else
                         <p class="hint">You entered this grade's human score; the organization's single-grader setting lets you reconcile it, and the audit log records that.</p>
                     }
                     <div class="gr-form-row">
-                        <label>Cause
+                        <label>Cause<span class="visually-hidden"> for @o.Objective.Title</span>
                             <select @bind="rf.Cause">
                                 <option value="">Choose…</option>
                                 @foreach (var (causeCode, causeLabel) in ReconciliationCauses.All) { <option value="@causeCode">@causeLabel</option> }
                             </select>
                         </label>
-                        <label>Resolved AI score (optional) <input type="number" step="any" @bind="rf.Ai" /></label>
-                        <label>Resolved human score (optional) <input type="number" step="any" @bind="rf.Human" /></label>
+                        <label>Resolved AI score (optional)<span class="visually-hidden"> for @o.Objective.Title</span> <input type="number" step="any" @bind="rf.Ai" /></label>
+                        <label>Resolved human score (optional)<span class="visually-hidden"> for @o.Objective.Title</span> <input type="number" step="any" @bind="rf.Human" /></label>
                         @if (Tenant.Role != OrgRoles.SecondReviewer && w.SecondReviewers.Count > 0)
                         {
-                            <label>Second reviewer
+                            <label>Second reviewer<span class="visually-hidden"> for @o.Objective.Title</span>
                                 <select @bind="rf.Second">
                                     <option value="">None</option>
                                     @foreach (var (uid, name) in w.SecondReviewers) { <option value="@uid">@name</option> }
@@ -293,7 +295,7 @@ else
                             </label>
                         }
                     </div>
-                    <label class="gr-wide">Resolution (what was found and why the scores stand or change) <textarea rows="3" @bind="rf.Resolution"></textarea></label>
+                    <label class="gr-wide">Resolution (what was found and why the scores stand or change)<span class="visually-hidden"> for @o.Objective.Title</span> <textarea rows="3" @bind="rf.Resolution"></textarea></label>
                     <div class="gr-actions">
                         <button type="button" disabled="@busy" @onclick="() => ReconcileAsync(d.Id)">Record resolution and recalculate</button>
                         @if (Can(Permission.ReconcileDisagreement) && Guid.TryParse(rf.Second, out var sr))
@@ -392,12 +394,12 @@ else
                 var f = Amend(o);
                 <div class="gr-form-row">
                     <span>@o.Objective.Title <span class="hint">(now @N(o.Combined?.HumanScore))</span></span>
-                    <label>Level
+                    <label>Level<span class="visually-hidden"> for @o.Objective.Title</span>
                         <select @bind="f.Level">
                             @foreach (var l in Enum.GetValues<MasteryLevel>()) { <option value="@((int)l)">@((int)l) @MasteryLevels.Label(l)</option> }
                         </select>
                     </label>
-                    <label>Score <input type="number" step="any" min="0" max="@o.Objective.MaxScore" @bind="f.Score" /></label>
+                    <label>Score<span class="visually-hidden"> for @o.Objective.Title</span> <input type="number" step="any" min="0" max="@o.Objective.MaxScore" @bind="f.Score" /></label>
                 </div>
             }
             <label class="gr-wide">Reason for the amendment <textarea rows="2" @bind="amendReason"></textarea></label>
@@ -409,7 +411,7 @@ else
     <h2 class="gr-section" data-tour="grading-objectives">Learning objectives, rubrics and evidence</h2>
     @if (w.Objectives.Count == 0)
     {
-        <p class="notice">This exam has no learning objectives yet; AI grading derives one per concept when it runs.</p>
+        <p class="notice info">This exam has no learning objectives yet; AI grading derives one per concept when it runs.</p>
     }
     @foreach (var o in w.Objectives)
     {
@@ -451,9 +453,10 @@ else
                     @if (!string.IsNullOrWhiteSpace(ai.Row.Explanation)) { <p>@ai.Row.Explanation</p> }
                     @if (ai.Criteria.Count > 0)
                     {
-                        <div class="gr-table-wrap">
+                        <div class="table-scroll">
                             <table class="grid">
-                                <thead><tr><th>Criterion</th><th>Level</th><th>Score</th><th>Rationale and evidence</th></tr></thead>
+                                <caption class="visually-hidden">AI evaluation by criterion for @o.Objective.Title</caption>
+                                <thead><tr><th scope="col">Criterion</th><th scope="col">Level</th><th scope="col">Score</th><th scope="col">Rationale and evidence</th></tr></thead>
                                 <tbody>
                                     @foreach (var c in ai.Criteria)
                                     {
@@ -529,7 +532,7 @@ else
         Texts="TranslatableTexts" @bind-Batch="translation" />
     @if (w.Responses.Count == 0)
     {
-        <p class="notice">No response records yet (they are built when AI grading starts).</p>
+        <p class="notice info">No response records yet (they are built when AI grading starts).</p>
     }
     @foreach (var r in w.Responses)
     {
@@ -588,9 +591,10 @@ else
     }
     <details class="gr-section">
         <summary>Audit trail (@w.Audit.Count)</summary>
-        <div class="gr-table-wrap">
+        <div class="table-scroll">
             <table class="grid gr-audit">
-                <thead><tr><th>When (UTC)</th><th>Who</th><th>Action</th><th>Detail</th></tr></thead>
+                <caption class="visually-hidden">Audit trail</caption>
+                <thead><tr><th scope="col">When (UTC)</th><th scope="col">Who</th><th scope="col">Action</th><th scope="col">Detail</th></tr></thead>
                 <tbody>
                     @foreach (var (e, actor) in w.Audit)
                     {

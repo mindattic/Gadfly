@@ -411,6 +411,19 @@ assessment editors.
   launch button meets `--target-min`.
 - **Responsive.** Grids use `minmax(0, 1fr)` / `min(…, 100%)` so long titles, objective names and source lines wrap
   instead of pushing the page sideways; breakpoints moved to the system's 40rem / 64rem.
-- **Not done here.** `AssessmentEditor.razor` and `GradingSession.razor` were being changed by GAD-T703 at the same time,
-  so only their stylesheets were touched, not their markup (their table headers still lack `scope`). `MyResult.razor`
-  belongs to GAD-T693.
+- **Assessment editor and grading workspace (GAD-T709).** The markup pass deferred while GAD-T703 changed these pages.
+  `AssessmentEditor.razor`: access-denied and unknown-step notices are `.notice.error`, the published, no-objectives and
+  publish-first notices `.notice.info`, "students have completed this assessment" `.notice.warn`, "ready to publish"
+  `.notice.ok`; the save message is a `.notice` with `role="status"` (`.as-message` removed) and the loading line is a
+  status. In the policy step the weights total is tied to both weight inputs with `aria-describedby`, marks them
+  `aria-invalid` when it is off, and says "(not 100%)" in words instead of only turning red; the GAD-T703 "Grading"
+  radio group keeps its legend, and its radios are named per form so the locked policy's change request does not share
+  them. `GradingSession.razor`: every `<thead>` cell has `scope="col"` and each data table a visually hidden caption
+  (score comparison, criterion levels, AI evaluation, audit trail); tables sit in `.table-scroll`; the GAD-T703
+  "Levels (AI / human)" column prints both numbers and the signed difference, and the agreement line is plain text;
+  a reconciliation criterion two or more levels from the human's is said in words, not only by the dissent colour.
+  Notices say their status by class (refusals `.notice.error` with `role="alert"`, the AI-grading failure
+  `.notice.error`, anonymous marking `.notice.info`, "Pending Grade Reconciliation" `.notice.warn`, the action
+  result `.notice.ok`/`.error` in a status region). Controls repeated per objective (level, score, comment, evidence,
+  cause, resolved scores, second reviewer, resolution, amendment level and score) carry the objective's title in a
+  visually hidden part of their label, so each has a distinct accessible name. `MyResult.razor` belongs to GAD-T693.

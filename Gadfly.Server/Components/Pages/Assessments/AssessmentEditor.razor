@@ -24,15 +24,15 @@
 
 @if (caps is null)
 {
-    <p class="hint">Loading…</p>
+    <p class="hint" role="status">Loading…</p>
 }
 else if (!caps.Any)
 {
-    <p class="notice" role="alert">Your role in this organization (@(caps.Role ?? "none")) can't set up assessments.</p>
+    <p class="notice error" role="alert">Your role in this organization (@(caps.Role ?? "none")) can't set up assessments.</p>
 }
 else if (notFound)
 {
-    <p class="notice" role="alert">That assessment does not exist in this organization.</p>
+    <p class="notice error" role="alert">That assessment does not exist in this organization.</p>
 }
 else
 {
@@ -57,7 +57,7 @@ else
 
     @if (view is { IsDraft: false })
     {
-        <p class="notice">
+        <p class="notice info">
             Published @AssessmentOps.When(view.PublishedAt). The details, objectives and rubric are locked, and so is the grading policy:
             a policy change must be requested and approved by an institution administrator.
         </p>
@@ -65,7 +65,7 @@ else
 
     @if (message is not null)
     {
-        <p role="status" class="as-message @(ok ? "ok" : "error")">@message</p>
+        <p role="status" class="notice @(ok ? "ok" : "error")">@message</p>
     }
 
     @switch (CurrentStep)
@@ -89,7 +89,7 @@ else
             @AssignStep
             break;
         default:
-            <p class="notice">Unknown step.</p>
+            <p class="notice error">Unknown step.</p>
             break;
     }
 }
@@ -346,7 +346,7 @@ else
 
             @if (view is not null && view.Objectives.Count == 0)
             {
-                <p class="notice">No objectives yet. Start from the source material's concepts below, or add your own.</p>
+                <p class="notice info">No objectives yet. Start from the source material's concepts below, or add your own.</p>
             }
             <ol class="as-objectives">
                 @foreach (var o in view?.Objectives ?? [])
@@ -481,7 +481,7 @@ else
                 the examination did not produce enough reliable evidence, never "no understanding".</p>
             @if (view is not null && view.Objectives.Count == 0)
             {
-                <p class="notice">Add learning objectives first.</p>
+                <p class="notice info">Add learning objectives first.</p>
             }
             @foreach (var o in view?.Objectives ?? [])
             {
@@ -612,7 +612,7 @@ else
                     <p>@view.Policy.Describe()</p>
                     @if (view.AnySessionCompleted)
                     {
-                        <p class="notice">Students have completed this assessment. A change needs a reason and must be approved by someone other than the person who requested it.</p>
+                        <p class="notice warn">Students have completed this assessment. A change needs a reason and must be approved by someone other than the person who requested it.</p>
                     }
                 </div>
 
@@ -690,14 +690,15 @@ else
         </fieldset>
         @if (p.Mode == GradingMode.Combined)
         {
-        <fieldset class="eb-list">
-            <legend>Weights (must total 100%)</legend>
-            <div class="as-two">
-                <label>AI weight (%) <input type="number" min="0" max="100" step="0.01" value="@p.AiWeightPercent" @onchange="e => SetAi(p, e)" /></label>
-                <label>Human weight (%) <input type="number" min="0.01" max="100" step="0.01" value="@p.HumanWeightPercent" @onchange="e => SetHuman(p, e)" /></label>
-            </div>
-            <p class="hint @(p.AiWeightPercent + p.HumanWeightPercent == 100 ? "" : "error")" aria-live="polite">Total: @((p.AiWeightPercent + p.HumanWeightPercent).ToString("0.##"))%</p>
-        </fieldset>
+            var totalOk = p.AiWeightPercent + p.HumanWeightPercent == 100;
+            <fieldset class="eb-list">
+                <legend>Weights (must total 100%)</legend>
+                <div class="as-two">
+                    <label>AI weight (%) <input type="number" min="0" max="100" step="0.01" value="@p.AiWeightPercent" @onchange="e => SetAi(p, e)" aria-describedby="@(prefix)-weight-total" aria-invalid="@(totalOk ? null : "true")" /></label>
+                    <label>Human weight (%) <input type="number" min="0.01" max="100" step="0.01" value="@p.HumanWeightPercent" @onchange="e => SetHuman(p, e)" aria-describedby="@(prefix)-weight-total" aria-invalid="@(totalOk ? null : "true")" /></label>
+                </div>
+                <p id="@(prefix)-weight-total" class="@(totalOk ? "field-hint" : "field-error")" aria-live="polite">Total: @((p.AiWeightPercent + p.HumanWeightPercent).ToString("0.##"))%@(totalOk ? "" : " (not 100%)")</p>
+            </fieldset>
         }
         <fieldset class="eb-list">
             <legend>Disagreement thresholds (percentage points of an objective's maximum)</legend>
@@ -798,7 +799,7 @@ else
                     }
                     else
                     {
-                        <p class="ok">Ready to publish. Publishing locks the assessment and its grading policy.</p>
+                        <p class="notice ok">Ready to publish. Publishing locks the assessment and its grading policy.</p>
                     }
                     <div class="eb-actions">
                         <button type="button" disabled="@(busy || problems.Count > 0)" @onclick="PublishAsync">Publish</button>
@@ -835,7 +836,7 @@ else
             <h2 id="assign-h" class="as-sr">Assign</h2>
             @if (view is { IsDraft: true })
             {
-                <p class="notice">Publish the assessment before assigning it. <a href="@StepHref("review")">Review and publish</a></p>
+                <p class="notice info">Publish the assessment before assigning it. <a href="@StepHref("review")">Review and publish</a></p>
             }
             else if (assignService is not null && Id is { } examId)
             {
