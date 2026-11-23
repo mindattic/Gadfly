@@ -5,7 +5,6 @@
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
 @inject TimeProvider Clock
-@inject IConfiguration Config
 @inject Gadfly.Server.Localization.UiText T
 
 <HeadContent><link rel="stylesheet" href="student.css" /><link rel="stylesheet" href="practice.css" /></HeadContent>
@@ -95,7 +94,7 @@ else
     </div>
 }
 
-@* Every exam the student can take, by category (GAD-T658); after the open assignments are made above. *@
+@* Every exam the student can take, by category (GAD-T658); open exams not started yet live only here. *@
 @if (rows is not null)
 {
     <ExamCatalog />
@@ -116,9 +115,8 @@ else
             rows = [];
             return;
         }
-        // Open exams (GAD-T253): every published exam in the organization, assigned on first sight.
-        if (Config.GetValue<bool>(StudentExams.OpenExamsSetting))
-            await StudentExams.EnsureOpenAssignmentsAsync(Scopes, org, user, Clock.GetUtcNow());
+        // Only what staff assigned or the student already started (GAD-T674): an open exam gets its assignment when the
+        // student starts it from the catalog below (/my-exams/exam/{id}/start, GAD-T669), not on sight.
         rows = await StudentExams.ListAsync(Scopes, org, user, Clock.GetUtcNow(), T.Language);
         published = await Gadfly.Server.Grading.GradingDb.RunAsync(Scopes, Tenant, g => g.MyResultsAsync());
     }

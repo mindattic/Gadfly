@@ -186,61 +186,13 @@ public static class StudentExams
     public const int OpenExamAttempts = 50;
 
     /// <summary>
-    /// Open exams (GAD-T253): every student can take every published exam in their organization that is open to all
-    /// students (<see cref="Exam.OpenToAllStudents"/>, GAD-T668) without being assigned. Creates any missing assignment
-    /// for the student on each such exam (50 attempts, assigned by the exam's owner, accommodations copied from the
-    /// student's most recent assignment in the organization), so the existing session and attempt code keeps working
-    /// unchanged; existing assignments are never touched. Returns how many assignments were created.
-    /// </summary>
-    public static Task<int> EnsureOpenAssignmentsAsync(
-        IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, DateTimeOffset now, CancellationToken ct = default) =>
-        WithDbAsync(scopes, organizationId, async db =>
-    {
-        var assigned = await db.ExamAssignments.AsNoTracking()
-            .Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId)
-            .Select(a => a.ExamId)
-            .ToListAsync(ct);
-        var missing = await db.Exams.AsNoTracking()
-            .Where(e => e.OrganizationId == organizationId && e.Status == ExamStatus.Published && e.OpenToAllStudents && !assigned.Contains(e.Id))
-            // An exam created by API key may have no creator: fall back to whoever created its notes collection.
-            .Select(e => new
-            {
-                e.Id,
-                AssignedBy = e.CreatedByUserId != Guid.Empty ? e.CreatedByUserId
-                    : db.SourceCollections.Where(c => c.Id == e.CollectionId).Select(c => (Guid?)c.CreatedByUserId).FirstOrDefault() ?? Guid.Empty,
-            })
-            .ToListAsync(ct);
-        if (missing.Count == 0) return 0;
-
-        var latest = await LatestAccommodationsAsync(db, organizationId, studentUserId, ct);
-
-        var created = 0;
-        foreach (var exam in missing)
-        {
-            if (exam.AssignedBy == Guid.Empty) continue;   // no real user to name as the assigner: leave it unassigned
-            db.ExamAssignments.Add(NewOpenAssignment(organizationId, exam.Id, studentUserId, exam.AssignedBy, now, latest));
-            // One at a time, so a duplicate refuses only itself.
-            try
-            {
-                await db.SaveChangesAsync(ct);
-                created++;
-            }
-            catch (DbUpdateException)
-            {
-                // Another load of the page (or an instructor) assigned this one at the same moment: the unique
-                // (exam, student) index refused the duplicate. Whatever exists now is what the student sees.
-                db.ChangeTracker.Clear();
-            }
-        }
-        return created;
-    });
-
-    /// <summary>
     /// Start by exam (GAD-T669): the student's assignment on <paramref name="examId"/>, the one they already have, or one made now
     /// when the exam is published and open to all students (<see cref="Exam.OpenToAllStudents"/>) and
-    /// <paramref name="createIfMissing"/> (open exams are on). Made with the same defaults and accommodation copy as
-    /// <see cref="EnsureOpenAssignmentsAsync"/>; a duplicate made at the same moment loses to the unique (exam, student) index and
-    /// the winner's id is returned. Null when there is none and none can be made.
+    /// <paramref name="createIfMissing"/> (open exams are on): 50 attempts, assigned by the exam's owner, accommodations copied
+    /// from the student's most recent assignment in the organization. This is the only way an open exam gets an assignment
+    /// (GAD-T674: none are made in bulk, so My exams lists only what staff assigned or the student started). A duplicate made at
+    /// the same moment loses to the unique (exam, student) index and the winner's id is returned. Null when there is none and
+    /// none can be made.
     /// </summary>
     public static Task<Guid?> EnsureOpenAssignmentAsync(
         IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, Guid examId, DateTimeOffset now,
