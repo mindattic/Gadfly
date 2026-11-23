@@ -1,5 +1,5 @@
 /* Eye contact with the examiner (GAD-T240). Tokens come from app.css; thresholds live in js/examiner-gaze.js (GAZE). */
-.examiner-gaze { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem .6rem; margin: 0 0 .75rem; padding: .4rem .75rem; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); font-size: .88rem; }
+.examiner-gaze { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); border: var(--border); border-radius: var(--radius-sm); color: var(--muted); font-size: var(--text-sm); }
 .examiner-gaze[data-state="off"] { display: none; }
 .examiner-gaze-dot { width: .6rem; height: .6rem; border-radius: 50%; background: var(--line); flex: none; }
 .examiner-gaze[data-state="on"] { color: var(--ink); }
@@ -12,7 +12,7 @@
 .examiner-gaze:is([data-state="no-face"], [data-state="two-faces"]) .examiner-gaze-dot { background: var(--error); }
 .examiner-gaze button[hidden] { display: none; }
 /* Calibration: the examiner's face is the spot to look at. */
-.voice-stage[data-gaze-calibrating] { outline: 3px solid var(--accent); outline-offset: 2px; }
+.voice-stage[data-gaze-calibrating] { outline: var(--focus-width) solid var(--accent); outline-offset: var(--focus-offset); }
 
 /* The soften (GAD-T561, step 2 of the reminder ladder): everything except the examiner's stage dims and blurs a little while the
    student keeps looking off the screen as they answer. examiner-gaze.js cuts her stage out of it (clip-path), drives its opacity (0 =
@@ -33,11 +33,11 @@
 
 /* The explanation, folded to one link (GAD-T416) and opened over the page so the exam room never grows. */
 .examiner-gaze { position: relative; }
-.examiner-gaze-more summary { cursor: pointer; color: var(--accent); font-size: .92em; }
-.examiner-gaze-note { margin: .25rem 0 0; font-size: .85em; }
+.examiner-gaze-more summary { cursor: pointer; color: var(--accent); }
+.examiner-gaze-note { margin: var(--space-1) 0 0; font-size: var(--text-sm); }
 .examiner-gaze-more[open] > .examiner-gaze-note {
-    position: absolute; z-index: 20; top: calc(100% + .3rem); left: 0; width: min(32rem, 80vw); margin: 0; padding: .6rem .8rem;
-    background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+    position: absolute; z-index: 20; top: calc(100% + var(--space-1)); left: 0; width: min(32rem, 80vw); margin: 0; padding: var(--space-2) var(--space-3);
+    background: var(--panel); color: var(--ink); border: var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-2);
 }
 
 /* The five-dot eye-tracking setup (GAD-T305, js/gaze-quality.js): a dot to follow over a light dim of the whole page; the examiner
@@ -52,8 +52,8 @@
 .gaze-calib-dot[data-phase="collect"] { border-color: #fff; transform: scale(.65); }
 .gaze-calib-bar {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: max-content; max-width: min(34rem, calc(100% - 2rem));
-    display: flex; flex-wrap: wrap; gap: .5rem .9rem; align-items: center; padding: .6rem .9rem; border-radius: var(--radius, 8px);
-    background: rgba(16, 21, 29, .92); color: #f3f4f6; font-size: .95rem; pointer-events: auto;
+    display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
+    background: rgba(16, 21, 29, .92); color: #f3f4f6; font-size: var(--text-base); pointer-events: auto;
 }
 .gaze-calib-bar[data-alt="1"] { top: 28%; }
 .gaze-calib-bar p { margin: 0; flex: 1 1 14rem; }
@@ -64,8 +64,8 @@
 
 /* The get-ready page's eye-tracking panel (GAD-T305): filled by js/gaze-quality.js, styled like the system checks around it. */
 .gaze-quality:empty { display: none; }
-.gaze-quality { margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--line); display: grid; gap: .5rem; }
-.gaze-quality-title { margin: 0; font-size: 1rem; }
+.gaze-quality { margin-top: var(--space-4); padding-top: var(--space-3); border-top: var(--border); display: grid; gap: var(--space-2); }
+.gaze-quality-title { margin: 0; font-size: var(--text-base); }
 .gaze-quality .hint { margin: 0; }
-.gaze-quality-actions { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; }
+.gaze-quality-actions { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; }
 .gaze-quality-result { margin: 0; }

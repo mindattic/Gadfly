@@ -9,6 +9,8 @@
   "examRoom.integrity.notice.strictTyped": "이 시험에는 부정행위 방지 기록이 켜져 있어요. 다른 탭이나 창으로 이동하거나, 답변 칸에 붙여 넣거나, 질문을 복사하거나, 전체 화면에서 나가거나, 화면을 두 개 이상 연결하면, 언제 얼마나 오래 그랬는지 브라우저가 기록해 담당 교수자가 검토할 수 있게 해요. 기록일 뿐 자동으로 불합격 처리되지 않으며, 어떤 동작도 막지 않아요. 브라우저가 화면 감지를 허용할지 물을 수 있는데, 거절해도 괜찮아요.",
   "examRoom.integrity.fullscreen": "전체 화면으로 전환",
   "examRoom.timer.title": "남은 시간",
+  "examRoom.timer.warn": "{0}분 남았습니다",
+  "examRoom.timer.warn.one": "1분 남았습니다",
   "examRoom.progress": "완료한 주제 {0}/{1}",
   "examRoom.voiceOff": "이 시험은 말로 진행하는데, 이 서버에서 말하는 시험관이 켜져 있지 않아 시험을 진행할 수 없어요. 담당 교수자에게 알려 주세요.",
   "examRoom.window.away": "이 창이 백그라운드에 있는 동안 시험이 일시 정지돼요. 계속하려면 이 창으로 돌아와 주세요.",

@@ -48,7 +48,8 @@ const PARTIAL_SEND_MS = 300;
 let S = null;
 
 const q = (name) => document.querySelector(`[data-voice-${name}]`);
-const text = (name, value) => { const el = q(name); if (el) el.textContent = value; };
+// Rewriting a live region with the same words makes some screen readers say them again (WCAG 4.1.3): unchanged text is left alone.
+const text = (name, value) => { const el = q(name); if (el && el.textContent !== value) el.textContent = value; };
 
 /** Resolves or rejects with <paramref name="promise"/>, or rejects on its own after <paramref name="ms"/> if it
  * hasn't settled by then (GAD-T306): bounds a connect or an invoke call that might otherwise hang indefinitely. */
@@ -78,7 +79,13 @@ function loadScript(src) {
     });
 }
 
-function status(message) { text("status", message); }
+/** The status line is polite; `urgent` only when the student has to act (an answer that didn't go through), and then assertive. */
+function status(message, urgent) {
+    const el = q("status");
+    if (!el || el.textContent === message) return;
+    el.setAttribute("aria-live", urgent ? "assertive" : "polite");
+    el.textContent = message;
+}
 
 function problem(kind, message, fatal) {
     if (!S) return;
@@ -1737,11 +1744,11 @@ async function submit(immediate, resend) {
         if (S === s) {
             s.cutWatch = null;
             // Her acknowledgement (GAD-T496) is still playing: its end opens the microphone again for this answer.
-            if (s.ackPlaying && s.allowed) { s.ackDeferredAllowed = true; status(t("examRoom.js.notThrough", "That did not go through. Press Done answering to try again.")); }
+            if (s.ackPlaying && s.allowed) { s.ackDeferredAllowed = true; status(t("examRoom.js.notThrough", "That did not go through. Press Done answering to try again."), true); }
             else if (s.running && s.allowed && !s.speaking && !s.speakToken && !s.fillPlaying && !s.remarkHold) {
                 s.gate = false;
                 if (s.avatar) s.avatar.state = "listening";
-                status(t("examRoom.js.notThrough", "That did not go through. Press Done answering to try again."));
+                status(t("examRoom.js.notThrough", "That did not go through. Press Done answering to try again."), true);
             }
         }
     }
@@ -1794,7 +1801,7 @@ function resendKept(s) {
     if (kept.tries >= KEPT_MAX_TRIES) {
         // Turned away a few times running: stop sending it on our own and let the student send it (or add to it) themselves.
         s.kept = null;
-        if (!s.gate) status(KEPT_GIVE_UP_TEXT());
+        if (!s.gate) status(KEPT_GIVE_UP_TEXT(), true);
         return;
     }
     void submit(true, true);

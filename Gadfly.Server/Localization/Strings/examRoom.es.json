@@ -9,6 +9,8 @@
   "examRoom.integrity.notice.strictTyped": "Este examen tiene activadas las notas de integridad: si cambia a otra pestaña o ventana, pega texto en el cuadro de respuesta, copia la pregunta, sale de la pantalla completa o tiene más de una pantalla conectada, el navegador anota cuándo y por cuánto tiempo, para que su docente lo revise. Son solo notas, nunca un reprobado automático, y no se bloquea nada. Es posible que su navegador le pida permiso para detectar pantallas; puede rechazarlo.",
   "examRoom.integrity.fullscreen": "Pantalla completa",
   "examRoom.timer.title": "Tiempo restante",
+  "examRoom.timer.warn": "Quedan {0} minutos",
+  "examRoom.timer.warn.one": "Queda 1 minuto",
   "examRoom.progress": "Temas terminados: {0} de {1}",
   "examRoom.voiceOff": "Este examen es oral, pero la IA examinadora no está activada en este servidor, así que el examen no puede continuar. Por favor, avise a su docente.",
   "examRoom.window.away": "El examen está en pausa mientras esta ventana está en segundo plano. Vuelva a esta ventana para continuar.",

@@ -9,6 +9,8 @@
   "examRoom.integrity.notice.strictTyped": "Integrity notes are on for this exam: if you switch to another tab or window, paste into the answer box, copy the question, leave full screen or have more than one screen connected, the browser notes when and for how long, for your instructor to review. They are notes, never an automatic fail, and nothing is blocked. Your browser may ask to allow screen detection; you can decline.",
   "examRoom.integrity.fullscreen": "Go full screen",
   "examRoom.timer.title": "Time left",
+  "examRoom.timer.warn": "{0} minutes left",
+  "examRoom.timer.warn.one": "1 minute left",
   "examRoom.progress": "Topics finished {0} of {1}",
   "examRoom.voiceOff": "This exam is spoken, but the talking examiner isn't turned on on this server, so the exam can't go ahead. Please tell your instructor.",
   "examRoom.window.away": "The exam is paused while this window is in the background. Come back to this window to carry on.",

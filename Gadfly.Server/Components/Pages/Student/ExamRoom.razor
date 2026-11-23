@@ -28,6 +28,8 @@
     @* Each question or request is announced to screen readers exactly once, when the examiner begins to say it (GAD-T599, WCAG 4.1.3):
        one live region that stays on the page, since the question card is rebuilt between phases and her caption is aria-hidden. *@
     <p class="exam-announce" role="status" aria-live="polite" aria-atomic="true">@announced</p>
+    @* The visible timer is silent (role=timer, aria-live=off); only the minutes in TimeWarnings are said, once each, in their own region. *@
+    <p class="exam-announce" role="status" aria-live="polite" aria-atomic="true">@timeAnnounced</p>
     <header class="exam-head">
         <h1>@(examTitle ?? T["examRoom.defaultTitle"])</h1>
         @* The camera, eye-contact and integrity lines share the title's row (GAD-T416), each one short line until opened. *@
@@ -374,6 +376,25 @@
         }
     }
 
+    /// <summary>The minutes left at which a screen reader hears the time (WCAG 4.1.3): never every second.</summary>
+    private static readonly int[] TimeWarnings = [5, 2, 1];
+    private string? timeAnnounced;
+    /// <summary>The smallest warning the time left is already under, or null before the clock is first seen.</summary>
+    private int? timeWarnedAt;
+
+    /// <summary>Says the time once as it falls under each warning. The first reading only notes where the clock stands, so a
+    /// short exam or a reload doesn't open with a warning for a mark it was already past.</summary>
+    private void WarnTime()
+    {
+        if (step is not { ClockStarted: true }) return;
+        var left = TimeLeft;
+        if (left <= TimeSpan.Zero) return;
+        var under = TimeWarnings.Where(m => left <= TimeSpan.FromMinutes(m)).DefaultIfEmpty(int.MaxValue).Min();
+        if (timeWarnedAt is { } last && under < last)
+            timeAnnounced = under == 1 ? T["examRoom.timer.warn.one"] : T["examRoom.timer.warn", under];
+        timeWarnedAt = under;
+    }
+
     private ElementReference confirmDialogRef;
     private bool confirmDialogFocused;
 
@@ -713,6 +734,7 @@
                         timeUpHandled = true;
                         await TimeUpAsync();
                     }
+                    WarnTime();
                     StateHasChanged();
                 });
             }
