@@ -291,7 +291,17 @@ Before:
       only on the owner's word).
 - [ ] The databases are awake (`/kickstart gadfly`) so the migration step doesn't time out on a paused database.
 
-Deploy:
+Deploy through staging (per [DEPLOY.md](DEPLOY.md) "Staging and production slots"):
+
+- [ ] `tools/deploy-azure.ps1 -Slot staging` (or the workflow with target `staging`): migrates `Gadfly-staging`,
+      deploys to the staging slot, prints `Deployed <sha> as V<N> to staging ... not tagged`. Nothing is tagged.
+- [ ] Run the smoke checks under *After* against the staging slot's address; its `/healthz/version` shows
+      `V<N> <sha>`.
+- [ ] `tools/deploy-azure.ps1 -Promote` (or target `promote`): migrates the production database with that commit's
+      migrations, swaps staging into production (slot settings stay with their slot), checks production reports that
+      commit, then tags `vN`. It printed `Deployed <sha> as V<N> ... tagged vN`.
+
+Or straight to production (no staging step):
 
 - [ ] `npm run deploy -- --app gadfly` from `MindAttic.Deploy` (it runs `tools/deploy-azure.ps1`): clean export of the
       commit, migrations first (a failure stops it before any code goes out), publish, zip deploy, `/healthz` and
@@ -303,7 +313,7 @@ Deploy:
 After (smoke checks, all without spending provider credit):
 
 - [ ] `GET /healthz` is 200 and `GET /healthz/ready` is 200 with `Database` and `Database migrations` `ok`.
-- [ ] The browser tab title and header show the new **V&lt;N&gt;**.
+- [ ] The browser tab title and header show the new **V&lt;N&gt;**, and `GET /healthz/version` answers `V<N> <sha>`.
 - [ ] Sign in as the owner: the admin desk opens; `/admin` and `/admin/status` load, with no new *Errors in the log*.
 - [ ] `/help` opens and a guide renders; the public site's home page loads signed out.
 - [ ] If any organization uses LTI, `/lti/jwks.json` answers with a key.

@@ -11,6 +11,11 @@ name: Build and deploy Gadfly to Azure App Service
 #   waits for /healthz and /login to answer 200, and only then tags the commit vN and pushes the tag.
 # Change the steps in the script, never here.
 #
+# The target input picks one of the script's three targets (GAD-T652, docs/DEPLOY.md "Staging and production slots"):
+#   production  build the commit, migrate Gadfly, deploy to production, tag vN (the script's default)
+#   staging     -Slot staging: build the commit as the next V<N>, migrate Gadfly-staging, deploy to the staging slot; no tag
+#   promote     -Promote: build nothing; migrate Gadfly with the commit staging runs, swap staging into production, tag vN
+#
 # Manual only (workflow_dispatch). Needs the repo secrets AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID and
 # the deploy identity set up per docs/DEPLOY.md (Website Contributor on the app, a user on the Gadfly database that can
 # alter it). Run it from main: the script refuses anything not on origin/main.
@@ -18,13 +23,21 @@ name: Build and deploy Gadfly to Azure App Service
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: 'production (deploy straight to production), staging (deploy to the staging slot, no tag) or promote (swap what staging runs into production, tag vN)'
+        type: choice
+        options:
+          - production
+          - staging
+          - promote
+        default: production
       dry_run:
         description: 'Dry run: export, restore, list migrations, publish and zip; migrate, deploy and tag nothing'
         type: boolean
         default: false
 
 permissions:
-  contents: write          # the script pushes the vN tag after a successful deploy
+  contents: write          # the script pushes the vN tag after a successful production deploy or promotion
   id-token: write          # azure/login OIDC
 
 concurrency:
@@ -76,8 +89,15 @@ jobs:
       - name: Deploy with tools/deploy-azure.ps1
         shell: pwsh
         env:
+          DEPLOY_TARGET: ${{ inputs.target }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          $deployArgs = @{ Ref = $env:GITHUB_SHA }
+          # promote ignores Ref: it promotes the commit the staging slot reports at /healthz/version.
+          switch ($env:DEPLOY_TARGET) {
+            'production' { $deployArgs = @{ Ref = $env:GITHUB_SHA } }
+            'staging'    { $deployArgs = @{ Ref = $env:GITHUB_SHA; Slot = 'staging' } }
+            'promote'    { $deployArgs = @{ Promote = $true } }
+            default      { throw "Unknown target '$env:DEPLOY_TARGET' (production, staging or promote)." }
+          }
           if ($env:DRY_RUN -eq 'true') { $deployArgs.DryRun = $true }
           ./tools/deploy-azure.ps1 @deployArgs

@@ -15,7 +15,7 @@ anywhere:
 | Data Protection keys | blob container `gadfly-dp-keys`, Key Vault key `gadfly-dp-protect` | Signs cookies, launch links and webhook secrets |
 | Secrets | Key Vault `kv-tutor-f65744` | Auth pepper, reset key, bootstrap token, LLM and ElevenLabs keys |
 | Deploy | `tools/deploy-azure.ps1` (via MindAttic.Deploy) | Clean export, migrate, publish, zip deploy, health and login smoke checks |
-| Deploy (CI) | `.github/workflows/azure-deploy.yml` | Manual trigger, once the repo secrets exist. Runs `tools/deploy-azure.ps1` itself, so it is the same deploy (GAD-T477) |
+| Deploy (CI) | `.github/workflows/azure-deploy.yml` | Manual trigger, once the repo secrets exist. Runs `tools/deploy-azure.ps1` itself, so it is the same deploy (GAD-T477); target production, staging or promote (GAD-T652) |
 
 ## One-time setup
 
@@ -106,12 +106,62 @@ The manual GitHub workflow (GitHub → mindattic/Gadfly → Actions → **Build 
 Run workflow, from `main`) has no deploy steps of its own: it signs in to Azure with the repo secrets and runs
 `tools/deploy-azure.ps1` on a Windows runner (GAD-T477). So a CI deploy gets the same version number and `vN` tag, the
 same mock-mode refusal, migrate-first, Kudu follow-up and health and login checks as a desk deploy. Its **dry run**
-box passes `-DryRun`. It never passes `-AllowLive` or `-AllowUnpushed`; those stay desk decisions. The deploy identity
+box passes `-DryRun`, and its **target** picks `production` (the default), `staging` (`-Slot staging`) or `promote`
+(`-Promote`), as in **Staging and production slots** below. It never passes `-AllowLive` or `-AllowUnpushed`; those
+stay desk decisions. The deploy identity
 needs Website Contributor on the app (it reads `Gadfly__AiMode` and the Kudu log) and its database user; the workflow's
 own token has `contents: write` to push the tag. Change deploy steps in the script only: the workflow just calls it.
 
 The first sign-in on a new deployment is `admin` with the `gadfly-bootstrap-token` password; you're made to change it
 and set up MFA. Then rotate the `gadfly-bootstrap-token` secret to a new random value.
+
+### Staging and production slots
+
+A release can go through the App Service's `staging` slot first (GAD-T336): deploy the commit there, check it on its
+own database, then promote it, which swaps the very build staging ran into production. The plain production deploy
+above still works and is unchanged.
+
+| Step | Desk | CI (Run workflow, **target**) |
+|---|---|---|
+| Deploy to staging | `powershell -NoProfile -File tools\deploy-azure.ps1 -Slot staging [-Ref <commit>]` | `staging` |
+| Promote to production | `powershell -NoProfile -File tools\deploy-azure.ps1 -Promote` | `promote` |
+| Straight to production | `npm run deploy -- --app gadfly` in MindAttic.Deploy, or the script with no `-Slot` | `production` |
+
+`-DryRun` (the workflow's **dry run** box) works with each of them. For a CI staging deploy the deploy identity also
+needs a user on the `Gadfly-staging` database that can alter it, like the one on `Gadfly`; Website Contributor on the
+app covers its slots.
+
+1. **Deploy to staging.** `-Slot staging` runs the same checks and steps as a production deploy against the slot:
+   `Gadfly__AiMode` on the slot must be `mock`, the commit must be on `origin/main`, the migrations go to the
+   **`Gadfly-staging`** database (never `Gadfly`), then it publishes as the next V&lt;N&gt;, zip-deploys to
+   `mindattic-gadfly/staging` and waits for the slot's `/healthz`, `/login` and `/healthz/version`. It ends with
+   `Deployed <sha> as V<N> to staging ... not tagged. Promote with -Promote.`
+2. **Check it.** Open the slot's address (usually `https://mindattic-gadfly-staging.azurewebsites.net`; Azure has
+   the real one: `az webapp show -g MyApps -n mindattic-gadfly --slot staging --query defaultHostName`) and run the
+   smoke checks from the OPERATIONS.md release checklist against it. It runs on the staging database, so nothing done there
+   touches production data.
+3. **Promote.** `-Promote` builds nothing. It reads `V<N> <commit>` from the staging slot's `/healthz/version`,
+   exports that commit and migrates the **production** database `Gadfly` with that commit's migrations (a failure
+   stops it before the swap), checks staging still runs the same commit, then swaps `staging` into production
+   (`az webapp deployment slot swap`; Azure warms the slot up first). It then waits for production's `/healthz` and
+   `/login`, checks production's `/healthz/version` now reports that version and commit, and tags it `vN`. The mock
+   check reads production's own `Gadfly__AiMode`. After a swap the staging slot runs the previous production build;
+   deploy to staging again before the next promotion.
+
+**Slot settings stay put.** The swap moves code, not configuration. The settings that tie a slot to its own
+resources must be marked as deployment slot settings (sticky) on each slot: the database connection string (`Gadfly` for
+production, `Gadfly-staging` for staging), the Data Protection key blob, and `Gadfly__AiMode`. So the promoted build
+runs on production's database, keys and AI mode, and staging keeps its own. A setting added to production later that
+must not follow a swap has to be marked as a slot setting too (Configuration → the setting → *Deployment slot
+setting*).
+
+**Versions.** A staging deploy is built as the next number (the highest `vN` tag plus one) and shows that V&lt;N&gt;,
+but **tags nothing**, so staging uses up no number and can be redeployed as often as needed. Promotion keeps the
+number baked into the staged build and tags `vN` on that commit only once production reports it. If a straight
+production deploy has taken that number meanwhile, `-Promote` refuses: deploy to staging again and promote that.
+`GET /healthz/version` (anonymous) answers `V<N> <full commit sha>` for a deployed build; the script uses it to know
+what staging runs and to confirm what production runs after the swap, and it is the quickest way to see what any slot
+is running.
 
 ### App settings a release must check
 
