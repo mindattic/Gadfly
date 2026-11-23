@@ -7,6 +7,7 @@
   "layout.myExams": "My exams",
   "layout.signOut": "Sign out",
   "layout.help": "Help",
+  "layout.menu": "Menu",
   "standing.notOpenYet": "Not open yet",
   "standing.open": "Ready to start",
   "standing.inProgress": "In progress",
@@ -359,5 +360,9 @@
   "research.saidAgreed": "Research: you have agreed to take part.",
   "research.saidDeclined": "Research: you chose not to take part.",
   "research.saidWithdrawn": "Research: you have withdrawn.",
-  "research.saveFailed": "Your research choice could not be saved; you can make it later on My research choice."
+  "research.saveFailed": "Your research choice could not be saved; you can make it later on My research choice.",
+  "liveExaminer.label": "The examiner, live",
+  "liveExaminer.label.male": "The examiner, live",
+  "liveExaminer.loading": "Loading the examiner…",
+  "liveExaminer.loading.male": "Loading the examiner…"
 }

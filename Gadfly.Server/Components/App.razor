@@ -11,6 +11,8 @@
     @* The mock-mode banner's styles (GAD-T507): linked here, not from the banner's own HeadContent, because Blazor keeps only
        one HeadContent per page and a page's stylesheet link replaced the banner's, leaving it unstyled in the app shell. *@
     <link rel="stylesheet" href="demo.css" />
+    @* The live examiner and her presence (GAD-T691): shared components placed on several pages, so linked here like demo.css. *@
+    <link rel="stylesheet" href="live-examiner.css" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     @* Import map for the voice exam room's talking head (three.js, TalkingHead, MindAttic.Avatar), GAD-T53. Always present because
        Blazor navigates between pages without reloading the head. Carries the CSP nonce on the sign-in pages that send one. *@

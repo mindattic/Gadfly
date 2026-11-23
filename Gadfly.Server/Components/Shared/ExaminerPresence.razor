@@ -1,0 +1,57 @@
+@* The examiner's presence (GAD-T691): a slowly turning blue sphere with glowing circuitry (wwwroot/js/live-examiner.js, WebGL), or a
+   CSS orb with the same pattern where WebGL isn't available; calm under reduced motion. Never a picture of her. <LiveExaminer>
+   shows it while she loads and where 3D can't run; on its own it fills its positioned container. Decorative: whoever places it
+   names the examiner. Her voice's loudness brightens it: Level here, or element.examinerPresence.setLevel(0..1) from a script. *@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div class="examiner-presence" aria-hidden="true" @ref="element"><span class="examiner-presence-orb"></span></div>
+
+@code {
+    /// <summary>Start the WebGL sphere on first render (the default). <see cref="LiveExaminer"/> starts it itself, once in view.</summary>
+    [Parameter] public bool AutoStart { get; set; } = true;
+    /// <summary>Her voice's loudness, 0 (silent) to 1. A script with an audio meter should call setLevel directly instead.</summary>
+    [Parameter] public double Level { get; set; }
+
+    private ElementReference element;
+    private IJSObjectReference? module;
+    private double sentLevel;
+    private bool disposed;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!AutoStart) return;
+        try
+        {
+            if (firstRender)
+            {
+                module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/live-examiner.js");
+                if (disposed) { await module.DisposeAsync(); module = null; return; }
+                await module.InvokeVoidAsync("mountPresence", element);
+            }
+            if (module is not null && Level != sentLevel)
+            {
+                sentLevel = Level;
+                await module.InvokeVoidAsync("setPresenceLevel", element, Level);
+            }
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (JSException) { }   // the CSS orb stays
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true;
+        if (module is null) return;
+        try
+        {
+            await module.InvokeVoidAsync("disposePresence", element);
+            await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (JSException) { }
+        module = null;
+    }
+}

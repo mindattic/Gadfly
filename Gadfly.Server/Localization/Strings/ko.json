@@ -7,6 +7,7 @@
   "layout.myExams": "내 시험",
   "layout.signOut": "로그아웃",
   "layout.help": "도움말",
+  "layout.menu": "메뉴",
   "standing.notOpenYet": "아직 열리지 않음",
   "standing.open": "시작 가능",
   "standing.inProgress": "진행 중",
@@ -359,5 +360,9 @@
   "research.saidAgreed": "연구: 참여에 동의했어요.",
   "research.saidDeclined": "연구: 참여하지 않기로 했어요.",
   "research.saidWithdrawn": "연구: 참여를 철회했어요.",
-  "research.saveFailed": "연구 참여 선택을 저장하지 못했어요. 나중에 연구 참여 선택 페이지에서 다시 할 수 있어요."
+  "research.saveFailed": "연구 참여 선택을 저장하지 못했어요. 나중에 연구 참여 선택 페이지에서 다시 할 수 있어요.",
+  "liveExaminer.label": "실시간 시험관",
+  "liveExaminer.label.male": "실시간 시험관",
+  "liveExaminer.loading": "시험관을 불러오는 중…",
+  "liveExaminer.loading.male": "시험관을 불러오는 중…"
 }

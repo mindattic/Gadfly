@@ -1,0 +1,88 @@
+@* The examiner, live (GAD-T691): the 3D examiner muted and idle, in the blue look and the student's customization, as the exam
+   room shows her (wwwroot/js/live-examiner.js). Never a static picture: while she loads, and where 3D can't run, the examiner's
+   presence (<ExaminerPresence>) stands in. She starts loading only when scrolled into view and stops drawing off screen. Fills its
+   container's width at a 4:5 aspect ratio (live-examiner.css, --live-examiner-ratio). Plays no audio.
+   <LiveExaminer ExaminerId="@ExaminerCatalog.Female" Customization="@look" /> *@
+@using Gadfly.Server.Student
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject Gadfly.Server.Voice.VoiceSettings VoiceConfig
+@inject IWebHostEnvironment Env
+@inject Gadfly.Server.Localization.UiText T
+
+<div class="live-examiner @Class" data-mode="presence" @ref="host">
+    <div class="live-examiner-view" role="img" aria-label="@(Label ?? T[male ? "liveExaminer.label.male" : "liveExaminer.label"])">
+        <ExaminerPresence AutoStart="false" />
+        <div class="live-examiner-stage" aria-hidden="true"></div>
+    </div>
+    <span class="live-examiner-status visually-hidden" role="status" aria-live="polite"></span>
+</div>
+
+@code {
+    /// <summary>The examiner (<see cref="ExaminerCatalog"/> id); none: the first available. Ignored when <see cref="ModelUrl"/> is set.</summary>
+    [Parameter] public string? ExaminerId { get; set; }
+    /// <summary>A model to show instead of the catalog examiner's.</summary>
+    [Parameter] public string? ModelUrl { get; set; }
+    /// <summary>The student's validated customization: skin, hair and clothing colours and the framing.</summary>
+    [Parameter] public ExaminerCustomization? Customization { get; set; }
+    /// <summary>"head-and-shoulders", "close" or "seated" (avatar-look.js FRAMINGS), over the customization's framing.</summary>
+    [Parameter] public string? Framing { get; set; }
+    /// <summary>The accessible name; default "The examiner, live" in the page's language.</summary>
+    [Parameter] public string? Label { get; set; }
+    /// <summary>Extra classes on the outer element.</summary>
+    [Parameter] public string? Class { get; set; }
+
+    private ElementReference host;
+    private IJSObjectReference? module;
+    private IJSObjectReference? handle;
+    private string? modelUrl;
+    private bool male;
+    private bool disposed;
+
+    protected override void OnParametersSet()
+    {
+        if (ModelUrl is { Length: > 0 }) { modelUrl = ModelUrl; male = false; return; }
+        var options = ExaminerCatalog.For(VoiceConfig, Env.WebRootPath);
+        var examiner = options.FirstOrDefault(o => o.Available && string.Equals(o.Id, ExaminerId, StringComparison.OrdinalIgnoreCase))
+            ?? ExaminerCatalog.Pick(options, null);
+        modelUrl = examiner.ModelUrl;
+        male = examiner.Id == ExaminerCatalog.Male;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        try
+        {
+            module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/live-examiner.js");
+            if (disposed) { await module.DisposeAsync(); module = null; return; }
+            var c = Customization;
+            handle = await module.InvokeAsync<IJSObjectReference>("mount", host, new
+            {
+                modelUrl,
+                look = new { skinTone = c?.SkinTone, hair = c?.Hair, attire = c?.Attire, look = c?.Look },
+                framing = Framing,
+                loading = T[male ? "liveExaminer.loading.male" : "liveExaminer.loading"].Value,
+            });
+            if (disposed) await DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (JSException) { }   // the presence's CSS orb stays
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        disposed = true;
+        try
+        {
+            if (handle is not null) { await handle.InvokeVoidAsync("dispose"); await handle.DisposeAsync(); }
+            if (module is not null) await module.DisposeAsync();
+        }
+        catch (JSDisconnectedException) { }
+        catch (TaskCanceledException) { }
+        catch (JSException) { }
+        handle = null;
+        module = null;
+    }
+}

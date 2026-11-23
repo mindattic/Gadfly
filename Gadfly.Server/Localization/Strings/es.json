@@ -7,6 +7,7 @@
   "layout.myExams": "Mis exámenes",
   "layout.signOut": "Cerrar sesión",
   "layout.help": "Ayuda",
+  "layout.menu": "Menú",
   "standing.notOpenYet": "Aún no está abierto",
   "standing.open": "Disponible para comenzar",
   "standing.inProgress": "En curso",
@@ -359,5 +360,9 @@
   "research.saidAgreed": "Investigación: aceptó participar.",
   "research.saidDeclined": "Investigación: decidió no participar.",
   "research.saidWithdrawn": "Investigación: retiró su participación.",
-  "research.saveFailed": "No se pudo guardar su decisión sobre la investigación; puede tomarla más tarde en Mi decisión sobre la investigación."
+  "research.saveFailed": "No se pudo guardar su decisión sobre la investigación; puede tomarla más tarde en Mi decisión sobre la investigación.",
+  "liveExaminer.label": "La examinadora, en vivo",
+  "liveExaminer.label.male": "El examinador, en vivo",
+  "liveExaminer.loading": "Cargando a la examinadora…",
+  "liveExaminer.loading.male": "Cargando al examinador…"
 }
