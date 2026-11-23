@@ -26,6 +26,10 @@ public static class LtiEndpoints
     public const string LinkSendPath = "/lti/link/send";
     public const string LinkPath = "/lti/link";
 
+    /// <summary>Every route above, as <see cref="GadflyEndpoints.AnonymousRoutes"/> lists them (no leading slash).</summary>
+    public static readonly IReadOnlyList<string> AnonymousRoutes =
+        [.. new[] { LoginPath, LaunchPath, JwksPath, DeepLinkSubmitPath, ContinuePath, LinkSendPath, LinkPath }.Select(p => p.TrimStart('/'))];
+
     /// <summary>The cookie that binds a login's state to the browser that started it: one per login, so two launches in
     /// two tabs don't overwrite each other. SameSite=None (the launch is a cross-site form post from the LMS),
     /// Partitioned (so it still works inside an LMS frame where third-party cookies are otherwise blocked).</summary>

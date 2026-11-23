@@ -21,6 +21,11 @@ public static class GadflyEndpoints
     /// <summary>Every route a signed-out visitor may reach.</summary>
     public static readonly IReadOnlyList<string> AnonymousRoutes =
         ["login", "mfa", "forgot-password", "account/reset", "account/accept-invite", "healthz", "healthz/ready", "launch", "error", "openapi/{documentName}.json", "transcripts/verify", .. AnonymousAuthPosts.Select(p => "_ma-auth/" + p),
+         "payments/stripe/webhook",   // Stripe calls it server to server; authenticated by its Stripe signature, not a session (GAD-T372)
+         // LTI 1.3 (GAD-T312): the LMS starts the OIDC login and posts the signed launch before any Gadfly session exists; each
+         // checks the platform's signed token or single-use state, and the JWKS is the tool's public key the platform fetches.
+         .. Lti.LtiEndpoints.AnonymousRoutes,
+         Localization.LocalizationSetup.ChooseRoute.TrimStart('/'),   // the public site's English / 한국어 switch: sets only the culture cookie, follows only local return paths (GAD-T592)
          .. Help.HelpEndpoints.AnonymousRoutes,   // the help center: a student with a broken microphone may never get past sign-in (GAD-T292)
          .. Site.PublicSite.AnonymousRoutes];   // the public site: landing, product and legal pages, robots, sitemap, the 404 catch-all (GAD-T308)
 
