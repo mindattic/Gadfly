@@ -166,7 +166,12 @@ them (mechanic 6), warned when it differs by more than a quarter between groups 
 **What Gadfly does.** `RecitationCheck` (GAD-T242) flags an answer whose wording closely follows the source (six-word runs,
 overlap at least 0.6, or a copied stretch of 20 words), or that fits a read-out pattern: 60 or more words, fluent, started
 after a silent wait of at least 15 seconds and at least twice the student's usual. The read-out pattern is voice-derived (timing and fluency), so it is not applied when voice measurements are off
-(GAD-T283); source overlap is. A flagged answer is left out of the
+(GAD-T283); source overlap is. In a Korean or Spanish exam the English source shares no words with the answer, so when a
+live model is configured the source passages are also machine-translated into the exam language (the live turn's fast
+model, cached per process so a repeated passage costs one call; skipped in mock mode, for answers under 15 words, and for
+any passage whose translation fails) and the answer is compared with that translation too: word runs for Spanish,
+15-syllable runs for Korean. A match there is flagged as following a machine translation of the source (GAD-T600,
+GAD-T642, GAD-T643). A flagged answer is left out of the
 evidence, the next question asks the student to say it differently, apply it or explain why, and a reviewer sees the flag.
 It is never a cheating verdict.
 

@@ -6,8 +6,10 @@ using Gadfly.Server.Data;
 using Gadfly.Server.Localization;
 using Gadfly.Server.Sources;
 using Gadfly.Server.Tenancy;
+using Gadfly.Server.Translation;
 using Gadfly.Server.Verification;
 using Gadfly.Socrates;
+using Gadfly.Socrates.Mock;
 using Gadfly.Sources;
 using Gadfly.Sources.Verification;
 using Microsoft.EntityFrameworkCore;
@@ -96,7 +98,8 @@ public sealed partial class SessionOrchestrator(
     Platform.PlanEnforcement plans,
     Evidence.EvidenceSyncQueue evidenceQueue,
     ILiveTurnModel? liveModel = null,
-    IConfiguration? configuration = null)
+    IConfiguration? configuration = null,
+    IPanelInfo? panelInfo = null)
 {
     private sealed class Live(SourceExamEngine engine, Guid organizationId, Guid studentUserId, AssessmentMode mode)
     {
@@ -124,6 +127,18 @@ public sealed partial class SessionOrchestrator(
 
     private readonly ConcurrentDictionary<Guid, Live> _live = new();
     private readonly ResponseVerifier _verifier = new(panel);
+
+    /// <summary>
+    /// Translates source passages from English into the exam language for the cross-lingual recitation check (GAD-T643); null in
+    /// mock mode or with no live model, so the check compares with the source alone. <see cref="MachineTranslator"/> caches per
+    /// process, so a passage repeated across turns and sessions costs one call.
+    /// </summary>
+    private readonly Func<string, string, CancellationToken, Task<string?>>? _sourceTranslator =
+        liveModel is null || (panelInfo ?? panel as IPanelInfo) is not { IsMock: false } info ? null
+            : TranslateSource(new MachineTranslator(info, liveModel));
+
+    private static Func<string, string, CancellationToken, Task<string?>> TranslateSource(MachineTranslator translator) =>
+        async (text, language, ct) => (await translator.TranslateAsync(text, ExamLanguage.English, language, ct)).Text;
 
     /// <summary>The verifier on the attempt's prompt set (GAD-T535): the shared English one for an English attempt.</summary>
     private ResponseVerifier VerifierFor(Live live) =>
@@ -1046,6 +1061,9 @@ public sealed partial class SessionOrchestrator(
             // The next question and its leak guard come from one fast model, not the panel vote (GAD-T494): the examiner answers in
             // conversational time. The panel still judges every answer.
             engine.LiveTurnModel = liveModel;
+            // A Korean or Spanish answer recited from a translation of the English notes is caught too (GAD-T600, GAD-T643): the
+            // recitation check also compares it with the passages machine-translated into the exam language by the same fast model.
+            engine.SourceTranslator = _sourceTranslator;
             // The fast model's provisional judgment steers the next move and the panel's full judgment runs off the turn (GAD-T508).
             engine.DeferFullJudgment = DeferJudging;
             var live = new Live(engine, organizationId, row.StudentUserId, exam.AssessmentMode);
