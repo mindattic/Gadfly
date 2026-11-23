@@ -20,11 +20,18 @@
 //
 //   - The exam language (GAD-T531): in a Korean exam her 3D head lip-syncs Korean (lipsync-ko.js, registered on the head once it
 //     has loaded), the portrait mouth opens once per Hangul syllable, and the browser-speech fallback reads with a Korean voice.
-//     An English exam is unchanged.
+//     An English exam is unchanged. A Spanish exam (GAD-T608) lip-syncs with lipsync-es.js the same way, the portrait mouth counts
+//     accented vowels as vowels, and the fallback reads with a Spanish voice (a Latin American one first).
 //
 // Gaps in the library that this works around are filed as MindAttic.Avatar tickets (see docs/VOICE.md).
 
 import { registerKorean } from "./lipsync-ko.js";
+import { registerSpanish } from "./lipsync-es.js";
+
+// Gadfly's own lip-sync modules for languages TalkingHead doesn't ship (GAD-T531, GAD-T608).
+const LIPSYNC = { ko: registerKorean, es: registerSpanish };
+// The browser-speech fallback's language tag per exam language.
+const SPEECH_LANG = { ko: "ko-KR", es: "es-419" };
 
 const STYLE_FADE_MS = 450;
 const TIER_KEY = "gadfly.examiner.tier";
@@ -244,7 +251,7 @@ function mouthOpen(w, t) {
 
 function syllables(word) {
     const w = String(word || "").toLowerCase();
-    const m = w.match(/[aeiouy]+/g);
+    const m = w.match(/[aeiouyáéíóúü]+/g);   // accented vowels for Spanish (GAD-T608); English has none
     const hangul = w.match(/[\uac00-\ud7a3]/g);   // one Hangul block is one syllable (GAD-T531)
     return Math.max(1, (m ? m.length : 0) + (hangul ? hangul.length : 0));
 }
@@ -370,13 +377,14 @@ function afterReady(p) {
 }
 
 /**
- * Her lip-sync language (GAD-T531). TalkingHead has no Korean module of its own: Gadfly's is registered on the loaded head, and only
- * then is the element's lang set (ma-avatar reads it for every utterance, and does not reload on it), so TalkingHead never tries to
- * fetch a Korean module it doesn't have. English needs nothing: the head loads with English.
+ * Her lip-sync language (GAD-T531, GAD-T608). TalkingHead has no Korean or Spanish module of its own: Gadfly's is registered on the
+ * loaded head, and only then is the element's lang set (ma-avatar reads it for every utterance, and does not reload on it), so
+ * TalkingHead never tries to fetch a module it doesn't have. English needs nothing: the head loads with English.
  */
 function useLanguage(p, el) {
-    if (p.language !== "ko") return;
-    if (safe(() => registerKorean(el.head))) safe(() => el.setAttribute("lang", "ko"));
+    const register = LIPSYNC[p.language];
+    if (!register) return;
+    if (safe(() => register(el.head))) safe(() => el.setAttribute("lang", p.language));
 }
 
 function applyTier(p, t) {
@@ -450,10 +458,18 @@ function completePortrait(p) {
 
 // -------------------------------------------------------------------------------------------------------- browser speech
 
-/** A browser voice for `language` ("en", "ko"), a local one first. */
+/**
+ * A browser voice for `language` ("en", "ko", "es"), a local one first; for Spanish a Latin American one (es-419, es-MX, es-US...)
+ * before one from Spain (GAD-T608).
+ */
 function browserVoice(language) {
     const voices = safe(() => window.speechSynthesis.getVoices()) || [];
     const exact = new RegExp("^" + language + "(-|_)", "i"), loose = new RegExp("^" + language, "i");
+    if (language === "es") {
+        const latin = /^es(-|_)(419|MX|US|CO|AR|CL|PE|VE|EC|GT|CR|PA|UY|PY|BO|DO|HN|NI|SV|PR|CU)/i;
+        const v = voices.find((x) => latin.test(x.lang) && x.localService) || voices.find((x) => latin.test(x.lang));
+        if (v) return v;
+    }
     return voices.find((v) => exact.test(v.lang) && v.localService) || voices.find((v) => loose.test(v.lang)) || null;
 }
 
@@ -470,8 +486,8 @@ function speakWithBrowser(p, text) {
     p.fallbackActive = true;
     return new Promise((resolve) => {
         const u = new SpeechSynthesisUtterance(text);
-        u.lang = p.language === "ko" ? "ko-KR" : "en-US";
-        const v = browserVoice(p.language === "ko" ? "ko" : "en");
+        u.lang = SPEECH_LANG[p.language] || "en-US";
+        const v = browserVoice(SPEECH_LANG[p.language] ? p.language : "en");
         if (v) u.voice = v;
         u.rate = 1;
         // Character offsets of each caption word, to map boundary events onto words.

@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json;
 using Gadfly.Engine;
 using Gadfly.Server.Voice;
 using Microsoft.Extensions.Configuration;
@@ -98,5 +100,64 @@ public class SpanishSpeechTests
         Assert.That(MockTextToSpeech.Syllables("canción"), Is.EqualTo(2), "ió is one vowel group");
         Assert.That(MockTextToSpeech.Syllables("mamá"), Is.EqualTo(2));
         Assert.That(MockTextToSpeech.Syllables("photosynthesis"), Is.EqualTo(5), "English is counted as before");
+    }
+
+    // ------------------------------------------------------------------------------------------------- lip-sync (GAD-T608)
+
+    [Test]
+    public void Spanish_lip_sync_reads_regular_spelling_into_visemes()
+    {
+        // The module is browser JavaScript; it is run here with Node when Node is installed.
+        var module = Path.GetFullPath(Path.Combine(TestContext.CurrentContext.TestDirectory, "..", "..", "..", "..", "Gadfly.Server", "wwwroot", "js", "lipsync-es.js"));
+        Assert.That(File.Exists(module), Is.True, module);
+        const string script = """
+            const m = await import(process.argv[1]);
+            const k = new m.LipsyncEs();
+            const head = {};
+            const v = (w) => k.wordsToVisemes(w).visemes;
+            const out = {
+              llamar: v("llamar"), chico: v("chico"), perro: v("perro"), queso: v("queso"), guerra: v("guerra"), pinguino: v("pingüino"),
+              hola: v("hola"), nino: v("niño"), cena: v("cena"), yo: v("yo"), hoy: v("hoy"), cancion: v("canción"),
+              pre: k.preProcessText("¿Qué es el 25%? ¡Explíquelo en 3 pasos!"), n: m.numberToSpanish("2026"), n21: m.numberToSpanish("21000"),
+              registered: m.registerSpanish(head) && head.lipsync.es instanceof m.LipsyncEs, times: k.wordsToVisemes("fotosíntesis").times,
+            };
+            console.log(JSON.stringify(out));
+            """;
+        string output;
+        try
+        {
+            var psi = new ProcessStartInfo("node") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+            foreach (var a in new[] { "--input-type=module", "-e", script, new Uri(module).AbsoluteUri }) psi.ArgumentList.Add(a);
+            using var node = Process.Start(psi)!;
+            output = node.StandardOutput.ReadToEnd();
+            var error = node.StandardError.ReadToEnd();
+            node.WaitForExit(30_000);
+            Assert.That(node.ExitCode, Is.Zero, error);
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            Assert.Ignore("Node is not installed: the Spanish lip-sync module is not run here.");
+            return;
+        }
+        var r = JsonDocument.Parse(output).RootElement;
+        string[] V(string name) => r.GetProperty(name).EnumerateArray().Select(x => x.GetString()!).ToArray();
+        Assert.That(V("llamar"), Is.EqualTo(new[] { "CH", "aa", "PP", "aa", "RR" }), "ll is one sound (yeísmo)");
+        Assert.That(V("chico"), Is.EqualTo(new[] { "CH", "I", "kk", "O" }));
+        Assert.That(V("perro"), Is.EqualTo(new[] { "PP", "E", "RR", "O" }), "rr is one trill");
+        Assert.That(V("queso"), Is.EqualTo(new[] { "kk", "E", "SS", "O" }), "the u of qu is silent");
+        Assert.That(V("guerra"), Is.EqualTo(new[] { "kk", "E", "RR", "aa" }), "the u of gue is silent");
+        Assert.That(V("pinguino"), Is.EqualTo(new[] { "PP", "I", "nn", "kk", "U", "I", "nn", "O" }), "the u of gü is heard");
+        Assert.That(V("hola"), Is.EqualTo(new[] { "O", "nn", "aa" }), "h is silent");
+        Assert.That(V("nino"), Is.EqualTo(new[] { "nn", "I", "nn", "I", "O" }), "ñ is n with an i-glide");
+        Assert.That(V("cena"), Is.EqualTo(new[] { "SS", "E", "nn", "aa" }), "seseo: c before e is s");
+        Assert.That(V("yo"), Is.EqualTo(new[] { "CH", "O" }));
+        Assert.That(V("hoy"), Is.EqualTo(new[] { "O", "I" }));
+        Assert.That(V("cancion"), Is.EqualTo(new[] { "kk", "aa", "nn", "SS", "I", "O", "nn" }), "an accented vowel has its base vowel's shape");
+        Assert.That(r.GetProperty("pre").GetString(), Is.EqualTo("Qué es el veinticinco por ciento? Explíquelo en tres pasos!"));
+        Assert.That(r.GetProperty("n").GetString(), Is.EqualTo("dos mil veintiséis"));
+        Assert.That(r.GetProperty("n21").GetString(), Is.EqualTo("veintiún mil"));
+        Assert.That(r.GetProperty("registered").GetBoolean(), Is.True);
+        var times = r.GetProperty("times").EnumerateArray().Select(x => x.GetDouble()).ToArray();
+        Assert.That(times.Zip(times.Skip(1)).All(p => p.Second > p.First), Is.True, "visemes in time order");
     }
 }

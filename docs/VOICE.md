@@ -341,6 +341,11 @@ by a student whose primary language is English (or unknown) behaves exactly as b
   decomposed to jamo by Unicode arithmetic and mapped to visemes), registered on the loaded head by `examiner-voice.js`.
   The library passes only word timings to the browser, so visemes are spread over each word by relative duration (Korean is
   syllable-timed); per-character timings would need the library to forward ElevenLabs' character alignment.
+  Spanish (GAD-T608) works the same way with `wwwroot/js/lipsync-es.js`: Spanish spelling is regular, so a letter table and
+  a few context rules (ch, ll as y, rr and a word-initial r trilled, silent u in qu/gue/gui but heard in gü, silent h, ñ with
+  an i-glide, seseo for c before e/i and z, y as a consonant before a vowel, accented vowels as their base vowel, numbers
+  read in Spanish, ¿ and ¡ dropped) give the visemes. The browser-speech fallback reads with a Latin American Spanish voice
+  first (es-419, es-MX, es-US...), then any Spanish one.
 - **Fillers (GAD-T532).** `ExaminerFiller.For(language)`: Korean acknowledgements, wait fillers, backchannels and
   eye-contact remarks, reviewed as non-evaluative; prepared per voice and language in the phrase cache.
 
