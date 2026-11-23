@@ -315,24 +315,28 @@ Each attempt has an exam language (`ExamSession.Language`) and a copy of the stu
 the `VoiceGrants` grant; nothing comes from the browser, and a language is never inferred from the voice. **An English exam
 by a student whose primary language is English (or unknown) behaves exactly as before** (`SessionSpeech.IsDefault`).
 
-- **Recognition (GAD-T529, GAD-T554).** A Korean exam sends `ko` to the recognizer (Scribe `language_code`, Whisper
+- **Recognition (GAD-T529, GAD-T554, GAD-T607).** A Korean exam sends `ko` to the recognizer, a Spanish exam `es` (Scribe `language_code`, Whisper
   `language`; the hub filter still refuses any other). An English exam by a second-language speaker is pinned to `en`, so an
   accent never makes the recognizer drift into another language. Keyterms are capped at Scribe realtime's limits, 50 terms
-  and 1,000 characters (GAD-T597), and a Korean attempt gets the exam's Korean objective titles first, then the English.
+  and 1,000 characters (GAD-T597), and a Korean or Spanish attempt gets the exam's objective titles in that language first,
+  then the English.
 - **Endpointing in ESL mode (GAD-T554).** For a second-language speaker the end-of-answer silences start from the `Esl`
   settings (6 s floor, 15 s ceiling, 3.5 s finished-sentence cue used only after 3 answers in a row that were not cut off,
   twice the cut-off backoff; docs/research/esl-and-korean.md R3), with the extra-time accommodation on top and the 45 s cap.
   The student's own calibration reading in the exam language (GAD-T594), when present, can only lengthen the floor (to 1.5
-  times their longest reading pause). A Korean exam never uses the short finished-sentence cue: that test is English.
-- **Voice (GAD-T530, GAD-T555).** `eleven_flash_v2_5`, the default model, speaks Korean, so a Korean exam uses the same
+  times their longest reading pause). A Korean or Spanish exam never uses the short finished-sentence cue: that test is English.
+- **Voice (GAD-T530, GAD-T555, GAD-T607).** `eleven_flash_v2_5`, the default model, speaks Korean and Spanish, so a Korean
+  or Spanish exam uses the same
   voice and model unless `Gadfly:Voice:TtsModels:ko` names another (`eleven_multilingual_v2`, `eleven_turbo_v2_5` and
   `eleven_v3` speak Korean; `eleven_flash_v2`/`eleven_turbo_v2` do not) or `Gadfly:Voice:VoiceIds:ko` a platform voice for
-  Korean (the exam's or organization's own voice always stands). A second-language speaker hears the examiner at
+  Korean (`TtsModels:es` and `VoiceIds:es` for Spanish; the exam's or organization's own voice always stands). The premade
+  voices speak Spanish on the multilingual models; whether their accent suits neutral Latin American Spanish is for the
+  Spanish tester (GAD-T614) to judge, and `VoiceIds:es` is where a native voice would go. A second-language speaker hears the examiner at
   `PlainSpeechSpeed` (0.9). Because the avatar library binds one model and one set of voice settings per process (MAA-T20),
   a session that needs another model or speed is spoken by Gadfly's own `ElevenLabsTtsClient` (`ExaminerTts`), built from
   the library's options and HTTP client (the mock voice in mock mode) and sharing its phrase cache; `VoiceHubFilter` plays
   such a session's `Speak` calls through `QuestionVoiceStreams.SpeakText`, on the library's own events. The mock voice reads
-  Hangul and times each syllable block as a syllable. Captions of her questions are always on.
+  Hangul and times each syllable block as a syllable, and counts Spanish accented vowels as vowels. Captions of her questions are always on.
 - **Lip-sync (GAD-T531).** TalkingHead has no Korean module; `wwwroot/js/lipsync-ko.js` is Gadfly's own (Hangul syllables
   decomposed to jamo by Unicode arithmetic and mapped to visemes), registered on the loaded head by `examiner-voice.js`.
   The library passes only word timings to the browser, so visemes are spread over each word by relative duration (Korean is

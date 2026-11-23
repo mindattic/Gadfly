@@ -1,7 +1,7 @@
 namespace Gadfly.Engine;
 
 /// <summary>
-/// The language an exam attempt is conducted in (GAD-T526, GAD-T534): a BCP-47 primary-language tag, lower case ("en", "ko").
+/// The language an exam attempt is conducted in (GAD-T526, GAD-T534): a BCP-47 primary-language tag, lower case ("en", "ko", "es").
 /// The source material, concept map and rubric stay in their own (English) language; the examiner asks, and the student answers,
 /// in the exam language. English is the default and the only language whose behavior predates localization: an English attempt
 /// by a student whose primary language is English behaves exactly as it always has.
@@ -10,9 +10,11 @@ public static class ExamLanguage
 {
     public const string English = "en";
     public const string Korean = "ko";
+    /// <summary>Spanish (GAD-T596): neutral Latin American Spanish, the student addressed as usted.</summary>
+    public const string Spanish = "es";
 
     /// <summary>The languages Gadfly can run an exam in, in display order.</summary>
-    public static readonly IReadOnlyList<string> Supported = [English, Korean];
+    public static readonly IReadOnlyList<string> Supported = [English, Korean, Spanish];
 
     /// <summary>The offered languages a new exam starts with (Exam.Languages).</summary>
     public const string DefaultOffered = "en,ko";
@@ -36,6 +38,8 @@ public static class ExamLanguage
 
     public static bool IsKorean(string? tag) => Normalize(tag) == Korean;
 
+    public static bool IsSpanish(string? tag) => Normalize(tag) == Spanish;
+
     /// <summary>Parses a comma-separated language list ("en,ko") into normalized, distinct, supported tags; English when empty.</summary>
     public static IReadOnlyList<string> ParseList(string? list)
     {
@@ -52,6 +56,7 @@ public static class ExamLanguage
     public static string NativeName(string? tag) => Normalize(tag) switch
     {
         Korean => "한국어",
+        Spanish => "Español",
         _ => "English",
     };
 
@@ -59,6 +64,7 @@ public static class ExamLanguage
     public static string EnglishName(string? tag) => Normalize(tag) switch
     {
         Korean => "Korean",
+        Spanish => "Spanish",
         English => "English",
         var other => other,
     };
@@ -88,4 +94,6 @@ public sealed record AttemptLanguage(string Language, string? PrimaryLanguage = 
     public bool IsDefault => Exam == ExamLanguage.English && !IsNonNative;
 
     public bool IsKorean => Exam == ExamLanguage.Korean;
+
+    public bool IsSpanish => Exam == ExamLanguage.Spanish;
 }

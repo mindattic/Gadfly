@@ -92,8 +92,9 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, strin
     /// <summary>
     /// The ElevenLabs model per exam language (GAD-T530), <c>Gadfly:Voice:TtsModels:&lt;language&gt;</c> (e.g. <c>TtsModels:ko</c>). A
     /// language without one uses the examiner's model (<see cref="TtsModel"/>, or <c>MindAttic:Avatar:ElevenLabs:ModelId</c>), which by
-    /// default is <c>eleven_flash_v2_5</c>: it speaks Korean (as do <c>eleven_turbo_v2_5</c>, <c>eleven_multilingual_v2</c> and
-    /// <c>eleven_v3</c>; <c>eleven_flash_v2</c>/<c>eleven_turbo_v2</c> are English only, so a Korean exam must not be left on those).
+    /// default is <c>eleven_flash_v2_5</c>: it speaks Korean and Spanish (as do <c>eleven_turbo_v2_5</c>, <c>eleven_multilingual_v2</c>
+    /// and <c>eleven_v3</c>; <c>eleven_flash_v2</c>/<c>eleven_turbo_v2</c> are English only, so a Korean or Spanish exam (GAD-T607) must
+    /// not be left on those).
     /// </summary>
     public IReadOnlyDictionary<string, string> TtsModels { get; init; } = new Dictionary<string, string>();
 

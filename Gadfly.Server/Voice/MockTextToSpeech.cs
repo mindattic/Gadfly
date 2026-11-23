@@ -41,7 +41,10 @@ public sealed class MockTextToSpeech : HttpMessageHandler
         _ => 0.07,
     };
 
-    /// <summary>A rough syllable count (groups of vowels; each Hangul syllable block is one syllable, GAD-T530), at least one.</summary>
+    /// <summary>
+    /// A rough syllable count (groups of vowels, Spanish accented vowels included, GAD-T607; each Hangul syllable block is one
+    /// syllable, GAD-T530), at least one. English words have no accented vowels, so they count as before.
+    /// </summary>
     public static int Syllables(string word)
     {
         var count = 0;
@@ -49,7 +52,7 @@ public sealed class MockTextToSpeech : HttpMessageHandler
         foreach (var c in word.ToLowerInvariant())
         {
             if (IsHangulSyllable(c)) { count++; inVowel = false; continue; }
-            var vowel = "aeiouy".Contains(c);
+            var vowel = "aeiouyáéíóúü".Contains(c);
             if (vowel && !inVowel) count++;
             inVowel = vowel;
         }
