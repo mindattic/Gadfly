@@ -77,6 +77,8 @@ public sealed record HelpViewer(bool SignedIn, IReadOnlySet<HelpAudience> Audien
 public static class HelpTopics
 {
     public const string QuickStartStudent = "quick-start-student";
+    /// <summary>The student essentials in Korean (GAD-T544).</summary>
+    public const string QuickStartStudentKorean = "quick-start-student-ko";
     public const string QuickStartInstructor = "quick-start-instructor";
     public const string QuickStartGrader = "quick-start-grader";
     public const string QuickStartAdmin = "quick-start-admin";
@@ -137,6 +139,10 @@ public static class HelpCatalog
         new(HelpTopics.QuickStartStudent, "quick-start-student.md", HelpAudience.Student, HelpSectionId.StartHere,
             "Quick start for students", "Sign in, get ready, and take your first spoken exam in five steps.",
             "getting started begin first time new student"),
+        // The student essentials in Korean (GAD-T544): sign-in to result, the get-ready page, eye contact, what to do if something goes wrong.
+        new(HelpTopics.QuickStartStudentKorean, "quick-start-student-ko.md", HelpAudience.Student, HelpSectionId.StartHere,
+            "학생 빠른 시작(한국어)", "로그인부터 결과까지 다섯 단계, 시험 준비, 시선 맞추기, 문제가 생겼을 때 (Quick start for students, in Korean).",
+            "korean 한국어 학생 시작 quick start getting started"),
         new(HelpTopics.QuickStartInstructor, "quick-start-instructor.md", HelpAudience.Instructor, HelpSectionId.StartHere,
             "Quick start for instructors", "From your notes to a graded exam: upload, build, assign, review, grade.",
             "getting started begin first time teacher"),
