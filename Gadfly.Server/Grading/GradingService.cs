@@ -775,8 +775,6 @@ public sealed class GradingService(GadflyDbContext db, ITenantContext tenant, Ti
         if (refused is not null) return refused;
         AddApproval(sessionId, ApprovalAction.Publish, note);
         await GradingEvents.GradePublishedAsync(db, grade, Actor, Now, ct);
-        await NotifyStudentAsync(sessionId, Notifications.EmailKinds.ResultReleased, (title, orgName, name) =>
-            new(orgName, name, ExamTitle: title, Score: grade.LetterOrLabel ?? (grade.FinalPercent is { } p ? $"{p:0.##}%" : null), ActionUrl: "/my-results", ActionLabel: "View my result"), ct);
         return await SaveAsync(ct) ?? GradingResult.Done("Published: the student can now see the result and the report.");
     }
 

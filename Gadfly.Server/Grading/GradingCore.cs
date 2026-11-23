@@ -150,19 +150,35 @@ internal static class GradeLifecycle
 internal static class GradingEvents
 {
     /// <summary>AI grading has recorded every objective of the session, in any grading mode, before the grade moves on.</summary>
-    public static Task AiGradingFinishedAsync(GadflyDbContext db, FinalGrade grade, PolicySnapshot policy, DateTimeOffset at, CancellationToken ct)
+    public static async Task AiGradingFinishedAsync(GadflyDbContext db, FinalGrade grade, PolicySnapshot policy, DateTimeOffset at, CancellationToken ct)
     {
         GradingAudit.Add(db, grade.OrganizationId, GradingActor.System, "grade.ai.completed", "FinalGrade", grade.SessionId.ToString(), grade.SessionId, at,
             after: new { mode = policy.Rules.Mode.ToString() });
-        return Task.CompletedTask;
+        await Inbox.GradeInbox.PreliminaryAsync(db, grade, policy, at, ct);
     }
 
     /// <summary>The grade was published to the student: by a person (GradingService.PublishAsync) or by the system under AI-only grading.</summary>
-    public static Task GradePublishedAsync(GadflyDbContext db, FinalGrade grade, GradingActor actor, DateTimeOffset at, CancellationToken ct)
+    public static async Task GradePublishedAsync(GadflyDbContext db, FinalGrade grade, GradingActor actor, DateTimeOffset at, CancellationToken ct)
     {
         GradingAudit.Add(db, grade.OrganizationId, actor, "grade.published", "FinalGrade", grade.SessionId.ToString(), grade.SessionId, at,
             after: new { finalPercent = grade.FinalPercent });
-        return Task.CompletedTask;
+        await Inbox.GradeInbox.FinalAsync(db, grade, at, ct);
+        await ResultReleasedEmailAsync(db, grade, at, ct);
+    }
+
+    /// <summary>The "result released" email, the same whether a person or the AI-only path published the grade.</summary>
+    private static async Task ResultReleasedEmailAsync(GadflyDbContext db, FinalGrade grade, DateTimeOffset at, CancellationToken ct)
+    {
+        var info = await (from s in db.ExamSessions.AsNoTracking()
+                          join e in db.Exams.AsNoTracking() on s.ExamId equals e.Id
+                          where s.Id == grade.SessionId && s.OrganizationId == grade.OrganizationId
+                          select new { s.StudentUserId, e.Title }).FirstOrDefaultAsync(ct);
+        if (info is null) return;
+        var orgName = await db.Organizations.AsNoTracking().Where(o => o.Id == grade.OrganizationId).Select(o => o.Name).FirstOrDefaultAsync(ct) ?? "your organization";
+        var studentName = await db.AuthUsers.AsNoTracking().Where(u => u.Id == info.StudentUserId).Select(u => u.DisplayName ?? u.UserName).FirstOrDefaultAsync(ct) ?? "there";
+        await Notifications.EmailOutbox.StageAsync(db, grade.OrganizationId, Notifications.EmailKinds.ResultReleased, info.StudentUserId,
+            new(orgName, studentName, ExamTitle: info.Title, Score: grade.LetterOrLabel ?? (grade.FinalPercent is { } p ? $"{p:0.##}%" : null),
+                ActionUrl: "/my-results", ActionLabel: "View my result"), at, ct, relatedId: grade.SessionId);
     }
 }
 

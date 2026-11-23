@@ -409,6 +409,18 @@ hidden from graders until a human grade is in. A gated, uncalibrated panel (GAD-
 session is graded `HumanOnly`. Two hooks mark the moments other features build on: `GradingEvents.AiGradingFinishedAsync`
 (every objective graded, any mode) and `GradingEvents.GradePublishedAsync` (published by a person or by the system).
 
+**Grade to inbox (GAD-T702).** Both hooks post to the student's in-app inbox (`Inbox/GradeInbox.cs`), in the same save as
+the grading change, so the web process and the grading worker behave alike. When AI grading finishes and a person still
+decides the grade (`HumanOnly`, `Combined`, or an `AiOnly` attempt held for instructor review), the student gets a
+`grade.preliminary` message labelled not final: each objective's AI level (0-5 and its name), confidence category and
+impressions of their understanding built from the stored AI explanation, misconceptions and evidence count (no model
+call); it has no link, since the result page shows nothing before publication. Graders never see it. On publication, in any
+mode, the student gets a `grade.final` message (final grade, per-objective level and score, the grader's comments or under
+`AiOnly` the AI's impressions and a note that the AI examiner panel produced the grade, an overall strongest/weakest line)
+linking to `/my-results/{session}`, and the "result released" email is staged from the same hook, so a system publish
+emails the student exactly as a human one does. The text is in the student's primary language (en, ko, es;
+`Strings/inbox.*.json`), as their emails are.
+
 The `Combined` flow:
 
 ```mermaid
