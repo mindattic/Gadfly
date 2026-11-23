@@ -3,6 +3,7 @@
   <Project Path="Gadfly.Personal/Gadfly.Personal.csproj" />
   <Project Path="Gadfly.Sources/Gadfly.Sources.csproj" />
   <Project Path="Gadfly.Server/Gadfly.Server.csproj" />
+  <Project Path="Gadfly.Worker/Gadfly.Worker.csproj" />
   <Project Path="Gadfly.Cli/Gadfly.Cli.csproj" />
   <Project Path="Gadfly.Tests/Gadfly.Tests.csproj" />
   <Project Path="Gadfly.Tour/Gadfly.Tour.csproj" />

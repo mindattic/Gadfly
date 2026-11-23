@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <!-- Gadfly.Worker (GAD-T700): the job queue, grading and the sweepers that feed it, in their own process. Deployed as the
+       Azure continuous WebJob GadflyWorker beside the site (tools/deploy-azure.ps1 publishes it into
+       App_Data/jobs/continuous/GadflyWorker), with the site's own app settings and database (docs/DEPLOY.md "The worker"). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Gadfly.Worker</RootNamespace>
+    <AssemblyName>Gadfly.Worker</AssemblyName>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- The server's user secrets, so a local worker reads the same development configuration. -->
+    <UserSecretsId>gadfly-server-6f1d2c3a</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\Gadfly.Server\Gadfly.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="run.cmd;settings.job" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

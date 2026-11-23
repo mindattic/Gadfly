@@ -14,6 +14,7 @@ anywhere:
 | Database | `Gadfly` on `sql-mindattic-f65744` (group `rg-mindattic-data`) | Serverless, auto-pause after 60 min |
 | Data Protection keys | blob container `gadfly-dp-keys`, Key Vault key `gadfly-dp-protect` | Signs cookies, launch links and webhook secrets |
 | Secrets | Key Vault `kv-tutor-f65744` | Auth pepper, reset key, bootstrap token, LLM and ElevenLabs keys |
+| Grading worker | continuous WebJob `GadflyWorker` in `mindattic-gadfly` | `Gadfly.Worker`: the job queue, AI grading and the sweepers, in their own process (see **The worker**) |
 | Deploy | `tools/deploy-azure.ps1` (via MindAttic.Deploy) | Clean export, migrate, publish, zip deploy, health and login smoke checks |
 | Deploy (CI) | `.github/workflows/azure-deploy.yml` | Manual trigger, once the repo secrets exist. Runs `tools/deploy-azure.ps1` itself, so it is the same deploy (GAD-T477); target production, staging or promote (GAD-T652) |
 
@@ -77,7 +78,7 @@ can also be run directly: `powershell -NoProfile -File tools\deploy-azure.ps1 [-
    working tree are never published;
 3. runs `dotnet restore`, then `dotnet ef database update` against Azure SQL with Entra auth. **If this fails the
    script stops and nothing is deployed**: new code never runs on an old database;
-4. publishes (Release), zips, and runs `az webapp deploy --type zip --async true`, then waits for Kudu to report
+4. publishes (Release), publishes `Gadfly.Worker` into the same package as the WebJob (see **The worker**), zips, and runs `az webapp deploy --type zip --async true`, then waits for Kudu to report
    the deployment (status 4 is success; Kudu sometimes answers a 500 timeout for a deploy that did succeed, so the
    script reads the deployment log rather than trusting that reply);
 5. polls `https://mindattic-gadfly.azurewebsites.net/healthz` until 200, then checks that `/login` is 200;
@@ -177,6 +178,67 @@ is running.
   otherwise without `-AllowLive`.
 
 The full release checklist and smoke checks are in [OPERATIONS.md](OPERATIONS.md).
+
+## The worker
+
+Exams are taken on the website; grading and the other queued work run in a separate process beside it, the
+**Gadfly.Worker** console host, deployed as the Azure **continuous WebJob `GadflyWorker`** in the same App Service
+(GAD-T700). It shares the site's service registration (`GadflyServices.AddGadflyServices`, used by both
+`Gadfly.Server/Program.cs` and `Gadfly.Worker/Program.cs`), so it reads the same app settings (App Service passes them
+to WebJobs as environment variables), the same connection string and Key Vault references, and uses the same managed
+identity, Data Protection key ring and AI panel (`Gadfly__AiMode`).
+
+| Runs in | What |
+|---|---|
+| Worker (and the web app while `Gadfly:Jobs:RunInWeb` is true) | `JobWorker` (every queued job: AI grading, source processing, email, webhooks, retention, stale-session close, LTI passback and roster refresh, reminders); `GradingSweeper` (queues grading ~15 s after an exam ends); `ReminderScheduler`, `StaleSessionScheduler`, `RetentionScheduler`, `LtiPassbackSweeper`, `LtiRosterRefreshScheduler`, `ResponseBackfillService` |
+| Both, each for its own process | `ApiCallTimingWriter` and `EvidenceSyncWriter` (drain in-memory queues of the process that filled them), `DeskAdminsListWarning` (a startup log line) |
+| Web app only | Pages, the exam hub and live sessions, voice, the API; the web app always enqueues jobs |
+
+The list of queue-driven services is `GadflyServices.BackgroundWork`.
+
+**Packaging.** `tools/deploy-azure.ps1` publishes `Gadfly.Worker` into the site's package at
+`App_Data/jobs/continuous/GadflyWorker/`, so every normal deploy (desk, MindAttic.Deploy or the CI workflow, any slot)
+ships the worker with the site and Azure restarts it on the new build. `run.cmd` starts it (`dotnet Gadfly.Worker.dll`);
+`settings.job` makes it a singleton (one instance even if the plan scales out) and gives it 60 s to stop. The staging
+slot runs its own copy against `Gadfly-staging`.
+
+**Shutdown and logs.** Azure stops a continuous WebJob by creating the file named in `WEBJOBS_SHUTDOWN_FILE` (and with
+SIGTERM / Ctrl+C); the worker watches for it and stops within 50 s, and a job cut off mid-run is put back on the queue
+without using up an attempt. It logs to the console (the WebJob log in Kudu) and to the same Azure application log as
+the site. Its first line is the health line: `Gadfly.Worker V<N> <commit> started: environment ..., database Gadfly on
+..., AI panel mock (...), job kinds [...], background services [...], web app runs jobs too: True`. Every job handler is
+built once at startup, so a missing registration stops the worker there with the error rather than failing its first job.
+
+**Always On.** A continuous WebJob only runs while the site is loaded, so the app needs **Always On**, which the Free
+and Shared tiers do not have. Gadfly qualifies: `provision-azure.ps1` turns Always On for the app and its staging slot,
+and the plan (`ASP-MyApps-99fe`) is Standard or higher, which the staging slot already requires.
+
+**`Gadfly:Jobs:RunInWeb`** (default `true`). While it is true the web app still runs the job worker and the sweepers
+too; that is safe, since a job is claimed by an atomic row update and several processes may share the queue (the
+schedulers only queue a sweep when none is waiting, and a grade record is keyed by its session, so two grading sweepers
+cannot start one session twice). Set it to `false` and the web app only enqueues. **Production keeps the
+default until the WebJob is confirmed running** (below); then flip it on each slot:
+
+```powershell
+az webapp config appsettings set -g MyApps -n mindattic-gadfly --settings Gadfly__Jobs__RunInWeb=false
+az webapp config appsettings set -g MyApps -n mindattic-gadfly --slot staging --settings Gadfly__Jobs__RunInWeb=false
+```
+
+Changing a setting restarts the site and the WebJob. To go back, set it to `true` (or delete it).
+
+**Confirming it runs.**
+
+```powershell
+az webapp webjob continuous list -g MyApps -n mindattic-gadfly -o table   # GadflyWorker, status Running
+```
+
+or Kudu: `https://mindattic-gadfly.scm.azurewebsites.net/azurejobs/#/jobs/continuous/GadflyWorker` (the WebJobs
+dashboard; its log should show the health line above and then `Running job <id> (grading.ai), attempt 1.` lines after an exam
+ends). In the portal: the app → Settings → WebJobs. With `RunInWeb=false`, a finished exam still being graded is the
+end-to-end check.
+
+**Locally**, `.un.ps1 -Worker` runs the worker in Development against LocalDB, in mock mode; start the server with
+`$env:Gadfly__Jobs__RunInWeb='false'` beside it to try the split.
 
 ## Running it locally
 

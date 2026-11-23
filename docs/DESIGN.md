@@ -136,6 +136,7 @@ flowchart LR
 | Panel seam | `Gadfly/Socrates` | `ISocraticVotingClient` (`AskAsync`, `AskWithProfilesAsync`, `DecideAsync`, `FanOutAsync`) over MindAttic.Legion (`LegionVotingClient`), with `ProviderHealth`, `PanelUsage`; mock panel in `Socrates/Mock` (GAD-T100). |
 | Source material and AI analysis | `Gadfly.Sources` | Ingestion and chunking, concept map, cited rubrics, hybrid retrieval, `SourceExamEngine` (the resumable step engine), `PanelAnswerJudge`, `TextStyleAssessor`; `ResponseAnalyzer`, `Verification/ResponseVerifier`, `Grading/AiObjectiveGrader`. |
 | Web host | `Gadfly.Server` | Blazor Server UI, `SessionHub` (SignalR), Platform API, tenancy, jobs, privacy, review, grading, analytics. |
+| Worker host | `Gadfly.Worker` | The job queue, AI grading and the sweepers outside the web process (Azure continuous WebJob, GAD-T700). |
 | CLI | `Gadfly.Cli` | Local runs of the engine against source folders (development and corpus work). |
 | Tests and tour | `Gadfly.Tests`, `Gadfly.Tour` | NUnit suites (run only when the owner asks); the tour drives the whole workflow through the real server (GAD-T105). |
 
@@ -154,7 +155,9 @@ flowchart LR
 - **Jobs.** `JobQueue` writes rows to the `Jobs` table; `JobWorker` (hosted service) leases and runs them
   through `IJobHandler`s: `SourceProcessingJob` (ingest, concept map, rubrics), `WebhookDeliveryJob`,
   `RetentionJob` (scheduled by `RetentionScheduler`), and `AiGradingJob` (GAD-T94, started by
-  `GradingSweeper` when a session ends).
+  `GradingSweeper` when a session ends). The worker and its sweepers also run in `Gadfly.Worker`, a separate
+  process deployed as the continuous WebJob `GadflyWorker` beside the site; `Gadfly:Jobs:RunInWeb=false` leaves them
+  to it and the web app only enqueues (GAD-T700, [DEPLOY.md](DEPLOY.md) "The worker").
 - **SQL Server.** EF Core 10, schema `gadfly` (application) and `auth` (MindAttic.Authentication). LocalDB in
   development, Azure SQL in production; migrations in `Gadfly.Server/Data/Migrations`.
 - **Legion panel.** Every model call goes through `ISocraticVotingClient`. Structured work fans out to
@@ -547,6 +550,7 @@ mock mode).
 | Piece | Choice |
 |---|---|
 | App | Azure App Service `mindattic-gadfly`, .NET 10, WebSockets on (Blazor Server and the exam hub), always on, HTTPS only, managed identity |
+| Worker | `Gadfly.Worker` as the continuous WebJob `GadflyWorker` in the same App Service (needs Always On): job queue, AI grading, sweepers; shares the site's settings, database and service registration (`GadflyServices`) |
 | Database | Azure SQL database `Gadfly` (serverless), Entra authentication, no password in the connection string |
 | Keys and secrets | Key Vault (auth pepper, reset key, bootstrap token, LLM provider keys); Data Protection key ring in Blob Storage wrapped by a Key Vault key |
 | Pipeline | `.github/workflows/azure-deploy.yml`, manual trigger: build, apply migrations with an EF bundle, deploy, smoke-test `/healthz` and `/login` |

@@ -8,7 +8,8 @@
      tree often holds other people's uncommitted edits; nothing is ever published from it.
   2. dotnet restore, then `dotnet ef database update` against Azure SQL (Entra auth as the signed-in az user).
      If this fails the script stops: new code is never deployed onto an old database.
-  3. dotnet publish (Release), zip, `az webapp deploy` (zip, async), wait for Kudu to report the deployment.
+  3. dotnet publish (Release), with Gadfly.Worker published inside it as the continuous WebJob
+     App_Data/jobs/continuous/GadflyWorker, zip, `az webapp deploy` (zip, async), wait for Kudu to report the deployment.
   4. Poll /healthz until 200, then smoke check that /login is 200.
   5. Tag the deployed commit vN and push the tag. N is the highest vN tag (on origin or here) plus one, baked into
      the build as /p:GadflyVersion=N so the app shows "VN" (GAD-T291). Only a successful deploy is tagged.
@@ -59,6 +60,8 @@ $ErrorActionPreference = 'Stop'
 
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $project = 'Gadfly.Server/Gadfly.Server.csproj'
+# The grading worker (GAD-T700), published into the site as the continuous WebJob GadflyWorker (docs/DEPLOY.md "The worker").
+$workerProject = 'Gadfly.Worker/Gadfly.Worker.csproj'
 if ($Promote -and $Slot -ne 'production') { throw 'deploy-azure: -Promote swaps staging into production; do not pass -Slot staging with it.' }
 $toStaging = ($Slot -eq 'staging')
 # The slot this run deploys to or swaps into, and the database that slot's code runs on.
@@ -190,6 +193,7 @@ try {
         # --- 2. restore, then migrate; a failure here stops everything ---------------------------------------
         Say 'dotnet restore'
         Invoke-Native 'dotnet restore' { dotnet restore $project --nologo -v q }
+        Invoke-Native 'dotnet restore (worker)' { dotnet restore $workerProject --nologo -v q }
 
         if ($DryRun) {
             Say 'Migrations (dry run: listing only)'
@@ -204,6 +208,9 @@ try {
         if (-not $Promote) {
             Say "dotnet publish (Release, V$version)"
             Invoke-Native 'dotnet publish' { dotnet publish $project -c Release -o $out --nologo --no-restore -v q "-p:GadflyVersion=$version" "-p:GadflyCommit=$sha" }
+            $webJob = Join-Path $out 'App_Data/jobs/continuous/GadflyWorker'
+            Say 'dotnet publish worker (continuous WebJob GadflyWorker)'
+            Invoke-Native 'dotnet publish (worker)' { dotnet publish $workerProject -c Release -o $webJob --nologo --no-restore -v q "-p:GadflyVersion=$version" "-p:GadflyCommit=$sha" }
             Say 'Zipping'
             Add-Type -AssemblyName System.IO.Compression.FileSystem
             [IO.Compression.ZipFile]::CreateFromDirectory($out, $zip, [IO.Compression.CompressionLevel]::Optimal, $false)
