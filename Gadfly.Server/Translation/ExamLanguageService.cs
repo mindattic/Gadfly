@@ -45,6 +45,15 @@ public sealed class ExamTextsForm
 /// <summary>The outcome of a change on the languages panel.</summary>
 public sealed record ExamLanguageResult(bool Ok, string Message);
 
+/// <summary>What a bulk draft did to one exam: <see cref="Ok"/> drafted, <see cref="Skip"/> already approved, <see cref="Fail"/> stopped the run.</summary>
+public enum ExamDraftOutcome { Ok, Skip, Fail }
+
+/// <summary>One exam's result in a bulk draft.</summary>
+public sealed record ExamDraftEntry(Guid ExamId, string Title, ExamDraftOutcome Outcome, string Message);
+
+/// <summary>The outcome of drafting every published exam in a language (GAD-T640), with a count and an entry per exam reached.</summary>
+public sealed record DraftAllResult(bool Ok, string Message, int Drafted, int Skipped, int Failed, int NotReached, IReadOnlyList<ExamDraftEntry> Exams);
+
 /// <summary>
 /// The languages an exam is offered in (GAD-T539, under GAD-T526). An exam lists the languages a student may take it in
 /// (<see cref="Exam.Languages"/>, English, Korean and Spanish by default, GAD-T611); instructors and admins turn languages off or on in the
@@ -177,6 +186,54 @@ public sealed class ExamLanguageService(GadflyDbContext db, ITenantContext tenan
         return new(true, batch.Mock
             ? $"Mock {ExamLanguage.EnglishName(lang)} draft written (mock mode calls no model: each text is the English behind a marker). Edit it, then approve."
             : $"Machine-translated {ExamLanguage.EnglishName(lang)} draft written. Check every text, edit what reads wrongly, then approve.");
+    }
+
+    /// <summary>
+    /// Drafts <paramref name="language"/> texts for every Published exam in the caller's organization that has no approved texts
+    /// in it, through <see cref="DraftAsync"/> (so each draft is audited and metered like a single one). Exams whose texts are
+    /// approved are skipped, never replaced. The run stops at the first exam that fails (a model error); the exams after it are
+    /// counted as not reached and the ones before it keep their drafts. Returns a per-exam entry and ok/skip/fail counts.
+    /// </summary>
+    public async Task<DraftAllResult> DraftAllPublishedAsync(string language, CancellationToken ct = default)
+    {
+        if (!await guard.RequireAsync(Permission.ManageAssessments, "Drafting every published exam's texts in another language", "Exam", "all", ct))
+            return new(false, AssessmentGuard.Denied(Permission.ManageAssessments), 0, 0, 0, 0, []);
+        if (tenant.OrganizationId is not { } org) return new(false, "No active organization.", 0, 0, 0, 0, []);
+        var lang = ExamLanguage.Normalize(language);
+        if (!ExamLanguage.IsSupported(lang) || ExamLanguage.IsEnglish(lang))
+            return new(false, "Choose a language other than English that Gadfly supports.", 0, 0, 0, 0, []);
+
+        var exams = await db.Exams.AsNoTracking().Where(e => e.OrganizationId == org && e.Status == ExamStatus.Published)
+            .OrderBy(e => e.Title).ThenBy(e => e.CreatedAt).Select(e => new { e.Id, e.Title }).ToListAsync(ct);
+        var approved = (await db.ExamLocalizations.AsNoTracking()
+            .Where(l => l.OrganizationId == org && l.Language == lang && l.Status == ExamLocalizationStatus.Approved)
+            .Select(l => l.ExamId).ToListAsync(ct)).ToHashSet();
+
+        var entries = new List<ExamDraftEntry>();
+        int drafted = 0, skipped = 0, failed = 0;
+        foreach (var exam in exams)
+        {
+            if (approved.Contains(exam.Id))
+            {
+                skipped++;
+                entries.Add(new(exam.Id, exam.Title, ExamDraftOutcome.Skip, "Approved texts already exist."));
+                continue;
+            }
+            var r = await DraftAsync(exam.Id, lang, replaceApproved: false, ct);
+            if (!r.Ok)
+            {
+                failed++;
+                entries.Add(new(exam.Id, exam.Title, ExamDraftOutcome.Fail, r.Message));
+                break;
+            }
+            drafted++;
+            entries.Add(new(exam.Id, exam.Title, ExamDraftOutcome.Ok, r.Message));
+        }
+        var notReached = exams.Count - entries.Count;
+        var name = ExamLanguage.EnglishName(lang);
+        var summary = $"{name}: {drafted} drafted, {skipped} skipped (approved), {failed} failed"
+            + (failed > 0 ? $"; stopped there, {notReached} not reached. {entries[^1].Message}" : ".");
+        return new(failed == 0, summary, drafted, skipped, failed, notReached, entries);
     }
 
     /// <summary>
