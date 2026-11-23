@@ -186,10 +186,11 @@ public static class StudentExams
     public const int OpenExamAttempts = 50;
 
     /// <summary>
-    /// Open exams (GAD-T253): every student can take every published exam in their organization without being
-    /// assigned. Creates any missing assignment for the student on each published exam (50 attempts, assigned by
-    /// the exam's owner), so the existing session and attempt code keeps working unchanged; assignment stays the
-    /// mechanism for later. Returns how many assignments were created.
+    /// Open exams (GAD-T253): every student can take every published exam in their organization that is open to all
+    /// students (<see cref="Exam.OpenToAllStudents"/>, GAD-T668) without being assigned. Creates any missing assignment
+    /// for the student on each such exam (50 attempts, assigned by the exam's owner, accommodations copied from the
+    /// student's most recent assignment in the organization), so the existing session and attempt code keeps working
+    /// unchanged; existing assignments are never touched. Returns how many assignments were created.
     /// </summary>
     public static Task<int> EnsureOpenAssignmentsAsync(
         IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, DateTimeOffset now, CancellationToken ct = default) =>
@@ -200,7 +201,7 @@ public static class StudentExams
             .Select(a => a.ExamId)
             .ToListAsync(ct);
         var missing = await db.Exams.AsNoTracking()
-            .Where(e => e.OrganizationId == organizationId && e.Status == ExamStatus.Published && !assigned.Contains(e.Id))
+            .Where(e => e.OrganizationId == organizationId && e.Status == ExamStatus.Published && e.OpenToAllStudents && !assigned.Contains(e.Id))
             // An exam created by API key may have no creator: fall back to whoever created its notes collection.
             .Select(e => new
             {
@@ -210,6 +211,23 @@ public static class StudentExams
             })
             .ToListAsync(ct);
         if (missing.Count == 0) return 0;
+
+        // GAD-T668: a new open assignment carries the student's accommodations from their most recent assignment in the
+        // organization, so extra time, gaze, typed answers, EU status and window-absence allowances follow them to every exam.
+        var latest = await db.ExamAssignments.AsNoTracking()
+            .Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId)
+            .OrderByDescending(a => a.AssignedAt)
+            .Select(a => new
+            {
+                a.TimeMultiplier,
+                a.GazeAccommodation,
+                a.TypedAnswerAccommodation,
+                a.StudentInEuropeanUnion,
+                a.WindowAbsenceFlagOff,
+                a.WindowAbsenceReviewAfterCount,
+                a.WindowAbsenceReviewAfterSeconds,
+            })
+            .FirstOrDefaultAsync(ct);
 
         var created = 0;
         foreach (var exam in missing)
@@ -223,6 +241,13 @@ public static class StudentExams
                 AttemptsAllowed = OpenExamAttempts,
                 AssignedByUserId = exam.AssignedBy,
                 AssignedAt = now,
+                TimeMultiplier = latest?.TimeMultiplier ?? 1m,
+                GazeAccommodation = latest?.GazeAccommodation ?? false,
+                TypedAnswerAccommodation = latest?.TypedAnswerAccommodation ?? false,
+                StudentInEuropeanUnion = latest?.StudentInEuropeanUnion ?? false,
+                WindowAbsenceFlagOff = latest?.WindowAbsenceFlagOff ?? false,
+                WindowAbsenceReviewAfterCount = latest?.WindowAbsenceReviewAfterCount,
+                WindowAbsenceReviewAfterSeconds = latest?.WindowAbsenceReviewAfterSeconds,
             });
             // One at a time, so a duplicate refuses only itself.
             try

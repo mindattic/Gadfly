@@ -275,6 +275,11 @@ public sealed class Exam : ITenantOwned
     public string Languages { get; set; } = Gadfly.Engine.ExamLanguage.DefaultOffered;
     /// <summary>GAD-T656: the organization's category this exam is filed under (<see cref="ExamCategory"/>); null = uncategorized.</summary>
     public Guid? CategoryId { get; set; }
+    /// <summary>
+    /// GAD-T668: open catalog access. When true (the default) any student in the organization can take this exam without being
+    /// assigned, once open exams are on (<c>Gadfly:OpenExams</c>); when false only students an instructor assigned see it.
+    /// </summary>
+    public bool OpenToAllStudents { get; set; } = true;
 }
 
 /// <summary>
