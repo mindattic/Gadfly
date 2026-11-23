@@ -2,82 +2,87 @@
 @attribute [AllowAnonymous]
 @attribute [ExcludeFromInteractiveRouting]
 @layout PublicLayout
-@* Product walkthrough (GAD-T308). Sources: README.md (Features), docs/VOICE.md, docs/PRIVACY.md. *@
+@inherits SitePage
+@* Product walkthrough (GAD-T308). Sources: README.md (Features), docs/VOICE.md, docs/PRIVACY.md, docs/LOCALIZATION.md and
+   docs/research/attention-and-gaze.md. Text in Localization/Strings/site.<lang>.json (GAD-T592). *@
 
-<SiteMeta Title="How it works" Path="/how-it-works"
-          Description="Before, during and after a Gadfly exam: course material to rubrics, a spoken exam with a talking examiner, then AI scoring, blind human grading and approval." />
+<SiteMeta Title="@T["site.how.metaTitle"]" Path="/how-it-works" Description="@T["site.how.metaDescription"]" />
 
 <header class="page-head">
     <div class="wrap">
-        <h1>How a Gadfly exam works</h1>
-        <p>Instructors bring their material, students talk with the examiner, and people decide the grade.</p>
+        <h1>@T["site.how.title"]</h1>
+        <p>@T["site.how.lede"]</p>
     </div>
 </header>
 
 <div class="wrap prose">
     <div class="phases">
         <section class="phase" aria-labelledby="before">
-            <h2 id="before">Before the exam</h2>
+            <h2 id="before">@T["site.how.before.title"]</h2>
             <ul>
-                <li><strong>Upload course material.</strong> Text, Markdown, PDF, Word, EPUB or HTML, up to 20 MB a file.</li>
-                <li><strong>Review the concept map.</strong> Gadfly drafts the concepts and the links between them, each with citations to the passages it came from. Fix anything wrong or missing.</li>
-                <li><strong>Set objectives and rubrics.</strong> Rubric criteria have level descriptors from 0 to 5, and they are versioned.</li>
-                <li><strong>Lock the grading policy.</strong> How AI and human grades combine, and how large a disagreement must be before it goes to reconciliation.</li>
-                <li><strong>Assign the exam.</strong> To students in your organization, with a time limit, extra time where needed, and a signed launch link if you start exams from another system.</li>
+                @foreach (var key in Before)
+                {
+                    <li><strong>@T[$"site.how.before.{key}.title"]</strong> @T[$"site.how.before.{key}.body"]</li>
+                }
             </ul>
         </section>
         <section class="phase" aria-labelledby="during">
-            <h2 id="during">During the exam</h2>
+            <h2 id="during">@T["site.how.during.title"]</h2>
             <ul>
-                <li><strong>A short check first.</strong> The browser checks that the camera shows a picture and the microphone hears the student before the exam can begin.</li>
-                <li><strong>A plain consent notice.</strong> It says what is recorded, that video stays on the device, how long data is kept, and that a person decides the grade.</li>
-                <li><strong>A spoken examiner.</strong> A talking head asks each question with captions. Without 3D graphics, or with reduced motion, a still portrait speaks instead.</li>
-                <li><strong>The student answers aloud.</strong> A live transcript shows what was heard. Each answer is taken as heard, with no read-back or do-over, so the exchange stays real-time; words the recognizer was unsure of are marked for the reviewer.</li>
-                <li><strong>Follow-ups from their own words.</strong> Clarify, probe, counterexample, apply to a new situation, and "can both be true?" when two claims conflict. "I don't know" is recorded as an honest answer.</li>
-                <li><strong>A fair clock.</strong> It starts when the examiner asks the first question, and pauses if the camera, microphone or connection drops.</li>
+                @foreach (var key in During)
+                {
+                    <li><strong>@T[$"site.how.during.{key}.title"]</strong> @T[$"site.how.during.{key}.body"]</li>
+                }
             </ul>
         </section>
         <section class="phase" aria-labelledby="after">
-            <h2 id="after">After the exam</h2>
+            <h2 id="after">@T["site.how.after.title"]</h2>
             <ul>
-                <li><strong>AI scores, marked preliminary.</strong> A panel of models scores each objective against the rubric and the cited material.</li>
-                <li><strong>Blind human grading.</strong> An examiner grades without seeing the AI's view, by default.</li>
-                <li><strong>Reconciliation.</strong> Large gaps between AI and human go to a second reviewer.</li>
-                <li><strong>Approval, then release.</strong> Nothing reaches a student until an authorized person approves it. Appeals and amendments stay on the record.</li>
-                <li><strong>Review and reports.</strong> A timeline of every question, answer, citation and judge's verdict, with Markdown and CSV reports and course analytics.</li>
+                @foreach (var key in After)
+                {
+                    <li><strong>@T[$"site.how.after.{key}.title"]</strong> @T[$"site.how.after.{key}.body"]</li>
+                }
             </ul>
         </section>
     </div>
 
-    <h2 id="evidence">The record stays intact</h2>
-    <p>Every answer is kept exactly as the student gave it. A typed answer's clarifications and typo fixes are added beside
-        the original, never in place of it, and the audit trail is append-only. Reviewers see integrity notes, such as a long look
-        away from the screen or a second voice, as low-confidence context. Graders working blind don't see them at all.</p>
+    <h2 id="languages">@T["site.how.languages.title"]</h2>
+    <p>@T["site.how.languages.p1"]</p>
+    <p>@T["site.how.languages.p2"]</p>
 
-    <h2 id="roles">Who does what</h2>
+    <h2 id="evidence">@T["site.how.record.title"]</h2>
+    <p>@T["site.how.record.body"]</p>
+
+    <h2 id="roles">@T["site.how.roles.title"]</h2>
     <div class="table-scroll">
         <table>
-            <thead><tr><th scope="col">Role</th><th scope="col">What they do in Gadfly</th></tr></thead>
+            <thead><tr><th scope="col">@T["site.how.roles.role"]</th><th scope="col">@T["site.how.roles.what"]</th></tr></thead>
             <tbody>
-                <tr><th scope="row">Owner and Admin</th><td>Manage members and invitations, retention, cost limits, API keys, webhooks and usage for the organization.</td></tr>
-                <tr><th scope="row">Instructor</th><td>Upload material, build assessments and exams, assign them, and review sessions.</td></tr>
-                <tr><th scope="row">Examiner</th><td>Grade sessions independently, blind to the AI's view by default.</td></tr>
-                <tr><th scope="row">Second reviewer</th><td>Reconcile large disagreements between the AI panel and the examiner.</td></tr>
-                <tr><th scope="row">Student</th><td>Take assigned exams and read released results.</td></tr>
+                @foreach (var key in Roles)
+                {
+                    <tr><th scope="row">@T[$"site.how.roles.{key}.name"]</th><td>@T[$"site.how.roles.{key}.does"]</td></tr>
+                }
             </tbody>
         </table>
     </div>
 
-    <h2 id="it">For your IT and data teams</h2>
+    <h2 id="it">@T["site.how.it.title"]</h2>
     <ul>
-        <li>Each institution is its own organization; every database query is limited to it.</li>
-        <li>Staff sign in with two-step verification. Passwords are hashed with Argon2id, with lockout after repeated failures.</li>
-        <li>An API with organization keys, signed launch links and signed webhooks, described by an OpenAPI document.</li>
-        <li>Retention periods, per-student data export and erasure. See the <a href="privacy">privacy notice</a> and the <a href="security">security page</a>.</li>
+        <li>@T["site.how.it.tenant"]</li>
+        <li>@T["site.how.it.signIn"]</li>
+        <li>@T["site.how.it.api"]</li>
+        <li>@H("site.how.it.retention")</li>
     </ul>
 
     <div class="actions">
-        <a class="btn" href="contact">Request a demo</a>
-        <a href="science">Why this way of questioning works</a>
+        <a class="btn" href="contact">@T["site.nav.demo"]</a>
+        <a href="science">@T["site.how.whyLink"]</a>
     </div>
 </div>
+
+@code {
+    private static readonly string[] Before = ["upload", "concepts", "rubrics", "policy", "languages", "assign"];
+    private static readonly string[] During = ["ready", "consent", "examiner", "answer", "pace", "followUps", "rephrase", "gaze", "window", "clock"];
+    private static readonly string[] After = ["ai", "blind", "reconcile", "approve", "original", "fairness", "reports"];
+    private static readonly string[] Roles = ["owner", "instructor", "examiner", "reviewer", "student"];
+}

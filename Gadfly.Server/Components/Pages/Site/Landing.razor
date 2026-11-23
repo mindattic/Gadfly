@@ -1,31 +1,30 @@
+@inherits SitePage
 @* The public landing page (GAD-T308), shown at "/" to signed-out visitors by Home.razor. Every claim here comes from
-   README.md, docs/SCIENCE.md, docs/PRIVACY.md or docs/VOICE.md; keep it that way when editing. *@
+   README.md, docs/SCIENCE.md, docs/PRIVACY.md, docs/VOICE.md, docs/LOCALIZATION.md or docs/research/attention-and-gaze.md;
+   keep it that way when editing. Text in Localization/Strings/site.<lang>.json (GAD-T592). *@
 
-<SiteMeta Title="Gadfly Exams: spoken exams that follow up on what the student said" Path="/"
-          Description="Gadfly Exams asks questions out loud and writes every follow-up from the student's previous answer, so understanding shows in the reasoning. A human grades and approves every result." />
+<SiteMeta Title="@T["site.landing.metaTitle"]" Path="/" Description="@T["site.landing.metaDescription"]" />
 
 <section class="hero" aria-labelledby="hero-heading">
     <div class="wrap">
         <div>
-            <h1 id="hero-heading">Exams that find out whether a student understands.</h1>
-            <p class="lede">When anyone can paste a question into an AI, a correct answer proves very little. Gadfly's examiner
-                asks out loud, then follows up on the student's own words: why, what if, and whether two things they said
-                can both be true.</p>
+            <h1 id="hero-heading">@T["site.landing.hero.title"]</h1>
+            <p class="lede">@T["site.landing.hero.lede"]</p>
             <div class="actions">
-                <a class="btn" href="contact">Request a demo</a>
-                <a href="how-it-works">See how an exam works</a>
+                <a class="btn" href="contact">@T["site.nav.demo"]</a>
+                <a href="how-it-works">@T["site.landing.hero.how"]</a>
             </div>
         </div>
         <figure class="plate" aria-labelledby="plate-caption">
-            <img src="assets/portrait.png" width="480" height="600" alt="The Gadfly examiner, a rendered face that speaks each question." />
+            <img src="assets/portrait.png" width="480" height="600" alt="@T["site.landing.plate.alt"]" />
             <div class="exchange">
-                <p class="turn examiner"><span class="who">Examiner</span>What is opportunity cost?</p>
-                <p class="turn student"><span class="who">Student</span>It's what you give up when you choose something, <mark>like the money you spend</mark>.</p>
-                <p class="turn examiner"><span class="who">Examiner</span>You said <mark>like the money you spend</mark>. If a concert ticket were free, would going still cost you anything?</p>
-                <p class="turn student"><span class="who">Student</span>I suppose the evening. I could have worked a shift.</p>
-                <p class="turn examiner"><span class="who">Examiner</span>So is it the money, or the best thing you gave up? Can both be true?</p>
+                <p class="turn examiner"><span class="who">@T["site.landing.plate.examiner"]</span>@T["site.landing.plate.q1"]</p>
+                <p class="turn student"><span class="who">@T["site.landing.plate.student"]</span>@H("site.landing.plate.a1")</p>
+                <p class="turn examiner"><span class="who">@T["site.landing.plate.examiner"]</span>@H("site.landing.plate.q2")</p>
+                <p class="turn student"><span class="who">@T["site.landing.plate.student"]</span>@T["site.landing.plate.a2"]</p>
+                <p class="turn examiner"><span class="who">@T["site.landing.plate.examiner"]</span>@T["site.landing.plate.q3"]</p>
             </div>
-            <figcaption id="plate-caption">An illustration of the questioning, not a recorded exam. Each follow-up is written from the answer before it.</figcaption>
+            <figcaption id="plate-caption">@T["site.landing.plate.caption"]</figcaption>
         </figure>
     </div>
 </section>
@@ -33,36 +32,57 @@
 <section class="band" aria-labelledby="why-heading">
     <div class="wrap split">
         <div>
-            <h2 id="why-heading">Why one right answer isn't enough</h2>
-            <p>A single correct answer can be recalled, guessed or pasted. Gadfly asks the questions a good examiner asks in person.</p>
+            <h2 id="why-heading">@T["site.landing.why.title"]</h2>
+            <p>@T["site.landing.why.intro"]</p>
         </div>
         <div>
-            <p>It starts with "what is it?", then asks the student to explain their answer, defend it against a case that
-                doesn't fit, and use it somewhere new. That is much harder to do without understanding the idea.</p>
-            <p>Each follow-up is written from the previous answer, so it can't be looked up or prepared in advance.
-                Understanding shows in the reasoning, not in the wording, and an unclear answer gets a neutral clarifying
-                question that never hints at the answer.</p>
-            <p>Instructors use their own course material. Gadfly turns it into learning objectives and rubrics they can edit,
-                and every question and judgment cites the passage it rests on.</p>
+            <p>@T["site.landing.why.p1"]</p>
+            <p>@T["site.landing.why.p2"]</p>
+            <p>@T["site.landing.why.p3"]</p>
+        </div>
+    </div>
+</section>
+
+<section class="band" aria-labelledby="feel-heading">
+    <div class="wrap split">
+        <div>
+            <h2 id="feel-heading">@T["site.landing.feel.title"]</h2>
+            <p>@T["site.landing.feel.intro"]</p>
+        </div>
+        <div class="sheet">
+            <ul>
+                <li><strong>@T["site.landing.feel.talk.title"]</strong>
+                    <span>@T["site.landing.feel.talk.body"]</span></li>
+                <li><strong>@T["site.landing.feel.languages.title"]</strong>
+                    <span>@T["site.landing.feel.languages.body"]</span></li>
+                <li><strong>@T["site.landing.feel.esl.title"]</strong>
+                    <span>@T["site.landing.feel.esl.body"]</span></li>
+                <li><strong>@T["site.landing.feel.ready.title"]</strong>
+                    <span>@T["site.landing.feel.ready.body"]</span></li>
+                <li><strong>@T["site.landing.feel.gaze.title"]</strong>
+                    <span>@T["site.landing.feel.gaze.body"]</span></li>
+                <li><strong>@T["site.landing.feel.access.title"]</strong>
+                    <span>@H("site.landing.feel.access.body")</span></li>
+            </ul>
         </div>
     </div>
 </section>
 
 <section class="band" aria-labelledby="path-heading">
     <div class="wrap">
-        <h2 id="path-heading">From the first question to a released grade</h2>
-        <p>A person stays accountable for every result. Nothing reaches a student until someone with authority approves it.</p>
+        <h2 id="path-heading">@T["site.landing.path.title"]</h2>
+        <p>@T["site.landing.path.intro"]</p>
         <ol class="steps">
-            <li><h3>The instructor uploads course material</h3>
-                <p>Text, Markdown, PDF, Word, EPUB or HTML. Gadfly drafts the concepts and rubrics; the instructor corrects and approves them.</p></li>
-            <li><h3>The student answers out loud, on camera</h3>
-                <p>A talking examiner asks each question with captions, and the student checks a live transcript of what they said.</p></li>
-            <li><h3>A panel of AI models scores each objective</h3>
-                <p>Models from different families score against the rubric and the cited material. Their grade is preliminary.</p></li>
-            <li><h3>An examiner grades independently</h3>
-                <p>Blind by default, without seeing the AI's view. Large disagreements go to a second reviewer to reconcile.</p></li>
-            <li><h3>An authorized person approves the result</h3>
-                <p>Only then is it published to the student, with appeals and amendments kept on the record.</p></li>
+            <li><h3>@T["site.landing.path.s1.title"]</h3>
+                <p>@T["site.landing.path.s1.body"]</p></li>
+            <li><h3>@T["site.landing.path.s2.title"]</h3>
+                <p>@T["site.landing.path.s2.body"]</p></li>
+            <li><h3>@T["site.landing.path.s3.title"]</h3>
+                <p>@T["site.landing.path.s3.body"]</p></li>
+            <li><h3>@T["site.landing.path.s4.title"]</h3>
+                <p>@T["site.landing.path.s4.body"]</p></li>
+            <li><h3>@T["site.landing.path.s5.title"]</h3>
+                <p>@T["site.landing.path.s5.body"]</p></li>
         </ol>
     </div>
 </section>
@@ -70,21 +90,25 @@
 <section class="band" aria-labelledby="wont-heading">
     <div class="wrap split">
         <div>
-            <h2 id="wont-heading">What Gadfly will not do</h2>
-            <p>The research on proctoring and AI grading sets clear limits. Gadfly is built inside them.</p>
+            <h2 id="wont-heading">@T["site.landing.wont.title"]</h2>
+            <p>@T["site.landing.wont.intro"]</p>
         </div>
         <div class="sheet">
             <ul>
-                <li><strong>Decide that a student cheated.</strong>
-                    <span>Signals such as a face out of view or a tab switch are low-confidence notes for a reviewer. They are never a verdict and never part of the grade.</span></li>
-                <li><strong>Store or send video.</strong>
-                    <span>Camera checks run in the student's browser. Video frames never leave the device; only short descriptions of events are sent.</span></li>
-                <li><strong>Mark anyone down for accent or fluency.</strong>
-                    <span>Judges are told to ignore transcription slips, filler words and false starts. Pauses and speech rate never enter the grade.</span></li>
-                <li><strong>Run an AI-text detector.</strong>
-                    <span>Those tools are unreliable and flag non-native writers. Answer style is context for the reviewer only.</span></li>
-                <li><strong>Claim more than it has measured.</strong>
-                    <span>Gadfly makes no validity claims until its own pilot measures them.</span></li>
+                <li><strong>@T["site.landing.wont.cheat.title"]</strong>
+                    <span>@T["site.landing.wont.cheat.body"]</span></li>
+                <li><strong>@T["site.landing.wont.cancel.title"]</strong>
+                    <span>@T["site.landing.wont.cancel.body"]</span></li>
+                <li><strong>@T["site.landing.wont.video.title"]</strong>
+                    <span>@T["site.landing.wont.video.body"]</span></li>
+                <li><strong>@T["site.landing.wont.accent.title"]</strong>
+                    <span>@T["site.landing.wont.accent.body"]</span></li>
+                <li><strong>@T["site.landing.wont.guess.title"]</strong>
+                    <span>@T["site.landing.wont.guess.body"]</span></li>
+                <li><strong>@T["site.landing.wont.detector.title"]</strong>
+                    <span>@T["site.landing.wont.detector.body"]</span></li>
+                <li><strong>@T["site.landing.wont.claim.title"]</strong>
+                    <span>@T["site.landing.wont.claim.body"]</span></li>
             </ul>
         </div>
     </div>
@@ -93,15 +117,15 @@
 <section class="band" aria-labelledby="science-heading">
     <div class="wrap split">
         <div>
-            <h2 id="science-heading">An old method, examined carefully</h2>
-            <p>Gadfly follows the Socratic elenchus and Piaget's clinical interview, and says plainly where the research stops.</p>
-            <p><a href="science">Read the science behind Gadfly</a></p>
+            <h2 id="science-heading">@T["site.landing.science.title"]</h2>
+            <p>@T["site.landing.science.body"]</p>
+            <p><a href="science">@T["site.landing.science.link"]</a></p>
         </div>
         <blockquote class="quote">
             @* GAD-T453: Fowler's 1914 translation (public domain in the US, and in the EU and UK since 2026). The Piaget quote that stood
                here was a misquotation of a translation still in copyright in the EU and UK; the Science page quotes it accurately, with its source. *@
-            <p>"This man thinks he knows something when he does not."</p>
-            <cite>Plato, Apology 21d (trans. H. N. Fowler, 1914)</cite>
+            <p>@T["site.landing.science.quote"]</p>
+            <cite>@T["site.landing.science.cite"]</cite>
         </blockquote>
     </div>
 </section>
@@ -109,11 +133,11 @@
 <section class="band closing" aria-labelledby="closing-heading">
     <div class="wrap">
         <div>
-            <h2 id="closing-heading">See it with your own course material</h2>
-            <p>We'll set up a demonstration on a topic you teach and walk your team through grading and review.</p>
+            <h2 id="closing-heading">@T["site.landing.closing.title"]</h2>
+            <p>@T["site.landing.closing.body"]</p>
             <div class="actions">
-                <a class="btn" href="contact">Request a demo</a>
-                <a href="pricing">Compare plans</a>
+                <a class="btn" href="contact">@T["site.nav.demo"]</a>
+                <a href="pricing">@T["site.landing.closing.plans"]</a>
             </div>
         </div>
         <img class="fly" src="assets/site/logo.png" alt="" width="136" height="136" loading="lazy" />

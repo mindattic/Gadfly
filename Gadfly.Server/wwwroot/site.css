@@ -47,6 +47,11 @@
 .site .btn.quiet { background: transparent; color: var(--oxblood); }
 .site-nav .btn { padding: .45rem .85rem; border-bottom-width: 1px; }
 .site-nav .btn:hover { border-bottom-color: var(--oxblood); }
+/* English / Korean (GAD-T592): the current language as plain text, the other as a link; each at least 24px tall (WCAG 2.5.8). */
+.site-lang { display: flex; align-items: center; gap: .6rem; font-size: .9rem; }
+.site-lang a, .site-lang span { display: inline-flex; align-items: center; min-height: 24px; padding: 0 .1rem; }
+.site-lang a { color: var(--oxblood); }
+.site-lang span { color: var(--muted); }
 
 /* ---- page frame (overrides app.css's generic main) */
 .site main.site-main { flex: 1; max-width: none; margin: 0; padding: 0; display: block; min-height: 0; }
@@ -212,6 +217,7 @@
 }
 @media (max-width: 640px) {
     .site .site-nav { width: 100%; margin-left: 0; gap: .1rem 1rem; }
+    .site .site-lang { margin-left: 0; }
     .site .plate { grid-template-columns: 1fr; }
     .site .plate img { height: 13rem; min-height: 0; object-position: 50% 35%; }
     .site .plans { grid-template-columns: 1fr; }

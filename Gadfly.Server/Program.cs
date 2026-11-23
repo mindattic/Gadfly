@@ -248,6 +248,7 @@ app.UseAntiforgery();
 
 GadflyEndpoints.Map(app);
 Gadfly.Server.Localization.LocalizationSetup.MapUiStrings(app);   // UI strings for scripts (GAD-T543)
+Gadfly.Server.Localization.LocalizationSetup.MapLanguageChoice(app);   // the public site's English / 한국어 links (GAD-T592)
 app.MapVoiceExam();
 app.MapGrading();
 app.MapGradingActions();   // HTTP grading workflow for integrators and the demo tour (GAD-T105)

@@ -2,91 +2,87 @@
 @attribute [AllowAnonymous]
 @attribute [ExcludeFromInteractiveRouting]
 @layout PublicLayout
+@inherits SitePage
 @* The science page (GAD-T308), condensed from docs/SCIENCE.md (and docs/PRIVACY.md for the current voice-measurement
-   rules). Keep every claim and citation within what those documents support; the full verification levels are there. *@
+   rules), with the attention and second-language rows from docs/research/attention-and-gaze.md and
+   docs/research/esl-and-korean.md (GAD-T592). Keep every claim and citation within what those documents support; the full
+   verification levels are there. Text in Localization/Strings/site.<lang>.json; the references stay as published. *@
 
-<SiteMeta Title="The science behind Gadfly" Path="/science"
-          Description="Why follow-up questions built from a student's own answers say more about understanding, where the method stops working, and what Gadfly does about each limit." />
+<SiteMeta Title="@T["site.science.metaTitle"]" Path="/science" Description="@T["site.science.metaDescription"]" />
 
 <header class="page-head">
     <div class="wrap">
-        <h1>The science behind Gadfly</h1>
-        <p>What the Socratic method is, why follow-up questions reveal understanding, and where the research sets limits.</p>
+        <h1>@T["site.science.title"]</h1>
+        <p>@T["site.science.lede"]</p>
     </div>
 </header>
 
 <div class="wrap prose">
-    <h2 id="elenchus">Asking until the answers have to hold together</h2>
-    <p>In Plato's <em>Apology</em>, Socrates questions a man reputed to be wise and finds that he "thinks he knows something
-        when he does not" (21d). He calls himself a gadfly, stinging a sluggish horse awake (30e). Scholars call his way of
-        questioning the <em>elenchus</em>. Two features of it carry straight into Gadfly:</p>
+    <h2 id="elenchus">@T["site.science.elenchus.title"]</h2>
+    <p>@H("site.science.elenchus.body")</p>
     <ul>
-        <li><strong>Only the student's own words count.</strong> The examiner works from what the student actually said, not from premises it supplied.</li>
-        <li><strong>The test is coherence.</strong> When two answers conflict, something in the student's grasp of the idea is not yet secure.</li>
+        <li>@H("site.science.elenchus.own")</li>
+        <li>@H("site.science.elenchus.coherence")</li>
     </ul>
 
-    <h2 id="why">Why follow-up questions reveal understanding</h2>
-    <p><strong>A single correct answer can be borrowed.</strong> One right definition can be recalled, guessed or pasted.
-        Explaining it, defending it against a counterexample and using it somewhere new is much harder without understanding it.</p>
-    <p><strong>Following the answer is an established research method.</strong> Piaget's clinical interview asked researchers
-        to "vary the questions, ... make counter-suggestions, in short, ... give up all idea of a fixed questionnaire" (1929, p. 4).
-        An answer that survives a counter-suggestion is better evidence than one stated once.</p>
-    <p><strong>Not suggesting the answer matters as much as asking.</strong> Piaget's "golden rule is to avoid suggestion"
-        (p. 13). Gadfly's clarifying question is written to be neutral for that reason.</p>
-    <p><strong>Asking "why" also helps students learn.</strong> Prompting learners to explain improves learning (Chi et al. 1994;
-        Bisra et al. 2018), and open recall questions are the kind of test that most improves later retention (Rowland 2014).
-        An exam like this teaches as well as measures.</p>
+    <h2 id="why">@T["site.science.why.title"]</h2>
+    <p>@H("site.science.why.borrowed")</p>
+    <p>@H("site.science.why.piaget")</p>
+    <p>@H("site.science.why.suggestion")</p>
+    <p>@H("site.science.why.learn")</p>
 
-    <h2 id="limits">The limits, and what Gadfly does about each</h2>
+    <h2 id="limits">@T["site.science.limits.title"]</h2>
     <div class="table-scroll">
         <table>
-            <thead><tr><th scope="col">What the research found</th><th scope="col">What Gadfly does</th></tr></thead>
+            <thead><tr><th scope="col">@T["site.science.limits.found"]</th><th scope="col">@T["site.science.limits.does"]</th></tr></thead>
             <tbody>
-                <tr><td>A contradiction shows that two claims clash, not which one is wrong (Vlastos 1983, via Wolfsdorf 2013; Benson 1995).</td>
-                    <td>"Can both be true?" quotes the student's two claims and lets them revise either. The rubric and the cited course material decide which is right.</td></tr>
-                <tr><td>Explaining to a listener changes and slows the explainer (Fox, Ericsson &amp; Best 2011).</td>
-                    <td>Judges ignore filler words and false starts. Pauses and speech rate never enter the grade.</td></tr>
-                <tr><td>Oral exams are reliable through sampling: "one measure is no measure" (van der Vleuten et al. 2010; Wass et al. 2003).</td>
-                    <td>Exams cover several objectives, each scored separately, by a panel of models and an independent human.</td></tr>
-                <tr><td>AI judges carry biases, and people shown an AI verdict often change their own (Zheng et al. 2023).</td>
-                    <td>Models from different families score each objective; a human grades blind by default; large gaps are reconciled; an authorized person approves. The EU AI Act requires human oversight for this use (Annex III, point 3).</td></tr>
-                <tr><td>Speech recognition makes more errors for some dialects and for stuttered speech (Koenecke et al. 2020; Mujtaba et al. 2024).</td>
-                    <td>The original answer is kept as given. Judges ignore transcription slips that don't change the meaning and never penalize accent.</td></tr>
-                <tr><td>Webcam gaze is too coarse to tell reading from thinking (Papoutsaki et al. 2016; Rayner 2009).</td>
-                    <td>Camera events are reviewer-only notes with low confidence, never a verdict and never part of the grade.</td></tr>
-                <tr><td>Voice-stress analysis performs at chance (Harnsberger et al. 2009; National Research Council 2003).</td>
-                    <td>Voice measurements are described to reviewers as raw differences, name no emotional state, never enter the grade and are off by default in the EU and EEA. Where they are on, they may make the examiner probe harder.</td></tr>
-                <tr><td>AI-text detectors are unreliable and flag non-native writers (Weber-Wulff et al. 2023; Liang et al. 2023).</td>
-                    <td>Gadfly uses no AI-text detector.</td></tr>
+                @foreach (var key in Limits)
+                {
+                    <tr><td>@T[$"site.science.limits.{key}.found"]</td><td>@T[$"site.science.limits.{key}.does"]</td></tr>
+                }
             </tbody>
         </table>
     </div>
 
-    <h2 id="not-shown">What the research does not show</h2>
+    <h2 id="conversation">@T["site.science.conversation.title"]</h2>
+    <p>@T["site.science.conversation.p1"]</p>
+    <p>@T["site.science.conversation.p2"]</p>
+
+    <h2 id="not-shown">@T["site.science.notShown.title"]</h2>
     <ul>
-        <li>That a spoken Socratic exam is a more valid measure of understanding than other formats. Gadfly makes no validity claims until its own pilot measures them.</li>
-        <li>That conversational follow-up reduces cheating. We have not verified a source for this.</li>
-        <li>How well AI models grade spoken, transcribed answers. A double-marked pilot is the only route to that number.</li>
-        <li>That gaze or voice signals can detect cheating, lying or stress. Gadfly does not claim to detect any of these.</li>
+        <li>@T["site.science.notShown.validity"]</li>
+        <li>@T["site.science.notShown.cheating"]</li>
+        <li>@T["site.science.notShown.grading"]</li>
+        <li>@T["site.science.notShown.signals"]</li>
+        <li>@T["site.science.notShown.attention"]</li>
     </ul>
 
-    <h2 id="references">References</h2>
-    <ul class="refs">
+    <h2 id="references">@T["site.science.references"]</h2>
+    <ul class="refs" lang="@EnglishOnly">
         <li>Benson, H. H. (1995). The dissolution of the problem of the elenchus. <em>Oxford Studies in Ancient Philosophy, 13</em>, 45-112.</li>
         <li>Bisra, K., Liu, Q., Nesbit, J. C., Salimi, F., &amp; Winne, P. H. (2018). Inducing self-explanation: A meta-analysis. <em>Educational Psychology Review, 30</em>(3), 703-725.</li>
+        <li>CNIL. (2023). <em lang="fr">Délibération n° 2023-058 du 8 juin 2023 portant adoption d'une recommandation relative aux dispositifs de surveillance à distance des examens</em>.</li>
         <li>Chi, M. T. H., de Leeuw, N., Chiu, M.-H., &amp; LaVancher, C. (1994). Eliciting self-explanations improves understanding. <em>Cognitive Science, 18</em>(3), 439-477.</li>
+        <li>Doherty-Sneddon, G., &amp; Phelps, F. G. (2005). Gaze aversion: A response to cognitive or social difficulty? <em>Memory &amp; Cognition, 33</em>(4), 727-733.</li>
+        <li>Doherty-Sneddon, G., Riby, D. M., &amp; Whittle, L. (2012). Gaze aversion as a cognitive load management strategy in autism spectrum disorder and Williams syndrome. <em>Journal of Child Psychology and Psychiatry, 53</em>(4), 420-430.</li>
         <li>Fox, M. C., Ericsson, K. A., &amp; Best, R. (2011). Do procedures for verbal reporting of thinking have to be reactive? <em>Psychological Bulletin, 137</em>(2), 316-344.</li>
+        <li>Glenberg, A. M., Schroeder, J. L., &amp; Robertson, D. A. (1998). Averting the gaze disengages the environment and facilitates remembering. <em>Memory &amp; Cognition, 26</em>(4), 651-658.</li>
         <li>Harnsberger, J. D., Hollien, H., Martin, C. A., &amp; Hollien, K. A. (2009). Stress and deception in speech: Evaluating layered voice analysis. <em>Journal of Forensic Sciences, 54</em>(3), 642-650.</li>
+        <li>Kahng, J. (2014). Exploring utterance and cognitive fluency of L1 and L2 English speakers: Temporal measures and stimulated recall. <em>Language Learning, 64</em>(4), 809-854.</li>
         <li>Koenecke, A., et al. (2020). Racial disparities in automated speech recognition. <em>PNAS, 117</em>(14), 7684-7689.</li>
         <li>Liang, W., Yuksekgonul, M., Mao, Y., Wu, E., &amp; Zou, J. (2023). GPT detectors are biased against non-native English writers. <em>Patterns, 4</em>(7).</li>
+        <li>Lima, L. M., Favarato, M. H., &amp; Tibério, I. F. L. C. (2026). Empowering medical students: Peer-led OSCE reduces anxiety. <em>PLoS ONE, 21</em>(2), e0340407.</li>
+        <li>Maslych, M., et al. (2025). Mitigating response delays in free-form conversations with LLM-powered intelligent virtual agents. <em>CUI '25</em>.</li>
         <li>Mujtaba, D., et al. (2024). Lost in transcription: Accuracy biases of automatic speech recognition against disfluent speech. <em>NAACL 2024</em>, 4795-4809.</li>
         <li>National Research Council. (2003). <em>The polygraph and lie detection</em>. The National Academies Press.</li>
         <li>Papoutsaki, A., et al. (2016). WebGazer: Scalable webcam eye tracking using user interactions. <em>Proceedings of IJCAI-16</em>, 3839-3845.</li>
-        <li>Piaget, J. (1929). <em>The child's conception of the world</em> (J. Tomlinson &amp; A. Tomlinson, Trans.). Kegan Paul, Trench, Trubner. (Original work published 1926 as <em>La représentation du monde chez l'enfant</em>.)</li>
+        <li>Piaget, J. (1929). <em>The child's conception of the world</em> (J. Tomlinson &amp; A. Tomlinson, Trans.). Kegan Paul, Trench, Trubner. (Original work published 1926 as <em lang="fr">La représentation du monde chez l'enfant</em>.)</li>
         <li>Plato. <em>Apology</em> (H. N. Fowler, Trans.). In <em>Plato in twelve volumes</em>, Vol. 1 (Loeb Classical Library). Harvard University Press. (Translation first published 1914; cited from the 1966 printing.)</li>
         <li>Rayner, K. (2009). Eye movements in reading: Models and data. <em>Journal of Eye Movement Research, 2</em>(5).</li>
         <li>Regulation (EU) 2024/1689 (Artificial Intelligence Act). <em>Official Journal of the European Union</em>, 12 July 2024.</li>
+        <li>Rogers, S. L., Speelman, C. P., Guidetti, O., &amp; Longmuir, M. (2018). Using dual eye tracking to uncover personal gaze patterns during social interaction. <em>Scientific Reports, 8</em>, 4271.</li>
         <li>Rowland, C. A. (2014). The effect of testing versus restudy on retention. <em>Psychological Bulletin, 140</em>(6), 1432-1463.</li>
+        <li>Tien, I. S., Imundo, M. N., &amp; Bjork, E. L. (2023). Viewing oneself during synchronous online learning increases appearance anxiety and decreases memory for lecture content. <em>Applied Cognitive Psychology, 37</em>, 443-451.</li>
         <li>van der Vleuten, C. P. M., et al. (2010). The assessment of professional competence: Building blocks for theory development. <em>Best Practice &amp; Research Clinical Obstetrics and Gynaecology, 24</em>(6), 703-719.</li>
         <li>Vlastos, G. (1983). The Socratic elenchus. <em>Oxford Studies in Ancient Philosophy, 1</em>, 27-58.</li>
         <li>Wass, V., Wakeford, R., Neighbour, R., &amp; Van der Vleuten, C. (2003). Achieving acceptable reliability in oral examinations. <em>Medical Education, 37</em>(2), 126-131.</li>
@@ -95,3 +91,8 @@
         <li>Zheng, L., et al. (2023). Judging LLM-as-a-judge with MT-Bench and Chatbot Arena. <em>NeurIPS 36</em>.</li>
     </ul>
 </div>
+
+@code {
+    private static readonly string[] Limits =
+        ["contradiction", "explaining", "sampling", "aiBias", "recognition", "secondLanguage", "gazeThinking", "gazeCoarse", "selfView", "automated", "waiting", "rehearsal", "voiceStress", "detectors"];
+}

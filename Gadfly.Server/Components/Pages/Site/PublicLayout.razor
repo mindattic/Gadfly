@@ -1,28 +1,45 @@
 @* The public site's frame (GAD-T308): header, footer and site.css for the landing, product, pricing, contact and legal
    pages. Those pages render as static HTML (no Blazor circuit), so a signed-out visitor costs one request per page. *@
 @inherits LayoutComponentBase
+@inject Gadfly.Server.Localization.UiText T
+@inject NavigationManager Nav
 
 @* site.css and the head tags come from each page's SiteMeta: Blazor shows only one HeadContent per page, the last one
    rendered, so a HeadContent here would be replaced by the page's. *@
 <div class="site">
-    <a class="skip" href="#content">Skip to content</a>
+    <a class="skip" href="#content">@T["site.skip"]</a>
     <Gadfly.Server.Components.Shared.MockBanner />
     <header class="site-head">
         <div class="bar">
-            <a class="site-brand" href="/" aria-label="Gadfly Exams, home">
+            <a class="site-brand" href="/" aria-label="@T["site.brandLabel"]">
                 <img class="fly" src="assets/site/logo-192.png" alt="" width="40" height="40" />
                 Gadfly <span>Exams</span>
             </a>
-            <nav class="site-nav" aria-label="Site">
-                <NavLink href="how-it-works">How it works</NavLink>
-                <NavLink href="science">The science</NavLink>
-                <NavLink href="pricing">Pricing</NavLink>
-                <NavLink href="security">Security</NavLink>
+            <nav class="site-nav" aria-label="@T["site.nav.label"]">
+                <NavLink href="how-it-works">@T["site.nav.how"]</NavLink>
+                <NavLink href="science">@T["site.nav.science"]</NavLink>
+                <NavLink href="pricing">@T["site.nav.pricing"]</NavLink>
+                <NavLink href="security">@T["site.nav.security"]</NavLink>
                 <AuthorizeView>
-                    <Authorized><a class="sign-in" href="/">Your dashboard</a></Authorized>
-                    <NotAuthorized><a class="sign-in" href="login">Sign in</a></NotAuthorized>
+                    <Authorized><a class="sign-in" href="/">@T["site.nav.dashboard"]</a></Authorized>
+                    <NotAuthorized><a class="sign-in" href="login">@T["site.nav.signIn"]</a></NotAuthorized>
                 </AuthorizeView>
-                <a class="btn" href="contact">Request a demo</a>
+                <a class="btn" href="contact">@T["site.nav.demo"]</a>
+            </nav>
+            @* English / 한국어 (GAD-T592): plain links, since these pages run without a circuit; /language/{lang} sets the culture
+               cookie and returns here. Each name is in its own language and script (WCAG 3.1.2). *@
+            <nav class="site-lang" aria-label="@T["site.lang.label"]">
+                @foreach (var lang in Gadfly.Server.Localization.UiCatalog.Languages)
+                {
+                    @if (lang == T.Language)
+                    {
+                        <span lang="@lang" aria-current="true">@Gadfly.Server.Localization.UiCatalog.NativeName(lang)</span>
+                    }
+                    else
+                    {
+                        <a href="@LanguageHref(lang)" lang="@lang" hreflang="@lang" rel="nofollow">@Gadfly.Server.Localization.UiCatalog.NativeName(lang)</a>
+                    }
+                }
             </nav>
         </div>
     </header>
@@ -35,31 +52,40 @@
         <div class="wrap">
             <div>
                 <img class="fly" src="assets/site/logo-192.png" alt="" width="36" height="36" />
-                <p>Gadfly Exams is a spoken examination platform for universities and training providers, made by MindAttic.</p>
+                <p>@T["site.foot.about"]</p>
                 <p>&copy; @DateTime.UtcNow.Year MindAttic</p>
             </div>
             <nav aria-labelledby="foot-product">
-                <h2 id="foot-product">Product</h2>
+                <h2 id="foot-product">@T["site.foot.product"]</h2>
                 <ul>
-                    <li><a href="how-it-works">How it works</a></li>
-                    <li><a href="science">The science</a></li>
-                    <li><a href="pricing">Pricing and plans</a></li>
-                    <li><a href="contact">Request a demo</a></li>
-                    <li><a href="help">Help center</a></li>
-                    <li><a href="login">Sign in</a></li>
+                    <li><a href="how-it-works">@T["site.nav.how"]</a></li>
+                    <li><a href="science">@T["site.nav.science"]</a></li>
+                    <li><a href="pricing">@T["site.foot.pricing"]</a></li>
+                    <li><a href="contact">@T["site.nav.demo"]</a></li>
+                    <li><a href="help">@T["site.foot.help"]</a></li>
+                    <li><a href="login">@T["site.nav.signIn"]</a></li>
                 </ul>
             </nav>
             <nav aria-labelledby="foot-legal">
-                <h2 id="foot-legal">Policies</h2>
+                <h2 id="foot-legal">@T["site.foot.policies"]</h2>
                 <ul>
-                    <li><a href="terms">Terms of service</a></li>
-                    <li><a href="privacy">Privacy notice</a></li>
-                    <li><a href="accessibility">Accessibility</a></li>
-                    <li><a href="security">Security</a></li>
-                    <li><a href="THIRD-PARTY-NOTICES.txt">Third-party notices</a></li>
+                    <li><a href="terms">@T["site.foot.terms"]</a></li>
+                    <li><a href="privacy">@T["site.foot.privacy"]</a></li>
+                    <li><a href="accessibility">@T["site.foot.accessibility"]</a></li>
+                    <li><a href="security">@T["site.nav.security"]</a></li>
+                    <li><a href="THIRD-PARTY-NOTICES.txt">@T["site.foot.notices"]</a></li>
                 </ul>
             </nav>
         </div>
     </footer>
 </div>
 <script src="site.js" defer></script>
+
+@code {
+    /// <summary>The language link for <paramref name="lang"/>, coming back to this page (path and query).</summary>
+    private string LanguageHref(string lang)
+    {
+        var here = "/" + Nav.ToBaseRelativePath(Nav.Uri);
+        return $"language/{lang}?returnUrl={Uri.EscapeDataString(here)}";
+    }
+}

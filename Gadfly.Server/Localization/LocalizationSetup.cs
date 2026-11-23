@@ -51,6 +51,31 @@ public static class LocalizationSetup
         return CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(name, name));
     }
 
+    /// <summary>The route the public site's language links use (GAD-T592).</summary>
+    public const string ChooseRoute = "/language/{language}";
+
+    /// <summary>
+    /// GET /language/{language}?returnUrl=/pricing remembers the visitor's UI language in the culture cookie (a year) and goes back
+    /// to the page they were on. The public site renders without a circuit or script, so its English / 한국어 links need this
+    /// instead of the interactive language switch. Anonymous; only a local return address is followed (anything else goes home).
+    /// </summary>
+    public static void MapLanguageChoice(this IEndpointRouteBuilder app) =>
+        app.MapGet(ChooseRoute, (string language, string? returnUrl, HttpContext http) =>
+        {
+            var lang = UiCatalog.Normalize(language);
+            http.Response.Cookies.Append(CookieName, CookieValue(lang), new CookieOptions
+            {
+                Path = "/",
+                MaxAge = TimeSpan.FromDays(365),
+                SameSite = SameSiteMode.Lax,
+                Secure = http.Request.IsHttps,
+                IsEssential = true,
+            });
+            var local = !string.IsNullOrEmpty(returnUrl) && returnUrl[0] == '/'
+                && (returnUrl.Length == 1 || (returnUrl[1] != '/' && returnUrl[1] != '\\'));
+            return Results.LocalRedirect(local ? returnUrl! : "/");
+        }).AllowAnonymous();
+
     /// <summary>
     /// GET /ui-strings/{language}?prefix=examRoom. returns the UI strings under a prefix in one language, English filling untranslated
     /// keys, as a flat JSON object. Signed-in users only (the default-deny fallback policy); the strings are not secret, but
