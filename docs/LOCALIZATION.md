@@ -22,7 +22,7 @@ or name (owner rule; docs/research/esl-and-korean.md).
 
 | Record | Field | Meaning |
 |---|---|---|
-| `Exam` | `Languages` | The languages a student may take the exam in, a comma list of BCP-47 primary tags, `en,ko` by default (GAD-T539). |
+| `Exam` | `Languages` | The languages a student may take the exam in, a comma list of BCP-47 primary tags, `en,ko,es` by default (GAD-T539, Spanish GAD-T611). |
 | `ExamLocalization` | one row per exam and non-English language | The exam's title, instructions and objective titles in that language, `MachineDraft` or `Approved` (GAD-T540). English stays on the `Exam` row. |
 | `ExamSession` | `Language` | The language the attempt is conducted in, chosen before Begin and fixed for the attempt. `en` for every attempt before localization. |
 | `ExamSession` | `PrimaryLanguage` | The student's primary language copied from their profile when the attempt started (null: not stated), so a later edit never changes how a finished attempt was run. |
@@ -50,6 +50,12 @@ means a prompt rule block, heuristics, a voice check, a lip-sync module, a strin
 - **Rules.** Staff with `ManageAssessments` turn languages on or off; at least one stays on; the list may change after
   publishing, since an attempt keeps the language it began in. Every change is audited (`exam.languages.changed`). A
   duplicated exam keeps its languages; its texts are drafted and approved on their own.
+- **Spanish (GAD-T611).** New exams offer English, Korean and Spanish. The `SpanishExamLanguage` migration gave Spanish to every
+  existing exam whose list was still exactly the old default, `en,ko` (staff had not narrowed it); an exam whose staff had
+  changed its list keeps it as they left it. Staff turn Spanish off like any other language. Machine drafts into Spanish are
+  asked for neutral Latin American Spanish addressing the student as usted; the English and Korean translation prompts are
+  unchanged. Grader translations from Spanish, the review list's language tag and the fairness views (Spanish by exam or
+  primary language) need nothing Spanish-specific.
 - **Students only see offered languages.** Student pages read `ExamLanguageService.Offered(exam.Languages)`; the get-ready
   picker and the session start must offer and accept only those (GAD-T546, in progress).
 

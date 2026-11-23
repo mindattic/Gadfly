@@ -731,7 +731,7 @@ namespace Gadfly.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)")
-                        .HasDefaultValue("en,ko");
+                        .HasDefaultValue("en,ko,es");
 
                     b.Property<string>("Mode")
                         .IsRequired()

@@ -47,7 +47,7 @@ public sealed record ExamLanguageResult(bool Ok, string Message);
 
 /// <summary>
 /// The languages an exam is offered in (GAD-T539, under GAD-T526). An exam lists the languages a student may take it in
-/// (<see cref="Exam.Languages"/>, English and Korean by default); instructors and admins turn languages off or on in the
+/// (<see cref="Exam.Languages"/>, English, Korean and Spanish by default, GAD-T611); instructors and admins turn languages off or on in the
 /// assessment editor and the admin desk, and students are offered only the languages listed. English is the language the exam is
 /// written in (its source language); the other languages' texts live in <see cref="ExamLocalization"/>. Changing the list
 /// never touches an attempt already started: an attempt's language is fixed when it begins (<see cref="ExamSession.Language"/>).
@@ -281,7 +281,7 @@ public sealed class ExamLanguageService(GadflyDbContext db, ITenantContext tenan
     /// <summary>The offered languages of a stored list, in display order (English when the list is empty).</summary>
     public static IReadOnlyList<string> Offered(string? stored) => ExamLanguage.ParseList(stored).OrderBy(IndexOf).ToList();
 
-    /// <summary>"English and Korean".</summary>
+    /// <summary>"English and Korean"; "English, Korean and Spanish".</summary>
     public static string Names(IReadOnlyList<string> tags) => tags.Count switch
     {
         0 => "no language",

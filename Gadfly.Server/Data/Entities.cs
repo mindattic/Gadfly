@@ -269,8 +269,8 @@ public sealed class Exam : ITenantOwned
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? PublishedAt { get; set; }
     /// <summary>
-    /// The languages a student may take this exam in (GAD-T539), comma-separated BCP-47 tags (Gadfly.Engine.ExamLanguage); English and
-    /// Korean by default. The source material and rubric stay in their own language; LanguageEntities.cs holds the per-language texts.
+    /// The languages a student may take this exam in (GAD-T539), comma-separated BCP-47 tags (Gadfly.Engine.ExamLanguage); English,
+    /// Korean and Spanish by default (GAD-T611). The source material and rubric stay in their own language; LanguageEntities.cs holds the per-language texts.
     /// </summary>
     public string Languages { get; set; } = Gadfly.Engine.ExamLanguage.DefaultOffered;
 }

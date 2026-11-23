@@ -16,8 +16,12 @@ public static class ExamLanguage
     /// <summary>The languages Gadfly can run an exam in, in display order.</summary>
     public static readonly IReadOnlyList<string> Supported = [English, Korean, Spanish];
 
-    /// <summary>The offered languages a new exam starts with (Exam.Languages).</summary>
-    public const string DefaultOffered = "en,ko";
+    /// <summary>
+    /// The offered languages a new exam starts with (Exam.Languages): English, Korean and Spanish (GAD-T611). Staff turn any of them
+    /// off per exam. Exams created before Spanish that still offered exactly the old default, en,ko, were given es by the
+    /// SpanishExamLanguage migration; an exam whose staff had changed its list keeps it as they left it.
+    /// </summary>
+    public const string DefaultOffered = "en,ko,es";
 
     /// <summary>
     /// The primary language subtag of <paramref name="tag"/>, lower case ("ko-KR" becomes "ko", "EN" becomes "en"); English when

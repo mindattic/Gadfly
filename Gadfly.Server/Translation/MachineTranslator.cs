@@ -74,9 +74,17 @@ public sealed class MachineTranslator(IPanelInfo panel, ILiveTurnModel model)
         You translate text for an examination platform from {ExamLanguage.EnglishName(from)} into {ExamLanguage.EnglishName(to)}.
         Translate faithfully: keep the meaning, register and any errors or hesitations of the original; never correct, improve,
         explain, summarize or answer it. Keep names, numbers, formulas, technical terms and Markdown formatting as they are.
-        If part of the text is already in {ExamLanguage.EnglishName(to)}, keep that part unchanged.
+        If part of the text is already in {ExamLanguage.EnglishName(to)}, keep that part unchanged.{Register(to)}
         Reply with the translation only: no preamble, no notes, no quotation marks around it.
         """;
+
+    /// <summary>
+    /// The register a translation into <paramref name="to"/> is written in (GAD-T611): Spanish is neutral Latin American Spanish
+    /// addressing the student as usted. Empty for every other language, so the English and Korean prompts are unchanged.
+    /// </summary>
+    private static string Register(string to) => ExamLanguage.IsSpanish(to)
+        ? "\nWrite neutral Latin American Spanish, understood in every Spanish-speaking country (no vosotros, no regional slang), and address the reader as usted, never tú."
+        : "";
 
     public static string UserMessage(string text) => $"Translate this text:\n<text>\n{text.Trim()}\n</text>";
 
