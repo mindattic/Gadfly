@@ -15,12 +15,41 @@
     --content-max: 1100px;
     /* WCAG 2.5.8: the smallest pointer target (24 CSS px) for an icon-sized control. */
     --target-min: 1.5rem;
+    /* Design system (GAD-T689). docs/ACCESSIBILITY.md "Shared tokens" lists every token and primitive; pages use these
+       instead of their own sizes. Breakpoints can't be custom properties (media queries don't read them): phone below
+       40rem (640px), tablet 40-64rem, desktop from 64rem (1024px). */
+    /* The coarse-pointer target (44 CSS px): buttons and other controls grow to it on a touch screen. */
+    --target-touch: 2.75rem;
+    /* Type scale: h1 xl-2xl (fluid), h2 xl, h3 lg, h4 base; body base; hints and table cells sm; badges xs. */
+    --text-xs: .8rem; --text-sm: .9rem; --text-base: 1rem; --text-lg: 1.1rem; --text-xl: 1.25rem;
+    --text-2xl: clamp(1.4rem, 1.2rem + 1vw, 1.6rem);
+    --leading: 1.5; --leading-tight: 1.25;
+    /* The readable line length for prose (WCAG 1.4.8 advisory, kept anyway). */
+    --measure: 68ch;
+    /* Radius scale: controls sm, panels and cards md (= --radius), dialogs lg, badges and pills full. */
+    --radius-sm: 6px; --radius-md: var(--radius); --radius-lg: 14px; --radius-pill: 999px;
+    /* Borders and elevation: --line for decorative dividers, --line-strong for a control's only boundary (3:1). */
+    --border: 1px solid var(--line); --border-strong: 1px solid var(--line-strong);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, .06), 0 1px 3px rgba(0, 0, 0, .08);
+    --shadow-2: 0 6px 20px rgba(0, 0, 0, .18);
+    --shadow-3: 0 10px 30px rgba(0, 0, 0, .3);
+    /* The focus ring (WCAG 2.4.7, 2.4.13): --accent meets 3:1 against --bg, --panel and every notice tint. */
+    --focus-color: var(--accent); --focus-width: 3px; --focus-offset: 2px;
+    /* Status colours for notices and badges, each with a tint background. Text on a tint stays --ink; the status colour
+       is the border and any short label. Every pair is in the contrast table in docs/ACCESSIBILITY.md. */
+    --info: #2f5d8a; --warn: #8a5a00;
+    --info-tint: #eef3f8; --ok-tint: #edf6f0; --warn-tint: #fbf3e2; --error-tint: #fbeceb; --accent-tint: #f6eeeb;
+    --danger-ink: #ffffff;
 }
 @media (prefers-color-scheme: dark) {
     :root {
         --bg: #16171a; --panel: #1f2024; --ink: #ecebe8; --muted: #a6a7ab; --line: #34353a;
         --accent: #d98a6c; --accent-ink: #16171a; --ok: #6fcf97; --error: #f28b82; color-scheme: dark;
         --line-strong: #75777f;
+        --info: #8ab4e0; --warn: #f0c05a;
+        --info-tint: #1c2633; --ok-tint: #18291f; --warn-tint: #2e2614; --error-tint: #331c1b; --accent-tint: #2e211d;
+        --danger-ink: #16171a;
+        --shadow-1: 0 1px 3px rgba(0, 0, 0, .5);
     }
 }
 * { box-sizing: border-box; }
@@ -32,11 +61,34 @@
 /* A sticky bar (the mock-mode banner, the assignments console's bulk bar) must never cover the control that has focus
    (WCAG 2.4.11): scrolling a focused element into view leaves this much room at the top. */
 html { scroll-padding-top: var(--space-8); }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; overflow-wrap: break-word; }
+:where(img, video) { max-width: 100%; height: auto; }
 a { color: var(--accent); }
-h1 { font-size: 1.6rem; margin: 0 0 1rem; }
+h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: 0 0 var(--space-4); }
 h1 span, .brand span { font-weight: 400; color: var(--muted); }
-.topbar { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); align-items: center; padding: var(--space-3) var(--gutter); background: var(--panel); border-bottom: 1px solid var(--line); }
+.topbar { position: relative; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); align-items: center; padding: var(--space-3) var(--gutter); background: var(--panel); border-bottom: 1px solid var(--line); }
+/* The top bar's menu (GAD-T689): one <details> holding the nav, the account controls, the language switch and Help.
+   Below 40rem it is a "Menu" disclosure whose panel drops under the bar, so the bar never runs wider than a 320px
+   screen; from 40rem the summary hides and the content always shows, in one wrapping row as before. A browser without
+   ::details-content keeps the disclosure at every width rather than hiding the nav. */
+.nav-menu { flex: 1 1 auto; min-width: 0; }
+.nav-menu-toggle { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--target-min); padding: var(--space-1) var(--space-3); border: var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; list-style: none; font-weight: 600; }
+.nav-menu-toggle::-webkit-details-marker { display: none; }
+.nav-menu-icon { width: 1rem; height: .75rem; background: linear-gradient(currentColor 0 0) top / 100% 2px no-repeat, linear-gradient(currentColor 0 0) center / 100% 2px no-repeat, linear-gradient(currentColor 0 0) bottom / 100% 2px no-repeat; }
+.nav-menu-body { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); align-items: center; }
+@media (min-width: 40rem) {
+    @supports selector(::details-content) {
+        .nav-menu > .nav-menu-toggle { display: none; }
+        .nav-menu::details-content { content-visibility: visible; }
+    }
+}
+@media (max-width: 39.99rem) {
+    .nav-menu { flex: 0 0 auto; margin-left: auto; }
+    .nav-menu-body { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; flex-direction: column; align-items: stretch; padding: var(--space-3) var(--gutter) var(--space-4); background: var(--panel); border-bottom: var(--border); box-shadow: var(--shadow-2); }
+    .nav-menu-body .nav { flex-direction: column; }
+    .nav-menu-body .who { margin-left: 0; }
+    .nav-menu-body .nav-more[open] > div { position: static; }
+}
 .brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--ink); }
 .app-version { margin-left: -.6rem; font-size: .8rem; color: var(--muted); white-space: nowrap; } /* "V<N>" next to the brand (GAD-T291) */
 .nav { display: flex; flex-wrap: wrap; gap: .25rem; }
@@ -68,6 +120,8 @@ main.bare { display: grid; place-items: center; min-height: 100vh; padding: var(
 /* Blocks that sit one after another in a page get the same breathing room below them, unless they end their container. */
 :is(.cards, .grid, .table-scroll, .stat-tiles):not(:last-child) { margin-bottom: var(--space-5); }
 .panel h2 { font-size: 1.05rem; margin: 0; }
+/* A panel holding more than a short form (a table, a list): the full content width. */
+.panel.panel-wide { max-width: none; }
 label { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); font-size: .9rem; }
 /* A control stays inside its column on a 320px screen (WCAG 1.4.10, GAD-T507): a dropdown sizes itself to its longest
    option, which pushed whole forms (Settings) wider than a phone. max-width here, and minmax(0, 1fr) on the label's and
@@ -79,22 +133,98 @@ input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
 button { font: inherit; padding: .5rem .9rem; border: 0; border-radius: 6px; background: var(--accent); color: var(--accent-ink); cursor: pointer; justify-self: start; }
 button:disabled { opacity: .6; cursor: default; }
 button.link { background: none; color: var(--accent); padding: 0; text-decoration: underline; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:focus-visible { outline: var(--focus-width) solid var(--focus-color); outline-offset: var(--focus-offset); }
 /* A heading or <main> that only receives focus from script (Blazor's focus-on-navigate, the skip link) isn't a control;
    no ring around the whole page or title. Real controls keep theirs. */
 :is(h1, main)[tabindex="-1"]:focus { outline: none; }
 /* A table that scrolls sideways is reachable by keyboard (js/scroll-regions.js gives it tabindex), so its ring shows. */
-[data-scroll-region]:focus-visible { outline-offset: -2px; }
-/* Skip-to-content (GAD-T365), same pattern as the public site's (site.css .skip). */
-.skip { position: absolute; left: -999px; top: .5rem; z-index: 1200; padding: var(--space-2) var(--space-4); background: var(--ink); color: var(--bg); border-radius: 4px; }
-.skip:focus { left: .5rem; }
+[data-scroll-region]:focus-visible { outline-offset: calc(-1 * var(--focus-width)); }
+/* Skip-to-content (GAD-T365), same pattern as the public site's (site.css .skip). .skip-link is the same thing. */
+:is(.skip, .skip-link) { position: absolute; left: -999px; top: .5rem; z-index: 1200; padding: var(--space-2) var(--space-4); background: var(--ink); color: var(--bg); border-radius: 4px; }
+:is(.skip, .skip-link):focus { left: .5rem; }
 /* Screen-reader-only text: visible to assistive tech, removed from the visual layout (GAD-T366). */
-.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .grid { position: relative; width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .grid th, .grid td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid var(--line); font-size: .92rem; }
 .grid th { color: var(--muted); font-weight: 600; }
+/* Data tables (GAD-T689): .grid is the table component. Cells align to the top; numbers right-align in .num cells; a
+   caption names the table; .zebra stripes long tables. Below 900px a .grid scrolls sideways in its own box. */
+.grid :is(th, td) { vertical-align: top; }
+.grid thead th { border-bottom-color: var(--line-strong); }
+.grid tbody tr:last-child > * { border-bottom: 0; }
+.grid :is(th, td).num { text-align: right; font-variant-numeric: tabular-nums; }
+.grid caption { caption-side: top; text-align: left; padding: var(--space-2) var(--space-3); font-weight: 600; }
+.grid.zebra tbody tr:nth-child(even) { background: var(--bg); }
 .ok { color: var(--ok); } .error { color: var(--error); }
 .notice { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: .75rem 1rem; border-radius: 6px; }
+/* Notice variants (GAD-T689): a tint background and a status-coloured edge. Body text stays --ink (an .error or .ok
+   notice keeps its status colour, which also meets 4.5:1 on its tint); start the message with a word that says the
+   status ("Error:", "Saved.") so colour is never the only cue (WCAG 1.4.1). */
+.notice.info { background: var(--info-tint); border-left-color: var(--info); }
+.notice.ok { background: var(--ok-tint); border-left-color: var(--ok); }
+.notice.warn { background: var(--warn-tint); border-left-color: var(--warn); }
+.notice.error { background: var(--error-tint); border-left-color: var(--error); }
+.notice > :first-child { margin-top: 0; }
+.notice > :last-child { margin-bottom: 0; }
+
+/* Layout primitives (GAD-T689). Pages compose these instead of their own margins. */
+/* The title row: the page's h1 and its actions; the actions wrap under the title on a phone. */
+.page-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); margin-bottom: var(--space-5); }
+.page-header > :is(h1, h2) { margin: 0; }
+.page-header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+/* Vertical rhythm: children sit --stack-gap apart and their own block margins are dropped. */
+.stack { display: flex; flex-direction: column; gap: var(--stack-gap, var(--space-4)); }
+.stack > * { margin-block: 0; }
+.stack-sm { --stack-gap: var(--space-2); }
+.stack-lg { --stack-gap: var(--space-6); }
+/* A wrapping inline row: buttons, badges, filters. */
+.cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cluster-gap, var(--space-2) var(--space-3)); }
+/* A card grid: as many --grid-min columns as fit, one column on a phone. (.grid is the data table; .cards the older
+   card list.) */
+.auto-grid { display: grid; gap: var(--grid-gap, var(--space-4)); grid-template-columns: repeat(auto-fit, minmax(min(var(--grid-min, 15rem), 100%), 1fr)); }
+/* A page section: one titled block of a page; sections sit --space-6 apart. (h2.section on admin pages is a heading
+   style, not this.) */
+.page-section { margin: 0 0 var(--space-6); }
+.page-section:last-child { margin-bottom: 0; }
+/* Prose at a readable line length. */
+.prose { max-width: var(--measure); }
+/* A wide table scrolls inside this box, never the page (WCAG 1.4.10); js/scroll-regions.js makes it focusable and
+   names it while it overflows. Only for tables: everything else reflows. */
+.table-scroll { max-width: 100%; overflow-x: auto; }
+.table-scroll > table.grid { display: table; overflow: visible; }
+
+/* Buttons (GAD-T689). <button> is primary by default; .button makes a link look like one. Variants: .secondary
+   (outlined), .danger (destructive), .ghost (quiet, bordered), .link (inline text). At least --target-min tall, and
+   --target-touch on a touch screen. Zero-specificity bases so a page's own button class still wins. */
+:where(button:not(.link), .button) { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--target-min); line-height: var(--leading-tight); text-align: center; }
+:where(.button) { font: inherit; font-weight: 500; padding: .5rem .9rem; border: 0; border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); text-decoration: none; cursor: pointer; }
+:where(button, .button).secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+:where(button, .button).danger { background: var(--error); color: var(--danger-ink); }
+:where(button, .button).ghost { background: transparent; color: var(--ink); border: var(--border-strong); }
+:where(button, .button).secondary:hover:not(:disabled), :where(button, .button).ghost:hover:not(:disabled) { background: var(--accent-tint); }
+:where(.button)[aria-disabled="true"] { opacity: .6; pointer-events: none; }
+
+/* Form fields (GAD-T689). Markup: <div class="field"><label for>…</label><input aria-describedby="x-hint x-error">
+   <p class="field-hint" id="x-hint">…</p><p class="field-error" id="x-error">…</p></div>; a bare <label> wrapping its
+   control (the older pattern) gets the same spacing. A .form stacks fields; .form-actions holds its buttons. */
+.form { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); max-width: 40rem; }
+.field { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+.field > label { font-weight: 600; }
+:is(.field-hint, .field-error) { margin: 0; font-size: var(--text-sm); }
+.field-hint { color: var(--muted); }
+.field-error { color: var(--error); font-weight: 600; }
+:where(input:not([type=checkbox]):not([type=radio]), select, textarea) { min-height: var(--target-min); }
+:is(input, select, textarea)[aria-invalid="true"] { border-color: var(--error); box-shadow: inset 0 0 0 1px var(--error); }
+.check { display: flex; gap: var(--space-2); align-items: center; }
+fieldset { min-width: 0; margin: 0; padding: var(--space-3) var(--space-4) var(--space-4); border: var(--border); border-radius: var(--radius-md); }
+legend { padding: 0 var(--space-1); font-weight: 600; }
+.form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+
+/* A touch screen gets 44px controls (WCAG 2.5.5 advisory; 2.5.8's 24px is the floor everywhere). */
+@media (pointer: coarse) {
+    :where(button:not(.link), .button, .nav a, .nav-help, .nav-menu-toggle, .nav-more summary, input:not([type=checkbox]):not([type=radio]), select) { min-height: var(--target-touch); }
+    :where(.nav a, .nav-help, .nav-more summary) { display: inline-flex; align-items: center; }
+}
 /* Help (GAD-T292): the top-bar Help link and the small "?" a page puts next to its title (<HelpLink>). */
 .nav-help { padding: .35rem .65rem; border-radius: 6px; text-decoration: none; color: var(--ink); }
 .nav-help:hover, .nav-help:focus-visible { color: var(--accent); }
@@ -104,7 +234,6 @@ button.link { background: none; color: var(--accent); padding: 0; text-decoratio
 .help-link-label { font-weight: 500; }
 /* The student's UI language switch (GAD-T543), next to Help in the top bar. */
 .language-switch select { min-height: var(--target-min); padding: .25rem .5rem; border-radius: 6px; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* A lost connection (GAD-T306): Blazor's own reconnect element (id fixed by the framework), toggled through these
    classes as the connection drops, retries and comes back, so a dropped connection never looks like a frozen or
@@ -130,8 +259,12 @@ html[lang="ko"] #components-reconnect-modal.components-reconnect-rejected .recon
 
 /* A type scale beyond h1 (GAD-T318): most pages already pick their own h2/h3 size per section, which still wins (a class
    selector beats a bare element one), so this is only the default for a heading that doesn't set its own. */
-h2 { font-size: 1.25rem; margin: 1.5rem 0 .75rem; }
-h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
+h2 { font-size: var(--text-xl); line-height: var(--leading-tight); margin: var(--space-5) 0 var(--space-3); }
+h3 { font-size: var(--text-lg); line-height: var(--leading-tight); margin: var(--space-5) 0 var(--space-2); }
+h4 { font-size: var(--text-base); line-height: var(--leading-tight); margin: var(--space-4) 0 var(--space-2); }
+/* A heading that opens its container (a panel, card, section) doesn't push away from its top edge. Zero specificity, so
+   a page's own heading margins still win. */
+:where(h1, h2, h3, h4):first-child { margin-top: 0; }
 
 /* Badges (GAD-T318): a small label on a pill, for a status word next to a title or in a table cell. Plain by default;
    the three variants read like .ok/.error already do. */
@@ -139,6 +272,8 @@ h3 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
 .badge-accent { border-color: var(--accent); color: var(--accent); }
 .badge-ok { border-color: var(--ok); color: var(--ok); }
 .badge-error { border-color: var(--error); color: var(--error); }
+.badge-warn { border-color: var(--warn); color: var(--warn); }
+.badge-info { border-color: var(--info); color: var(--info); }
 
 /* A dialog (GAD-T318): a focused decision or confirmation over the page, dismissed by its own buttons or Escape.
    Markup: a backdrop with class dialog-backdrop containing one .dialog-box (role="dialog" aria-modal="true" on the box). */

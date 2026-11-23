@@ -30,6 +30,70 @@ dialogs, help results and practice boxes use the scale for padding and gaps; `.c
 sign-in library's forms get one field per row with a `--space-4` gap (the password label used to sit flush against the
 username box).
 
+### Design system (GAD-T689)
+
+One system in `app.css` for every app page (the public site keeps `site.css`). Page passes compose these classes and
+tokens; a page stylesheet adds only what is specific to that page, using the tokens, never new sizes or colours.
+Bases that pages may need to override are written with `:where()` (zero specificity), so any page class wins.
+
+**Tokens**
+
+| Group | Tokens | Use |
+| --- | --- | --- |
+| Type | `--text-xs` .8, `--text-sm` .9, `--text-base` 1, `--text-lg` 1.1, `--text-xl` 1.25 rem, `--text-2xl` fluid 1.4-1.6rem; `--leading` 1.5, `--leading-tight` 1.25; `--measure` 68ch | h1 2xl, h2 xl, h3 lg, h4 base; hints and table cells sm; badges xs; prose width |
+| Headings | h1 `0 0 --space-4`; h2 `--space-5 0 --space-3`; h3 `--space-5 0 --space-2`; h4 `--space-4 0 --space-2` | a heading that is its container's first child has no top margin |
+| Space | `--space-1`..`--space-8`, `--gutter`, `--content-max` | as above |
+| Radius | `--radius-sm` 6px (controls), `--radius-md` = `--radius` 10px (panels, cards), `--radius-lg` 14px (dialogs), `--radius-pill` | |
+| Border | `--border` (decorative, `--line`), `--border-strong` (a control's only boundary, 3:1) | |
+| Elevation | `--shadow-1` (resting card), `--shadow-2` (toast, dropped menu), `--shadow-3` (dialog) | |
+| Focus | `--focus-color` (`--accent`), `--focus-width` 3px, `--focus-offset` 2px | the global `:focus-visible` ring on every link, button, input, select, textarea, summary and `[tabindex]`; never remove it, only change its offset |
+| Targets | `--target-min` 24px (WCAG 2.5.8 floor), `--target-touch` 44px | buttons, inputs, selects and top-bar links are at least `--target-min`, and `--target-touch` under `(pointer: coarse)` |
+| Status | `--info`, `--ok`, `--warn`, `--error` and their `--*-tint` backgrounds; `--accent-tint`; `--danger-ink` (text on `--error`) | notices, badges, danger buttons |
+
+**Breakpoints.** Custom properties can't be used in media queries, so these are the fixed values: phone below
+`40rem` (640px; write `max-width: 39.99rem` / `min-width: 40rem`), tablet `40rem`-`64rem`, desktop from `64rem`
+(1024px). `.grid` tables start scrolling sideways below 900px. Every page must work at 320px with no horizontal page
+scroll (WCAG 1.4.10): only a `.table-scroll` box (or a `.grid` table) may scroll sideways.
+
+**Layout primitives**
+
+| Class | What it is |
+| --- | --- |
+| `.page-header` + `.page-header-actions` | the title row: h1 left, actions right, actions wrap under the title on a phone; `--space-5` below |
+| `.page-section` | one titled block of a page, `--space-6` apart (`h2.section` on admin pages is a heading style, not this) |
+| `.stack` (`.stack-sm`, `.stack-lg`, or set `--stack-gap`) | vertical rhythm: children `--space-4` apart, their own block margins dropped |
+| `.cluster` (`--cluster-gap`) | a wrapping row of buttons, badges or filters |
+| `.auto-grid` (`--grid-min`, default 15rem; `--grid-gap`) | a card grid: as many columns as fit, one on a phone. `.grid` is the data table and `.cards` the older card list; both keep working |
+| `.prose` | text at `--measure` |
+| `.table-scroll` | wraps a wide table so it, not the page, scrolls; `js/scroll-regions.js` adds `tabindex="0"`, `role="region"` and a name while it overflows, so pages don't hand-write those |
+| `.visually-hidden` | text for screen readers only |
+| `.skip` / `.skip-link` | skip-to-content link, the first focusable thing in a layout |
+
+**Components**
+
+- *Buttons.* `<button>` is primary (accent fill). `.secondary` (outlined), `.danger` (destructive, `--error` fill),
+  `.ghost` (quiet, `--border-strong`), `.link` (inline text). `.button` gives an `<a>` the same look (combine with the
+  variants). Disabled: the `disabled` attribute on a button, `aria-disabled="true"` on a `.button` link.
+- *Forms.* `.form` stacks fields `--space-4` apart (max 40rem); `.field` wraps a label, its control, an optional
+  `.field-hint` and `.field-error`, each tied to the control with `aria-describedby`; an invalid control carries
+  `aria-invalid="true"` (red border, doubled). A bare `<label>` wrapping its control still works. `.check` lays out a
+  checkbox or radio with its text; `fieldset` + `legend` group related controls; `.form-actions` holds the buttons.
+- *Tables.* `.grid` on the `<table>`: cell padding, row dividers, muted header, top-aligned cells, `caption`, `.num`
+  cells right-aligned with tabular figures, `.zebra` for striped rows. Wrap anything wider than a phone in
+  `.table-scroll`.
+- *Notices.* `.notice` plus `.info`, `.ok`, `.warn` or `.error`: a tint background with a status-coloured left edge.
+  Give it `role="status"` (or `role="alert"` for an error that needs attention now), and start the text with a word
+  that says the status so colour is never the only cue.
+- *Badges.* `.badge` plus `.badge-accent`, `.badge-ok`, `.badge-warn`, `.badge-error`, `.badge-info`.
+- *Panels and cards.* `.panel` (a form-width box, `.panel-wide` for full width), `.card` / `.cards`, `.dialog-box`,
+  `.toast`, `.empty-state`: padding from the space scale, `--radius-md`, `--border`.
+
+**App shell.** `MainLayout`: skip link, `<header class="topbar">`, `<nav>`, `<main id="content">`. Below 40rem the nav,
+account controls, language switch and Help fold into a "Menu" `<details class="nav-menu">` whose panel drops under the
+bar (closes on navigation); from 40rem it is one wrapping row. The top bar is not sticky; the mock banner is, and
+`html { scroll-padding-top }` keeps a focused control clear of it (WCAG 2.4.11). A new sticky bar must fit inside that
+padding.
+
 **Contrast of the colour tokens** (WCAG 2.x relative luminance; text needs 4.5:1, borders and focus rings 3:1).
 Every token pair already passed, including the dark theme's salmon accent, so no colour token changed:
 
@@ -48,6 +112,12 @@ Every token pair already passed, including the dark theme's salmon accent, so no
 | Site `--muted` on `--paper` | 6.27 | 7.63 |
 | Site plate: `--slate-muted` / `--slate-mark` on `--slate` | 7.15 / 7.51 | 8.38 / 9.93 |
 | Mock banner text / tag | 8.31 / 5.93 | 9.78 / 9.91 |
+| `--info` on `--bg` / `--panel` / `--info-tint` (GAD-T689) | 6.30 / 6.88 / 6.16 | 8.27 / 7.51 / 7.05 |
+| `--ok` on `--bg` / `--ok-tint` | 4.84 / 4.79 | 9.43 / 8.03 |
+| `--warn` on `--bg` / `--panel` / `--warn-tint` | 5.43 / 5.93 / 5.37 | 10.58 / 9.60 / 8.83 |
+| `--error` on `--panel` / `--error-tint` | 6.54 / 5.70 | 6.81 / 6.65 |
+| `--ink` / `--muted` on the lightest-contrast tint | 14.67 / 5.27 | 12.55 / 6.23 |
+| `--danger-ink` on `--error` (danger buttons) | 6.54 | 7.50 |
 
 `--line` (1.38 light, 1.33 dark) is for decorative dividers only; any control whose border is its only boundary uses
 `--line-strong`.

@@ -14,64 +14,71 @@
     <header class="topbar">
         <a class="brand" href="/">Gadfly <span>Exams</span></a>
         <span class="app-version" title="Deployed version (GAD-T291)">@AppVersion.Label</span>
-        <AuthorizeView>
-            <Authorized>
-                <nav class="nav">
-                    @{ var desk = Gadfly.Server.Desk.DeskAccess.IsDeskAdmin(context.User, Tenant, Config); }
-                    @if (OrgAdmin)
-                    {
-                        @* Owners and admins get one Admin entry; every admin page is in the admin navigation below the top bar (GAD-T300). *@
-                        <a href="admin" class="@(InAdminArea ? "active" : null)" aria-current="@(InAdminArea ? "page" : null)">Admin</a>
-                    }
-                    else
-                    {
-                        @if (desk)
-                        {
-                            <NavLink href="admin/desk">Admin desk</NavLink>
-                        }
-                        @StaffLinks
-                    }
-                    @if (Tenant.Role == OrgRoles.Student)
-                    {
-                        <NavLink href="my-exams">@T["layout.myExams"]</NavLink>
-                    }
-                    @if (Tenant.IsSuperAdmin)
-                    {
-                        <NavLink href="platform/organizations">Organizations</NavLink>
-                    }
-                </nav>
-                <div class="who">
-                    @if (Tenant.Memberships.Count > 1)
-                    {
-                        <form method="post" action="/org/switch" class="org-switch" data-enhance="false">
-                            <AntiforgeryToken />
-                            <select name="organizationId" onchange="this.form.submit()" aria-label="Organization">
-                                @foreach (var m in orgNames)
+        @* Below 40rem the nav and account controls fold into this disclosure (GAD-T689, app.css .nav-menu); a new key per
+           navigation closes it after a link is followed. *@
+        <details class="nav-menu" @key="menuKey">
+            <summary class="nav-menu-toggle"><span class="nav-menu-icon" aria-hidden="true"></span>@T["layout.menu"]</summary>
+            <div class="nav-menu-body">
+                <AuthorizeView>
+                    <Authorized>
+                        <nav class="nav">
+                            @{ var desk = Gadfly.Server.Desk.DeskAccess.IsDeskAdmin(context.User, Tenant, Config); }
+                            @if (OrgAdmin)
+                            {
+                                @* Owners and admins get one Admin entry; every admin page is in the admin navigation below the top bar (GAD-T300). *@
+                                <a href="admin" class="@(InAdminArea ? "active" : null)" aria-current="@(InAdminArea ? "page" : null)">Admin</a>
+                            }
+                            else
+                            {
+                                @if (desk)
                                 {
-                                    <option value="@m.Id" selected="@(m.Id == Tenant.OrganizationId)">@m.Name (@m.Role)</option>
+                                    <NavLink href="admin/desk">Admin desk</NavLink>
                                 }
-                            </select>
-                        </form>
-                    }
-                    else if (orgNames.Count == 1)
-                    {
-                        <span class="org">@orgNames[0].Name · @orgNames[0].Role</span>
-                    }
-                    <span class="user">@context.User.Identity?.Name</span>
-                    <form method="post" action="/_ma-auth/logout" data-enhance="false">
-                        <AntiforgeryToken />
-                        <button type="submit" class="link">@T["layout.signOut"]</button>
-                    </form>
-                </div>
-            </Authorized>
-        </AuthorizeView>
-        @* Help is open to everyone, signed in or not (GAD-T292). *@
-        @if (Tenant.Role == OrgRoles.Student && !InExamRoom)
-        {
-            @* Students choose their UI language (GAD-T543); in the exam room the attempt's own language rules, so it isn't offered there. *@
-            <LanguageSwitch />
-        }
-        <a class="nav-help" href="help">@T["layout.help"]</a>
+                                @StaffLinks
+                            }
+                            @if (Tenant.Role == OrgRoles.Student)
+                            {
+                                <NavLink href="my-exams">@T["layout.myExams"]</NavLink>
+                            }
+                            @if (Tenant.IsSuperAdmin)
+                            {
+                                <NavLink href="platform/organizations">Organizations</NavLink>
+                            }
+                        </nav>
+                        <div class="who">
+                            @if (Tenant.Memberships.Count > 1)
+                            {
+                                <form method="post" action="/org/switch" class="org-switch" data-enhance="false">
+                                    <AntiforgeryToken />
+                                    <select name="organizationId" onchange="this.form.submit()" aria-label="Organization">
+                                        @foreach (var m in orgNames)
+                                        {
+                                            <option value="@m.Id" selected="@(m.Id == Tenant.OrganizationId)">@m.Name (@m.Role)</option>
+                                        }
+                                    </select>
+                                </form>
+                            }
+                            else if (orgNames.Count == 1)
+                            {
+                                <span class="org">@orgNames[0].Name · @orgNames[0].Role</span>
+                            }
+                            <span class="user">@context.User.Identity?.Name</span>
+                            <form method="post" action="/_ma-auth/logout" data-enhance="false">
+                                <AntiforgeryToken />
+                                <button type="submit" class="link">@T["layout.signOut"]</button>
+                            </form>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+                @* Help is open to everyone, signed in or not (GAD-T292). *@
+                @if (Tenant.Role == OrgRoles.Student && !InExamRoom)
+                {
+                    @* Students choose their UI language (GAD-T543); in the exam room the attempt's own language rules, so it isn't offered there. *@
+                    <LanguageSwitch />
+                }
+                <a class="nav-help" href="help">@T["layout.help"]</a>
+            </div>
+        </details>
     </header>
     <main id="content" tabindex="-1">
         @if (OrgAdmin && InAdminArea)
@@ -88,9 +95,20 @@
     private bool InExamRoom => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("exam/", StringComparison.OrdinalIgnoreCase);
 
     // A page that switches the UI language live (get-ready, GAD-T546) re-renders the top bar with it.
-    protected override void OnInitialized() => T.Changed += OnLanguageChanged;
+    protected override void OnInitialized()
+    {
+        T.Changed += OnLanguageChanged;
+        Nav.LocationChanged += OnLocationChanged;
+    }
     private void OnLanguageChanged() => _ = InvokeAsync(StateHasChanged);
-    public void Dispose() => T.Changed -= OnLanguageChanged;
+    private int menuKey;
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        _ = InvokeAsync(() => { menuKey++; StateHasChanged(); });
+    public void Dispose()
+    {
+        T.Changed -= OnLanguageChanged;
+        Nav.LocationChanged -= OnLocationChanged;
+    }
 
     private bool OrgAdmin => Gadfly.Server.Admin.AdminArea.IsOrgAdmin(Tenant.Role);
     private bool InAdminArea => Gadfly.Server.Admin.AdminArea.Contains(Nav.ToBaseRelativePath(Nav.Uri));
