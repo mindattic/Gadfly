@@ -307,8 +307,17 @@ Pages: landing, how it works, science, pricing, security, contact, privacy, term
   neither it keeps the fixed fraction of the stage as before.
 - **Layout.** A phone on its side (landscape, at most 32rem tall) keeps her beside the controls and lets her take most of the
   height; portrait phones stack her, controls and transcript as before.
-- **Not done in this pass.** A token sweep of voice.css (it still has its own spacing and the dark stage colour), and a review of
-  how often the polite status line (`data-voice-status`) changes, are follow-ups.
+- **Follow-ups done.** The voice.css token sweep and the status-line review were done in GAD-T708 (below).
+
+### Exam room (GAD-T708)
+
+- **Tokens.** `voice.css`, `examiner-gaze.css` and `webcam.css` use the space, type, radius, border and colour tokens.
+- **Answer draft.** The draft of the student's answer is no longer a live region, so it isn't read out as they speak.
+- **Status line.** `data-voice-status` is only rewritten when its text changes; it is polite, and assertive only when the
+  student must act.
+- **Time left.** A visually hidden timer region announces 5, 2 and 1 minute left, once each.
+- **Caption.** The word-by-word caption is `aria-hidden`.
+- **Errors.** Blocking errors use `role="alert"`.
 
 ### No portraits (GAD-T697)
 
