@@ -87,12 +87,15 @@ public static class StudentLanguages
         }
     }
 
-    /// <summary>The answers with unknown tags removed and the primary language included in the spoken ones.</summary>
+    /// <summary>
+    /// The answers with unknown tags removed and the primary language included in the spoken ones. A blank answer is no answer:
+    /// <see cref="ExamLanguage.Normalize"/> reads a blank tag as English, so blanks are dropped first, never saved as English.
+    /// </summary>
     public static (IReadOnlyList<string> Spoken, string? Primary) Clean(LanguageAnswers answers)
     {
         var known = Choices.Select(c => c.Tag).ToHashSet();
-        var spoken = answers.Spoken.Select(ExamLanguage.Normalize).Where(known.Contains).Distinct().ToList();
-        var primary = ExamLanguage.Normalize(answers.Primary);
+        var spoken = answers.Spoken.Where(s => !string.IsNullOrWhiteSpace(s)).Select(ExamLanguage.Normalize).Where(known.Contains).Distinct().ToList();
+        var primary = string.IsNullOrWhiteSpace(answers.Primary) ? "" : ExamLanguage.Normalize(answers.Primary);
         if (!known.Contains(primary)) primary = spoken.FirstOrDefault() ?? "";
         if (primary.Length == 0) return ([], null);
         if (!spoken.Contains(primary)) spoken.Insert(0, primary);
