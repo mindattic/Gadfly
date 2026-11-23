@@ -435,6 +435,30 @@ Decision: no fast-model misconception pass for now. It would add a second fast-m
 misconceptions would not carry the panel's quote checks; revisit if the `judgment.provisional.disagreed` rate (GAD-T514)
 or reviewer reports show the examiner steering past misconceptions.
 
+**When the fast model is good enough to steer (GAD-T647).** The fast-model agreement report
+(`/grading/provisional-agreement`, `ProvisionalAgreement`, GAD-T645/T662) counts, per compared turn, whether the panel
+recorded a material disagreement (the definition above) and the score gap. A disagreement means the planner may have
+chosen a different move than the panel's view would have; the next move corrects it, so a modest rate costs one off-key
+question, not a grade. Decision rule, read off the overall row and the provider/model row of the fast model in use:
+- *Enough to read:* at least 100 compared turns from at least 10 ended sessions with a real (not mock) fast model, and a
+  group (subject or move kind) is read only once it has the report's minimum (`MinTurns`, 10). Below that, collect more.
+- *Good enough to steer:* the 95% Wilson upper bound of the disagreement rate is at or under 15%, the mean signed gap is
+  within ±0.10 (no steady lean), and no subject or move group's lower bound is over 25%. Keep the model and prompt.
+- *Needs prompt changes:* the lower bound is over 15% but the rate is at most 30%, or the mean signed gap is beyond
+  ±0.10 (the fast model is consistently harsher or kinder than the panel: recalibrate the judge prompt), or one subject or
+  move group's lower bound is over 25% (fix the prompt for that case). One prompt revision, then re-read on fresh turns.
+- *Needs a different fast model:* the lower bound is over 30%, or it is still over 15% after one prompt revision; switch to
+  the provider/model whose own row has a lower interval that does not overlap, or trial one.
+- *Inconclusive:* the interval straddles 15% (lower bound under, upper bound over). Keep collecting; no change.
+The `judgment.provisional.disagreed` audit count must match the transcripts' count (the report's cross-check) before the
+figures are trusted.
+
+Result (2026-11-23, live database, read-only, no model calls): **not yet enough data.** Live has 8 ended sessions
+(5 test runs, 1 evidence-complete, 1 time-up, 1 abandoned; 38 turns), all from 2026-11-21 to 2026-11-22 19:03 UTC, before
+the provisional judgment landed (GAD-T508, 2026-11-22 20:49 UTC): no transcript carries a provisional judgment and there is
+no `judgment.provisional.disagreed` audit event, so there are 0 compared turns. No tuning is called for yet; the re-read is
+GAD-T670.
+
 **The wait at the end (GAD-T516).** Ending waits for the panel, so the student's last step costs the full panel time of
 the last answer (its full judgment only starts once that answer is recorded, inside the step that ends the exam) plus
 whatever is left of the one before it; the judgments run one at a time, in turn order, because each reads the claim
