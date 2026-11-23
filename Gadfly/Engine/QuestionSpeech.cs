@@ -57,6 +57,8 @@ public sealed class SentenceSplitter
     private static readonly HashSet<string> Abbreviations = new(StringComparer.OrdinalIgnoreCase)
     {
         "e.g", "i.e", "etc", "vs", "cf", "dr", "mr", "mrs", "ms", "prof", "st", "approx", "no", "fig", "eq", "al", "jr", "sr",
+        // Spanish (GAD-T610), words that are never English: "p. ej.", "Sra.", "Dra.", "Ud.", "aprox.", "pág.", "núm.".
+        "ej", "p.ej", "sra", "srta", "dra", "ud", "uds", "aprox", "pág", "págs", "núm",
     };
 
     private readonly StringBuilder _buffer = new();
@@ -79,8 +81,10 @@ public sealed class SentenceSplitter
             if (end + 1 >= text.Length) break;
             // Korean (GAD-T537): a Korean sentence may run straight into the next with no space ("요.그리고"), and full-width
             // punctuation ends one too; both only ever apply around Hangul, so English splits exactly as before.
+            // Spanish (GAD-T610): an opening ¿ or ¡ starts a new sentence even with no space before it ("bien.¿Por qué?"); English
+            // text never has one, so it splits exactly as before.
             var joined = !char.IsWhiteSpace(text[end + 1]) && !(LanguageText.IsHangul(text[end + 1]) && i > 0 && LanguageText.IsHangul(text[i - 1]))
-                && !(IsFullWidth(text[i]) && end + 1 < text.Length);
+                && !(IsFullWidth(text[i]) && end + 1 < text.Length) && text[end + 1] is not ('¿' or '¡');
             if (joined || (text[i] == '.' && !EndsSentence(text, start, i)))
             {
                 i = end;
@@ -112,7 +116,7 @@ public sealed class SentenceSplitter
     {
         var w = dot;
         while (w > start && !char.IsWhiteSpace(text[w - 1])) w--;
-        var word = text[w..dot].TrimStart('(', '"', '\'', '“', '‘');
+        var word = text[w..dot].TrimStart('(', '"', '\'', '“', '‘', '¿', '¡');
         if (word.Length == 0) return true;
         if (word.Length == 1 && char.IsLetter(word[0]) && !LanguageText.IsHangul(word[0])) return false;   // an initial; one Hangul syllable is a word
         return !Abbreviations.Contains(word);

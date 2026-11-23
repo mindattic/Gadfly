@@ -107,7 +107,8 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         {
             // "Say it another way" (GAD-T555): the same question behind a plain lead-in; it adds nothing, so it cannot leak.
             var question = Section(prompt, "The question to reword:", "Reply with only").Trim();
-            return (prompt.Contains("Write it in Korean", StringComparison.Ordinal) ? $"다시 말씀드리면, {question}" : $"Put another way: {question}",
+            return (prompt.Contains("Write it in Korean", StringComparison.Ordinal) ? $"다시 말씀드리면, {question}"
+                : prompt.Contains("Write it in Spanish", StringComparison.Ordinal) ? $"Dicho de otra manera: {question}" : $"Put another way: {question}",
                 "the question behind a plain lead-in");
         }
         return ($"{Marker} The mock panel has no reply for this request.", "unrecognized prompt");
@@ -164,6 +165,7 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
     private static string Question(string prompt)
     {
         if (IsKorean(prompt)) return KoreanQuestion(prompt);
+        if (IsSpanish(prompt)) return SpanishQuestion(prompt);
         var move = Line(prompt, "Write the next question for this move:");
         var concept = Line(prompt, "Concept:");
         if (concept.Length == 0) concept = "this idea";
@@ -312,6 +314,78 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         return $"{candidates[0].TrimEnd('?')}, 이번에는 다른 방식으로 생각해 볼까요 (질문 {asked.Count + 1})?";
     }
 
+    /// <summary>
+    /// The template questions of a Spanish exam (GAD-T610), neutral Latin American Spanish with usted, built like the English ones from
+    /// the concept title and the student's own words, and never repeating a question already asked.
+    /// </summary>
+    private static string SpanishQuestion(string prompt)
+    {
+        var move = Line(prompt, "Write the next question for this move:");
+        var concept = Line(prompt, "Concept:");
+        if (concept.Length == 0) concept = "esta idea";
+        var related = Line(prompt, "Second concept (Synthesize only):");
+        var dialogue = Section(prompt, "Conversation so far:");
+        var asked = Regex.Matches(dialogue, @"(?m)^\s*Examiner:\s*(.+)$").Select(m => m.Groups[1].Value.Trim()).ToHashSet(StringComparer.Ordinal);
+        var lastAnswer = StudentTexts(dialogue).LastOrDefault() ?? "";
+        var phrase = KeyPhrase(lastAnswer);
+        string[] candidates = move switch
+        {
+            "Clarify" when phrase.Length > 0 =>
+            [
+                $"Usted dijo «{phrase}». ¿Qué quiere decir exactamente con eso?",
+                $"Cuando dice «{phrase}», ¿a qué se refiere, con sus propias palabras?",
+            ],
+            "Clarify" => [$"¿Podría explicar con más precisión qué quiere decir cuando habla de {concept}?"],
+            "Probe" =>
+            [
+                phrase.Length > 0 ? $"¿Por qué «{phrase}»? Explíqueme su razonamiento paso a paso." : $"¿Por qué es cierto eso de {concept}? Explíqueme su razonamiento.",
+                $"¿Qué se deduce de lo que acaba de decir sobre {concept}, y cómo lo sabe?",
+                $"¿Cómo convencería a un compañero de clase de que su explicación de {concept} es correcta?",
+            ],
+            "Counterexample" =>
+            [
+                $"¿Se le ocurre un caso en el que su explicación de {concept} no se cumpliría? ¿Qué pasaría entonces?",
+                $"¿Hay alguna situación en la que {concept} funcione de otra manera de como lo describió? Descríbala.",
+            ],
+            "Contradiction" => ["Antes dijo algo que parece no coincidir con lo que acaba de decir. ¿Cómo encajan las dos cosas?"],
+            "Apply" =>
+            [
+                $"Imagine una situación nueva, que no hayamos comentado, en la que {concept} sea importante. ¿Qué esperaría que pasara y por qué?",
+                $"Suponga que tiene que usar {concept} para resolver un problema cotidiano. Describa el problema y cómo razonaría.",
+            ],
+            "Synthesize" => [$"¿Qué relación hay entre {concept} y {(related is { Length: > 0 } r && r != "(none)" ? r : "las otras ideas que hemos comentado")}?"],
+            "CausalReasoning" =>
+            [
+                "¿Qué causa el resultado que acaba de describir, y qué pasaría si esa causa cambiara?",
+                $"Pensando en {concept}, ¿por qué ocurre eso y no otra cosa?",
+            ],
+            "ScenarioVariation" =>
+            [
+                "Deje todo igual en su ejemplo menos una cosa que usted elija cambiar. ¿Qué pasa entonces y por qué?",
+                $"Suponga que una condición de la situación que comentamos fuera distinta. ¿Cómo funcionaría {concept} entonces?",
+            ],
+            "AssumptionTesting" =>
+            [
+                $"¿Qué tiene que ser cierto para que su explicación de {concept} funcione?",
+                "¿Qué está suponiendo en esa respuesta, y qué pasaría si ese supuesto fuera falso?",
+            ],
+            "IndependentExplanation" => [$"Sin usar una definición de libro, ¿cómo reconstruiría la idea de {concept} a partir de su propio razonamiento?"],
+            _ =>
+            [
+                $"Con sus propias palabras, ¿qué es {concept}? ¿Cómo lo explicaría con un ejemplo?",
+                $"Pasemos a {concept}. ¿Cómo lo describiría con sus propias palabras?",
+                $"¿Qué es lo más importante que hay que entender sobre {concept}, y por qué?",
+            ],
+        };
+        var start = asked.Count % candidates.Length;
+        for (var i = 0; i < candidates.Length; i++)
+        {
+            var q = candidates[(start + i) % candidates.Length];
+            if (!asked.Contains(q)) return q;
+        }
+        return $"{candidates[0].TrimEnd('?')}, pensándolo de otra manera esta vez (pregunta {asked.Count + 1})?";
+    }
+
     /// <summary>A short run of the student's own words worth asking about: the content-richest clause, at most six words.</summary>
     private static string KeyPhrase(string answer)
     {
@@ -328,6 +402,9 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         if (IsKorean(prompt))
             return phrase.Length > 0 ? $"“{Clip(phrase, 80)}”라고 하셨는데, 자신의 말로 어떤 뜻이었는지 설명해 주시겠어요?"
                 : "제가 제대로 이해했는지 확인하고 싶어요. 자신의 말로 다시 한번 말씀해 주시겠어요?";
+        if (IsSpanish(prompt))
+            return phrase.Length > 0 ? $"Usted dijo «{Clip(phrase, 80)}». ¿Qué quiso decir con eso, con sus propias palabras?"
+                : "¿Podría decirlo otra vez con sus propias palabras, para asegurarme de haber entendido lo que quiso decir?";
         return phrase.Length > 0
             ? $"You said \"{Clip(phrase, 80)}\". What did you mean by that, in your own words?"
             : "Could you say that again in your own words, so I'm sure I understood what you meant?";
@@ -338,6 +415,10 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         var move = Line(prompt, "Move:");
         var concept = Line(prompt, "Concept:");
         if (concept.Length == 0) concept = "this idea";
+        if (IsSpanish(prompt))
+            return move == "GuidedExplanation"
+                ? $"Veamos {concept} juntos, con los apuntes como guía. Piense en un ejemplo pequeño que conozca bien. ¿Cómo lo usaría para explicar {concept} con sus propias palabras?"
+                : $"Le doy una pista: piense en qué representa cada parte de su ejemplo. Con eso en mente, ¿cómo explicaría {concept} ahora?";
         if (IsKorean(prompt))
             return move == "GuidedExplanation"
                 ? $"노트를 길잡이로 {concept}을(를) 함께 살펴볼게요. 잘 아는 작은 예를 하나 떠올려 보세요. 그 예로 {concept}을(를) 자신의 말로 어떻게 설명하시겠어요?"
@@ -433,6 +514,9 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         // Korean (GAD-T537): with the "I don't know" phrases gone, only a few words (a 저는, a 잘, a 죄송해요) may be left.
         if (Gadfly.Engine.LanguageText.HasHangul(answer))
             return Gadfly.Engine.LanguageText.WordCount(Gadfly.Engine.LanguageText.WithoutKoreanDontKnow(rest)) <= 4;
+        // Spanish (GAD-T610): with "no lo sé" and the like gone, only a few words (a lo siento, a la verdad, a perdón) may be left.
+        if (Gadfly.Engine.LanguageText.SaysDontKnowSpanish(answer))
+            return Gadfly.Engine.LanguageText.WordCount(Gadfly.Engine.LanguageText.WithoutSpanishDontKnow(rest)) <= 4;
         return Keywords(rest).Count <= 3;
     }
 
@@ -479,6 +563,15 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         var markers = ReasoningMarkers(answer);
         var wordCount = answer.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
         var korean = Gadfly.Engine.LanguageText.HasHangul(answer);
+        var spanish = !korean && IsSpanish(prompt);
+        if (spanish)
+        {
+            // A Spanish answer against the English rubric (GAD-T610): English keyword overlap only catches cognates and English terms,
+            // so the mock also credits how much the student said and whether they gave a reason, like Korean; still a simulation.
+            coverage = Math.Max(coverage, Math.Min(0.5, wordCount / 70.0));
+            hits = Math.Max(hits, (int)Math.Round(points.Count * Math.Min(1.0, wordCount / 45.0)));
+            markers += Gadfly.Engine.LanguageText.SpanishReasonOrExample(answer) ? 2 : 0;
+        }
         if (korean)
         {
             // A Korean answer against the English rubric (GAD-T536): no English keyword overlap to count, so the mock credits the
@@ -502,6 +595,7 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         accuracy = Math.Clamp(accuracy, 0, 10);
         var coveredText = string.Create(CultureInfo.InvariantCulture, $"{coverage:P0} of the rubric's key terms");
         var verdict = (korean ? $"{Marker} Korean answer: scored from its length, its reasons and any English terms it uses. " : "")
+            + (spanish ? $"{Marker} Spanish answer: scored from its length, its reasons and any English terms or cognates it uses. " : "")
             + $"{Marker} Simulated from keyword overlap, not an AI evaluation: the answer uses {coveredText}"
             + (points.Count > 0 ? $" and touches {hits} of {points.Count} rubric points" : "")
             + (wrong ? "; it repeats a listed misconception." : ".");

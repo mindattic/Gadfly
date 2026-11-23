@@ -91,6 +91,17 @@ examiner (GAD-T554, GAD-T555).
   English rules, and English technical terms inside a Korean answer (the normal case) still get them.
 - **Recitation and speech accuracy.** Korean answers are compared by character, not word, since Korean spacing varies
   (GAD-T554); English answers score exactly as before.
+- **Spanish (GAD-T610).** `exam-es` adds a Spanish rule block (neutral Latin American Spanish, usted, opening ¿ and ¡, no
+  gendered wording; Spanish ways of saying "I don't know" for the aporia judge) under the same rules version, so the English,
+  Korean and plain sets keep their hashes. Spanish has no script of its own, so every Spanish heuristic keys on the text
+  looking Spanish (`LanguageText.LooksSpanish`: ñ, ¿ or ¡; an accented vowel with a Spanish function word; or two Spanish
+  function words that are not English words) or on a Spanish-only word: unfinished answers (a trailing comma or ellipsis, or
+  ending on y, pero, porque, que, entonces, o sea, este...), "I don't know" (no lo sé, no sé, no me acuerdo, ni idea; "no se
+  puede" is not one), hedges (creo que, tal vez, a lo mejor), vague words (cosas, algo así, y eso), reasons (porque, ya que,
+  por eso, por ejemplo), rephrase and clarify requests, and the fillers eh and em in the judges' content view. The question
+  splitter starts a sentence at ¿ or ¡ even without a space and knows Spanish abbreviations (p. ej., Dra., Ud.). A Spanish
+  word counts as one word, as an English one does. Fallback, clarification and word-check questions exist in Spanish with
+  usted, and the mock panel asks and judges in Spanish.
 
 ## Grading across languages (GAD-T547)
 

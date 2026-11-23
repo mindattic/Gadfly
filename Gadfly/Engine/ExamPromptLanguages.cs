@@ -6,7 +6,8 @@ namespace Gadfly.Engine;
 /// wording itself is never edited. An English exam by an English-primary student (<see cref="AttemptLanguage.IsDefault"/>) runs on
 /// the English set itself, byte for byte, with its own SHA-256.
 /// <para>
-/// Each variant is its own prompt set: id <c>exam-ko</c>, <c>exam-en-plain</c>, <c>exam-ko-plain</c>, the base version, and a hash
+/// Each variant is its own prompt set: id <c>exam-ko</c>, <c>exam-es</c>, <c>exam-en-plain</c>, <c>exam-ko-plain</c>, <c>exam-es-plain</c>,
+/// the base version, and a hash
 /// over its own texts, so every session records exactly which wording examined the student and an attempt can never resume on a
 /// different language's prompts. <see cref="RulesVersion"/> is bumped whenever any rule text here changes.
 /// </para>
@@ -19,7 +20,11 @@ namespace Gadfly.Engine;
 /// </summary>
 public static class ExamPromptLanguages
 {
-    /// <summary>1: Korean exams (questions, guard and judging in Korean over the English source) and the plain-language examiner.</summary>
+    /// <summary>
+    /// 1: Korean exams (questions, guard and judging in Korean over the English source) and the plain-language examiner. Spanish
+    /// (GAD-T610) was added under the same version: its blocks are new and no existing block's text changed, so the English, Korean and
+    /// plain sets keep their hashes.
+    /// </summary>
     public const int RulesVersion = 1;
 
     /// <summary>The line every language rule block starts with; the mock panel reads the tag after it.</summary>
@@ -61,9 +66,12 @@ public static class ExamPromptLanguages
         var name = ExamLanguage.EnglishName(exam);
         var header = $"{LanguageLine} {exam} ({name}), language rules version {RulesVersion}.";
         var source = $"The source material, concept titles and rubric are in English and remain the only standard of truth. The student hears the examiner and answers in {name}.";
-        var register = exam == ExamLanguage.Korean
-            ? " Use the polite 해요체 register (for example \"설명해 주시겠어요?\", \"왜 그렇게 생각하세요?\") consistently, as one examiner speaking to one student."
-            : "";
+        var register = exam switch
+        {
+            ExamLanguage.Korean => " Use the polite 해요체 register (for example \"설명해 주시겠어요?\", \"왜 그렇게 생각하세요?\") consistently, as one examiner speaking to one student.",
+            ExamLanguage.Spanish => " Use neutral Latin American Spanish, understood in every Spanish-speaking country (no vosotros, no regional slang), and address the student as usted consistently (for example \"¿Podría explicar...?\", \"¿Por qué piensa eso?\"), never tú. Avoid wording that assumes the student's gender. Use the opening ¿ and ¡ marks.",
+            _ => "",
+        };
         var terms = $" Translate technical terms into the established {name} term; when the field usually keeps the English term, or {name} has no settled equivalent, say the {name} term followed by the English term in parentheses once.";
         return key switch
         {
@@ -103,6 +111,11 @@ public static class ExamPromptLanguages
                 ? $"""
                     {header}
                     The answer is in Korean. Korean ways of saying "I don't know" include 모르겠어요, 모르겠습니다, 잘 몰라요, 기억이 안 나요 and 생각이 안 나요; a hedge such as 아마 or 것 같아요 followed by an attempt is an answer. Reply with the English word APORIA or ANSWER.
+                    """
+                : exam == ExamLanguage.Spanish
+                ? $"""
+                    {header}
+                    The answer is in Spanish. Spanish ways of saying "I don't know" include no lo sé, no sé, no me acuerdo, no lo recuerdo, ni idea and no tengo idea; a hedge such as creo que, tal vez or a lo mejor followed by an attempt is an answer. Reply with the English word APORIA or ANSWER.
                     """
                 : $"""
                     {header}

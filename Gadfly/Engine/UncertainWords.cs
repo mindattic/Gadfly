@@ -37,6 +37,8 @@ public static class UncertainWords
     /// <summary>The word-check question, quoting only the word as heard (no suggested meaning, nothing to lead with).</summary>
     public static string Question(string word, string? language) => ExamLanguage.IsKorean(language)
         ? $"한 단어를 제대로 들었는지 확인하고 싶어요. “{word}”라고 들렸는데, 어떤 단어였는지 다시 말씀해 주시거나 다른 말로 설명해 주시겠어요?"
+        : ExamLanguage.IsSpanish(language)   // GAD-T610: usted, only the word as heard
+        ? $"Quiero asegurarme de haber oído bien una palabra. Sonó como «{word}». ¿Podría repetir esa palabra o decirla de otra manera?"
         : $"I want to be sure I heard one word correctly. It sounded like “{word}”. Could you say that word again, or say it another way?";
 
     /// <summary>

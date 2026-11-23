@@ -349,7 +349,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         var dialogue = Dialogue(session);
         var prompt = ExamPrompts.Fill(RephrasePrompt, new Dictionary<string, string?>
         {
-            ["language"] = ExamLanguage.EnglishName(Language.Exam) + (Language.IsKorean ? " (polite 해요체)" : ""),
+            ["language"] = ExamLanguage.EnglishName(Language.Exam) + (Language.IsKorean ? " (polite 해요체)" : Language.IsSpanish ? " (neutral Latin American Spanish, addressing the student as usted)" : ""),
             ["plain"] = Language.IsNonNative ? " Use at most about 20 words, no idioms, phrasal verbs or negative questions." : "",
             ["dialogue"] = dialogue.Length == 0 ? "(none)" : dialogue,
             ["question"] = question,
@@ -691,8 +691,8 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             ? new[] { $"Examiner: {t.Question}" }
             : new[] { $"Examiner: {t.Question}", $"Student: {ExamPrompts.Student(t.Answer.Text)}" }));
 
-    /// <summary>Labels a model may put before the question ("질문:" and "시험관:" in a Korean exam, GAD-T535).</summary>
-    private static readonly string[] Labels = ["Question:", "Examiner:", "Q:", "질문:", "시험관:"];
+    /// <summary>Labels a model may put before the question ("질문:" and "시험관:" in a Korean exam, GAD-T535; "Pregunta:" in Spanish, GAD-T610).</summary>
+    private static readonly string[] Labels = ["Question:", "Examiner:", "Q:", "질문:", "시험관:", "Pregunta:", "Examinador:", "Examinadora:", "P:"];
 
     /// <summary>Strips quotes, labels and extra lines a model may wrap the question in.</summary>
     internal static string Clean(string? raw)
@@ -765,12 +765,16 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         + @"|\bwhat\s+(went|was\s+going|goes)\s+through\s+your\s+(mind|head)\b"
         + @"|\b(your|the)\s+thought\s+process\b|\byour\s+thinking\s+process\b"
         + @"|\bhow\s+were\s+you\s+thinking\b|\bwhat\s+was\s+in\s+your\s+(mind|head)\b"
-        + @"|\bwalk\s+me\s+through\s+(how\s+you\s+(thought|got|arrived|figured)|your\s+(thinking|thoughts))\b",
+        + @"|\bwalk\s+me\s+through\s+(how\s+you\s+(thought|got|arrived|figured)|your\s+(thinking|thoughts))\b"
+        // Spanish (GAD-T610): "¿cómo llegó a eso?", "¿qué le hizo pensar...?", "¿qué estaba pensando?", "su proceso de pensamiento".
+        + @"|\bc[óo]mo\s+lleg[óo]\s+a\b|\bqu[ée]\s+le\s+(hizo|llev[óo]\s+a)\s+(pensar|decir|decidir|concluir|elegir|creer)\b"
+        + @"|\bqu[ée]\s+estaba\s+pensando\b|\bqu[ée]\s+(le\s+)?pas[óo]\s+por\s+la\s+(mente|cabeza)\b|\bsu\s+proceso\s+de\s+pensamiento\b",
         System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex Introspection();
 
     internal static string Fallback(MoveKind move, string concept, string? related, string? language = null) =>
-        ExamLanguage.IsKorean(language) ? KoreanFallback(move, concept, related) : move switch
+        ExamLanguage.IsKorean(language) ? KoreanFallback(move, concept, related)
+        : ExamLanguage.IsSpanish(language) ? SpanishFallback(move, concept, related) : move switch
     {
         MoveKind.Clarify => $"Could you say more precisely what you mean, in your own words, when you talk about {concept}?",
         MoveKind.Probe => "Why do you think that is true? Walk me through your reasoning.",
@@ -785,6 +789,27 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         MoveKind.Hint => $"Here is a hint: think about what {concept} needs in order to happen. With that in mind, how would you explain it now?",
         MoveKind.GuidedExplanation => $"Let's look at {concept} step by step, starting from what you already said. Which step do you think comes first, and why?",
         _ => $"In your own words, what is {concept}?",
+    };
+
+    /// <summary>
+    /// The plain fallback questions in Spanish (GAD-T610): neutral Latin American Spanish, usted, no gendered wording, worded so any
+    /// concept title (English or Spanish) fits.
+    /// </summary>
+    internal static string SpanishFallback(MoveKind move, string concept, string? related) => move switch
+    {
+        MoveKind.Clarify => $"¿Podría explicar con sus propias palabras, con más precisión, qué quiere decir cuando habla de {concept}?",
+        MoveKind.Probe => "¿Por qué piensa que eso es cierto? Explíqueme su razonamiento paso a paso.",
+        MoveKind.Counterexample => $"¿Se le ocurre un caso en el que su explicación de {concept} no se cumpliría? ¿Qué pasaría entonces?",
+        MoveKind.Contradiction => "Antes dijo algo que parece no coincidir con lo que acaba de decir. ¿Cómo encajan las dos cosas?",
+        MoveKind.Apply => $"Imagine una situación nueva en la que {concept} sea importante. ¿Qué esperaría que pasara y por qué?",
+        MoveKind.Synthesize => $"¿Qué relación hay entre {concept} y {related ?? "las otras ideas que hemos comentado"}?",
+        MoveKind.CausalReasoning => "¿Qué cree que hace que eso ocurra? Explique la cadena de causas y efectos.",
+        MoveKind.ScenarioVariation => "Supongamos que cambia una de las condiciones de esa situación y todo lo demás sigue igual. ¿Qué cambiaría y por qué?",
+        MoveKind.AssumptionTesting => "¿Qué tiene que ser cierto para que su explicación funcione? ¿Cuál de esos supuestos podría fallar?",
+        MoveKind.IndependentExplanation => $"Sin usar una definición de libro, ¿cómo explicaría {concept} a partir de su propio razonamiento?",
+        MoveKind.Hint => $"Le doy una pista: piense en qué necesita {concept} para ocurrir. Con eso en mente, ¿cómo lo explicaría ahora?",
+        MoveKind.GuidedExplanation => $"Veamos {concept} paso a paso, a partir de lo que ya dijo. ¿Qué paso cree que va primero y por qué?",
+        _ => $"Con sus propias palabras, ¿qué es {concept}?",
     };
 
     /// <summary>The plain fallback questions in Korean (GAD-T535), polite 해요체, worded so any concept title (English or Korean) fits.</summary>

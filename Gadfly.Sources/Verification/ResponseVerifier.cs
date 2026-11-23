@@ -90,6 +90,7 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
 
         var ask = StudentAsks().Match(text);
         if (!ask.Success && LanguageText.HasHangul(text)) ask = KoreanStudentAsks().Match(text);
+        if (!ask.Success && LanguageText.LooksSpanish(text)) ask = SpanishStudentAsks().Match(text);   // GAD-T610
         if (ask.Success)
             hints.Add(new(ClarificationTrigger.StudentRequest, null, $"The student asked to clarify (\"{ask.Value.Trim()}\")."));
 
@@ -113,6 +114,7 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
         var t = text.Trim();
         if (t.Length == 0) return false;
         if (LanguageText.IsIncompleteKorean(t) is { } korean) return korean;   // a Korean last word: Korean endings decide (GAD-T537)
+        if (LanguageText.IsIncompleteSpanish(t) is { } spanish) return spanish;   // Spanish text: a trailing comma or connective (GAD-T610)
         if (t.EndsWith("...", StringComparison.Ordinal) || t.EndsWith('…') || t.EndsWith('-') || t.EndsWith('—') || t.EndsWith('–')) return true;
         if (".!?)\"'”".Contains(t[^1])) return false;
         var last = WordRx().Matches(t).Select(m => m.Value.ToLowerInvariant()).LastOrDefault();
@@ -297,6 +299,13 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
             if (trigger == ClarificationTrigger.IncompleteSentence) return $"답변이 “{p}”에서 멈춘 것 같아요. 그 생각을 어떻게 마무리하시겠어요?";
             return $"“{p}”라고 하셨는데, 무슨 뜻인가요?";
         }
+        if (ExamLanguage.IsSpanish(language))   // the same templates in Spanish (GAD-T610), usted: only the student's own words
+        {
+            if (trigger == ClarificationTrigger.StudentRequest) return "Quiere aclarar algo. Adelante: ¿qué le gustaría agregar o explicar sobre su respuesta?";
+            if (string.IsNullOrWhiteSpace(p)) return "¿Podría decir un poco más sobre lo que quiso decir, con sus propias palabras?";
+            if (trigger == ClarificationTrigger.IncompleteSentence) return $"Su respuesta parece detenerse después de «{p}». ¿Cómo terminaría esa idea?";
+            return $"Cuando dice «{p}», ¿qué quiere decir?";
+        }
         if (trigger == ClarificationTrigger.StudentRequest)
             return "You asked to clarify. Go ahead: what would you like to add or explain about your answer?";
         if (string.IsNullOrWhiteSpace(p))
@@ -346,6 +355,12 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
         "thought", "through", "unclear", "understand", "where", "which", "while", "whole", "words", "would", "write", "wrote",
         "written", "yourself", "already", "complete", "completed", "continue", "earlier", "first", "rephrase", "simply", "sure",
         "trying", "using", "wanted", "means", "mind", "other", "their", "there", "they're", "doesn", "isn't", "describes", "connection",
+        // Spanish asking words (GAD-T610): never English words, so English drafts are checked exactly as before.
+        "podría", "podria", "puede", "quiere", "quiso", "quería", "decir", "decirlo", "explicar", "explique", "explicarlo", "palabras",
+        "propias", "significa", "refiere", "refería", "respuesta", "pregunta", "terminar", "terminaría", "pensamiento", "mencionó",
+        "dicho", "parece", "usted", "cuando", "exactamente", "entender", "entendí", "seguro", "segura", "aclarar", "detalle", "detalles",
+        "manera", "forma", "otra", "frase", "ideas", "agregar", "añadir", "sobre", "poco", "decía", "estaba", "hablar", "habla",
+        "habló", "idea", "después", "antes", "todavía",
     };
 
     // ------------------------------------------------------------------ helpers
@@ -378,6 +393,10 @@ public sealed partial class ResponseVerifier(ISocraticVotingClient panel, Prompt
     /// <summary>The student asks, in Korean, to clarify or correct their own answer (다시 설명해도 될까요, 정정할게요, 다시 말할게요).</summary>
     [GeneratedRegex(@"(다시|좀\s*더)\s*(설명|말)(해도|할게|하겠)|정정(할게|하겠|해도)|고쳐\s*(말|말할게|말하겠)|제\s*말은")]
     private static partial Regex KoreanStudentAsks();
+
+    /// <summary>The student asks, in Spanish, to clarify or correct their own answer (quiero aclarar, déjeme corregir, me corrijo, quiero decir).</summary>
+    [GeneratedRegex(@"\b(quiero|quisiera|me\s+gustar[íi]a)\s+(aclarar|corregir|reformular|explicar(lo)?\s+mejor)\b|\bd[ée]jeme\s+(aclarar|corregir|reformular|explicar(lo)?\s+mejor)\b|\bme\s+corrijo\b|\b(puedo|podr[íi]a)\s+(aclarar|corregir|reformular)\b|\blo\s+que\s+quiero\s+decir\b", RegexOptions.IgnoreCase)]
+    private static partial Regex SpanishStudentAsks();
 
     /// <summary>Confirmation-seeking forms that put an interpretation in the student's mouth.</summary>
     [GeneratedRegex(@"^\s*(so\s+)?(do|did|are|were|is|was)\s+you\s+(mean|saying|suggesting|implying|referring)\b|\bdo\s+you\s+mean\b|\bin\s+other\s+words\b|\bis\s+it\s+that\b|\b(or|versus)\b.{0,60}\?$",
