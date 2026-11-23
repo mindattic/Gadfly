@@ -1,0 +1,477 @@
+// Catalog exams for Physical Sciences (GAD-T677): physics and chemistry. Format: see life-sciences.json's header comment.
+// Each exam carries approved Korean and Spanish texts (title, instructions, objective titles) under "translations".
+[
+  {
+    "title": "Newton's Laws of Motion",
+    "category": "physical-sciences",
+    "subject": "Physics",
+    "topic": "Mechanics",
+    "instructions": "The examiner will talk with you about Newton's three laws of motion and how they apply to everyday situations. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "Isaac Newton set out three laws of motion in his Principia in 1687. They describe how forces change the motion of objects. They are highly accurate at everyday speeds and sizes, but they break down near the speed of light and at atomic scales, where relativity and quantum mechanics take over.",
+      "The first law, the law of inertia, states that an object stays at rest, or keeps moving at a constant velocity in a straight line, unless a net external force acts on it. Inertia is an object's resistance to a change in its motion, and mass is the measure of it. A moving object needs no force to keep moving; things on Earth slow down because friction and air resistance act on them.",
+      "The second law states that the net force on an object equals its mass times its acceleration, F = ma, and the acceleration points in the direction of the net force. Force is measured in newtons: one newton gives a 1 kg mass an acceleration of 1 m/s². Weight is the gravitational force on an object, W = mg, where g is about 9.8 m/s² near Earth's surface. Mass is the same everywhere; weight depends on the local gravity.",
+      "The third law states that when object A exerts a force on object B, B exerts a force of equal size and opposite direction on A. The two forces of the pair act on different objects, so they never cancel each other. A rocket pushes exhaust gas backward and the gas pushes the rocket forward; a swimmer pushes water back and the water pushes the swimmer ahead."
+    ],
+    "objectives": [
+      { "key": "inertia", "title": "Explain the first law and inertia", "description": "States the first law and explains why moving objects slow down on Earth.",
+        "concept": "Newton's first law", "definition": "An object keeps its state of rest or constant straight-line velocity unless a net external force acts on it.",
+        "facts": ["With no net force, an object at rest stays at rest and a moving object keeps a constant velocity.", "Inertia is resistance to a change in motion, and mass measures it.", "Objects slow down on Earth because friction and air resistance act on them."],
+        "misconceptions": ["A force is needed to keep an object moving at constant speed.", "Objects naturally come to rest on their own."] },
+      { "key": "second-law", "title": "Apply the second law, F = ma", "description": "Relates net force, mass and acceleration and works a simple example.",
+        "concept": "Newton's second law", "definition": "The net force on an object equals its mass times its acceleration, and the acceleration is in the direction of the net force.",
+        "facts": ["Net force equals mass times acceleration, F = ma.", "For the same force, a larger mass gets a smaller acceleration.", "One newton accelerates 1 kg at 1 m/s²."],
+        "misconceptions": ["An object always moves in the direction of the force on it, regardless of its velocity.", "A constant force produces a constant velocity."] },
+      { "key": "mass-weight", "title": "Distinguish mass from weight", "description": "Explains why weight changes with gravity while mass does not.",
+        "concept": "Mass and weight", "definition": "Mass is the amount of matter and inertia in an object; weight is the gravitational force on it, W = mg.",
+        "facts": ["Weight is a force, measured in newtons.", "Weight equals mass times gravitational field strength, W = mg.", "An object's mass is the same on the Moon as on Earth, but its weight is smaller there."],
+        "misconceptions": ["Mass and weight are the same thing.", "Objects in orbit have no mass."] },
+      { "key": "third-law", "title": "Explain the third law and force pairs", "description": "Identifies action-reaction pairs and explains why they do not cancel.",
+        "concept": "Newton's third law", "definition": "Forces come in pairs: if A pushes on B, B pushes on A with an equal and opposite force.",
+        "facts": ["The two forces of a pair are equal in size and opposite in direction.", "The forces act on different objects, so they do not cancel.", "A rocket moves forward because the exhaust pushes back on it."],
+        "misconceptions": ["Action and reaction forces cancel, so nothing can move.", "The larger object exerts the larger force in a collision."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "뉴턴의 운동 법칙",
+        "instructions": "시험관이 뉴턴의 운동 3법칙과 그것이 일상 상황에 어떻게 적용되는지에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "inertia": "제1법칙과 관성 설명하기", "second-law": "제2법칙 F = ma 적용하기", "mass-weight": "질량과 무게 구별하기", "third-law": "제3법칙과 힘의 쌍 설명하기" }
+      },
+      "es": {
+        "title": "Las leyes del movimiento de Newton",
+        "instructions": "El examinador conversará con usted sobre las tres leyes del movimiento de Newton y cómo se aplican en situaciones cotidianas. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "inertia": "Explicar la primera ley y la inercia", "second-law": "Aplicar la segunda ley, F = ma", "mass-weight": "Distinguir la masa del peso", "third-law": "Explicar la tercera ley y los pares de fuerzas" }
+      }
+    }
+  },
+  {
+    "title": "Work, Energy and Power",
+    "category": "physical-sciences",
+    "subject": "Physics",
+    "topic": "Energy",
+    "instructions": "The examiner will talk with you about work, kinetic and potential energy, the conservation of energy, and power. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "In physics, a force does work on an object when it moves the object. Work equals the force times the displacement in the direction of the force, W = Fd cos θ, and is measured in joules. A force perpendicular to the motion does no work: carrying a bag across a level floor at constant speed does no work on the bag against gravity, however tiring it feels.",
+      "Kinetic energy is the energy of motion, KE = ½mv². Because speed is squared, doubling an object's speed quadruples its kinetic energy. Gravitational potential energy near Earth's surface is PE = mgh, measured from a chosen reference level. The work-energy theorem states that the net work done on an object equals the change in its kinetic energy.",
+      "The law of conservation of energy states that energy cannot be created or destroyed, only transformed from one form to another or transferred between objects. In an isolated system the total energy stays constant. As a ball falls, its potential energy becomes kinetic energy; with air resistance, some becomes thermal energy. That energy is not lost, but it is spread out and less useful.",
+      "Power is the rate of doing work or transferring energy, P = W/t, measured in watts, where one watt is one joule per second. Efficiency is the useful energy output divided by the total energy input. Real machines always waste some energy, usually as heat, so their efficiency is below 100 percent."
+    ],
+    "objectives": [
+      { "key": "work", "title": "Explain when a force does work", "description": "Uses W = Fd cos θ and explains why a perpendicular force does no work.",
+        "concept": "Work", "definition": "Work is the energy transferred when a force moves an object, equal to force times displacement in the force's direction.",
+        "facts": ["Work equals force times displacement in the direction of the force.", "Work is measured in joules.", "A force perpendicular to the motion does no work."],
+        "misconceptions": ["Holding a heavy object still does work on it.", "Any effort that makes you tired counts as work in physics."] },
+      { "key": "kinetic-potential", "title": "Calculate kinetic and potential energy", "description": "Uses KE = ½mv² and PE = mgh and explains the effect of doubling speed.",
+        "concept": "Kinetic and potential energy", "definition": "Kinetic energy is energy of motion, ½mv²; gravitational potential energy is energy of position, mgh.",
+        "facts": ["Kinetic energy equals one half mass times speed squared.", "Doubling speed quadruples kinetic energy.", "Gravitational potential energy near Earth equals mgh from a reference level.", "Net work equals the change in kinetic energy."],
+        "misconceptions": ["Doubling speed doubles kinetic energy.", "Potential energy has one absolute value, independent of the reference level."] },
+      { "key": "conservation", "title": "Apply conservation of energy", "description": "Traces energy transformations and explains where 'lost' energy goes.",
+        "concept": "Conservation of energy", "definition": "Energy cannot be created or destroyed; in an isolated system the total stays constant as it changes form.",
+        "facts": ["Energy is transformed or transferred, never created or destroyed.", "A falling object turns potential energy into kinetic energy.", "Friction and air resistance turn some energy into thermal energy."],
+        "misconceptions": ["Energy is used up and disappears.", "Friction destroys energy."] },
+      { "key": "power-efficiency", "title": "Explain power and efficiency", "description": "Defines power as a rate and explains why efficiency is below 100 percent.",
+        "concept": "Power and efficiency", "definition": "Power is the rate of energy transfer, P = W/t; efficiency is useful output over total input.",
+        "facts": ["Power is measured in watts, one joule per second.", "The same work done faster needs more power.", "Real machines waste some energy, usually as heat, so efficiency is below 100 percent."],
+        "misconceptions": ["Power and energy are the same thing.", "A well-built machine can be more than 100 percent efficient."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "일, 에너지, 일률",
+        "instructions": "시험관이 일, 운동 에너지와 위치 에너지, 에너지 보존, 일률에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "work": "힘이 일을 하는 경우 설명하기", "kinetic-potential": "운동 에너지와 위치 에너지 계산하기", "conservation": "에너지 보존 법칙 적용하기", "power-efficiency": "일률과 효율 설명하기" }
+      },
+      "es": {
+        "title": "Trabajo, energía y potencia",
+        "instructions": "El examinador conversará con usted sobre el trabajo, la energía cinética y potencial, la conservación de la energía y la potencia. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "work": "Explicar cuándo una fuerza realiza trabajo", "kinetic-potential": "Calcular la energía cinética y la potencial", "conservation": "Aplicar la conservación de la energía", "power-efficiency": "Explicar la potencia y la eficiencia" }
+      }
+    }
+  },
+  {
+    "title": "Momentum and Collisions",
+    "category": "physical-sciences",
+    "subject": "Physics",
+    "topic": "Mechanics",
+    "instructions": "The examiner will talk with you about momentum, impulse, the conservation of momentum, and elastic and inelastic collisions. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "Momentum is the product of an object's mass and its velocity, p = mv, measured in kilogram metres per second. It is a vector: it has a direction, the direction of the velocity. A slow truck can have more momentum than a fast bicycle because its mass is so much larger.",
+      "A force acting over a time changes momentum. The impulse, force times the time it acts, equals the change in momentum, FΔt = Δp. For a given change in momentum, a longer stopping time means a smaller force. Airbags, crumple zones and bending your knees when you land all work by stretching out the time of the collision.",
+      "The law of conservation of momentum states that the total momentum of an isolated system, one with no net external force, stays constant. It follows from Newton's third law: in a collision the two objects push on each other with equal and opposite forces for the same time, so the momentum one gains the other loses. When a gun fires, the bullet goes forward and the gun recoils backward, and the total momentum stays zero.",
+      "Momentum is conserved in every collision of an isolated system, but kinetic energy is not always. In an elastic collision kinetic energy is also conserved, which is nearly true for colliding billiard balls. In an inelastic collision some kinetic energy becomes heat, sound or deformation. In a perfectly inelastic collision the objects stick together and move off with a common velocity."
+    ],
+    "objectives": [
+      { "key": "momentum", "title": "Define momentum", "description": "Uses p = mv and explains why momentum has a direction.",
+        "concept": "Momentum", "definition": "Momentum is mass times velocity, a vector quantity in the direction of motion.",
+        "facts": ["Momentum equals mass times velocity.", "Momentum is a vector with the direction of the velocity.", "A massive slow object can have more momentum than a light fast one."],
+        "misconceptions": ["Momentum and kinetic energy are the same quantity.", "Only fast objects have significant momentum."] },
+      { "key": "impulse", "title": "Explain impulse and safety design", "description": "Uses FΔt = Δp to explain why airbags and crumple zones reduce force.",
+        "concept": "Impulse", "definition": "Impulse, force times time, equals the change in momentum.",
+        "facts": ["Impulse equals force times the time it acts.", "Impulse equals the change in momentum.", "Extending the stopping time reduces the force for the same change in momentum."],
+        "misconceptions": ["Airbags reduce the change in momentum of the passenger.", "A softer landing means less momentum is lost."] },
+      { "key": "conservation", "title": "Apply conservation of momentum", "description": "States when momentum is conserved and links it to the third law.",
+        "concept": "Conservation of momentum", "definition": "The total momentum of an isolated system stays constant.",
+        "facts": ["Momentum is conserved when no net external force acts on the system.", "It follows from Newton's third law.", "In recoil, the forward and backward momenta add to zero."],
+        "misconceptions": ["Momentum is conserved for each object separately.", "Momentum is only conserved when nothing deforms."] },
+      { "key": "collision-types", "title": "Compare elastic and inelastic collisions", "description": "Says what is conserved in each kind of collision.",
+        "concept": "Elastic and inelastic collisions", "definition": "Elastic collisions conserve kinetic energy; inelastic ones do not; momentum is conserved in both.",
+        "facts": ["Momentum is conserved in both elastic and inelastic collisions of an isolated system.", "Kinetic energy is conserved only in elastic collisions.", "In a perfectly inelastic collision the objects stick together."],
+        "misconceptions": ["Momentum is lost in an inelastic collision.", "Energy is destroyed in an inelastic collision."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "운동량과 충돌",
+        "instructions": "시험관이 운동량, 충격량, 운동량 보존, 탄성 충돌과 비탄성 충돌에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "momentum": "운동량 정의하기", "impulse": "충격량과 안전 설계 설명하기", "conservation": "운동량 보존 법칙 적용하기", "collision-types": "탄성 충돌과 비탄성 충돌 비교하기" }
+      },
+      "es": {
+        "title": "Cantidad de movimiento y colisiones",
+        "instructions": "El examinador conversará con usted sobre la cantidad de movimiento, el impulso, la conservación de la cantidad de movimiento y las colisiones elásticas e inelásticas. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "momentum": "Definir la cantidad de movimiento", "impulse": "Explicar el impulso y el diseño de seguridad", "conservation": "Aplicar la conservación de la cantidad de movimiento", "collision-types": "Comparar colisiones elásticas e inelásticas" }
+      }
+    }
+  },
+  {
+    "title": "Waves and Sound",
+    "category": "physical-sciences",
+    "subject": "Physics",
+    "topic": "Waves",
+    "instructions": "The examiner will talk with you about the properties of waves, the wave equation, how sound travels, and interference and the Doppler effect. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "A wave is a disturbance that transfers energy from place to place without carrying matter along with it. Mechanical waves, such as sound and water waves, need a medium to travel through; electromagnetic waves, such as light, do not. In a transverse wave the medium oscillates at right angles to the direction of travel, as on a shaken rope. In a longitudinal wave it oscillates along the direction of travel, as in sound, which is a series of compressions and rarefactions.",
+      "Every periodic wave has a wavelength, the distance between successive crests, a frequency, the number of waves passing a point each second, measured in hertz, and an amplitude, the size of the oscillation. The period is the time for one wave, T = 1/f. Wave speed equals frequency times wavelength, v = fλ. The speed is set by the medium, not by the frequency: if the frequency rises in the same medium, the wavelength gets shorter.",
+      "Sound is a longitudinal mechanical wave, so it cannot travel through a vacuum. It moves at about 343 m/s in air at 20 °C, and faster in water and in solids. The pitch we hear depends on frequency, and humans hear roughly 20 Hz to 20,000 Hz. Loudness depends mainly on amplitude, which is related to the energy the wave carries.",
+      "When waves meet, their displacements add, a principle called superposition. Crest meeting crest gives constructive interference and a larger wave; crest meeting trough gives destructive interference, which noise-cancelling headphones use. The Doppler effect is the change in observed frequency when the source and observer move relative to each other: an approaching siren sounds higher in pitch and a receding one lower, although the siren itself emits the same frequency throughout."
+    ],
+    "objectives": [
+      { "key": "wave-types", "title": "Distinguish types of waves", "description": "Explains what waves transfer and compares transverse with longitudinal, mechanical with electromagnetic.",
+        "concept": "Types of waves", "definition": "Waves transfer energy, not matter; they are transverse or longitudinal, and mechanical or electromagnetic.",
+        "facts": ["Waves transfer energy without transferring matter.", "Transverse waves oscillate at right angles to travel; longitudinal waves oscillate along it.", "Mechanical waves need a medium; electromagnetic waves do not."],
+        "misconceptions": ["Water in an ocean wave travels along with the wave.", "All waves need a medium."] },
+      { "key": "wave-equation", "title": "Use the wave equation", "description": "Relates speed, frequency and wavelength and says what sets the speed.",
+        "concept": "Wave equation", "definition": "Wave speed equals frequency times wavelength, v = fλ, with the speed set by the medium.",
+        "facts": ["Wave speed equals frequency times wavelength.", "Period is the reciprocal of frequency.", "In one medium, a higher frequency means a shorter wavelength."],
+        "misconceptions": ["Raising the frequency makes a wave travel faster in the same medium.", "Amplitude determines wave speed."] },
+      { "key": "sound", "title": "Explain how sound travels", "description": "Explains why sound needs a medium and links pitch and loudness to wave properties.",
+        "concept": "Sound", "definition": "Sound is a longitudinal mechanical wave whose pitch depends on frequency and loudness on amplitude.",
+        "facts": ["Sound cannot travel through a vacuum.", "Sound travels about 343 m/s in air at 20 °C and faster in water and solids.", "Pitch depends on frequency; loudness mainly on amplitude."],
+        "misconceptions": ["Sound travels fastest in air because air is least dense.", "Louder sounds travel faster."] },
+      { "key": "interference-doppler", "title": "Explain interference and the Doppler effect", "description": "Uses superposition for interference and explains the change in pitch of a moving source.",
+        "concept": "Superposition and the Doppler effect", "definition": "Overlapping waves add; relative motion of source and observer shifts the observed frequency.",
+        "facts": ["Overlapping waves add their displacements.", "Crest on crest is constructive; crest on trough is destructive.", "An approaching source is heard at a higher frequency, a receding one at a lower frequency."],
+        "misconceptions": ["The Doppler effect changes the frequency the source emits.", "The Doppler effect is a change in loudness."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "파동과 소리",
+        "instructions": "시험관이 파동의 성질, 파동 방정식, 소리의 전달 방식, 간섭과 도플러 효과에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "wave-types": "파동의 종류 구별하기", "wave-equation": "파동 방정식 사용하기", "sound": "소리가 전달되는 방식 설명하기", "interference-doppler": "간섭과 도플러 효과 설명하기" }
+      },
+      "es": {
+        "title": "Ondas y sonido",
+        "instructions": "El examinador conversará con usted sobre las propiedades de las ondas, la ecuación de onda, cómo se propaga el sonido, y la interferencia y el efecto Doppler. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "wave-types": "Distinguir los tipos de ondas", "wave-equation": "Usar la ecuación de onda", "sound": "Explicar cómo se propaga el sonido", "interference-doppler": "Explicar la interferencia y el efecto Doppler" }
+      }
+    }
+  },
+  {
+    "title": "Electric Circuits",
+    "category": "physical-sciences",
+    "subject": "Physics",
+    "topic": "Electricity",
+    "instructions": "The examiner will talk with you about current, voltage, resistance, Ohm's law, series and parallel circuits, and electrical power. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "Electric current is the rate at which charge flows, I = Q/t, measured in amperes. By convention current flows from the positive terminal to the negative one around the outside of a circuit, although in metal wires the moving charges are electrons, which drift the other way. Voltage, or potential difference, is the energy transferred per unit of charge, measured in volts, where one volt is one joule per coulomb. A battery provides a potential difference; it does not supply electrons that get used up, because charge is conserved all the way around the circuit.",
+      "Resistance opposes current and is measured in ohms. Ohm's law states that the current through a conductor is proportional to the voltage across it, V = IR, provided the temperature and other conditions stay constant; conductors that obey it are called ohmic. A wire's resistance depends on its material, and increases with its length and decreases with its cross-sectional area. For most metals it also rises with temperature.",
+      "In a series circuit the components form a single loop, so the same current flows through each, the voltages across them add up to the supply voltage, and the total resistance is the sum, R = R1 + R2. A break anywhere stops the whole circuit. In a parallel circuit each branch has the full supply voltage, the branch currents add up to the total current, and 1/R = 1/R1 + 1/R2, so the total resistance is less than that of the smallest branch. Household wiring is parallel, so each appliance works on its own.",
+      "Electrical power is the rate of energy transfer, P = IV, which with Ohm's law also equals I²R and V²/R. Energy equals power times time. Electricity companies bill energy in kilowatt-hours: a 1,000-watt heater running for one hour uses one kilowatt-hour, which is 3.6 million joules."
+    ],
+    "objectives": [
+      { "key": "current-voltage", "title": "Explain current and voltage", "description": "Defines current and potential difference and explains what a battery supplies.",
+        "concept": "Current and potential difference", "definition": "Current is the rate of flow of charge; voltage is the energy transferred per unit charge.",
+        "facts": ["Current is charge per unit time, measured in amperes.", "Voltage is energy per unit charge, measured in volts.", "Charge is conserved around a circuit; a battery provides energy, not new charge."],
+        "misconceptions": ["Current is used up as it goes around a circuit.", "A battery stores a fixed amount of electrons that it gives out."] },
+      { "key": "ohms-law", "title": "Apply Ohm's law", "description": "Uses V = IR and names what a wire's resistance depends on.",
+        "concept": "Resistance and Ohm's law", "definition": "For an ohmic conductor at constant temperature, current is proportional to voltage, V = IR.",
+        "facts": ["Voltage equals current times resistance for an ohmic conductor.", "Resistance increases with wire length and decreases with cross-sectional area.", "A metal's resistance usually rises with temperature."],
+        "misconceptions": ["Ohm's law holds for every component, including lamps and diodes.", "A thicker wire has more resistance."] },
+      { "key": "series-parallel", "title": "Compare series and parallel circuits", "description": "Explains how current, voltage and total resistance behave in each arrangement.",
+        "concept": "Series and parallel circuits", "definition": "Series components share one current and add resistances; parallel branches share one voltage and lower the total resistance.",
+        "facts": ["In series the current is the same everywhere and resistances add.", "In parallel each branch has the supply voltage and branch currents add.", "Adding a parallel branch lowers the total resistance."],
+        "misconceptions": ["Adding more resistors in parallel increases the total resistance.", "The first bulb in a series circuit gets more current than the last."] },
+      { "key": "electrical-power", "title": "Calculate electrical power and energy", "description": "Uses P = IV and explains the kilowatt-hour.",
+        "concept": "Electrical power", "definition": "Electrical power is current times voltage, and energy is power times time.",
+        "facts": ["Power equals current times voltage.", "Power also equals I²R and V²/R.", "A kilowatt-hour is a unit of energy, 3.6 million joules."],
+        "misconceptions": ["A kilowatt-hour is a unit of power.", "Power and energy mean the same thing on an electricity bill."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "전기 회로",
+        "instructions": "시험관이 전류, 전압, 저항, 옴의 법칙, 직렬 회로와 병렬 회로, 전력에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "current-voltage": "전류와 전압 설명하기", "ohms-law": "옴의 법칙 적용하기", "series-parallel": "직렬 회로와 병렬 회로 비교하기", "electrical-power": "전력과 전기 에너지 계산하기" }
+      },
+      "es": {
+        "title": "Circuitos eléctricos",
+        "instructions": "El examinador conversará con usted sobre la corriente, el voltaje, la resistencia, la ley de Ohm, los circuitos en serie y en paralelo, y la potencia eléctrica. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "current-voltage": "Explicar la corriente y el voltaje", "ohms-law": "Aplicar la ley de Ohm", "series-parallel": "Comparar circuitos en serie y en paralelo", "electrical-power": "Calcular la potencia y la energía eléctricas" }
+      }
+    }
+  },
+  {
+    "title": "Heat and the Laws of Thermodynamics",
+    "category": "physical-sciences",
+    "subject": "Physics",
+    "topic": "Thermodynamics",
+    "instructions": "The examiner will talk with you about heat and temperature, specific heat capacity, how heat is transferred, and the first and second laws of thermodynamics. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "Temperature measures the average kinetic energy of the particles in a substance. Heat is energy transferred from one body to another because of a difference in temperature, and it flows on its own from hotter to colder. A bathtub of warm water holds far more thermal energy than a cup of boiling water, even though the cup is at a higher temperature. The lowest possible temperature, absolute zero, is 0 kelvin, or -273.15 °C.",
+      "The heat needed to change the temperature of a substance is Q = mcΔT, where c is the specific heat capacity. Water's is unusually high, about 4,200 joules per kilogram per kelvin, which is why it warms and cools slowly. During a change of state, such as melting or boiling, energy is absorbed or released as latent heat while the temperature stays constant.",
+      "Heat moves in three ways. Conduction passes energy through a material by particle collisions and is fastest in metals. Convection carries energy by the bulk movement of a fluid, as warm air rises and cool air sinks. Radiation transfers energy as electromagnetic waves and needs no medium, which is how heat reaches us from a fire across a room.",
+      "The first law of thermodynamics is conservation of energy: the change in a system's internal energy equals the heat added to it minus the work it does, ΔU = Q − W. The second law states that the total entropy of an isolated system never decreases. It follows that heat does not flow spontaneously from cold to hot, and that no heat engine can turn all the heat it takes in into work. The best possible efficiency, the Carnot efficiency, is 1 − Tc/Th, with temperatures in kelvin."
+    ],
+    "objectives": [
+      { "key": "heat-temperature", "title": "Distinguish heat from temperature", "description": "Defines both and explains why a large cool object can hold more thermal energy than a small hot one.",
+        "concept": "Heat and temperature", "definition": "Temperature measures average particle kinetic energy; heat is energy transferred because of a temperature difference.",
+        "facts": ["Temperature measures the average kinetic energy of particles.", "Heat is energy in transfer, flowing from hotter to colder.", "Absolute zero is 0 K, or -273.15 °C."],
+        "misconceptions": ["Heat and temperature are the same thing.", "Cold is a substance that flows into warm objects."] },
+      { "key": "specific-heat", "title": "Use specific heat capacity and latent heat", "description": "Uses Q = mcΔT and explains why temperature is constant during a change of state.",
+        "concept": "Specific heat capacity and latent heat", "definition": "Specific heat capacity is the energy to raise 1 kg by 1 K; latent heat is the energy for a change of state at constant temperature.",
+        "facts": ["The heat needed equals mass times specific heat capacity times temperature change.", "Water has a high specific heat capacity.", "Temperature stays constant during melting or boiling while latent heat is absorbed."],
+        "misconceptions": ["Water keeps getting hotter while it boils in an open pot.", "All substances heat up equally fast for the same energy."] },
+      { "key": "heat-transfer", "title": "Explain conduction, convection and radiation", "description": "Describes each mechanism and gives an example.",
+        "concept": "Heat transfer", "definition": "Heat moves by conduction through materials, convection in fluids, and radiation as electromagnetic waves.",
+        "facts": ["Conduction transfers energy by particle collisions.", "Convection moves energy by the bulk flow of a fluid.", "Radiation needs no medium and can cross a vacuum."],
+        "misconceptions": ["Metals feel cold because they are at a lower temperature than wood in the same room.", "Heat always rises."] },
+      { "key": "laws", "title": "Explain the first and second laws of thermodynamics", "description": "States both laws and explains why no heat engine is 100 percent efficient.",
+        "concept": "Laws of thermodynamics", "definition": "The first law conserves energy, ΔU = Q − W; the second says entropy of an isolated system never decreases.",
+        "facts": ["The first law is conservation of energy: ΔU = Q − W.", "The second law: total entropy of an isolated system never decreases.", "Heat does not flow spontaneously from cold to hot.", "No heat engine can convert all its heat input into work."],
+        "misconceptions": ["A perfect engine could be 100 percent efficient.", "A refrigerator destroys heat."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "열과 열역학 법칙",
+        "instructions": "시험관이 열과 온도, 비열, 열의 이동 방식, 열역학 제1법칙과 제2법칙에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "heat-temperature": "열과 온도 구별하기", "specific-heat": "비열과 잠열 사용하기", "heat-transfer": "전도, 대류, 복사 설명하기", "laws": "열역학 제1법칙과 제2법칙 설명하기" }
+      },
+      "es": {
+        "title": "El calor y las leyes de la termodinámica",
+        "instructions": "El examinador conversará con usted sobre el calor y la temperatura, la capacidad calorífica específica, cómo se transfiere el calor y la primera y segunda leyes de la termodinámica. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "heat-temperature": "Distinguir el calor de la temperatura", "specific-heat": "Usar la capacidad calorífica específica y el calor latente", "heat-transfer": "Explicar la conducción, la convección y la radiación", "laws": "Explicar la primera y la segunda ley de la termodinámica" }
+      }
+    }
+  },
+  {
+    "title": "Atomic Structure and the Periodic Table",
+    "category": "physical-sciences",
+    "subject": "Chemistry",
+    "topic": "Atoms and Elements",
+    "instructions": "The examiner will talk with you about the parts of the atom, isotopes and ions, electron shells, and how the periodic table is organized. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "An atom has a tiny, dense nucleus of positively charged protons and uncharged neutrons, surrounded by negatively charged electrons. Ernest Rutherford's gold foil experiment, published in 1911, showed that almost all of an atom's mass is concentrated in the nucleus, while most of its volume is empty space occupied by electrons. A proton or neutron has about 1,800 times the mass of an electron.",
+      "The atomic number, the number of protons, defines which element an atom is: every carbon atom has six. The mass number is the number of protons plus neutrons. Isotopes are atoms of the same element with different numbers of neutrons, such as carbon-12 and carbon-14; they react almost identically. A neutral atom has as many electrons as protons; an ion has gained electrons and become negative, or lost them and become positive.",
+      "Electrons occupy energy levels, or shells, around the nucleus. The electrons in the outermost shell, the valence electrons, largely decide how an element reacts. When an electron drops from a higher energy level to a lower one, the atom emits light of a specific energy, so each element has its own line spectrum.",
+      "Dmitri Mendeleev published a periodic table in 1869, leaving gaps for elements not yet discovered. The modern table orders elements by atomic number. Elements in the same column, or group, have the same number of valence electrons and similar properties: group 1 holds the reactive alkali metals, group 17 the halogens, and group 18 the unreactive noble gases. Across a period from left to right, atomic radius generally decreases and electronegativity increases; down a group, atomic radius increases and electronegativity decreases."
+    ],
+    "objectives": [
+      { "key": "subatomic", "title": "Describe the parts of the atom", "description": "Names the subatomic particles, their charges and where the mass is.",
+        "concept": "Subatomic particles", "definition": "Atoms have a dense nucleus of protons and neutrons, surrounded by much lighter electrons.",
+        "facts": ["Protons are positive, neutrons neutral and electrons negative.", "Nearly all an atom's mass is in the nucleus.", "Most of an atom's volume is empty space."],
+        "misconceptions": ["Electrons orbit the nucleus in fixed circular paths like planets.", "Electrons account for most of an atom's mass."] },
+      { "key": "isotopes-ions", "title": "Explain atomic number, isotopes and ions", "description": "Uses atomic and mass numbers and distinguishes isotopes from ions.",
+        "concept": "Isotopes and ions", "definition": "Isotopes differ in neutron number; ions differ from neutral atoms in electron number.",
+        "facts": ["The atomic number, the proton count, identifies the element.", "Mass number is protons plus neutrons.", "Isotopes of an element have different numbers of neutrons.", "Ions form when atoms gain or lose electrons."],
+        "misconceptions": ["Changing the number of neutrons changes the element.", "Ions form by gaining or losing protons."] },
+      { "key": "electron-shells", "title": "Explain electron shells and valence electrons", "description": "Links valence electrons to reactivity and energy levels to line spectra.",
+        "concept": "Electron shells", "definition": "Electrons occupy energy levels; outer-shell valence electrons govern chemical behaviour.",
+        "facts": ["Electrons occupy discrete energy levels.", "Valence electrons largely determine how an element reacts.", "Electrons dropping between levels emit light at specific energies, giving each element a line spectrum."],
+        "misconceptions": ["Electrons can have any energy at all within an atom."] },
+      { "key": "periodic-trends", "title": "Explain the organization of the periodic table", "description": "Explains groups and periods and describes the main periodic trends.",
+        "concept": "Periodic table and trends", "definition": "Elements are ordered by atomic number; groups share valence electron counts and properties, and properties change regularly across periods.",
+        "facts": ["The modern table is ordered by atomic number.", "Elements in a group share valence electron counts and similar properties.", "Atomic radius decreases across a period and increases down a group.", "Electronegativity increases across a period and decreases down a group."],
+        "misconceptions": ["The periodic table is ordered by atomic mass.", "Atoms get larger from left to right because they have more particles."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "원자 구조와 주기율표",
+        "instructions": "시험관이 원자의 구성 요소, 동위 원소와 이온, 전자 껍질, 주기율표의 구성 방식에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "subatomic": "원자의 구성 요소 설명하기", "isotopes-ions": "원자 번호, 동위 원소, 이온 설명하기", "electron-shells": "전자 껍질과 원자가 전자 설명하기", "periodic-trends": "주기율표의 구성 설명하기" }
+      },
+      "es": {
+        "title": "La estructura atómica y la tabla periódica",
+        "instructions": "El examinador conversará con usted sobre las partes del átomo, los isótopos y los iones, las capas electrónicas y cómo está organizada la tabla periódica. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "subatomic": "Describir las partes del átomo", "isotopes-ions": "Explicar el número atómico, los isótopos y los iones", "electron-shells": "Explicar las capas electrónicas y los electrones de valencia", "periodic-trends": "Explicar la organización de la tabla periódica" }
+      }
+    }
+  },
+  {
+    "title": "Chemical Bonding",
+    "category": "physical-sciences",
+    "subject": "Chemistry",
+    "topic": "Bonding",
+    "instructions": "The examiner will talk with you about ionic, covalent and metallic bonding, polarity, and the forces between molecules. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "Atoms bond because the bonded arrangement has lower energy and is more stable than the separate atoms. Many atoms bond in a way that gives them a full outer shell of eight electrons, the octet rule, although there are exceptions, such as hydrogen, which needs only two.",
+      "In ionic bonding, electrons transfer from a metal atom to a nonmetal atom, forming positive and negative ions that attract each other strongly. Sodium chloride is a lattice of Na⁺ and Cl⁻ ions, not a collection of separate molecules. Ionic compounds have high melting points and conduct electricity when molten or dissolved in water, because the ions can then move, but not as solids.",
+      "In covalent bonding, nonmetal atoms share pairs of electrons; two atoms can share one, two or three pairs, forming single, double or triple bonds. When the atoms differ in electronegativity, the electrons are shared unequally and the bond is polar. Whether a whole molecule is polar also depends on its shape: water is bent, so its bond polarities add up and the molecule is polar, while carbon dioxide is linear, so its two polar bonds cancel and the molecule is nonpolar.",
+      "In metallic bonding, positive metal ions sit in a sea of delocalized electrons that move freely through the structure, which explains why metals conduct electricity and heat and can be hammered into shape. Between molecules act intermolecular forces, such as hydrogen bonds, dipole-dipole forces and London dispersion forces, which are much weaker than chemical bonds. When water boils, it is the hydrogen bonds between molecules that break, not the covalent bonds inside them."
+    ],
+    "objectives": [
+      { "key": "ionic", "title": "Explain ionic bonding", "description": "Describes electron transfer and links the ionic lattice to the compound's properties.",
+        "concept": "Ionic bonding", "definition": "Ionic bonds form when electrons transfer from metal to nonmetal atoms and the resulting ions attract each other.",
+        "facts": ["Ionic bonding involves transfer of electrons from a metal to a nonmetal.", "Ionic compounds form a lattice of ions, not separate molecules.", "Ionic compounds conduct when molten or dissolved, not as solids."],
+        "misconceptions": ["Solid salt conducts electricity well.", "Sodium chloride is made of NaCl molecules."] },
+      { "key": "covalent-polarity", "title": "Explain covalent bonds and polarity", "description": "Describes electron sharing and explains why water is polar and carbon dioxide is not.",
+        "concept": "Covalent bonding and polarity", "definition": "Covalent bonds share electron pairs; unequal sharing makes a bond polar, and shape decides whether the molecule is polar.",
+        "facts": ["Covalent bonds share pairs of electrons between nonmetal atoms.", "A difference in electronegativity makes a bond polar.", "Water is bent and polar; carbon dioxide is linear and nonpolar."],
+        "misconceptions": ["A molecule with polar bonds must be polar.", "Covalent bonds are always weaker than ionic bonds."] },
+      { "key": "metallic", "title": "Explain metallic bonding", "description": "Uses delocalized electrons to explain conductivity and malleability.",
+        "concept": "Metallic bonding", "definition": "Metallic bonding is the attraction between positive metal ions and a sea of delocalized electrons.",
+        "facts": ["Metal ions sit in a sea of delocalized electrons.", "Free electrons let metals conduct electricity and heat.", "Layers of ions can slide, so metals are malleable."],
+        "misconceptions": ["Metals conduct because their nuclei move through the wire."] },
+      { "key": "intermolecular", "title": "Distinguish bonds from intermolecular forces", "description": "Names intermolecular forces and explains what breaks when water boils.",
+        "concept": "Intermolecular forces", "definition": "Intermolecular forces are weak attractions between molecules, distinct from the bonds within them.",
+        "facts": ["Hydrogen bonds, dipole-dipole and dispersion forces act between molecules.", "Intermolecular forces are much weaker than covalent bonds.", "Boiling water breaks hydrogen bonds between molecules, not bonds within them."],
+        "misconceptions": ["Boiling water splits it into hydrogen and oxygen.", "A hydrogen bond is a covalent bond to hydrogen."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "화학 결합",
+        "instructions": "시험관이 이온 결합, 공유 결합, 금속 결합, 극성, 분자 사이의 힘에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "ionic": "이온 결합 설명하기", "covalent-polarity": "공유 결합과 극성 설명하기", "metallic": "금속 결합 설명하기", "intermolecular": "화학 결합과 분자 간 힘 구별하기" }
+      },
+      "es": {
+        "title": "El enlace químico",
+        "instructions": "El examinador conversará con usted sobre los enlaces iónico, covalente y metálico, la polaridad y las fuerzas entre moléculas. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "ionic": "Explicar el enlace iónico", "covalent-polarity": "Explicar el enlace covalente y la polaridad", "metallic": "Explicar el enlace metálico", "intermolecular": "Distinguir los enlaces de las fuerzas intermoleculares" }
+      }
+    }
+  },
+  {
+    "title": "Chemical Reactions and Stoichiometry",
+    "category": "physical-sciences",
+    "subject": "Chemistry",
+    "topic": "Reactions",
+    "instructions": "The examiner will talk with you about balancing chemical equations, the mole, mole ratios, and limiting reactants and yield. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "In a chemical reaction, atoms are rearranged into new substances. Antoine Lavoisier established the law of conservation of mass: in a closed system the total mass of the products equals the total mass of the reactants, because atoms are neither created nor destroyed. A chemical equation must therefore be balanced, with the same number of each kind of atom on both sides, as in 2H₂ + O₂ → 2H₂O. Equations are balanced by changing coefficients, never subscripts, since changing a subscript changes the substance.",
+      "Chemists count particles in moles. One mole is 6.022 × 10²³ particles, Avogadro's number. The molar mass of a substance, in grams per mole, has the same numerical value as the mass of one of its particles in atomic mass units: water has a molar mass of about 18.02 g/mol, so 18.02 grams of water contain one mole of molecules.",
+      "The coefficients of a balanced equation give the ratios in which substances react, in moles, not in grams. In 2H₂ + O₂ → 2H₂O, two moles of hydrogen react with one mole of oxygen to give two moles of water. To find a mass of product, convert the given mass to moles, use the mole ratio, then convert back to grams.",
+      "When reactants are not present in the exact ratio, the one that runs out first is the limiting reactant: it fixes the most product that can form, the theoretical yield, while the others are left in excess. The amount actually obtained is usually less, because of side reactions, incomplete reactions and losses during handling. Percent yield is the actual yield divided by the theoretical yield, times 100."
+    ],
+    "objectives": [
+      { "key": "balancing", "title": "Balance equations using conservation of mass", "description": "Explains why equations must balance and why only coefficients may change.",
+        "concept": "Conservation of mass and balanced equations", "definition": "Atoms are conserved in a reaction, so a balanced equation has the same atoms on each side.",
+        "facts": ["Mass is conserved in a chemical reaction in a closed system.", "A balanced equation has equal numbers of each atom on both sides.", "Equations are balanced with coefficients, not by changing subscripts."],
+        "misconceptions": ["Mass is lost when a substance burns.", "You can balance an equation by changing H2O to H2O2."] },
+      { "key": "mole", "title": "Explain the mole and molar mass", "description": "Defines the mole and converts between grams and moles.",
+        "concept": "The mole", "definition": "A mole is 6.022 × 10²³ particles; molar mass is the mass of one mole in grams.",
+        "facts": ["One mole contains 6.022 × 10²³ particles.", "Molar mass in g/mol matches the particle mass in atomic mass units.", "Moles equal mass divided by molar mass."],
+        "misconceptions": ["A mole of any substance has the same mass."] },
+      { "key": "mole-ratios", "title": "Use mole ratios from a balanced equation", "description": "Uses coefficients as mole ratios to find an amount of product.",
+        "concept": "Stoichiometric ratios", "definition": "Coefficients in a balanced equation give the mole ratios in which substances react and form.",
+        "facts": ["Coefficients give ratios in moles, not grams.", "In 2H₂ + O₂ → 2H₂O, 2 mol H₂ react with 1 mol O₂.", "Mass problems go grams to moles, through the ratio, then back to grams."],
+        "misconceptions": ["Coefficients give the ratio of masses that react."] },
+      { "key": "limiting-reactant", "title": "Identify the limiting reactant and percent yield", "description": "Explains what limits the product and why actual yield is usually lower.",
+        "concept": "Limiting reactant and yield", "definition": "The reactant that runs out first limits the product; percent yield compares actual to theoretical yield.",
+        "facts": ["The limiting reactant is used up first and sets the theoretical yield.", "Other reactants are left in excess.", "Percent yield is actual yield over theoretical yield times 100."],
+        "misconceptions": ["The reactant with the smaller mass is always the limiting reactant.", "A careful chemist always gets 100 percent yield."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "화학 반응과 화학량론",
+        "instructions": "시험관이 화학 반응식 맞추기, 몰, 몰 비, 한계 반응물과 수득률에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "balancing": "질량 보존을 이용해 반응식 맞추기", "mole": "몰과 몰 질량 설명하기", "mole-ratios": "균형 맞춘 반응식에서 몰 비 사용하기", "limiting-reactant": "한계 반응물과 퍼센트 수득률 구하기" }
+      },
+      "es": {
+        "title": "Reacciones químicas y estequiometría",
+        "instructions": "El examinador conversará con usted sobre el balanceo de ecuaciones químicas, el mol, las relaciones molares, y el reactivo limitante y el rendimiento. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "balancing": "Balancear ecuaciones con la conservación de la masa", "mole": "Explicar el mol y la masa molar", "mole-ratios": "Usar las relaciones molares de una ecuación balanceada", "limiting-reactant": "Identificar el reactivo limitante y el rendimiento porcentual" }
+      }
+    }
+  },
+  {
+    "title": "Acids, Bases and pH",
+    "category": "physical-sciences",
+    "subject": "Chemistry",
+    "topic": "Acids and Bases",
+    "instructions": "The examiner will talk with you about definitions of acids and bases, the pH scale, strong and weak acids, and neutralization and buffers. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "Svante Arrhenius defined an acid as a substance that produces hydrogen ions, H⁺, in water, and a base as one that produces hydroxide ions, OH⁻. In water the hydrogen ion actually joins a water molecule to form the hydronium ion, H₃O⁺. The broader Brønsted-Lowry definition calls an acid a proton donor and a base a proton acceptor. When an acid gives up a proton, what remains is its conjugate base; ammonia, NH₃, is a base because it accepts a proton from water, even though it contains no hydroxide.",
+      "The pH scale measures acidity: pH = −log[H⁺], where [H⁺] is the hydrogen ion concentration in moles per litre. At 25 °C pure water has a pH of 7, which is neutral; lower values are acidic and higher values basic. Because the scale is logarithmic, each step of one pH unit is a tenfold change, so a solution at pH 3 has a hundred times the hydrogen ion concentration of one at pH 5.",
+      "A strong acid, such as hydrochloric acid, ionizes completely in water. A weak acid, such as acetic acid in vinegar, ionizes only partly, so most of its molecules stay intact. Strength is not the same as concentration: a dilute solution of a strong acid can have a higher pH than a concentrated solution of a weak one.",
+      "In neutralization, an acid and a base react to form a salt and water, as in HCl + NaOH → NaCl + H₂O. A titration finds an unknown concentration by adding a solution of known concentration until an indicator changes colour at the end point. A buffer, a mixture of a weak acid and its conjugate base, resists changes in pH when small amounts of acid or base are added; buffers in blood keep its pH close to 7.4."
+    ],
+    "objectives": [
+      { "key": "definitions", "title": "Define acids and bases", "description": "Gives the Arrhenius and Brønsted-Lowry definitions and identifies conjugate pairs.",
+        "concept": "Acid-base definitions", "definition": "Arrhenius acids produce H⁺ and bases OH⁻ in water; Brønsted-Lowry acids donate protons and bases accept them.",
+        "facts": ["Arrhenius acids produce H⁺ in water; Arrhenius bases produce OH⁻.", "Brønsted-Lowry acids donate protons; bases accept protons.", "An acid that loses a proton becomes its conjugate base."],
+        "misconceptions": ["Every base must contain hydroxide.", "Acids are always dangerous and bases are always safe."] },
+      { "key": "ph-scale", "title": "Interpret the pH scale", "description": "Explains pH as a logarithmic measure and compares solutions.",
+        "concept": "pH", "definition": "pH is the negative logarithm of the hydrogen ion concentration; each unit is a tenfold change.",
+        "facts": ["pH equals the negative log of the hydrogen ion concentration.", "At 25 °C, pH 7 is neutral, below is acidic and above is basic.", "One pH unit is a tenfold change in hydrogen ion concentration."],
+        "misconceptions": ["pH 4 is twice as acidic as pH 8.", "A higher pH means more hydrogen ions."] },
+      { "key": "strength-concentration", "title": "Distinguish strength from concentration", "description": "Explains complete and partial ionization and why strong does not mean concentrated.",
+        "concept": "Strong and weak acids", "definition": "Strong acids ionize completely, weak acids partly; strength is separate from concentration.",
+        "facts": ["Strong acids such as HCl ionize completely in water.", "Weak acids such as acetic acid ionize only partly.", "A dilute strong acid can have a higher pH than a concentrated weak acid."],
+        "misconceptions": ["Strong acid means concentrated acid.", "Weak acids cannot be harmful."] },
+      { "key": "neutralization", "title": "Explain neutralization, titration and buffers", "description": "Writes a neutralization reaction and explains how a buffer resists pH change.",
+        "concept": "Neutralization and buffers", "definition": "An acid and a base react to form a salt and water; a buffer of a weak acid and its conjugate base resists pH change.",
+        "facts": ["Acid plus base gives a salt and water.", "A titration uses an indicator to find the end point.", "A buffer is a weak acid with its conjugate base and resists pH change.", "Blood is buffered near pH 7.4."],
+        "misconceptions": ["Neutralization always produces a solution of exactly pH 7.", "A buffer keeps pH constant no matter how much acid is added."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "산, 염기, pH",
+        "instructions": "시험관이 산과 염기의 정의, pH 척도, 강산과 약산, 중화와 완충 용액에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "definitions": "산과 염기 정의하기", "ph-scale": "pH 척도 해석하기", "strength-concentration": "산의 세기와 농도 구별하기", "neutralization": "중화, 적정, 완충 용액 설명하기" }
+      },
+      "es": {
+        "title": "Ácidos, bases y pH",
+        "instructions": "El examinador conversará con usted sobre las definiciones de ácidos y bases, la escala de pH, los ácidos fuertes y débiles, y la neutralización y las soluciones amortiguadoras. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "definitions": "Definir los ácidos y las bases", "ph-scale": "Interpretar la escala de pH", "strength-concentration": "Distinguir la fuerza de la concentración", "neutralization": "Explicar la neutralización, la titulación y las soluciones amortiguadoras" }
+      }
+    }
+  },
+  {
+    "title": "Light and Electromagnetic Radiation",
+    "category": "physical-sciences",
+    "subject": "Physics",
+    "topic": "Light",
+    "instructions": "The examiner will talk with you about the electromagnetic spectrum, reflection and refraction, and the wave and particle nature of light. Answer in your own words, explain why and not only what, and say you don't know when you don't.",
+    "passage": [
+      "Light is an electromagnetic wave: oscillating electric and magnetic fields that sustain each other and need no medium. James Clerk Maxwell showed in the 1860s that such waves travel at a fixed speed in a vacuum, about 3.00 × 10⁸ m/s, which matched the measured speed of light. The electromagnetic spectrum runs, from longest wavelength to shortest, through radio waves, microwaves, infrared, visible light, ultraviolet, X-rays and gamma rays. All travel at the same speed in a vacuum; they differ in wavelength and frequency.",
+      "When light reflects from a smooth surface, the angle of reflection equals the angle of incidence, both measured from the normal, the line perpendicular to the surface. Refraction is the bending of light as it passes between materials in which it travels at different speeds. Light slows down in glass or water and bends toward the normal on entering. The refractive index of a material is n = c/v, the speed of light in a vacuum divided by its speed in the material.",
+      "Because the refractive index of glass differs slightly for different wavelengths, a prism spreads white light into a spectrum of colours, an effect called dispersion; rainbows form the same way in raindrops. When light tries to pass from a slower medium into a faster one at a large enough angle, it does not cross at all but reflects completely, called total internal reflection, which keeps light inside optical fibres.",
+      "Light also behaves as particles. In the photoelectric effect, explained by Albert Einstein in 1905, light shining on a metal ejects electrons only if its frequency is above a threshold, no matter how bright it is. Light comes in packets called photons, each with energy E = hf, where h is Planck's constant. A brighter beam has more photons, not more energetic ones, which is why ultraviolet light can eject electrons and cause sunburn while bright red light cannot."
+    ],
+    "objectives": [
+      { "key": "spectrum", "title": "Describe the electromagnetic spectrum", "description": "Orders the regions of the spectrum and says what they share and how they differ.",
+        "concept": "Electromagnetic spectrum", "definition": "Electromagnetic waves range from radio to gamma rays; all travel at c in a vacuum and differ in wavelength and frequency.",
+        "facts": ["Light is an electromagnetic wave and needs no medium.", "All electromagnetic waves travel at about 3.00 × 10⁸ m/s in a vacuum.", "From longest to shortest wavelength: radio, microwave, infrared, visible, ultraviolet, X-ray, gamma."],
+        "misconceptions": ["Radio waves are a kind of sound.", "Higher-frequency electromagnetic waves travel faster in a vacuum."] },
+      { "key": "reflection-refraction", "title": "Explain reflection and refraction", "description": "States the law of reflection and explains why light bends between materials.",
+        "concept": "Reflection and refraction", "definition": "Reflected light leaves at the angle it arrives; refracted light bends because its speed changes between materials.",
+        "facts": ["The angle of reflection equals the angle of incidence, measured from the normal.", "Refraction happens because light changes speed between materials.", "Refractive index is the speed of light in a vacuum over its speed in the material."],
+        "misconceptions": ["Light bends because the material pulls on it.", "Light travels faster in glass than in air."] },
+      { "key": "dispersion-tir", "title": "Explain dispersion and total internal reflection", "description": "Explains how a prism makes a spectrum and how optical fibres carry light.",
+        "concept": "Dispersion and total internal reflection", "definition": "Different wavelengths refract by different amounts; beyond a critical angle light reflects entirely back into a slower medium.",
+        "facts": ["A prism separates colours because refractive index depends on wavelength.", "Rainbows come from dispersion in raindrops.", "Total internal reflection happens going from a slower to a faster medium beyond the critical angle.", "Optical fibres rely on total internal reflection."],
+        "misconceptions": ["A prism adds colour to white light."] },
+      { "key": "photons", "title": "Explain the particle nature of light", "description": "Uses the photoelectric effect and E = hf to explain why frequency, not brightness, matters.",
+        "concept": "Photons and the photoelectric effect", "definition": "Light comes in photons of energy E = hf; electrons are ejected only above a threshold frequency.",
+        "facts": ["Each photon has energy E = hf.", "Electrons are ejected only above a threshold frequency, whatever the brightness.", "A brighter beam has more photons, not more energetic ones."],
+        "misconceptions": ["Red light bright enough will eject electrons from any metal.", "Light is either a wave or a particle, so one model must be wrong."] }
+    ],
+    "translations": {
+      "ko": {
+        "title": "빛과 전자기 복사",
+        "instructions": "시험관이 전자기 스펙트럼, 반사와 굴절, 빛의 파동성과 입자성에 대해 이야기를 나눕니다. 자신의 말로 답하고, 무엇인지뿐 아니라 왜 그런지 설명하며, 모르는 것은 모른다고 말해 주세요.",
+        "objectives": { "spectrum": "전자기 스펙트럼 설명하기", "reflection-refraction": "반사와 굴절 설명하기", "dispersion-tir": "분산과 전반사 설명하기", "photons": "빛의 입자성 설명하기" }
+      },
+      "es": {
+        "title": "La luz y la radiación electromagnética",
+        "instructions": "El examinador conversará con usted sobre el espectro electromagnético, la reflexión y la refracción, y la naturaleza ondulatoria y corpuscular de la luz. Responda con sus propias palabras, explique el porqué y no solo el qué, y diga que no lo sabe cuando no lo sepa.",
+        "objectives": { "spectrum": "Describir el espectro electromagnético", "reflection-refraction": "Explicar la reflexión y la refracción", "dispersion-tir": "Explicar la dispersión y la reflexión interna total", "photons": "Explicar la naturaleza corpuscular de la luz" }
+      }
+    }
+  }
+]
