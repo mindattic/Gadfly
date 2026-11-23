@@ -1,6 +1,7 @@
 # La página de preparación y sus idiomas
 
 > Read in English: [Getting ready: the get-ready page and your languages](get-ready-and-languages.md)
+> 한국어로 읽기: [시험 준비와 언어](get-ready-and-languages-ko.md)
 
 Cuando presiona **Comenzar** en un examen de **Mis exámenes**, se abre la página de preparación. Todo lo que necesita para su
 examen está en esta única pantalla: sus idiomas, su cámara y su micrófono, la IA examinadora, cómo funciona el examen y el

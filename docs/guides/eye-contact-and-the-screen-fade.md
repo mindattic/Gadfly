@@ -1,6 +1,7 @@
 # Eye contact and gentle reminders
 
 > 한국어로 읽기: [시선 맞추기와 부드러운 알림](eye-contact-ko.md)
+> Leer en español: [Contacto visual y recordatorios amables](eye-contact-es.md)
 
 In a spoken exam with a person, you'd look at them while you talk. Gadfly asks the same, the way a friendly person would:
 **looking away to think is completely normal**, and only a long look away from the screen while you are speaking gets a

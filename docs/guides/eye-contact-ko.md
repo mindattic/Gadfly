@@ -1,6 +1,7 @@
 # 시선 맞추기와 부드러운 알림
 
 > Read in English: [Eye contact and gentle reminders](eye-contact-and-the-screen-fade.md)
+> Leer en español: [Contacto visual y recordatorios amables](eye-contact-es.md)
 
 사람과 이야기할 때처럼, 시험관과 이야기할 때도 시험관을 봐 주세요. 그렇다고 화면을 뚫어지게 볼 필요는 없어요.
 **생각하느라 시선을 돌리는 것은 아주 자연스러운 일이에요.** 말하는 동안 화면에서 오래 눈을 떼고 있을 때만, 그것도

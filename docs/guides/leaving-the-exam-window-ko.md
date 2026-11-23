@@ -1,6 +1,7 @@
 # 시험 창을 벗어나면
 
 > Read in English: [Leaving the exam window](leaving-the-exam-window.md)
+> Leer en español: [Si sale de la ventana del examen](leaving-the-exam-window-es.md)
 
 시험 중에는 시험 창을 맨 앞에 두고, 다른 창이나 탭, 앱으로 옮기지 마세요. 1초 이상 시험 창을 벗어나면 어떻게 되는지
 정확히 알려 드릴게요. 짧게 말하면, **시험이 일시 정지되고, 하던 말은 그대로 남고, 확인이 필요한지는 컴퓨터가 아니라

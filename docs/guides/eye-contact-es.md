@@ -1,6 +1,7 @@
 # Contacto visual y recordatorios amables
 
 > Read in English: [Eye contact and gentle reminders](eye-contact-and-the-screen-fade.md)
+> 한국어로 읽기: [시선 맞추기와 부드러운 알림](eye-contact-ko.md)
 
 En un examen oral con una persona, usted la miraría mientras habla. Gadfly le pide lo mismo, como lo haría una persona amable:
 **apartar la mirada para pensar es completamente normal**, y solo una mirada larga fuera de la pantalla mientras usted habla

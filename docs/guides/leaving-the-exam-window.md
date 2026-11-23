@@ -1,6 +1,7 @@
 # Leaving the exam window
 
 > 한국어로 읽기: [시험 창을 벗어나면](leaving-the-exam-window-ko.md)
+> Leer en español: [Si sale de la ventana del examen](leaving-the-exam-window-es.md)
 
 During an exam, keep the exam window in front: don't switch to another window, tab or app. If you do leave it, for a second
 or longer, here is exactly what happens. In short: **the exam pauses, your words are kept, and a person, never the computer,

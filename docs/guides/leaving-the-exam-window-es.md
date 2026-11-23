@@ -1,6 +1,7 @@
 # Si sale de la ventana del examen
 
 > Read in English: [Leaving the exam window](leaving-the-exam-window.md)
+> 한국어로 읽기: [시험 창을 벗어나면](leaving-the-exam-window-ko.md)
 
 Durante un examen, mantenga la ventana del examen al frente: no cambie a otra ventana, pestaña o aplicación. Si sale de ella,
 por un segundo o por más tiempo, esto es exactamente lo que pasa. En pocas palabras: **el examen queda en pausa, lo que dijo
