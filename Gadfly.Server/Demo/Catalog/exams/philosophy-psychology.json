@@ -1,0 +1,346 @@
+// Catalog exams for Philosophy and Psychology (GAD-T684). Format: see the header of life-sciences.json (GAD-T659).
+// Each exam carries approved Korean and Spanish texts (title, instructions, objective titles) so the seeder offers en, ko, es.
+[
+  {
+    "title": "The Socratic Method",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Socratic questioning",
+    "instructions": "The examiner will question you the way Socrates questioned his partners. Explain the method in your own words, use an example, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Socrates (469-399 BCE) wrote nothing himself. We know his way of doing philosophy mainly through the dialogues of his student Plato, and also through Xenophon. In those dialogues Socrates asks a partner to define a concept such as courage, piety or justice, and then tests the answer with further questions.",
+      "This testing is called the elenchus, Greek for refutation or cross-examination. Socrates draws out a definition, gets the partner to agree to other claims, and then shows that those claims contradict the definition. The partner must give up or revise something. The method tests the consistency of a person's beliefs; it does not by itself prove which belief is true.",
+      "In Plato's Euthyphro, Euthyphro defines piety as what the gods love. Socrates asks: is something pious because the gods love it, or do the gods love it because it is pious? Either answer causes trouble for the definition. Many dialogues end in aporia, a state of puzzlement in which no definition has survived.",
+      "In Plato's Apology, Socrates tells the jury that the oracle at Delphi said no one was wiser than he. After questioning people reputed to be wise, he concluded that they thought they knew things they did not, while he at least did not think he knew what he did not know. He held that the unexamined life is not worth living for a human being."
+    ],
+    "objectives": [
+      { "key": "elenchus", "title": "Explain how the elenchus works", "description": "Describes the steps of Socratic cross-examination and what it can and cannot show.",
+        "concept": "Elenchus", "definition": "Socrates' method of testing a definition by showing it conflicts with other beliefs the speaker accepts.",
+        "facts": ["Socrates asks for a definition of a concept such as courage or piety.", "He gains agreement to further claims and shows they contradict the definition.", "The method exposes inconsistency rather than directly proving the truth."],
+        "misconceptions": ["The Socratic method is just asking many questions with no aim.", "Socrates gave his partners the correct answers at the end."] },
+      { "key": "euthyphro", "title": "Explain the Euthyphro dilemma", "description": "States the dilemma and why both answers trouble the definition of piety.",
+        "concept": "Euthyphro dilemma", "definition": "Is something pious because the gods love it, or do the gods love it because it is pious?",
+        "facts": ["Euthyphro defines piety as what the gods love.", "If piety depends on the gods' love, it seems arbitrary.", "If the gods love it because it is pious, piety is something independent of their love."],
+        "misconceptions": ["The dilemma proves that gods do not exist."] },
+      { "key": "socratic-ignorance", "title": "Explain Socratic ignorance and aporia", "description": "Explains Socrates' claim about wisdom and why dialogues often end in puzzlement.",
+        "concept": "Socratic ignorance", "definition": "Socrates' wisdom lay in not thinking he knew what he did not know.",
+        "facts": ["The Delphic oracle said no one was wiser than Socrates.", "He found that reputedly wise people thought they knew what they did not.", "Many dialogues end in aporia, with no surviving definition.", "Socrates held that the unexamined life is not worth living."],
+        "misconceptions": ["Socrates claimed to know nothing at all about anything.", "Ending in aporia means the dialogue failed and taught nothing."] }
+    ],
+    "translations": {
+      "ko": { "title": "소크라테스식 문답법", "instructions": "시험관은 소크라테스가 대화 상대에게 했던 방식으로 질문합니다. 이 방법을 자신의 말로 설명하고 예를 들어 보세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "elenchus": "논박법(엘렌코스)의 작동 방식 설명하기", "euthyphro": "에우티프론 딜레마 설명하기", "socratic-ignorance": "소크라테스의 무지와 아포리아 설명하기" } },
+      "es": { "title": "El método socrático", "instructions": "El examinador le hará preguntas como Sócrates interrogaba a sus interlocutores. Explique el método con sus propias palabras, use un ejemplo y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "elenchus": "Explicar cómo funciona el elenchus", "euthyphro": "Explicar el dilema de Eutifrón", "socratic-ignorance": "Explicar la ignorancia socrática y la aporía" } }
+    }
+  },
+  {
+    "title": "Utilitarianism and Kantian Ethics",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Normative ethics",
+    "instructions": "The examiner will ask you to compare two major ethical theories and apply them to cases. Explain the reasoning behind each, not only its slogan, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Normative ethics asks what makes actions right or wrong. Two of its most influential answers are utilitarianism, developed by Jeremy Bentham and John Stuart Mill, and the deontological ethics of Immanuel Kant.",
+      "Utilitarianism is a form of consequentialism: the rightness of an action depends only on its consequences. The right action is the one that produces the greatest overall happiness, or well-being, counting everyone affected equally. Bentham treated pleasure as one measurable quantity; Mill argued that some pleasures, such as intellectual ones, are higher in quality than others.",
+      "Kant held that the moral worth of an action lies in acting from duty, guided by a good will, not in its results. Morality rests on the categorical imperative, a command that binds every rational being regardless of their desires. One formulation says to act only on a maxim you could will to become a universal law. Another says to treat humanity, in yourself and others, always as an end and never merely as a means.",
+      "Each theory faces objections. Utilitarianism seems to permit sacrificing an innocent person if doing so would maximize total happiness, which critics say ignores rights and justice. Kant's view seems to forbid lying even to a murderer asking where your friend is hiding, which critics say makes rules more important than lives."
+    ],
+    "objectives": [
+      { "key": "utilitarianism", "title": "Explain utilitarianism", "description": "States the principle of utility and the difference between Bentham and Mill.",
+        "concept": "Utilitarianism", "definition": "The right action is the one that produces the greatest overall happiness for everyone affected.",
+        "facts": ["Utilitarianism judges actions only by their consequences.", "Everyone's happiness counts equally.", "Mill distinguished higher and lower pleasures; Bentham did not."],
+        "misconceptions": ["Utilitarianism means doing whatever makes you personally happiest.", "Utilitarianism counts only the happiness of the majority group."] },
+      { "key": "kant", "title": "Explain Kant's categorical imperative", "description": "Explains duty, the good will and two formulations of the categorical imperative.",
+        "concept": "Categorical imperative", "definition": "An unconditional moral command: act only on maxims you could will as universal law, and treat humanity never merely as a means.",
+        "facts": ["Kant locates moral worth in acting from duty, not in consequences.", "The universal law formulation tests whether a maxim could be willed for everyone.", "The humanity formulation forbids treating people merely as means."],
+        "misconceptions": ["Kant said you may never use other people in any way at all.", "The categorical imperative is the same as the Golden Rule."] },
+      { "key": "compare-cases", "title": "Compare the theories on hard cases", "description": "Applies both theories to a case and explains the main objection to each.",
+        "concept": "Objections to each theory", "definition": "Utilitarianism seems to permit sacrificing innocents; Kant seems to forbid lying even to prevent harm.",
+        "facts": ["Utilitarianism can seem to justify harming an innocent for a greater total good.", "Critics say utilitarianism ignores rights and justice.", "Kant's view seems to forbid lying to a murderer at the door."],
+        "misconceptions": ["The two theories always give opposite verdicts."] }
+    ],
+    "translations": {
+      "ko": { "title": "공리주의와 칸트 윤리학", "instructions": "시험관은 두 가지 주요 윤리 이론을 비교하고 사례에 적용해 보라고 요청할 것입니다. 구호만이 아니라 각 이론의 논리를 설명하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "utilitarianism": "공리주의 설명하기", "kant": "칸트의 정언명령 설명하기", "compare-cases": "어려운 사례에서 두 이론 비교하기" } },
+      "es": { "title": "El utilitarismo y la ética kantiana", "instructions": "El examinador le pedirá comparar dos grandes teorías éticas y aplicarlas a casos. Explique el razonamiento de cada una, no solo su lema, y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "utilitarianism": "Explicar el utilitarismo", "kant": "Explicar el imperativo categórico de Kant", "compare-cases": "Comparar las teorías en casos difíciles" } }
+    }
+  },
+  {
+    "title": "What Is Knowledge?",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Epistemology",
+    "instructions": "The examiner will talk with you about what knowledge is and where it comes from. Use examples to test the definitions, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Epistemology is the branch of philosophy that studies knowledge and justified belief. A traditional analysis, traced to Plato's Theaetetus, holds that knowledge is justified true belief: you know a proposition when you believe it, it is true, and you have good reason, or justification, for believing it.",
+      "In 1963 Edmund Gettier published short counterexamples to this analysis. In a typical case a person has a justified belief that happens to be true only by luck, for example a stopped clock that by chance shows the correct time when you glance at it. The belief is justified and true, yet most people judge that it is not knowledge. Gettier cases suggest that justified true belief is not sufficient for knowledge.",
+      "Philosophers also ask where knowledge comes from. Rationalists such as René Descartes held that some important knowledge comes from reason alone, independent of experience. Empiricists such as John Locke and David Hume held that knowledge of the world comes from sense experience; Locke described the mind at birth as a blank slate. Knowledge that does not depend on experience is called a priori; knowledge that does is called a posteriori.",
+      "Descartes used methodical doubt to look for a certain foundation. Because the senses sometimes deceive, and he might be dreaming or deceived by an evil demon, he set aside every belief that could be doubted. He found one he could not doubt: that he was thinking, and therefore existed, expressed as \"I think, therefore I am\"."
+    ],
+    "objectives": [
+      { "key": "jtb", "title": "Explain knowledge as justified true belief", "description": "States the three conditions and why each seems needed.",
+        "concept": "Justified true belief", "definition": "The traditional analysis: knowledge is a belief that is true and justified.",
+        "facts": ["Knowledge requires believing the proposition.", "A false belief cannot be knowledge.", "A lucky guess that happens to be true lacks justification."],
+        "misconceptions": ["Feeling very certain of something means you know it."] },
+      { "key": "gettier", "title": "Explain the Gettier problem", "description": "Describes a Gettier case and what it shows about the analysis.",
+        "concept": "Gettier cases", "definition": "Cases of justified true belief that seem not to be knowledge because the truth is reached by luck.",
+        "facts": ["Gettier published his counterexamples in 1963.", "In a Gettier case the belief is justified and true but true only by luck.", "They suggest justified true belief is not sufficient for knowledge."],
+        "misconceptions": ["Gettier showed that justification is not needed for knowledge."] },
+      { "key": "rationalism-empiricism", "title": "Compare rationalism and empiricism", "description": "Explains the two views of the source of knowledge and the a priori / a posteriori distinction.",
+        "concept": "Rationalism and empiricism", "definition": "Rationalists hold that some knowledge comes from reason alone; empiricists that knowledge of the world comes from experience.",
+        "facts": ["Descartes was a rationalist; Locke and Hume were empiricists.", "Locke described the mind at birth as a blank slate.", "A priori knowledge is independent of experience; a posteriori knowledge depends on it."],
+        "misconceptions": ["Rationalists believe the senses are useless.", "Empiricists deny that people can reason."] },
+      { "key": "cartesian-doubt", "title": "Explain Descartes' method of doubt", "description": "Explains why Descartes doubted and what he found certain.",
+        "concept": "Methodical doubt and the cogito", "definition": "Descartes set aside every doubtable belief and found that his own thinking, and so his existence, could not be doubted.",
+        "facts": ["The senses sometimes deceive.", "Descartes considered that he might be dreaming or deceived by an evil demon.", "He concluded \"I think, therefore I am\"."],
+        "misconceptions": ["Descartes actually believed an evil demon was deceiving him."] }
+    ],
+    "translations": {
+      "ko": { "title": "앎이란 무엇인가?", "instructions": "시험관은 앎이 무엇이며 어디에서 오는지에 대해 이야기할 것입니다. 예를 들어 정의를 검토해 보세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "jtb": "정당화된 참인 믿음으로서의 앎 설명하기", "gettier": "게티어 문제 설명하기", "rationalism-empiricism": "합리론과 경험론 비교하기", "cartesian-doubt": "데카르트의 방법적 회의 설명하기" } },
+      "es": { "title": "¿Qué es el conocimiento?", "instructions": "El examinador conversará con usted sobre qué es el conocimiento y de dónde proviene. Use ejemplos para poner a prueba las definiciones y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "jtb": "Explicar el conocimiento como creencia verdadera justificada", "gettier": "Explicar el problema de Gettier", "rationalism-empiricism": "Comparar el racionalismo y el empirismo", "cartesian-doubt": "Explicar la duda metódica de Descartes" } }
+    }
+  },
+  {
+    "title": "The Mind-Body Problem",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Philosophy of mind",
+    "instructions": "The examiner will ask how the mind relates to the body and brain. Explain each position and its strongest objection, and say \"I don't know\" if you don't.",
+    "passage": [
+      "The mind-body problem asks how mental states, such as thoughts, feelings and sensations, relate to physical states of the body and brain.",
+      "René Descartes defended substance dualism: the mind is a non-physical thinking thing, distinct from the extended, physical body. Dualism faces the interaction problem, raised in Descartes' own time by Princess Elisabeth of Bohemia: if the mind is not physical, how can it cause the body to move, and how can bodily events cause sensations?",
+      "Physicalism holds that everything, including the mind, is physical. The mind-brain identity theory says each type of mental state is identical to a type of brain state, for example pain is a particular kind of neural activity. Functionalism instead defines mental states by what they do, by their causal role between inputs, other mental states and behaviour. Because one role could be filled by different physical systems, functionalists say mental states are multiply realizable: an octopus, or perhaps a machine, could be in pain with a very different physical makeup.",
+      "Consciousness is the hardest part of the problem. Thomas Nagel asked in 1974 what it is like to be a bat, arguing that the subjective character of experience is left out of purely physical descriptions. David Chalmers called the question of why physical processes give rise to subjective experience at all the hard problem of consciousness."
+    ],
+    "objectives": [
+      { "key": "dualism", "title": "Explain substance dualism and the interaction problem", "description": "States Descartes' view and the main objection to it.",
+        "concept": "Substance dualism", "definition": "The view that the mind is a non-physical substance distinct from the physical body.",
+        "facts": ["Descartes held that the mind is a non-physical thinking thing.", "The interaction problem asks how a non-physical mind can cause bodily movement.", "Princess Elisabeth of Bohemia pressed this objection on Descartes."],
+        "misconceptions": ["Dualism says the mind does not exist."] },
+      { "key": "physicalism", "title": "Compare identity theory and functionalism", "description": "Explains both physicalist views and the idea of multiple realizability.",
+        "concept": "Identity theory and functionalism", "definition": "Identity theory equates mental state types with brain state types; functionalism defines mental states by their causal role.",
+        "facts": ["Physicalism holds that everything, including the mind, is physical.", "Identity theory says pain is a particular type of brain state.", "Functionalism defines mental states by what they do.", "Multiple realizability means different physical systems could have the same mental state."],
+        "misconceptions": ["Functionalism says only human brains can have minds."] },
+      { "key": "consciousness", "title": "Explain the hard problem of consciousness", "description": "Explains Nagel's bat argument and Chalmers' hard problem.",
+        "concept": "Hard problem of consciousness", "definition": "Why physical processes give rise to subjective experience at all.",
+        "facts": ["Nagel asked what it is like to be a bat in 1974.", "Subjective experience seems left out of purely physical descriptions.", "Chalmers named the hard problem of consciousness."],
+        "misconceptions": ["The hard problem is just that the brain is very complicated."] }
+    ],
+    "translations": {
+      "ko": { "title": "심신 문제", "instructions": "시험관은 마음이 몸과 뇌와 어떤 관계인지 물을 것입니다. 각 입장과 그에 대한 가장 강력한 반론을 설명하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "dualism": "실체 이원론과 상호작용 문제 설명하기", "physicalism": "동일론과 기능주의 비교하기", "consciousness": "의식의 어려운 문제 설명하기" } },
+      "es": { "title": "El problema mente-cuerpo", "instructions": "El examinador le preguntará cómo se relaciona la mente con el cuerpo y el cerebro. Explique cada posición y su objeción más fuerte, y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "dualism": "Explicar el dualismo de sustancias y el problema de la interacción", "physicalism": "Comparar la teoría de la identidad y el funcionalismo", "consciousness": "Explicar el problema difícil de la conciencia" } }
+    }
+  },
+  {
+    "title": "Free Will and Determinism",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Metaphysics of action",
+    "instructions": "The examiner will ask whether people act freely if their choices have causes. Explain the main positions and test them with examples, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Determinism is the thesis that every event, including every human choice, is fixed by prior events together with the laws of nature. If determinism is true, then given the past and the laws, only one future is possible. Many people feel that free will requires the ability to have done otherwise, which determinism seems to rule out.",
+      "Incompatibilists hold that free will and determinism cannot both be true. Hard determinists accept determinism and conclude that we lack free will. Libertarians, in the philosophical sense, hold that we have free will and conclude that determinism is false, at least for human choices. Mere randomness does not obviously help, since a choice caused by chance does not seem to be under the agent's control either.",
+      "Compatibilists hold that free will and determinism can both be true. David Hume argued that liberty means acting according to the determinations of one's own will, as opposed to being under external constraint, such as chains. On this view, a person acts freely when their action flows from their own desires and reasoning, even if those desires have causes.",
+      "In 1969 Harry Frankfurt described cases in which a person could not have done otherwise, because a hidden device would have forced the choice, yet the person chooses entirely on their own and the device never acts. Many judge that such a person is morally responsible, which challenges the principle that responsibility requires being able to do otherwise."
+    ],
+    "objectives": [
+      { "key": "determinism", "title": "Explain determinism and why it threatens free will", "description": "States the thesis and connects it to the ability to do otherwise.",
+        "concept": "Determinism", "definition": "Every event is fixed by prior events together with the laws of nature.",
+        "facts": ["Given the past and the laws, only one future is possible.", "Free will is often thought to require the ability to have done otherwise.", "Determinism seems to rule out that ability."],
+        "misconceptions": ["Determinism means our choices make no difference to what happens.", "Determinism is the same as fatalism."] },
+      { "key": "positions", "title": "Distinguish the main positions", "description": "Explains hard determinism, libertarianism and compatibilism and what divides them.",
+        "concept": "Incompatibilism and compatibilism", "definition": "Incompatibilists say free will and determinism cannot both hold; compatibilists say they can.",
+        "facts": ["Hard determinists accept determinism and deny free will.", "Libertarians affirm free will and deny determinism.", "Compatibilists such as Hume say freedom is acting from one's own will without external constraint.", "Randomness alone does not obviously give an agent control."],
+        "misconceptions": ["Philosophical libertarianism is a political view about limited government."] },
+      { "key": "frankfurt", "title": "Explain Frankfurt cases", "description": "Describes a Frankfurt case and what it suggests about moral responsibility.",
+        "concept": "Frankfurt cases", "definition": "Cases where a person could not have done otherwise yet seems morally responsible because they chose on their own.",
+        "facts": ["Frankfurt published these cases in 1969.", "A hidden mechanism would force the choice but never acts.", "They challenge the principle that responsibility requires being able to do otherwise."],
+        "misconceptions": ["Frankfurt cases prove that determinism is true."] }
+    ],
+    "translations": {
+      "ko": { "title": "자유의지와 결정론", "instructions": "시험관은 선택에 원인이 있다면 사람이 자유롭게 행동하는 것인지 물을 것입니다. 주요 입장을 설명하고 예를 들어 검토하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "determinism": "결정론과 그것이 자유의지를 위협하는 이유 설명하기", "positions": "주요 입장 구별하기", "frankfurt": "프랭크퍼트 사례 설명하기" } },
+      "es": { "title": "El libre albedrío y el determinismo", "instructions": "El examinador le preguntará si las personas actúan libremente cuando sus decisiones tienen causas. Explique las posiciones principales, póngalas a prueba con ejemplos y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "determinism": "Explicar el determinismo y por qué amenaza el libre albedrío", "positions": "Distinguir las posiciones principales", "frankfurt": "Explicar los casos de Frankfurt" } }
+    }
+  },
+  {
+    "title": "Classical and Operant Conditioning",
+    "category": "philosophy-psychology",
+    "subject": "Psychology",
+    "topic": "Learning",
+    "instructions": "The examiner will ask how animals and people learn by association. Use the correct terms and apply them to everyday examples, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Classical conditioning was described by Ivan Pavlov, who noticed that dogs began to salivate before food arrived. Food is an unconditioned stimulus that naturally produces salivation, the unconditioned response. When a neutral stimulus, such as a tone, is repeatedly paired with food, it becomes a conditioned stimulus that produces salivation on its own, now called the conditioned response.",
+      "If the conditioned stimulus is presented many times without the unconditioned stimulus, the conditioned response weakens: this is extinction. After a rest, the response may briefly return, which is spontaneous recovery, showing that extinction suppresses rather than erases learning. Stimuli similar to the conditioned stimulus can also trigger the response, which is generalization.",
+      "Operant conditioning, studied by Edward Thorndike and B. F. Skinner, is learning from the consequences of behaviour. Thorndike's law of effect states that behaviours followed by satisfying consequences become more likely. Reinforcement increases a behaviour; punishment decreases it. Positive means something is added and negative means something is removed: negative reinforcement, such as a seatbelt alarm stopping when you buckle up, increases a behaviour by removing something unpleasant.",
+      "Reinforcement can follow every response or only some. Partial schedules are based on the number of responses (ratio) or the time elapsed (interval), each fixed or variable. Behaviour learned on a variable-ratio schedule, like gambling on a slot machine, is especially persistent and resistant to extinction."
+    ],
+    "objectives": [
+      { "key": "classical", "title": "Explain classical conditioning", "description": "Identifies the US, UR, CS and CR in Pavlov's experiment and a new example.",
+        "concept": "Classical conditioning", "definition": "Learning in which a neutral stimulus, paired with an unconditioned stimulus, comes to trigger a conditioned response.",
+        "facts": ["Food is an unconditioned stimulus that produces salivation naturally.", "A tone paired with food becomes a conditioned stimulus.", "The conditioned response occurs to the conditioned stimulus alone."],
+        "misconceptions": ["Classical conditioning involves rewarding the animal for a voluntary action."] },
+      { "key": "extinction", "title": "Explain extinction, spontaneous recovery and generalization", "description": "Defines each and explains what spontaneous recovery shows.",
+        "concept": "Extinction and recovery", "definition": "A conditioned response weakens without pairing, can return after rest, and can spread to similar stimuli.",
+        "facts": ["Extinction happens when the CS is presented repeatedly without the US.", "Spontaneous recovery is the return of the response after a rest.", "Spontaneous recovery shows extinction suppresses rather than erases learning.", "Generalization is responding to stimuli similar to the CS."],
+        "misconceptions": ["Extinction permanently erases the original learning."] },
+      { "key": "operant", "title": "Distinguish reinforcement and punishment", "description": "Uses positive, negative, reinforcement and punishment correctly with examples.",
+        "concept": "Operant conditioning", "definition": "Learning from consequences: reinforcement increases a behaviour, punishment decreases it.",
+        "facts": ["Thorndike's law of effect: satisfying consequences make a behaviour more likely.", "Positive adds a stimulus; negative removes one.", "Negative reinforcement increases a behaviour by removing something unpleasant."],
+        "misconceptions": ["Negative reinforcement is the same as punishment."] },
+      { "key": "schedules", "title": "Explain schedules of reinforcement", "description": "Describes ratio and interval schedules and why variable ratio is persistent.",
+        "concept": "Schedules of reinforcement", "definition": "Rules for when reinforcement follows responses: continuous or partial, ratio or interval, fixed or variable.",
+        "facts": ["Ratio schedules depend on number of responses; interval schedules on time.", "Schedules can be fixed or variable.", "Variable-ratio schedules produce behaviour very resistant to extinction."],
+        "misconceptions": ["Rewarding every response always makes behaviour last longest."] }
+    ],
+    "translations": {
+      "ko": { "title": "고전적 조건형성과 조작적 조건형성", "instructions": "시험관은 동물과 사람이 연합을 통해 어떻게 배우는지 물을 것입니다. 정확한 용어를 사용하고 일상의 예에 적용해 보세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "classical": "고전적 조건형성 설명하기", "extinction": "소거, 자발적 회복, 일반화 설명하기", "operant": "강화와 처벌 구별하기", "schedules": "강화 계획 설명하기" } },
+      "es": { "title": "Condicionamiento clásico y operante", "instructions": "El examinador le preguntará cómo aprenden los animales y las personas por asociación. Use los términos correctos, aplíquelos a ejemplos cotidianos y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "classical": "Explicar el condicionamiento clásico", "extinction": "Explicar la extinción, la recuperación espontánea y la generalización", "operant": "Distinguir el reforzamiento y el castigo", "schedules": "Explicar los programas de reforzamiento" } }
+    }
+  },
+  {
+    "title": "How Memory Works",
+    "category": "philosophy-psychology",
+    "subject": "Psychology",
+    "topic": "Memory",
+    "instructions": "The examiner will ask how memories are formed, kept and recalled, and why they go wrong. Explain the evidence, not only the terms, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Memory involves three processes: encoding, getting information into memory; storage, keeping it over time; and retrieval, getting it back out. A failure at any stage can cause forgetting.",
+      "Richard Atkinson and Richard Shiffrin's 1968 multi-store model describes three stores. Sensory memory holds a brief, detailed copy of input for under a second for visual information. Information that receives attention moves to short-term memory, which holds a small amount, George Miller's classic estimate being about seven items, plus or minus two, for roughly 15 to 30 seconds without rehearsal. Rehearsed and elaborated information can be transferred to long-term memory, whose capacity has no known limit. Grouping items into meaningful chunks lets short-term memory hold more.",
+      "Alan Baddeley and Graham Hitch proposed in 1974 that short-term memory is better seen as working memory, an active system with a central executive that directs attention, a phonological loop for sounds and words, and a visuospatial sketchpad for images and locations; Baddeley later added an episodic buffer.",
+      "Memory is reconstructive rather than a recording. In Elizabeth Loftus and John Palmer's 1974 study, people who watched a car crash and were asked how fast the cars were going when they \"smashed\" into each other gave higher speed estimates than those asked with the word \"hit\", and a week later were more likely to falsely report seeing broken glass. Hermann Ebbinghaus showed in the 1880s that forgetting is fastest soon after learning and then levels off."
+    ],
+    "objectives": [
+      { "key": "processes", "title": "Explain encoding, storage and retrieval", "description": "Defines the three processes and shows how forgetting can occur at each.",
+        "concept": "Memory processes", "definition": "Encoding puts information into memory, storage keeps it, retrieval brings it back.",
+        "facts": ["Encoding gets information into memory.", "Storage keeps information over time.", "Retrieval brings stored information back to awareness.", "Forgetting can result from a failure at any stage."],
+        "misconceptions": ["If you cannot recall something, it must have been erased from memory."] },
+      { "key": "multi-store", "title": "Explain the multi-store and working memory models", "description": "Describes the three stores and how working memory refines short-term memory.",
+        "concept": "Models of memory", "definition": "The multi-store model has sensory, short-term and long-term stores; working memory treats short-term memory as an active multi-part system.",
+        "facts": ["Sensory memory lasts under a second for visual input.", "Short-term memory holds about seven items for 15 to 30 seconds without rehearsal.", "Chunking increases what short-term memory can hold.", "Working memory has a central executive, phonological loop and visuospatial sketchpad."],
+        "misconceptions": ["Short-term memory means memory for events from the last few days."] },
+      { "key": "reconstructive", "title": "Explain why memory is reconstructive", "description": "Uses the Loftus and Palmer study and the forgetting curve to explain memory errors.",
+        "concept": "Reconstructive memory", "definition": "Recall rebuilds events from stored fragments and later information, so it can be distorted.",
+        "facts": ["The verb \"smashed\" led to higher speed estimates than \"hit\".", "Participants who heard \"smashed\" more often falsely reported broken glass.", "Ebbinghaus found forgetting is fastest soon after learning."],
+        "misconceptions": ["Memory works like a video recording that can be replayed exactly.", "Vivid, confident memories are always accurate."] }
+    ],
+    "translations": {
+      "ko": { "title": "기억의 작동 방식", "instructions": "시험관은 기억이 어떻게 형성되고 유지되며 떠올려지는지, 그리고 왜 잘못되는지 물을 것입니다. 용어만이 아니라 근거를 설명하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "processes": "부호화, 저장, 인출 설명하기", "multi-store": "다중 저장 모형과 작업 기억 모형 설명하기", "reconstructive": "기억이 재구성적인 이유 설명하기" } },
+      "es": { "title": "Cómo funciona la memoria", "instructions": "El examinador le preguntará cómo se forman, se guardan y se recuperan los recuerdos, y por qué fallan. Explique la evidencia, no solo los términos, y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "processes": "Explicar la codificación, el almacenamiento y la recuperación", "multi-store": "Explicar el modelo multialmacén y el de memoria de trabajo", "reconstructive": "Explicar por qué la memoria es reconstructiva" } }
+    }
+  },
+  {
+    "title": "Heuristics and Cognitive Biases",
+    "category": "philosophy-psychology",
+    "subject": "Psychology",
+    "topic": "Judgment and decision making",
+    "instructions": "The examiner will ask how people make quick judgments and where those judgments go wrong. Name the bias, explain why it happens and give an example, and say \"I don't know\" if you don't.",
+    "passage": [
+      "People often judge and decide using heuristics, mental shortcuts that are fast and usually good enough but can lead to systematic errors called cognitive biases. Amos Tversky and Daniel Kahneman described several key heuristics in 1974. Kahneman later described two modes of thinking: a fast, automatic, intuitive System 1 and a slow, effortful, deliberate System 2.",
+      "The availability heuristic judges how frequent or likely something is by how easily examples come to mind. Because vivid, recent or heavily reported events are easy to recall, people tend to overestimate the risk of dramatic causes of death such as plane crashes and underestimate common ones.",
+      "The representativeness heuristic judges probability by how closely something matches a stereotype or prototype. It leads people to neglect base rates, the overall frequency of a category. Anchoring is the tendency to rely too heavily on an initial number: estimates are pulled toward a starting value even when it is obviously arbitrary, such as a number from a spinning wheel.",
+      "Confirmation bias is the tendency to seek, notice and remember information that supports what one already believes and to neglect evidence against it. Framing effects show that logically equivalent choices can be judged differently depending on wording: a treatment described as saving 200 of 600 people is preferred over one described as letting 400 of 600 die, though the outcomes are the same."
+    ],
+    "objectives": [
+      { "key": "heuristics", "title": "Explain heuristics and the two systems", "description": "Explains why shortcuts are useful and how they produce biases.",
+        "concept": "Heuristics", "definition": "Mental shortcuts that make judgment fast and usually adequate but can cause systematic errors.",
+        "facts": ["Heuristics are fast and usually good enough.", "Biases are systematic, predictable errors, not random ones.", "System 1 is fast and intuitive; System 2 is slow and deliberate."],
+        "misconceptions": ["Heuristics are always irrational and should never be used.", "Only unintelligent people show cognitive biases."] },
+      { "key": "availability-representativeness", "title": "Explain availability, representativeness and anchoring", "description": "Defines the three heuristics and gives an error each can produce.",
+        "concept": "Availability, representativeness and anchoring", "definition": "Judging by ease of recall, by resemblance to a prototype, or by adjusting from a starting number.",
+        "facts": ["Availability judges likelihood by how easily examples come to mind.", "Representativeness leads people to neglect base rates.", "Anchoring pulls estimates toward an initial value, even an arbitrary one."],
+        "misconceptions": ["Events that are easy to remember are always more common."] },
+      { "key": "confirmation-framing", "title": "Explain confirmation bias and framing", "description": "Explains both effects and applies them to a real decision.",
+        "concept": "Confirmation bias and framing", "definition": "Favouring evidence that fits existing beliefs; judging equivalent options differently depending on wording.",
+        "facts": ["Confirmation bias means seeking and remembering supporting evidence.", "People tend to neglect evidence against their beliefs.", "Equivalent options described as gains or losses are judged differently."],
+        "misconceptions": ["Confirmation bias only affects people who are dishonest."] }
+    ],
+    "translations": {
+      "ko": { "title": "휴리스틱과 인지 편향", "instructions": "시험관은 사람들이 어떻게 빠른 판단을 내리며 그 판단이 어디에서 잘못되는지 물을 것입니다. 편향의 이름을 말하고 왜 일어나는지 설명하며 예를 드세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "heuristics": "휴리스틱과 두 가지 사고 체계 설명하기", "availability-representativeness": "가용성, 대표성, 기준점 설명하기", "confirmation-framing": "확증 편향과 프레이밍 설명하기" } },
+      "es": { "title": "Heurísticas y sesgos cognitivos", "instructions": "El examinador le preguntará cómo las personas hacen juicios rápidos y en qué fallan esos juicios. Nombre el sesgo, explique por qué ocurre, dé un ejemplo y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "heuristics": "Explicar las heurísticas y los dos sistemas de pensamiento", "availability-representativeness": "Explicar la disponibilidad, la representatividad y el anclaje", "confirmation-framing": "Explicar el sesgo de confirmación y el efecto de encuadre" } }
+    }
+  },
+  {
+    "title": "Piaget's Stages of Cognitive Development",
+    "category": "philosophy-psychology",
+    "subject": "Psychology",
+    "topic": "Developmental psychology",
+    "instructions": "The examiner will ask how children's thinking changes as they grow. Describe each stage with an example of what a child can and cannot do, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Jean Piaget proposed that children actively build their understanding of the world and pass through four stages of cognitive development, in a fixed order, each with a qualitatively different way of thinking. Children organize knowledge into schemas; they assimilate new experiences into existing schemas and accommodate, or change, schemas when experiences do not fit.",
+      "In the sensorimotor stage, from birth to about age 2, infants learn through senses and actions. A key achievement is object permanence, the understanding that objects continue to exist when out of sight. In the preoperational stage, from about 2 to 7, children use symbols and language and engage in pretend play, but their thinking is egocentric, meaning they struggle to take another person's point of view, and they fail conservation tasks.",
+      "Conservation is the understanding that quantity stays the same when its appearance changes: a preoperational child may say a tall thin glass holds more water than a short wide one after watching the same water poured between them. In the concrete operational stage, from about 7 to 11, children master conservation and reason logically about concrete situations. In the formal operational stage, from about 11 or 12, adolescents can reason abstractly and test hypotheses systematically.",
+      "Later research supports the general sequence but suggests Piaget underestimated young children: with simpler tasks, such as measuring how long infants look at impossible events, signs of object knowledge appear earlier than he thought. Development also seems more gradual and more shaped by culture and social interaction than strict stages imply, a point stressed by Lev Vygotsky."
+    ],
+    "objectives": [
+      { "key": "schemas", "title": "Explain schemas, assimilation and accommodation", "description": "Defines the terms and shows how they drive development.",
+        "concept": "Schemas and adaptation", "definition": "Children fit experiences into existing mental frameworks (assimilation) or change the frameworks (accommodation).",
+        "facts": ["Schemas are mental frameworks for organizing knowledge.", "Assimilation fits new experience into an existing schema.", "Accommodation changes a schema when experience does not fit."],
+        "misconceptions": ["Piaget thought children passively absorb what adults teach them."] },
+      { "key": "stages", "title": "Describe the four stages", "description": "Names each stage, its age range and its key achievement or limit.",
+        "concept": "Piaget's four stages", "definition": "Sensorimotor, preoperational, concrete operational and formal operational, in a fixed order.",
+        "facts": ["Sensorimotor (0-2): object permanence develops.", "Preoperational (2-7): symbols and pretend play, but egocentrism.", "Concrete operational (7-11): logical thought about concrete things.", "Formal operational (11+): abstract and hypothetical reasoning."],
+        "misconceptions": ["Children can skip stages or go through them in any order."] },
+      { "key": "conservation", "title": "Explain conservation", "description": "Describes a conservation task and why preoperational children fail it.",
+        "concept": "Conservation", "definition": "Understanding that quantity stays the same when its appearance changes.",
+        "facts": ["Preoperational children judge by appearance, such as the height of liquid.", "Concrete operational children understand that pouring does not change the amount.", "Conservation is mastered around the concrete operational stage."],
+        "misconceptions": ["Failing conservation means the child cannot see the glasses properly."] },
+      { "key": "critique", "title": "Evaluate Piaget's theory", "description": "Explains what later research supports and what it revises.",
+        "concept": "Critiques of Piaget", "definition": "The sequence holds broadly, but infants are more capable and development more gradual and social than Piaget proposed.",
+        "facts": ["Looking-time studies show object knowledge earlier than Piaget thought.", "Development is more gradual than strict stages imply.", "Vygotsky stressed social interaction and culture."],
+        "misconceptions": ["Because parts were revised, Piaget's theory has been completely abandoned."] }
+    ],
+    "translations": {
+      "ko": { "title": "피아제의 인지 발달 단계", "instructions": "시험관은 아이들의 사고가 성장하면서 어떻게 변하는지 물을 것입니다. 각 단계에서 아이가 할 수 있는 것과 할 수 없는 것의 예를 들어 설명하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "schemas": "도식, 동화, 조절 설명하기", "stages": "네 단계 설명하기", "conservation": "보존 개념 설명하기", "critique": "피아제 이론 평가하기" } },
+      "es": { "title": "Las etapas del desarrollo cognitivo de Piaget", "instructions": "El examinador le preguntará cómo cambia el pensamiento de los niños a medida que crecen. Describa cada etapa con un ejemplo de lo que un niño puede y no puede hacer, y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "schemas": "Explicar los esquemas, la asimilación y la acomodación", "stages": "Describir las cuatro etapas", "conservation": "Explicar la conservación", "critique": "Evaluar la teoría de Piaget" } }
+    }
+  },
+  {
+    "title": "Conformity and Obedience",
+    "category": "philosophy-psychology",
+    "subject": "Psychology",
+    "topic": "Social influence",
+    "instructions": "The examiner will ask how other people shape what we do. Explain the classic studies, what they found and why, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Social psychology studies how the real or imagined presence of others affects thought and behaviour. Two classic forms of social influence are conformity, changing behaviour to match a group, and obedience, following the orders of an authority figure.",
+      "In Solomon Asch's line studies in the 1950s, a participant sat with a group of confederates who, on some trials, unanimously gave an obviously wrong answer about which line matched a standard line. Participants conformed on about a third of these critical trials, and about three quarters conformed at least once. When just one other person gave the correct answer, conformity dropped sharply.",
+      "Morton Deutsch and Harold Gerard distinguished two reasons people conform. Normative influence is conforming to be liked or accepted and to avoid rejection; informational influence is conforming because one believes the group is more likely to be right, which is stronger when the situation is ambiguous.",
+      "In Stanley Milgram's obedience studies, first reported in 1963, participants were told to give increasingly strong electric shocks to a learner, who was in fact an actor receiving no shocks, whenever he made a mistake. In the original study 26 of 40 participants, 65 percent, continued to the maximum 450 volts. Obedience fell when the experimenter was absent or the learner was closer. The studies raised serious ethical concerns about deception and distress, which helped shape modern research ethics rules."
+    ],
+    "objectives": [
+      { "key": "asch", "title": "Explain Asch's conformity findings", "description": "Describes the procedure, the main results and the effect of a dissenter.",
+        "concept": "Conformity", "definition": "Changing one's behaviour or judgment to match a group.",
+        "facts": ["Confederates unanimously gave obviously wrong answers on critical trials.", "Participants conformed on about a third of critical trials.", "About three quarters conformed at least once.", "One dissenter giving the correct answer sharply reduced conformity."],
+        "misconceptions": ["Most participants conformed on every trial."] },
+      { "key": "normative-informational", "title": "Distinguish normative and informational influence", "description": "Explains both reasons for conforming and when each is stronger.",
+        "concept": "Normative and informational influence", "definition": "Conforming to be accepted versus conforming because the group seems more likely to be right.",
+        "facts": ["Normative influence is driven by the wish to be accepted.", "Informational influence is driven by the belief the group is right.", "Informational influence is stronger in ambiguous situations."],
+        "misconceptions": ["People only conform because they are weak-willed."] },
+      { "key": "milgram", "title": "Explain Milgram's obedience studies", "description": "Describes the procedure, the 65 percent result, situational factors and the ethical debate.",
+        "concept": "Obedience to authority", "definition": "Following the orders of an authority figure, even against one's conscience.",
+        "facts": ["The learner was an actor who received no real shocks.", "26 of 40 participants (65 percent) went to 450 volts in the original study.", "Obedience fell when the experimenter was absent or the learner closer.", "The deception and distress raised ethical concerns that shaped research ethics."],
+        "misconceptions": ["Milgram showed that only cruel people obey harmful orders.", "The learner really received electric shocks."] }
+    ],
+    "translations": {
+      "ko": { "title": "동조와 복종", "instructions": "시험관은 다른 사람들이 우리의 행동을 어떻게 형성하는지 물을 것입니다. 고전적인 연구와 그 결과, 그리고 그 이유를 설명하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "asch": "애쉬의 동조 연구 결과 설명하기", "normative-informational": "규범적 영향과 정보적 영향 구별하기", "milgram": "밀그램의 복종 연구 설명하기" } },
+      "es": { "title": "Conformidad y obediencia", "instructions": "El examinador le preguntará cómo influyen otras personas en lo que hacemos. Explique los estudios clásicos, lo que encontraron y por qué, y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "asch": "Explicar los hallazgos de Asch sobre la conformidad", "normative-informational": "Distinguir la influencia normativa y la informativa", "milgram": "Explicar los estudios de obediencia de Milgram" } }
+    }
+  }
+]
