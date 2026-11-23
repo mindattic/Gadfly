@@ -45,6 +45,18 @@ public class PracticeInterviewTests
     }
 
     [Test]
+    public void NoLine_TeachesTheOldFadeOrPageTurns()
+    {
+        // GAD-T624: the practice teaches the exam's reminder ladder (GAD-T557/T561) and thinking-gesture wait (GAD-T559), in every language.
+        var all = PracticeInterview.AllLines()
+            .Concat(PracticeInterview.Steps.Concat(PracticeInterview.KoreanSteps).SelectMany(s => s.Points.Append(s.Title))).ToList();
+        string[] old = ["pages turning", "Please look at the examiner", "screen slowly fades", "screen fade", "시험관을 봐 주세요", "흐려", "조용한 소리"];
+        foreach (var o in old) Assert.That(all, Has.None.Contains(o), o);
+        Assert.That(all.Any(l => l.Contains("glance aside")), Is.True);
+        Assert.That(PracticeInterview.ThinkingPause, Is.GreaterThan(Gadfly.Server.Voice.ExaminerFiller.FirstAfter + TimeSpan.FromSeconds(2)));
+    }
+
+    [Test]
     public void Answer_MovesOneStep_AndIgnoresAnAnswerToAnEarlierStep()
     {
         var p = new PracticeInterview();

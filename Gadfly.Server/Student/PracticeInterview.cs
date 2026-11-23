@@ -13,7 +13,8 @@ public sealed record PracticeStep(string Key, string Title, IReadOnlyList<string
 
 /// <summary>
 /// "Meet your examiner" (GAD-T294): an ungraded practice interview any student can take from My exams at any time. The real
-/// exam room's talking examiner (<c>VoiceRoom</c>), camera self-view, eye-contact check and fade run on it, but everything the
+/// exam room's talking examiner (<c>VoiceRoom</c>: her judging wait with the thinking gesture and a short line, GAD-T559), camera,
+/// and eye-contact check with its gentle reminder ladder (examiner-gaze.js, GAD-T557/GAD-T561) run on it unchanged, but everything the
 /// examiner says is fixed text written here, so it never asks the AI panel for anything (in live mode a practice costs only the
 /// examiner's voice and the speech recognizer, never an LLM call) and it works the same in mock mode.
 /// <para>
@@ -26,8 +27,12 @@ public sealed record PracticeStep(string Key, string Title, IReadOnlyList<string
 /// </summary>
 public sealed class PracticeInterview
 {
-    /// <summary>How long the examiner "thinks" after each practice answer, so the student hears the wait as it is in an exam.</summary>
-    public static readonly TimeSpan ThinkingPause = TimeSpan.FromSeconds(3.5);
+    /// <summary>
+    /// How long the examiner "thinks" after each practice answer, so the student meets the wait as it is in an exam: long enough
+    /// (past <see cref="Voice.ExaminerFiller.FirstAfter"/> and the gap after her acknowledgement) for her thinking gesture and one
+    /// short line to show (GAD-T559, GAD-T624).
+    /// </summary>
+    public static readonly TimeSpan ThinkingPause = TimeSpan.FromSeconds(4.5);
 
     /// <summary>The practice clock, so the student can watch it stop during a pause. Nothing ends when it runs out.</summary>
     public static readonly TimeSpan ClockBudget = TimeSpan.FromMinutes(10);
@@ -60,16 +65,16 @@ public sealed class PracticeInterview
         ], true),
         new(DontKnow, "Saying \"I don't know\"",
         [
-            "After each answer the examiner takes a moment. You may hear a short line such as \"Let me think\" and a quiet sound of pages turning. It says nothing about how your answer went.",
+            "After each answer the examiner takes a moment. You may see the examiner glance aside, as people do when they think, and hear a short line such as \"Let me think\". It says nothing about how your answer went.",
             "\"I don't know\" is a real, honest answer. It never fails you on its own: the examiner tries another angle or moves on.",
             "Try it: if you don't know the answer to this one, just say \"I don't know\".",
         ], true),
-        new(EyeContact, "Eye contact and the screen fade",
+        new(EyeContact, "Eye contact and gentle reminders",
         [
-            "While you answer, look at the examiner, as you would with a person. Your camera checks this on your device only; no video is recorded or sent.",
-            "Look away for a while during an answer and the screen slowly fades with \"Please look at the examiner\". Look back and it clears at once. If you keep looking away, she asks you out loud to look at her.",
-            "Short glances while you think are fine, and you get extra time at the start of an answer.",
-            "Try it: start answering, then look away from the screen for a few seconds and watch the screen.",
+            "While you answer, look at the examiner, as you would with a person; there's no need to stare. Your camera checks this on your device only; no video is recorded or sent.",
+            "Looking away to think is normal: nothing happens before you start speaking, short glances while you speak are fine, and anywhere on the screen counts as looking at it.",
+            "Only a long look off the screen while you speak (about 8 seconds) brings a reminder, gentlest first: the examiner tilts their head a little; then the screen around the examiner dims slightly and clears as soon as you look back; at most, one short, friendly line at a pause. Nothing flashes and there is no warning text.",
+            "Try it if you like: describe the room, and keep talking while you look away from the screen for about 15 seconds, then look back.",
         ], true),
         new(Pause, "If the microphone or camera stops",
         [
@@ -96,15 +101,17 @@ public sealed class PracticeInterview
             + "and we move on, just like talking with a person. You can't change it afterwards, so say what you mean before the countdown ends. "
             + "Until then you can keep talking, or press Clear and answer again to start over. Let's try that. "
             + "Tell me about something you enjoy doing, and partway through, press Clear and answer again, then start over.",
-        [DontKnow] = "Thank you. While I was thinking just now, you may have heard me say something short, and a quiet sound of pages turning. "
-            + "That's just me taking a moment. It says nothing about how your answer went. "
+        [DontKnow] = "Thank you. While I was thinking just now, you may have seen me glance aside and heard me say something short. "
+            + "That's just me taking a moment, the way people do. It says nothing about how your answer went. "
             + "Next: not knowing. Sometimes I'll ask something you can't answer. Saying I don't know is honest, and it's fine. "
             + "Try it now. What is the capital city of Burkina Faso? If you're not sure, just say I don't know.",
-        [EyeContact] = "Now, eye contact. While you answer, look at me, as you would with a person. "
+        [EyeContact] = "Now, eye contact. While you answer, look at me, as you would with a person. There's no need to stare. "
             + "Your camera checks this on your device only. No video is recorded or sent. "
-            + "If you look away for a while during an answer, the screen slowly fades and asks you to look back, and it clears as soon as you do. "
-            + "Short glances while you think are fine. Try it: describe the room you're in, and partway through, look away from the screen for a few seconds.",
-        [Pause] = "If the screen faded, you saw it clear as soon as you looked back. Here, nothing about it is kept. "
+            + "Looking away to think is normal: nothing happens while you work out your answer, and short glances while you talk are fine. "
+            + "Only if you look off the screen for a long time while you speak, I tilt my head a little, the screen around me dims slightly "
+            + "and clears as soon as you look back, and at a pause I may say one short, friendly line. "
+            + "Try it: describe the room you're in. If you'd like to see the reminder, keep talking while you look away from the screen for about fifteen seconds.",
+        [Pause] = "If you saw me react, or the screen dim a little, it cleared as soon as you looked back. Here, nothing about it is kept. "
             + "Last thing: if your microphone or camera stops working, or your connection drops, the exam pauses. "
             + "The screen tells you what went wrong. Fix it, press Try again, and I'll ask the question again. "
             + "The clock stops while you're paused, for up to ten minutes in all. "
@@ -141,16 +148,16 @@ public sealed class PracticeInterview
         ], true),
         new(DontKnow, "\"잘 모르겠어요\"라고 말하기",
         [
-            "답을 하면 시험관은 잠시 생각해요. \"잠시만요\" 같은 짧은 말과 조용한 소리가 들릴 수 있지만, 답이 어땠는지와는 아무 관계가 없어요.",
+            "답을 하면 시험관은 잠시 생각해요. 사람이 생각할 때처럼 잠깐 옆을 보고 \"잠시만요\" 같은 짧은 말을 할 수 있지만, 답이 어땠는지와는 아무 관계가 없어요.",
             "\"잘 모르겠어요\"도 솔직하고 엄연한 답이에요. 그것만으로 불합격이 되지 않으며, 시험관은 다른 방향으로 묻거나 다음으로 넘어가요.",
             "해 보세요: 이 질문의 답을 모르면 \"잘 모르겠어요\"라고 말하면 돼요.",
         ], true),
-        new(EyeContact, "시선 맞추기와 화면 흐려짐",
+        new(EyeContact, "시선 맞추기와 부드러운 알림",
         [
-            "답하는 동안에는 사람과 이야기하듯 시험관을 봐 주세요. 카메라는 이 기기 안에서만 확인하며, 영상은 기록되거나 전송되지 않아요.",
-            "답하는 중에 한동안 다른 곳을 보면 화면이 천천히 흐려지며 \"시험관을 봐 주세요\"라고 나와요. 다시 보면 바로 원래대로 돌아와요. 계속 다른 곳을 보면 시험관이 소리 내어 자신을 봐 달라고 해요.",
-            "생각하느라 잠깐 시선을 돌리는 것은 괜찮고, 답을 시작할 때는 시간을 더 줘요.",
-            "해 보세요: 답을 시작한 뒤 몇 초 동안 화면에서 눈을 떼고 화면이 어떻게 되는지 보세요.",
+            "답하는 동안에는 사람과 이야기하듯 시험관을 봐 주세요. 뚫어지게 볼 필요는 없어요. 카메라는 이 기기 안에서만 확인하며, 영상은 기록되거나 전송되지 않아요.",
+            "생각하느라 다른 곳을 보는 건 자연스러운 일이에요. 말을 시작하기 전에는 아무 일도 없고, 말하는 중에 잠깐 시선을 돌려도 괜찮으며, 화면 안이라면 어디를 봐도 화면을 보는 것으로 쳐요.",
+            "말하는 중에 화면 밖을 오래(약 8초) 볼 때만, 가장 부드러운 것부터 알려 줘요. 시험관이 고개를 살짝 기울이고, 그다음 시험관 주변 화면이 살짝 어두워졌다가 다시 보면 바로 돌아오며, 많아야 말이 잠시 멈출 때 짧고 친절한 한마디를 해요. 화면이 번쩍이거나 경고 문구가 뜨지는 않아요.",
+            "원하면 해 보세요: 방을 설명하면서, 말을 계속하는 채로 15초쯤 화면 밖을 봤다가 다시 보세요.",
         ], true),
         new(Pause, "마이크나 카메라가 멈추면",
         [
@@ -176,15 +183,17 @@ public sealed class PracticeInterview
             + "사람과 대화하듯 다음으로 넘어가요. 제출한 뒤에는 바꿀 수 없으니, 카운트다운이 끝나기 전에 하고 싶은 말을 해 주세요. "
             + "그 전까지는 계속 말하거나, 지우고 다시 답하기를 눌러 처음부터 다시 할 수 있어요. 한번 해 봐요. "
             + "즐겨 하는 일에 대해 이야기하다가, 중간에 지우고 다시 답하기를 누르고 다시 시작해 보세요.",
-        [DontKnow] = "고마워요. 방금 제가 생각하는 동안 짧은 말과 조용한 소리가 들렸을 수도 있어요. "
-            + "그건 제가 잠시 생각하는 것일 뿐, 답이 어땠는지와는 아무 관계가 없어요. "
+        [DontKnow] = "고마워요. 방금 제가 생각하는 동안 잠깐 옆을 보며 짧은 말을 하는 걸 보셨을 수도 있어요. "
+            + "그건 사람들이 그러듯 제가 잠시 생각하는 것일 뿐, 답이 어땠는지와는 아무 관계가 없어요. "
             + "다음은 모를 때예요. 가끔은 답할 수 없는 질문을 할 수도 있어요. 잘 모르겠다고 말하는 건 솔직한 답이고, 괜찮아요. "
             + "지금 해 볼까요? 부르키나파소의 수도는 어디일까요? 잘 모르겠으면 그냥 잘 모르겠어요라고 말해 주세요.",
-        [EyeContact] = "이제 시선 맞추기예요. 답하는 동안에는 사람과 이야기하듯 저를 봐 주세요. "
+        [EyeContact] = "이제 시선 맞추기예요. 답하는 동안에는 사람과 이야기하듯 저를 봐 주세요. 뚫어지게 볼 필요는 없어요. "
             + "카메라는 이 기기 안에서만 확인하고, 영상은 기록되거나 전송되지 않아요. "
-            + "답하는 중에 한동안 다른 곳을 보면 화면이 천천히 흐려지면서 다시 봐 달라고 하고, 다시 보면 바로 원래대로 돌아와요. "
-            + "생각하느라 잠깐 시선을 돌리는 건 괜찮아요. 해 볼까요? 지금 있는 방을 설명하다가, 중간에 몇 초 동안 화면에서 눈을 떼 보세요.",
-        [Pause] = "화면이 흐려졌다면, 다시 보자마자 원래대로 돌아오는 걸 보셨을 거예요. 여기서는 그 기록도 남지 않아요. "
+            + "생각하느라 다른 곳을 보는 건 자연스러운 일이에요. 답을 생각하는 동안에는 아무 일도 없고, 말하다가 잠깐 시선을 돌려도 괜찮아요. "
+            + "말하는 중에 화면 밖을 오래 볼 때만, 제가 고개를 살짝 기울이고, 제 주변 화면이 살짝 어두워졌다가 다시 보면 바로 돌아와요. "
+            + "말이 잠시 멈출 때 짧고 친절한 한마디를 할 수도 있어요. "
+            + "해 볼까요? 지금 있는 방을 설명해 주세요. 알림을 보고 싶다면, 말을 계속하면서 15초쯤 화면 밖을 봐 보세요.",
+        [Pause] = "제가 반응하거나 화면이 살짝 어두워졌다면, 다시 보자마자 원래대로 돌아오는 걸 보셨을 거예요. 여기서는 그 기록도 남지 않아요. "
             + "마지막이에요. 마이크나 카메라가 멈추거나 연결이 끊기면 시험이 일시 정지돼요. "
             + "화면에 무엇이 문제인지 나와요. 문제를 해결하고 다시 시도를 누르면 제가 질문을 다시 할게요. "
             + "일시 정지된 동안에는 시간이 멈추고, 모두 합해 최대 10분까지예요. "
@@ -287,7 +296,7 @@ public sealed class PracticeInterview
     public PracticeClock Clock { get; private set; } = new(ClockBudget, PauseAllowance);
 
     /// <summary>
-    /// The eye-contact check reports episodes (looked away, faded...) as it would in an exam. In a practice they are dropped here:
+    /// The eye-contact check reports episodes (a long look away, how far the reminders went...) as it would in an exam. In a practice they are dropped here:
     /// never stored, never sent anywhere. Returns true so the browser keeps the check running.
     /// </summary>
     public static bool DropGazeEpisodes(IReadOnlyCollection<Sessions.HubIntegrityEvent>? episodes) => true;
