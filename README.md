@@ -137,7 +137,7 @@ Gadfly Exams, the web platform (`Gadfly.Server`):
   are told when a text is still an unchecked draft); the course material, concept map and rubric stay as written, so
   every language is the same exam. Graders read the original words, which are the record, with a labelled machine
   translation into English on request. The student pages, emails, consent notice and student help essentials are in
-  Korean too; the exam room's own on-screen text in Korean is being finished (GAD-T606). See
+  Korean too, and so is the exam room: its on-screen text follows the attempt's language (GAD-T606). See
   [docs/LOCALIZATION.md](docs/LOCALIZATION.md). Spanish is planned next (GAD-T596).
 - **Second-language speakers.** The student states the languages they speak and the one they speak best; nothing is
   inferred from voice or name. When that differs from the exam language, the recognizer is pinned to the exam
@@ -539,9 +539,7 @@ and `Gadfly.Server` are two hosts. The full plan is in [docs/SOCRATIC_PLATFORM.m
   plan's validity studies (Part 15.3) happen with real institutions. How well the AI panel grades spoken,
   transcribed answers, whether follow-ups resist a relayed answer, and fairness across groups have measurement tools
   built in but no results yet.
-- Exams run in English and Korean only. Spanish is planned (GAD-T596), waiting for a native-speaking tester. The
-  exam room's on-screen text is still English in a Korean attempt until GAD-T606 lands (the examiner already speaks,
-  listens and lip-syncs in Korean). Exams already live before localization need their Korean texts drafted (GAD-T541),
+- Exams run in English and Korean only. Spanish is planned (GAD-T596), waiting for a native-speaking tester. Exams already live before localization need their Korean texts drafted (GAD-T541),
   and the recitation check does not yet compare across languages (GAD-T600).
 - The ESL adaptations' numbers (longer silences, slower speech) are reasoned from research, not yet tuned on a pilot
   of Korean-L1 speakers.

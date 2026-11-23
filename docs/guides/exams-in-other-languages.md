@@ -15,7 +15,7 @@ themselves. Nothing is ever inferred from a voice, an accent, a name or the brow
 | Source material, concept map, rubric, grading policy | As you wrote them. They are the standard every answer is judged against, so each language is the same exam. |
 | Exam title, instructions, objective titles | Per language, checked and approved by you (below). |
 | The examiner's questions and fixed lines | The exam language. Questions are worded live from the English material. |
-| The student pages (My exams, get-ready, results, emails) | The student's chosen language (English or 한국어). The exam room's own buttons and status lines are being translated (GAD-T606); the examiner and the questions are already in Korean. |
+| The student pages (My exams, get-ready, results, emails) | The student's chosen language (English or 한국어). The exam room follows the attempt's language: its buttons, status lines and notices, the examiner and the questions. |
 | Staff pages | English, with machine translation of a Korean attempt on demand. |
 
 ## Offering an exam in a language

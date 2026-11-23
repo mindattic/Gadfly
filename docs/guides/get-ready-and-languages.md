@@ -41,9 +41,8 @@ words you read.)
 **An exam in Korean.** The examiner asks the questions in Korean, listens in Korean and the lips move with the Korean sounds.
 You answer in Korean; English technical terms in a Korean answer are fine. Your course material and the grading rubric stay as
 your instructor wrote them, and your answers are judged against the same standard as an English attempt. If your instructor
-hasn't checked the Korean title and instructions yet, the page says they were machine-translated. Most of the exam room's
-buttons and status lines are still in English while their Korean version is finished; the examiner and the questions are in
-Korean.
+hasn't checked the Korean title and instructions yet, the page says they were machine-translated. The exam room is in Korean
+too: its buttons, status lines and notices, the examiner and the questions.
 
 You can also switch the language of the student pages at any time with the language switch in the top bar (English / 한국어).
 

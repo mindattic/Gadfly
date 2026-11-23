@@ -169,8 +169,8 @@ What you see:
   answer it is tucked away so you can focus on the examiner; it comes back when your answer is in.
 - **Response delay**: how long you took to start speaking. It is shown for your information.
 
-**In Korean.** If you chose Korean, the examiner asks, listens and lip-syncs in Korean. Most of the exam room's buttons and
-status lines are still in English while their Korean version is finished.
+**In Korean.** If you chose Korean, the examiner asks, listens and lip-syncs in Korean, and the exam room's buttons, status
+lines and notices are in Korean too.
 
 If your device has no 3D graphics, or asks for reduced motion, you see the examiner's picture instead of the moving
 head. The questions are still spoken and shown as text.
