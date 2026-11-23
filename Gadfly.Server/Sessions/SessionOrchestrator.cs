@@ -159,6 +159,20 @@ public sealed partial class SessionOrchestrator(
         await CreateOrResumeAsync(organizationId, assignmentId, studentUserId, clientInfo, null, ct);
 
     /// <summary>
+    /// Starts or resumes the student's attempt at an exam by its id rather than an assignment (GAD-T669): an exam open to every
+    /// student gets the student's assignment made on first use (<see cref="Student.StudentExams.EnsureOpenAssignmentAsync"/>), then
+    /// the attempt runs exactly as an assigned one. Refused as not assigned when the exam isn't published and open to all students.
+    /// </summary>
+    public async Task<Guid> CreateOrResumeForExamAsync(Guid organizationId, Guid examId, Guid studentUserId, string? clientInfo, string? language,
+        CancellationToken ct = default)
+    {
+        var assignmentId = await Student.StudentExams.EnsureOpenAssignmentAsync(scopes, organizationId, studentUserId, examId, clock.GetUtcNow(),
+                createIfMissing: configuration?.GetValue<bool>(Student.StudentExams.OpenExamsSetting) ?? true, ct)
+            ?? throw new SessionRefusedException(new StudentText("refusal.notAssigned"));
+        return await CreateOrResumeAsync(organizationId, assignmentId, studentUserId, clientInfo, language, ct);
+    }
+
+    /// <summary>
     /// Starts the student's next attempt in <paramref name="language"/> (GAD-T534; one of the exam's offered languages, English when
     /// null), or returns the attempt already in progress, whose language stays as chosen. The attempt keeps a copy of the student's
     /// primary language from their language profile.

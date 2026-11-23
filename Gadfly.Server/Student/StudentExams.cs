@@ -212,43 +212,13 @@ public static class StudentExams
             .ToListAsync(ct);
         if (missing.Count == 0) return 0;
 
-        // GAD-T668: a new open assignment carries the student's accommodations from their most recent assignment in the
-        // organization, so extra time, gaze, typed answers, EU status and window-absence allowances follow them to every exam.
-        var latest = await db.ExamAssignments.AsNoTracking()
-            .Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId)
-            .OrderByDescending(a => a.AssignedAt)
-            .Select(a => new
-            {
-                a.TimeMultiplier,
-                a.GazeAccommodation,
-                a.TypedAnswerAccommodation,
-                a.StudentInEuropeanUnion,
-                a.WindowAbsenceFlagOff,
-                a.WindowAbsenceReviewAfterCount,
-                a.WindowAbsenceReviewAfterSeconds,
-            })
-            .FirstOrDefaultAsync(ct);
+        var latest = await LatestAccommodationsAsync(db, organizationId, studentUserId, ct);
 
         var created = 0;
         foreach (var exam in missing)
         {
             if (exam.AssignedBy == Guid.Empty) continue;   // no real user to name as the assigner: leave it unassigned
-            db.ExamAssignments.Add(new ExamAssignment
-            {
-                OrganizationId = organizationId,
-                ExamId = exam.Id,
-                StudentUserId = studentUserId,
-                AttemptsAllowed = OpenExamAttempts,
-                AssignedByUserId = exam.AssignedBy,
-                AssignedAt = now,
-                TimeMultiplier = latest?.TimeMultiplier ?? 1m,
-                GazeAccommodation = latest?.GazeAccommodation ?? false,
-                TypedAnswerAccommodation = latest?.TypedAnswerAccommodation ?? false,
-                StudentInEuropeanUnion = latest?.StudentInEuropeanUnion ?? false,
-                WindowAbsenceFlagOff = latest?.WindowAbsenceFlagOff ?? false,
-                WindowAbsenceReviewAfterCount = latest?.WindowAbsenceReviewAfterCount,
-                WindowAbsenceReviewAfterSeconds = latest?.WindowAbsenceReviewAfterSeconds,
-            });
+            db.ExamAssignments.Add(NewOpenAssignment(organizationId, exam.Id, studentUserId, exam.AssignedBy, now, latest));
             // One at a time, so a duplicate refuses only itself.
             try
             {
@@ -264,6 +234,83 @@ public static class StudentExams
         }
         return created;
     });
+
+    /// <summary>
+    /// Start by exam (GAD-T669): the student's assignment on <paramref name="examId"/>, the one they already have, or one made now
+    /// when the exam is published and open to all students (<see cref="Exam.OpenToAllStudents"/>) and
+    /// <paramref name="createIfMissing"/> (open exams are on). Made with the same defaults and accommodation copy as
+    /// <see cref="EnsureOpenAssignmentsAsync"/>; a duplicate made at the same moment loses to the unique (exam, student) index and
+    /// the winner's id is returned. Null when there is none and none can be made.
+    /// </summary>
+    public static Task<Guid?> EnsureOpenAssignmentAsync(
+        IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, Guid examId, DateTimeOffset now,
+        bool createIfMissing = true, CancellationToken ct = default) =>
+        WithDbAsync(scopes, organizationId, async db =>
+    {
+        Task<Guid?> ExistingAsync() => db.ExamAssignments.AsNoTracking()
+            .Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId && a.ExamId == examId)
+            .Select(a => (Guid?)a.Id).FirstOrDefaultAsync(ct);
+
+        if (await ExistingAsync() is { } existing) return existing;
+        if (!createIfMissing) return null;
+        var exam = await db.Exams.AsNoTracking()
+            .Where(e => e.Id == examId && e.OrganizationId == organizationId && e.Status == ExamStatus.Published && e.OpenToAllStudents)
+            .Select(e => new
+            {
+                e.Id,
+                AssignedBy = e.CreatedByUserId != Guid.Empty ? e.CreatedByUserId
+                    : db.SourceCollections.Where(c => c.Id == e.CollectionId).Select(c => (Guid?)c.CreatedByUserId).FirstOrDefault() ?? Guid.Empty,
+            })
+            .FirstOrDefaultAsync(ct);
+        if (exam is null || exam.AssignedBy == Guid.Empty) return null;
+
+        var latest = await LatestAccommodationsAsync(db, organizationId, studentUserId, ct);
+        var assignment = NewOpenAssignment(organizationId, exam.Id, studentUserId, exam.AssignedBy, now, latest);
+        db.ExamAssignments.Add(assignment);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return assignment.Id;
+        }
+        catch (DbUpdateException)
+        {
+            // Assigned at the same moment elsewhere: the unique (exam, student) index refused this one; use the one that won.
+            db.ChangeTracker.Clear();
+            return await ExistingAsync();
+        }
+    });
+
+    /// <summary>The accommodations a new open assignment copies: the student's most recent assignment in the organization's.</summary>
+    private sealed record OpenAccommodations(decimal TimeMultiplier, bool GazeAccommodation, bool TypedAnswerAccommodation,
+        bool StudentInEuropeanUnion, bool WindowAbsenceFlagOff, int? WindowAbsenceReviewAfterCount, int? WindowAbsenceReviewAfterSeconds);
+
+    // GAD-T668: a new open assignment carries the student's accommodations from their most recent assignment in the
+    // organization, so extra time, gaze, typed answers, EU status and window-absence allowances follow them to every exam.
+    private static Task<OpenAccommodations?> LatestAccommodationsAsync(GadflyDbContext db, Guid organizationId, Guid studentUserId, CancellationToken ct) =>
+        db.ExamAssignments.AsNoTracking()
+            .Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId)
+            .OrderByDescending(a => a.AssignedAt)
+            .Select(a => new OpenAccommodations(a.TimeMultiplier, a.GazeAccommodation, a.TypedAnswerAccommodation, a.StudentInEuropeanUnion,
+                a.WindowAbsenceFlagOff, a.WindowAbsenceReviewAfterCount, a.WindowAbsenceReviewAfterSeconds))
+            .FirstOrDefaultAsync(ct);
+
+    private static ExamAssignment NewOpenAssignment(Guid organizationId, Guid examId, Guid studentUserId, Guid assignedBy, DateTimeOffset now,
+        OpenAccommodations? latest) => new()
+    {
+        OrganizationId = organizationId,
+        ExamId = examId,
+        StudentUserId = studentUserId,
+        AttemptsAllowed = OpenExamAttempts,
+        AssignedByUserId = assignedBy,
+        AssignedAt = now,
+        TimeMultiplier = latest?.TimeMultiplier ?? 1m,
+        GazeAccommodation = latest?.GazeAccommodation ?? false,
+        TypedAnswerAccommodation = latest?.TypedAnswerAccommodation ?? false,
+        StudentInEuropeanUnion = latest?.StudentInEuropeanUnion ?? false,
+        WindowAbsenceFlagOff = latest?.WindowAbsenceFlagOff ?? false,
+        WindowAbsenceReviewAfterCount = latest?.WindowAbsenceReviewAfterCount,
+        WindowAbsenceReviewAfterSeconds = latest?.WindowAbsenceReviewAfterSeconds,
+    };
 
     /// <summary>One of the student's own assignments, or null when it isn't theirs.</summary>
     public static async Task<StudentAssignmentView?> FindAsync(

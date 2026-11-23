@@ -1,4 +1,6 @@
 @page "/my-exams/{AssignmentId:guid}/start"
+@page "/my-exams/exam/{ExamId:guid}/start"
+@inject IConfiguration Config
 @attribute [Authorize(Policy = GadflyPolicies.Student)]
 @implements IAsyncDisposable
 @using Gadfly.Server.Data
@@ -445,6 +447,8 @@ else
 
 @code {
     [Parameter] public Guid AssignmentId { get; set; }
+    /// <summary>Set on the start-by-exam route (GAD-T669), which redirects to the assignment's own get-ready page.</summary>
+    [Parameter] public Guid? ExamId { get; set; }
 
     private enum CheckStatus { Pass, Warn, Fail, Later }
     private sealed record Check(string Name, CheckStatus Status, string Result, string? Fix = null);
@@ -801,7 +805,19 @@ else
         T.Changed += OnLanguageChanged;
         examiners = ExaminerCatalog.For(VoiceConfig, Env.WebRootPath);
         examiner = ExaminerCatalog.Pick(examiners, null);
-        if (Tenant.OrganizationId is { } org && Tenant.UserId is { } user)
+        if (ExamId is { } examId && Tenant.OrganizationId is { } eorg && Tenant.UserId is { } euser)
+        {
+            // GAD-T669: start by exam: an exam open to every student gets the student's assignment made on first use, then the
+            // ordinary get-ready page for that assignment takes over. Anything else shows "not assigned" below.
+            var made = await StudentExams.EnsureOpenAssignmentAsync(Scopes, eorg, euser, examId, Clock.GetUtcNow(),
+                createIfMissing: Config.GetValue<bool>(StudentExams.OpenExamsSetting));
+            if (made is { } id)
+            {
+                Nav.NavigateTo($"my-exams/{id}/start", replace: true);
+                return;
+            }
+        }
+        else if (Tenant.OrganizationId is { } org && Tenant.UserId is { } user)
         {
             assignment = await StudentExams.FindAsync(Scopes, org, user, AssignmentId, Clock.GetUtcNow(), T.Language);
             if (assignment is not null)
