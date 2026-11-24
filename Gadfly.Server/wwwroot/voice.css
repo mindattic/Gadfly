@@ -103,7 +103,6 @@
     .exam-live .voice-interview { --stage-max-h: max(220px, min(70vh, calc(100vh - 19rem))); }
     .exam-live .voice-body { max-height: calc(var(--stage-max-h) + 3.5em); overflow-y: auto; }
     .exam-live .voice-body .voice-answer { min-height: 2.5rem; max-height: 14rem; overflow-y: auto; align-content: start; }
-    .exam-live .voice-actions { gap: var(--space-1); }
     .exam-live .voice-actions button { padding: var(--space-1) var(--space-3); font-size: var(--text-sm); }
 }
 .voice-level { --level: 0; height: 6px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
@@ -119,12 +118,18 @@
 .voice-cue i { display: block; height: 100%; width: 0; background: var(--accent); }
 .voice-cue[data-active="true"] i { width: 100%; transition: width var(--cue-ms, 4s) linear; }
 .voice-cue[data-active="false"] i { transition: none; width: 0; }
+/* The answer controls (GAD-T721): an even grid of full-width buttons, one column in the narrow side panel and side by side
+   when there is room, with real space between them. A disabled one is plainly off (marble, muted ink, dashed edge) rather
+   than a faded copy of the live button; muted on marble keeps 4.5:1. */
+.actions.voice-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: var(--space-2); align-items: stretch; }
+.voice-actions button { width: 100%; justify-self: stretch; }
+.voice-actions button:disabled { opacity: 1; background: var(--panel); color: var(--muted); border: 1px dashed var(--line-strong); filter: none; }
 .voice-actions button[hidden], .voice-self button[hidden] { display: none; }
 /* GAD-T599: the keyboard hint shows only with the hold-to-talk button; the pause choice is a plain labelled select. */
 .voice-actions:has([data-voice-action="ptt"][hidden]) + .voice-ptt-hint { display: none; }
 .voice-ptt-hint { margin: 0; }
-.voice-pause { display: grid; gap: var(--space-1); font-size: var(--text-sm); color: var(--muted); }
-.voice-pause select { max-width: 100%; }
+.voice-pause { display: grid; gap: var(--space-1); margin-top: var(--space-2); font-size: var(--text-sm); color: var(--muted); }
+.voice-pause select { width: 100%; max-width: 100%; color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .voice-level i, .voice-cue[data-active="true"] i, .voice-stage .examiner-presence { transition: none; } }
 
 /* The examiner's delivery (GAD-T303, js/examiner-voice.js). Captions: the whole question dimmed, each word lit as she says it. */
