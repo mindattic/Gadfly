@@ -41,7 +41,7 @@ info["teeth"] = "teeth_base/teeth_base.mhclo"
 info["tongue"] = "tongue01/tongue01.mhclo"
 # The afro's curls, cut to a fringe round the sides and back below a bald crown (below). The CC0 viking beard and moustache
 # (the only CC0 beards in bodyparts05 with full cheek-to-chin coverage; grinsegold_beard_sigmund_wip is a nicer solid shell
-# but is AGPL3, not CC0, so it can't ship here) are left as MPFB ships them (see the note below on why they are not reshaped).
+# but is AGPL3, not CC0, so it can't ship here) have the beard's long hanging drape shortened below (see the note there).
 info["hair"] = "afro01/afro01.mhclo"
 info["clothes"] = ["male_casualsuit06/male_casualsuit06.mhclo", "rehmanpolanski_beard_viking/rehmanpolanski_beard_viking.mhclo",
                    "rehmanpolanski_moustache_viking/rehmanpolanski_moustache_viking.mhclo"]
@@ -174,11 +174,22 @@ for o in meshes:
             q = bvh.find_nearest(p)[0]
             return (q - p) * 0.55 if q is not None else Vector()
         reshape(o, hug)
-    # The beard and moustache are strand/card geometry (hair cards), not a solid shell: pushing their vertices outward to try
-    # to "fill them out" just splays and lengthens individual strands into a scraggly hang (tried and reverted; see
-    # tools/examiner-socrates/build.py history for GAD-T730's render and the note left on GAD-T731). They are left as MPFB
-    # ships them; GAD-T731 tracks finding or making a real CC0 solid-shell beard asset for a fuller, rounder look -
-    # grinsegold_beard_sigmund_wip in bodyparts05 would be ideal in shape but is AGPL3, not CC0, so it cannot ship here.
+    # The beard is strand/card geometry (hair cards), not a solid shell: pushing their vertices outward to try to "fill
+    # them out" just splays and lengthens individual strands into a scraggly hang (tried and reverted; see
+    # tools/examiner-socrates/build.py history for GAD-T730's render and the note left on GAD-T731). No other CC0 beard
+    # in bodyparts05 has full cheek-to-chin coverage (culturalibre_faun_beard is a thin goatee; grinsegold_beard_sigmund_wip
+    # and wdg_scruffy_beard are both AGPL3, confirmed from their own .mhclo license fields, not just the pack index), so
+    # GAD-T731 instead shortens the drape: vertices below an assumed chin line (measured down from eye level, not from
+    # the mesh's own highest vertex - a stray sideburn wisp reaches almost to the cheekbone, so using the mesh's own
+    # bounding box as the anchor would compress the whole beard, not just the drape) are pulled up toward that line,
+    # proportionally to how far below it they are. Cheek and jaw strands, at or above the line, are left alone; only
+    # the long chin-tip strands get pulled into a shorter, denser, rounder hang.
+    if "beard" in n:
+        chin = eye.z - 0.12
+        def shorten(p):
+            drop = chin - p.z
+            return Vector((0, 0, drop * 0.5)) if drop > 0 else Vector()
+        reshape(o, shorten)
 
 # Lighter textures: at most 1024 px (the look keeps only the skin's light and shade and drops the clothing color); the hair
 # and beard alpha-cutout masks only need to read at a distance, so they are capped tighter, at 512, to keep the file near
