@@ -47,11 +47,17 @@
 .voice-self[data-preview="off"] { position: fixed; left: 0; top: 0; right: auto; bottom: auto; z-index: -1; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
 /* The side column's groups (GAD-T723): a status strip, the answer panel, the buttons and a quieter settings row, on one rhythm. The
    strip and the panel are inset parchment boxes inside the marble room, each with the same padding. */
-.voice-statusbar, .voice-answer, .voice-transcript {
+.voice-answer, .voice-transcript {
     padding: var(--space-3); background: var(--bg); border: var(--border); border-radius: var(--radius-sm); box-sizing: border-box;
 }
-.voice-statusbar { display: grid; gap: var(--space-1); }
-.voice-answer h2, .voice-transcript h2 { margin: 0; font-family: var(--font-sans); font-size: var(--text-sm); line-height: var(--leading-tight); }
+/* The design pass (GAD-T725): her words are set in the serif of the headings and the student's in the plain sans, so who is
+   speaking reads at a glance. The status strip is not a box: a quiet line over a rule, so the answer panel under it is the one
+   framed thing in the column. Panel titles are serif, in sentence case. */
+.voice-statusbar { display: grid; gap: var(--space-1); padding: 0 0 var(--space-2); border-bottom: var(--border); }
+.voice-answer h2, .voice-transcript h2 {
+    margin: 0; font-family: var(--font-serif); font-size: var(--text-base); font-weight: 600; line-height: var(--leading-tight);
+    color: var(--ink); text-transform: none; letter-spacing: .005em;
+}
 .voice-camera { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); margin: 0; font-size: var(--text-sm); color: var(--muted); }
 .voice-camera-label { flex: 1 1 auto; min-width: 0; }
 .voice-camera-toggle { padding: var(--space-0) var(--space-2); font-size: var(--text-xs); font-weight: 500; }
@@ -74,26 +80,28 @@
    spoke is the label and the rule's colour, gold for the examiner and Aegean blue on a tint for the student. */
 .voice-line { display: grid; gap: var(--space-1); padding: var(--space-2) var(--space-3); border-left: 3px solid var(--gold-soft); border-radius: var(--radius-sm); background: var(--panel); font-size: var(--text-sm); }
 .voice-line-you { border-left-color: var(--accent); background: var(--accent-tint); }
+.voice-line-examiner .voice-said { font-family: var(--font-serif); font-size: var(--text-base); line-height: 1.45; }
 /* While the student answers the conversation is tucked away so nothing pulls the eyes down off her face; the question stays as the
    caption under her (voice-room.js answering()). */
 .voice-transcript-quiet { display: none; }
 .voice-room[data-answering="true"] .voice-transcript-quiet { display: block; }
 .voice-room[data-answering="true"] .voice-log { visibility: hidden; }
-.voice-who { font-size: var(--text-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.voice-who { font-size: var(--text-xs); font-weight: 600; color: var(--muted); }
 .voice-said { white-space: pre-wrap; overflow-wrap: anywhere; }
 .voice-line .voice-line-delay { justify-self: start; padding: 0 var(--space-2); border: var(--border); border-radius: var(--radius-pill); background: var(--panel); font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
 .voice-body { grid-area: side; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; min-height: 0; }
 .voice-body > * { flex: none; }
 .voice-body > .hint { margin: 0; font-size: var(--text-sm); }
 /* Two lines, so a change of state never moves what is under it. */
-.voice-status { margin: 0; min-height: calc(2 * var(--leading) * 1em); color: var(--ink); font-size: var(--text-sm); line-height: var(--leading); }
-/* The examiner's subtitle (GAD-T723): two lines at most, always the same height, so nothing under the stage jumps with each
-   question (the whole question is also in the exam room's question card and the transcript). It still scrolls, without a
-   scrollbar: a soft shadow at the top or bottom edge says there is more, drawn only while there is. */
+.voice-status { margin: 0; min-height: calc(2 * var(--leading) * 1em); color: var(--ink); font-size: var(--text-sm); font-weight: 500; line-height: var(--leading); }
+/* The examiner's subtitle (GAD-T723, GAD-T725): three lines of her serif, always the same height on every screen, so nothing under
+   the stage jumps with each question. It follows her: once the word she is saying drops below the box, examiner-voice.js scrolls
+   its line to the top. No scrollbar; a soft shadow at the top or bottom edge says there is more, drawn only while there is. */
 .voice-caption {
+    --caption-leading: 1.4;
     flex: none; width: 100%; max-width: calc(var(--stage-max-h) * 16 / 9); box-sizing: border-box; margin: 0; padding: 0 var(--space-4);
-    height: calc(2 * var(--leading) * 1em); overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain;
-    font-size: var(--text-lg); line-height: var(--leading); text-align: center; text-wrap: balance; color: var(--ink);
+    height: calc(3 * var(--caption-leading) * 1em); overflow-y: auto; scrollbar-width: none; overscroll-behavior: contain;
+    font-family: var(--font-serif); font-size: var(--text-xl); line-height: var(--caption-leading); text-align: center; text-wrap: balance; color: var(--ink);
     background:
         linear-gradient(var(--panel) 40%, transparent) top / 100% .75em no-repeat local,
         linear-gradient(transparent, var(--panel) 60%) bottom / 100% .75em no-repeat local,
@@ -111,7 +119,10 @@
 @media (max-width: 719px) {
     .voice-interview { grid-template-columns: minmax(0, 1fr); grid-template-areas: "center" "side" "log"; }
     .voice-self { right: var(--space-1); bottom: var(--space-1); width: 28%; }
-    .voice-caption { height: auto; min-height: 1.5em; }
+    /* Still three fixed lines (GAD-T725): a question of any length leaves the answer panel where it was. */
+    .voice-caption { font-size: var(--text-lg); padding: 0 var(--space-1); }
+    /* The transcript is under everything here, so while the student answers it folds away instead of keeping an empty box. */
+    .voice-room[data-answering="true"] .voice-log { display: none; }
 }
 /* A phone on its side (GAD-T694): the screen is short, so she takes most of its height and the controls stay beside her. */
 @media (orientation: landscape) and (max-height: 32rem) {
@@ -122,16 +133,22 @@
    card, so she stays whole on a laptop screen; the controls column scrolls on its own if a long answer needs it. */
 @media (min-width: 960px) and (min-height: 560px) {
     .exam-live .voice-room { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: var(--space-2) var(--space-3); min-height: 0; }
-    .exam-live .voice-interview { --stage-max-h: max(220px, min(70vh, calc(100vh - 19rem))); }
-    .exam-live .voice-body { max-height: calc(var(--stage-max-h) + 3.5em); overflow-y: auto; }
+    .exam-live .voice-interview { --stage-max-h: max(220px, min(70vh, calc(100vh - 21rem))); flex: 1 0 auto; }
+    /* The controls column takes the height her stage and caption give the row and scrolls inside it (GAD-T725), like the
+       transcript: contain: size keeps a long column from making the row, and so the room, taller than the screen. */
+    .exam-live .voice-body { contain: size; align-self: stretch; overflow-y: auto; }
     .exam-live .voice-actions button { padding: var(--space-1) var(--space-3); font-size: var(--text-sm); }
+    .exam-live .voice-actions [data-voice-action="done"] { font-size: var(--text-base); }
 }
 /* Under the words: the microphone level and, just below it, the end-of-answer cue filling as the silence runs. */
 .voice-meter { display: grid; gap: var(--space-1); padding-top: var(--space-1); }
 .voice-level { --level: 0; height: 6px; border-radius: var(--radius-pill); background: var(--line); overflow: hidden; }
 .voice-level i { display: block; height: 100%; width: calc(var(--level) * 100%); background: var(--accent); transition: width 80ms linear; }
-.voice-answer { display: grid; gap: var(--space-2); }
+.voice-answer { display: grid; gap: var(--space-2); transition: border-color .2s ease, box-shadow .2s ease; }
 .voice-answer .verify-label { margin: 0; }
+/* While she listens the answer panel is the live one (GAD-T725): an Aegean edge and keyline, drawn with border colour and an inset
+   shadow so nothing moves. */
+.voice-room[data-answering="true"] .voice-answer { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); background: var(--panel); }
 /* GAD-T722: the answer as heard sits in a fixed-height box that scrolls, so the buttons below never move while the student
    talks. column-reverse keeps it pinned to the newest words; the earlier ones are a scroll (or Tab and arrow keys) away. */
 .voice-draft { display: flex; flex-direction: column-reverse; margin: 0; height: calc(4 * var(--leading, 1.5) * 1em); overflow-y: auto; overscroll-behavior: contain; font-size: var(--text-lg); line-height: var(--leading, 1.5); }
@@ -146,20 +163,26 @@
 /* The answer controls (GAD-T721): an even grid of full-width buttons, one column in the narrow side panel and side by side
    when there is room, with real space between them. A disabled one is plainly off (marble, muted ink, dashed edge) rather
    than a faded copy of the live button; muted on marble keeps 4.5:1. */
-.actions.voice-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: var(--space-2); align-items: stretch; }
+.actions.voice-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr)); gap: var(--space-2); align-items: stretch; }
 .voice-actions button { width: 100%; justify-self: stretch; }
-.voice-actions button:disabled { opacity: 1; background: var(--panel); color: var(--muted); border: 1px dashed var(--line-strong); filter: none; }
+/* One primary action (GAD-T725): "Done answering" takes the whole row, touch height and heavier type; the rest are quiet marble
+   buttons in ink with a stone edge (line-strong on marble keeps 3:1), smaller, so the eye finds the one that ends the answer. */
+.voice-actions [data-voice-action="done"] { grid-column: 1 / -1; min-height: var(--target-touch); font-weight: 600; letter-spacing: .01em; }
+.voice-actions button.secondary { padding: var(--space-1) var(--space-3); background: var(--panel); color: var(--ink); border: var(--border-strong); font-size: var(--text-sm); }
+.voice-actions button.secondary:hover:not(:disabled) { background: var(--accent-tint); border-color: var(--accent); }
+.voice-actions button:disabled { opacity: 1; background: var(--panel); color: var(--muted); border: 1px dashed var(--line-strong); filter: none; cursor: default; }
 .voice-actions button[hidden], .voice-self button[hidden] { display: none; }
 /* GAD-T599: the keyboard hint shows only with the hold-to-talk button; the pause choice is a plain labelled select. */
 .voice-actions:has([data-voice-action="ptt"][hidden]) + .voice-ptt-hint { display: none; }
-.voice-ptt-hint { margin: 0; }
+.voice-ptt-hint { margin: 0; font-size: var(--text-xs); }
 /* The settings row (GAD-T723): quieter than the buttons, set off by a rule. */
 .voice-settings { padding-top: var(--space-3); border-top: var(--border); }
-.voice-pause { display: grid; gap: var(--space-1); margin: 0; font-size: var(--text-sm); color: var(--muted); }
-.voice-pause select { width: 100%; max-width: 100%; color: var(--ink); }
-@media (prefers-reduced-motion: reduce) { .voice-level i, .voice-cue[data-active="true"] i, .voice-stage .examiner-presence { transition: none; } }
+.voice-pause { display: grid; gap: var(--space-1); margin: 0; font-size: var(--text-xs); color: var(--muted); }
+.voice-pause select { width: 100%; max-width: 100%; font-size: var(--text-sm); color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .voice-level i, .voice-cue[data-active="true"] i, .voice-stage .examiner-presence, .voice-answer { transition: none; } }
 
-/* The examiner's delivery (GAD-T303, js/examiner-voice.js). Captions: the whole question dimmed, each word lit as she says it. */
-.voice-caption[data-timed="true"] .voice-word { color: var(--muted); transition: color 120ms linear; }
+/* The examiner's delivery (GAD-T303, js/examiner-voice.js). Captions: the whole question shown at once, the words still to come a
+   lighter ink (85% muted on marble, about 5:1), each word darkening to full ink as she says it. */
+.voice-caption[data-timed="true"] .voice-word { color: color-mix(in srgb, var(--muted) 85%, var(--panel)); transition: color 120ms linear; }
 .voice-caption[data-timed="true"] .voice-word-said { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .voice-caption[data-timed="true"] .voice-word { transition: none; } }

@@ -82,7 +82,9 @@ textarea { width: 100%; resize: vertical; }
     .shell:has(.exam-live) > main { flex: 1 1 auto; min-height: 0; overflow-y: auto; width: 100%; max-width: 1500px; box-sizing: border-box; padding: var(--space-2) var(--gutter); display: flex; flex-direction: column; }
     .exam-live { flex: 1 1 auto; min-height: 0; width: 100%; max-width: none; display: flex; flex-direction: column; gap: var(--space-2); }
     .exam-live > * { flex: none; margin-top: 0; margin-bottom: 0; }
-    .exam-live > .voice-room:has(> .voice-interview:not([hidden])) { flex: 1 1 auto; min-height: 17rem; }
+    /* Grows to the height left but never shrinks below what it holds (GAD-T725): squeezed, the transcript under her on a medium
+       screen spilled over the card below; now the page scrolls instead. */
+    .exam-live > .voice-room:has(> .voice-interview:not([hidden])) { flex: 1 0 auto; min-height: 17rem; }
     .exam-live .exam-head { margin: 0; align-items: center; gap: var(--space-2) var(--space-4); }
     .exam-live .exam-head h1 { font-size: var(--text-xl); }
     .exam-live .exam-card { max-width: none; margin: 0; padding: var(--space-2) var(--space-4); gap: var(--space-1); align-content: start; height: 7.75rem; overflow-y: auto; box-sizing: border-box; }

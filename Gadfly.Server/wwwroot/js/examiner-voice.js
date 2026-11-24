@@ -127,6 +127,7 @@ function renderCaption(p, text) {
     p.spans = [];
     if (!el) return;
     el.replaceChildren();
+    el.scrollTop = 0;
     el.dataset.timed = "true";
     p.tokens.forEach((t, i) => {
         if (i > 0) el.appendChild(document.createTextNode(" "));
@@ -159,7 +160,7 @@ function appendCaption(p, text) {
 function plainCaption(p, text) {
     stopLoop(p);
     p.tokens = []; p.spans = []; p.words = [];
-    if (p.caption) { p.caption.dataset.timed = "false"; p.caption.textContent = text || ""; }
+    if (p.caption) { p.caption.dataset.timed = "false"; p.caption.textContent = text || ""; p.caption.scrollTop = 0; }
     setMouth(p, 0);
 }
 
@@ -177,6 +178,20 @@ function light(p, upTo) {
     if (upTo <= p.lit) return;
     for (let i = Math.max(0, p.lit + 1); i <= upTo && i < p.spans.length; i++) p.spans[i].classList.add("voice-word-said");
     p.lit = upTo;
+    follow(p.caption, p.spans[Math.min(upTo, p.spans.length - 1)]);
+}
+
+/**
+ * The caption is a fixed few lines (voice.css): once the word she is saying drops below them, its line scrolls up to the top of the
+ * box, so a long question follows her without anyone scrolling it. Only the caption box scrolls, never the page.
+ */
+function follow(el, word) {
+    if (!el || !word || el.scrollHeight <= el.clientHeight) return;
+    const box = el.getBoundingClientRect(), r = word.getBoundingClientRect();
+    if (r.bottom <= box.bottom + 1 && r.top >= box.top - 1) return;
+    const top = el.scrollTop + r.top - box.top;
+    const calm = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    el.scrollTo({ top, behavior: calm ? "auto" : "smooth" });
 }
 
 function endUtterance(p) {

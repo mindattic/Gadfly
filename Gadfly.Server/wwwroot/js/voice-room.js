@@ -2039,4 +2039,5 @@ function showCaption(what) {
     if (!el) return;
     el.dataset.timed = "false";
     el.textContent = what || "";
+    el.scrollTop = 0;
 }
