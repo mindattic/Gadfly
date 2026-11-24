@@ -19,7 +19,7 @@ for coll in ("nodes", "meshes"):
     for x in j[coll]:
         if "name" in x: x["name"] = strip(x["name"])
 
-masked = re.compile(r"eyebrow|eyelash|short0|hair|beard|moustache|high-poly")
+masked = re.compile(r"eyebrow|eyelash|short0|afro|hair|beard|moustache|high-poly")
 for m in j["materials"]:
     m.pop("extensions", None)
     if masked.search(m["name"].lower()):

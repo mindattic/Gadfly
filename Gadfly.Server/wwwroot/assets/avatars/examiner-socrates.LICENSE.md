@@ -2,14 +2,14 @@
 
 | | |
 |---|---|
-| File | `examiner-socrates.glb` (12.5 MB), committed |
-| SHA-256 | `ac07a6c4cfe11660350396b2cfa153df47676ce1df2602999ebbddf9a912c262` |
+| File | `examiner-socrates.glb` (12.7 MB), committed |
+| SHA-256 | `eaccb6e2970c44f32923059bc9c09de2ad069d02b6b16a5bb99f32c3e4863e3e` |
 | Made with | Blender 4.4.3 (headless) and the [MPFB](https://static.makehumancommunity.org/mpfb.html) 2.0.18 extension (a tool; none of its GPL code is in the file), by `tools/examiner-socrates/build.py`, then `tools/examiner-m/postprocess.py`, `tools/examiner-m/alignrig.py` and `tools/examiner-socrates/trim.py` |
-| Character | MPFB human: male, age 0.85 (about seventy), muscle 0.45, weight 0.62, proportions 0.5, height 0.4; face modifiers after the Vatican Pio-Clementino bust of Socrates (Inv. 314): broad, flat, short, upturned nose with flared nostrils; wide, round face; raised forehead; full cheeks; slightly enlarged, wide-set eyes with eye bags. Bald |
-| Assets | MakeHuman system assets: skin `old_caucasian_male` (the look replaces its color), eyes `high-poly` with `brown_eye` (so `avatar-look.js` finds the irises and makes them green), eyebrows `eyebrow001`, eyelashes `eyelashes01`, teeth `teeth_base`, tongue `tongue01`, clothes `male_casualsuit06`. bodyparts05 pack: `rehmanpolanski_beard_viking` and `rehmanpolanski_moustache_viking` (styled as hair by `avatar-look.js`) |
-| Face shapes | `faceunits01` (52 ARKit) and `visemes02` (15 Oculus) on the body (67 targets); interpolated onto beard (50), moustache (48), eyebrows, eyelashes, teeth and tongue (the targets that do not move a part are left off it, as in `examiner-m.glb`) |
+| Character | MPFB human: male, age 0.8 (about sixty-five), muscle 0.45, weight 0.62, proportions 0.6, height 0.575 (eye level ~1.68 m, matching `examiner-m.glb`'s ~1.6693 m so TalkingHead's fixed camera doesn't look down on him); face modifiers after the Vatican Pio-Clementino bust of Socrates (Inv. 314): broad, flat, short, upturned nose with flared nostrils; wide, round face; raised forehead; full cheeks; wide-set eyes opened clear of the lid and brow (no eye bags, no hooded overhang). A bald crown with a curly fringe at the sides and back |
+| Assets | MakeHuman system assets: skin `old_caucasian_male` (the look replaces its color), eyes `high-poly` with `brown_eye` (so `avatar-look.js` finds the irises and makes them green), eyebrows `eyebrow001`, eyelashes `eyelashes01`, teeth `teeth_base`, tongue `tongue01`, clothes `male_casualsuit06`. bodyparts05 pack: `afro01` hair (cut to the side/back fringe), `rehmanpolanski_beard_viking` and `rehmanpolanski_moustache_viking` (styled as hair by `avatar-look.js`) |
+| Face shapes | `faceunits01` (52 ARKit) and `visemes02` (15 Oculus) on the body (67 targets); interpolated onto hair (40), beard (50), moustache (48), eyebrows, eyelashes, teeth and tongue (the targets that do not move a part are left off it, as in `examiner-m.glb`) |
 | Rig | As `examiner-m.glb`: MPFB's Mixamo rig without the `mixamorig:` prefix, `LeftEye`/`RightEye` bones under `Head`, bone frames of TalkingHead's `mpfb.glb`. Root object `Armature` |
-| Lightened | Textures at most 1024 px, JPEG where there is no cut-out alpha; the beard and moustache keep their morph positions but not their morph normals (`trim.py`) |
+| Lightened | Textures at most 1024 px (512 for the hair and beard/moustache alpha-cutout masks, which only need to read at a distance) and JPEG where there is no cut-out alpha; the beard and moustache keep their morph positions but not their morph normals (`trim.py`) |
 
 Likeness reference only (nothing from it is in the file): the photograph
 [Socrates Pio-Clementino Inv314.jpg](https://commons.wikimedia.org/wiki/File:Socrates_Pio-Clementino_Inv314.jpg), released
