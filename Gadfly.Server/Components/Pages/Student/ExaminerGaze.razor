@@ -100,7 +100,8 @@
         try
         {
             await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
-            return (await WebcamIntegrityRecorder.Create(scope.ServiceProvider).RecordExaminerGazeAsync(org, user, SessionId, events ?? [], stop.Token)).KeepGoing;
+            // No stop token: the episodes the browser closes as the room is torn down must still be saved.
+            return (await WebcamIntegrityRecorder.Create(scope.ServiceProvider).RecordExaminerGazeAsync(org, user, SessionId, events ?? [])).KeepGoing;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
