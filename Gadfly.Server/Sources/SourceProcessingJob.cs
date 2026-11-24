@@ -9,7 +9,7 @@ namespace Gadfly.Server.Sources;
 public sealed record SourceProcessingRequest(Guid OrganizationId, Guid CollectionId, Guid RequestedByUserId, string Title,
     string UploadFolder, bool RebuildConceptMap = false);
 
-/// <summary>Where uploaded source files are kept on the server until they move to MindAttic.Media storage.</summary>
+/// <summary>Where uploaded source files are kept on the server until they move to MindAttic.Storage.</summary>
 public static class SourceUploads
 {
     public static string Root =>

@@ -172,7 +172,7 @@ public sealed class SourceDocument : ITenantOwned
     public string ContentType { get; set; } = "";
     public long SizeBytes { get; set; }
     public string Sha256 { get; set; } = "";
-    /// <summary>The stored original (MindAttic.Media uid, or a blob path).</summary>
+    /// <summary>The stored original (MindAttic.Storage uid, or a blob path).</summary>
     public string? StorageRef { get; set; }
     public ProcessingStatus Status { get; set; }
     public string? Error { get; set; }
@@ -460,7 +460,7 @@ public sealed class SessionTurn : ITenantOwned
     public DateTimeOffset? AnswerCompletedAt { get; set; }
     public string? WordsJson { get; set; }
     public string? SpeechMetricsJson { get; set; }
-    /// <summary>Stored answer audio (MindAttic.Media uid), deleted by retention.</summary>
+    /// <summary>Stored answer audio (MindAttic.Storage uid), deleted by retention.</summary>
     public string? AudioRef { get; set; }
     public double? MasteryAfter { get; set; }
 }
