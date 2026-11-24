@@ -1,4 +1,4 @@
-// Catalog exams for History (GAD-T681). Format as in life-sciences.json (GAD-T659): title, category, subject, topic,
+// Catalog exams for History (GAD-T681). Format as in the CatalogExam records in Demo/CatalogSeeder.cs (GAD-T659): title, category, subject, topic,
 // instructions, passage (one paragraph per entry), objectives (key, title, description, concept, definition, facts,
 // misconceptions) and translations ({ "ko": { "title", "instructions", "objectives": { "<key>": "<title>" } }, "es": { ... } },
 // Spanish neutral Latin American with usted), seeded as approved localizations so the exams offer en, ko and es.

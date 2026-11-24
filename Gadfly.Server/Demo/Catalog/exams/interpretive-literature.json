@@ -1,4 +1,4 @@
-// Interpretive literature and drama exams (GAD-T714). Format: see the header of life-sciences.json (GAD-T659).
+// Interpretive literature and drama exams (GAD-T714). Format: see the CatalogExam records in Demo/CatalogSeeder.cs (GAD-T659).
 // Each exam asks the student to defend readings of themes, motives and moral judgments, and carries Korean and Spanish texts.
 [
   {

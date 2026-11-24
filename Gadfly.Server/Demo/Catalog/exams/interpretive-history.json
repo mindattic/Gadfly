@@ -1,4 +1,4 @@
-// Interpretive history and politics exams (GAD-T715). Format: see the header of life-sciences.json (GAD-T659).
+// Interpretive history and politics exams (GAD-T715). Format: see the CatalogExam records in Demo/CatalogSeeder.cs (GAD-T659).
 // Each objective is a contestable historical judgment; each exam carries Korean and Spanish texts (title, objective titles).
 [
   {

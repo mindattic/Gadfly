@@ -1,4 +1,4 @@
-// Catalog exams: Economics and Civics (GAD-T682). Format as in life-sciences.json; ko and es texts are approved translations.
+// Catalog exams: Economics and Civics (GAD-T682). Format as in the CatalogExam records in Demo/CatalogSeeder.cs; ko and es texts are approved translations.
 [
   {
     "title": "Supply, Demand and Market Equilibrium",

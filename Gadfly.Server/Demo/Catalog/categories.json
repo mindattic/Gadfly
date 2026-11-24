@@ -1,10 +1,5 @@
 // Exam catalog categories (GAD-T659). slug is the stable key exams name in "category"; displayNames holds other languages.
 [
-  { "slug": "life-sciences", "name": "Life Sciences", "sortOrder": 10, "displayNames": { "ko": "생명 과학", "es": "Ciencias de la vida" } },
-  { "slug": "physical-sciences", "name": "Physical Sciences", "sortOrder": 20, "displayNames": { "ko": "물리 과학", "es": "Ciencias físicas" } },
-  { "slug": "earth-space", "name": "Earth and Space", "sortOrder": 30, "displayNames": { "ko": "지구와 우주", "es": "La Tierra y el espacio" } },
-  { "slug": "mathematics", "name": "Mathematics", "sortOrder": 40, "displayNames": { "ko": "수학", "es": "Matemáticas" } },
-  { "slug": "computing", "name": "Computing", "sortOrder": 50, "displayNames": { "ko": "컴퓨팅", "es": "Informática" } },
   { "slug": "history", "name": "History", "sortOrder": 60, "displayNames": { "ko": "역사", "es": "Historia" } },
   { "slug": "economics-civics", "name": "Economics and Civics", "sortOrder": 70, "displayNames": { "ko": "경제와 시민", "es": "Economía y civismo" } },
   { "slug": "literature", "name": "Literature", "sortOrder": 80, "displayNames": { "ko": "문학", "es": "Literatura" } },

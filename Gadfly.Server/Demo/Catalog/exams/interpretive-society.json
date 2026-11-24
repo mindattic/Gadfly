@@ -1,4 +1,4 @@
-// Interpretive catalog exams on society, mind, economics and civics (GAD-T716). Format: see the header of life-sciences.json (GAD-T659).
+// Interpretive catalog exams on society, mind, economics and civics (GAD-T716). Format: see the CatalogExam records in Demo/CatalogSeeder.cs (GAD-T659).
 // Each objective is a contestable position; the passage lays out the strongest arguments on more than one side.
 // Each exam carries approved Korean and Spanish texts (title, objective titles) so the seeder offers en, ko, es.
 [

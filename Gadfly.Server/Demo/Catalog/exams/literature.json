@@ -1,4 +1,4 @@
-// Catalog exams for Literature (GAD-T683). Format: see the header of life-sciences.json. Passages are original explanatory prose
+// Catalog exams for Literature (GAD-T683). Format: see the CatalogExam records in Demo/CatalogSeeder.cs. Passages are original explanatory prose
 // about public-domain works and literary forms across traditions; translations carry the approved Korean and Spanish texts.
 [
   {

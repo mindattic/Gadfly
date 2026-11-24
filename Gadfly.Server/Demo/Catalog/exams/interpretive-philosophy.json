@@ -1,4 +1,4 @@
-// Interpretive philosophy and ethics exams (GAD-T713). Format: see the header of life-sciences.json (GAD-T659).
+// Interpretive philosophy and ethics exams (GAD-T713). Format: see the CatalogExam records in Demo/CatalogSeeder.cs (GAD-T659).
 // Each exam carries approved Korean and Spanish texts (title, objective titles) so the seeder offers en, ko, es.
 [
   {
