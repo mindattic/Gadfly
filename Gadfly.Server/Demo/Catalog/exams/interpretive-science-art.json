@@ -1,0 +1,501 @@
+// Interpretive catalog exams on the meaning, history and ethics of science, art and myth (GAD-T717). Format: see philosophy-psychology.json.
+// Each exam carries approved Korean and Spanish texts (title, instructions, objective titles) so the seeder offers en, ko, es.
+[
+  {
+    "title": "Galileo and the Church",
+    "category": "history",
+    "subject": "History of Science",
+    "topic": "Science and religion",
+    "instructions": "The examiner will ask you to judge what the Galileo affair was really about. Take a position, defend it with the history, and say \"I don't know\" if you don't.",
+    "passage": [
+      "In 1610 Galileo Galilei published The Starry Messenger, reporting what his telescope showed: mountains on the Moon, many more stars than the eye can see, and four moons circling Jupiter. He soon observed that Venus shows a full set of phases, which the old Earth-centred system of Ptolemy could not explain. Galileo became a public champion of the Sun-centred system Nicolaus Copernicus had published in 1543.",
+      "Galileo's observations did not settle the question by themselves. The phases of Venus also fit the system of Tycho Brahe, in which the planets circle the Sun while the Sun circles a stationary Earth. If the Earth moved, astronomers expected the fixed stars to shift slightly over the year, but no such stellar parallax was measured until 1838. Galileo's own favourite proof, that the Earth's motion causes the tides, was wrong.",
+      "In 1615 Galileo wrote his Letter to the Grand Duchess Christina, arguing that Scripture speaks in the language of ordinary people and that the Bible teaches how one goes to heaven, not how the heavens go. In the same year Cardinal Robert Bellarmine wrote that if there were a true demonstration of the Earth's motion, the Church would have to reinterpret the passages that seemed to contradict it, but that until such a proof was shown the traditional reading should stand. In 1616 Copernicus's book was suspended until corrected, and Galileo was told not to hold or defend the doctrine.",
+      "In 1632 Galileo published his Dialogue Concerning the Two Chief World Systems. Its defender of the old view, Simplicio, was given an argument that Pope Urban VIII, once Galileo's admirer, had urged him to include, and the Pope was reportedly offended. In 1633 the Inquisition found Galileo vehemently suspected of heresy. He was made to abjure and spent the rest of his life under house arrest near Florence, dying in 1642. The story that he muttered \"and yet it moves\" is probably a later legend.",
+      "In the nineteenth century writers such as John William Draper and Andrew Dickson White made the affair the founding example of a permanent war between science and religion. Many historians now reject this conflict thesis. They point out that the Church had long supported astronomy, that the dispute ran through questions of evidence, of who had authority to interpret Scripture during the Counter-Reformation, and of personal and court politics. Others reply that whatever the details, an institution used force to silence a scientist for a true claim. In 1992 Pope John Paul II acknowledged that Galileo's judges had erred."
+    ],
+    "objectives": [
+      { "key": "conflict-thesis", "title": "Judge whether it was science against religion", "description": "Defends a view on whether the affair shows a basic conflict between science and religion or something narrower.",
+        "concept": "conflict-thesis", "definition": "The nineteenth-century claim that science and religion are locked in a permanent war, with the Galileo affair as its founding case.",
+        "facts": ["Draper and White presented the affair as the model of science against religion.", "Many churchmen, including Jesuit astronomers, practised and supported astronomy.", "The case also turned on Counter-Reformation authority over interpreting Scripture and on papal politics.", "A strong answer weighs the coercion actually used against Galileo against the evidence of cooperation."],
+        "misconceptions": ["The Church condemned Galileo simply because it opposed all science.", "Because politics mattered, religion played no real part in the condemnation."] },
+      { "key": "burden-of-proof", "title": "Decide whether Galileo had proven his case", "description": "Assesses whether the evidence of 1633 demonstrated the Earth's motion and what that means for judging the Church.",
+        "concept": "burden-of-proof", "definition": "The question of how much evidence a new theory needs before it should displace an established view.",
+        "facts": ["The phases of Venus refuted Ptolemy but also fit Tycho Brahe's system.", "Stellar parallax was not measured until 1838.", "Galileo's tidal argument for the Earth's motion was mistaken.", "Bellarmine said a true demonstration would require reinterpreting Scripture."],
+        "misconceptions": ["Galileo's telescope plainly proved that the Earth goes around the Sun.", "If Galileo lacked proof, the trial was therefore fair."] },
+      { "key": "two-books", "title": "Weigh Scripture and observation as authorities", "description": "Evaluates Galileo's argument that the Bible teaches how to go to heaven, not how the heavens go.",
+        "concept": "two-books", "definition": "The view that nature and Scripture are two sources of truth that cannot really conflict, so apparent conflicts call for reinterpretation.",
+        "facts": ["Galileo argued that Scripture speaks in the language of ordinary people.", "He held that the Bible's purpose is salvation, not astronomy.", "Bellarmine accepted reinterpretation in principle but only after a demonstration.", "A strong answer asks who should decide when the two seem to conflict."],
+        "misconceptions": ["Galileo rejected the authority of the Bible.", "Any conflict between a text and an observation is always settled in favour of the observation without further question."] },
+      { "key": "personal-politics", "title": "Assess the role of personality and politics", "description": "Judges how far Galileo's own conduct and Urban VIII's reaction explain the trial.",
+        "concept": "personal-politics", "definition": "The view that the outcome depended heavily on Galileo's combative style and his falling-out with Pope Urban VIII.",
+        "facts": ["Urban VIII had admired Galileo before the Dialogue appeared.", "An argument the Pope favoured was placed in the mouth of Simplicio.", "Galileo had been warned in 1616 not to hold or defend Copernicanism.", "A strong answer separates the immediate trigger from the deeper causes."],
+        "misconceptions": ["Galileo was a blameless victim with no part in the conflict.", "If personal offence triggered the trial, the issue of intellectual freedom does not arise."] }
+    ],
+    "translations": {
+      "ko": { "title": "갈릴레오와 교회", "instructions": "시험관은 갈릴레오 사건이 실제로 무엇에 관한 것이었는지 판단해 보라고 요청할 것입니다. 입장을 정하고 역사적 근거로 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "conflict-thesis": "과학 대 종교의 대립이었는지 판단하기", "burden-of-proof": "갈릴레오가 자신의 주장을 증명했는지 판단하기", "two-books": "성경과 관찰을 권위로서 저울질하기", "personal-politics": "개인적 성격과 정치의 역할 평가하기" } },
+      "es": { "title": "Galileo y la Iglesia", "instructions": "El examinador le pedirá juzgar de qué se trató realmente el caso Galileo. Tome una posición, defiéndala con la historia y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "conflict-thesis": "Juzgar si fue la ciencia contra la religión", "burden-of-proof": "Decidir si Galileo había probado su tesis", "two-books": "Sopesar la Escritura y la observación como autoridades", "personal-politics": "Evaluar el papel de la personalidad y la política" } }
+    }
+  },
+  {
+    "title": "Darwin and the Victorian Controversy",
+    "category": "history",
+    "subject": "History of Science",
+    "topic": "Evolution and society",
+    "instructions": "The examiner will ask you why Darwin's theory caused such controversy and what it does and does not imply. Defend your judgments, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Charles Darwin published On the Origin of Species in 1859. He argued that species change over long periods by natural selection: individuals vary, more are born than can survive, and those whose variations suit their conditions leave more offspring. Darwin had worked on the idea for about twenty years before publishing; he was prompted to act when Alfred Russel Wallace sent him an essay containing a similar theory, and their papers were presented together in 1858.",
+      "The book provoked a varied response. Some clergy, such as the novelist Charles Kingsley, welcomed it as compatible with a creator who made a world able to make itself. The American botanist Asa Gray argued that selection could be the means of a design. Some scientists, such as the anatomist Richard Owen, objected on scientific grounds. Others saw it as an attack on the special dignity of human beings, a question Darwin addressed directly in The Descent of Man in 1871.",
+      "At a meeting in Oxford in 1860, Bishop Samuel Wilberforce and Thomas Henry Huxley clashed over the theory. Wilberforce reportedly asked whether Huxley claimed descent from an ape through his grandfather or his grandmother, and Huxley reportedly answered that he would rather have an ape for an ancestor than a man who used his gifts to obscure the truth. No verbatim record exists, the accounts were written down later, and historians think the exchange grew in the retelling into a symbol of science defeating religion.",
+      "Huxley and his allies also used the debate to establish science as a profession independent of clergy, who had long dominated English learning. On this reading the controversy was partly about who should hold intellectual authority in Victorian society, not only about the truth of a theory.",
+      "The phrase \"survival of the fittest\" was coined by the philosopher Herbert Spencer, and Darwin adopted it in later editions. Spencer and others applied evolutionary language to society, arguing that competition between individuals, classes or nations was natural and good. Francis Galton, Darwin's half-cousin, founded eugenics. Critics ask whether these uses follow from Darwin's theory or distort it, since a description of how nature works does not by itself say how people ought to act.",
+      "Darwin's private faith faded over his life, especially after the death of his daughter Annie in 1851, and he later described himself as an agnostic. Yet he was buried in Westminster Abbey in 1882. Whether natural selection leaves room for purpose, meaning and morality remains debated."
+    ],
+    "objectives": [
+      { "key": "why-controversial", "title": "Explain why the theory was so controversial", "description": "Defends a view on what was really at stake for Victorians: religion, human dignity, social order or intellectual authority.",
+        "concept": "why-controversial", "definition": "The question of which of Darwin's claims troubled his contemporaries most and why.",
+        "facts": ["Responses were mixed: some clergy welcomed the theory and some scientists rejected it.", "The Descent of Man applied evolution to human beings in 1871.", "Huxley and his allies sought to make science independent of clerical authority.", "A strong answer distinguishes scientific objections from religious and social ones."],
+        "misconceptions": ["All religious people rejected Darwin and all scientists accepted him.", "The controversy was only about the age of the Earth."] },
+      { "key": "oxford-debate", "title": "Judge the Oxford debate as history and myth", "description": "Evaluates what the 1860 exchange shows and why it became a legend.",
+        "concept": "oxford-debate", "definition": "The 1860 clash between Wilberforce and Huxley, later told as a decisive victory of science over religion.",
+        "facts": ["No verbatim record of the exchange exists.", "The famous lines come from accounts written down later.", "The story became a symbol in the conflict narrative of science and religion.", "A strong answer explains why a story can matter even when its details are uncertain."],
+        "misconceptions": ["Huxley's reply settled the scientific question on the spot.", "Because the story is embellished, the debate did not matter at all."] },
+      { "key": "social-darwinism", "title": "Decide whether the theory is responsible for its misuse", "description": "Argues whether social Darwinism and eugenics follow from Darwin's theory or distort it.",
+        "concept": "social-darwinism", "definition": "The application of evolutionary ideas such as survival of the fittest to justify social, economic or racial hierarchies.",
+        "facts": ["Herbert Spencer coined survival of the fittest and applied evolutionary ideas to society.", "Francis Galton, Darwin's half-cousin, founded eugenics.", "Describing how nature works does not by itself show how people ought to act.", "A strong answer considers whether Darwin's own writings gave support to these uses."],
+        "misconceptions": ["Survival of the fittest means the strongest or most aggressive always win.", "A scientific theory can never bear any responsibility for how it is used."] },
+      { "key": "meaning-and-morality", "title": "Assess whether evolution leaves room for meaning", "description": "Defends a view on whether natural selection undermines purpose, religious belief or morality.",
+        "concept": "meaning-and-morality", "definition": "The question of what natural selection implies, if anything, for belief in design, human purpose and ethics.",
+        "facts": ["Asa Gray argued selection could be the means of a design.", "Darwin himself moved towards agnosticism.", "Darwin was buried in Westminster Abbey in 1882.", "A strong answer separates what the theory explains from what it leaves open."],
+        "misconceptions": ["Accepting evolution logically requires atheism.", "If humans evolved, morality must be an illusion."] }
+    ],
+    "translations": {
+      "ko": { "title": "다윈과 빅토리아 시대의 논쟁", "instructions": "시험관은 다윈의 이론이 왜 그렇게 큰 논쟁을 일으켰는지, 그리고 그 이론이 무엇을 함축하고 무엇을 함축하지 않는지 물을 것입니다. 판단을 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "why-controversial": "이론이 왜 그토록 논쟁적이었는지 설명하기", "oxford-debate": "옥스퍼드 논쟁을 역사와 신화로 판단하기", "social-darwinism": "이론이 오용에 책임이 있는지 판단하기", "meaning-and-morality": "진화론이 의미의 여지를 남기는지 평가하기" } },
+      "es": { "title": "Darwin y la controversia victoriana", "instructions": "El examinador le preguntará por qué la teoría de Darwin causó tanta controversia y qué implica y qué no. Defienda sus juicios y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "why-controversial": "Explicar por qué la teoría fue tan polémica", "oxford-debate": "Juzgar el debate de Oxford como historia y como mito", "social-darwinism": "Decidir si la teoría es responsable de su mal uso", "meaning-and-morality": "Evaluar si la evolución deja lugar al sentido" } }
+    }
+  },
+  {
+    "title": "The Ethics of Genetic Engineering",
+    "category": "philosophy-psychology",
+    "subject": "Ethics",
+    "topic": "Bioethics",
+    "instructions": "The examiner will ask where you draw lines on changing human genes and why. Defend your positions against hard cases, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Scientists have been able to alter DNA since the 1970s. In 1975 researchers met at Asilomar in California and agreed on voluntary safety guidelines for recombinant DNA work, an early example of scientists regulating their own field. In 2012 Jennifer Doudna and Emmanuelle Charpentier described how the CRISPR-Cas9 system could be used to cut DNA at chosen places, making gene editing far cheaper and more precise; they received the Nobel Prize in Chemistry in 2020.",
+      "Ethicists distinguish somatic editing, which changes cells in one patient's body and is not inherited, from germline editing, which changes embryos, eggs or sperm so that the change passes to future generations. Somatic therapies for inherited blood disorders have been approved in several countries. Germline editing is prohibited or restricted in many countries, partly because the people most affected cannot consent and errors would be inherited.",
+      "In 2018 the Chinese researcher He Jiankui announced the birth of twin girls whose embryos he had edited to disable the CCR5 gene, aiming to make them resistant to HIV. The work was widely condemned as unsafe and unnecessary, since other ways to prevent transmission existed, and he was sentenced to prison in China in 2019.",
+      "A second distinction is between therapy, which treats or prevents disease, and enhancement, which aims to improve traits beyond normal health, such as memory or height. Critics say the line is blurry: is preventing a high risk of heart disease therapy or enhancement? Some, like the philosopher Julian Savulescu, argue that parents have reason to choose the children with the best prospects. Others, like Michael Sandel, argue that a drive to design our children erodes an attitude of accepting life as a gift and would change parenthood itself.",
+      "Further worries concern justice and history. If enhancements were expensive, they might turn economic inequality into biological inequality. The twentieth-century eugenics movements, which led to forced sterilizations in several countries, make many people wary of any project to improve the human population. Some disability-rights advocates argue that editing out conditions sends a message about the worth of people who live with them, while others reply that preventing suffering is not a judgment on anyone's value.",
+      "Defenders of editing often point out that medicine already interferes with nature constantly, so the charge of playing God or being unnatural needs to explain what exactly is wrong with this particular interference."
+    ],
+    "objectives": [
+      { "key": "therapy-enhancement", "title": "Defend a line between therapy and enhancement", "description": "Argues whether the distinction holds and whether it should mark a moral boundary.",
+        "concept": "therapy-enhancement", "definition": "The distinction between editing to treat or prevent disease and editing to improve traits beyond normal health.",
+        "facts": ["Therapy aims to restore or protect normal health; enhancement aims beyond it.", "Borderline cases such as reducing disease risk blur the line.", "Savulescu argues parents have reason to choose the best prospects for their children.", "A strong answer tests the line against a case that sits on it."],
+        "misconceptions": ["The line between therapy and enhancement is always obvious.", "If enhancement is acceptable, every enhancement must be acceptable."] },
+      { "key": "germline-consent", "title": "Judge germline editing and future consent", "description": "Evaluates whether inherited edits are wrong because future people cannot consent.",
+        "concept": "germline-consent", "definition": "The objection that germline edits affect future generations who cannot agree to them and inherit any errors.",
+        "facts": ["Somatic edits affect one patient; germline edits are inherited.", "He Jiankui's 2018 edited twins were widely condemned and he was imprisoned.", "Future people also cannot consent to the genes they get by chance.", "A strong answer explains why consent matters here or why it does not."],
+        "misconceptions": ["Somatic and germline editing raise exactly the same issues.", "Because nobody consents to their natural genes, consent is irrelevant."] },
+      { "key": "playing-god", "title": "Assess the argument that editing is unnatural", "description": "Evaluates appeals to nature, giftedness and playing God.",
+        "concept": "playing-god", "definition": "The objection that deliberately redesigning human biology oversteps a limit we ought to respect.",
+        "facts": ["Medicine already alters natural processes routinely.", "Sandel argues the drive to design children erodes accepting life as a gift.", "An appeal to nature must say which natural features deserve respect and why.", "A strong answer distinguishes a sound worry from a bare dislike of the new."],
+        "misconceptions": ["Whatever is natural is good.", "The playing-God objection only has force for religious believers."] },
+      { "key": "justice-eugenics", "title": "Weigh justice and the shadow of eugenics", "description": "Judges whether gene editing threatens equality and repeats the wrongs of eugenics.",
+        "concept": "justice-eugenics", "definition": "Concerns that editing would deepen inequality or revive the aim of improving the population by excluding some kinds of people.",
+        "facts": ["Twentieth-century eugenics led to forced sterilizations in several countries.", "Costly enhancements could turn economic inequality into biological inequality.", "Some disability-rights advocates see editing out conditions as a judgment on people's worth.", "A strong answer separates state coercion from individual parental choice."],
+        "misconceptions": ["Any form of genetic choice is the same as eugenics.", "Inequality concerns disappear once a technology is invented."] }
+    ],
+    "translations": {
+      "ko": { "title": "유전공학의 윤리", "instructions": "시험관은 인간 유전자를 바꾸는 일에서 어디에 선을 긋는지, 그리고 그 이유를 물을 것입니다. 어려운 사례에 맞서 입장을 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "therapy-enhancement": "치료와 향상 사이의 경계 옹호하기", "germline-consent": "생식세포 편집과 미래 세대의 동의 판단하기", "playing-god": "편집이 부자연스럽다는 논증 평가하기", "justice-eugenics": "정의와 우생학의 그림자 저울질하기" } },
+      "es": { "title": "La ética de la ingeniería genética", "instructions": "El examinador le preguntará dónde traza los límites al modificar genes humanos y por qué. Defienda sus posiciones ante casos difíciles y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "therapy-enhancement": "Defender un límite entre terapia y mejora", "germline-consent": "Juzgar la edición de la línea germinal y el consentimiento futuro", "playing-god": "Evaluar el argumento de que editar es antinatural", "justice-eugenics": "Sopesar la justicia y la sombra de la eugenesia" } }
+    }
+  },
+  {
+    "title": "Climate Justice and Responsibility",
+    "category": "economics-civics",
+    "subject": "Ethics",
+    "topic": "Climate ethics",
+    "instructions": "The examiner will ask who owes what in responding to climate change and why. Defend your principles and test them on hard cases, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Climate change raises questions of fairness as well as science. The emissions that warm the planet come unevenly from different countries and people, while the harms, such as heat, drought, flooding and sea-level rise, often fall hardest on poorer countries and communities that emitted little.",
+      "The United Nations Framework Convention on Climate Change of 1992 states the principle of common but differentiated responsibilities and respective capabilities: every country shares the task, but not equally. Countries that industrialized early account for a large share of cumulative emissions since the nineteenth century, while today China emits the most each year and per-person emissions still vary greatly between countries. Under the Paris Agreement of 2015 every country sets its own nationally determined contribution, with the aim of keeping warming well below 2 degrees Celsius and pursuing 1.5 degrees. At the 2022 conference in Egypt, countries agreed to set up a fund for loss and damage in vulnerable countries.",
+      "Philosophers have proposed several principles for sharing the burden. Polluter pays says those who caused the problem should pay to fix it. Critics reply that many past emitters are dead and that before the science was widely known they could not have known the harm. Beneficiary pays answers that people today still benefit from wealth built on past emissions. Ability to pay, defended by the philosopher Henry Shue among others, says those with the most resources should bear the most, and that no one should be asked to give up emissions needed for a decent minimum of life.",
+      "Climate policy also asks how much weight future people deserve. Economists compare costs now with damages later by applying a discount rate. The Stern Review of 2006 used a very low rate and called for strong early action, while economists such as William Nordhaus argued for higher rates and a more gradual path. The choice of rate is partly an ethical judgment about whether the welfare of people in the future counts less simply because it is later.",
+      "Finally, there is the question of individuals. The philosopher Walter Sinnott-Armstrong argued that a single person's joyride makes no detectable difference to climate harm, so the duty lies with governments rather than individuals. Others reply that individual choices add up, shape norms and express integrity, and that citizens have duties to push for collective action."
+    ],
+    "objectives": [
+      { "key": "historical-responsibility", "title": "Judge historical responsibility for emissions", "description": "Defends a view on whether countries that emitted early owe more today.",
+        "concept": "historical-responsibility", "definition": "The claim that past cumulative emissions create present obligations for the countries or people who produced or benefited from them.",
+        "facts": ["Early-industrializing countries account for a large share of cumulative emissions.", "China is today the largest annual emitter, while per-person emissions differ widely.", "Past emitters may have been ignorant of the harm, and many are dead.", "Beneficiary pays answers that present people still benefit from past emissions."],
+        "misconceptions": ["Only current annual emissions matter for fairness.", "Ignorance of the harm in the past wipes out every present obligation."] },
+      { "key": "who-pays", "title": "Choose a principle for sharing the burden", "description": "Compares polluter pays, beneficiary pays and ability to pay and defends a choice or combination.",
+        "concept": "burden-sharing", "definition": "Principles for deciding how the costs of cutting emissions and adapting to harm should be divided.",
+        "facts": ["The 1992 Convention speaks of common but differentiated responsibilities and respective capabilities.", "Polluter pays ties cost to causation; ability to pay ties it to resources.", "Shue argues no one should give up emissions needed for a decent minimum of life.", "A strong answer tests the chosen principle on a case where the principles disagree."],
+        "misconceptions": ["Fairness means every country cuts emissions by the same percentage.", "One principle obviously settles every case."] },
+      { "key": "future-generations", "title": "Weigh duties to future generations", "description": "Evaluates whether and how much future people's welfare should be discounted.",
+        "concept": "discounting", "definition": "Reducing the weight of future costs and benefits relative to present ones when comparing policies.",
+        "facts": ["The Stern Review of 2006 used a very low discount rate and urged early action.", "Nordhaus argued for higher rates and a more gradual path.", "Discounting future welfare simply because it is later is an ethical choice, not only a technical one.", "A strong answer distinguishes discounting for growth or uncertainty from discounting people's worth."],
+        "misconceptions": ["The discount rate is a purely technical number with no ethical content.", "Future people count for nothing because they do not exist yet."] },
+      { "key": "individual-duty", "title": "Decide whether individuals have climate duties", "description": "Argues whether individual choices matter morally or only collective action does.",
+        "concept": "individual-duty", "definition": "The question of whether a single person has a moral duty to cut emissions when one person's contribution makes no detectable difference.",
+        "facts": ["Sinnott-Armstrong argued one joyride makes no detectable difference to harm.", "Others reply that individual choices add up and shape social norms.", "Citizens may have duties to press for collective action.", "A strong answer addresses the difference-making argument directly."],
+        "misconceptions": ["If one action makes no detectable difference, it cannot be wrong.", "Individual lifestyle change alone can solve climate change."] }
+    ],
+    "translations": {
+      "ko": { "title": "기후 정의와 책임", "instructions": "시험관은 기후 변화 대응에서 누가 무엇을 책임져야 하는지, 그리고 그 이유를 물을 것입니다. 원칙을 옹호하고 어려운 사례로 시험해 보세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "historical-responsibility": "배출에 대한 역사적 책임 판단하기", "who-pays": "부담을 나누는 원칙 선택하기", "future-generations": "미래 세대에 대한 의무 저울질하기", "individual-duty": "개인에게 기후 의무가 있는지 판단하기" } },
+      "es": { "title": "Justicia climática y responsabilidad", "instructions": "El examinador le preguntará quién debe qué al responder al cambio climático y por qué. Defienda sus principios, póngalos a prueba en casos difíciles y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "historical-responsibility": "Juzgar la responsabilidad histórica por las emisiones", "who-pays": "Elegir un principio para repartir la carga", "future-generations": "Sopesar los deberes con las generaciones futuras", "individual-duty": "Decidir si los individuos tienen deberes climáticos" } }
+    }
+  },
+  {
+    "title": "Is Mathematics Discovered or Invented?",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Philosophy of mathematics",
+    "instructions": "The examiner will ask whether mathematical truths are found or made. No calculation is needed; defend a view about what mathematics is, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Mathematicians often speak as if they discover things: a theorem was true before anyone proved it, and a proof reveals it. Yet mathematics is also built from definitions and axioms that people choose. The philosophy of mathematics asks which description is right, or whether both capture something.",
+      "Platonism holds that numbers, sets and other mathematical objects exist independently of human minds, outside space and time, and that mathematicians discover truths about them. The view takes its name from Plato's theory of Forms. Kurt Gödel and G. H. Hardy expressed Platonist views. Platonism explains why mathematical truths seem necessary, objective and the same for everyone. The philosopher Paul Benacerraf posed a famous difficulty in 1973: if mathematical objects are abstract and causally inert, how could we ever come to know anything about them?",
+      "Other views treat mathematics as a human creation. Formalism, associated with David Hilbert's programme, treats mathematics as the manipulation of symbols according to rules, without asking what the symbols refer to. Intuitionism, developed by L. E. J. Brouwer, holds that mathematical objects are mental constructions, and it rejects some classical proofs that assert existence without constructing anything. Fictionalists such as Hartry Field argue that talk of numbers is a useful fiction. The nineteenth-century mathematician Leopold Kronecker is reported to have said that God made the integers and all else is the work of man.",
+      "The history of geometry is often cited in this debate. For two thousand years Euclid's parallel postulate seemed self-evident. In the nineteenth century mathematicians including Lobachevsky, Bolyai and Riemann built consistent geometries in which it fails. Some took this to show that axioms are free choices rather than discoveries. Yet Riemann's geometry later proved to be the mathematics Einstein needed for general relativity.",
+      "In 1960 the physicist Eugene Wigner wrote of the unreasonable effectiveness of mathematics in the natural sciences: structures developed for their own sake, such as complex numbers, turn out to describe the physical world with uncanny accuracy. Platonists see this as evidence that mathematics captures real structure. Others reply that we keep the mathematics that works and forget the rest, or that our mathematics grew out of experience of the world in the first place. W. V. O. Quine and Hilary Putnam argued that because mathematics is indispensable to our best science, we are committed to the existence of mathematical objects."
+    ],
+    "objectives": [
+      { "key": "platonism", "title": "Defend or criticize mathematical Platonism", "description": "Evaluates the claim that mathematical objects exist independently of minds.",
+        "concept": "platonism", "definition": "The view that mathematical objects exist independently of human minds and that mathematical truths are discovered.",
+        "facts": ["Platonism explains why mathematical truths seem necessary and objective.", "Gödel and Hardy expressed Platonist views.", "Benacerraf asked how we could know about causally inert abstract objects.", "A strong answer responds to the problem of knowledge, not only to the feeling of discovery."],
+        "misconceptions": ["Platonism claims numbers are physical things somewhere in the universe.", "Because a proof feels like discovery, Platonism must be true."] },
+      { "key": "invention-views", "title": "Evaluate views that mathematics is made", "description": "Compares formalism, intuitionism or fictionalism and judges what they explain and miss.",
+        "concept": "invention-views", "definition": "Views that treat mathematics as a human creation: rule-governed symbol games, mental constructions or useful fictions.",
+        "facts": ["Formalism treats mathematics as manipulating symbols by rules.", "Brouwer's intuitionism treats mathematical objects as mental constructions and rejects some non-constructive proofs.", "Fictionalism treats talk of numbers as a useful fiction.", "A strong answer explains why invented mathematics is not therefore arbitrary."],
+        "misconceptions": ["If mathematics is invented, its results are just matters of opinion.", "All anti-Platonist views agree with each other."] },
+      { "key": "non-euclidean", "title": "Interpret the lesson of non-Euclidean geometry", "description": "Judges whether alternative geometries show that axioms are chosen rather than discovered.",
+        "concept": "non-euclidean-geometry", "definition": "Consistent geometries in which Euclid's parallel postulate fails, developed in the nineteenth century.",
+        "facts": ["Euclid's parallel postulate long seemed self-evident.", "Lobachevsky, Bolyai and Riemann built consistent geometries without it.", "Riemann's geometry later served general relativity.", "A strong answer says what the episode supports for each side."],
+        "misconceptions": ["Non-Euclidean geometry proved Euclid wrong.", "If several geometries are consistent, none can describe reality."] },
+      { "key": "effectiveness", "title": "Explain the effectiveness of mathematics", "description": "Defends an explanation of why abstract mathematics describes the physical world so well.",
+        "concept": "unreasonable-effectiveness", "definition": "Wigner's puzzle that mathematics developed for its own sake so often describes nature with great accuracy.",
+        "facts": ["Wigner raised the puzzle in 1960.", "Complex numbers, developed abstractly, are central to modern physics.", "Sceptics note selection: we keep the mathematics that works and forget the rest.", "The Quine-Putnam indispensability argument infers mathematical objects from their role in science."],
+        "misconceptions": ["Every piece of pure mathematics eventually finds a physical use.", "The usefulness of mathematics proves it is invented to fit the world."] }
+    ],
+    "translations": {
+      "ko": { "title": "수학은 발견인가 발명인가?", "instructions": "시험관은 수학적 진리가 발견되는 것인지 만들어지는 것인지 물을 것입니다. 계산은 필요 없습니다. 수학이 무엇인지에 대한 견해를 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "platonism": "수학적 플라톤주의를 옹호하거나 비판하기", "invention-views": "수학이 만들어진 것이라는 견해 평가하기", "non-euclidean": "비유클리드 기하학의 교훈 해석하기", "effectiveness": "수학의 놀라운 유효성 설명하기" } },
+      "es": { "title": "¿Las matemáticas se descubren o se inventan?", "instructions": "El examinador le preguntará si las verdades matemáticas se encuentran o se crean. No hace falta calcular; defienda una postura sobre qué son las matemáticas y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "platonism": "Defender o criticar el platonismo matemático", "invention-views": "Evaluar las posturas de que las matemáticas se crean", "non-euclidean": "Interpretar la lección de la geometría no euclidiana", "effectiveness": "Explicar la eficacia de las matemáticas" } }
+    }
+  },
+  {
+    "title": "The Two Cultures: Science and the Humanities",
+    "category": "literature",
+    "subject": "Intellectual History",
+    "topic": "Science and the humanities",
+    "instructions": "The examiner will ask whether science and the humanities are really divided and what each owes the other. Defend your view, and say \"I don't know\" if you don't.",
+    "passage": [
+      "In 1959 the British novelist and former physicist C. P. Snow gave the Rede Lecture at Cambridge, published as The Two Cultures and the Scientific Revolution. He argued that the intellectual life of the West had split into two groups, literary intellectuals and scientists, who barely understood or respected each other. He said he had asked educated people whether they could describe the Second Law of Thermodynamics, and that this was the scientific equivalent of asking whether they had read a work of Shakespeare.",
+      "Snow's argument was not only about manners. He claimed that a literary establishment indifferent to science was ill-equipped to govern a modern society, and that the scientific and industrial revolution was the main hope for relieving poverty in the poorer nations. He suggested that the humanities had at times been suspicious of progress itself.",
+      "In 1962 the literary critic F. R. Leavis replied in a lecture of unusual harshness, attacking Snow's standing as a novelist and thinker. Behind the personal attack was a real disagreement: Leavis held that literature and criticism keep alive the questions of value and purpose that a society must ask about its own progress, and that a culture cannot be judged by its material standard of living alone.",
+      "The quarrel had a Victorian precedent. In 1880 Thomas Henry Huxley argued that science deserved a central place in education, and in 1882 Matthew Arnold replied that the study of letters remained essential because it relates knowledge to our sense of conduct and beauty. In 1963 Snow himself suggested that a third culture, including the social sciences, might bridge the gap.",
+      "Later episodes renewed the debate. In 1996 the physicist Alan Sokal had a deliberately nonsensical article accepted by the cultural studies journal Social Text, and presented it as evidence of careless thinking about science in parts of the humanities. In 1998 the biologist E. O. Wilson called in Consilience for uniting all knowledge, including ethics and the arts, under explanations continuous with natural science. Critics responded that interpretation, meaning and value cannot be reduced to scientific explanation without losing what makes them what they are."
+    ],
+    "objectives": [
+      { "key": "divide-real", "title": "Judge whether the two cultures really exist", "description": "Defends a view on whether Snow described a real and harmful divide or a caricature.",
+        "concept": "two-cultures", "definition": "Snow's claim that scientists and literary intellectuals had become two groups unable to understand each other.",
+        "facts": ["Snow gave the Rede Lecture in 1959.", "He compared knowing the Second Law of Thermodynamics to having read Shakespeare.", "He later proposed a third culture including the social sciences.", "A strong answer tests the claim against examples of real exchange or real ignorance."],
+        "misconceptions": ["Snow argued that the humanities are worthless.", "Because some people know both fields, there is no divide at all."] },
+      { "key": "snow-leavis", "title": "Weigh the Snow-Leavis quarrel", "description": "Evaluates what was really at stake between Snow and Leavis beyond the personal attack.",
+        "concept": "snow-leavis", "definition": "The 1962 dispute in which Leavis attacked Snow, defending literature as the guardian of questions of value.",
+        "facts": ["Leavis replied to Snow in 1962 with unusual harshness.", "Snow held science and industry to be the main hope against world poverty.", "Leavis held that a culture cannot be judged by its material standard of living alone.", "A strong answer separates the personal attack from the underlying disagreement."],
+        "misconceptions": ["Leavis simply opposed science.", "The quarrel was only a personal feud with no real issue."] },
+      { "key": "education", "title": "Decide what an educated person must know", "description": "Argues what place science and the humanities should have in education.",
+        "concept": "liberal-education", "definition": "The question, debated by Huxley and Arnold and later by Snow, of what knowledge education should give everyone.",
+        "facts": ["Huxley argued in 1880 that science deserves a central place in education.", "Arnold replied in 1882 that letters relate knowledge to conduct and beauty.", "Snow worried that leaders ignorant of science could not govern a modern society.", "A strong answer gives a reason for its priorities, not only a list of subjects."],
+        "misconceptions": ["Education should only teach what is useful for jobs.", "Reading literature has nothing to do with judging science or technology."] },
+      { "key": "consilience", "title": "Assess whether science can explain the humanities", "description": "Evaluates Wilson's consilience and what the Sokal hoax does and does not show.",
+        "concept": "consilience", "definition": "Wilson's proposal that all knowledge, including ethics and the arts, can be unified under explanations continuous with natural science.",
+        "facts": ["Wilson published Consilience in 1998.", "Sokal's nonsensical article was accepted by Social Text in 1996.", "Critics argue meaning and value cannot be reduced to scientific explanation.", "A strong answer says what a single hoax can and cannot prove about a whole field."],
+        "misconceptions": ["The Sokal hoax proved the humanities are worthless.", "Explaining how a feeling arises in the brain tells us whether a poem is good."] }
+    ],
+    "translations": {
+      "ko": { "title": "두 문화: 과학과 인문학", "instructions": "시험관은 과학과 인문학이 정말 나뉘어 있는지, 그리고 서로에게 무엇을 빚지고 있는지 물을 것입니다. 견해를 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "divide-real": "두 문화가 실제로 존재하는지 판단하기", "snow-leavis": "스노와 리비스의 논쟁 저울질하기", "education": "교육받은 사람이 알아야 할 것 정하기", "consilience": "과학이 인문학을 설명할 수 있는지 평가하기" } },
+      "es": { "title": "Las dos culturas: la ciencia y las humanidades", "instructions": "El examinador le preguntará si la ciencia y las humanidades están realmente divididas y qué se deben una a otra. Defienda su postura y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "divide-real": "Juzgar si las dos culturas existen realmente", "snow-leavis": "Sopesar la disputa entre Snow y Leavis", "education": "Decidir qué debe saber una persona educada", "consilience": "Evaluar si la ciencia puede explicar las humanidades" } }
+    }
+  },
+  {
+    "title": "What Is Art?",
+    "category": "arts-languages",
+    "subject": "Aesthetics",
+    "topic": "Defining art",
+    "instructions": "The examiner will ask what makes something a work of art. Test each definition against examples, defend your own view, and say \"I don't know\" if you don't.",
+    "passage": [
+      "People have long tried to say what all works of art have in common. The oldest answer, found in Plato and Aristotle, is that art is mimesis, imitation or representation. Plato distrusted it as a copy of a copy, far from the truth; Aristotle thought imitation natural to human beings and a source of learning and pleasure. But much music, architecture and abstract painting represents nothing.",
+      "Expression theories hold that art communicates or clarifies feeling. In What Is Art? (1897) Leo Tolstoy argued that art is the activity in which a person, having experienced a feeling, transmits it to others so that they are infected by it, and that art should unite people. He condemned much celebrated art of his day as obscure and exclusive. R. G. Collingwood later argued that art is the artist's working out of an emotion that was at first unclear.",
+      "Formalism looks to the work itself. In 1914 the critic Clive Bell proposed that what all visual art shares is significant form, arrangements of lines and colours that stir a distinctive aesthetic emotion, regardless of subject matter.",
+      "In 1917 Marcel Duchamp submitted a mass-produced porcelain urinal, signed \"R. Mutt\" and titled Fountain, to an exhibition in New York that had promised to show any work whose fee was paid. It was not displayed. Duchamp's readymades seemed to show that an object could become art without being made, beautiful or expressive by the artist, and later critics treated Fountain as one of the most influential works of the century.",
+      "Such cases inspired institutional theories. Arthur Danto, struck by Andy Warhol's Brillo Box (1964), which looked almost exactly like ordinary supermarket boxes, argued that what makes something art is a theory and an atmosphere of art history, which he called the artworld. George Dickie argued that a work of art is an artifact presented to an artworld public. Critics object that this seems circular and makes art depend on insiders' decisions.",
+      "Others doubt that art can be defined at all. In 1956 Morris Weitz, drawing on Wittgenstein's idea of family resemblance, argued that art is an open concept whose members share overlapping similarities but no single essence, and that each new movement stretches it further. Recent images made by machine-learning systems add a new test case for every theory."
+    ],
+    "objectives": [
+      { "key": "classic-theories", "title": "Compare imitation, expression and form", "description": "Evaluates the classic definitions of art against counterexamples.",
+        "concept": "theories-of-art", "definition": "Definitions of art as imitation, as the communication of feeling, or as significant form.",
+        "facts": ["Plato and Aristotle treated art as mimesis, though they valued it differently.", "Tolstoy defined art as transmitting a felt emotion that infects others.", "Bell proposed significant form as what all visual art shares.", "A strong answer finds a counterexample for each theory and says whether it is fatal."],
+        "misconceptions": ["Art is simply anything beautiful.", "A good definition must match every personal taste."] },
+      { "key": "fountain", "title": "Decide whether Fountain is art", "description": "Defends a verdict on Duchamp's readymade and what follows from it.",
+        "concept": "readymade", "definition": "An ordinary manufactured object selected and presented as art by an artist, as with Duchamp's Fountain.",
+        "facts": ["Duchamp submitted Fountain, a signed urinal, in 1917.", "It was not displayed at the exhibition.", "The readymade challenged the idea that art requires skill, beauty or making.", "A strong answer says what feature, if any, makes the urinal art and an identical one not."],
+        "misconceptions": ["Fountain is art simply because it is in a museum now.", "Fountain cannot be art because anyone could have done it."] },
+      { "key": "institutional", "title": "Assess the institutional theory", "description": "Evaluates whether the artworld makes something art and whether that is circular.",
+        "concept": "institutional-theory", "definition": "The view that something is art because of its place in the practices, theories and institutions of the artworld.",
+        "facts": ["Danto developed the idea of the artworld after Warhol's Brillo Box.", "Brillo Box looked almost exactly like ordinary boxes.", "Dickie defined art as an artifact presented to an artworld public.", "Critics call the theory circular and elitist."],
+        "misconceptions": ["The institutional theory says critics may call anything art for any reason.", "If art depends on context, it cannot be good or bad."] },
+      { "key": "open-concept", "title": "Judge whether art can be defined", "description": "Argues whether art has an essence or is an open, family-resemblance concept.",
+        "concept": "open-concept", "definition": "Weitz's view that art has no single defining feature but a family of overlapping resemblances that new works keep extending.",
+        "facts": ["Weitz argued in 1956 that art is an open concept.", "The idea draws on Wittgenstein's family resemblance.", "Each new movement can stretch the concept further.", "A strong answer considers a hard new case such as machine-made images."],
+        "misconceptions": ["If art cannot be defined, the word is meaningless.", "Anything at all is art."] }
+    ],
+    "translations": {
+      "ko": { "title": "예술이란 무엇인가?", "instructions": "시험관은 무엇이 어떤 것을 예술 작품으로 만드는지 물을 것입니다. 각 정의를 사례로 시험하고 자신의 견해를 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "classic-theories": "모방, 표현, 형식 이론 비교하기", "fountain": "「샘」이 예술인지 판단하기", "institutional": "제도론 평가하기", "open-concept": "예술을 정의할 수 있는지 판단하기" } },
+      "es": { "title": "¿Qué es el arte?", "instructions": "El examinador le preguntará qué hace que algo sea una obra de arte. Ponga a prueba cada definición con ejemplos, defienda su propia postura y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "classic-theories": "Comparar la imitación, la expresión y la forma", "fountain": "Decidir si Fuente es arte", "institutional": "Evaluar la teoría institucional", "open-concept": "Juzgar si el arte puede definirse" } }
+    }
+  },
+  {
+    "title": "Impressionism as Rebellion",
+    "category": "arts-languages",
+    "subject": "Art History",
+    "topic": "Impressionism",
+    "instructions": "The examiner will ask how rebellious the Impressionists really were and what their paintings meant. Defend your interpretation with examples, and say \"I don't know\" if you don't.",
+    "passage": [
+      "In nineteenth-century France, artistic careers depended on the Salon, the official exhibition associated with the Académie des Beaux-Arts. Its juries favoured smooth finish and a hierarchy of genres in which large paintings of history, myth and religion ranked above landscapes and scenes of everyday life. Rejection could cost an artist buyers and reputation.",
+      "In 1863 so many works were rejected that Emperor Napoleon III allowed a Salon des Refusés to show them. Édouard Manet's Le Déjeuner sur l'herbe, showing a nude woman picnicking with clothed modern men, caused a scandal there. Manet became a hero to younger painters, though he never showed in their independent exhibitions.",
+      "In 1874 a group including Claude Monet, Pierre-Auguste Renoir, Camille Pissarro, Edgar Degas and Berthe Morisot organized their own exhibition, in the former studio of the photographer Nadar. A critic, Louis Leroy, mocked Monet's Impression, Sunrise and called the group Impressionists, and they adopted the name. Eight group exhibitions followed until 1886.",
+      "The Impressionists often painted outdoors, used visible, broken brushstrokes and bright colour to record changing light, and took subjects from modern life: railway stations, boulevards, cafés, suburban leisure and middle-class interiors. Morisot and Mary Cassatt painted women's domestic and social worlds from the inside. Critics at first called the work unfinished.",
+      "Historians disagree about how rebellious this was. Several Impressionists still sent work to the Salon when it suited them; Renoir and Monet both did around 1880. They depended on dealers such as Paul Durand-Ruel and on private collectors, so independence from the state also meant entry into a commercial market. Some see their bright scenes of leisure as a celebration of bourgeois modern Paris, newly rebuilt under Baron Haussmann; others, following the art historian T. J. Clark, read them as registering the anonymity, spectacle and class divisions of that city. Pissarro held anarchist sympathies, while Degas held strongly conservative views, so the group shared no single politics."
+    ],
+    "objectives": [
+      { "key": "rebellion-or-career", "title": "Judge how rebellious the Impressionists were", "description": "Defends a view on whether the movement was a rebellion against the art establishment or a career strategy within a changing market.",
+        "concept": "artistic-rebellion", "definition": "The question of whether the Impressionists rejected the official art system or sought success by other routes.",
+        "facts": ["The Salon and Académie controlled artistic reputations.", "The group held eight independent exhibitions from 1874 to 1886.", "Several members still submitted to the Salon, including Renoir and Monet around 1880.", "A strong answer weighs both the risk they took and the compromises they made."],
+        "misconceptions": ["The Impressionists completely rejected the Salon from the start.", "Wanting to sell paintings means they were not really rebels."] },
+      { "key": "technique-meaning", "title": "Interpret technique as a statement", "description": "Argues whether broken brushwork and painting outdoors were themselves a challenge to accepted values.",
+        "concept": "technique-meaning", "definition": "The idea that a way of painting can carry meaning, such as valuing perception and the passing moment over finish and permanence.",
+        "facts": ["Impressionists used visible, broken brushstrokes and bright colour.", "They often painted outdoors to record changing light.", "Critics at first called the work unfinished.", "A strong answer connects technique to a claim about what painting is for."],
+        "misconceptions": ["Impressionists painted loosely because they lacked skill.", "Technique is only a matter of method and carries no meaning."] },
+      { "key": "modern-life", "title": "Decide whether they celebrated or critiqued modern life", "description": "Interprets the scenes of leisure and city life as celebration, critique or neither.",
+        "concept": "modern-life", "definition": "Competing readings of Impressionist scenes of Paris and its suburbs as celebrations of bourgeois modernity or records of its tensions.",
+        "facts": ["Subjects included railway stations, boulevards, cafés and suburban leisure.", "Paris had recently been rebuilt under Haussmann.", "T. J. Clark read the paintings as registering class and spectacle in the new city.", "Morisot and Cassatt painted women's social worlds from the inside."],
+        "misconceptions": ["Pretty pictures cannot have anything to say about society.", "Every Impressionist shared the same political views."] },
+      { "key": "market-independence", "title": "Assess independence and the art market", "description": "Evaluates whether leaving the state system for dealers and collectors made artists freer.",
+        "concept": "market-independence", "definition": "The trade-off between official patronage and dependence on dealers, collectors and the market.",
+        "facts": ["The Impressionists relied on dealers such as Paul Durand-Ruel.", "Rejection by the Salon could cost buyers and reputation.", "Independent exhibitions required funds and organization.", "A strong answer asks whether market pressure replaced academic pressure."],
+        "misconceptions": ["Leaving the Salon meant artists were free of all outside pressure.", "Commercial success shows a movement was never radical."] }
+    ],
+    "translations": {
+      "ko": { "title": "반역으로서의 인상주의", "instructions": "시험관은 인상주의 화가들이 실제로 얼마나 반항적이었는지, 그리고 그들의 그림이 무엇을 의미했는지 물을 것입니다. 예를 들어 해석을 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "rebellion-or-career": "인상주의자들이 얼마나 반항적이었는지 판단하기", "technique-meaning": "기법을 하나의 주장으로 해석하기", "modern-life": "근대 생활을 찬미했는지 비판했는지 판단하기", "market-independence": "독립성과 미술 시장 평가하기" } },
+      "es": { "title": "El impresionismo como rebelión", "instructions": "El examinador le preguntará cuán rebeldes fueron realmente los impresionistas y qué significaban sus cuadros. Defienda su interpretación con ejemplos y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "rebellion-or-career": "Juzgar cuán rebeldes fueron los impresionistas", "technique-meaning": "Interpretar la técnica como una declaración", "modern-life": "Decidir si celebraron o criticaron la vida moderna", "market-independence": "Evaluar la independencia y el mercado del arte" } }
+    }
+  },
+  {
+    "title": "Picasso's Guernica and Art as Protest",
+    "category": "arts-languages",
+    "subject": "Art History",
+    "topic": "Political art",
+    "instructions": "The examiner will ask what Guernica means and whether art can work as protest. Defend your reading with details of the painting, and say \"I don't know\" if you don't.",
+    "passage": [
+      "On 26 April 1937, during the Spanish Civil War, aircraft of the German Condor Legion, with Italian support, bombed the Basque town of Guernica on behalf of Francisco Franco's Nationalist forces. The attack killed many civilians and destroyed much of the town. News reports and photographs spread quickly around the world.",
+      "Pablo Picasso had already been commissioned by the government of the Spanish Republic to make a mural for its pavilion at the 1937 International Exposition in Paris. After the bombing he painted Guernica in a matter of weeks. The canvas is very large, about three and a half metres high and nearly eight metres wide, and painted only in black, white and greys, which some viewers compare to newsprint.",
+      "The painting shows no aircraft and no town in any realistic way. Instead it presents a crowded, broken space: a bull, a screaming wounded horse, a mother holding a dead child, a fallen figure with a broken sword, a woman leaning in through a window with a lamp, and a light overhead that some read as an eye or an electric bulb. Picasso resisted fixed interpretations. Asked about the bull and the horse, he suggested they were simply a bull and a horse and that viewers should make of them what they would.",
+      "After the exposition the painting toured to raise support for the Republic and then stayed for decades at the Museum of Modern Art in New York. Picasso asked that it not go to Spain until democracy was restored; it arrived in 1981, after Franco's death, and it now hangs in the Museo Reina Sofía in Madrid. A tapestry copy hung at the United Nations in New York, and in 2003 it was reportedly covered during press statements on the coming war in Iraq, which many took as proof of the image's continuing power.",
+      "Interpreters disagree about how the painting works. Some argue that its distortion and refusal of specific detail make it a universal image of the suffering of war, which is why it has been taken up by protesters ever since. Others argue that this universality drains away the specific event and its perpetrators. Some note that a work commissioned by a government at war raises the question of where protest ends and propaganda begins. And some doubt that any painting can change what armies do, while others reply that art shapes memory and how events are judged."
+    ],
+    "objectives": [
+      { "key": "symbols", "title": "Interpret the painting's symbols", "description": "Offers and defends readings of figures such as the bull, the horse and the light, and judges the value of their ambiguity.",
+        "concept": "ambiguous-symbolism", "definition": "Images whose meaning is left open by the artist, inviting several readings rather than one.",
+        "facts": ["The painting includes a bull, a wounded horse, a mother with a dead child, a fallen figure with a broken sword and a woman with a lamp.", "Picasso resisted fixing the meaning of the bull and horse.", "The monochrome palette is often compared to newsprint.", "A strong answer grounds a reading in visible details and admits alternatives."],
+        "misconceptions": ["Every figure has one correct meaning the viewer must decode.", "If the artist refused to explain, any reading is as good as any other."] },
+      { "key": "universal-specific", "title": "Judge universality against specificity", "description": "Argues whether the painting's abstraction strengthens its protest or blurs the real event.",
+        "concept": "universal-specific", "definition": "The tension between depicting a particular atrocity and making an image of suffering that applies to all wars.",
+        "facts": ["The painting shows no aircraft or realistic view of the town.", "It has been used by protesters against many later wars.", "Critics say universality can hide the specific perpetrators.", "A strong answer considers what is gained and lost by leaving out detail."],
+        "misconceptions": ["A realistic picture of the bombing would necessarily be more powerful.", "Because it is abstract, the painting is not about Guernica at all."] },
+      { "key": "protest-propaganda", "title": "Distinguish protest from propaganda", "description": "Evaluates whether a work commissioned by a government at war is protest art, propaganda or both.",
+        "concept": "protest-propaganda", "definition": "The question of whether art made for a political cause can keep artistic and moral integrity.",
+        "facts": ["The Spanish Republic commissioned the mural for its pavilion at the 1937 Paris exposition.", "The painting toured to raise support for the Republic.", "Picasso kept it out of Spain until democracy was restored.", "A strong answer defines propaganda and tests the painting against the definition."],
+        "misconceptions": ["Any commissioned political art is mere propaganda.", "Art made for a good cause cannot be propaganda."] },
+      { "key": "efficacy", "title": "Decide whether art can change anything", "description": "Defends a view on what, if anything, protest art accomplishes.",
+        "concept": "art-efficacy", "definition": "The question of whether political art changes events, beliefs or memory, or only expresses feeling.",
+        "facts": ["The painting did not stop the war or Franco's victory.", "It has shaped how the bombing is remembered worldwide.", "A copy at the United Nations was reportedly covered in 2003.", "A strong answer distinguishes immediate political effects from longer-term effects on memory and judgment."],
+        "misconceptions": ["If a painting does not stop a war, it achieved nothing.", "Art changes history as directly as political action does."] }
+    ],
+    "translations": {
+      "ko": { "title": "피카소의 「게르니카」와 저항으로서의 예술", "instructions": "시험관은 「게르니카」가 무엇을 의미하는지, 그리고 예술이 저항의 역할을 할 수 있는지 물을 것입니다. 그림의 세부로 해석을 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "symbols": "그림의 상징 해석하기", "universal-specific": "보편성과 구체성 판단하기", "protest-propaganda": "저항과 선전 구별하기", "efficacy": "예술이 무언가를 바꿀 수 있는지 판단하기" } },
+      "es": { "title": "El Guernica de Picasso y el arte como protesta", "instructions": "El examinador le preguntará qué significa el Guernica y si el arte puede funcionar como protesta. Defienda su lectura con detalles del cuadro y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "symbols": "Interpretar los símbolos del cuadro", "universal-specific": "Juzgar lo universal frente a lo concreto", "protest-propaganda": "Distinguir la protesta de la propaganda", "efficacy": "Decidir si el arte puede cambiar algo" } }
+    }
+  },
+  {
+    "title": "Beauty and Taste",
+    "category": "arts-languages",
+    "subject": "Aesthetics",
+    "topic": "Judgments of taste",
+    "instructions": "The examiner will ask whether beauty is in the object or in the eye of the beholder. Defend your view with examples, and say \"I don't know\" if you don't.",
+    "passage": [
+      "We disagree about beauty constantly, yet we also argue about it as if someone could be right. If beauty were merely a matter of personal liking, arguing about it would make no more sense than arguing about whether one likes coffee. If it were an objective property, it is hard to say how it could be measured.",
+      "Plato treated beauty as objective and ultimately as a Form. In the Symposium, Diotima describes a ladder of love that rises from the beauty of one body to all bodies, to beautiful souls, laws and knowledge, and finally to beauty itself.",
+      "In his essay Of the Standard of Taste (1757), David Hume began from the view that beauty is no quality in things themselves but exists in the mind that contemplates them. Yet he argued that there is a standard of taste: the joint verdict of true judges, who have delicate sentiment, practice, experience in comparing works, good sense and freedom from prejudice. He told a story from Don Quixote of two wine tasters who detect a taste of leather and of iron in a cask, and are mocked until a key on a leather thong is found at the bottom. Critics ask how we identify true judges without already knowing which works are good.",
+      "In the Critique of the Power of Judgment (1790), Immanuel Kant distinguished the agreeable, which simply pleases me, from the beautiful. A judgment of beauty, he argued, is disinterested, not based on desire to own or use the object, and it claims universal agreement even though it rests on feeling rather than on concepts or proof. When I call something beautiful I speak as if everyone ought to agree.",
+      "Other thinkers locate taste in society or biology. In Distinction (1979) the sociologist Pierre Bourdieu argued that taste marks and reproduces social class: what counts as refined taste is learned in privileged upbringings and then used to look down on others. Some evolutionary psychologists argue that certain preferences, for example for some kinds of landscape or for symmetrical faces, are widely shared because of our evolutionary history. Anthropologists note how widely ideals of beauty vary between cultures and periods."
+    ],
+    "objectives": [
+      { "key": "subjective-objective", "title": "Decide whether beauty is subjective", "description": "Defends a view on whether beauty is a property of objects, a response of viewers, or something between.",
+        "concept": "beauty-status", "definition": "The question of whether beauty exists in objects themselves or only in the responses of those who perceive them.",
+        "facts": ["Plato treated beauty as objective, rising in the Symposium to beauty itself.", "Hume said beauty exists in the mind that contemplates things.", "We argue about beauty as if one view could be correct.", "A strong answer explains the fact of disagreement and the practice of argument together."],
+        "misconceptions": ["Beauty is in the eye of the beholder, so no judgment of beauty is better than another.", "If beauty were objective, everyone would already agree."] },
+      { "key": "hume-standard", "title": "Evaluate Hume's standard of taste", "description": "Assesses Hume's appeal to true judges and whether it is circular.",
+        "concept": "standard-of-taste", "definition": "Hume's proposal that the joint verdict of qualified judges provides a standard for judgments of beauty.",
+        "facts": ["Hume's true judges have delicate sentiment, practice, comparison, good sense and no prejudice.", "The wine-tasting story illustrates delicacy of taste.", "Critics ask how to identify true judges without already knowing which works are good.", "A strong answer responds to the circularity worry."],
+        "misconceptions": ["Hume thought every opinion about beauty is equally valid.", "Expert taste is just snobbery and has no basis."] },
+      { "key": "kant-judgment", "title": "Explain Kant's judgment of beauty", "description": "Interprets Kant's claims that beauty is disinterested and claims universal agreement, and evaluates them.",
+        "concept": "judgment-of-taste", "definition": "Kant's view that a judgment of beauty rests on disinterested feeling yet claims that everyone ought to agree.",
+        "facts": ["Kant distinguished the agreeable from the beautiful.", "A judgment of beauty is disinterested, not based on desire for the object.", "It claims universal agreement without proof from concepts.", "A strong answer asks whether such a claim can be justified."],
+        "misconceptions": ["Kant meant that a beautiful thing must be useful.", "Claiming universal agreement means Kant thought everyone actually agrees."] },
+      { "key": "taste-and-class", "title": "Weigh social and biological explanations of taste", "description": "Evaluates whether class, culture or evolution explains taste, and whether explaining taste debunks it.",
+        "concept": "explaining-taste", "definition": "Accounts that trace taste to social class, culture or evolutionary history rather than to the qualities of objects.",
+        "facts": ["Bourdieu argued in Distinction that taste marks and reproduces social class.", "Some evolutionary psychologists argue some preferences are widely shared.", "Ideals of beauty vary widely between cultures and periods.", "A strong answer asks whether explaining the origin of a judgment shows it is mistaken."],
+        "misconceptions": ["If taste can be explained socially, no work is really better than another.", "Shared preferences prove that beauty is a fixed biological fact."] }
+    ],
+    "translations": {
+      "ko": { "title": "아름다움과 취미", "instructions": "시험관은 아름다움이 대상에 있는지 보는 사람의 눈에 있는지 물을 것입니다. 예를 들어 견해를 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "subjective-objective": "아름다움이 주관적인지 판단하기", "hume-standard": "흄의 취미의 기준 평가하기", "kant-judgment": "칸트의 미적 판단 설명하기", "taste-and-class": "취미에 대한 사회적·생물학적 설명 저울질하기" } },
+      "es": { "title": "La belleza y el gusto", "instructions": "El examinador le preguntará si la belleza está en el objeto o en los ojos de quien mira. Defienda su postura con ejemplos y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "subjective-objective": "Decidir si la belleza es subjetiva", "hume-standard": "Evaluar la norma del gusto de Hume", "kant-judgment": "Explicar el juicio de lo bello en Kant", "taste-and-class": "Sopesar las explicaciones sociales y biológicas del gusto" } }
+    }
+  },
+  {
+    "title": "Prometheus and the Greek Myths of Defiance",
+    "category": "literature",
+    "subject": "Mythology",
+    "topic": "Greek myth",
+    "instructions": "The examiner will ask what the myths of Prometheus and other defiers of the gods mean. Defend your interpretation with the stories, and say \"I don't know\" if you don't.",
+    "passage": [
+      "The earliest full accounts of Prometheus come from the poet Hesiod, around 700 BCE, in the Theogony and the Works and Days. At a sacrifice at Mecone, Prometheus divides an ox and tricks Zeus into choosing the portion of bones wrapped in glistening fat, leaving the meat for humans. In anger Zeus withholds fire; Prometheus steals it and brings it to humans hidden in a fennel stalk. Zeus punishes Prometheus by chaining him to a rock, where an eagle eats his liver, which grows back, until Heracles later frees him. Zeus punishes humanity by sending Pandora, whose jar releases evils into the world.",
+      "Hesiod tells the story as a warning: it is not possible to deceive or escape the mind of Zeus, and human labour and hardship follow from Prometheus's cleverness.",
+      "The tragedy Prometheus Bound, traditionally attributed to Aeschylus though its authorship is disputed, gives a different picture. Prometheus is a suffering benefactor who has given humans not only fire but writing, numbers, medicine and the other arts, and Zeus is a new and harsh ruler. Prometheus refuses to submit and holds a secret that threatens Zeus's power.",
+      "Greek myth contains many other stories of mortals who challenge the gods. Arachne, in the version told by the Roman poet Ovid, challenges Athena to a weaving contest and is turned into a spider. Niobe boasts that her children make her greater than the goddess Leto, and her children are killed. Icarus flies too near the sun on wings his father made. Many readers take these as warnings against hubris, overweening pride. Others note that the stories often show the gods as jealous and cruel, so the warning may be less about virtue than about power.",
+      "Later writers reshaped Prometheus as a hero of human freedom and creativity. Goethe's poem Prometheus has him defy Zeus and shape humans in his own image. Percy Bysshe Shelley wrote the lyrical drama Prometheus Unbound (1820), in which Prometheus resists tyranny. Mary Shelley subtitled Frankenstein (1818) The Modern Prometheus, linking the myth to the dangers of scientific ambition. Albert Camus later made Sisyphus, endlessly pushing his rock, a figure of defiant human dignity. Today Prometheus is often invoked in arguments about technology."
+    ],
+    "objectives": [
+      { "key": "hero-or-transgressor", "title": "Judge whether Prometheus is hero or transgressor", "description": "Defends a reading of Prometheus as benefactor, trickster, rebel or wrongdoer.",
+        "concept": "prometheus", "definition": "The Titan who tricks Zeus and steals fire for humans, read variously as benefactor, trickster and rebel.",
+        "facts": ["Prometheus tricks Zeus at Mecone and steals fire in a fennel stalk.", "He is chained and an eagle eats his regrowing liver until Heracles frees him.", "Humans are also punished through Pandora.", "A strong answer weighs the benefits to humans against the costs his acts bring."],
+        "misconceptions": ["Prometheus is simply a good hero and Zeus simply a villain in every version.", "Because he broke the rules, Prometheus must be in the wrong."] },
+      { "key": "hesiod-aeschylus", "title": "Compare Hesiod's and Aeschylus's Prometheus", "description": "Interprets how the two versions differ in meaning and why.",
+        "concept": "versions-of-myth", "definition": "The difference between Hesiod's cautionary trickster tale and the tragic portrait of Prometheus as a suffering benefactor.",
+        "facts": ["Hesiod uses the story to show that Zeus's mind cannot be deceived.", "Prometheus Bound presents him as giver of the arts and Zeus as a harsh new ruler.", "The authorship of Prometheus Bound is disputed.", "A strong answer explains what the changes do to the myth's meaning."],
+        "misconceptions": ["A myth has one original, correct version.", "Different versions are just mistakes in retelling."] },
+      { "key": "hubris", "title": "Interpret the myths of hubris", "description": "Argues whether stories such as Arachne, Niobe and Icarus teach humility or expose the gods' power.",
+        "concept": "hubris", "definition": "Overweening pride or presumption that challenges the gods or the limits of human life.",
+        "facts": ["In Ovid's version Arachne challenges Athena and is turned into a spider.", "Niobe's children are killed after she boasts against Leto.", "Icarus flies too close to the sun.", "A strong answer considers whether the gods in these stories are just."],
+        "misconceptions": ["Hubris simply means having confidence.", "The myths always present the gods' punishments as fair."] },
+      { "key": "modern-prometheus", "title": "Assess modern uses of Prometheus", "description": "Evaluates how Romantic and modern writers reshaped the myth and whether it fits debates about technology.",
+        "concept": "modern-prometheus", "definition": "Later reworkings that make Prometheus a symbol of rebellion, creativity or dangerous scientific ambition.",
+        "facts": ["Goethe and Percy Bysshe Shelley made Prometheus a figure of defiance against tyranny.", "Mary Shelley subtitled Frankenstein The Modern Prometheus.", "Camus made Sisyphus a figure of defiant dignity.", "A strong answer asks whether the modern meanings are faithful to the ancient ones."],
+        "misconceptions": ["The Romantic Prometheus is the same as the ancient one.", "Using the myth for technology means the myth is against technology."] }
+    ],
+    "translations": {
+      "ko": { "title": "프로메테우스와 반항의 그리스 신화", "instructions": "시험관은 프로메테우스와 신들에게 맞선 다른 인물들의 신화가 무엇을 의미하는지 물을 것입니다. 이야기를 근거로 해석을 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "hero-or-transgressor": "프로메테우스가 영웅인지 위반자인지 판단하기", "hesiod-aeschylus": "헤시오도스와 아이스킬로스의 프로메테우스 비교하기", "hubris": "오만(휴브리스)의 신화 해석하기", "modern-prometheus": "프로메테우스의 현대적 활용 평가하기" } },
+      "es": { "title": "Prometeo y los mitos griegos del desafío", "instructions": "El examinador le preguntará qué significan los mitos de Prometeo y de otros que desafiaron a los dioses. Defienda su interpretación con los relatos y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "hero-or-transgressor": "Juzgar si Prometeo es héroe o transgresor", "hesiod-aeschylus": "Comparar el Prometeo de Hesíodo y el de Esquilo", "hubris": "Interpretar los mitos de la hybris", "modern-prometheus": "Evaluar los usos modernos de Prometeo" } }
+    }
+  },
+  {
+    "title": "Architecture and Power",
+    "category": "arts-languages",
+    "subject": "Architecture",
+    "topic": "Architecture and politics",
+    "instructions": "The examiner will ask how buildings and cities express and exercise power. Defend your interpretations with examples, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Rulers have always built to impress. The pyramids of Egypt, the forums and triumphal arches of Rome and the cathedrals of medieval Europe displayed the power of rulers, empires and churches in stone. In 1682 Louis XIV moved his court to Versailles, where the palace, its Hall of Mirrors and its vast gardens staged the king's authority and kept the nobility close and dependent on royal favour.",
+      "Between 1853 and 1870, under Napoleon III, Baron Georges-Eugène Haussmann rebuilt much of Paris, cutting wide straight boulevards through crowded medieval districts. It is often said that the boulevards were designed to let troops move quickly and make revolutionary barricades harder to build. Historians debate how far this motive mattered compared with sanitation, traffic, property speculation and imperial prestige, and note that the rebuilding pushed many poorer residents out of the centre.",
+      "Totalitarian regimes made architecture central to their image. Albert Speer designed monumental buildings for Nazi Germany and later described a theory of ruin value, building so that even ruins would impress future ages. Yet the same neoclassical columns appear in the public buildings of democracies, such as those in Washington, D.C., which raises the question of whether a style carries any politics of its own or only the meanings people give it.",
+      "Architecture can also shape behaviour. Jeremy Bentham designed the panopticon, a prison in which a central watchtower lets a guard see every cell while prisoners cannot tell whether they are being watched. In Discipline and Punish (1975) Michel Foucault made it a model of how modern institutions such as schools, hospitals and factories discipline people through visibility. Winston Churchill, arguing in 1943 for rebuilding the bombed House of Commons in its old cramped, adversarial form, said that we shape our buildings and afterwards our buildings shape us.",
+      "Planned capitals show both hopes and limits. Brasília, designed by Lúcio Costa and Oscar Niemeyer and inaugurated in 1960, was meant to embody a modern, egalitarian Brazil; critics say its scale and reliance on cars separated government from ordinary life. Today many societies argue over public monuments to figures linked with slavery, colonialism or dictatorship, debating whether to keep, explain, move or remove them."
+    ],
+    "objectives": [
+      { "key": "style-ideology", "title": "Judge whether a style carries politics", "description": "Argues whether architectural styles have political meanings of their own or only those that users give them.",
+        "concept": "style-ideology", "definition": "The question of whether a style such as neoclassicism expresses a political ideology in itself.",
+        "facts": ["Speer designed monumental neoclassical buildings for Nazi Germany.", "Neoclassical columns also appear in democratic capitals such as Washington, D.C.", "Speer described a theory of ruin value.", "A strong answer distinguishes a style's form from its uses and associations."],
+        "misconceptions": ["Neoclassical architecture is inherently fascist.", "Buildings are neutral and never carry political meaning."] },
+      { "key": "haussmann", "title": "Interpret the motives behind Haussmann's Paris", "description": "Weighs military, sanitary, economic and symbolic explanations of the rebuilding of Paris.",
+        "concept": "haussmannization", "definition": "The rebuilding of Paris under Napoleon III and Haussmann from 1853 to 1870 with wide boulevards and new infrastructure.",
+        "facts": ["Wide boulevards replaced crowded medieval districts.", "A common claim is that they eased troop movement against barricades.", "Historians also stress sanitation, traffic, speculation and prestige.", "Many poorer residents were pushed out of the centre."],
+        "misconceptions": ["Haussmann rebuilt Paris only to fight revolutionaries.", "Because the city became healthier, the rebuilding had no political purpose."] },
+      { "key": "shaping-behaviour", "title": "Decide whether buildings shape us", "description": "Evaluates the panopticon and Churchill's claim that buildings shape the people in them.",
+        "concept": "architecture-and-behaviour", "definition": "The claim that the design of spaces influences how people act, think and relate to power.",
+        "facts": ["Bentham's panopticon lets a guard see prisoners who cannot tell if they are watched.", "Foucault used it as a model of modern disciplinary institutions.", "Churchill defended the Commons' adversarial layout in 1943.", "A strong answer considers how much people resist or reinterpret spaces."],
+        "misconceptions": ["Architecture determines behaviour completely.", "The design of a room makes no difference to how people act in it."] },
+      { "key": "monuments", "title": "Judge what to do with contested monuments", "description": "Defends a principle for monuments to figures linked with slavery, colonialism or dictatorship.",
+        "concept": "contested-monuments", "definition": "Public memorials whose subjects are now judged by many to represent injustice.",
+        "facts": ["Many societies now debate keeping, explaining, moving or removing such monuments.", "A monument honours its subject as well as recording history.", "Removing a monument does not erase written history.", "A strong answer applies its principle consistently to a hard case."],
+        "misconceptions": ["Removing a monument erases history.", "Every monument to a flawed figure must be destroyed."] }
+    ],
+    "translations": {
+      "ko": { "title": "건축과 권력", "instructions": "시험관은 건물과 도시가 어떻게 권력을 표현하고 행사하는지 물을 것입니다. 예를 들어 해석을 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "style-ideology": "양식이 정치성을 지니는지 판단하기", "haussmann": "오스만의 파리 개조 동기 해석하기", "shaping-behaviour": "건물이 사람을 형성하는지 판단하기", "monuments": "논란이 되는 기념물의 처리 판단하기" } },
+      "es": { "title": "La arquitectura y el poder", "instructions": "El examinador le preguntará cómo los edificios y las ciudades expresan y ejercen el poder. Defienda sus interpretaciones con ejemplos y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "style-ideology": "Juzgar si un estilo tiene carga política", "haussmann": "Interpretar los motivos del París de Haussmann", "shaping-behaviour": "Decidir si los edificios nos moldean", "monuments": "Juzgar qué hacer con los monumentos polémicos" } }
+    }
+  },
+  {
+    "title": "Music and Meaning",
+    "category": "arts-languages",
+    "subject": "Aesthetics",
+    "topic": "Philosophy of music",
+    "instructions": "The examiner will ask what, if anything, music means and how it moves us. No music theory is needed; defend your view with pieces you know, and say \"I don't know\" if you don't.",
+    "passage": [
+      "Music without words seems to say something, yet it is hard to say what. A melody can sound sad, triumphant or anxious, but it does not describe anything or state any fact. Philosophers have long asked how music can have meaning and why it affects us so strongly.",
+      "In the Republic, Plato has Socrates argue that musical modes shape character, and that the ideal city should keep only modes that encourage courage and self-control while banning those thought to make people soft or sorrowful. On this view music is powerful enough to be a matter of public concern.",
+      "In On the Musically Beautiful (1854) the critic Eduard Hanslick argued that the content of music is tonally moving forms. Music cannot represent definite emotions such as love or anger, which require thoughts about objects; at most it can present the motion of feelings, rising and falling, hurrying and lingering. The beauty of music lies in its form. Igor Stravinsky went further in his autobiography of 1936, saying that music is by its nature essentially powerless to express anything at all, though he later qualified the remark.",
+      "Others defend expression. Program music, such as Hector Berlioz's Symphonie fantastique (1830), follows a story the composer supplies, while absolute music, such as a string quartet, has no such program. The philosopher Peter Kivy argued that music can be expressive of sadness the way a drooping face or posture looks sad, by resemblance, without anyone being sad. The music theorist Leonard Meyer argued in 1956 that musical emotion and meaning arise from expectations that a piece sets up, delays and fulfils. How listeners hear major and minor keys, or which sounds seem consonant, partly depends on the musical culture they grow up in.",
+      "Meaning can also be contested. Dmitri Shostakovich's Fifth Symphony (1937), written after Soviet officials had denounced his music, was received as a triumphant return to favour. Some listeners hear its loud finale as forced rejoicing under pressure; the evidence for this, including the disputed memoir Testimony, is debated. John Cage's 4'33\" (1952), in which performers play nothing and the audience hears the sounds around them, asks whether music requires any intended sound at all."
+    ],
+    "objectives": [
+      { "key": "expression-or-form", "title": "Decide whether music expresses or only forms", "description": "Compares Hanslick's formalism with expression theories and defends a view.",
+        "concept": "musical-formalism", "definition": "The view, defended by Hanslick, that music's content is its moving forms and it cannot represent definite emotions.",
+        "facts": ["Hanslick held that music's content is tonally moving forms.", "He argued definite emotions require thoughts about objects that music cannot supply.", "Stravinsky said music is essentially powerless to express anything, though he later qualified this.", "A strong answer explains why so many listeners hear emotion in music anyway."],
+        "misconceptions": ["Music simply records what the composer was feeling while writing.", "If music cannot state facts, it has no meaning at all."] },
+      { "key": "sad-music", "title": "Explain how music can be sad", "description": "Evaluates explanations of musical expressiveness such as resemblance and expectation.",
+        "concept": "musical-expressiveness", "definition": "The way music can sound sad or joyful even though music itself has no feelings.",
+        "facts": ["Kivy compared musical sadness to the sad look of a drooping face or posture.", "Meyer traced musical meaning to expectations set up, delayed and fulfilled.", "Hearing major and minor keys emotionally is partly shaped by musical culture.", "A strong answer separates music expressing sadness from music making a listener sad."],
+        "misconceptions": ["Minor keys are sad for everyone in every culture.", "Music is sad only if the listener feels sad."] },
+      { "key": "contested-meaning", "title": "Judge who decides what a piece means", "description": "Uses cases such as Shostakovich's Fifth to argue whether meaning lies with composer, context or listener.",
+        "concept": "contested-meaning", "definition": "Disagreement over a piece's meaning when the composer's intentions, the historical context and listeners' hearings conflict.",
+        "facts": ["Shostakovich wrote the Fifth Symphony in 1937 after official denunciation.", "It was received as triumphant, while some hear the finale as forced rejoicing.", "The memoir Testimony, often cited for the ironic reading, is of disputed authenticity.", "A strong answer weighs evidence of intention against the sound and the context."],
+        "misconceptions": ["A piece means only what its composer intended.", "Because a piece can be heard many ways, no hearing is better supported than another."] },
+      { "key": "music-character", "title": "Assess whether music shapes character", "description": "Evaluates Plato's claim that music forms character and whether it should be regulated.",
+        "concept": "music-and-character", "definition": "Plato's view that musical modes shape the soul, so a well-ordered city should control which music is allowed.",
+        "facts": ["In the Republic Plato would keep modes that encourage courage and self-control and ban others.", "The view treats music as a matter of public concern.", "Modern debates about the effects of songs on listeners echo the question.", "A strong answer separates the claim that music influences us from the claim that it should be censored."],
+        "misconceptions": ["Music is pure entertainment with no effect on character.", "If music influences character, the state should control it."] }
+    ],
+    "translations": {
+      "ko": { "title": "음악과 의미", "instructions": "시험관은 음악이 무엇을 의미하는지, 그리고 어떻게 우리를 움직이는지 물을 것입니다. 음악 이론은 필요 없습니다. 아는 곡을 예로 들어 견해를 옹호하세요. 모르면 \"모르겠습니다\"라고 말씀하세요.",
+        "objectives": { "expression-or-form": "음악이 표현하는지 형식일 뿐인지 판단하기", "sad-music": "음악이 어떻게 슬플 수 있는지 설명하기", "contested-meaning": "작품의 의미를 누가 정하는지 판단하기", "music-character": "음악이 성품을 형성하는지 평가하기" } },
+      "es": { "title": "La música y el significado", "instructions": "El examinador le preguntará qué significa la música, si significa algo, y cómo nos conmueve. No hace falta teoría musical; defienda su postura con obras que conozca y diga \"No lo sé\" si no lo sabe.",
+        "objectives": { "expression-or-form": "Decidir si la música expresa o es solo forma", "sad-music": "Explicar cómo puede ser triste la música", "contested-meaning": "Juzgar quién decide lo que significa una obra", "music-character": "Evaluar si la música forma el carácter" } }
+    }
+  }
+]
