@@ -388,6 +388,9 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
         var withAttempts = (await db.ExamSessions.Where(s => s.OrganizationId == org && ids.Contains(s.AssignmentId))
             .Select(s => s.AssignmentId).Distinct().ToListAsync(ct)).ToHashSet();
         var removable = rows.Where(a => !withAttempts.Contains(a.Id)).ToList();
+        // An LTI-launched assignment has a grade-passback row pointing at it (a restricting foreign key); it goes with the assignment.
+        var removableIds = removable.Select(a => a.Id).ToList();
+        db.LtiAssignmentLinks.RemoveRange(await db.LtiAssignmentLinks.Where(l => l.OrganizationId == org && removableIds.Contains(l.AssignmentId)).ToListAsync(ct));
         foreach (var a in removable)
         {
             Gate.Audit("admin.assignment-removed", "ExamAssignment", a.Id.ToString(),
