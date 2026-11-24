@@ -173,6 +173,7 @@ async function watchScreens(strict) {
             onScreens();
             return;
         } catch { /* refused or unsupported: fall back */ }
+        if (!state || state.stopped) return;
     }
     if (typeof screen.isExtended === "boolean") {
         const onChange = () => reportScreens(screen.isExtended ? 2 : 1, "is-extended");
