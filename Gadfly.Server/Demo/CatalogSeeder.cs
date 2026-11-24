@@ -93,6 +93,8 @@ public static class CatalogSeeder
         return new CatalogData(categories, exams);
     }
 
+    public const int MaxObjectives = 4;
+
     public static List<string> Validate(IReadOnlyList<CatalogCategory> categories, IReadOnlyList<CatalogExam> exams)
     {
         var problems = new List<string>();
@@ -104,6 +106,7 @@ public static class CatalogSeeder
             if (!slugs.Contains(e.Category)) problems.Add($"\"{e.Title}\": unknown category {e.Category}.");
             if (e.Passage is not { Count: > 0 }) problems.Add($"\"{e.Title}\": no passage.");
             if (e.Objectives is not { Count: > 0 }) problems.Add($"\"{e.Title}\": no objectives.");
+            else if (e.Objectives.Count > MaxObjectives) problems.Add($"\"{e.Title}\": {e.Objectives.Count} objectives; a catalog exam has at most {MaxObjectives} so the 16-turn session has room to cross-examine.");
             else if (e.Objectives.Select(o => o.Key).Distinct(StringComparer.Ordinal).Count() != e.Objectives.Count) problems.Add($"\"{e.Title}\": objective keys repeat.");
             foreach (var o in e.Objectives ?? []) if (o.Facts is not { Count: > 0 }) problems.Add($"\"{e.Title}\" / {o.Key}: no facts.");
         }
