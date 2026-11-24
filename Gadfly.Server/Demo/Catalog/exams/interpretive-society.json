@@ -1,0 +1,499 @@
+// Interpretive catalog exams on society, mind, economics and civics (GAD-T716). Format: see the header of life-sciences.json (GAD-T659).
+// Each objective is a contestable position; the passage lays out the strongest arguments on more than one side.
+// Each exam carries approved Korean and Spanish texts (title, objective titles) so the seeder offers en, ko, es.
+[
+  {
+    "title": "Free Speech and Its Limits",
+    "category": "economics-civics",
+    "subject": "Civics",
+    "topic": "Freedom of expression",
+    "passage": [
+      "Freedom of expression is protected in many constitutions and in Article 19 of the Universal Declaration of Human Rights. Yet every legal system limits some speech: fraud, perjury, true threats and incitement to imminent violence are restricted almost everywhere. The live question is not whether speech has limits but where they should fall and who should draw them.",
+      "John Stuart Mill's On Liberty (1859) gives the classic defense. If a silenced opinion is true, we lose the truth; if it is false, we lose the clearer understanding of the truth that comes from its collision with error; and most often it holds part of the truth. Mill's harm principle says that power may rightly be exercised over a person against their will only to prevent harm to others. A later image, the 'marketplace of ideas', suggests that open competition among views tends to sort good from bad.",
+      "Critics answer that the marketplace is not fair. Speakers with money, platforms or majority status are heard; others are drowned out or intimidated into silence. Some argue that hate speech harms its targets by undermining their standing as equal citizens, so a law against it protects rather than reduces the freedom of the group it shields. Many democracies, including Germany and Canada, restrict hate speech or Holocaust denial on such grounds.",
+      "The United States takes a more protective line. In Brandenburg v. Ohio (1969) the Supreme Court held that advocacy of force may be punished only when it is directed to inciting imminent lawless action and is likely to produce it. Defenders say this bright line keeps governments from punishing unpopular dissent, which they have often done; critics say it leaves real harms unaddressed.",
+      "A further dispute concerns who limits speech. Constitutional guarantees usually bind governments, not private companies, employers or universities. Some argue that when a few platforms host most public debate, their moderation decisions matter as much as laws; others reply that forcing private parties to carry speech violates their own freedom.",
+      "Underneath lies a choice about what speech is for: discovering truth, enabling self-government, expressing individual autonomy, or some mix. Each rationale draws the line in a different place, and the hardest cases are those where two of them pull apart."
+    ],
+    "objectives": [
+      { "key": "mill-defense", "title": "Is Mill's case for free speech convincing?", "description": "Defends or criticizes Mill's argument that silencing any opinion is a loss, using the harm principle.",
+        "concept": "harm-principle", "definition": "Mill's view that power may be exercised over a person against their will only to prevent harm to others, together with his argument that suppressing any opinion costs us truth or understanding.",
+        "facts": ["Mill argues a silenced opinion may be true, may contain part of the truth, or may sharpen understanding even if false.", "The harm principle allows restriction only to prevent harm to others, not offense or self-regarding harm.", "A strong answer asks what counts as harm, since the principle's reach depends on that.", "A strong answer weighs the critics' point that open debate does not reliably favor truth."],
+        "misconceptions": ["Mill thought all speech should be completely unrestricted.", "Offending someone is the same as harming them."] },
+      { "key": "hate-speech", "title": "Should hate speech be banned?", "description": "Takes a position on hate speech laws, weighing equal standing against the risks of state censorship.",
+        "concept": "hate-speech-regulation", "definition": "Laws restricting speech that attacks people for characteristics such as race or religion, adopted in many democracies and largely rejected in US constitutional law.",
+        "facts": ["Germany and Canada, among others, restrict hate speech; the US generally does not.", "Supporters argue hate speech harms targets' standing as equal citizens and can silence them.", "Opponents argue the category is vague and that governments can turn such laws against dissenters and minorities.", "A strong answer distinguishes hate speech from threats or incitement, which are restricted in both approaches."],
+        "misconceptions": ["Free speech means freedom from all consequences, including criticism.", "Banning hateful views makes them disappear."] },
+      { "key": "incitement-line", "title": "Is the imminent-incitement test the right line?", "description": "Evaluates the Brandenburg standard against broader or narrower limits on dangerous speech.",
+        "concept": "imminent-lawless-action", "definition": "The Brandenburg v. Ohio (1969) rule that advocacy of force may be punished only when directed to and likely to produce imminent lawless action.",
+        "facts": ["Brandenburg protects abstract advocacy of violence but not incitement to imminent lawless action.", "Defenders value a clear line that resists suppression of unpopular dissent.", "Critics say slow-building incitement, for example online, can cause harm without being imminent.", "A strong answer considers who decides under a looser standard and how it might be abused."],
+        "misconceptions": ["In the US you can be punished for any speech that advocates violence.", "A bright-line rule is always better than a balancing test, or always worse."] },
+      { "key": "private-power", "title": "Should private platforms be bound by free-speech norms?", "description": "Argues whether the moderation choices of private companies raise free-speech concerns comparable to state censorship.",
+        "concept": "private-censorship", "definition": "The question whether limits on expression imposed by employers, universities or online platforms threaten free speech as government limits do.",
+        "facts": ["Constitutional speech guarantees usually bind governments, not private parties.", "A few large platforms host much public debate, which gives their rules wide effect.", "Requiring platforms to carry speech can itself restrict the platforms' own expression and editorial choices.", "A strong answer separates the legal question from the question of a healthy culture of free expression."],
+        "misconceptions": ["A company removing a post violates the First Amendment.", "Because platforms are private, their moderation has no bearing on free expression."] }
+    ],
+    "translations": {
+      "ko": { "title": "표현의 자유와 그 한계",
+        "objectives": { "mill-defense": "밀의 표현의 자유 옹호는 설득력이 있는가?", "hate-speech": "혐오 표현은 금지해야 하는가?", "incitement-line": "임박한 선동 기준은 올바른 선인가?", "private-power": "민간 플랫폼도 표현의 자유 규범을 따라야 하는가?" } },
+      "es": { "title": "La libertad de expresión y sus límites",
+        "objectives": { "mill-defense": "¿Es convincente la defensa de Mill de la libertad de expresión?", "hate-speech": "¿Debe prohibirse el discurso de odio?", "incitement-line": "¿Es la incitación inminente el límite correcto?", "private-power": "¿Deben las plataformas privadas respetar las normas de libertad de expresión?" } }
+    }
+  },
+  {
+    "title": "Privacy and Surveillance",
+    "category": "economics-civics",
+    "subject": "Civics",
+    "topic": "Privacy rights",
+    "passage": [
+      "In 1890 Samuel Warren and Louis Brandeis argued in the Harvard Law Review for a 'right to be let alone', prompted by new portable cameras and an intrusive press. Since then the meaning of privacy has been disputed: is it control over information about oneself, protection of a personal space, freedom from being watched, or a condition for forming one's own thoughts?",
+      "Governments justify surveillance by security. Interception of communications, data retention and camera networks can help prevent terrorism and solve crimes. In 2013 documents disclosed by Edward Snowden showed that the US National Security Agency had collected bulk records of domestic telephone calls; a federal appeals court later held that program was not authorized by the statute relied on, and Congress replaced it in 2015.",
+      "A common argument says 'if you have nothing to hide, you have nothing to fear.' Critics reply that everyone has lawful things they reasonably keep private, that information can be misused by later governments, and that being watched changes behavior: people who know they are observed may avoid lawful but unpopular associations or reading. This is often called a chilling effect. Jeremy Bentham's design for a panopticon prison, in which inmates could always be watched but never know when, is a common image of that effect.",
+      "Much collection is now done by companies. Firms gather data about browsing, location and purchases to target advertising, and people agree to it by accepting terms they rarely read. Some argue this consent is real and the services are a fair trade; others argue it is not meaningful consent, and that aggregated data can reveal far more than any single item.",
+      "Legal responses differ. The European Union's General Data Protection Regulation (2018) requires a lawful basis for processing personal data and gives individuals rights of access and erasure. Other systems rely more on sector-by-sector rules and contract. Defenders of lighter regulation stress innovation and free services; defenders of stronger rules stress power imbalances between individuals and data holders.",
+      "Underlying these debates is the question whether privacy is mainly an individual good that each person may trade away, or also a collective good that a free society needs whatever individuals choose."
+    ],
+    "objectives": [
+      { "key": "nothing-to-hide", "title": "Does the 'nothing to hide' argument work?", "description": "Evaluates the claim that law-abiding people lose nothing from surveillance.",
+        "concept": "nothing-to-hide", "definition": "The argument that surveillance harms only wrongdoers, so innocent people have no reason to object.",
+        "facts": ["The argument assumes privacy matters only for concealing wrongdoing.", "Critics note lawful matters such as health, beliefs and relationships are reasonably kept private.", "Information collected now can be used by future authorities with different aims.", "A strong answer considers the chilling effect on lawful but unpopular behavior."],
+        "misconceptions": ["Only criminals benefit from privacy.", "Privacy concerns are only about embarrassment."] },
+      { "key": "security-tradeoff", "title": "How much privacy should we trade for security?", "description": "Takes a position on mass surveillance programs, weighing security benefits against civil liberties.",
+        "concept": "security-privacy-tradeoff", "definition": "The judgment of how far governments may monitor people to prevent crime and terrorism.",
+        "facts": ["Snowden's 2013 disclosures revealed bulk collection of US telephone records.", "A federal appeals court held that program was not authorized by the statute cited, and Congress replaced it in 2015.", "Supporters stress that surveillance can prevent attacks; critics question how effective bulk collection is.", "A strong answer distinguishes targeted surveillance with judicial oversight from bulk collection."],
+        "misconceptions": ["More surveillance always means more security.", "Privacy and security are always in direct opposition."] },
+      { "key": "corporate-consent", "title": "Is accepting data collection real consent?", "description": "Argues whether users meaningfully consent to commercial data collection.",
+        "concept": "informed-consent-data", "definition": "The question whether agreement to terms of service makes commercial collection and use of personal data legitimate.",
+        "facts": ["Companies collect browsing, location and purchase data, often to target advertising.", "Users rarely read terms and often have no practical alternative to accepting them.", "Aggregated data can reveal more than any individual item disclosed.", "A strong answer weighs the value of free services against the imbalance of knowledge and power."],
+        "misconceptions": ["If you clicked 'I agree', you understood what you agreed to.", "Data is only valuable to the person it describes."] },
+      { "key": "privacy-value", "title": "Is privacy an individual or a collective good?", "description": "Defends a view of why privacy matters and whether individuals alone should be able to trade it away.",
+        "concept": "value-of-privacy", "definition": "Competing accounts of privacy as individual control over information or as a social condition for freedom and democracy.",
+        "facts": ["Warren and Brandeis argued in 1890 for a 'right to be let alone'.", "One view treats privacy as an individual's control over information about themselves.", "Another holds that a free society needs privacy regardless of individual choices, for example to protect dissent.", "Rules such as the GDPR limit what individuals can trade away by requiring a lawful basis for processing."],
+        "misconceptions": ["Privacy is an outdated idea in the internet age.", "Privacy only matters to people who are personally targeted."] }
+    ],
+    "translations": {
+      "ko": { "title": "사생활과 감시",
+        "objectives": { "nothing-to-hide": "'숨길 것이 없다'는 논리는 타당한가?", "security-tradeoff": "안보를 위해 사생활을 얼마나 포기해야 하는가?", "corporate-consent": "데이터 수집에 동의하는 것은 진정한 동의인가?", "privacy-value": "사생활은 개인의 재화인가, 공동의 재화인가?" } },
+      "es": { "title": "Privacidad y vigilancia",
+        "objectives": { "nothing-to-hide": "¿Funciona el argumento de «no tengo nada que ocultar»?", "security-tradeoff": "¿Cuánta privacidad debemos ceder por seguridad?", "corporate-consent": "¿Es un consentimiento real aceptar la recopilación de datos?", "privacy-value": "¿Es la privacidad un bien individual o colectivo?" } }
+    }
+  },
+  {
+    "title": "Capital Punishment",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Ethics of punishment",
+    "passage": [
+      "Capital punishment is execution by the state as punishment for a crime. Most countries have abolished it in law or practice, while others, including the United States, China, Iran and Saudi Arabia, still carry out executions. The debate draws on general theories of why the state may punish at all.",
+      "Retributivists hold that punishment is justified because offenders deserve it, in proportion to their wrongdoing. Kant argued that a murderer must die, and that even a society about to dissolve itself should first execute the last murderer in prison. Other retributivists accept desert but deny it requires death: proportion, they say, sets an upper limit or a ranking of punishments, not an exact copy of the crime.",
+      "Consequentialists justify punishment by its effects, chiefly deterrence and incapacitation. Whether the death penalty deters murder better than long imprisonment is disputed. A 2012 report of the US National Research Council concluded that existing studies were not informative about the deterrent effect of capital punishment and should not be used to guide policy.",
+      "Opponents stress error. Courts make mistakes, and execution cannot be undone. In the United States more than 190 people sentenced to death have later been exonerated since 1973, according to the Death Penalty Information Center. Opponents also point to disparities by race of victim, by region and by quality of defense counsel, arguing that the penalty cannot be administered fairly.",
+      "Some argue that execution violates human dignity or a right to life that even a murderer keeps; Cesare Beccaria made an early case against it in 1764. Supporters reply that taking a murderer's life honors the dignity of the victim and treats the offender as a responsible agent, and that some crimes are so grave that any lesser penalty fails to express their seriousness.",
+      "The debate thus combines empirical questions about deterrence and error with moral questions about desert, rights and what a state may do in its citizens' name."
+    ],
+    "objectives": [
+      { "key": "retribution", "title": "Does desert justify the death penalty?", "description": "Evaluates the retributivist case for execution and whether proportionality requires it.",
+        "concept": "retributivism", "definition": "The view that punishment is justified because the offender deserves it, in proportion to the wrong done.",
+        "facts": ["Kant held that murder deserves death.", "Some retributivists hold that proportion ranks punishments without requiring an exact equivalent of the crime.", "A strong answer separates the claim that a murderer deserves severe punishment from the claim that the state must inflict death.", "A strong answer considers whether we would accept copying other crimes, such as torture, as their punishment."],
+        "misconceptions": ["Retribution is the same as revenge.", "An eye for an eye means every punishment must mirror the crime exactly."] },
+      { "key": "deterrence", "title": "Can deterrence justify execution?", "description": "Weighs the deterrence argument against the state of the evidence.",
+        "concept": "deterrence", "definition": "The consequentialist justification that a punishment prevents future crimes by discouraging would-be offenders.",
+        "facts": ["Whether executions deter murder more than long imprisonment is disputed.", "A 2012 US National Research Council report found existing studies uninformative on deterrence.", "A strong answer asks what follows morally if the evidence is uncertain.", "A strong answer notes that deterrence reasoning might justify punishing more than desert allows."],
+        "misconceptions": ["It is obvious that the death penalty deters murder.", "If deterrence were proven, the moral question would be settled."] },
+      { "key": "irreversible-error", "title": "Does the risk of error decide the question?", "description": "Argues whether wrongful convictions and unequal application make capital punishment unjustifiable.",
+        "concept": "irreversible-error", "definition": "The objection that because courts err and execution cannot be undone, the state should not execute.",
+        "facts": ["More than 190 US death-row prisoners have been exonerated since 1973.", "Disparities by race of victim, region and quality of counsel have been documented.", "Supporters reply that all punishment risks error and that safeguards can reduce it.", "A strong answer asks whether the irreversibility of death differs in kind from wrongly imposed imprisonment."],
+        "misconceptions": ["Modern forensic methods have eliminated wrongful convictions.", "An error only matters if the executed person was completely innocent of everything."] },
+      { "key": "dignity", "title": "Does execution violate human dignity?", "description": "Takes a position on whether execution denies or affirms the dignity of offenders and victims.",
+        "concept": "dignity-and-right-to-life", "definition": "Competing claims that execution violates a right to life every person keeps, or that it respects responsible agency and the victim's worth.",
+        "facts": ["Beccaria argued against capital punishment in 1764.", "Opponents hold that even a murderer keeps a right to life the state must respect.", "Supporters argue punishment treats the offender as a responsible agent and honors the victim.", "A strong answer explains what 'dignity' means in each argument rather than using it as a slogan."],
+        "misconceptions": ["Anyone who opposes the death penalty thinks murder is not very serious.", "Most countries in the world still use the death penalty."] }
+    ],
+    "translations": {
+      "ko": { "title": "사형 제도",
+        "objectives": { "retribution": "응보는 사형을 정당화하는가?", "deterrence": "억지 효과로 사형을 정당화할 수 있는가?", "irreversible-error": "오판의 위험이 문제를 결정하는가?", "dignity": "사형은 인간의 존엄성을 침해하는가?" } },
+      "es": { "title": "La pena de muerte",
+        "objectives": { "retribution": "¿Justifica el merecimiento la pena de muerte?", "deterrence": "¿Puede la disuasión justificar la ejecución?", "irreversible-error": "¿Decide la cuestión el riesgo de error?", "dignity": "¿Viola la ejecución la dignidad humana?" } }
+    }
+  },
+  {
+    "title": "Meritocracy and Desert",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Distributive justice",
+    "passage": [
+      "A meritocracy distributes positions and rewards by merit, usually understood as talent plus effort, rather than by birth, connections or wealth. The word was coined, with ironic intent, by the British sociologist Michael Young in The Rise of the Meritocracy (1958), a satire of a society that sorts people by measured intelligence and then treats the result as just.",
+      "Defenders see meritocracy as fair and efficient. Opening careers to talent ended hereditary privilege, and placing the most capable people in demanding jobs benefits everyone who relies on surgeons, engineers or judges. Rewarding effort, they add, respects people as responsible agents who shape their own lives.",
+      "John Rawls, in A Theory of Justice (1971), challenged the idea that people deserve the rewards their talents earn. Natural talents are a matter of luck, and even the willingness to make an effort depends in part on family and circumstance. Rawls did not reject unequal rewards; his difference principle allows inequalities that work to the greatest benefit of the least advantaged. But he denied that the talented have a pre-institutional claim of desert to them.",
+      "Critics of Rawls reply that if effort and character are not our own, it becomes hard to hold anyone responsible for anything, and that people do ordinarily think a hard-working student deserves her good grade. Robert Nozick argued that people are entitled to what they acquire through just processes, whether or not they 'deserve' their talents.",
+      "More recent critics, such as Michael Sandel in The Tyranny of Merit (2020), argue that meritocratic societies encourage winners to believe their success is wholly their own doing and losers to blame themselves, damaging solidarity. Others note that wealthy families pass on advantages through education, so a nominal meritocracy can reproduce class.",
+      "The debate therefore concerns both an ideal (should rewards track merit?) and a reality (do our institutions actually measure merit, or something else?)."
+    ],
+    "objectives": [
+      { "key": "fair-ideal", "title": "Is meritocracy a just ideal?", "description": "Defends or criticizes distributing positions and rewards by talent and effort.",
+        "concept": "meritocracy", "definition": "A system that allocates positions and rewards by merit, usually talent and effort, rather than by birth or connections.",
+        "facts": ["Michael Young coined the term in a 1958 satire.", "Defenders cite fairness compared with hereditary privilege and efficiency from placing capable people in demanding roles.", "A strong answer separates allocating jobs by competence from allocating income and status by merit.", "A strong answer considers what the ideal implies for people with little marketable talent."],
+        "misconceptions": ["Meritocracy was originally coined as praise.", "If something is efficient it must also be just."] },
+      { "key": "rawls-luck", "title": "Do we deserve the rewards of our talents?", "description": "Evaluates Rawls' argument that natural talent and even effort are partly matters of luck.",
+        "concept": "moral-arbitrariness", "definition": "Rawls' claim that the distribution of natural talents is arbitrary from a moral point of view, so no one deserves their talents.",
+        "facts": ["Rawls held that talents and even the capacity for effort depend partly on luck and upbringing.", "His difference principle permits inequalities that benefit the least advantaged.", "Rawls denied a pre-institutional desert claim, not all unequal rewards.", "Critics say the argument threatens personal responsibility altogether."],
+        "misconceptions": ["Rawls wanted everyone to receive exactly equal income.", "Effort is entirely under a person's own control."] },
+      { "key": "entitlement", "title": "Are we entitled to what we earn even if we do not deserve it?", "description": "Compares entitlement-based reasoning such as Nozick's with desert-based reasoning.",
+        "concept": "entitlement-versus-desert", "definition": "The distinction between having a rightful claim through just processes and deserving something on moral merit.",
+        "facts": ["Nozick argued that people are entitled to holdings acquired and transferred justly.", "Entitlement does not require that people deserve their natural talents.", "A strong answer shows how entitlement and desert can come apart, for example in an inheritance or a lottery win.", "A strong answer considers whether the starting distribution was itself just."],
+        "misconceptions": ["Desert and entitlement are the same thing.", "Whatever a market pays someone is what they deserve."] },
+      { "key": "merit-reality", "title": "Does meritocracy damage solidarity or reproduce class?", "description": "Argues whether real meritocratic institutions live up to the ideal and what effects they have.",
+        "concept": "critique-of-meritocracy", "definition": "The criticism that meritocratic sorting fosters hubris and self-blame and can pass advantage down through education.",
+        "facts": ["Sandel argues meritocracy leads winners to see success as wholly their own and losers to blame themselves.", "Wealthier families can buy advantages in schooling and test preparation.", "Defenders reply that the remedy is fairer competition, not abandoning merit.", "A strong answer separates criticism of the ideal from criticism of imperfect implementation."],
+        "misconceptions": ["Standardized tests measure pure merit independent of background.", "Criticizing meritocracy means opposing all competition."] }
+    ],
+    "translations": {
+      "ko": { "title": "능력주의와 응분",
+        "objectives": { "fair-ideal": "능력주의는 정의로운 이상인가?", "rawls-luck": "우리는 재능에 따른 보상을 받을 자격이 있는가?", "entitlement": "응분이 없어도 번 것에 대한 권리가 있는가?", "merit-reality": "능력주의는 연대를 해치거나 계급을 재생산하는가?" } },
+      "es": { "title": "La meritocracia y el merecimiento",
+        "objectives": { "fair-ideal": "¿Es la meritocracia un ideal justo?", "rawls-luck": "¿Merecemos las recompensas de nuestros talentos?", "entitlement": "¿Tenemos derecho a lo que ganamos aunque no lo merezcamos?", "merit-reality": "¿Daña la meritocracia la solidaridad o reproduce las clases?" } }
+    }
+  },
+  {
+    "title": "Nature and Nurture",
+    "category": "philosophy-psychology",
+    "subject": "Psychology",
+    "topic": "Genes, environment and behavior",
+    "passage": [
+      "The phrase 'nature and nurture' was popularized by Francis Galton in the nineteenth century. The question it names is how far human traits such as intelligence, personality and mental illness are shaped by inherited biology and how far by environment, upbringing and culture.",
+      "Twin and adoption studies are the main evidence. Identical twins share essentially all their genes and fraternal twins about half of their varying genes; if identical twins are more alike on a trait, that suggests a genetic contribution. Such studies estimate heritability: the proportion of variation in a trait within a particular population that is associated with genetic variation. Many psychological traits show moderate heritability.",
+      "Heritability is often misread. It describes variation in a population, not how much of an individual's trait comes from genes. It can change when the environment changes: if everyone gets the same good schooling, more of the remaining variation will track genes. And a highly heritable trait can still be changed by the environment; height is highly heritable, yet average heights rose sharply over the twentieth century with better nutrition.",
+      "Critics of twin studies question the assumption that identical and fraternal twins share equally similar environments, and note that heritability figures from one population do not transfer to another. Others stress that genes and environment interact: a genetic tendency may be expressed only in certain environments, and people with different temperaments choose and evoke different environments.",
+      "The debate has political weight. Some fear that emphasizing genes encourages fatalism or justifies inequality, as eugenics movements did in the early twentieth century. Others reply that denying biology leads to blaming parents or individuals for differences they did not cause, and that knowing a risk is inherited can guide help.",
+      "Many researchers now say the dichotomy is false, because traits develop through constant interaction. Others answer that it is still meaningful to ask how much of the variation among people is linked to genetic versus environmental differences."
+    ],
+    "objectives": [
+      { "key": "heritability", "title": "What does heritability really tell us?", "description": "Interprets heritability estimates correctly and says what they do and do not show.",
+        "concept": "heritability", "definition": "The proportion of variation in a trait within a given population and environment that is associated with genetic variation.",
+        "facts": ["Heritability describes variation in a population, not the makeup of an individual.", "It can change when environments change.", "A heritable trait can still change with environment; average height rose with nutrition.", "Twin and adoption studies compare similarity among people of different genetic relatedness."],
+        "misconceptions": ["A heritability of 50% means half of a person's trait comes from genes.", "Highly heritable traits cannot be changed."] },
+      { "key": "twin-critique", "title": "How much should we trust twin studies?", "description": "Evaluates the assumptions behind twin studies and the strength of the criticisms.",
+        "concept": "twin-study-method", "definition": "Estimating genetic influence by comparing how alike identical and fraternal twins are on a trait.",
+        "facts": ["Identical twins share essentially all their genes; fraternal twins about half of their varying genes.", "The method assumes both kinds of twins share equally similar environments.", "Critics argue identical twins may be treated more alike; defenders cite adoption studies with similar results.", "Estimates from one population do not automatically apply to another."],
+        "misconceptions": ["Twin studies prove exactly how much of a trait is genetic for everyone.", "Any flaw in twin studies shows genes play no role."] },
+      { "key": "interaction", "title": "Is the nature-nurture question a false dichotomy?", "description": "Argues whether it still makes sense to apportion traits between genes and environment.",
+        "concept": "gene-environment-interaction", "definition": "The idea that genes and environment act together, so a trait's development cannot simply be split into separate contributions.",
+        "facts": ["Genetic tendencies may be expressed only in some environments.", "People's temperaments lead them to choose and evoke different environments.", "Researchers still ask how much of the variation among people tracks genetic versus environmental differences.", "A strong answer distinguishes explaining one person's development from explaining differences in a population."],
+        "misconceptions": ["Every trait is either genetic or environmental.", "If genes and environment interact, nothing can be said about either."] },
+      { "key": "politics", "title": "Is emphasizing genetics dangerous or helpful?", "description": "Takes a position on the social and political implications of genetic explanations of behavior.",
+        "concept": "genetic-determinism-debate", "definition": "The dispute over whether genetic explanations promote fatalism and inequality or reduce blame and guide help.",
+        "facts": ["Early twentieth-century eugenics used claims about heredity to justify coercion.", "Critics fear genetic explanations encourage fatalism about inequality.", "Others argue ignoring biology can unfairly blame parents or individuals.", "A strong answer separates the scientific question from what policies should follow from it."],
+        "misconceptions": ["Genetic influence means a trait is fixed destiny.", "Environmental explanations are always more hopeful than genetic ones."] }
+    ],
+    "translations": {
+      "ko": { "title": "본성과 양육",
+        "objectives": { "heritability": "유전율은 실제로 무엇을 알려 주는가?", "twin-critique": "쌍둥이 연구를 얼마나 신뢰해야 하는가?", "interaction": "본성과 양육은 잘못된 이분법인가?", "politics": "유전을 강조하는 것은 위험한가, 유익한가?" } },
+      "es": { "title": "Naturaleza y crianza",
+        "objectives": { "heritability": "¿Qué nos dice realmente la heredabilidad?", "twin-critique": "¿Cuánto debemos confiar en los estudios de gemelos?", "interaction": "¿Es naturaleza frente a crianza una falsa dicotomía?", "politics": "¿Es peligroso o útil enfatizar la genética?" } }
+    }
+  },
+  {
+    "title": "Moral Intuitions and Moral Reasoning",
+    "category": "philosophy-psychology",
+    "subject": "Psychology",
+    "topic": "Moral psychology",
+    "passage": [
+      "When people judge something right or wrong, do they reason their way to the verdict, or do they feel it first and reason afterwards? Moral psychology has made this old philosophical question empirical.",
+      "The trolley problem, introduced by Philippa Foot in 1967 and developed by Judith Jarvis Thomson, is a common test. Most people say it is permissible to divert a runaway trolley so it kills one person instead of five, but wrong to push a large man off a footbridge to stop it, even though the numbers are the same. Philosophers have long tried to find a principle that explains the difference.",
+      "Jonathan Haidt's social intuitionist model holds that moral judgments are mostly fast intuitions, and that reasoning usually comes afterwards to justify them. In studies of 'moral dumbfounding', people condemned harmless taboo acts, such as consensual incest with no possible harm, and kept condemning them even after their stated reasons were rebutted. Haidt compares reason to a press secretary for the intuitive mind.",
+      "Joshua Greene's dual-process theory proposes that emotional responses drive judgments like refusing to push the man, while more deliberate reasoning supports counting lives. Greene argues that some of our intuitions are unreliable products of evolution and culture, tuned to features like physical contact that may not matter morally, and that we should sometimes override them.",
+      "Others defend intuitions. Many philosophers treat considered intuitions as evidence, adjusting principles and judgments against each other until they cohere, a process Rawls called reflective equilibrium. If intuitions had no authority, they argue, moral reasoning would have nothing to start from. Critics of the psychological research also question whether laboratory dilemmas tell us how people reason in real life.",
+      "The underlying question is normative as well as descriptive: even if intuition drives most judgments, should it?"
+    ],
+    "objectives": [
+      { "key": "trolley", "title": "Why is pushing different from switching?", "description": "Defends an explanation of why many people treat the two trolley cases differently, or argues they should not.",
+        "concept": "trolley-problem", "definition": "Paired dilemmas in which killing one to save five seems permissible when diverting a trolley but wrong when pushing a person.",
+        "facts": ["Foot introduced the problem in 1967; Thomson developed the footbridge variant.", "Most people approve switching but not pushing, though the numbers are the same.", "Proposed principles include the doctrine of double effect and the difference between using someone as a means and redirecting a threat.", "A strong answer tests a proposed principle against further variations."],
+        "misconceptions": ["The trolley problem has a single agreed answer.", "The only relevant difference between the cases is physical contact."] },
+      { "key": "intuitionism", "title": "Is moral reasoning mostly after-the-fact justification?", "description": "Evaluates Haidt's social intuitionist model and the evidence of moral dumbfounding.",
+        "concept": "social-intuitionist-model", "definition": "Haidt's view that moral judgments arise mainly from fast intuitions, with reasoning usually constructed afterwards to justify them.",
+        "facts": ["In dumbfounding studies people kept condemning harmless taboo acts after their reasons were rebutted.", "Haidt compares reasoning to a press secretary for intuition.", "Haidt allows that reasoning, especially in discussion with others, can sometimes change intuitions.", "A strong answer asks whether lab scenarios reflect everyday moral thinking."],
+        "misconceptions": ["Haidt claims reasoning never affects moral judgments.", "If a judgment begins as a feeling, it must be wrong."] },
+      { "key": "debunking", "title": "Should we override intuitions that conflict with principle?", "description": "Weighs Greene's argument that some intuitions are unreliable against defenders of their evidential role.",
+        "concept": "debunking-arguments", "definition": "Arguments that an intuition's evolutionary or cultural origin shows it tracks morally irrelevant features and so may be overridden.",
+        "facts": ["Greene links refusal to push to emotional responses and counting lives to deliberate reasoning.", "He argues some intuitions respond to features such as physical contact that may not matter morally.", "Critics reply that the reasoning favored by Greene may also rest on intuitions.", "A strong answer considers which intuitions would survive the same debunking test."],
+        "misconceptions": ["Anything that evolved is morally justified.", "Feeling strongly about a case is enough to show it is right."] },
+      { "key": "reflective-equilibrium", "title": "Can intuitions count as moral evidence?", "description": "Argues whether reflective equilibrium is a sound method for ethics.",
+        "concept": "reflective-equilibrium", "definition": "Rawls' method of adjusting moral principles and considered judgments against each other until they cohere.",
+        "facts": ["Many philosophers treat considered intuitions as data that principles must accommodate.", "Principles can also lead us to revise intuitions.", "Critics argue coherence among biased judgments does not make them true.", "A strong answer explains what makes an intuition 'considered' rather than a raw reaction."],
+        "misconceptions": ["Reflective equilibrium simply accepts whatever people already believe.", "Moral reasoning can proceed without any starting judgments at all."] }
+    ],
+    "translations": {
+      "ko": { "title": "도덕적 직관과 도덕적 추론",
+        "objectives": { "trolley": "밀어 떨어뜨리는 것은 왜 선로를 바꾸는 것과 다른가?", "intuitionism": "도덕적 추론은 대부분 사후 정당화인가?", "debunking": "원칙과 충돌하는 직관은 무시해야 하는가?", "reflective-equilibrium": "직관은 도덕적 증거가 될 수 있는가?" } },
+      "es": { "title": "Intuiciones morales y razonamiento moral",
+        "objectives": { "trolley": "¿Por qué empujar es distinto de desviar el tranvía?", "intuitionism": "¿Es el razonamiento moral sobre todo una justificación posterior?", "debunking": "¿Debemos anular las intuiciones que chocan con los principios?", "reflective-equilibrium": "¿Pueden las intuiciones contar como evidencia moral?" } }
+    }
+  },
+  {
+    "title": "The Stanford Prison Experiment and Its Critics",
+    "category": "philosophy-psychology",
+    "subject": "Psychology",
+    "topic": "Situationism and research ethics",
+    "passage": [
+      "In August 1971 the psychologist Philip Zimbardo ran a simulated prison in the basement of Stanford University's psychology building. Male college students, screened as psychologically ordinary, were randomly assigned to be guards or prisoners. Planned to last two weeks, the study was ended after six days.",
+      "Zimbardo reported that some guards became cruel and abusive, while prisoners became distressed and passive. He concluded that powerful situations and social roles can lead ordinary people to behave in ways they would not predict, a view called situationism. For decades the study featured in textbooks, and Zimbardo later invoked it to explain the abuse of prisoners at Abu Ghraib in Iraq.",
+      "Critics have challenged both the method and the conclusion. Zimbardo acted as prison superintendent rather than a detached observer. Archival recordings and interviews, publicized notably by Thibault Le Texier in 2018, indicate that guards were briefed on how to create an oppressive atmosphere and encouraged to be 'tough'. Some participants later said they were acting the part they believed the researchers wanted. Only some guards were abusive; others were fair or kind.",
+      "The BBC Prison Study of 2002, by Alex Haslam and Stephen Reicher, did not reproduce the original pattern: guards there did not simply adopt tyrannical roles. Haslam and Reicher argue that people do not conform to roles automatically; they act cruelly when they come to identify with a group and its leadership, which makes such behavior a matter of engaged followership rather than blind conformity.",
+      "Defenders reply that the original study, whatever its flaws, dramatized real dynamics that other evidence supports, and that the variation among guards does not refute the power of situations. The study also raised ethical questions about harm to participants that helped shape later research rules.",
+      "Debate continues over what, if anything, the experiment shows, and over how scientific findings become cultural myths."
+    ],
+    "objectives": [
+      { "key": "situationism", "title": "Do situations overpower character?", "description": "Takes a position on the situationist interpretation of the experiment.",
+        "concept": "situationism", "definition": "The view that features of a situation, such as roles and power, explain behavior more than stable personal traits.",
+        "facts": ["Students were randomly assigned as guards or prisoners; the study ended after six days.", "Zimbardo concluded that roles and situations can make ordinary people abusive.", "Only some guards were abusive; others were fair or kind.", "A strong answer explains what the variation among guards implies for situationism."],
+        "misconceptions": ["The experiment showed that everyone becomes cruel when given power.", "Personality plays no role in behavior."] },
+      { "key": "demand-characteristics", "title": "Was the guards' cruelty produced by the researchers?", "description": "Evaluates the criticism that briefing, encouragement and expectations shaped the results.",
+        "concept": "demand-characteristics", "definition": "Cues in a study that tell participants what behavior the researchers expect, which can produce the result being studied.",
+        "facts": ["Zimbardo acted as superintendent rather than a neutral observer.", "Recordings and interviews indicate guards were briefed and encouraged to be tough.", "Some participants said they were playing the role they thought was wanted.", "A strong answer weighs how far these problems undermine, rather than merely complicate, the conclusion."],
+        "misconceptions": ["Because a study is famous, its findings are settled.", "Any participant awareness of the study makes its results worthless."] },
+      { "key": "identity-leadership", "title": "Is cruelty conformity or engaged followership?", "description": "Compares Zimbardo's role-conformity account with Haslam and Reicher's social identity account.",
+        "concept": "social-identity-leadership", "definition": "Haslam and Reicher's view that people act cruelly when they identify with a group and its leaders, not by automatically adopting roles.",
+        "facts": ["The 2002 BBC Prison Study did not reproduce the original pattern.", "Haslam and Reicher stress identification with a group and its leadership.", "On their view perpetrators are active and committed rather than mindless.", "A strong answer considers what each account implies about responsibility."],
+        "misconceptions": ["The BBC study proved the opposite: that situations do not matter.", "People who follow harmful roles bear no responsibility."] },
+      { "key": "legacy", "title": "Should the experiment still be taught?", "description": "Argues how the study should be presented today, considering its scientific and ethical problems.",
+        "concept": "scientific-legacy", "definition": "The question of how a famous but flawed study should be used in teaching and public explanation.",
+        "facts": ["The study long featured in textbooks as evidence of situational power.", "Zimbardo used it to explain the abuse at Abu Ghraib.", "Its harm to participants contributed to debates about research ethics.", "A strong answer distinguishes teaching it as evidence from teaching it as a case study in method and ethics."],
+        "misconceptions": ["A flawed study has nothing to teach.", "If a conclusion is plausible, the study that dramatized it must be sound."] }
+    ],
+    "translations": {
+      "ko": { "title": "스탠퍼드 감옥 실험과 그 비판",
+        "objectives": { "situationism": "상황은 성격을 압도하는가?", "demand-characteristics": "간수들의 잔혹함은 연구자가 만들어 낸 것인가?", "identity-leadership": "잔혹함은 동조인가, 적극적 추종인가?", "legacy": "이 실험을 여전히 가르쳐야 하는가?" } },
+      "es": { "title": "El experimento de la prisión de Stanford y sus críticos",
+        "objectives": { "situationism": "¿Se impone la situación al carácter?", "demand-characteristics": "¿Fue la crueldad de los guardias producida por los investigadores?", "identity-leadership": "¿Es la crueldad conformidad o seguimiento comprometido?", "legacy": "¿Debe seguir enseñándose el experimento?" } }
+    }
+  },
+  {
+    "title": "Propaganda and Persuasion",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Ethics of persuasion",
+    "passage": [
+      "All public life involves persuasion: politicians, advocates, teachers and advertisers all try to change minds. 'Propaganda' is the word usually kept for persuasion we disapprove of. The difficulty is saying what makes the difference.",
+      "The word comes from the Catholic Church's Congregation for the Propagation of the Faith, founded in 1622, and at first was neutral. In 1928 Edward Bernays, a founder of public relations, published a book called Propaganda arguing that the 'conscious and intelligent manipulation of the organized habits and opinions of the masses' was a necessary part of democratic society. After the state propaganda of the world wars, and especially of Nazi Germany under Joseph Goebbels, the word became pejorative.",
+      "One account says propaganda is persuasion by falsehood. But much effective propaganda uses true but selected facts, and some lies are told without any propaganda campaign. A second account says propaganda bypasses reason, working through fear, repetition, symbols and group belonging instead of evidence and argument. Critics reply that emotion is not opposed to reason: fear of a real danger is rational, and a moving speech can also be a sound one.",
+      "A third account focuses on purpose and power: propaganda is communication by an organized interest that aims to shape mass opinion for its own ends, regardless of truth. Jason Stanley has argued that the most dangerous propaganda in democracies uses democratic ideals, such as freedom, in ways that actually undermine them.",
+      "Aristotle's Rhetoric distinguished three means of persuasion: the speaker's character (ethos), the audience's emotions (pathos) and the argument itself (logos), and he treated all three as legitimate. On a Kantian view, by contrast, manipulation is wrong because it treats people as objects to be steered rather than as rational agents to be convinced.",
+      "These questions matter for judging political campaigns, public health messaging, education and one's own attempts to persuade others."
+    ],
+    "objectives": [
+      { "key": "define-propaganda", "title": "What distinguishes propaganda from legitimate persuasion?", "description": "Defends a criterion for propaganda and tests it against counterexamples.",
+        "concept": "propaganda", "definition": "Persuasion of a mass audience, usually by an organized interest, that is judged illegitimate; accounts differ on whether falsehood, bypassing reason or purpose makes it so.",
+        "facts": ["The term originally referred to the Church's propagation of the faith and was neutral.", "Bernays defended organized opinion management as part of democracy in 1928.", "A falsehood criterion struggles with propaganda that uses selected true facts.", "A strong answer tests its criterion against both a clear case and a borderline one."],
+        "misconceptions": ["Propaganda always consists of lies.", "Propaganda is something only dictatorships produce."] },
+      { "key": "emotion-reason", "title": "Is appealing to emotion manipulative?", "description": "Argues whether emotional appeals bypass reason or can be legitimate.",
+        "concept": "pathos-and-manipulation", "definition": "The question whether persuading through emotion undermines rational agency or can be a fitting part of argument.",
+        "facts": ["Aristotle treated ethos, pathos and logos all as legitimate means of persuasion.", "Fear of a real danger can be rational and fitting.", "Repetition, symbols and group belonging can shift belief without evidence.", "A strong answer distinguishes emotions that fit the facts from emotions that are exploited."],
+        "misconceptions": ["Any emotional appeal is manipulation.", "Reason and emotion are always opposed."] },
+      { "key": "good-ends", "title": "Is manipulation acceptable for good causes?", "description": "Takes a position on whether persuasion techniques used for public health or social good escape the objection to propaganda.",
+        "concept": "manipulation-and-respect", "definition": "The dispute over whether manipulation is wrong in itself, because it fails to respect people as rational agents, or only when it serves bad ends.",
+        "facts": ["A Kantian view holds manipulation fails to treat people as rational agents.", "Public health campaigns often use vivid emotional imagery.", "A consequentialist may judge persuasion by its effects.", "A strong answer considers who decides which causes are good enough."],
+        "misconceptions": ["If the cause is good, any method is acceptable.", "Persuasion and respect for autonomy can never coexist."] },
+      { "key": "democratic-propaganda", "title": "Can propaganda thrive inside democracies?", "description": "Evaluates the claim that democratic ideals can be turned against democracy.",
+        "concept": "undermining-propaganda", "definition": "Stanley's idea of propaganda that invokes an ideal, such as freedom, in ways that work against that ideal.",
+        "facts": ["Stanley argues the most dangerous democratic propaganda uses democratic ideals against themselves.", "Bernays saw organized persuasion as necessary in mass democracy.", "Free speech allows counter-speech that state-controlled media restricts.", "A strong answer gives an example and explains what makes it undermining rather than merely partisan."],
+        "misconceptions": ["Democracies are immune to propaganda because speech is free.", "Any message one disagrees with is propaganda."] }
+    ],
+    "translations": {
+      "ko": { "title": "선전과 설득",
+        "objectives": { "define-propaganda": "선전과 정당한 설득을 구별하는 것은 무엇인가?", "emotion-reason": "감정에 호소하는 것은 조작인가?", "good-ends": "좋은 대의를 위한 조작은 허용되는가?", "democratic-propaganda": "선전은 민주주의 안에서도 번성할 수 있는가?" } },
+      "es": { "title": "Propaganda y persuasión",
+        "objectives": { "define-propaganda": "¿Qué distingue la propaganda de la persuasión legítima?", "emotion-reason": "¿Es manipulador apelar a las emociones?", "good-ends": "¿Es aceptable la manipulación por buenas causas?", "democratic-propaganda": "¿Puede prosperar la propaganda dentro de las democracias?" } }
+    }
+  },
+  {
+    "title": "Advertising and Consumer Culture",
+    "category": "economics-civics",
+    "subject": "Economics",
+    "topic": "Advertising and consumer society",
+    "passage": [
+      "Advertising is paid communication meant to promote a product, service or idea. Modern economies spend very large sums on it, and much of it says little about the product's qualities, relying instead on images, moods and associations.",
+      "Economists have offered two broad views. On the informative view, advertising tells buyers what is available, at what price and where, which lowers search costs and helps new firms enter markets. Even uninformative advertising may signal quality: a firm that spends heavily to advertise is betting it will win repeat customers, which is only worthwhile if the product is good. On the persuasive view, advertising shapes preferences, creates brand loyalty that lets firms raise prices, and can deter competitors.",
+      "John Kenneth Galbraith argued in The Affluent Society (1958) that in rich societies production creates the very wants it satisfies, through advertising and salesmanship, so the fact that people buy more does not show they are better off. Friedrich Hayek replied that almost all our wants beyond the most basic are learned from our surroundings, including music and literature, and that this does not make them less genuinely ours.",
+      "Earlier, Thorstein Veblen's The Theory of the Leisure Class (1899) described 'conspicuous consumption': spending to display status. If much consumption is positional, aimed at standing above others, then everyone spending more may leave no one happier, a point later raised in research on why rising incomes have not always raised reported happiness. Others argue that consumer goods have greatly improved ordinary lives, and that critics of consumerism often look down on the tastes of others.",
+      "Particular concerns surround advertising aimed at children, who may not recognize persuasive intent, and advertising for harmful products such as tobacco, which many countries restrict. Defenders of advertising also note that it pays for much free media and many online services.",
+      "The debate asks whether consumer culture expresses free choice or shapes choice in ways that serve sellers more than buyers."
+    ],
+    "objectives": [
+      { "key": "inform-or-persuade", "title": "Does advertising mainly inform or manipulate?", "description": "Compares the informative and persuasive views of advertising and their consequences for markets.",
+        "concept": "informative-vs-persuasive-advertising", "definition": "Competing economic views that advertising mainly lowers search costs and signals quality, or mainly shapes preferences and market power.",
+        "facts": ["Informative advertising lowers search costs and can help new firms enter markets.", "Heavy advertising may signal quality because it pays only if customers return.", "Persuasive advertising can create brand loyalty that supports higher prices.", "A strong answer notes that different kinds of advertising may fit different views."],
+        "misconceptions": ["Advertising never contains useful information.", "If people buy an advertised product, the ad did not influence them."] },
+      { "key": "created-wants", "title": "Are wants created by advertising truly ours?", "description": "Evaluates Galbraith's dependence effect against Hayek's reply.",
+        "concept": "dependence-effect", "definition": "Galbraith's claim that in affluent societies production creates the wants it satisfies, so satisfying them shows little about welfare.",
+        "facts": ["Galbraith set out the argument in The Affluent Society (1958).", "Hayek replied that most wants are learned from surroundings without being less genuine.", "A strong answer distinguishes wants shaped by culture generally from wants engineered by sellers.", "A strong answer asks what standard decides whether a want is 'real'."],
+        "misconceptions": ["Only natural, biological wants are authentic.", "Wants that are influenced by others cannot be freely chosen."] },
+      { "key": "positional", "title": "Does consumer culture make us happier?", "description": "Takes a position on whether rising consumption improves well-being, considering status competition.",
+        "concept": "conspicuous-consumption", "definition": "Veblen's idea of spending to display status, which makes some consumption positional rather than satisfying in itself.",
+        "facts": ["Veblen described conspicuous consumption in 1899.", "If consumption is positional, everyone spending more may leave relative standing unchanged.", "Consumer goods have substantially improved many material conditions of life.", "A strong answer distinguishes positional goods from goods valued for their own use."],
+        "misconceptions": ["More consumption always means more happiness.", "Criticizing consumerism means rejecting material progress."] },
+      { "key": "regulation", "title": "Should advertising be more tightly regulated?", "description": "Argues whether and where advertising should be restricted, for example to children or for harmful products.",
+        "concept": "advertising-regulation", "definition": "Limits on advertising content, audience or products, such as bans on tobacco advertising or rules for ads aimed at children.",
+        "facts": ["Many countries restrict tobacco advertising.", "Young children may not recognize persuasive intent.", "Advertising funds much free media and many online services.", "A strong answer weighs protection against commercial speech and consumer autonomy."],
+        "misconceptions": ["Regulating advertising is the same as banning products.", "Adults are never influenced by advertising they recognize as advertising."] }
+    ],
+    "translations": {
+      "ko": { "title": "광고와 소비문화",
+        "objectives": { "inform-or-persuade": "광고는 주로 정보를 주는가, 조종하는가?", "created-wants": "광고가 만든 욕구는 진정한 우리의 욕구인가?", "positional": "소비문화는 우리를 더 행복하게 하는가?", "regulation": "광고를 더 엄격히 규제해야 하는가?" } },
+      "es": { "title": "La publicidad y la cultura de consumo",
+        "objectives": { "inform-or-persuade": "¿La publicidad sobre todo informa o manipula?", "created-wants": "¿Son nuestros los deseos creados por la publicidad?", "positional": "¿Nos hace más felices la cultura de consumo?", "regulation": "¿Debe regularse más estrictamente la publicidad?" } }
+    }
+  },
+  {
+    "title": "Universal Basic Income",
+    "category": "economics-civics",
+    "subject": "Economics",
+    "topic": "Welfare policy",
+    "passage": [
+      "A universal basic income (UBI) is a regular cash payment from the state to every individual, without a means test and without a work requirement. The idea has older roots; Thomas Paine's Agrarian Justice (1797) proposed a lump-sum payment to every adult funded by a tax on land, and Milton Friedman proposed a related negative income tax in the twentieth century.",
+      "Supporters on the left see UBI as freedom from poverty and from dependence on bad jobs or unequal relationships; Philippe Van Parijs argues it gives 'real freedom' to everyone. Supporters on the right see it as a simpler replacement for many targeted programs, with less bureaucracy and fewer of the traps that occur when means-tested benefits are withdrawn as earnings rise. Some advocates argue it will be needed if automation reduces demand for labor.",
+      "Critics raise cost. A meaningful payment to every adult is expensive, so it requires higher taxes, cuts to other programs, or a small payment. Targeted benefits concentrate help on those in need, while a universal payment also goes to the well-off, though taxes can claw it back.",
+      "A second objection is about work. Some fear people will work less, reducing output and the tax base. Others raise a moral objection of reciprocity: those who can contribute should do so in return for support. Supporters reply that unpaid care and volunteer work are contributions, and that freedom to refuse exploitative work is a benefit, not a cost.",
+      "Evidence comes from pilots, which are neither universal nor permanent. Finland's 2017-2018 experiment paid a basic income to 2,000 unemployed people; it found small effects on employment and improvements in reported well-being. GiveDirectly's long-term program in Kenya and various guaranteed-income trials in the United States add further data. How far these pilots predict a national, permanent, tax-funded scheme is disputed.",
+      "The UBI debate thus mixes economics, about cost and incentives, with political philosophy, about freedom, reciprocity and what citizens owe each other."
+    ],
+    "objectives": [
+      { "key": "freedom", "title": "Does UBI expand real freedom?", "description": "Evaluates the argument that an unconditional income gives people meaningful freedom.",
+        "concept": "real-freedom", "definition": "The idea, defended by Van Parijs, that freedom requires the means to pursue one's choices, which an unconditional income supplies.",
+        "facts": ["UBI is paid to everyone without a means test or work requirement.", "Supporters say it reduces dependence on bad jobs or unequal relationships.", "Paine proposed a universal payment funded by a land tax in 1797.", "A strong answer considers whether the level of payment determines how much freedom it gives."],
+        "misconceptions": ["UBI is supported only by the political left.", "Any cash transfer program counts as UBI."] },
+      { "key": "targeting", "title": "Is universal better than targeted support?", "description": "Weighs universality against means-tested programs on cost, simplicity and fairness.",
+        "concept": "universal-vs-targeted", "definition": "The choice between giving support to everyone and directing it to those who meet conditions of need.",
+        "facts": ["A meaningful universal payment requires higher taxes, program cuts or a small amount.", "Means-tested benefits can create traps when withdrawn as earnings rise.", "Taxes can recover a universal payment from higher earners.", "A strong answer compares net effects, not only gross cost."],
+        "misconceptions": ["Paying everyone necessarily costs exactly the gross sum of all payments.", "Targeted programs always reach everyone who is eligible."] },
+      { "key": "reciprocity", "title": "Is it unfair to pay people who choose not to work?", "description": "Takes a position on the reciprocity objection and the replies to it.",
+        "concept": "reciprocity-objection", "definition": "The objection that able people who receive support from others ought to contribute in return.",
+        "facts": ["Critics argue support should be matched by contribution from those who are able.", "Supporters count unpaid care and volunteer work as contributions.", "Supporters argue freedom to refuse exploitative work is a benefit.", "A strong answer considers whether existing inheritance or unearned wealth raise the same objection."],
+        "misconceptions": ["Everyone who receives a basic income would stop working.", "Only paid employment counts as a social contribution."] },
+      { "key": "evidence", "title": "What do the pilots really show?", "description": "Interprets basic income trials and argues how far they predict a national scheme.",
+        "concept": "pilot-evidence", "definition": "Evidence about basic income from time-limited, partial trials such as Finland's 2017-2018 experiment.",
+        "facts": ["Finland paid 2,000 unemployed people a basic income in 2017-2018.", "Finland found small employment effects and improved reported well-being.", "Pilots are neither universal nor permanent and are not funded by taxes on participants.", "A strong answer names a specific way a national scheme could differ from a pilot."],
+        "misconceptions": ["The Finnish trial proved UBI works for an entire country.", "One trial's results settle the debate either way."] }
+    ],
+    "translations": {
+      "ko": { "title": "기본소득",
+        "objectives": { "freedom": "기본소득은 실질적 자유를 확대하는가?", "targeting": "보편 지원이 선별 지원보다 나은가?", "reciprocity": "일하지 않기로 한 사람에게 지급하는 것은 불공정한가?", "evidence": "시범 사업은 실제로 무엇을 보여 주는가?" } },
+      "es": { "title": "La renta básica universal",
+        "objectives": { "freedom": "¿Amplía la renta básica la libertad real?", "targeting": "¿Es mejor la ayuda universal que la focalizada?", "reciprocity": "¿Es injusto pagar a quien elige no trabajar?", "evidence": "¿Qué muestran realmente los proyectos piloto?" } }
+    }
+  },
+  {
+    "title": "Globalization: Winners and Losers",
+    "category": "economics-civics",
+    "subject": "Economics",
+    "topic": "Globalization",
+    "passage": [
+      "Globalization is the growing integration of economies and societies through trade, investment, migration and the movement of information. Since about 1980, trade as a share of world output rose substantially, China and other economies joined global markets, and supply chains spread production across many countries.",
+      "Supporters credit globalization with large gains. Trade lets countries specialize, lowers prices for consumers and spreads technology. The share of the world's people living in extreme poverty fell sharply over this period, with much of the decline in China and elsewhere in East and South Asia, where export-led growth played a major role.",
+      "The gains were not evenly shared. Branko Milanovic's 'elephant curve' showed that between about 1988 and 2008 incomes grew fastest for the middle classes of emerging Asia and for the global top 1 percent, while lower-middle-class households in rich countries saw little growth. Research by David Autor, David Dorn and Gordon Hanson on the 'China shock' found that US regions most exposed to Chinese import competition suffered lasting job losses and lower wages.",
+      "Economists disagree about weights. Many argue that technological change, not trade, explains most job loss in manufacturing, and that the right response is to compensate and retrain displaced workers rather than restrict trade. Critics reply that promised compensation was rarely paid in full, and that the concentrated losses fell on communities that could not easily recover.",
+      "Dani Rodrik describes a 'trilemma': a country cannot simultaneously have deep economic integration, full national sovereignty and democratic politics; it must give up at least one. Critics of globalization also point to the power of multinational firms, tax avoidance and lower labor or environmental standards, while supporters argue that openness raises standards over time and that protectionism harms the poor most.",
+      "Whether globalization has been good overall thus depends on whose gains and losses count, how they are weighed, and what was done about them."
+    ],
+    "objectives": [
+      { "key": "net-benefit", "title": "Has globalization been good overall?", "description": "Defends an overall verdict while accounting for both gains and losses.",
+        "concept": "gains-from-trade", "definition": "The benefits of specialization, lower prices and spread of technology that trade can bring, set against the costs it imposes on some groups.",
+        "facts": ["Trade allows specialization and lowers consumer prices.", "Extreme poverty fell sharply as East and South Asian economies grew through trade.", "Gains in aggregate do not mean every group gains.", "A strong answer says whose welfare it counts and how it weighs it."],
+        "misconceptions": ["Free trade makes every person better off.", "Because some lose from trade, trade is harmful overall."] },
+      { "key": "elephant-curve", "title": "Who were the winners and losers?", "description": "Interprets distributional evidence such as the elephant curve and the China shock.",
+        "concept": "distributional-effects", "definition": "Evidence that gains from globalization went largely to emerging Asian middle classes and the global top, while some rich-country workers lost.",
+        "facts": ["Milanovic's elephant curve covers roughly 1988-2008.", "The middle classes of emerging Asia and the global top 1 percent gained most.", "Autor, Dorn and Hanson found lasting job and wage losses in US regions exposed to Chinese imports.", "A strong answer notes that global inequality and within-country inequality can move in different directions."],
+        "misconceptions": ["Globalization only helped rich countries at poor countries' expense.", "Losses from trade are always temporary and quickly reabsorbed."] },
+      { "key": "trade-or-technology", "title": "Is trade or technology to blame for lost jobs?", "description": "Weighs trade against technological change as causes of manufacturing job loss and argues what follows for policy.",
+        "concept": "trade-versus-technology", "definition": "The dispute over how much of the decline in manufacturing employment in rich countries is due to trade versus automation and productivity growth.",
+        "facts": ["Many economists attribute most manufacturing job loss to technological change.", "The China shock research found trade exposure had substantial local effects.", "Compensation and retraining for displaced workers have often been limited.", "A strong answer explains why the answer matters for choosing between compensation and protection."],
+        "misconceptions": ["If technology caused most job losses, trade caused none.", "Tariffs will reliably bring back the same jobs that were lost."] },
+      { "key": "trilemma", "title": "Must we choose between integration and democracy?", "description": "Evaluates Rodrik's trilemma and takes a position on what should give way.",
+        "concept": "globalization-trilemma", "definition": "Rodrik's claim that deep economic integration, national sovereignty and democratic politics cannot all be had at once.",
+        "facts": ["Rodrik argues at least one of the three must be given up.", "Deep integration requires shared rules that limit national policy choices.", "Critics point to the power of multinational firms and tax avoidance.", "A strong answer names which element it would weaken and defends the cost."],
+        "misconceptions": ["Globalization is an unstoppable natural force that policy cannot shape.", "Opposing some trade agreements means opposing all trade."] }
+    ],
+    "translations": {
+      "ko": { "title": "세계화: 승자와 패자",
+        "objectives": { "net-benefit": "세계화는 전체적으로 좋았는가?", "elephant-curve": "누가 승자이고 누가 패자였는가?", "trade-or-technology": "일자리 상실의 원인은 무역인가, 기술인가?", "trilemma": "통합과 민주주의 중 하나를 선택해야 하는가?" } },
+      "es": { "title": "Globalización: ganadores y perdedores",
+        "objectives": { "net-benefit": "¿Ha sido buena la globalización en conjunto?", "elephant-curve": "¿Quiénes ganaron y quiénes perdieron?", "trade-or-technology": "¿Tiene la culpa de los empleos perdidos el comercio o la tecnología?", "trilemma": "¿Debemos elegir entre integración y democracia?" } }
+    }
+  },
+  {
+    "title": "Social Media and Democracy",
+    "category": "economics-civics",
+    "subject": "Civics",
+    "topic": "Media and democratic politics",
+    "passage": [
+      "In the early 2010s many observers celebrated social media as a democratizing force. During the Arab Spring of 2010-2011, activists used Facebook and Twitter to organize protests and share images the state media hid. Social platforms lowered the cost of publishing and let ordinary citizens reach large audiences without editors or broadcasters.",
+      "A decade later the mood had darkened. Critics argue that platforms optimized for engagement amplify outrage and sensational content, that false stories can spread faster than corrections, and that foreign and domestic actors use the platforms for coordinated manipulation. The Cambridge Analytica affair, revealed in 2018, showed that data from millions of Facebook users had been harvested for political targeting.",
+      "A popular claim is that algorithms trap people in 'filter bubbles' or 'echo chambers' of like-minded views, driving polarization. The evidence is mixed. Several studies find that most users encounter some opposing views and that heavy partisan news consumers are a minority. In the United States, polarization rose before social media and has risen most among older people, who use it least. Large experiments run with Meta during the 2020 US election found that changing users' feeds altered what they saw but had little measurable effect on their political attitudes over the study period.",
+      "Others argue the damage is less about individual beliefs than about the public sphere: incentives that reward the most extreme voices, the decline of local journalism as advertising moved online, and harassment that drives some people out of public debate.",
+      "Responses are contested. Content moderation can reduce harmful material but raises questions about who decides what is false or harmful and about bias. The European Union's Digital Services Act imposes duties on very large platforms, while others favor more user control, transparency about algorithms, or competition policy. Each approach trades off free expression, accuracy and the power of a few private companies.",
+      "The question is whether social media has damaged democracy, exposed problems that were already there, or both."
+    ],
+    "objectives": [
+      { "key": "net-effect", "title": "Has social media been good or bad for democracy?", "description": "Defends an overall judgment, weighing participation and organization against manipulation and outrage.",
+        "concept": "social-media-and-democracy", "definition": "The debate over whether social platforms strengthen democratic participation or undermine democratic discourse.",
+        "facts": ["Activists used social media to organize during the Arab Spring.", "Engagement-based ranking can amplify outrage and sensational content.", "The Cambridge Analytica affair exposed harvesting of user data for political targeting.", "A strong answer separates effects in democracies from effects under authoritarian regimes."],
+        "misconceptions": ["Technology itself is either inherently democratic or inherently harmful.", "Social media created political division from nothing."] },
+      { "key": "echo-chambers", "title": "Do filter bubbles drive polarization?", "description": "Evaluates the echo chamber hypothesis against the evidence.",
+        "concept": "filter-bubble", "definition": "The claim that personalized feeds isolate users among like-minded views and so increase polarization.",
+        "facts": ["Several studies find most users see some opposing views.", "In the US, polarization rose before social media and most among older people.", "Feed experiments with Meta in 2020 changed exposure but had little measured effect on attitudes in the study period.", "A strong answer considers effects that individual-level studies may miss, such as effects on elites or media."],
+        "misconceptions": ["Everyone online lives in a sealed echo chamber.", "If feed changes do not shift attitudes in months, social media has no political effect."] },
+      { "key": "public-sphere", "title": "Is the real harm to the public sphere?", "description": "Argues whether structural effects such as incentives and the decline of journalism matter more than individual beliefs.",
+        "concept": "public-sphere", "definition": "The shared space of public discussion in which citizens form opinions; its health depends on institutions such as journalism and norms of debate.",
+        "facts": ["Advertising revenue moved online, contributing to the decline of local journalism.", "Incentives can reward the most extreme voices with attention.", "Harassment can drive people out of public debate.", "A strong answer explains why these effects might not appear in measures of individual attitudes."],
+        "misconceptions": ["More speech always produces better public debate.", "The decline of journalism is unrelated to the digital economy."] },
+      { "key": "regulate", "title": "Who should decide what spreads online?", "description": "Takes a position on content moderation, regulation and alternatives.",
+        "concept": "platform-governance", "definition": "Approaches to governing online platforms, from company moderation to laws such as the EU Digital Services Act to transparency and competition policy.",
+        "facts": ["Moderation can reduce harmful content but raises questions about who decides and about bias.", "The EU Digital Services Act imposes duties on very large platforms.", "Alternatives include user control, algorithm transparency and competition policy.", "A strong answer states the trade-off its preferred approach accepts."],
+        "misconceptions": ["Removing false content is simple because falsehood is always obvious.", "Any regulation of platforms is censorship."] }
+    ],
+    "translations": {
+      "ko": { "title": "소셜 미디어와 민주주의",
+        "objectives": { "net-effect": "소셜 미디어는 민주주의에 좋았는가, 나빴는가?", "echo-chambers": "필터 버블이 양극화를 낳는가?", "public-sphere": "진짜 피해는 공론장에 있는가?", "regulate": "온라인에서 무엇이 퍼질지 누가 결정해야 하는가?" } },
+      "es": { "title": "Las redes sociales y la democracia",
+        "objectives": { "net-effect": "¿Han sido las redes sociales buenas o malas para la democracia?", "echo-chambers": "¿Impulsan las burbujas de filtro la polarización?", "public-sphere": "¿Está el verdadero daño en la esfera pública?", "regulate": "¿Quién debe decidir qué se difunde en internet?" } }
+    }
+  },
+  {
+    "title": "The Moral Status of Animals",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Animal ethics",
+    "passage": [
+      "Do animals matter morally for their own sake, and if so, how much? Most people think it is wrong to torment a dog for fun, yet eat meat from animals raised in intensive farms. Philosophers ask whether these attitudes are consistent.",
+      "Descartes is often read as holding that animals are machines without minds or feeling. Kant held that we have no direct duties to animals, but that cruelty to them is wrong because it damages our humanity and makes us likely to be cruel to people. Jeremy Bentham took a different view: 'The question is not, Can they reason? nor, Can they talk? but, Can they suffer?'",
+      "Peter Singer's Animal Liberation (1975) builds on Bentham. If suffering is bad, the suffering of a pig counts equally with similar suffering in a human. To give it less weight simply because of species is 'speciesism', which Singer compares to racism and sexism. As a utilitarian, Singer does not claim all lives are equal, but he argues that the suffering caused by factory farming cannot be justified by the pleasure of eating meat.",
+      "Tom Regan's The Case for Animal Rights (1983) argues instead that many animals are 'subjects-of-a-life' with inherent value, and so have rights that may not be overridden even for good consequences. On this view practices like factory farming and much animal experimentation are wrong in themselves, not just because they cause more harm than good.",
+      "Critics answer from several directions. Some contractualists argue that morality arises from agreements among rational agents, so animals do not have rights in the same sense, though cruelty may still be wrong. Others point to the 'argument from marginal cases': if moral status depends on rationality, some humans, such as infants, would lack it, which most find unacceptable. Defenders of a special human status argue that what matters is belonging to a kind whose members are normally rational. Others ask whether the suffering of wild animals or the interests of very simple creatures also count.",
+      "These debates bear directly on diet, farming, medical research and conservation."
+    ],
+    "objectives": [
+      { "key": "suffering", "title": "Is the capacity to suffer what gives moral status?", "description": "Defends or criticizes sentience as the basis of moral consideration.",
+        "concept": "sentience", "definition": "The capacity to have experiences such as pain and pleasure, which Bentham and Singer treat as the basis for moral consideration.",
+        "facts": ["Bentham asked whether animals can suffer, not whether they can reason or talk.", "Kant held that our duties concerning animals are indirect, grounded in effects on our humanity.", "Descartes is often read as treating animals as machines.", "A strong answer considers what follows for creatures whose sentience is uncertain."],
+        "misconceptions": ["Animals feel no pain because they cannot describe it.", "Kant thought cruelty to animals was morally acceptable."] },
+      { "key": "speciesism", "title": "Is speciesism like racism?", "description": "Evaluates Singer's argument against favoring humans because of species.",
+        "concept": "speciesism", "definition": "Singer's term for giving less weight to a being's interests merely because it belongs to another species.",
+        "facts": ["Singer argues equal suffering deserves equal consideration regardless of species.", "He compares speciesism to racism and sexism as arbitrary discrimination.", "Singer does not claim all lives have equal value.", "A strong answer asks whether species membership tracks any morally relevant difference."],
+        "misconceptions": ["Singer says animals and humans must be treated identically in all respects.", "Equal consideration of interests means equal treatment."] },
+      { "key": "rights-vs-welfare", "title": "Do animals have rights or only welfare interests?", "description": "Compares Regan's rights view with Singer's utilitarian view and takes a position.",
+        "concept": "animal-rights", "definition": "Regan's view that animals who are subjects-of-a-life have inherent value and rights that cannot be overridden for good consequences.",
+        "facts": ["Regan argues many animals are subjects-of-a-life with inherent value.", "On his view some uses of animals are wrong whatever their benefits.", "Singer's utilitarianism weighs animal suffering against benefits.", "A strong answer applies both views to a case such as medical research."],
+        "misconceptions": ["Animal welfare and animal rights are the same position.", "Anyone who cares about animal suffering must oppose all animal research."] },
+      { "key": "marginal-cases", "title": "Does the argument from marginal cases succeed?", "description": "Evaluates whether rationality-based accounts of moral status can protect all humans without including animals.",
+        "concept": "argument-from-marginal-cases", "definition": "The argument that if moral status requires rationality, some humans, such as infants, would lack it, so the criterion must be wrong or must include animals.",
+        "facts": ["Contractualists ground morality in agreements among rational agents.", "Infants and some other humans lack capacities that rationality-based views require.", "Some reply that belonging to a normally rational kind is what matters.", "A strong answer explains whether that reply is principled or ad hoc."],
+        "misconceptions": ["The argument claims infants matter less than animals.", "Pointing out an inconsistency settles which belief to give up."] }
+    ],
+    "translations": {
+      "ko": { "title": "동물의 도덕적 지위",
+        "objectives": { "suffering": "고통을 느끼는 능력이 도덕적 지위를 부여하는가?", "speciesism": "종차별주의는 인종차별과 비슷한가?", "rights-vs-welfare": "동물은 권리를 가지는가, 복지 이익만 가지는가?", "marginal-cases": "주변적 사례 논증은 성공하는가?" } },
+      "es": { "title": "El estatus moral de los animales",
+        "objectives": { "suffering": "¿Es la capacidad de sufrir lo que da estatus moral?", "speciesism": "¿Es el especismo como el racismo?", "rights-vs-welfare": "¿Tienen los animales derechos o solo intereses de bienestar?", "marginal-cases": "¿Tiene éxito el argumento de los casos marginales?" } }
+    }
+  }
+]
