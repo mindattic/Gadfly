@@ -15,7 +15,7 @@
 
 /* Steps */
 .as-steps { list-style: none; padding: 0; margin: 0 0 var(--space-4); display: flex; flex-wrap: wrap; gap: var(--space-2); counter-reset: none; }
-.as-steps li a, .as-steps li span { display: block; min-height: var(--target-min); padding: var(--space-1) var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); font-size: var(--text-sm); text-decoration: none; color: var(--ink); background: var(--panel); }
+.as-steps li a, .as-steps li span { display: block; min-height: var(--target-min); padding: var(--space-1) var(--space-3); border: var(--border-strong); border-radius: var(--radius-pill); font-size: var(--text-sm); text-decoration: none; color: var(--ink); background: var(--panel); }
 .as-steps li span { color: var(--muted); }
 .as-steps li.current a { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 
@@ -30,9 +30,9 @@
 .as-objectives { list-style: none; padding: 0; margin: 0 0 var(--space-4); display: grid; gap: var(--space-3); }
 .as-objectives > li { margin: 0; }
 .as-desc { margin: 0; }
-.as-criterion { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); display: grid; gap: var(--space-2); min-width: 0; }
+.as-criterion { border: var(--border); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); display: grid; gap: var(--space-2); min-width: 0; }
 .as-criterion summary { cursor: pointer; min-height: var(--target-min); }
-.as-levels { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px var(--space-3); margin: var(--space-1) 0; font-size: var(--text-sm); }
+.as-levels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-0) var(--space-3); margin: var(--space-1) 0; font-size: var(--text-sm); }
 .as-levels dt { font-weight: 600; }
 .as-levels dd { margin: 0 0 var(--space-2); color: var(--muted); }
 @media (min-width: 48rem) {

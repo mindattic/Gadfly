@@ -13,12 +13,12 @@
 <AdminNav />
 
 <style>
-    .lti-urls { display: grid; grid-template-columns: max-content 1fr max-content; gap: .4rem .75rem; align-items: center; max-width: 900px; }
+    .lti-urls { display: grid; grid-template-columns: max-content 1fr max-content; gap: var(--space-2) var(--space-3); align-items: center; max-width: 900px; }
     .lti-urls code { overflow-wrap: anywhere; }
-    .lti-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0 1rem; }
-    .lti-tabs button[aria-pressed="true"] { outline: 2px solid var(--accent); }
+    .lti-tabs { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 var(--space-4); }
+    .lti-tabs button[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: var(--focus-offset); }
     .lti-steps { max-width: 900px; }
-    .lti-steps li { margin-bottom: .55rem; }
+    .lti-steps li { margin-bottom: var(--space-2); }
     .lti-steps code { overflow-wrap: anywhere; }
     .lti-wide { max-width: 900px; }
     @@media (max-width: 700px) { .lti-urls { grid-template-columns: 1fr; } }

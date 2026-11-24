@@ -200,15 +200,14 @@ public static class TranscriptEndpoints
     }
 
     private const string VerifyCss = """
-        :root{color-scheme:light dark;--bg:#f4f3ef;--card:#fff;--ink:#1d1d1f;--muted:#555;--line:#d8d6cf}
-        @media (prefers-color-scheme:dark){:root{--bg:#18181a;--card:#232326;--ink:#ececec;--muted:#aaa;--line:#3a3a3e}}
+        :root{color-scheme:light;--bg:#f6f0e4;--card:#fffdf8;--ink:#1b2430;--muted:#4d5866;--line:#7f745e}
         body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-        main{max-width:640px;margin:32px auto;background:var(--card);padding:28px 32px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+        main{max-width:640px;margin:32px auto;background:var(--card);padding:28px 32px;border:1px solid #dccfb6;border-radius:6px;box-shadow:0 1px 4px rgba(60,45,20,.12)}
         @media (max-width:700px){main{margin:0;border-radius:0;padding:20px 16px}}
-        h1{font-size:24px;margin:0 0 12px}
+        h1{font:600 24px/1.25 "Palatino Linotype","Book Antiqua",Palatino,Georgia,serif;margin:0 0 12px}
         label{display:block;font-weight:600;margin:14px 0 4px}
         input:not([type=file]){width:100%;box-sizing:border-box;font:18px ui-monospace,Consolas,monospace;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:transparent;color:inherit;letter-spacing:.06em}
-        button{margin-top:16px;font:600 16px system-ui,sans-serif;padding:9px 20px;border-radius:6px;border:0;background:#2f5d50;color:#fff;cursor:pointer}
+        button{margin-top:16px;font:600 16px system-ui,sans-serif;padding:9px 20px;border-radius:6px;border:0;background:#1f5aa6;color:#fff;cursor:pointer}
         .or{margin:10px 0 0;color:var(--muted)}
         .hint{color:var(--muted);font-size:14px;margin-top:20px}
         code{font-family:ui-monospace,Consolas,monospace}

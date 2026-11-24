@@ -1,29 +1,26 @@
 /* Grading workflow (GAD-T94..T99): queue, workspace, reconciliation, report. Uses app.css tokens. */
-/* The mock-mode badge colour, same values as demo.css's --mock-tag-bg/--mock-tag-ink (GAD-T396): kept here too so it
-   stays correct in dark mode on a grading page even when demo.css isn't loaded. */
-:root { --mock-tag-bg: #8a5a00; --mock-tag-ink: #ffffff; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --mock-tag-bg: #f0c050; --mock-tag-ink: #1d1d1f; } }
-:root[data-theme="dark"] { --mock-tag-bg: #f0c050; --mock-tag-ink: #1d1d1f; }
+/* The mock-mode badge colour is demo.css's --mock-tag-bg/--mock-tag-ink (the --warn pair, GAD-T396, GAD-T718); the fallbacks
+   below are the same tokens for a page where demo.css isn't loaded. */
 .gr-filters { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: end; margin-bottom: var(--space-4); }
 .gr-filters label { margin: 0; }
-.gr-status { display: inline-block; padding: .1rem var(--space-2); border-radius: var(--radius-pill); font-size: var(--text-xs); border: 1px solid var(--border-strong); white-space: nowrap; }
+.gr-status { display: inline-block; padding: var(--space-0) var(--space-2); border-radius: var(--radius-pill); font-size: var(--text-xs); border: var(--border-strong); background: var(--panel); white-space: nowrap; }
 .gr-status.s-HumanReviewPending, .gr-status.s-AwaitingFinalApproval { border-color: var(--accent); color: var(--accent); }
 .gr-status.s-ReconciliationRequired, .gr-status.s-TranscriptVerificationPending, .gr-status.s-UnderAppeal { border-color: var(--error); color: var(--error); }
 .gr-status.s-Finalized, .gr-status.s-Published, .gr-status.s-Amended { border-color: var(--ok); color: var(--ok); }
 /* The same mock-mode colour as demo.css's .mock-label (GAD-T396): fixed hex before, so it didn't stay legible in dark mode. */
-.gr-mock { display: inline-block; padding: .1rem var(--space-2); border-radius: var(--radius-sm); background: var(--mock-tag-bg, #8a5a00); color: var(--mock-tag-ink, #fff); font-weight: 700; font-size: var(--text-xs); letter-spacing: .04em; }
-.gr-banner { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--border); border-left-width: 4px; background: var(--panel); margin: 0 0 var(--space-4); }
+.gr-mock { display: inline-block; padding: var(--space-0) var(--space-2); border-radius: var(--radius-sm); background: var(--mock-tag-bg, var(--warn)); color: var(--mock-tag-ink, var(--warn-ink)); font-weight: 700; font-size: var(--text-xs); letter-spacing: .04em; }
+.gr-banner { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border: var(--border); border-left-width: 4px; background: var(--panel); margin: 0 0 var(--space-4); }
 .gr-banner.warn { border-left-color: var(--warn); background: var(--warn-tint); }
-.gr-banner.mock { border-left-color: var(--mock-tag-bg, #8a5a00); }
+.gr-banner.mock { border-left-color: var(--mock-tag-bg, var(--warn)); }
 .gr-summary { display: grid; gap: var(--space-2) var(--space-5); grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr)); margin-bottom: var(--space-4); }
 .gr-summary .hint { display: block; }
 .gr-section { margin-top: var(--space-6); }
-.gr-response { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); min-width: 0; overflow-wrap: break-word; }
+.gr-response { border: var(--border); border-radius: var(--radius-md); background: var(--panel); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); min-width: 0; overflow-wrap: break-word; }
 .gr-response.needs-human { border-color: var(--error); border-left-width: 4px; }
 .gr-response .q { margin: var(--space-1) 0; font-weight: 600; }
 .gr-response blockquote { margin: var(--space-2) 0; padding: var(--space-2) var(--space-3); border-left: 3px solid var(--accent); white-space: pre-wrap; }
-.gr-response blockquote.original { border-left-color: var(--border-strong); color: var(--muted); }
-.gr-objective { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel); padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-5)); margin-bottom: var(--space-4); min-width: 0; }
+.gr-response blockquote.original { border-left-color: var(--line-strong); color: var(--muted); }
+.gr-objective { border: var(--border); border-radius: var(--radius-md); background: var(--panel); padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-5)); margin-bottom: var(--space-4); min-width: 0; }
 .gr-objective h3 { margin: 0 0 var(--space-1); }
 .gr-two { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
 .gr-two > div { min-width: 0; }
@@ -37,7 +34,7 @@
 .gr-band-MandatoryReconciliation { color: var(--error); font-weight: 600; }
 .gr-band-AdditionalReview { color: var(--accent); }
 .gr-audit td { font-size: var(--text-sm); vertical-align: top; }
-.gr-hidden { padding: var(--space-3) var(--space-4); border: 1px dashed var(--border-strong); border-radius: var(--radius-md); color: var(--muted); }
+.gr-hidden { padding: var(--space-3) var(--space-4); border: 1px dashed var(--line-strong); border-radius: var(--radius-md); color: var(--muted); }
 .gr-report .gr-objective { break-inside: avoid; }
 .gr-table-wrap { overflow-x: auto; }
 /* The queue's pager (GAD-T390), same pattern as the admin-people pages' .pager. */
@@ -58,4 +55,4 @@
 .gr-speech { margin: var(--space-1) 0; font-size: var(--text-sm); }
 .gr-speech.corrected { color: var(--ink); border-left: 3px solid var(--accent); padding-left: var(--space-2); }
 .gr-speech.unsure { color: var(--ink); border-left: 3px solid var(--warn); padding-left: var(--space-2); }
-.gr-speech mark { background: color-mix(in srgb, var(--error) 22%, transparent); color: inherit; padding: 0 .15rem; border-radius: 3px; }
+.gr-speech mark { background: color-mix(in srgb, var(--error) 22%, transparent); color: inherit; padding: 0 var(--space-1); border-radius: var(--radius-sm); }

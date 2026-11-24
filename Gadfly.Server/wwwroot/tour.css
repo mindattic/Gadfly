@@ -2,25 +2,26 @@
 .tour-launch { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--target-min); padding: var(--space-1) var(--space-3); font-size: var(--text-sm); font-weight: 600;
     background: transparent; color: var(--accent); border: 1.5px solid var(--accent); border-radius: var(--radius-pill); white-space: nowrap; }
 .tour-launch:hover:not(:disabled), .tour-launch:focus-visible { background: var(--accent); color: var(--accent-ink); }
-.tour-launch-float { float: right; margin: 2px 0 var(--space-2) var(--space-3); }
+.tour-launch-float { float: right; margin: var(--space-0) 0 var(--space-2) var(--space-3); }
 
 .tour-root { position: fixed; inset: 0; z-index: 1100; }
 .tour-blocker { position: fixed; inset: 0; background: transparent; }
-.tour-root.tour-centred .tour-blocker { background: rgba(0, 0, 0, .45); }
-.tour-spot { position: fixed; border-radius: var(--radius-sm); box-shadow: 0 0 0 9999px rgba(0, 0, 0, .45); outline: 2px solid var(--accent);
+.tour-root.tour-centred .tour-blocker { background: var(--scrim); }
+/* The ring is white: the page around it is dimmed navy, where the blue accent would not show (3:1). */
+.tour-spot { position: fixed; border-radius: var(--radius-sm); box-shadow: 0 0 0 9999px var(--scrim); outline: 2px solid var(--focus-on-stage);
     outline-offset: 0; pointer-events: none; transition: top .2s ease, left .2s ease, width .2s ease, height .2s ease; }
 .tour-callout { position: fixed; width: 380px; max-width: calc(100vw - 24px); background: var(--panel); color: var(--ink);
-    border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4) var(--space-4);
+    border: var(--border-strong); border-top: 3px solid var(--gold); border-radius: var(--radius-lg); padding: var(--space-3) var(--space-4) var(--space-4);
     box-shadow: var(--shadow-3); max-height: calc(100vh - 24px); overflow-y: auto; transition: top .2s ease, left .2s ease; }
 .tour-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-2); }
 .tour-count { color: var(--muted); font-size: var(--text-xs); }
-.tour-skip { background: none; color: var(--muted); padding: 2px var(--space-1); min-height: var(--target-min); font-size: var(--text-xs); text-decoration: underline; }
+.tour-skip { background: none; color: var(--muted); padding: var(--space-0) var(--space-1); min-height: var(--target-min); font-size: var(--text-xs); text-decoration: underline; }
 .tour-skip:hover { color: var(--accent); }
 .tour-title { font-size: var(--text-lg); margin: 0 0 var(--space-2); }
 .tour-title:focus { outline: none; }
 .tour-body { margin: 0 0 var(--space-3); font-size: var(--text-sm); line-height: var(--leading); }
 .tour-nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
-.tour-back { background: transparent; color: var(--accent); border: 1px solid var(--border-strong); }
+.tour-back { background: transparent; color: var(--accent); border: var(--border-strong); }
 .tour-back:disabled { visibility: hidden; }
 
 /* Reduced motion: no sliding between steps (tour.js also turns smooth scrolling off). */

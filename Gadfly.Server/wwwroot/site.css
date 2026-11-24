@@ -1,52 +1,51 @@
 /* Gadfly Exams public site (GAD-T308): landing, how it works, science, pricing, contact, legal, 404.
    One product with the app (GAD-T692): the palette below aliases app.css's tokens (paper = --bg, sheet = --panel, rule =
-   --line, oxblood = --accent), so light, dark and every contrast fix there apply here too; spacing, radii, focus and small
-   type use app.css's scale (docs/ACCESSIBILITY.md "Design system"). What stays the site's own is editorial: the serif
-   headings, the wider page for the landing, and the slate of the examination plate.
-   No web fonts, no external requests: the serif is the system's Palatino family. */
+   --line, aegean = --accent), so the light classical theme and every contrast fix there apply here too; spacing, radii,
+   focus and small type use app.css's scale (docs/ACCESSIBILITY.md "Design system"). What stays the site's own is
+   editorial: the serif headings, the wider page for the landing, and the colonnade, painted Aegean and marble plate of the
+   hero (GAD-T718). The plate's old dark slate is now the marble --panel (its --slate-* names stay, aliased to tokens).
+   No web fonts, no external requests: the serif is the system's Palatino family (app.css --font-serif). */
 .site {
     --paper: var(--bg); --sheet: var(--panel); --rule: var(--line); --rule-strong: var(--line-strong);
-    --oxblood: var(--accent); --oxblood-ink: var(--accent-ink);
-    --slate: #1c2430; --slate-ink: #e9e6df; --slate-muted: #a9b0bb; --slate-mark: #e3a68c; --slate-rule: #2f3a4a; --slate-line: #3a4556;
-    --serif: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", "URW Palladio L", P052, Georgia, serif;
-    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --aegean: var(--accent); --aegean-ink: var(--accent-ink);
+    --slate: var(--panel); --slate-ink: var(--ink); --slate-muted: var(--muted); --slate-mark: var(--clay); --slate-rule: var(--line); --slate-line: var(--line-strong);
+    --serif: var(--font-serif);
+    --sans: var(--font-sans);
     --wide: 72rem;
     min-height: 100vh; display: flex; flex-direction: column; background: var(--paper); color: var(--ink);
     font: 1.0625rem/1.6 var(--sans);
-}
-@media (prefers-color-scheme: dark) {
-    .site { --slate: #10151d; --slate-mark: #e9b39c; }
 }
 
 /* ---- skip link, focus */
 .site .skip { position: absolute; left: -999px; top: var(--space-2); z-index: 1200; padding: var(--space-2) var(--space-4); background: var(--ink); color: var(--paper); border-radius: var(--radius-sm); }
 .site .skip:focus { left: var(--space-2); }
-.site a { color: var(--oxblood); text-underline-offset: .18em; text-decoration-thickness: 1px; }
+.site a { color: var(--aegean); text-underline-offset: .18em; text-decoration-thickness: 1px; }
 .site a:hover { text-decoration-thickness: 2px; }
 
-/* ---- the engraved fly: black on white in the file, so it multiplies into paper and inverts in the dark */
+/* ---- the engraved fly: black on white in the file, so it multiplies into paper; inverted in the opt-in Aegean night */
 .site .fly { display: block; mix-blend-mode: multiply; }
-@media (prefers-color-scheme: dark) { .site .fly { filter: invert(1); mix-blend-mode: screen; } }
+:root[data-theme="dark"] .site .fly { filter: invert(1); mix-blend-mode: screen; }
 
-/* ---- header */
-.site-head { border-bottom: var(--border); background: var(--paper); }
+/* ---- header: marble under a Greek key (the band hangs below the bar, like the app's top bar) */
+.site-head { position: relative; border-bottom: var(--border); background: var(--sheet); }
+.site-head::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; z-index: 1; height: .75rem; background: var(--gold); -webkit-mask: var(--meander) repeat-x left center / auto 100%; mask: var(--meander) repeat-x left center / auto 100%; pointer-events: none; }
 .site-head .bar { max-width: var(--wide); margin: 0 auto; padding: var(--space-3) var(--gutter); display: flex; align-items: center; gap: var(--space-3) var(--space-5); flex-wrap: wrap; }
 .site .site-brand { display: flex; align-items: center; gap: var(--space-2); min-height: var(--target-min); text-decoration: none; color: var(--ink); font: 600 var(--text-xl)/1 var(--serif); }
 .site .site-brand .fly { width: 2.4rem; height: 2.4rem; }
 .site .site-brand span { font-weight: 400; color: var(--muted); }
 .site-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); margin-left: auto; font-size: var(--text-sm); }
 .site-nav a { display: inline-flex; align-items: center; min-height: var(--target-min); color: var(--ink); text-decoration: none; padding: var(--space-1) 0; border-bottom: 1px solid transparent; }
-.site-nav a:hover, .site-nav a.active { border-bottom-color: var(--oxblood); }
+.site-nav a:hover, .site-nav a.active { border-bottom-color: var(--aegean); }
 .site-nav .sign-in { color: var(--muted); }
-.site .btn { display: inline-flex; align-items: center; min-height: var(--target-touch); padding: var(--space-2) var(--space-4); border: 1px solid var(--oxblood); border-radius: var(--radius-sm); background: var(--oxblood); color: var(--oxblood-ink); font: 600 var(--text-base)/1.2 var(--sans); text-decoration: none; cursor: pointer; }
-.site .btn:hover { filter: brightness(1.08); }
-.site .btn.quiet { background: transparent; color: var(--oxblood); }
+.site .btn { display: inline-flex; align-items: center; min-height: var(--target-touch); padding: var(--space-2) var(--space-4); border: 1px solid var(--aegean); border-radius: var(--radius-sm); background: var(--aegean); color: var(--aegean-ink); font: 600 var(--text-base)/1.2 var(--sans); text-decoration: none; cursor: pointer; }
+.site .btn:hover { filter: brightness(.9); }
+.site .btn.quiet { background: transparent; color: var(--aegean); }
 .site-nav .btn { min-height: var(--target-min); padding: var(--space-2) var(--space-3); border-bottom-width: 1px; }
-.site-nav .btn:hover { border-bottom-color: var(--oxblood); }
+.site-nav .btn:hover { border-bottom-color: var(--aegean); }
 /* English / Korean (GAD-T592): the current language as plain text, the other as a link; each at least 24px tall (WCAG 2.5.8). */
 .site-lang { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); }
 .site-lang a, .site-lang span { display: inline-flex; align-items: center; min-height: var(--target-min); padding: 0 var(--space-1); }
-.site-lang a { color: var(--oxblood); }
+.site-lang a { color: var(--aegean); }
 .site-lang span { color: var(--muted); }
 
 /* ---- page frame (overrides app.css's generic main) */
@@ -63,16 +62,27 @@
 .site section.band:first-of-type { border-top: 0; }
 .site .actions { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: center; margin-top: var(--space-5); }
 
-/* ---- hero: headline beside the examination plate */
-.site .hero { padding: clamp(2.5rem, 6vw, 5rem) 0 clamp(3rem, 6vw, 5rem); }
+/* ---- hero: headline beside the examination plate, in front of the painted Aegean (app.css --scene: sky, sun, far isles, sea,
+   soft brushwork from SVG turbulence) with a marble colonnade standing along its foot. The painting is only the ground: the
+   headline, lede and link sit on its palest part (about L 0.68 at worst, so --ink, --muted and --aegean keep 4.5:1), and the
+   colonnade stays inside the hero's bottom padding, under nothing. */
+.site .hero { --colonnade-h: clamp(3rem, 7vw, 4.5rem); position: relative; isolation: isolate; background: var(--scene), var(--paper); padding: clamp(2.5rem, 6vw, 5rem) 0 calc(var(--colonnade-h) + var(--space-6)); }
+.site .hero::after { content: ""; position: absolute; z-index: -1; left: 0; right: 0; bottom: 0; height: var(--colonnade-h); pointer-events: none;
+    /* an entablature, then columns every 5rem: each a fluted, cylinder-shaded shaft (hard-stop bands) between two plinths */
+    background:
+        linear-gradient(var(--line-strong), var(--line-strong)) left top / 100% 1px no-repeat,
+        linear-gradient(180deg, var(--marble-mid) 0, var(--marble-shade) 100%) left top / 100% .55rem no-repeat,
+        repeating-linear-gradient(90deg, transparent 0 1.85rem, var(--marble-shade) 1.85rem 1.95rem, var(--marble-mid) 1.95rem 2.25rem, var(--marble-lite) 2.25rem 2.7rem, var(--marble-mid) 2.7rem 3.05rem, var(--marble-shade) 3.05rem 3.15rem, transparent 3.15rem 5rem) left .55rem / 100% 100% no-repeat; }
 .site .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 4.5rem); align-items: center; }
 .site .hero h1 { font-size: clamp(2.2rem, 1.3rem + 3.2vw, 3.6rem); max-width: 17ch; }
+:root[data-theme="dark"] .site .hero::after { opacity: .35; }
 
 /* The plate (GAD-T692): the examiner, live (<LiveExaminer>, 4:5) beside the exchange; stacked under the headline below 820px,
-   and on a phone she sits above the exchange at a capped width, so the headline stays the first thing on screen. */
-.site .plate { margin: 0; background: var(--slate); color: var(--slate-ink); border-radius: var(--radius-sm); overflow: hidden; display: grid; grid-template-columns: minmax(10rem, 42%) minmax(0, 1fr); }
-.site .plate-examiner { align-self: stretch; display: flex; align-items: center; }
-.site .plate .live-examiner { --live-examiner-radius: 0; }
+   and on a phone she sits above the exchange at a capped width, so the headline stays the first thing on screen. Marble
+   now (GAD-T718): a --panel card with fluted pilasters, her stage framed in marble inside it. */
+.site .plate { margin: 0; background: var(--pilasters), var(--slate); color: var(--slate-ink); border: var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-2); overflow: hidden; display: grid; grid-template-columns: minmax(10rem, 42%) minmax(0, 1fr); }
+.site .plate-examiner { align-self: stretch; display: flex; align-items: center; padding: var(--space-4) 0 var(--space-4) var(--space-5); }
+.site .plate .live-examiner { --live-examiner-radius: var(--radius-sm); }
 .site .plate .exchange { padding: var(--space-5) var(--space-5) var(--space-4) var(--space-4); display: grid; gap: var(--space-3); align-content: start; font-size: var(--text-base); }
 .site .plate .turn { margin: 0; max-width: none; }
 .site .plate .who { display: block; font: 600 var(--text-xs)/1.3 var(--sans); color: var(--slate-muted); margin-bottom: var(--space-1); }
@@ -80,7 +90,7 @@
 .site .plate .student { color: var(--slate-muted); padding-left: var(--space-3); border-left: 2px solid var(--slate-line); }
 .site .plate mark { background: none; color: var(--slate-mark); text-decoration: underline; text-decoration-color: var(--slate-mark); text-underline-offset: .2em; }
 .site .plate .student mark { color: var(--slate-ink); }
-.site .plate figcaption { grid-column: 1 / -1; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--slate-rule); color: var(--slate-muted); font-size: var(--text-xs); }
+.site .plate figcaption { grid-column: 1 / -1; padding: var(--space-3) var(--space-5); border-top: 1px solid var(--slate-rule); color: var(--slate-muted); font-size: var(--text-xs); }
 
 /* ---- two-column prose */
 .site .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: clamp(1.5rem, 5vw, 4rem); align-items: start; }
@@ -89,12 +99,12 @@
 /* ---- a real sequence: the path from first question to released grade */
 .site ol.steps { list-style: none; margin: var(--space-5) 0 0; padding: 0; counter-reset: step; display: grid; gap: 0; }
 .site ol.steps > li { counter-increment: step; display: grid; grid-template-columns: 3rem 1fr; gap: 0 var(--space-4); padding: var(--space-4) 0; border-top: var(--border); max-width: 52rem; }
-.site ol.steps > li::before { content: counter(step); font: 600 1.6rem/1 var(--serif); color: var(--oxblood); padding-top: .15rem; }
+.site ol.steps > li::before { content: counter(step); font: 600 1.6rem/1 var(--serif); color: var(--clay); padding-top: var(--space-1); }
 .site ol.steps h3 { margin: 0 0 var(--space-1); }
 .site ol.steps p { margin: 0; color: var(--muted); grid-column: 2; }
 
 /* ---- ruled sheet: plain statements, one per row */
-.site .sheet { background: var(--sheet); border: var(--border); border-radius: var(--radius-sm); padding: var(--space-1) clamp(1rem, 3vw, 2rem); }
+.site .sheet { background: var(--sheet); border: var(--border); border-radius: var(--radius-sm); padding: var(--space-1) clamp(var(--space-4), 3vw, var(--space-6)); }
 .site .sheet > ul { list-style: none; margin: 0; padding: 0; }
 .site .sheet > ul > li { padding: var(--space-4) 0; border-top: var(--border); max-width: none; }
 .site .sheet > ul > li:first-child { border-top: 0; }
@@ -102,12 +112,14 @@
 .site .sheet span { color: var(--muted); }
 
 /* ---- quotation from the research */
-.site .quote { margin: 0; padding: 0 0 0 var(--space-5); border-left: 3px solid var(--oxblood); }
+.site .quote { margin: 0; padding: 0 0 0 var(--space-5); border-left: 3px solid var(--aegean); }
 .site .quote p { font: 400 clamp(1.35rem, 1.1rem + 1vw, 1.85rem)/1.4 var(--serif); margin: 0 0 var(--space-2); max-width: 38ch; }
 .site .quote cite { font-style: normal; color: var(--muted); font-size: var(--text-sm); }
 
 /* ---- closing call to action */
-.site .closing { background: var(--sheet); }
+.site .closing { position: relative; background: var(--sheet); }
+/* A laurel sprig over the closing call to action, in the band's top padding (decorative). */
+.site .closing::before { content: ""; position: absolute; left: 50%; top: var(--space-5); width: 4rem; height: 1.1rem; transform: translateX(-50%); background: var(--gold); -webkit-mask: var(--laurel) center / contain no-repeat; mask: var(--laurel) center / contain no-repeat; }
 .site .closing .wrap { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-6); align-items: center; }
 .site .closing .fly { width: 8.5rem; height: 8.5rem; opacity: .9; }
 
@@ -123,7 +135,7 @@
 .site .prose .updated { color: var(--muted); font-size: var(--text-sm); }
 .site .prose table { border-collapse: collapse; width: 100%; max-width: 60rem; margin: var(--space-4) 0 var(--space-5); font-size: var(--text-sm); background: var(--sheet); }
 .site .prose th, .site .prose td { text-align: left; vertical-align: top; padding: var(--space-2) var(--space-3); border: var(--border); }
-.site .prose th { font-weight: 600; background: var(--paper); }
+.site .prose th { font-weight: 600; background: var(--bg-deep); }
 .site .toc { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: var(--space-4) 0 0; padding: 0; list-style: none; font-size: var(--text-sm); }
 .site .toc li { margin: 0; }
 .site .refs { font-size: var(--text-sm); color: var(--muted); }
@@ -148,7 +160,7 @@
 .site .plan dt { font-size: var(--text-sm); color: var(--muted); }
 .site .plan dd { margin: 0; font: 600 1.15rem/1.25 var(--serif); }
 .site .plan .price { margin-top: auto; padding-top: var(--space-4); border-top: var(--border); font-weight: 600; }
-.site .plan.featured { box-shadow: inset 0 3px 0 var(--oxblood); }
+.site .plan.featured { box-shadow: inset 0 3px 0 var(--aegean); }
 .site .included { columns: 2 18rem; column-gap: var(--space-7); padding-left: var(--space-5); }
 .site .included li { break-inside: avoid; margin: 0 0 var(--space-2); }
 .site .faq dt { font: 600 1.12rem/1.35 var(--serif); margin-top: var(--space-5); }
@@ -156,7 +168,7 @@
 
 /* ---- contact form */
 .site .form-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: clamp(2rem, 5vw, 4rem); align-items: start; }
-.site form.contact { display: grid; gap: var(--space-4); background: var(--sheet); border: var(--border); border-radius: var(--radius-sm); padding: clamp(1.2rem, 3vw, 2rem); }
+.site form.contact { display: grid; gap: var(--space-4); background: var(--sheet); border: var(--border); border-radius: var(--radius-sm); padding: clamp(var(--space-4), 3vw, var(--space-6)); }
 .site form.contact .row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
 .site form.contact label { display: grid; gap: var(--space-1); font-size: var(--text-sm); font-weight: 600; }
 .site form.contact label small { font-weight: 400; color: var(--muted); }
@@ -180,14 +192,14 @@
 .site .lost ul { padding-left: var(--space-5); }
 
 /* ---- footer */
-.site-foot { border-top: var(--border); background: var(--paper); font-size: var(--text-sm); color: var(--muted); }
+.site-foot { border-top: var(--border); background: var(--bg-deep); font-size: var(--text-sm); color: var(--muted); }
 .site-foot .wrap { padding-top: var(--space-6); padding-bottom: var(--space-6); display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)); gap: var(--space-5) var(--space-6); }
 .site-foot .fly { width: 2.2rem; height: 2.2rem; margin-bottom: var(--space-2); }
 .site-foot p { margin: 0 0 var(--space-2); max-width: 40ch; }
 .site-foot h2 { font: 600 var(--text-sm)/1.3 var(--sans); color: var(--ink); margin: 0 0 var(--space-2); }
 .site-foot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
 .site-foot a { display: inline-flex; align-items: center; min-height: var(--target-min); color: var(--muted); }
-.site-foot a:hover { color: var(--oxblood); }
+.site-foot a:hover { color: var(--aegean); }
 
 /* ---- one orchestrated moment: the exchange arrives turn by turn on first load */
 @media (prefers-reduced-motion: no-preference) {

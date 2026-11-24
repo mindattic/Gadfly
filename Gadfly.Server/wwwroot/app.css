@@ -1,14 +1,28 @@
-/* Gadfly Exams — a quiet, readable shell. Light and dark from the system setting. */
+/* Gadfly Exams: a light, classical shell (GAD-T718). Marble and parchment grounds, Aegean blue and terracotta accents, gold
+   leaf for ornament only. Light is the default for every visitor, whatever their system setting; the Aegean-night variant is
+   opt-in through <html data-theme="dark"> (nothing sets it today). Every colour pair below is in the contrast table in
+   docs/ACCESSIBILITY.md; change a colour here, at the token, never in a page rule. */
 :root {
-    --bg: #f6f5f1; --panel: #ffffff; --ink: #1d1d1f; --muted: #5f6368; --line: #dedbd2;
-    --accent: #7a3e2e; --accent-ink: #ffffff; --ok: #1e7b45; --error: #b3261e; --radius: 10px;
-    /* A border that meets 3:1 against --bg and --panel (GAD-T366), for controls whose boundary is the only way to see
-       them (inputs, selects, textareas): --line alone is too faint (WCAG 1.4.11). Decorative dividers keep --line. */
-    --line-strong: #817c6e;
+    /* Grounds. --bg is the page (limestone parchment), --bg-deep a deeper parchment for bands and table heads, --panel the
+       marble of panels, cards and fields. */
+    --bg: #f6f0e4; --bg-deep: #efe5d0; --panel: #fffdf8;
+    --ink: #1b2430; --muted: #4d5866;
+    /* --line is decorative (dividers, card edges); --line-strong meets 3:1 against every ground and tint, for a control
+       whose boundary is the only way to see it (WCAG 1.4.11). */
+    --line: #dccfb6; --line-strong: #7f745e;
+    /* Aegean blue: links, primary buttons, the focus ring. --clay is terracotta, the second accent (numerals, marks). */
+    --accent: #1f5aa6; --accent-ink: #ffffff; --accent-tint: #e8eff8;
+    --clay: #9a4a2c;
+    /* Gold leaf, sky, sea and sun are ornament only: they never carry text or state (their contrast is not claimed). */
+    --gold: #b8923a; --gold-soft: #e1c87f;
+    --ok: #1f6b45; --error: #b3261e; --info: #25598c; --warn: #7a5200;
+    --info-tint: #e6eff6; --ok-tint: #e9f3e8; --warn-tint: #fbf1d6; --error-tint: #fbebe6;
+    --danger-ink: #ffffff; --warn-ink: #ffffff;
+    --radius: 6px;
     color-scheme: light;
     /* Spacing scale (GAD-T507): every gap, padding and margin between sections, panels and controls picks one of these
        rather than an ad-hoc value, so sections never touch each other or the screen edge. 4px steps at the small end. */
-    --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
+    --space-0: .125rem; --space-1: .25rem; --space-2: .5rem; --space-3: .75rem; --space-4: 1rem;
     --space-5: 1.5rem; --space-6: 2rem; --space-7: 3rem; --space-8: 4rem;
     /* The page gutter: 16px on a phone, growing with the viewport to 40px; and the widest a page's content runs. */
     --gutter: clamp(1rem, 4vw, 2.5rem);
@@ -20,37 +34,82 @@
        40rem (640px), tablet 40-64rem, desktop from 64rem (1024px). */
     /* The coarse-pointer target (44 CSS px): buttons and other controls grow to it on a touch screen. */
     --target-touch: 2.75rem;
-    /* Type scale: h1 xl-2xl (fluid), h2 xl, h3 lg, h4 base; body base; hints and table cells sm; badges xs. */
+    /* Type scale: h1 xl-2xl (fluid), h2 xl, h3 lg, h4 base; body base; hints and table cells sm; badges xs. Headings are set
+       in the system's classical serif (Palatino family; no web font is loaded, so the CSP is untouched), body in the system
+       sans for reading. */
+    --font-serif: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", "URW Palladio L", P052, Georgia, serif;
+    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --text-xs: .8rem; --text-sm: .9rem; --text-base: 1rem; --text-lg: 1.1rem; --text-xl: 1.25rem;
     --text-2xl: clamp(1.4rem, 1.2rem + 1vw, 1.6rem);
     --leading: 1.5; --leading-tight: 1.25;
     /* The readable line length for prose (WCAG 1.4.8 advisory, kept anyway). */
     --measure: 68ch;
-    /* Radius scale: controls sm, panels and cards md (= --radius), dialogs lg, badges and pills full. */
-    --radius-sm: 6px; --radius-md: var(--radius); --radius-lg: 14px; --radius-pill: 999px;
-    /* Borders and elevation: --line for decorative dividers, --line-strong for a control's only boundary (3:1). */
+    /* Radius scale: controls sm, panels and cards md (= --radius), dialogs lg, badges and pills full. Squarer than a web
+       app's usual, as cut stone is. */
+    --radius-sm: 4px; --radius-md: var(--radius); --radius-lg: 10px; --radius-pill: 999px;
+    /* Borders and elevation: --line for decorative dividers, --line-strong for a control's only boundary (3:1). Use them
+       as `border: var(--border)`; for a single colour (border-left: 4px solid ...) use --line / --line-strong. */
     --border: 1px solid var(--line); --border-strong: 1px solid var(--line-strong);
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, .06), 0 1px 3px rgba(0, 0, 0, .08);
-    --shadow-2: 0 6px 20px rgba(0, 0, 0, .18);
-    --shadow-3: 0 10px 30px rgba(0, 0, 0, .3);
-    /* The focus ring (WCAG 2.4.7, 2.4.13): --accent meets 3:1 against --bg, --panel and every notice tint. */
-    --focus-color: var(--accent); --focus-width: 3px; --focus-offset: 2px;
+    --shadow-1: 0 1px 2px rgba(60, 45, 20, .08), 0 1px 3px rgba(60, 45, 20, .1);
+    --shadow-2: 0 6px 20px rgba(40, 32, 18, .18);
+    --shadow-3: 0 10px 30px rgba(27, 36, 48, .3);
+    /* The dim behind a dialog, a tour or a calibration (rgb for the places that vary its alpha). */
+    --scrim-rgb: 27, 36, 48; --scrim: rgba(var(--scrim-rgb), .55);
+    /* The focus ring (WCAG 2.4.7, 2.4.13): --accent meets 3:1 against --bg, --panel and every notice tint; on the examiner's
+       dark stage it is --focus-on-stage. */
+    --focus-color: var(--accent); --focus-width: 3px; --focus-offset: 2px; --focus-on-stage: #ffffff;
     /* Status colours for notices and badges, each with a tint background. Text on a tint stays --ink; the status colour
        is the border and any short label. Every pair is in the contrast table in docs/ACCESSIBILITY.md. */
-    --info: #2f5d8a; --warn: #8a5a00;
-    --info-tint: #eef3f8; --ok-tint: #edf6f0; --warn-tint: #fbf3e2; --error-tint: #fbeceb; --accent-tint: #f6eeeb;
-    --danger-ink: #ffffff;
+    /* The examiner's stage: a deep Aegean twilight she is drawn on (the avatar's blue circuitry was tuned for a dark ground),
+       framed in marble so the page stays light. Shared by the live examiner and the exam room. */
+    --stage-bg: radial-gradient(120% 90% at 50% 38%, #1a3a6e 0%, #0f2347 62%, #0a1630 100%);
+    --stage-ink: #eef1f6; --stage-veil: rgba(10, 22, 48, .85);
+    --stage-frame: linear-gradient(180deg, var(--panel) 0%, var(--bg-deep) 100%);
+    /* Ornament, drawn here once. Fluted marble (a shaft shaded like a cylinder, with flutes) for columns and pilasters; the
+       Greek key and the laurel are masks (painted in --gold or --accent by the rule that uses them); --scene is the
+       impressionist Aegean painting (sky, sun, far isles, sea, two layers of soft brushwork from SVG turbulence) used only
+       behind the landing hero and the sign-in backdrop, never behind body text: its darkest point is about L 0.68 (the sea
+       with the brushwork at its strongest), so --ink and --muted on it stay above 5:1 and --accent above 4.7:1. */
+    --marble-shade: #cdbf9f; --marble-mid: #f1e8d3; --marble-lite: #fffdf8;
+    --pilaster-w: .75rem;
+    --flutes: repeating-linear-gradient(90deg, rgba(90, 70, 35, 0) 0 .18rem, rgba(90, 70, 35, .16) .18rem .24rem);
+    --shaft: linear-gradient(90deg, var(--marble-shade) 0%, var(--marble-mid) 22%, var(--marble-lite) 42%, var(--marble-mid) 72%, var(--marble-shade) 100%);
+    /* A pilaster down each side of a box: use as `background: var(--pilasters), var(--panel)` and pad the box past --pilaster-w. */
+    --pilasters: var(--flutes) left top / var(--pilaster-w) 100% no-repeat, var(--shaft) left top / var(--pilaster-w) 100% no-repeat,
+        var(--flutes) right top / var(--pilaster-w) 100% no-repeat, var(--shaft) right top / var(--pilaster-w) 100% no-repeat;
+    --meander: url("assets/ornament/meander.svg");
+    --temple: url("assets/ornament/temple.svg");
+    --laurel: url("assets/ornament/laurel.svg");
+    --sky: #d9eaf2; --sea: #cfe3ed; --sun: #fbefc9;
+    --scene:
+        url("assets/ornament/scene.svg") 0 0 / 720px 480px,
+        radial-gradient(46% 34% at 84% 10%, var(--sun) 0%, rgba(251, 239, 201, 0) 72%),
+        radial-gradient(40% 22% at 10% 12%, rgba(243, 220, 198, .8) 0%, rgba(243, 220, 198, 0) 75%),
+        radial-gradient(34% 8% at 22% 71%, rgba(236, 224, 196, .45) 0%, rgba(236, 224, 196, 0) 72%),
+        radial-gradient(26% 6% at 68% 69%, rgba(236, 224, 196, .4) 0%, rgba(236, 224, 196, 0) 72%),
+        linear-gradient(180deg, var(--sky) 0%, #e4eff1 46%, var(--sea) 64%, #d6e7ee 82%, var(--bg) 100%);
 }
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #16171a; --panel: #1f2024; --ink: #ecebe8; --muted: #a6a7ab; --line: #34353a;
-        --accent: #d98a6c; --accent-ink: #16171a; --ok: #6fcf97; --error: #f28b82; color-scheme: dark;
-        --line-strong: #75777f;
-        --info: #8ab4e0; --warn: #f0c05a;
-        --info-tint: #1c2633; --ok-tint: #18291f; --warn-tint: #2e2614; --error-tint: #331c1b; --accent-tint: #2e211d;
-        --danger-ink: #16171a;
-        --shadow-1: 0 1px 3px rgba(0, 0, 0, .5);
-    }
+/* Aegean night: the opt-in dark variant (GAD-T718). Deep sea-blue grounds, warm ivory ink, a light Aegean accent. */
+:root[data-theme="dark"] {
+    --bg: #0f1a2b; --bg-deep: #0b1422; --panel: #16243a;
+    --ink: #eae6da; --muted: #a9b5c6;
+    --line: #2c3d57; --line-strong: #6f819c;
+    --accent: #8db6ea; --accent-ink: #0f1a2b; --accent-tint: #1a3350;
+    --clay: #e3a384;
+    --gold: #c9a85a; --gold-soft: #8a7440;
+    --ok: #7fd1a0; --error: #f4968c; --info: #8cc4e8; --warn: #e8c26a;
+    --info-tint: #16314a; --ok-tint: #12302a; --warn-tint: #3a2e12; --error-tint: #3a1d22;
+    --danger-ink: #0f1a2b; --warn-ink: #0f1a2b;
+    color-scheme: dark;
+    --shadow-1: 0 1px 3px rgba(0, 0, 0, .5);
+    --shadow-2: 0 6px 20px rgba(0, 0, 0, .5);
+    --shadow-3: 0 10px 30px rgba(0, 0, 0, .6);
+    --scrim-rgb: 4, 9, 18; --scrim: rgba(var(--scrim-rgb), .65);
+    --stage-frame: linear-gradient(180deg, #243a5c 0%, var(--panel) 100%);
+    --marble-shade: #1a2a44; --marble-mid: #24385a; --marble-lite: #2f4668;
+    --flutes: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0) 0 .18rem, rgba(0, 0, 0, .25) .18rem .24rem);
+    --scene: radial-gradient(30% 24% at 82% 12%, rgba(201, 168, 90, .22) 0%, rgba(201, 168, 90, 0) 72%),
+        linear-gradient(180deg, #0b1424 0%, #142848 58%, #0f1a2b 100%);
 }
 * { box-sizing: border-box; }
 /* Reduced motion (GAD-T366): a blanket safety net alongside each animated feature's own override, so anything added
@@ -61,12 +120,24 @@
 /* A sticky bar (the mock-mode banner, the assignments console's bulk bar) must never cover the control that has focus
    (WCAG 2.4.11): scrolling a focused element into view leaves this much room at the top. */
 html { scroll-padding-top: var(--space-8); }
-body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; overflow-wrap: break-word; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: var(--text-base)/var(--leading) var(--font-sans); overflow-wrap: break-word; }
 :where(img, video) { max-width: 100%; height: auto; }
-a { color: var(--accent); }
+:where(a) { color: var(--accent); }
+h1, h2, h3, h4 { font-family: var(--font-serif); font-weight: 600; letter-spacing: .005em; }
 h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: 0 0 var(--space-4); }
 h1 span, .brand span { font-weight: 400; color: var(--muted); }
-.topbar { position: relative; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); align-items: center; padding: var(--space-3) var(--gutter); background: var(--panel); border-bottom: 1px solid var(--line); }
+
+/* Ornament (GAD-T718), decorative only: put aria-hidden="true" on an element that exists just to carry one. */
+/* A Greek key (meander) band: --gold on the page, as wide as its box and --meander-h tall (a whole number of pixels at
+   16px type, so the key's strokes stay crisp). */
+.rule-meander, .topbar::after, .site-foot::before { content: ""; display: block; height: var(--meander-h, .75rem); background: var(--gold); -webkit-mask: var(--meander) repeat-x left center / auto 100%; mask: var(--meander) repeat-x left center / auto 100%; }
+.rule-meander { margin: var(--space-5) 0; }
+/* A laurel rule: two gold hairlines with a sprig between them. */
+.rule-laurel { position: relative; height: 1.25rem; margin: var(--space-5) 0; background: linear-gradient(to right, var(--gold-soft) 0 calc(50% - 2.25rem), transparent 0 calc(50% + 2.25rem), var(--gold-soft) 0) center / 100% 1px no-repeat; }
+.rule-laurel::before { content: ""; position: absolute; left: 50%; top: 50%; width: 3.5rem; height: 1rem; transform: translate(-50%, -50%); background: var(--gold); -webkit-mask: var(--laurel) center / contain no-repeat; mask: var(--laurel) center / contain no-repeat; }
+/* The top bar: marble under a Greek key (the band hangs below the bar, over the page's top padding). */
+.topbar { position: relative; display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-4); align-items: center; padding: var(--space-3) var(--gutter); background: var(--panel); border-bottom: var(--border); }
+.topbar::after { position: absolute; left: 0; right: 0; top: 100%; pointer-events: none; }
 /* The top bar's menu (GAD-T689): one <details> holding the nav, the account controls, the language switch and Help.
    Below 40rem it is a "Menu" disclosure whose panel drops under the bar, so the bar never runs wider than a 320px
    screen; from 40rem the summary hides and the content always shows, in one wrapping row as before. A browser without
@@ -89,74 +160,85 @@ h1 span, .brand span { font-weight: 400; color: var(--muted); }
     .nav-menu-body .who { margin-left: 0; }
     .nav-menu-body .nav-more[open] > div { position: static; }
 }
-.brand { font-weight: 700; font-size: 1.15rem; text-decoration: none; color: var(--ink); }
-.app-version { margin-left: -.6rem; font-size: .8rem; color: var(--muted); white-space: nowrap; } /* "V<N>" next to the brand (GAD-T291) */
-.nav { display: flex; flex-wrap: wrap; gap: .25rem; }
-.nav a { padding: .35rem .65rem; border-radius: 6px; text-decoration: none; color: var(--ink); }
+/* The brand: a small temple front in Aegean blue, then the name in serif. */
+.brand { display: inline-flex; align-items: center; min-height: var(--target-min); font: 700 var(--text-xl)/1 var(--font-serif); text-decoration: none; color: var(--ink); }
+.brand span { margin-left: .25em; }
+.brand::before { content: ""; flex: none; width: 1.6rem; height: 1.4rem; margin-right: var(--space-2); background: var(--accent); -webkit-mask: var(--temple) center / contain no-repeat; mask: var(--temple) center / contain no-repeat; }
+.app-version { margin-left: calc(-1 * var(--space-2)); font-size: var(--text-xs); color: var(--muted); white-space: nowrap; } /* "V<N>" next to the brand (GAD-T291) */
+.nav { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.nav a { padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); text-decoration: none; color: var(--ink); }
+.nav a:hover { background: var(--accent-tint); }
 .nav a.active { background: var(--accent); color: var(--accent-ink); }
 /* Staff screens tucked under "More" for admin-desk users (GAD-T246) */
 .nav-more { position: relative; }
-.nav-more summary { padding: .35rem .65rem; border-radius: 6px; cursor: pointer; color: var(--muted); list-style: none; }
+.nav-more summary { padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); cursor: pointer; color: var(--muted); list-style: none; }
 .nav-more summary::-webkit-details-marker { display: none; }
-.nav-more[open] > div { position: absolute; z-index: 10; top: 100%; left: 0; display: grid; gap: .15rem; min-width: 12rem; padding: .35rem; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
-.who { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; color: var(--muted); font-size: .9rem; }
+.nav-more[open] > div { position: absolute; z-index: 10; top: 100%; left: 0; display: grid; gap: var(--space-1); min-width: 12rem; padding: var(--space-2); background: var(--panel); border: var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-2); }
+.who { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; color: var(--muted); font-size: var(--text-sm); }
 .who form { margin: 0; }
-main { max-width: var(--content-max); margin: 0 auto; padding: var(--space-5) var(--gutter) var(--space-7); }
+main { max-width: var(--content-max); margin: 0 auto; padding: var(--space-6) var(--gutter) var(--space-7); }
 main.bare { display: grid; place-items: center; min-height: 100vh; padding: var(--space-5) var(--gutter); }
-.auth-card { width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: clamp(var(--space-5), 5vw, var(--space-6)); }
+/* The sign-in pages sit in the painted Aegean (--scene) behind a marble card, so no text is ever on the painting. */
+body:has(main.bare) { background: var(--scene), var(--bg); }
+/* The sign-in card: marble between two fluted pilasters, a laurel sprig above its heading. */
+.auth-card { position: relative; width: min(420px, 100%); background: var(--pilasters), var(--panel); border: var(--border); border-radius: var(--radius); box-shadow: var(--shadow-2); padding: clamp(var(--space-5), 5vw, var(--space-6)) clamp(var(--space-5), 6vw, var(--space-6)); }
+.auth-card::before { content: ""; display: block; width: 3.5rem; height: 1rem; margin: 0 auto var(--space-3); background: var(--gold); -webkit-mask: var(--laurel) center / contain no-repeat; mask: var(--laurel) center / contain no-repeat; }
 .auth-card input { width: 100%; }
 /* The sign-in library's forms (MindAttic.Authentication's .ma-auth) have no stylesheet of their own: one field per row
    with a clear gap, so a label never sits flush against the box above it. */
 .auth-card form { display: grid; gap: var(--space-4); margin: var(--space-4) 0; }
 .auth-card form > p { margin: 0; }
 .auth-card form label:has(> input[type=checkbox]) { display: flex; gap: var(--space-2); align-items: center; }
-.subtitle, .hint { color: var(--muted); font-size: .9rem; }
+.subtitle, .hint { color: var(--muted); font-size: var(--text-sm); }
 .cards { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
-.card { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4); text-decoration: none; color: var(--ink); }
+.card { display: block; background: var(--panel); border: var(--border); border-radius: var(--radius); box-shadow: var(--shadow-1); padding: var(--space-4); text-decoration: none; color: var(--ink); }
 .card:hover { border-color: var(--accent); }
-.card h2 { font-size: 1.05rem; margin: 0 0 .35rem; }
-.card p { margin: 0; color: var(--muted); font-size: .92rem; }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-5)); margin-bottom: var(--space-5); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); max-width: 560px; }
+.card h2 { font-size: var(--text-lg); margin: 0 0 var(--space-1); }
+.card p { margin: 0; color: var(--muted); font-size: var(--text-sm); }
+.panel { background: var(--panel); border: var(--border); border-radius: var(--radius); box-shadow: var(--shadow-1); padding: var(--space-4) clamp(var(--space-4), 3vw, var(--space-5)); margin-bottom: var(--space-5); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); max-width: 560px; }
 /* Blocks that sit one after another in a page get the same breathing room below them, unless they end their container. */
 :is(.cards, .grid, .table-scroll, .stat-tiles):not(:last-child) { margin-bottom: var(--space-5); }
-.panel h2 { font-size: 1.05rem; margin: 0; }
+.panel h2 { font-size: var(--text-lg); margin: 0; }
 /* A panel holding more than a short form (a table, a list): the full content width. */
 .panel.panel-wide { max-width: none; }
-label { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); font-size: .9rem; }
+label { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); font-size: var(--text-sm); }
 /* A control stays inside its column on a 320px screen (WCAG 1.4.10, GAD-T507): a dropdown sizes itself to its longest
    option, which pushed whole forms (Settings) wider than a phone. max-width here, and minmax(0, 1fr) on the label's and
-   the panel's single column, let it shrink instead. */
-input, select, textarea { font: inherit; max-width: 100%; padding: .45rem .55rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--bg); color: var(--ink); }
+   the panel's single column, let it shrink instead. Fields are marble on the parchment, edged in --line-strong. */
+input, select, textarea { font: inherit; max-width: 100%; padding: var(--space-2); border: var(--border-strong); border-radius: var(--radius-sm); background: var(--panel); color: var(--ink); }
 /* Placeholder text at the muted ink's contrast (WCAG 1.4.3) instead of the browser's lighter default. */
 ::placeholder { color: var(--muted); opacity: 1; }
 input[type=checkbox], input[type=radio] { accent-color: var(--accent); }
-button { font: inherit; padding: .5rem .9rem; border: 0; border-radius: 6px; background: var(--accent); color: var(--accent-ink); cursor: pointer; justify-self: start; }
+button { font: inherit; padding: var(--space-2) var(--space-4); border: 0; border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); cursor: pointer; justify-self: start; }
 button:disabled { opacity: .6; cursor: default; }
 button.link { background: none; color: var(--accent); padding: 0; text-decoration: underline; }
+:where(button:not(:disabled), .button):hover { filter: brightness(.9); }
 :focus-visible { outline: var(--focus-width) solid var(--focus-color); outline-offset: var(--focus-offset); }
+/* On the examiner's dark stage the ring is white (3:1 against the Aegean twilight, which the blue ring is not). */
+:is(.live-examiner-view, .voice-stage) :focus-visible { outline-color: var(--focus-on-stage); }
 /* A heading or <main> that only receives focus from script (Blazor's focus-on-navigate, the skip link) isn't a control;
    no ring around the whole page or title. Real controls keep theirs. */
 :is(h1, main)[tabindex="-1"]:focus { outline: none; }
 /* A table that scrolls sideways is reachable by keyboard (js/scroll-regions.js gives it tabindex), so its ring shows. */
 [data-scroll-region]:focus-visible { outline-offset: calc(-1 * var(--focus-width)); }
 /* Skip-to-content (GAD-T365), same pattern as the public site's (site.css .skip). .skip-link is the same thing. */
-:is(.skip, .skip-link) { position: absolute; left: -999px; top: .5rem; z-index: 1200; padding: var(--space-2) var(--space-4); background: var(--ink); color: var(--bg); border-radius: 4px; }
-:is(.skip, .skip-link):focus { left: .5rem; }
+:is(.skip, .skip-link) { position: absolute; left: -999px; top: var(--space-2); z-index: 1200; padding: var(--space-2) var(--space-4); background: var(--ink); color: var(--bg); border-radius: var(--radius-sm); }
+:is(.skip, .skip-link):focus { left: var(--space-2); }
 /* Screen-reader-only text: visible to assistive tech, removed from the visual layout (GAD-T366). */
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.grid { position: relative; width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.grid th, .grid td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.grid { position: relative; width: 100%; border-collapse: collapse; background: var(--panel); border: var(--border); border-radius: var(--radius); overflow: hidden; }
+.grid th, .grid td { text-align: left; padding: var(--space-2) var(--space-3); border-bottom: var(--border); font-size: var(--text-sm); }
 .grid th { color: var(--muted); font-weight: 600; }
 /* Data tables (GAD-T689): .grid is the table component. Cells align to the top; numbers right-align in .num cells; a
    caption names the table; .zebra stripes long tables. Below 900px a .grid scrolls sideways in its own box. */
 .grid :is(th, td) { vertical-align: top; }
-.grid thead th { border-bottom-color: var(--line-strong); }
+.grid thead th { background: var(--bg-deep); color: var(--ink); border-bottom-color: var(--line-strong); }
 .grid tbody tr:last-child > * { border-bottom: 0; }
 .grid :is(th, td).num { text-align: right; font-variant-numeric: tabular-nums; }
 .grid caption { caption-side: top; text-align: left; padding: var(--space-2) var(--space-3); font-weight: 600; }
 .grid.zebra tbody tr:nth-child(even) { background: var(--bg); }
 .ok { color: var(--ok); } .error { color: var(--error); }
-.notice { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: .75rem 1rem; border-radius: 6px; }
+.notice { background: var(--panel); border: var(--border); border-left: 4px solid var(--accent); padding: var(--space-3) var(--space-4); border-radius: var(--radius-sm); }
 /* Notice variants (GAD-T689): a tint background and a status-coloured edge. Body text stays --ink (an .error or .ok
    notice keeps its status colour, which also meets 4.5:1 on its tint); start the message with a word that says the
    status ("Error:", "Saved.") so colour is never the only cue (WCAG 1.4.1). */
@@ -168,8 +250,10 @@ button.link { background: none; color: var(--accent); padding: 0; text-decoratio
 .notice > :last-child { margin-bottom: 0; }
 
 /* Layout primitives (GAD-T689). Pages compose these instead of their own margins. */
-/* The title row: the page's h1 and its actions; the actions wrap under the title on a phone. */
-.page-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); margin-bottom: var(--space-5); }
+/* The title row: the page's h1 and its actions; the actions wrap under the title on a phone. A hairline under it with a
+   short gold segment at its start, like a cornice. */
+.page-header { position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-4); margin-bottom: var(--space-5); padding-bottom: var(--space-3); border-bottom: var(--border); }
+.page-header::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 4rem; height: 3px; background: var(--gold); }
 .page-header > :is(h1, h2) { margin: 0; }
 .page-header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 /* Vertical rhythm: children sit --stack-gap apart and their own block margins are dropped. */
@@ -197,11 +281,11 @@ button.link { background: none; color: var(--accent); padding: 0; text-decoratio
    (outlined), .danger (destructive), .ghost (quiet, bordered), .link (inline text). At least --target-min tall, and
    --target-touch on a touch screen. Zero-specificity bases so a page's own button class still wins. */
 :where(button:not(.link), .button) { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--target-min); line-height: var(--leading-tight); text-align: center; }
-:where(.button) { font: inherit; font-weight: 500; padding: .5rem .9rem; border: 0; border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); text-decoration: none; cursor: pointer; }
+:where(.button) { font: inherit; font-weight: 500; padding: var(--space-2) var(--space-4); border: 0; border-radius: var(--radius-sm); background: var(--accent); color: var(--accent-ink); text-decoration: none; cursor: pointer; }
 :where(button, .button).secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
 :where(button, .button).danger { background: var(--error); color: var(--danger-ink); }
 :where(button, .button).ghost { background: transparent; color: var(--ink); border: var(--border-strong); }
-:where(button, .button).secondary:hover:not(:disabled), :where(button, .button).ghost:hover:not(:disabled) { background: var(--accent-tint); }
+:where(button, .button).secondary:hover:not(:disabled), :where(button, .button).ghost:hover:not(:disabled) { background: var(--accent-tint); filter: none; }
 :where(.button)[aria-disabled="true"] { opacity: .6; pointer-events: none; }
 
 /* Form fields (GAD-T689). Markup: <div class="field"><label for>…</label><input aria-describedby="x-hint x-error">
@@ -226,25 +310,25 @@ legend { padding: 0 var(--space-1); font-weight: 600; }
     :where(.nav a, .nav-help, .nav-more summary) { display: inline-flex; align-items: center; }
 }
 /* Help (GAD-T292): the top-bar Help link and the small "?" a page puts next to its title (<HelpLink>). */
-.nav-help { padding: .35rem .65rem; border-radius: 6px; text-decoration: none; color: var(--ink); }
+.nav-help { padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); text-decoration: none; color: var(--ink); }
 .nav-help:hover, .nav-help:focus-visible { color: var(--accent); }
 /* The inbox's unread count (GAD-T701): a pill in the link's own colour, so it reads on the active (accent) link too. */
 .nav-count { margin-left: var(--space-1); border-color: currentColor; color: inherit; font-weight: 700; font-variant-numeric: tabular-nums; }
-.help-link { display: inline-flex; align-items: center; gap: .35rem; vertical-align: middle; margin-left: .35rem; font-size: .85rem; font-weight: 600; text-decoration: none; color: var(--accent); }
-.help-link-mark { display: inline-grid; place-items: center; width: var(--target-min); height: var(--target-min); border: 1.5px solid currentColor; border-radius: 50%; font-size: .8rem; line-height: 1; }
+.help-link { display: inline-flex; align-items: center; gap: var(--space-1); vertical-align: middle; margin-left: var(--space-1); font-size: var(--text-sm); font-weight: 600; text-decoration: none; color: var(--accent); }
+.help-link-mark { display: inline-grid; place-items: center; width: var(--target-min); height: var(--target-min); border: 1.5px solid currentColor; border-radius: 50%; font-size: var(--text-xs); line-height: 1; }
 .help-link:hover .help-link-mark, .help-link:focus-visible .help-link-mark { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .help-link-label { font-weight: 500; }
 /* The student's UI language switch (GAD-T543), next to Help in the top bar. */
-.language-switch select { min-height: var(--target-min); padding: .25rem .5rem; border-radius: 6px; }
+.language-switch select { min-height: var(--target-min); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm); }
 
 /* A lost connection (GAD-T306): Blazor's own reconnect element (id fixed by the framework), toggled through these
    classes as the connection drops, retries and comes back, so a dropped connection never looks like a frozen or
    blank page. The text per state lives in CSS so no script has to keep it in sync with the class. */
-#components-reconnect-modal { display: none; position: fixed; inset: 0; z-index: 2000; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .45); }
+#components-reconnect-modal { display: none; position: fixed; inset: 0; z-index: 2000; align-items: center; justify-content: center; padding: var(--space-4); background: var(--scrim); }
 #components-reconnect-modal.components-reconnect-show,
 #components-reconnect-modal.components-reconnect-failed,
 #components-reconnect-modal.components-reconnect-rejected { display: flex; }
-.reconnect-box { width: min(22rem, 100%); background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem 1.4rem; text-align: center; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+.reconnect-box { width: min(22rem, 100%); background: var(--panel); color: var(--ink); border: var(--border); border-radius: var(--radius); padding: var(--space-5); text-align: center; box-shadow: var(--shadow-3); }
 .reconnect-message::before { content: "Reconnecting\2026"; }
 #components-reconnect-modal.components-reconnect-failed .reconnect-message::before { content: "That's taking too long. Check your internet connection, then try again."; }
 #components-reconnect-modal.components-reconnect-rejected .reconnect-message::before { content: "This page needs to reload to continue."; }
@@ -252,7 +336,7 @@ legend { padding: 0 var(--space-1); font-weight: 600; }
 html[lang="ko"] .reconnect-message::before { content: "다시 연결하는 중\2026"; }
 html[lang="ko"] #components-reconnect-modal.components-reconnect-failed .reconnect-message::before { content: "연결이 오래 걸리고 있어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요."; }
 html[lang="ko"] #components-reconnect-modal.components-reconnect-rejected .reconnect-message::before { content: "계속하려면 페이지를 새로 고쳐야 해요."; }
-.reconnect-retry { margin-top: .75rem; }
+.reconnect-retry { margin-top: var(--space-3); }
 #components-reconnect-modal.components-reconnect-show .reconnect-retry { display: none; }
 @media (max-width: 640px) { .who { margin-left: 0; width: 100%; } }
 /* A plain data table scrolls sideways rather than squeezing illegibly or forcing the whole page to scroll (GAD-T367):
@@ -269,8 +353,8 @@ h4 { font-size: var(--text-base); line-height: var(--leading-tight); margin: var
 :where(h1, h2, h3, h4):first-child { margin-top: 0; }
 
 /* Badges (GAD-T318): a small label on a pill, for a status word next to a title or in a table cell. Plain by default;
-   the three variants read like .ok/.error already do. */
-.badge { display: inline-block; font-size: .8rem; padding: .1rem .55rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+   the variants read like .ok/.error already do. */
+.badge { display: inline-block; font-size: var(--text-xs); padding: var(--space-0) var(--space-2); border-radius: var(--radius-pill); border: var(--border); background: var(--panel); color: var(--muted); }
 .badge-accent { border-color: var(--accent); color: var(--accent); }
 .badge-ok { border-color: var(--ok); color: var(--ok); }
 .badge-error { border-color: var(--error); color: var(--error); }
@@ -279,22 +363,24 @@ h4 { font-size: var(--text-base); line-height: var(--leading-tight); margin: var
 
 /* A dialog (GAD-T318): a focused decision or confirmation over the page, dismissed by its own buttons or Escape.
    Markup: a backdrop with class dialog-backdrop containing one .dialog-box (role="dialog" aria-modal="true" on the box). */
-.dialog-backdrop { position: fixed; inset: 0; z-index: 1500; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .45); }
-.dialog-box { width: min(32rem, 100%); max-height: calc(100vh - 2rem); overflow: auto; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius); padding: var(--space-5) clamp(var(--space-4), 4vw, var(--space-5)); box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+.dialog-backdrop { position: fixed; inset: 0; z-index: 1500; display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: var(--scrim); }
+.dialog-box { width: min(32rem, 100%); max-height: calc(100vh - 2rem); overflow: auto; background: var(--panel); color: var(--ink); border: var(--border); border-top: 3px solid var(--gold); border-radius: var(--radius); padding: var(--space-5) clamp(var(--space-4), 4vw, var(--space-5)); box-shadow: var(--shadow-3); }
 .dialog-box h2 { margin-top: 0; }
 .dialog-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; margin-top: var(--space-4); }
 
 /* A toast (GAD-T318): a brief, dismissable confirmation or warning that doesn't block the page. Markup: an element with
    class toast (plus a variant) inside a fixed-position container the page supplies once near its root. */
-.toast { display: flex; gap: .6rem; align-items: start; max-width: 26rem; background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; padding: .75rem 1rem; box-shadow: 0 6px 20px rgba(0, 0, 0, .18); }
+.toast { display: flex; gap: var(--space-2); align-items: start; max-width: 26rem; background: var(--panel); color: var(--ink); border: var(--border); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: var(--space-3) var(--space-4); box-shadow: var(--shadow-2); }
 .toast-ok { border-left-color: var(--ok); }
 .toast-error { border-left-color: var(--error); }
 .toast-close { margin-left: auto; background: none; padding: 0; min-width: var(--target-min); min-height: var(--target-min); color: var(--muted); }
 
 /* An empty state (GAD-T318): nothing to show yet, with what to do about it. Most list pages already say this plainly in
-   a sentence or two (kept as-is where that already reads well); this is for a page that wants the quieter, centred look. */
-.empty-state { display: grid; justify-items: center; gap: .4rem; text-align: center; padding: 3rem 1rem; color: var(--muted); }
-.empty-state h2 { margin: 0; color: var(--ink); font-size: 1.1rem; }
+   a sentence or two (kept as-is where that already reads well); this is for a page that wants the quieter, centred look,
+   with a laurel sprig over it. */
+.empty-state { display: grid; justify-items: center; gap: var(--space-2); text-align: center; padding: var(--space-7) var(--space-4); color: var(--muted); }
+.empty-state::before { content: ""; width: 3.5rem; height: 1rem; background: var(--gold); -webkit-mask: var(--laurel) center / contain no-repeat; mask: var(--laurel) center / contain no-repeat; }
+.empty-state h2 { margin: 0; color: var(--ink); font-size: var(--text-lg); }
 .empty-state p { margin: 0; max-width: 32rem; }
 
 /* Printing (GAD-T397): the top bar never prints (nowhere to click on paper), and a page marks its own nav links, download

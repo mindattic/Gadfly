@@ -43,12 +43,17 @@ Bases that pages may need to override are written with `:where()` (zero specific
 | Type | `--text-xs` .8, `--text-sm` .9, `--text-base` 1, `--text-lg` 1.1, `--text-xl` 1.25 rem, `--text-2xl` fluid 1.4-1.6rem; `--leading` 1.5, `--leading-tight` 1.25; `--measure` 68ch | h1 2xl, h2 xl, h3 lg, h4 base; hints and table cells sm; badges xs; prose width |
 | Headings | h1 `0 0 --space-4`; h2 `--space-5 0 --space-3`; h3 `--space-5 0 --space-2`; h4 `--space-4 0 --space-2` | a heading that is its container's first child has no top margin |
 | Space | `--space-1`..`--space-8`, `--gutter`, `--content-max` | as above |
-| Radius | `--radius-sm` 6px (controls), `--radius-md` = `--radius` 10px (panels, cards), `--radius-lg` 14px (dialogs), `--radius-pill` | |
-| Border | `--border` (decorative, `--line`), `--border-strong` (a control's only boundary, 3:1) | |
-| Elevation | `--shadow-1` (resting card), `--shadow-2` (toast, dropped menu), `--shadow-3` (dialog) | |
-| Focus | `--focus-color` (`--accent`), `--focus-width` 3px, `--focus-offset` 2px | the global `:focus-visible` ring on every link, button, input, select, textarea, summary and `[tabindex]`; never remove it, only change its offset |
+| Radius | `--radius-sm` 4px (controls), `--radius-md` = `--radius` 6px (panels, cards), `--radius-lg` 10px (dialogs), `--radius-pill` | squarer since GAD-T718 |
+| Border | `--border` (decorative, `--line`), `--border-strong` (a control's only boundary, 3:1) | write `border: var(--border)`; for one colour use `--line` / `--line-strong`, never `1px solid var(--border)` (that is invalid CSS and drops the border) |
+| Elevation | `--shadow-1` (resting card), `--shadow-2` (toast, dropped menu), `--shadow-3` (dialog); `--scrim` (the dim behind a dialog or tour) | warm-toned; no page hard-codes a shadow or scrim |
+| Focus | `--focus-color` (`--accent`), `--focus-width` 3px, `--focus-offset` 2px, `--focus-on-stage` (white, on the examiner's dark stage) | the global `:focus-visible` ring on every link, button, input, select, textarea, summary and `[tabindex]`; never remove it, only change its offset |
 | Targets | `--target-min` 24px (WCAG 2.5.8 floor), `--target-touch` 44px | buttons, inputs, selects and top-bar links are at least `--target-min`, and `--target-touch` under `(pointer: coarse)` |
-| Status | `--info`, `--ok`, `--warn`, `--error` and their `--*-tint` backgrounds; `--accent-tint`; `--danger-ink` (text on `--error`) | notices, badges, danger buttons |
+| Status | `--info`, `--ok`, `--warn`, `--error` and their `--*-tint` backgrounds; `--accent-tint`; `--danger-ink` (text on `--error`), `--warn-ink` (text on `--warn`) | notices, badges, danger buttons, the mock banner |
+| Grounds | `--bg` parchment (page), `--bg-deep` deeper parchment (bands, table heads, footer), `--panel` marble (panels, cards, fields) | |
+| Accents | `--accent` Aegean blue (links, primary buttons, focus), `--clay` terracotta (numerals, concept labels, marks) | |
+| Ornament | `--gold`, `--gold-soft`, `--sky`, `--sea`, `--sun`, `--marble-*`, `--meander`, `--laurel`, `--temple`, `--flutes`, `--shaft`, `--pilasters`, `--scene` | decoration only, never text or state; see "Classical theme" below |
+| Spacing | `--space-0` 2px joins the scale (hairline gaps) | |
+| Type | `--font-serif` (headings: Palatino family, system fonts, nothing loaded), `--font-sans` (body) | |
 
 **Breakpoints.** Custom properties can't be used in media queries, so these are the fixed values: phone below
 `40rem` (640px; write `max-width: 39.99rem` / `min-width: 40rem`), tablet `40rem`-`64rem`, desktop from `64rem`
@@ -94,33 +99,46 @@ bar (closes on navigation); from 40rem it is one wrapping row. The top bar is no
 `html { scroll-padding-top }` keeps a focused control clear of it (WCAG 2.4.11). A new sticky bar must fit inside that
 padding.
 
-**Contrast of the colour tokens** (WCAG 2.x relative luminance; text needs 4.5:1, borders and focus rings 3:1).
-Every token pair already passed, including the dark theme's salmon accent, so no colour token changed:
+**Contrast of the colour tokens (GAD-T718, the classical theme).** WCAG 2.x relative luminance; text needs 4.5:1,
+borders, icons and focus rings 3:1. Computed by hand from the hex values below with the WCAG formula (no tool was run in
+that session), so treat each figure as accurate to about 0.1 and re-check any new colour with a contrast checker. Light
+is the default; "Aegean night" (the dark column) applies only under `<html data-theme="dark">`.
+
+Light tokens: `--bg` #f6f0e4, `--bg-deep` #efe5d0, `--panel` #fffdf8, `--ink` #1b2430, `--muted` #4d5866, `--line` #dccfb6,
+`--line-strong` #7f745e, `--accent` #1f5aa6, `--accent-tint` #e8eff8, `--clay` #9a4a2c, `--ok` #1f6b45, `--error` #b3261e,
+`--info` #25598c, `--warn` #7a5200, tints `--ok-tint` #e9f3e8, `--error-tint` #fbebe6, `--info-tint` #e6eff6, `--warn-tint`
+#fbf1d6, `--accent-ink`/`--danger-ink`/`--warn-ink` #ffffff. Dark: `--bg` #0f1a2b, `--bg-deep` #0b1422, `--panel` #16243a,
+`--ink` #eae6da, `--muted` #a9b5c6, `--line` #2c3d57, `--line-strong` #6f819c, `--accent` #8db6ea, `--accent-tint` #1a3350,
+`--clay` #e3a384, `--ok` #7fd1a0, `--error` #f4968c, `--info` #8cc4e8, `--warn` #e8c26a, tints #12302a / #3a1d22 / #16314a /
+#3a2e12, `--accent-ink`/`--danger-ink`/`--warn-ink` #0f1a2b.
 
 | Pair | Light | Dark |
 | --- | --- | --- |
-| `--ink` on `--bg` | 15.43 | 15.04 |
-| `--muted` on `--bg` / `--panel` (hints, placeholders) | 5.55 / 6.05 | 7.46 / 6.77 |
-| `--accent` (links, secondary buttons) on `--bg` / `--panel` | 7.53 / 8.22 | 6.66 / 6.05 |
-| `--accent-ink` on `--accent` (primary buttons, active nav) | 8.22 | 6.66 |
-| `--ok` on `--panel` | 5.28 | 8.56 |
-| `--error` on `--bg` / `--panel` | 5.99 / - | - / 6.81 |
-| `--line-strong` (control borders) on `--bg` / `--panel` | 3.82 / 4.17 | 4.01 / 3.64 |
-| Focus ring (`--accent`) on `--bg` | 7.53 | 6.66 |
-| Site `--oxblood` on `--paper` / `--sheet` | 7.53 / 8.22 | 7.76 / 7.04 |
-| Site `--oxblood-ink` on `--oxblood` (buttons) | 8.22 | 7.76 |
-| Site `--muted` on `--paper` | 6.27 | 7.63 |
-| Site plate: `--slate-muted` / `--slate-mark` on `--slate` | 7.15 / 7.51 | 8.38 / 9.93 |
-| Mock banner text / tag | 8.31 / 5.93 | 9.78 / 9.91 |
-| `--info` on `--bg` / `--panel` / `--info-tint` (GAD-T689) | 6.30 / 6.88 / 6.16 | 8.27 / 7.51 / 7.05 |
-| `--ok` on `--bg` / `--ok-tint` | 4.84 / 4.79 | 9.43 / 8.03 |
-| `--warn` on `--bg` / `--panel` / `--warn-tint` | 5.43 / 5.93 / 5.37 | 10.58 / 9.60 / 8.83 |
-| `--error` on `--panel` / `--error-tint` | 6.54 / 5.70 | 6.81 / 6.65 |
-| `--ink` / `--muted` on the lightest-contrast tint | 14.67 / 5.27 | 12.55 / 6.23 |
-| `--danger-ink` on `--error` (danger buttons) | 6.54 | 7.50 |
+| `--ink` on `--bg` / `--bg-deep` / `--panel` | 13.8 / 12.5 / 15.4 | 14.0 / - / 12.5 |
+| `--ink` on the palest tint (`--info-tint`) | 13.4 | 10.7 |
+| `--muted` on `--bg` / `--bg-deep` / `--panel` (hints, placeholders, table cells) | 6.4 / 5.8 / 7.1 | 8.4 / - / 7.5 |
+| `--muted` on `--info-tint` / `--accent-tint` | 6.2 / 6.3 | 6.4 / 6.2 |
+| `--accent` (links, secondary buttons, focus ring) on `--bg` / `--bg-deep` / `--panel` / `--accent-tint` | 6.0 / 5.5 / 6.7 / 5.9 | 8.3 / - / 7.4 / 6.1 |
+| `--accent-ink` on `--accent` (primary buttons, active nav, tour launch) | 6.8 | 8.3 |
+| `--clay` (numerals, concept labels, plate marks) on `--bg` / `--bg-deep` / `--panel` | 5.5 / 5.0 / 6.1 | - / - / 7.3 |
+| `--ok` on `--bg` / `--panel` / `--ok-tint` | 5.7 / 6.4 / 5.7 | - / 8.6 / 7.8 |
+| `--error` on `--bg` / `--panel` / `--error-tint` | 5.8 / 6.4 / 5.7 | - / 7.1 / 7.0 |
+| `--info` on `--bg` / `--panel` / `--info-tint` | 6.4 / 7.2 / 6.3 | - / 8.3 / 7.1 |
+| `--warn` on `--bg` / `--panel` / `--warn-tint` | 6.1 / 6.8 / 6.2 | - / 9.2 / 7.8 |
+| `--danger-ink` on `--error` (danger buttons) | 6.5 | 8.0 |
+| `--warn-ink` on `--warn` (mock tag); `--ink` on `--warn-tint` (mock banner) | 6.9; 13.9 | 10.3; - |
+| `--line-strong` (control borders) on `--bg` / `--bg-deep` / `--panel` / palest tint | 4.1 / 3.7 / 4.5 / 4.0 | 4.4 / - / 3.9 / 3.2 |
+| Focus ring: `--accent` on `--bg` / `--panel` (above); `--focus-on-stage` white on the stage's lightest blue | 6.0 / 6.7; 11.2 | 8.3 / 7.4; 11.2 |
+| Site plate: `--muted` and `--clay` mark on `--panel` | 7.1 / 6.1 | 7.5 / 7.3 |
+| Analytics meter: `--meter` fill on `--track` (non-text, 3:1) | 3.2 | not re-checked |
 
-`--line` (1.38 light, 1.33 dark) is for decorative dividers only; any control whose border is its only boundary uses
-`--line-strong`.
+`--line` (1.5 on `--bg`) is for decorative dividers and card edges only; any control whose border is its only boundary
+uses `--line-strong`. `--gold` (2.6 on `--bg`) is ornament only. Every status is also said in words (WCAG 1.4.1).
+
+**Painted ground.** The landing hero and the sign-in backdrop sit on `--scene`. Text on it is `--ink`, `--muted` or the
+accent link only, over its palest part: the sea at its darkest with the brushwork at full strength is about L 0.68, which
+gives `--ink` 10.9, `--muted` 5.0, `--accent` 4.7. The brushwork's alpha is capped at 0.165 for exactly this reason: a
+stronger texture would break the link's 4.5:1.
 
 Component colours that failed and were fixed:
 
@@ -128,6 +146,46 @@ Component colours that failed and were fixed:
 | --- | --- | --- |
 | Help search excerpt, highlighted word (`.help-excerpt mark`): muted text on the accent tint | 4.23 light, 4.67 dark | ink: 11.76 light, 9.41 dark |
 | Input placeholders: browser default (about `#757575` on `--bg`) | 4.22 light | `--muted`: 5.55 light, 7.46 dark |
+| Get ready: the examiner preview caption's words not yet said (`.preview-word`, `opacity: .55` on the ink) | about 2.5 | `--muted` (6.4 on `--bg`, 7.1 on `--panel`), then `--ink` as each word is said |
+| Gaze calibration: the dot was cyan on a dimmed page, the prompt bar light text on a hard-coded dark | not measured | gold-soft ring with navy halo and white centre; the bar is `--panel` with `--ink` (15.4) |
+| Tour spotlight ring (`--accent` on the dimmed page) | below 3:1 | white `--focus-on-stage` ring on the `--scrim` |
+| Borders that never rendered: `border: 1px solid var(--border)` (and `--border-strong`) is invalid CSS, so the browser dropped it, in grading, review, sources, help, assessments, exams, tour, analytics | no border | `border: var(--border)` / `var(--border-strong)`; single-colour edges use `--line` / `--line-strong` |
+| Decorative-only borders on controls and swatches (`--line`, 1.5:1): examiner swatches, the calibration box, review quotes | 1.5 | `--line-strong` (4.1) |
+
+## Classical theme (GAD-T718)
+
+The owner asked for the UI to be light, academic and Greek-classical ("an ancient Greek city with columns", impressionist
+Greek isles, "high minded idealist, not just a typical dark mode site") and for every colour and spacing problem to meet
+WCAG 2.2 AA.
+
+- **Light everywhere, by default.** The app no longer follows `prefers-color-scheme: dark` (`app.css`, `site.css`,
+  `demo.css`, `grading.css`, `analytics.css`, the LTI picker and the transcript-verify page). A visitor whose system is
+  dark sees the same light marble and parchment. "Aegean night" (deep sea-blue grounds, ivory ink, a light Aegean accent)
+  is kept as an opt-in: set `data-theme="dark"` on `<html>`. Nothing sets it yet.
+- **Type.** Headings use the system's Palatino family (`--font-serif`; nothing is downloaded, so the CSP, which allows
+  fonts and images only from `'self'` and `data:`, is unchanged); body text stays the system sans.
+- **Motifs, all CSS or same-origin SVG files** (`wwwroot/assets/ornament/`; not data URIs, because the sign-in page's
+  CSP comes from the authentication package and has no `img-src data:`): a Greek key (meander) mask in
+  gold under the top bar, the public header and above the public footer (`.rule-meander` for any page); a temple front
+  before the brand; fluted marble pilasters on the sign-in card and the landing plate; a marble colonnade standing along
+  the foot of the landing hero; a laurel sprig (`.rule-laurel`, and over the sign-in card, the empty state and the
+  closing call to action); a short gold segment under each `.page-header`.
+- **Impressionist Greek isles.** `--scene` (sky, sun, far isles, sea, and two layers of soft brushwork from SVG
+  `feTurbulence`) behind the landing hero and the sign-in pages only, never behind body text (see "Painted ground").
+- **The examiner's stage** keeps her deep Aegean twilight (`--stage-bg`): her blue-circuitry skin and WebGL sphere were
+  tuned for a dark ground and her skin code is read-only. The page gets the frame instead: a marble mat with a white inner
+  line and a gold keyline (`.live-examiner`, and `box-shadow` rings on the exam room's `.voice-stage`, which leave the
+  stage's measured box unchanged). The focus ring inside the stage is white.
+- **Spacing sweep.** Hard-coded paddings, margins and gaps in `app.css`, `student.css`, `practice.css`, `help.css`,
+  `grading.css`, `sources.css`, `tour.css` and the LTI page's style block now use `--space-*` (new `--space-0`, 2px).
+  Fluid section padding on the public site stays `clamp()` (section rhythm, not a component gap). `--shadow-*` and
+  `--scrim` replace every hard-coded shadow and backdrop.
+- **Not changed.** The analytics level ramp (`--lv0`..`--lv5`), already validated; the email preview's white page; print
+  styles (white paper); the avatar library under `wwwroot/lib/voice`.
+- **Not verified in a browser.** This pass was written without a shell: the project was not built, the app was not run and
+  no page was looked at, at phone or desktop width. The contrast figures are hand-computed. Before relying on this, build
+  `Gadfly.Server`, look at the landing page, sign-in, My exams, get ready, the exam room, the inbox and an admin page at
+  320px and desktop, and check that the colonnade, key and laurel masks render and that the avatar reads well in its frame.
 
 ## What was checked and fixed (GAD-T507)
 

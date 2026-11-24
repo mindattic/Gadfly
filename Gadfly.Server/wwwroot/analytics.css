@@ -2,19 +2,13 @@
    dark with the dataviz validator, --ordinal), a neutral grey for level 0 (Insufficient Evidence, not a magnitude). */
 :root {
     --lv0: #b9b7b0; --lv1: #86b6ef; --lv2: #5598e7; --lv3: #2a78d6; --lv4: #1c5cab; --lv5: #104281;
-    --meter: #2a78d6; --track: #ebe9e3;
+    --meter: #2a78d6; --track: #e3d9c3;
     --lv-ink-dark: #111418; --lv-ink-light: #ffffff;
 }
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-        --lv0: #5c5b57; --lv1: #184f95; --lv2: #256abf; --lv3: #3987e5; --lv4: #6da7ec; --lv5: #b7d3f6;
-        --meter: #5598e7; --track: #2c2d31;
-        --lv-ink-dark: #ffffff; --lv-ink-light: #111418;
-    }
-}
+/* Light is the default whatever the system setting (GAD-T718); the Aegean-night variant is opt-in with data-theme. */
 :root[data-theme="dark"] {
     --lv0: #5c5b57; --lv1: #184f95; --lv2: #256abf; --lv3: #3987e5; --lv4: #6da7ec; --lv5: #b7d3f6;
-    --meter: #5598e7; --track: #2c2d31;
+    --meter: #5598e7; --track: #2c3d57;
     --lv-ink-dark: #ffffff; --lv-ink-light: #111418;
 }
 
@@ -24,7 +18,7 @@
 .analytics-filters .check { font-size: var(--text-sm); }
 
 .stat-tiles { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr)); margin-bottom: var(--space-4); }
-.stat { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.stat { background: var(--panel); border: var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
 .stat .label { display: block; color: var(--muted); font-size: var(--text-xs); }
 .stat .value { display: block; font-size: var(--text-2xl); font-weight: 600; font-variant-numeric: tabular-nums; }
 .stat .hint { display: block; font-size: var(--text-xs); }
@@ -61,7 +55,7 @@
 /* Meters are decorative: the value is always printed beside them. */
 .meter { display: inline-block; vertical-align: middle; width: 64px; height: 8px; margin-right: var(--space-2); }
 .meter.wide { width: 100%; min-width: 120px; height: 10px; }
-.meter .track { fill: var(--track); stroke: var(--border-strong); stroke-width: 1px; }
+.meter .track { fill: var(--track); stroke: var(--line-strong); stroke-width: 1px; }
 .meter .fill { fill: var(--meter); }
 .bar-cell { width: 40%; }
 
