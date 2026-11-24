@@ -1,0 +1,494 @@
+// Interpretive philosophy and ethics exams (GAD-T713). Format: see the header of life-sciences.json (GAD-T659).
+// Each exam carries approved Korean and Spanish texts (title, objective titles) so the seeder offers en, ko, es.
+[
+  {
+    "title": "Plato's Allegory of the Cave",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Plato's Republic",
+    "passage": [
+      "In Book VII of the Republic, Plato has Socrates describe prisoners chained since childhood in a cave, facing a wall. Behind them a fire burns, and between the fire and the prisoners people carry objects whose shadows fall on the wall. The prisoners take the shadows for the whole of reality and compete to predict which shadow will come next.",
+      "One prisoner is freed and turned toward the fire. The light hurts his eyes, and he at first believes the shadows are more real than the objects that cast them. Dragged up out of the cave, he is dazzled by the sun, and only slowly learns to see reflections, then things themselves, and finally the sun, which he understands as the cause of the seasons and of everything visible.",
+      "If he returns to the cave, his eyes, used to the light, see poorly in the dark. The prisoners laugh at him, conclude that the journey upward ruined his sight, and, Socrates suggests, might kill anyone who tried to free them. Readers often hear an echo of Socrates' own trial and death.",
+      "Plato connects the image to the analogies of the sun and the divided line just before it. The cave stands for the world of sense experience and opinion; the world outside stands for the intelligible realm of the Forms, the unchanging realities that ordinary things only imitate; and the sun stands for the Form of the Good, which makes the Forms knowable. Education, Socrates says, is not putting sight into blind eyes but turning the whole soul toward the light.",
+      "The allegory also has a political point. The philosophers who have seen the Good must be compelled to go back down and rule, because they alone know what is truly good for the city, and because those who do not want to rule are the least likely to rule for their own gain.",
+      "Interpreters disagree about how far to take it. Some read it as a strict theory of knowledge that ranks the senses below pure reason. Others read it mainly as a picture of education as painful conversion. Critics, including Karl Popper, see in the ruling philosopher a warrant for paternalism or authoritarian rule by those who claim superior insight. Modern readers often apply the cave to propaganda, advertising or screens, and argue over whether that stretches Plato's meaning or captures it."
+    ],
+    "objectives": [
+      { "key": "shadows-and-forms", "title": "Interpret what the cave stands for", "description": "Defends a reading of the shadows, the objects, the outside world and the sun, and says whether the senses really mislead us.",
+        "concept": "theory-of-forms", "definition": "Plato's view that sensible things are imperfect copies of unchanging Forms, known by reason rather than the senses.",
+        "facts": ["The shadows and the cave stand for the world of sense and opinion.", "The world outside stands for the intelligible realm of the Forms, and the sun for the Form of the Good.", "The image follows the sun and divided line analogies in the Republic.", "A strong answer weighs whether experience is merely misleading or a necessary first stage of learning."],
+        "misconceptions": ["The allegory says everything we see is a hallucination.", "Plato thought the senses tell us nothing at all."] },
+      { "key": "education-as-turning", "title": "Judge Plato's picture of education", "description": "Argues whether education is a painful turning of the soul or the transfer of information, and what that implies for teaching.",
+        "concept": "education-as-conversion", "definition": "Socrates' claim that education turns the soul toward what is real rather than putting knowledge into it.",
+        "facts": ["The freed prisoner is first pained and confused and prefers the shadows.", "His sight adjusts gradually, from reflections to things to the sun.", "Socrates denies that education puts sight into blind eyes.", "A defensible view addresses whether learners must be compelled, as the prisoner is dragged upward."],
+        "misconceptions": ["Learning the truth is always pleasant once you hear it.", "Education just means memorizing correct facts from a teacher."] },
+      { "key": "the-return", "title": "Should the freed prisoner go back?", "description": "Judges whether the philosopher owes it to the others to return and why the prisoners resist him.",
+        "concept": "duty-to-return", "definition": "Plato's claim that those who have seen the Good must go back into the cave and govern.",
+        "facts": ["The returning prisoner sees badly in the dark and is mocked.", "Socrates suggests the prisoners might kill whoever tried to free them, recalling Socrates' execution.", "Plato says philosophers must be compelled to rule, and that reluctant rulers rule best.", "A strong answer considers whether the duty is owed to the city, to the prisoners, or to justice itself."],
+        "misconceptions": ["The prisoners are simply stupid for not believing him.", "The enlightened person has no obligation to anyone else."] },
+      { "key": "philosopher-rule", "title": "Is rule by those who know justified?", "description": "Weighs Plato's case for rule by philosophers against the charge of paternalism or authoritarianism.",
+        "concept": "philosopher-kings", "definition": "Plato's proposal that those with knowledge of the Good should govern the city.",
+        "facts": ["Plato argues only those who know the Good know what truly benefits the city.", "Critics such as Karl Popper read this as a warrant for authoritarian rule.", "A strong answer asks who decides who has seen the light and how errors are checked.", "It distinguishes expertise in a field from authority over others' lives."],
+        "misconceptions": ["Plato was arguing for democracy.", "If someone knows better, they automatically have the right to rule."] }
+    ],
+    "translations": {
+      "ko": { "title": "플라톤의 동굴의 비유",
+        "objectives": { "shadows-and-forms": "동굴이 상징하는 바 해석하기", "education-as-turning": "플라톤의 교육관 평가하기", "the-return": "풀려난 죄수는 돌아가야 하는가?", "philosopher-rule": "아는 자의 통치는 정당한가?" } },
+      "es": { "title": "La alegoría de la caverna de Platón",
+        "objectives": { "shadows-and-forms": "Interpretar lo que representa la caverna", "education-as-turning": "Juzgar la idea platónica de la educación", "the-return": "¿Debe volver el prisionero liberado?", "philosopher-rule": "¿Está justificado el gobierno de quienes saben?" } }
+    }
+  },
+  {
+    "title": "Aristotle's Virtue Ethics",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Virtue ethics",
+    "passage": [
+      "In the Nicomachean Ethics, Aristotle asks what the highest human good is. Everyone agrees it is eudaimonia, usually translated happiness or flourishing, but people disagree about what it consists in: pleasure, honour or wealth. Aristotle argues that the good for a thing depends on its function, and that the distinctive human function is activity of the soul in accordance with reason. Eudaimonia is therefore rational activity in accordance with virtue, over a complete life.",
+      "Virtue (arete, excellence) is a stable state of character. Aristotle distinguishes virtues of thought, such as practical wisdom (phronesis), from virtues of character, such as courage, temperance, generosity and justice. Virtues of character are not inborn; we acquire them by habituation, becoming just by doing just acts and brave by doing brave acts, much as we become builders by building.",
+      "Each virtue of character is a mean between two vices, one of excess and one of deficiency. Courage lies between rashness and cowardice; generosity between wastefulness and stinginess. The mean is relative to us and to the situation, not an arithmetic midpoint, and it is found by the person of practical wisdom. Some actions and feelings, such as murder or spite, have no mean at all.",
+      "Aristotle also holds that flourishing needs some external goods: friends, health, a measure of wealth, and good fortune. A person who suffers terrible misfortunes, like Priam at the fall of Troy, cannot be called happy, though a virtuous person will bear misfortune nobly.",
+      "Modern virtue ethics, revived by philosophers such as Elizabeth Anscombe, Philippa Foot and Alasdair MacIntyre, presents itself as an alternative to rule-based theories. Instead of asking which rule an act obeys or what outcome it produces, it asks what a virtuous person would do and what kind of person one is becoming.",
+      "Critics reply that \"do what the virtuous person would do\" gives little guidance in hard cases, that the list of virtues reflects one culture (Aristotle's ideal included pride and excluded humility, and he defended slavery and denied women full rationality), and that tying happiness to luck seems unfair. Defenders answer that practical wisdom is exactly the skill of handling cases no rule anticipates, and that the core idea can be separated from Aristotle's prejudices."
+    ],
+    "objectives": [
+      { "key": "eudaimonia", "title": "Is happiness the same as flourishing?", "description": "Defends or challenges Aristotle's function argument and his claim that the good life is virtuous rational activity.",
+        "concept": "eudaimonia", "definition": "Flourishing or living well: for Aristotle, rational activity in accordance with virtue over a complete life.",
+        "facts": ["Aristotle rejects pleasure, honour and wealth as the highest good.", "The function argument says the human good is activity in accordance with reason.", "Eudaimonia is an activity over a whole life, not a passing feeling.", "A strong answer asks whether humans really have a single function."],
+        "misconceptions": ["Eudaimonia just means feeling happy at the moment.", "Aristotle said the good life is whatever you enjoy most."] },
+      { "key": "doctrine-of-mean", "title": "Is virtue really a mean?", "description": "Tests the doctrine of the mean on examples and judges whether it explains virtue or only describes it.",
+        "concept": "doctrine-of-the-mean", "definition": "Each virtue of character lies between a vice of excess and a vice of deficiency, relative to us and the situation.",
+        "facts": ["Courage lies between rashness and cowardice.", "The mean is relative to us, not an arithmetic midpoint.", "Some actions, such as murder, have no mean.", "A strong answer considers virtues like honesty or justice that seem hard to place on a scale."],
+        "misconceptions": ["The mean means always being moderate and never feeling strongly.", "Aristotle meant the exact halfway point between two extremes."] },
+      { "key": "habituation", "title": "Can character be trained?", "description": "Judges the claim that we become virtuous by practice, and what follows for moral education and responsibility.",
+        "concept": "habituation", "definition": "Aristotle's view that virtues of character are acquired by repeatedly doing virtuous acts.",
+        "facts": ["Virtues of character are not inborn but formed by habit.", "We become just by doing just acts, as builders become builders by building.", "Practical wisdom is needed to know which act is right in a situation.", "A strong answer distinguishes acting from habit from acting merely out of routine."],
+        "misconceptions": ["Doing one good deed makes a person virtuous.", "If character comes from upbringing, no one is responsible for it."] },
+      { "key": "guidance-objection", "title": "Does virtue ethics tell us what to do?", "description": "Weighs the objection that virtue ethics gives no guidance in dilemmas against the defence from practical wisdom.",
+        "concept": "action-guidance", "definition": "The objection that 'act as the virtuous person would' cannot decide hard cases.",
+        "facts": ["Virtue ethics asks what kind of person to be, not only which rule to follow.", "Critics say it gives little guidance when virtues conflict.", "Defenders reply that practical wisdom handles cases rules cannot anticipate.", "Aristotle's own list of virtues reflects his culture, including his defence of slavery."],
+        "misconceptions": ["Virtue ethics has no view about right action at all.", "Because Aristotle held prejudiced views, his whole theory is worthless."] }
+    ],
+    "translations": {
+      "ko": { "title": "아리스토텔레스의 덕 윤리",
+        "objectives": { "eudaimonia": "행복은 번영과 같은가?", "doctrine-of-mean": "덕은 정말 중용인가?", "habituation": "성품은 훈련될 수 있는가?", "guidance-objection": "덕 윤리는 무엇을 할지 알려 주는가?" } },
+      "es": { "title": "La ética de la virtud de Aristóteles",
+        "objectives": { "eudaimonia": "¿Es la felicidad lo mismo que el florecimiento?", "doctrine-of-mean": "¿Es la virtud realmente un término medio?", "habituation": "¿Se puede entrenar el carácter?", "guidance-objection": "¿Nos dice la ética de la virtud qué hacer?" } }
+    }
+  },
+  {
+    "title": "Stoicism and What We Control",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Hellenistic ethics",
+    "passage": [
+      "Stoicism was founded in Athens around 300 BCE by Zeno of Citium and taught in the Painted Porch (stoa) from which it takes its name. Its best-known later voices are Roman: the statesman Seneca, the former slave Epictetus, and the emperor Marcus Aurelius, whose private notebook we call the Meditations.",
+      "Epictetus' Handbook opens with a distinction: some things are up to us and some are not. Up to us are our judgments, intentions, desires and aversions; not up to us are our body, property, reputation and office. Suffering comes from treating what is not up to us as if it were. The Stoic aims to want only what is in their power.",
+      "The Stoics held that virtue, which is wisdom expressed as courage, justice and moderation, is the only true good, and vice the only true evil. Health, wealth and reputation are \"indifferents\": some are preferred and reasonably pursued, but none can make a life good or bad. A good person can therefore flourish even in poverty, exile or prison.",
+      "Emotions such as fear, grief and anger were, for the Stoics, mistaken judgments: believing that something not up to us is truly good or bad. The goal was apatheia, freedom from these passions, not numbness. The wise person still has \"good feelings\" such as joy and caution, and the Stoics placed great weight on duty to family, city and all humanity, whom they saw as fellow citizens of one cosmos.",
+      "Stoic practices included imagining losses in advance, reviewing one's day, and reminding oneself that everything passes. Modern cognitive behavioural therapy credits Epictetus' remark that people are disturbed not by things but by their judgments about things.",
+      "Critics have long objected. Some say Stoicism counsels passivity in the face of injustice: if a tyrant or an unjust system is not up to me, should I simply accept it? Others say it underrates grief and love, since mourning a child seems fitting rather than mistaken. Defenders reply that the Stoics were active in public life and that the point is to act fully while accepting the outcome. A further debate concerns where to draw the line, since much of what affects us, from health to social conditions, is partly up to us."
+    ],
+    "objectives": [
+      { "key": "dichotomy-of-control", "title": "Where is the line of control?", "description": "Interprets Epictetus' distinction and tests whether things like health, success or relationships fall clearly on one side.",
+        "concept": "dichotomy-of-control", "definition": "Epictetus' division between what is up to us (judgments, intentions, desires) and what is not (body, property, reputation).",
+        "facts": ["Epictetus places judgments, desires and aversions within our control.", "Body, property, reputation and office are not up to us.", "Suffering comes from treating what is not up to us as ours.", "A strong answer deals with things that are partly in our control."],
+        "misconceptions": ["Stoicism means you control nothing, so nothing matters.", "Anything you can influence at all is fully in your control."] },
+      { "key": "virtue-only-good", "title": "Is virtue the only true good?", "description": "Defends or challenges the Stoic claim that health, wealth and reputation are indifferent to living well.",
+        "concept": "preferred-indifferents", "definition": "Things like health and wealth that are reasonably preferred but cannot make a life good or bad.",
+        "facts": ["The Stoics held virtue is the only good and vice the only evil.", "Health and wealth are preferred indifferents, not worthless.", "On this view a good person can flourish in poverty or prison.", "A strong answer weighs this against Aristotle's view that flourishing needs external goods."],
+        "misconceptions": ["Stoics thought money and health should be rejected.", "Calling something indifferent means it should be ignored completely."] },
+      { "key": "emotions-as-judgments", "title": "Are emotions mistaken judgments?", "description": "Judges the Stoic theory of the passions, including whether grief or anger can be fitting.",
+        "concept": "apatheia", "definition": "Freedom from passions, which the Stoics saw as false judgments that something outside our control is good or bad.",
+        "facts": ["The Stoics treated fear, grief and anger as false judgments of value.", "Apatheia is freedom from passions, not the absence of all feeling.", "The wise person still has good feelings such as joy.", "Cognitive behavioural therapy draws on the idea that judgments shape distress."],
+        "misconceptions": ["Stoics wanted people to feel nothing at all.", "Being stoic just means hiding your emotions."] },
+      { "key": "passivity-objection", "title": "Does Stoicism counsel passivity?", "description": "Weighs the objection that Stoicism accepts injustice against the Stoic emphasis on duty and action.",
+        "concept": "acceptance-and-action", "definition": "The question of whether accepting outcomes outside our control undermines the will to change the world.",
+        "facts": ["Seneca and Marcus Aurelius held high public office.", "The Stoics saw all humans as citizens of one cosmos with duties to each other.", "Critics say accepting what is not up to us can excuse injustice.", "A strong answer separates accepting an outcome from not trying to change it."],
+        "misconceptions": ["Stoicism tells you never to try to change anything.", "Acceptance is the same as approval."] }
+    ],
+    "translations": {
+      "ko": { "title": "스토아주의와 우리가 통제할 수 있는 것",
+        "objectives": { "dichotomy-of-control": "통제의 경계는 어디인가?", "virtue-only-good": "덕만이 참된 선인가?", "emotions-as-judgments": "감정은 잘못된 판단인가?", "passivity-objection": "스토아주의는 수동성을 권하는가?" } },
+      "es": { "title": "El estoicismo y lo que depende de nosotros",
+        "objectives": { "dichotomy-of-control": "¿Dónde está el límite de lo que controlamos?", "virtue-only-good": "¿Es la virtud el único bien verdadero?", "emotions-as-judgments": "¿Son las emociones juicios equivocados?", "passivity-objection": "¿Aconseja el estoicismo la pasividad?" } }
+    }
+  },
+  {
+    "title": "Existentialism: Sartre and Camus",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Existentialism",
+    "passage": [
+      "Existentialism is a broad movement, rooted in Kierkegaard and Nietzsche and flourishing in France after the Second World War, that starts from the situation of the individual who must choose how to live without a guaranteed meaning.",
+      "In his 1945 lecture Existentialism Is a Humanism, Jean-Paul Sartre summed up his view as \"existence precedes essence\". A paper knife is made to a plan, so its essence comes first. If there is no God who designed human nature, then human beings first exist and only afterwards define themselves by what they do. We are, Sartre said, \"condemned to be free\": not choosing is itself a choice.",
+      "With freedom comes responsibility, and with it anguish. Sartre argued that in choosing for myself I also affirm an image of what a human being should be. Bad faith (mauvaise foi) is the evasion of this freedom: pretending that our role, our past or our nature forces us to act. His example is a café waiter who plays at being a waiter as if that were all he could be.",
+      "Albert Camus, though often grouped with Sartre, rejected the label. In The Myth of Sisyphus (1942) he described the absurd: the clash between our demand for meaning and a universe that answers with silence. He rejected physical suicide and also \"philosophical suicide\", the leap into a faith or system that dissolves the tension. Instead he urged revolt: living with full awareness of the absurd. Sisyphus, condemned to roll his rock up a hill forever, becomes his hero: \"One must imagine Sisyphus happy.\"",
+      "The two disagreed politically. After Camus' The Rebel (1951) criticized revolutionary violence and the Soviet camps, a hostile review in Sartre's journal Les Temps modernes led to a public break in 1952. Sartre held that one must commit to history and its struggles; Camus insisted on limits that no cause may cross.",
+      "Critics ask whether radical freedom is believable given the weight of upbringing, class, body and circumstance; Simone de Beauvoir and the later Sartre gave more weight to such situations. Others ask whether, without a given human nature, existentialism can say that any choice is better than another, or whether Camus' cheerful Sisyphus is a real answer or a rhetorical flourish."
+    ],
+    "objectives": [
+      { "key": "existence-precedes-essence", "title": "Do we define ourselves?", "description": "Interprets 'existence precedes essence' and judges whether there is a fixed human nature.",
+        "concept": "existence-precedes-essence", "definition": "Sartre's claim that humans exist first and create their essence through their choices.",
+        "facts": ["Sartre contrasts a designed paper knife with human beings.", "He ties the claim to the absence of a designing God.", "We are 'condemned to be free'; refusing to choose is a choice.", "A strong answer weighs biology, upbringing and circumstance against radical freedom."],
+        "misconceptions": ["Existentialism says you can become literally anything you want.", "Existence precedes essence means nothing about you is real."] },
+      { "key": "bad-faith", "title": "Is bad faith avoidable?", "description": "Explains bad faith with an example and judges whether anyone can live fully without it.",
+        "concept": "bad-faith", "definition": "Self-deception by which we deny our freedom, pretending our role or nature forces our choices.",
+        "facts": ["Sartre's café waiter plays at being a waiter.", "Bad faith blames roles, the past or nature for choices.", "Freedom brings responsibility and anguish.", "A strong answer distinguishes real constraint from excuses."],
+        "misconceptions": ["Bad faith just means lying to other people.", "Having a job or a social role is itself bad faith."] },
+      { "key": "the-absurd", "title": "How should we respond to the absurd?", "description": "Interprets Camus' absurd and judges his choice of revolt over suicide and over a leap of faith.",
+        "concept": "the-absurd", "definition": "Camus' name for the clash between the human demand for meaning and the silence of the universe.",
+        "facts": ["The absurd lies in the relation between us and the world, not in the world alone.", "Camus rejects physical suicide and 'philosophical suicide'.", "He urges revolt: living in full awareness of the absurd.", "A strong answer says whether 'imagine Sisyphus happy' is convincing."],
+        "misconceptions": ["Camus said life is meaningless, so nothing matters.", "The absurd means the world itself is irrational."] },
+      { "key": "sartre-camus-split", "title": "Who was right in the Sartre-Camus split?", "description": "Weighs Sartre's commitment to history against Camus' insistence on moral limits to revolt.",
+        "concept": "commitment-and-limits", "definition": "The 1952 quarrel over whether political commitment can justify revolutionary violence.",
+        "facts": ["Camus' The Rebel criticized revolutionary violence and the Soviet camps.", "A hostile review in Les Temps modernes led to their public break in 1952.", "Sartre stressed engagement with historical struggle; Camus stressed limits no cause may cross.", "A strong answer connects the quarrel to each thinker's view of freedom and meaning."],
+        "misconceptions": ["Sartre and Camus held the same philosophy.", "Camus was simply apolitical."] }
+    ],
+    "translations": {
+      "ko": { "title": "실존주의: 사르트르와 카뮈",
+        "objectives": { "existence-precedes-essence": "우리는 스스로를 규정하는가?", "bad-faith": "자기기만은 피할 수 있는가?", "the-absurd": "부조리에 어떻게 대응해야 하는가?", "sartre-camus-split": "사르트르와 카뮈의 결별에서 누가 옳았는가?" } },
+      "es": { "title": "El existencialismo: Sartre y Camus",
+        "objectives": { "existence-precedes-essence": "¿Nos definimos a nosotros mismos?", "bad-faith": "¿Se puede evitar la mala fe?", "the-absurd": "¿Cómo responder al absurdo?", "sartre-camus-split": "¿Quién tenía razón en la ruptura entre Sartre y Camus?" } }
+    }
+  },
+  {
+    "title": "The Social Contract: Hobbes, Locke and Rousseau",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Political philosophy",
+    "passage": [
+      "Social contract theory asks why anyone should obey a government. Its answer is that legitimate political authority rests on an agreement, actual or hypothetical, among people who would otherwise live in a \"state of nature\" without government. The three classic versions disagree about what that state is like and therefore about what the contract creates.",
+      "Thomas Hobbes, writing in Leviathan (1651) after the English Civil War, held that people in the state of nature are roughly equal, competitive and fearful. Without a common power, there is a war of all against all, and life is \"solitary, poor, nasty, brutish, and short\". Rational people would therefore give up their freedom to an absolute sovereign, whose power to keep the peace should be very nearly unlimited. Only if the sovereign threatens a subject's life may that subject resist.",
+      "John Locke, in his Second Treatise of Government (1689), described a state of nature governed by a law of nature: people have rights to life, liberty and property, which they acquire by mixing their labour with the world. The trouble is the lack of an impartial judge to settle disputes. People consent to government to protect these rights, and a government that violates them breaks the trust and may rightly be resisted or replaced. His ideas influenced the American Declaration of Independence.",
+      "Jean-Jacques Rousseau, in The Social Contract (1762), began: \"Man is born free, and everywhere he is in chains.\" He thought natural humans were not warlike and that inequality grew with property and society. A legitimate contract must let each person, uniting with all, still obey only themselves. That happens when citizens are ruled by the general will, which aims at the common good, as opposed to the will of all, a mere sum of private interests. Whoever refuses to obey the general will, he wrote, will be \"forced to be free\".",
+      "Critics raise several problems. Most people never actually consented to their government, and Locke's appeal to tacit consent by living in a country has been doubted (David Hume compared it to a sailor carried aboard while asleep who \"consents\" by not jumping into the sea). Feminist and critical theorists, such as Carole Pateman and Charles Mills, argue that the classic contracts quietly excluded women and non-Europeans. Rousseau's general will has been read both as the root of democratic self-rule and as a license for majorities or states to override individuals."
+    ],
+    "objectives": [
+      { "key": "state-of-nature", "title": "Whose state of nature is more realistic?", "description": "Compares Hobbes's war of all against all with Locke's and Rousseau's accounts and defends one as closer to human nature.",
+        "concept": "state-of-nature", "definition": "The hypothetical condition of people without government, used to justify the form government should take.",
+        "facts": ["Hobbes describes a war of all against all, with life 'solitary, poor, nasty, brutish, and short'.", "Locke's state of nature already has natural rights and a law of nature.", "Rousseau held natural humans were not warlike and that society bred inequality.", "A strong answer notes how each picture of nature drives the kind of government it justifies."],
+        "misconceptions": ["The state of nature was a real historical period all three described.", "Hobbes thought people are evil by nature."] },
+      { "key": "limits-of-authority", "title": "When may people resist government?", "description": "Judges Hobbes's near-absolute sovereign against Locke's right of resistance.",
+        "concept": "right-of-resistance", "definition": "Locke's claim that a government that violates natural rights breaks its trust and may be resisted or replaced.",
+        "facts": ["Hobbes allows resistance only when the sovereign threatens a subject's life.", "Locke holds government exists to protect life, liberty and property.", "Locke's ideas influenced the Declaration of Independence.", "A strong answer weighs the risk of disorder against the risk of tyranny."],
+        "misconceptions": ["Hobbes argued for democracy.", "Locke thought people may overthrow a government whenever they disagree with it."] },
+      { "key": "consent", "title": "Did we ever consent?", "description": "Evaluates whether tacit or hypothetical consent can ground political obligation.",
+        "concept": "consent", "definition": "The idea that legitimate authority depends on the agreement of the governed.",
+        "facts": ["Few people ever explicitly agreed to their government.", "Locke appeals to tacit consent by living in and benefiting from a country.", "Hume compared this to a sleeping sailor carried aboard a ship.", "Critics such as Pateman and Mills argue the classic contracts excluded women and non-Europeans."],
+        "misconceptions": ["Voting in an election means you signed the social contract.", "If consent is hypothetical, the theory is pointless."] },
+      { "key": "general-will", "title": "Is the general will freedom or tyranny?", "description": "Interprets Rousseau's general will and 'forced to be free', and judges whether it protects or threatens individuals.",
+        "concept": "general-will", "definition": "Rousseau's will of the community aimed at the common good, distinct from the sum of private interests.",
+        "facts": ["Rousseau distinguishes the general will from the will of all.", "Obeying the general will is meant to be obeying oneself.", "He wrote that whoever refuses to obey it will be 'forced to be free'.", "A strong answer considers both democratic and authoritarian readings."],
+        "misconceptions": ["The general will is whatever the majority votes for.", "Rousseau simply wanted a dictatorship."] }
+    ],
+    "translations": {
+      "ko": { "title": "사회계약론: 홉스, 로크, 루소",
+        "objectives": { "state-of-nature": "누구의 자연 상태가 더 현실적인가?", "limits-of-authority": "언제 정부에 저항할 수 있는가?", "consent": "우리는 동의한 적이 있는가?", "general-will": "일반 의지는 자유인가 폭정인가?" } },
+      "es": { "title": "El contrato social: Hobbes, Locke y Rousseau",
+        "objectives": { "state-of-nature": "¿Qué estado de naturaleza es más realista?", "limits-of-authority": "¿Cuándo puede el pueblo resistir al gobierno?", "consent": "¿Alguna vez dimos nuestro consentimiento?", "general-will": "¿Es la voluntad general libertad o tiranía?" } }
+    }
+  },
+  {
+    "title": "Justice: Rawls and Nozick",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Distributive justice",
+    "passage": [
+      "How should a society's wealth, income and opportunities be distributed? Two Harvard colleagues gave the most influential modern answers: John Rawls in A Theory of Justice (1971) and Robert Nozick in Anarchy, State, and Utopia (1974).",
+      "Rawls asked us to imagine choosing principles of justice in an \"original position\" behind a \"veil of ignorance\": we would not know our sex, race, class, talents or conception of the good life. Because no one could tailor the rules to their own advantage, the principles chosen would be fair. Rawls called this justice as fairness.",
+      "He argued that people in that position would choose two principles. First, each person has an equal right to the most extensive basic liberties compatible with the same liberties for all. Second, social and economic inequalities are allowed only if they are attached to positions open to all under fair equality of opportunity, and only if they benefit the least advantaged members of society. This last condition is the difference principle. Rawls also argued that no one deserves their natural talents or the family they were born into, so the rewards those bring are not simply theirs by right.",
+      "Nozick replied with an entitlement theory. A distribution is just if it came about through just acquisition and just transfer, or through rectification of past injustice, whatever pattern results. He illustrated this with the basketball star Wilt Chamberlain: if fans freely pay to watch him, he becomes rich, and no one has been wronged. Any \"patterned\" principle, Nozick argued, can only be kept in place by continually interfering with people's free choices, and taxing earnings for redistribution is on a par with forced labour.",
+      "Critics of Rawls ask whether people behind the veil would really be so cautious, rather than gambling for a chance at great wealth, and whether talents can be detached from persons. Critics of Nozick note that almost all existing holdings trace back to conquest, theft or slavery, so his own principle of rectification might demand large redistribution, and they ask whether market freedom means much to those who have nothing. Others, such as communitarians and the capabilities theorists Amartya Sen and Martha Nussbaum, question the terms both men used."
+    ],
+    "objectives": [
+      { "key": "veil-of-ignorance", "title": "Is the veil of ignorance fair?", "description": "Interprets the original position and judges whether choosing behind the veil really yields fair principles.",
+        "concept": "veil-of-ignorance", "definition": "Rawls's device of choosing principles without knowing one's own place in society, talents or values.",
+        "facts": ["Behind the veil, people do not know their class, race, sex, talents or idea of the good.", "The aim is to stop people tailoring rules to their own advantage.", "Rawls calls the result justice as fairness.", "A strong answer considers whether people might gamble rather than play it safe."],
+        "misconceptions": ["The veil of ignorance means people choose without any knowledge at all.", "Rawls thought everyone should end up with exactly equal wealth."] },
+      { "key": "difference-principle", "title": "Should inequality benefit the worst off?", "description": "Defends or challenges the difference principle, including Rawls's claim that natural talents are undeserved.",
+        "concept": "difference-principle", "definition": "Inequalities are just only if they benefit the least advantaged members of society.",
+        "facts": ["Rawls permits inequality only when it improves the position of the least advantaged.", "Inequalities must also be attached to positions open under fair equality of opportunity.", "Rawls argues no one deserves their natural talents or birth.", "Equal basic liberties take priority over the second principle."],
+        "misconceptions": ["The difference principle forbids all inequality.", "Rawls was against markets entirely."] },
+      { "key": "entitlement-theory", "title": "Is justice about history or pattern?", "description": "Weighs Nozick's entitlement theory and the Wilt Chamberlain argument against patterned principles.",
+        "concept": "entitlement-theory", "definition": "A distribution is just if it arose from just acquisition, just transfer and rectification of past injustice.",
+        "facts": ["Nozick judges holdings by how they arose, not by the resulting pattern.", "In the Wilt Chamberlain example, fans freely pay and he becomes rich.", "Nozick argues patterns can be kept only by constant interference with liberty.", "He compares taxation of earnings for redistribution to forced labour."],
+        "misconceptions": ["Nozick thought the rich deserve their wealth because they are better people.", "Nozick rejected all taxation of any kind."] },
+      { "key": "rectification", "title": "What does history demand of us now?", "description": "Judges whether past injustice in how holdings were acquired undermines Nozick's view or supports redistribution.",
+        "concept": "rectification-of-injustice", "definition": "Nozick's third principle: holdings that arose from injustice must be corrected.",
+        "facts": ["Nozick includes a principle of rectification for past injustice.", "Many existing holdings trace back to conquest, theft or slavery.", "Critics argue rectification could justify large redistribution.", "A strong answer addresses how far back and to whom rectification should go."],
+        "misconceptions": ["Past injustices have no bearing on present property.", "Nozick's theory only applies to a perfect market."] }
+    ],
+    "translations": {
+      "ko": { "title": "정의: 롤스와 노직",
+        "objectives": { "veil-of-ignorance": "무지의 베일은 공정한가?", "difference-principle": "불평등은 최소 수혜자에게 이익이 되어야 하는가?", "entitlement-theory": "정의는 역사의 문제인가, 분배 형태의 문제인가?", "rectification": "역사는 지금 우리에게 무엇을 요구하는가?" } },
+      "es": { "title": "La justicia: Rawls y Nozick",
+        "objectives": { "veil-of-ignorance": "¿Es justo el velo de la ignorancia?", "difference-principle": "¿Debe la desigualdad beneficiar a los más desfavorecidos?", "entitlement-theory": "¿Es la justicia cuestión de historia o de patrón?", "rectification": "¿Qué nos exige hoy la historia?" } }
+    }
+  },
+  {
+    "title": "Personal Identity and the Ship of Theseus",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Metaphysics of persons",
+    "passage": [
+      "Plutarch records that the Athenians preserved the ship of the hero Theseus, replacing its planks one by one as they rotted, so that philosophers argued over whether it remained the same ship. Thomas Hobbes added a twist: suppose someone kept every discarded plank and rebuilt them into a ship. Which one is the ship of Theseus?",
+      "The same question arises for persons. What makes you, now, the same person as a child in an old photograph, when almost every feature of your body and mind has changed? Philosophers distinguish numerical identity (being one and the same thing) from qualitative identity (being exactly alike).",
+      "John Locke proposed a psychological answer: a person is a thinking being that can consider itself the same thinking thing at different times, and personal identity extends as far as consciousness, chiefly memory, reaches back. He imagined the soul of a prince entering the body of a cobbler, and argued that the person would go where the prince's consciousness went.",
+      "Critics pressed objections. Thomas Reid's brave officer case: a boy is flogged, later as a young officer remembers the flogging, and later still as a general remembers being the officer but not the boy. By Locke's memory test the general is the officer and the officer the boy, yet the general is not the boy, which breaks the logic of identity. Later psychological theories answer with overlapping chains of memory and other mental connections.",
+      "Others defend a physical or animalist view: you are a human organism, and you persist as long as that organism does. Thought experiments pull in different directions: if your brain were transplanted into another body, many say you would go with the brain; if a teleporter destroyed you and built an exact copy on Mars, many doubt the copy would be you; and if it made two copies, both cannot be you.",
+      "David Hume doubted there is any self beyond a bundle of perceptions, and Buddhist thought has long taught a similar doctrine of no-self (anatta). Derek Parfit, in Reasons and Persons (1984), argued that identity is not what matters: what matters is psychological connectedness and continuity, which come in degrees. If so, questions about the ship of Theseus, and about ourselves, may sometimes have no deep answer. The stakes are practical: punishment for past crimes, promises, advance directives and fear of death all seem to depend on who is the same person."
+    ],
+    "objectives": [
+      { "key": "ship-of-theseus", "title": "Which ship is the ship of Theseus?", "description": "Defends an answer to the replaced-plank and reassembled-ship puzzle and states the criterion used.",
+        "concept": "identity-over-time", "definition": "The question of what makes a thing at one time numerically the same as a thing at a later time.",
+        "facts": ["Plutarch reports the planks were replaced one by one.", "Hobbes added the case of a ship rebuilt from the old planks.", "Numerical identity differs from qualitative identity.", "A strong answer shows how continuity of form and continuity of material give different verdicts."],
+        "misconceptions": ["There must be one obvious correct answer.", "Anything that changes at all becomes a different thing."] },
+      { "key": "memory-theory", "title": "Does memory make you you?", "description": "Evaluates Locke's memory criterion and Reid's brave officer objection.",
+        "concept": "psychological-continuity", "definition": "The view that personal identity consists in links of memory and other mental states over time.",
+        "facts": ["Locke ties personal identity to consciousness reaching back through memory.", "His prince and cobbler case places the person where consciousness goes.", "Reid's brave officer case shows memory alone breaks transitivity.", "Later theories use overlapping chains of psychological connections."],
+        "misconceptions": ["If you forget something, you were never the person who did it, with no further problem.", "Locke identified the person with the soul."] },
+      { "key": "body-vs-mind", "title": "Are you your body or your mind?", "description": "Compares psychological and animalist views using brain transplant and teleporter cases.",
+        "concept": "animalism", "definition": "The view that each of us is a human organism and persists as long as that organism does.",
+        "facts": ["Animalism holds that we are human organisms.", "Brain transplant cases pull toward a psychological view.", "Teleporter and duplication cases challenge it, since two copies cannot both be you.", "A strong answer explains which intuition it trusts and why."],
+        "misconceptions": ["Thought experiments are useless because they cannot happen.", "Every cell in the body is replaced every seven years, so the body cannot be the criterion."] },
+      { "key": "what-matters", "title": "Does identity matter?", "description": "Judges Parfit's claim that what matters is continuity, not identity, and what follows for responsibility and death.",
+        "concept": "parfit-what-matters", "definition": "Parfit's view that psychological connectedness and continuity, which come in degrees, matter rather than identity itself.",
+        "facts": ["Hume saw the self as a bundle of perceptions; Buddhism teaches no-self.", "Parfit argued identity is not what matters in survival.", "Connectedness comes in degrees, so some identity questions may lack a deep answer.", "A strong answer applies the view to punishment, promises or fear of death."],
+        "misconceptions": ["If there is no fixed self, no one is responsible for anything.", "Parfit denied that people exist."] }
+    ],
+    "translations": {
+      "ko": { "title": "인격 동일성과 테세우스의 배",
+        "objectives": { "ship-of-theseus": "어느 것이 테세우스의 배인가?", "memory-theory": "기억이 당신을 당신으로 만드는가?", "body-vs-mind": "당신은 몸인가, 마음인가?", "what-matters": "동일성은 중요한가?" } },
+      "es": { "title": "La identidad personal y el barco de Teseo",
+        "objectives": { "ship-of-theseus": "¿Cuál es el barco de Teseo?", "memory-theory": "¿Es la memoria lo que te hace ser tú?", "body-vs-mind": "¿Eres tu cuerpo o tu mente?", "what-matters": "¿Importa la identidad?" } }
+    }
+  },
+  {
+    "title": "Moral Relativism",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Metaethics",
+    "passage": [
+      "Herodotus tells how the Persian king Darius asked some Greeks what it would take for them to eat their dead fathers, and they said no sum could make them. He then asked members of an Indian people who did eat their dead what it would take to make them burn their fathers, as the Greeks did, and they cried out in horror. Herodotus concluded, quoting the poet Pindar, that custom is king of all.",
+      "Descriptive relativism is the observation that moral beliefs and practices differ between cultures and eras. Moral relativism, as a philosophical thesis, goes further: it says that moral claims are true or false only relative to a culture's (or an individual's) standards, and that there is no further standard by which to judge one culture's morality better than another's.",
+      "Relativism has attractions. It seems to fit the facts of disagreement, to explain why moral arguments so often stall, and to express humility about judging others. The anthropologist Ruth Benedict argued that what counts as normal is culturally defined, and many people associate relativism with tolerance.",
+      "Critics, among them James Rachels, argue that the move from disagreement to relativism is invalid: people once disagreed about the shape of the earth without the matter being relative. Much apparent moral disagreement may also rest on different factual beliefs, for instance about the afterlife, with shared values underneath. If relativism were true, we could not say a society that practised slavery was wrong, reformers like abolitionists or suffragists would be wrong by definition when they opposed their society's code, and there could be no moral progress, only change.",
+      "There is also a problem about tolerance. If tolerance is valued only because our culture values it, a relativist cannot tell an intolerant culture it should be tolerant. Relativism also struggles to say what counts as \"a culture\" when people belong to many overlapping groups.",
+      "Some philosophers defend more careful views. Gilbert Harman argued that moral judgments make sense relative to implicit agreements; David Wong has argued for a pluralistic relativism in which several moralities can be adequate while some are not. Their opponents, moral realists and universalists of various kinds, hold that at least some moral claims, such as that gratuitous cruelty is wrong, hold everywhere, while allowing that many customs, such as funeral rites, legitimately vary."
+    ],
+    "objectives": [
+      { "key": "disagreement-argument", "title": "Does disagreement prove relativism?", "description": "Judges whether cultural variation in morals shows that there is no objective moral truth.",
+        "concept": "argument-from-disagreement", "definition": "The inference from the fact that cultures disagree about morality to the claim that moral truth is relative.",
+        "facts": ["Herodotus' Darius story contrasts Greek and Indian funeral customs.", "Descriptive relativism differs from moral relativism.", "Disagreement about a question does not by itself show there is no fact of the matter.", "Some disagreements rest on different factual beliefs with shared values underneath."],
+        "misconceptions": ["Because cultures differ, nothing can be truly right or wrong.", "Every moral difference between cultures is a difference in basic values."] },
+      { "key": "reformers-and-progress", "title": "Can there be moral progress?", "description": "Tests relativism against reformers and the abolition of slavery, and judges whether 'progress' is meaningful for a relativist.",
+        "concept": "moral-progress", "definition": "The idea that a society's morality can improve, not merely change.",
+        "facts": ["On cultural relativism, reformers who oppose their society's code are wrong by definition.", "Relativism seems unable to call slavery wrong where it was accepted.", "Rachels argues relativism allows change but not progress.", "A strong answer considers how a relativist might reply."],
+        "misconceptions": ["Relativism and believing in moral progress are easily compatible.", "Calling a past practice wrong is just imposing our culture."] },
+      { "key": "tolerance", "title": "Does relativism support tolerance?", "description": "Weighs the claim that relativism makes us tolerant against the objection that it cannot ground tolerance.",
+        "concept": "tolerance-and-relativism", "definition": "The question of whether a relativist can hold tolerance as a value binding on other cultures.",
+        "facts": ["Many associate relativism with humility and tolerance.", "If tolerance is valid only where a culture accepts it, it cannot be urged on intolerant cultures.", "Universal tolerance would itself be a non-relative moral claim.", "A strong answer separates respecting customs from approving every practice."],
+        "misconceptions": ["Being tolerant requires believing every practice is equally good.", "Rejecting relativism means being intolerant."] },
+      { "key": "middle-ground", "title": "Is there a defensible middle ground?", "description": "Defends a position between strict relativism and a single universal code, drawing a line between what varies and what does not.",
+        "concept": "moral-pluralism", "definition": "The view that several moral codes may be adequate while some are not, or that core values hold everywhere while customs vary.",
+        "facts": ["Harman tied moral judgments to implicit agreements.", "Wong defends a pluralistic relativism in which some moralities are inadequate.", "Universalists hold claims like 'gratuitous cruelty is wrong' everywhere.", "Many customs, such as funeral rites, can legitimately vary."],
+        "misconceptions": ["The only options are strict relativism or one rigid code for everyone.", "If some customs vary, all of morality must vary."] }
+    ],
+    "translations": {
+      "ko": { "title": "도덕적 상대주의",
+        "objectives": { "disagreement-argument": "의견 차이는 상대주의를 증명하는가?", "reformers-and-progress": "도덕적 진보는 가능한가?", "tolerance": "상대주의는 관용을 뒷받침하는가?", "middle-ground": "옹호할 만한 중간 입장이 있는가?" } },
+      "es": { "title": "El relativismo moral",
+        "objectives": { "disagreement-argument": "¿Prueba el desacuerdo el relativismo?", "reformers-and-progress": "¿Puede haber progreso moral?", "tolerance": "¿Apoya el relativismo la tolerancia?", "middle-ground": "¿Existe un término medio defendible?" } }
+    }
+  },
+  {
+    "title": "The Euthyphro Dilemma and Divine Command",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Religion and morality",
+    "passage": [
+      "In Plato's Euthyphro, Socrates meets Euthyphro outside the court. Euthyphro is prosecuting his own father for the death of a labourer, and he is confident this is pious. Asked what piety is, he eventually says it is what all the gods love. Socrates asks: is the pious loved by the gods because it is pious, or is it pious because it is loved by the gods?",
+      "Restated for monotheism, the question becomes: is an act right because God commands it, or does God command it because it is right? Divine command theory, held in various forms by thinkers such as William of Ockham, says morality depends on God's will: what makes an act obligatory is that God commands it.",
+      "The first horn of the dilemma threatens arbitrariness. If rightness is whatever God commands, then had God commanded cruelty, cruelty would have been right, and saying \"God is good\" would mean little more than \"God does what God wills.\" The second horn threatens God's sovereignty: if God commands acts because they are already right, then rightness exists independently of God, and God becomes a reporter of morality rather than its source.",
+      "Defenders have offered several replies. Some bite the bullet. Others, following a line found in Thomas Aquinas, ground morality in God's nature rather than God's will: God's commands flow necessarily from a perfectly good nature, so God could not command cruelty. Robert Adams argued that obligation comes from the commands of a loving God, so that commands to be cruel are not merely unlikely but would not create obligation.",
+      "Critics reply that this only moves the dilemma: is God's nature good because it has the features it has, such as love and justice, or are those features good because they are God's? If the former, there is a standard of goodness we could in principle understand without reference to God.",
+      "The dilemma matters beyond theology. It asks whether anything, a god, a society, a ruler or majority opinion, can make something right just by approving it, or whether approval should track reasons that exist independently. Many people who are not religious still hold views with the same structure, and many religious philosophers accept that moral truths are knowable by reason."
+    ],
+    "objectives": [
+      { "key": "the-dilemma", "title": "Does either horn survive?", "description": "States the dilemma precisely and defends which horn, if either, a believer should accept.",
+        "concept": "euthyphro-dilemma", "definition": "Is an act right because God commands it, or does God command it because it is right?",
+        "facts": ["Euthyphro defines piety as what all the gods love.", "Socrates asks whether the pious is loved because it is pious or pious because loved.", "The first horn makes morality seem arbitrary; the second makes it independent of God.", "A strong answer says what each horn costs and which cost is acceptable."],
+        "misconceptions": ["The dilemma proves God does not exist.", "The dilemma only concerns ancient Greek gods."] },
+      { "key": "arbitrariness", "title": "Would a commanded cruelty be right?", "description": "Judges the arbitrariness objection to divine command theory and whether 'God is good' remains meaningful.",
+        "concept": "arbitrariness-objection", "definition": "If rightness is whatever God commands, then anything, even cruelty, would be right if commanded.",
+        "facts": ["Divine command theory makes obligation depend on God's will.", "Ockham is associated with a strong version of this view.", "On it, calling God good may reduce to saying God does what God wills.", "A strong answer distinguishes what God would command from what God could command."],
+        "misconceptions": ["Divine command theory says only that God tells us what is right.", "No serious thinker has accepted the first horn."] },
+      { "key": "gods-nature", "title": "Does grounding morality in God's nature solve it?", "description": "Evaluates the reply that God's commands flow from a good nature, and the objection that the dilemma returns.",
+        "concept": "modified-divine-command", "definition": "The view that morality rests on God's necessarily good nature, so God could not command cruelty.",
+        "facts": ["Aquinas-style replies ground goodness in God's nature rather than will.", "Adams argued obligation comes from the commands of a loving God.", "Critics ask whether God's nature is good because of its features or the features good because they are God's.", "A strong answer says whether the reply is a solution or a restatement."],
+        "misconceptions": ["Any reply that mentions God's nature automatically solves the dilemma.", "The reply means God is bound by rules outside himself."] },
+      { "key": "beyond-theology", "title": "Can approval make something right?", "description": "Applies the dilemma's structure to societies, rulers or majorities and judges whether rightness can depend on anyone's say-so.",
+        "concept": "authority-and-reasons", "definition": "The general question of whether an authority's approval makes something right or should track independent reasons.",
+        "facts": ["The same structure applies to laws, cultures and majorities.", "If approval makes rightness, the approver cannot be mistaken.", "If approval tracks reasons, those reasons can be examined directly.", "Many religious philosophers hold moral truths are knowable by reason."],
+        "misconceptions": ["Only religious people face this kind of question.", "Whatever is legal is therefore right."] }
+    ],
+    "translations": {
+      "ko": { "title": "에우티프론 딜레마와 신명론",
+        "objectives": { "the-dilemma": "어느 쪽 뿔이 살아남는가?", "arbitrariness": "명령된 잔혹함은 옳은가?", "gods-nature": "신의 본성에 도덕을 근거 지으면 해결되는가?", "beyond-theology": "승인이 무언가를 옳게 만들 수 있는가?" } },
+      "es": { "title": "El dilema de Eutifrón y el mandato divino",
+        "objectives": { "the-dilemma": "¿Sobrevive alguno de los dos cuernos?", "arbitrariness": "¿Sería correcta una crueldad ordenada?", "gods-nature": "¿Lo resuelve fundar la moral en la naturaleza de Dios?", "beyond-theology": "¿Puede la aprobación hacer que algo sea correcto?" } }
+    }
+  },
+  {
+    "title": "The Problem of Evil",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Philosophy of religion",
+    "passage": [
+      "The problem of evil asks how the existence of suffering can be reconciled with a God who is all-powerful, all-knowing and perfectly good. David Hume, in his Dialogues Concerning Natural Religion, put an ancient form of the question in the mouth of his character Philo: is God willing to prevent evil but not able? Then he is impotent. Able but not willing? Then he is malevolent. Both able and willing? Then whence evil?",
+      "Philosophers distinguish moral evil, which comes from free agents (murder, cruelty), from natural evil, which comes from natural processes (earthquakes, disease). They also distinguish two forms of the argument. The logical problem claims that God and evil are strictly inconsistent. The evidential problem, associated with William Rowe, claims only that the amount and kinds of suffering we see, such as a fawn dying slowly in a forest fire unseen by anyone, make God's existence improbable.",
+      "The most influential reply to the logical problem is Alvin Plantinga's free will defence. A world with free creatures who freely choose good is more valuable than a world of automata, but God cannot cause free creatures to always freely choose good. It is therefore possible that God could not create a world with free creatures and no moral evil. Many philosophers, including some atheists, accept that this shows there is no strict contradiction.",
+      "Theodicies try to go further and explain why God actually permits evil. John Hick's \"soul-making\" theodicy, drawing on Irenaeus, holds that the world is a place where character is formed; courage, compassion and perseverance require real danger and need. Others appeal to the regularity of natural laws, which make free action possible but also produce disasters. Augustine traced evil to the misuse of free will and saw evil as a privation of good rather than a thing in itself.",
+      "Critics answer that free will does not obviously explain natural evil, that the amount and distribution of suffering, especially that of children and animals, seems far beyond what soul-making requires, and that many people are crushed rather than ennobled by suffering. Skeptical theists reply that we should not expect to see God's reasons, given the gap between human and divine understanding; their opponents worry that such skepticism would also undercut ordinary moral judgments. Some, like Ivan in Dostoevsky's The Brothers Karamazov, reject any justification that makes a child's suffering the price of harmony."
+    ],
+    "objectives": [
+      { "key": "logical-vs-evidential", "title": "Which version of the problem is stronger?", "description": "Distinguishes the logical and evidential problems and defends which poses the greater challenge.",
+        "concept": "logical-and-evidential-problem", "definition": "The logical problem claims God and evil are inconsistent; the evidential problem claims evil makes God improbable.",
+        "facts": ["Hume's Philo states the classic trilemma of power, goodness and evil.", "Moral evil comes from agents; natural evil from natural processes.", "Rowe's fawn in the forest fire illustrates the evidential problem.", "A strong answer explains why defeating one version may not defeat the other."],
+        "misconceptions": ["The problem of evil is only about human wickedness.", "If there is any evil at all, God's existence is proved impossible."] },
+      { "key": "free-will-defence", "title": "Does free will justify evil?", "description": "Evaluates Plantinga's free will defence and whether it covers natural as well as moral evil.",
+        "concept": "free-will-defence", "definition": "The argument that it is possible God could not create free creatures who never do wrong, so God and evil are consistent.",
+        "facts": ["Free creatures who choose good may be more valuable than automata.", "God cannot cause creatures to freely choose good.", "Many philosophers accept that the defence answers the logical problem.", "Natural evil like earthquakes is harder to explain by free will."],
+        "misconceptions": ["The free will defence claims to prove God exists.", "Free will explains every kind of suffering equally well."] },
+      { "key": "soul-making", "title": "Is suffering needed for growth?", "description": "Judges Hick's soul-making theodicy against the amount and distribution of suffering.",
+        "concept": "soul-making-theodicy", "definition": "Hick's view, after Irenaeus, that the world is a place for developing moral and spiritual character through real challenges.",
+        "facts": ["Virtues like courage and compassion seem to require real danger and need.", "Hick draws on Irenaeus.", "Critics note that suffering often crushes rather than ennobles.", "The suffering of children and animals is hard to explain as soul-making."],
+        "misconceptions": ["People who suffer more must deserve it.", "Showing some suffering has a purpose shows all suffering does."] },
+      { "key": "skeptical-theism", "title": "Can we expect to see God's reasons?", "description": "Weighs skeptical theism against the objection that it undermines ordinary moral judgment, and considers Ivan Karamazov's protest.",
+        "concept": "skeptical-theism", "definition": "The view that our failure to see a reason for some evil is not good evidence that there is none.",
+        "facts": ["Skeptical theists cite the gap between human and divine understanding.", "Critics say this skepticism would also undercut our judgments about preventing harm.", "Dostoevsky's Ivan rejects any harmony bought with a child's suffering.", "A strong answer says how much ignorance it is reasonable to assume."],
+        "misconceptions": ["Saying 'God works in mysterious ways' ends the discussion.", "Admitting we cannot see a reason is the same as having one."] }
+    ],
+    "translations": {
+      "ko": { "title": "악의 문제",
+        "objectives": { "logical-vs-evidential": "어느 형태의 문제가 더 강력한가?", "free-will-defence": "자유 의지는 악을 정당화하는가?", "soul-making": "성장에 고통이 필요한가?", "skeptical-theism": "신의 이유를 알 수 있으리라 기대할 수 있는가?" } },
+      "es": { "title": "El problema del mal",
+        "objectives": { "logical-vs-evidential": "¿Qué versión del problema es más fuerte?", "free-will-defence": "¿Justifica el libre albedrío el mal?", "soul-making": "¿Es necesario el sufrimiento para crecer?", "skeptical-theism": "¿Podemos esperar conocer las razones de Dios?" } }
+    }
+  },
+  {
+    "title": "Falsifiability and Scientific Revolutions",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Philosophy of science",
+    "passage": [
+      "What makes a theory scientific? Karl Popper called this the problem of demarcation. As a young man in Vienna he noticed that Einstein's general relativity made a risky prediction, that starlight would bend near the sun, which could have failed and was tested during the 1919 eclipse. By contrast, he thought, Freudian psychoanalysis and the Marxist theory of history of his day could explain any outcome, and their supporters saw confirmation everywhere.",
+      "Popper concluded that a theory is scientific if it is falsifiable: if some possible observation would contradict it. Following Hume, he held that no number of observations can prove a universal law (every white swan seen does not show all swans are white), but one genuine counterexample can refute it. Science advances by bold conjectures and attempted refutations, and a theory that survives severe tests is corroborated, never proven.",
+      "Thomas Kuhn's The Structure of Scientific Revolutions (1962) drew a different picture from the history of science. Most of the time scientists do \"normal science\" within a paradigm: a shared set of exemplary achievements, methods and assumptions, such as Newtonian mechanics. Normal science is puzzle-solving; when results conflict with the paradigm, scientists usually treat them as anomalies to be explained, not as refutations.",
+      "When anomalies pile up, a crisis can lead to a revolution, as when Copernican astronomy replaced the Ptolemaic system or Lavoisier's chemistry replaced phlogiston theory. Kuhn argued that rival paradigms are partly incommensurable: they use terms differently and value different problems, so the switch cannot be settled by a simple neutral test and resembles a conversion or gestalt switch.",
+      "Each view has critics. Popper's opponents note that scientists rightly hold on to theories in the face of anomalies; Newton's theory seemed refuted by the orbit of Uranus until the anomaly led to the discovery of Neptune. Any test also relies on auxiliary assumptions, so a failed prediction does not show which belief is false. Kuhn's critics, including Popper and Imre Lakatos, charged that he made theory change a matter of \"mob psychology\" rather than reason; Kuhn replied that shared values such as accuracy, consistency, scope, simplicity and fruitfulness guide choice without dictating it. Lakatos proposed research programmes with a protected hard core as a middle way.",
+      "The debate has practical weight. Arguments over whether intelligent design, astrology or some economic models count as science, and over how much public trust consensus deserves, often borrow, consciously or not, from Popper or Kuhn."
+    ],
+    "objectives": [
+      { "key": "falsifiability", "title": "Is falsifiability the mark of science?", "description": "Defends or challenges Popper's criterion, using his own examples and at least one hard case.",
+        "concept": "falsifiability", "definition": "Popper's criterion: a theory is scientific if some possible observation would contradict it.",
+        "facts": ["Relativity's prediction of light bending near the sun could have failed in 1919.", "Popper thought psychoanalysis and the Marxism of his day explained any outcome.", "No number of confirmations proves a universal law, but a counterexample can refute it.", "A strong answer considers theories that are valuable but hard to falsify."],
+        "misconceptions": ["Falsifiable means the theory has been shown false.", "A theory that has passed many tests has been proven true."] },
+      { "key": "anomalies", "title": "Should scientists abandon a theory at the first anomaly?", "description": "Judges when holding on to a theory is rational, using the Uranus and Neptune case and the role of auxiliary assumptions.",
+        "concept": "auxiliary-hypotheses", "definition": "The background assumptions any test relies on, so a failed prediction does not show which belief is false.",
+        "facts": ["Uranus' orbit seemed to refute Newton until it led to the discovery of Neptune.", "Every test relies on auxiliary assumptions.", "Kuhn says normal science treats conflicts as anomalies, not refutations.", "A strong answer distinguishes reasonable persistence from dogmatism."],
+        "misconceptions": ["Good scientists always drop a theory when one result disagrees.", "Defending a theory against evidence is always unscientific."] },
+      { "key": "paradigms", "title": "Is theory change rational?", "description": "Interprets Kuhn's paradigms, crises and incommensurability, and judges whether revolutions are decided by reason.",
+        "concept": "paradigm-shift", "definition": "Kuhn's account of science moving from normal science within a paradigm through crisis to revolution.",
+        "facts": ["Normal science is puzzle-solving within a shared paradigm.", "Copernican astronomy and Lavoisier's chemistry are classic revolutions.", "Kuhn argued rival paradigms are partly incommensurable.", "Kuhn later named shared values like accuracy and simplicity that guide but do not dictate choice."],
+        "misconceptions": ["Paradigm shift just means any new idea.", "Kuhn said science is irrational and no theory is better than another."] },
+      { "key": "demarcation-today", "title": "Where should we draw the line today?", "description": "Applies Popper, Kuhn or Lakatos to a present-day contested case and defends a verdict.",
+        "concept": "demarcation-problem", "definition": "The problem of distinguishing science from non-science or pseudoscience.",
+        "facts": ["Lakatos proposed research programmes with a protected hard core.", "Programmes can be judged progressive or degenerating.", "Debates over intelligent design or astrology draw on these criteria.", "A strong answer explains why a single criterion may not be enough."],
+        "misconceptions": ["Anything that uses data or numbers is science.", "If something is not science, it is worthless."] }
+    ],
+    "translations": {
+      "ko": { "title": "반증 가능성과 과학 혁명",
+        "objectives": { "falsifiability": "반증 가능성은 과학의 표지인가?", "anomalies": "과학자는 첫 변칙 사례에서 이론을 버려야 하는가?", "paradigms": "이론의 변화는 합리적인가?", "demarcation-today": "오늘날 경계를 어디에 그어야 하는가?" } },
+      "es": { "title": "La falsabilidad y las revoluciones científicas",
+        "objectives": { "falsifiability": "¿Es la falsabilidad el rasgo de la ciencia?", "anomalies": "¿Deben los científicos abandonar una teoría ante la primera anomalía?", "paradigms": "¿Es racional el cambio de teoría?", "demarcation-today": "¿Dónde trazar hoy la línea?" } }
+    }
+  },
+  {
+    "title": "The Ethics of Artificial Intelligence",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Applied ethics",
+    "passage": [
+      "Artificial intelligence systems now help decide who gets a loan, which job applicants are interviewed, what news people see, and how cars and weapons behave. These uses raise ethical questions that philosophers, engineers and lawmakers answer in different ways.",
+      "One set of questions concerns fairness. Systems trained on past data can reproduce past discrimination. A 2016 investigation by ProPublica into the COMPAS risk tool used in some US courts reported that Black defendants who did not reoffend were more often labelled high risk than white defendants who did not; the tool's makers replied that its scores were equally well calibrated across groups. Researchers later showed that, when base rates differ between groups, these two notions of fairness cannot generally both be satisfied. Choosing between them is a value judgment, not a purely technical one.",
+      "A second set concerns responsibility and transparency. When a complex system makes a harmful decision, it can be unclear whether the developer, the deploying company, the user or no one is to blame, a so-called responsibility gap. Some argue people have a right to an explanation of decisions that affect them; others reply that demanding explanations could rule out more accurate systems, and that humans are not very transparent either.",
+      "A third set concerns autonomy and power: surveillance, manipulation through personalized content, the concentration of capability in a few companies or states, effects on work, and lethal autonomous weapons, where many argue meaningful human control must be kept.",
+      "Some researchers argue that the greatest risks come from future systems more capable than humans whose goals are not aligned with ours, and that this deserves urgent attention. Others answer that such speculation distracts from present harms to real people, or that it is too uncertain to guide policy. Many hold that both deserve attention.",
+      "Finally, philosophers ask whether an AI system could itself have moral status, if it were conscious or had interests, and what we would owe it. John Searle's Chinese Room argument holds that running a program is not by itself understanding; functionalists disagree. Approaches to all these questions differ: consequentialists weigh benefits and harms, rights-based views set limits that no benefit can override, and virtue ethicists ask what the use of these tools does to the character of the people and institutions using them."
+    ],
+    "objectives": [
+      { "key": "algorithmic-fairness", "title": "What makes an algorithm fair?", "description": "Uses the COMPAS dispute to judge competing definitions of fairness and defends one for a given use.",
+        "concept": "algorithmic-fairness", "definition": "The question of which statistical and moral standard an automated decision system must meet to treat groups justly.",
+        "facts": ["ProPublica reported unequal false positive rates for Black and white defendants in COMPAS.", "The makers replied that scores were equally calibrated across groups.", "When base rates differ, these fairness measures cannot generally both be met.", "A strong answer treats the choice as a value judgment tied to the context of use."],
+        "misconceptions": ["A computer cannot be biased because it only uses numbers.", "Removing the race column from the data guarantees fairness."] },
+      { "key": "responsibility-gap", "title": "Who is responsible when AI causes harm?", "description": "Judges where responsibility lies among developers, deployers and users, and whether a right to explanation is warranted.",
+        "concept": "responsibility-gap", "definition": "The worry that harmful outcomes of complex automated systems may leave no one clearly to blame.",
+        "facts": ["Developers, deploying organizations and users each shape outcomes.", "Some argue for a right to an explanation of automated decisions.", "Others say demanding explanations may cost accuracy, and humans are not transparent either.", "A strong answer distinguishes legal liability from moral blame."],
+        "misconceptions": ["The AI itself is responsible, so no person is.", "If a human clicks approve, all responsibility is theirs alone."] },
+      { "key": "present-vs-future-risk", "title": "Which AI risks deserve priority?", "description": "Weighs concern about present harms against concern about future, more capable systems.",
+        "concept": "ai-risk-priorities", "definition": "The debate over how to divide attention between current harms of AI and risks from future advanced systems.",
+        "facts": ["Present harms include bias, surveillance, manipulation and effects on work.", "Some researchers stress risks from future systems whose goals are misaligned with ours.", "Critics call such speculation a distraction or too uncertain to guide policy.", "Many argue lethal autonomous weapons require meaningful human control."],
+        "misconceptions": ["Only one kind of AI risk can be real.", "Because future risks are uncertain, they can be ignored."] },
+      { "key": "moral-status", "title": "Could an AI deserve moral consideration?", "description": "Defends a view on whether an AI could have moral status and what would settle the question.",
+        "concept": "machine-moral-status", "definition": "The question of whether an artificial system could have interests or consciousness that create obligations toward it.",
+        "facts": ["Moral status usually rests on consciousness, interests or the capacity to suffer.", "Searle's Chinese Room argues that running a program is not by itself understanding.", "Functionalists hold that the right organization could suffice for a mind.", "A strong answer addresses how we could ever tell, and the cost of error either way."],
+        "misconceptions": ["If a system says it has feelings, it does.", "Machines can never matter morally, by definition."] }
+    ],
+    "translations": {
+      "ko": { "title": "인공지능의 윤리",
+        "objectives": { "algorithmic-fairness": "무엇이 알고리즘을 공정하게 만드는가?", "responsibility-gap": "AI가 피해를 주면 누가 책임지는가?", "present-vs-future-risk": "어떤 AI 위험을 우선해야 하는가?", "moral-status": "AI가 도덕적 고려를 받을 수 있는가?" } },
+      "es": { "title": "La ética de la inteligencia artificial",
+        "objectives": { "algorithmic-fairness": "¿Qué hace justo a un algoritmo?", "responsibility-gap": "¿Quién es responsable cuando la IA causa daño?", "present-vs-future-risk": "¿Qué riesgos de la IA merecen prioridad?", "moral-status": "¿Podría una IA merecer consideración moral?" } }
+    }
+  },
+  {
+    "title": "Euthanasia and the Right to Die",
+    "category": "philosophy-psychology",
+    "subject": "Philosophy",
+    "topic": "Bioethics",
+    "passage": [
+      "Euthanasia means deliberately ending a person's life to relieve suffering. Ethicists distinguish voluntary euthanasia (at the person's competent request), non-voluntary (when the person cannot consent, such as someone in a permanent coma) and involuntary (against the person's wishes, which almost everyone condemns). They also distinguish active euthanasia, such as a lethal injection, from passive euthanasia, withholding or withdrawing life-sustaining treatment, and both from physician-assisted dying, where a doctor provides the means and the patient takes them.",
+      "Laws vary. The Netherlands and Belgium legalized voluntary euthanasia in 2002; Canada allows medical assistance in dying; several US states, beginning with Oregon in 1997, allow physician-assisted dying for terminally ill adults; many other countries forbid both. Refusing treatment is widely recognized as a patient's right.",
+      "The main argument for a right to die appeals to autonomy: competent adults should be able to make the most personal decisions about their own lives and deaths. A second appeals to mercy: prolonging severe, unrelievable suffering against a person's will seems cruel.",
+      "Opponents give several arguments. Some hold that intentionally killing an innocent person is always wrong, or that life has a sanctity that is not ours to end. Some rely on the doctrine of double effect: a doctor may give pain relief that foreseeably shortens life, if the aim is to relieve pain, but may not aim at death. Others give slippery slope arguments: legal euthanasia may put pressure on the elderly, disabled or poor to see themselves as burdens, and criteria may widen over time. Disability rights groups raise this concern strongly, and some point to the expansion of eligibility in places like Belgium and Canada as evidence; supporters dispute how much that shows.",
+      "In a 1975 article James Rachels challenged the moral difference between killing and letting die. He imagined Smith, who drowns his young cousin in the bath for an inheritance, and Jones, who plans to do the same but merely watches as the child slips and drowns. If Jones is no better than Smith, then the bare difference between killing and letting die has no moral weight, and if passive euthanasia is allowed, active euthanasia, which can be quicker and more humane, should be too. Critics reply that intention, the doctor's role and the social meaning of a practice can matter even if the bare distinction does not."
+    ],
+    "objectives": [
+      { "key": "autonomy-argument", "title": "Is there a right to die?", "description": "Evaluates the argument from autonomy and mercy and whether a right to die follows.",
+        "concept": "autonomy", "definition": "The capacity and right of competent persons to make decisions about their own lives.",
+        "facts": ["Voluntary euthanasia rests on a competent person's request.", "The autonomy argument appeals to self-determination over personal decisions.", "The mercy argument appeals to unrelievable suffering.", "A strong answer asks whether a choice made under pain, depression or pressure is fully autonomous."],
+        "misconceptions": ["Respecting autonomy means doctors must do whatever patients ask.", "Supporters want euthanasia for anyone who asks, without conditions."] },
+      { "key": "killing-vs-letting-die", "title": "Is killing worse than letting die?", "description": "Judges Rachels's Smith and Jones argument and its implication for active and passive euthanasia.",
+        "concept": "killing-and-letting-die", "definition": "The question of whether actively causing death is morally worse than allowing it to happen.",
+        "facts": ["Passive euthanasia withholds or withdraws treatment; active euthanasia directly ends life.", "Rachels's Smith drowns his cousin; Jones lets him drown.", "Rachels argues the bare difference has no moral weight.", "Critics say intention, role and social meaning can still matter."],
+        "misconceptions": ["Withdrawing life support is the same as murder.", "Because outcomes are the same, the two acts are always morally equal."] },
+      { "key": "double-effect", "title": "Does intention make the difference?", "description": "Evaluates the doctrine of double effect as a basis for allowing life-shortening pain relief but forbidding euthanasia.",
+        "concept": "double-effect", "definition": "The principle that causing a foreseen harm may be permitted if it is not intended and is outweighed by the intended good.",
+        "facts": ["A doctor may give pain relief that foreseeably shortens life if the aim is relief.", "On this view the doctor may not aim at the patient's death.", "Critics ask whether the line between foreseeing and intending is real.", "A strong answer applies the principle to a concrete case."],
+        "misconceptions": ["Double effect means good intentions justify anything.", "Giving strong painkillers to a dying patient is the same as euthanasia."] },
+      { "key": "slippery-slope", "title": "Is the slippery slope real?", "description": "Weighs the risk that legal euthanasia pressures vulnerable people and widens over time against the harm of forbidding it.",
+        "concept": "slippery-slope", "definition": "The argument that permitting voluntary euthanasia will lead to pressure on the vulnerable or wider, less voluntary practices.",
+        "facts": ["Disability rights groups warn that some may feel they are burdens.", "Critics point to expanded eligibility in Belgium and Canada.", "Supporters dispute how much this evidence shows.", "A strong answer distinguishes a logical slope from an empirical prediction and considers safeguards."],
+        "misconceptions": ["Any slippery slope argument is automatically a fallacy.", "Legal euthanasia inevitably leads to involuntary killing."] }
+    ],
+    "translations": {
+      "ko": { "title": "안락사와 죽을 권리",
+        "objectives": { "autonomy-argument": "죽을 권리는 있는가?", "killing-vs-letting-die": "죽이는 것은 죽게 두는 것보다 나쁜가?", "double-effect": "의도가 차이를 만드는가?", "slippery-slope": "미끄러운 비탈길은 실재하는가?" } },
+      "es": { "title": "La eutanasia y el derecho a morir",
+        "objectives": { "autonomy-argument": "¿Existe un derecho a morir?", "killing-vs-letting-die": "¿Es matar peor que dejar morir?", "double-effect": "¿Marca la intención la diferencia?", "slippery-slope": "¿Es real la pendiente resbaladiza?" } }
+    }
+  }
+]
