@@ -1,0 +1,490 @@
+// Interpretive history and politics exams (GAD-T715). Format: see the header of life-sciences.json (GAD-T659).
+// Each objective is a contestable historical judgment; each exam carries Korean and Spanish texts (title, objective titles).
+[
+  {
+    "title": "The Trial and Death of Socrates",
+    "category": "history",
+    "subject": "History",
+    "topic": "Classical Athens",
+    "passage": [
+      "In 399 BCE the Athenian philosopher Socrates, then about seventy, was tried before a popular jury of around five hundred citizens. His accusers were Meletus, a young poet, Anytus, a leading democratic politician, and Lycon, an orator. The charge was that he did not recognize the gods the city recognized, introduced new divine beings, and corrupted the young.",
+      "Our main sources are two of his followers, Plato and Xenophon, both writing after his death and both eager to defend him. In Plato's Apology Socrates says he has spent his life questioning those reputed to be wise, exposing that they did not know what they thought they knew, and that he follows a divine sign, his daimonion, that warns him away from certain actions. He tells the jury that if they released him on condition that he stop philosophizing, he would obey the god rather than them.",
+      "He was convicted by a fairly narrow margin; in Plato's account he remarks that if about thirty votes had gone the other way he would have been acquitted. Asked to propose a penalty, he first suggested free meals in the Prytaneum, an honour for public benefactors, and then a fine that his friends, including Plato, would guarantee. The jury voted for death, and he died by drinking hemlock.",
+      "The political setting matters. Athens had lost the Peloponnesian War in 404. A pro-Spartan oligarchy, the Thirty Tyrants, then ruled by terror until democracy was restored in 403. Critias, a leader of the Thirty, and Alcibiades, who had defected to Sparta during the war, had both been associates of Socrates. An amnesty of 403 barred prosecutions for political acts committed before it, which may explain why the charge was framed as impiety.",
+      "In Plato's Crito, his friend Crito arranges an escape. Socrates refuses, imagining the Laws of Athens arguing that by living in the city all his life he had agreed to abide by its judgments, and that to escape would be to try to destroy the laws. Readers have long asked how this fits with his statement in the Apology that he would disobey an order to stop philosophizing.",
+      "Historians disagree about why he was really tried. Some, like the journalist I. F. Stone in The Trial of Socrates (1988), argued that the motive was political: Socrates was seen as a critic of democracy and teacher of its enemies. Others take the religious charge seriously, noting that Athenians believed impiety could bring divine anger on the whole city. Xenophon even suggested that Socrates spoke defiantly because he preferred death to the hardships of old age."
+    ],
+    "objectives": [
+      { "key": "real-motive", "title": "Judge why Socrates was really tried", "description": "Defends a view on whether the prosecution was mainly religious, political or personal.",
+        "concept": "motives-for-the-trial", "definition": "The debate over whether the impiety charge was sincere or covered a political grievance against an associate of the Thirty.",
+        "facts": ["The formal charge was not recognizing the city's gods, introducing new divinities and corrupting the young.", "Critias and Alcibiades, enemies of the democracy, had been his associates.", "The amnesty of 403 barred prosecution for earlier political acts.", "A strong answer explains why Athenians might sincerely treat impiety as a public danger, not only as a pretext."],
+        "misconceptions": ["The religious charge was obviously just an excuse.", "Socrates was tried simply for asking questions."] },
+      { "key": "verdict-justice", "title": "Judge whether the verdict was just", "description": "Weighs the jury's verdict against Athenian law and against a principle of free inquiry.",
+        "concept": "democracy-and-dissent", "definition": "Whether a lawful democratic court can still commit an injustice when it punishes speech and teaching.",
+        "facts": ["The trial followed Athenian legal procedure before a large citizen jury.", "The vote to convict was fairly close.", "A strong answer separates legal validity from moral justice.", "It considers how Athenians had recently suffered under the Thirty."],
+        "misconceptions": ["Because the trial was legal, it was just.", "The trial proves democracy is simply mob rule."] },
+      { "key": "socrates-choice", "title": "Judge whether Socrates sought his death", "description": "Interprets his defense and counter-penalty: principled defiance, provocation or a wish to die.",
+        "concept": "socrates-defense", "definition": "Whether Socrates' conduct at trial was a principled refusal to compromise or helped bring about his own conviction and death.",
+        "facts": ["He first proposed free meals in the Prytaneum as his penalty.", "He said he would not stop philosophizing even if released on that condition.", "Xenophon suggested he preferred death to old age.", "Plato and Xenophon were sympathetic sources writing after the event."],
+        "misconceptions": ["Socrates had no choice in how he conducted his defense.", "The sources give a neutral record of what was said."] },
+      { "key": "crito-obedience", "title": "Judge Socrates' refusal to escape", "description": "Assesses the Laws' argument in the Crito and whether it is consistent with the Apology.",
+        "concept": "obedience-to-law", "definition": "The argument that a citizen who has accepted a city's laws must accept its judgment even when it is unjust.",
+        "facts": ["Crito offered to arrange his escape.", "The Laws argue that living in Athens implied agreement to its judgments.", "In the Apology he said he would disobey an order to stop philosophizing.", "A strong answer tries to reconcile or explain the apparent tension."],
+        "misconceptions": ["Socrates believed one must always obey every law.", "Escaping would obviously have been the right choice."] }
+    ],
+    "translations": {
+      "ko": { "title": "소크라테스의 재판과 죽음",
+        "objectives": { "real-motive": "소크라테스가 재판받은 진짜 이유 판단하기", "verdict-justice": "판결이 정의로웠는지 판단하기", "socrates-choice": "소크라테스가 죽음을 자초했는지 판단하기", "crito-obedience": "탈옥 거부에 대해 판단하기" } },
+      "es": { "title": "El juicio y la muerte de Sócrates",
+        "objectives": { "real-motive": "Juzgar por qué se juzgó realmente a Sócrates", "verdict-justice": "Juzgar si el veredicto fue justo", "socrates-choice": "Juzgar si Sócrates buscó su muerte", "crito-obedience": "Juzgar su negativa a escapar" } }
+    }
+  },
+  {
+    "title": "The Melian Dialogue and the Peloponnesian War",
+    "category": "history",
+    "subject": "History",
+    "topic": "Classical Greece",
+    "passage": [
+      "The Peloponnesian War (431-404 BCE) was fought between Athens, with its maritime empire, and Sparta and its allies. Its historian, the Athenian general Thucydides, wrote that the truest cause of the war, though the least spoken of, was the growth of Athenian power and the fear this caused in Sparta. He set this against the immediate disputes over Corcyra and Potidaea.",
+      "In 416 BCE Athens sent a force to the island of Melos, a Spartan colony that had stayed out of the Athenian empire. Thucydides presents the negotiation as a dialogue between Athenian envoys and the Melian magistrates. The Athenians refuse to argue about justice, saying that justice applies only between equals in power, and that the strong do what they can and the weak suffer what they must.",
+      "The Melians appeal to fairness, to the gods who they hope will favour the just, to Sparta's obligation to help its colony, and to the hope that fortune may turn. The Athenians answer that the gods and men alike rule wherever they can, that Sparta will not risk itself for Melos, and that hope is a costly comfort for those who have nothing else. The Melians refuse to submit.",
+      "Athens besieged the city. When it surrendered, the Athenians killed the men of military age, enslaved the women and children, and later settled five hundred colonists there. Thucydides places the dialogue directly before his account of the Sicilian Expedition of 415-413, in which Athens lost a great fleet and army.",
+      "Thucydides said his speeches give what the speakers would have needed to say on each occasion, kept as close as possible to the general sense of what was actually said. The words are his composition, so readers must ask what he meant by them.",
+      "Interpretations divide. Many international relations scholars treat Thucydides as the founder of political realism, for whom power and fear, not justice, drive states. Others read the dialogue as tragedy: Athenian arrogance is shown just before its punishment in Sicily, and Thucydides is criticizing, not endorsing, the Athenian view. The political scientist Graham Allison coined the phrase Thucydides Trap for the danger of war when a rising power threatens a ruling one, a use of Thucydides that some classicists dispute."
+    ],
+    "objectives": [
+      { "key": "power-vs-justice", "title": "Judge the Athenian argument", "description": "Evaluates the claim that justice applies only between equals in power.",
+        "concept": "political-realism", "definition": "The view that relations between states are governed by power and interest rather than justice.",
+        "facts": ["The Athenians say the strong do what they can and the weak suffer what they must.", "They claim justice applies only between equals in power.", "A strong answer distinguishes describing how states behave from saying how they ought to behave.", "It considers whether Athens' own fate supports or refutes the argument."],
+        "misconceptions": ["Because the Athenians won at Melos, their argument was correct.", "Realism means states never care about morality at all."] },
+      { "key": "melian-choice", "title": "Judge the Melians' refusal", "description": "Assesses whether the Melians acted with courage or with foolish hope.",
+        "concept": "honour-and-prudence", "definition": "Whether resisting a far stronger power on principle is admirable or irresponsible when it costs the lives of a community.",
+        "facts": ["The Melians relied on the gods, on Sparta and on hope.", "Sparta did not come to their aid.", "Surrender would have made them tributary subjects of Athens.", "The men were killed and the women and children enslaved."],
+        "misconceptions": ["The Melians simply did not understand the risk.", "Submitting would have cost them nothing."] },
+      { "key": "thucydides-view", "title": "Interpret Thucydides' own view", "description": "Argues whether Thucydides endorses the Athenian position or presents it as hubris.",
+        "concept": "authorial-intent", "definition": "The question of what Thucydides himself thought, given that he composed the speeches and arranged the narrative.",
+        "facts": ["Thucydides composed the speeches to fit what the occasion required.", "He placed the dialogue just before the Sicilian disaster.", "Realists treat him as a founder of their tradition.", "Tragic readings see the dialogue as showing arrogance before a fall."],
+        "misconceptions": ["The dialogue is a word-for-word transcript.", "A historian's characters always speak for the historian."] },
+      { "key": "war-cause", "title": "Judge the cause of the war", "description": "Weighs Thucydides' claim that fear of Athenian power made the war inevitable.",
+        "concept": "truest-cause", "definition": "Thucydides' distinction between the openly stated grievances and the underlying cause, Spartan fear of Athens' growth.",
+        "facts": ["Thucydides named the growth of Athenian power and Spartan fear as the truest cause.", "The immediate disputes involved Corcyra and Potidaea.", "Allison's Thucydides Trap applies the idea to modern rivalries.", "A strong answer asks whether a structural cause makes war inevitable or only likely."],
+        "misconceptions": ["Underlying causes make the immediate decisions irrelevant.", "Thucydides said the war was a matter of chance."] }
+    ],
+    "translations": {
+      "ko": { "title": "멜로스 대화와 펠로폰네소스 전쟁",
+        "objectives": { "power-vs-justice": "아테네인의 논리 판단하기", "melian-choice": "멜로스인의 거부 판단하기", "thucydides-view": "투키디데스 자신의 견해 해석하기", "war-cause": "전쟁의 원인 판단하기" } },
+      "es": { "title": "El diálogo de los melios y la guerra del Peloponeso",
+        "objectives": { "power-vs-justice": "Juzgar el argumento ateniense", "melian-choice": "Juzgar la negativa de los melios", "thucydides-view": "Interpretar la opinión de Tucídides", "war-cause": "Juzgar la causa de la guerra" } }
+    }
+  },
+  {
+    "title": "The French Revolution and the Terror",
+    "category": "history",
+    "subject": "History",
+    "topic": "Revolutionary France",
+    "passage": [
+      "In 1789 a royal financial crisis led Louis XVI to summon the Estates-General. The Third Estate declared itself the National Assembly, crowds in Paris stormed the Bastille on 14 July, and in August the Assembly abolished feudal privileges and adopted the Declaration of the Rights of Man and of the Citizen, which proclaimed that men are born and remain free and equal in rights.",
+      "From 1792 the Revolution radicalized. France went to war with Austria and then Prussia, the monarchy was overthrown in August 1792, a republic was declared, and the king was tried and executed in January 1793. Revolts broke out in the Vendée and in several cities, and foreign armies threatened the frontiers.",
+      "In 1793-1794 the Committee of Public Safety, in which Maximilien Robespierre was a leading figure, governed through what came to be called the Terror. The Law of Suspects of September 1793 allowed broad arrests, and the Law of 22 Prairial in June 1794 stripped defendants of most protections. Around 17,000 people were officially executed, many more died in prison, and tens of thousands more were killed in the repression of the Vendée. Robespierre himself was overthrown and executed in July 1794, on 9 Thermidor.",
+      "Contemporaries argued about the Revolution from the start. Edmund Burke, in Reflections on the Revolution in France (1790), warned that tearing down inherited institutions in the name of abstract rights would end in violence and despotism. Thomas Paine replied in Rights of Man that hereditary government had no rightful claim and that the Revolution restored natural rights.",
+      "Historians have offered competing explanations of the Terror. The circumstances thesis holds that war, civil war and economic crisis drove an embattled government to emergency measures. François Furet and others argued instead that the Terror grew from the Revolution's own political ideas: a single sovereign people whose will had to be unified, so that opponents became enemies of the people.",
+      "Historians also disagree about what kind of revolution it was. Marxist historians such as Georges Lefebvre and Albert Soboul saw a bourgeois revolution in which a rising capitalist class overthrew feudal aristocracy. Revisionists, beginning with Alfred Cobban, argued that the revolutionaries were mostly lawyers and officials rather than capitalists, and that the Revolution is better explained by political conflict than by class."
+    ],
+    "objectives": [
+      { "key": "terror-cause", "title": "Judge what caused the Terror", "description": "Weighs the circumstances thesis against the claim that revolutionary ideology produced the Terror.",
+        "concept": "causes-of-the-terror", "definition": "The debate over whether the Terror was a response to war and rebellion or a product of the Revolution's political ideas.",
+        "facts": ["France faced foreign war and internal revolts in 1793.", "The Law of 22 Prairial came when the military danger was easing.", "Furet linked the Terror to the idea of a unified popular will.", "A strong answer tests each thesis against the timing of events."],
+        "misconceptions": ["The Terror was simply the work of one bloodthirsty man.", "Emergencies automatically explain any measures taken during them."] },
+      { "key": "robespierre", "title": "Judge Robespierre's responsibility", "description": "Assesses how far Robespierre personally was responsible for the Terror.",
+        "concept": "individual-responsibility", "definition": "The question of whether the Terror is best explained by individual leaders or by collective institutions and pressures.",
+        "facts": ["Robespierre was a leading member of the Committee of Public Safety.", "The Committee acted collectively and with the Convention's approval.", "Robespierre was executed in July 1794 and later blamed for the Terror by survivors.", "A strong answer notes that those who overthrew him had an interest in blaming him."],
+        "misconceptions": ["Robespierre held the power of a dictator.", "Removing Robespierre ended all political violence."] },
+      { "key": "revolution-nature", "title": "Judge what kind of revolution it was", "description": "Compares the Marxist bourgeois-revolution reading with the revisionist political reading.",
+        "concept": "bourgeois-revolution", "definition": "The Marxist view that the Revolution was a rising capitalist class overthrowing feudal aristocracy.",
+        "facts": ["Lefebvre and Soboul argued for a bourgeois revolution.", "Cobban argued many revolutionaries were lawyers and officials, not capitalists.", "The August 1789 decrees abolished feudal privileges.", "A strong answer says what evidence would decide between the readings."],
+        "misconceptions": ["The Revolution was simply the poor rising against the rich.", "Class played no role at all."] },
+      { "key": "burke-paine", "title": "Judge whether the Revolution was worth its cost", "description": "Weighs the Revolution's lasting achievements against its violence, using Burke and Paine.",
+        "concept": "revolution-and-reform", "definition": "The dispute between Burke's defence of gradual change through inherited institutions and Paine's defence of natural rights.",
+        "facts": ["The Declaration of the Rights of Man proclaimed equality in rights.", "Burke predicted violence and despotism in 1790, before the Terror.", "Paine argued hereditary government had no rightful claim.", "A strong answer asks whether the gains could have come without the violence."],
+        "misconceptions": ["The Revolution's ideals are discredited by the Terror.", "Burke opposed all political change."] }
+    ],
+    "translations": {
+      "ko": { "title": "프랑스 혁명과 공포 정치",
+        "objectives": { "terror-cause": "공포 정치의 원인 판단하기", "robespierre": "로베스피에르의 책임 판단하기", "revolution-nature": "어떤 혁명이었는지 판단하기", "burke-paine": "혁명이 그 대가를 치를 가치가 있었는지 판단하기" } },
+      "es": { "title": "La Revolución francesa y el Terror",
+        "objectives": { "terror-cause": "Juzgar qué causó el Terror", "robespierre": "Juzgar la responsabilidad de Robespierre", "revolution-nature": "Juzgar qué tipo de revolución fue", "burke-paine": "Juzgar si la Revolución valió su costo" } }
+    }
+  },
+  {
+    "title": "The Protestant Reformation",
+    "category": "history",
+    "subject": "History",
+    "topic": "Early modern Europe",
+    "passage": [
+      "In 1517 Martin Luther, a monk and professor at Wittenberg, circulated his Ninety-five Theses, criticizing the sale of indulgences, which promised remission of punishment for sin. The dispute grew into a challenge to papal authority. Excommunicated, Luther refused to recant before the Imperial Diet at Worms in 1521.",
+      "Luther taught that people are justified before God by faith alone, not by good works; that scripture alone is the final authority; and that all believers share in the priesthood. The printing press spread his pamphlets and his German translation of the New Testament quickly and widely.",
+      "German princes and city councils protected Luther and adopted reform, often taking over church lands and authority. When peasants rose in 1524-1525, partly inspired by the new teachings, Luther condemned them and urged the princes to suppress them. The Peace of Augsburg in 1555 let each prince choose Lutheranism or Catholicism for his territory.",
+      "Reform took other forms. Huldrych Zwingli in Zurich and John Calvin in Geneva led reformations that differed from Luther's, for example on the Lord's Supper. In England Henry VIII broke with Rome, and the Act of Supremacy of 1534 made the king head of the English church, a break first driven by his wish to annul his marriage.",
+      "Historians debate the causes. Older accounts stressed a corrupt and unpopular church. Revisionists such as Eamon Duffy, in The Stripping of the Altars (1992), argued that late medieval English Catholicism was vigorous and popular, and that reform was imposed from above. Others stress the political and financial interests of princes and kings.",
+      "Its consequences are also debated. Max Weber argued in 1905 that a Protestant ethic, especially in Calvinism, helped shape the spirit of capitalism. Some credit the Reformation with fostering individual conscience and, eventually, religious toleration; others point out that it was followed by more than a century of religious wars, and Brad Gregory argued in The Unintended Reformation (2012) that it led unintentionally to secularization and the fragmentation of shared values."
+    ],
+    "objectives": [
+      { "key": "causes", "title": "Judge what drove the Reformation", "description": "Weighs religious conviction against political and economic interests.",
+        "concept": "causes-of-the-reformation", "definition": "The debate over whether the Reformation was driven chiefly by religious belief, by church corruption or by the interests of rulers.",
+        "facts": ["Luther's protest began with indulgences and theology.", "Princes and cities gained church lands and authority by adopting reform.", "Henry VIII's break began with his marriage.", "A strong answer explains why rulers and believers might both have had real motives."],
+        "misconceptions": ["The Reformation was only about corruption in the church.", "Religious motives were just a cover for greed."] },
+      { "key": "luther-intent", "title": "Judge whether Luther was a reformer or a revolutionary", "description": "Interprets what Luther intended and whether his conduct, including the Peasants' War, was consistent.",
+        "concept": "luthers-aims", "definition": "Whether Luther sought to reform the existing church or to overturn its authority, and how far he accepted the social consequences.",
+        "facts": ["Luther first framed his theses as a call for debate.", "He refused to recant at Worms in 1521.", "He condemned the rebelling peasants in 1525.", "A strong answer separates religious radicalism from social conservatism."],
+        "misconceptions": ["Luther set out to found a new church from the start.", "Luther supported every movement inspired by his ideas."] },
+      { "key": "popular-or-imposed", "title": "Judge whether reform came from below or above", "description": "Assesses Duffy's revisionist claim against the older picture of an unpopular church.",
+        "concept": "reformation-from-above", "definition": "The view that the Reformation was imposed by rulers on populations attached to traditional religion.",
+        "facts": ["Duffy argued late medieval English Catholicism was vigorous and popular.", "Printing spread Luther's ideas widely and quickly.", "The Peace of Augsburg let rulers decide their territory's religion.", "A strong answer recognizes that the answer may differ by place."],
+        "misconceptions": ["Ordinary people everywhere welcomed the Reformation.", "One country's experience settles the question for all of Europe."] },
+      { "key": "modernity", "title": "Judge the Reformation's legacy", "description": "Evaluates claims that it produced individualism, capitalism, toleration or secularization.",
+        "concept": "reformation-and-modernity", "definition": "The contested link between the Reformation and later developments such as capitalism, toleration and secularization.",
+        "facts": ["Weber linked a Protestant ethic to the spirit of capitalism.", "The Reformation was followed by more than a century of religious wars.", "Gregory argued it unintentionally led to secularization.", "A strong answer distinguishes intended aims from unintended effects."],
+        "misconceptions": ["The Reformers intended religious freedom for everyone.", "If something followed the Reformation, the Reformation caused it."] }
+    ],
+    "translations": {
+      "ko": { "title": "프로테스탄트 종교 개혁",
+        "objectives": { "causes": "종교 개혁의 원동력 판단하기", "luther-intent": "루터가 개혁가였는지 혁명가였는지 판단하기", "popular-or-imposed": "개혁이 아래에서 왔는지 위에서 왔는지 판단하기", "modernity": "종교 개혁의 유산 판단하기" } },
+      "es": { "title": "La Reforma protestante",
+        "objectives": { "causes": "Juzgar qué impulsó la Reforma", "luther-intent": "Juzgar si Lutero fue reformador o revolucionario", "popular-or-imposed": "Juzgar si la reforma vino de abajo o de arriba", "modernity": "Juzgar el legado de la Reforma" } }
+    }
+  },
+  {
+    "title": "The Enlightenment and Its Critics",
+    "category": "history",
+    "subject": "History",
+    "topic": "Eighteenth-century thought",
+    "passage": [
+      "The Enlightenment was an eighteenth-century movement of thinkers who sought to apply reason and critical inquiry to religion, politics, law and society. In 1784 Immanuel Kant defined enlightenment as humanity's emergence from its self-incurred immaturity, and gave it the motto Sapere aude: dare to know, have the courage to use your own understanding.",
+      "Its figures differed widely. Montesquieu, in The Spirit of the Laws (1748), argued for separating legislative, executive and judicial powers. Voltaire attacked religious intolerance. Rousseau, in The Social Contract (1762), grounded legitimate government in the general will. Cesare Beccaria's On Crimes and Punishments (1764) attacked torture and the death penalty. Diderot and d'Alembert edited the Encyclopédie, and David Hume and Adam Smith worked in Scotland.",
+      "They did not agree about reason itself. Hume argued that reason is, and ought only to be, the slave of the passions: it can tell us how to reach our ends but cannot by itself set them. Rousseau criticized the arts and sciences as corrupting. Some historians therefore speak of several Enlightenments rather than one; Jonathan Israel distinguished a radical Enlightenment, which he traced to Spinoza, from a moderate one.",
+      "Enlightenment ideals of universal rights were proclaimed while slavery and colonial rule continued, and many of its thinkers excluded women or held racial hierarchies. Others, such as Diderot in his contributions to Raynal's history of the two Indies, condemned colonial conquest and slavery. Critics disagree about whether these failures expose the ideals as hollow or show that the ideals were applied inconsistently.",
+      "Critics have also blamed the Enlightenment for later disasters. Max Horkheimer and Theodor Adorno, in Dialectic of Enlightenment (1944), argued that reason, used as a tool of domination over nature and people, turned into its opposite. Isaiah Berlin studied the Counter-Enlightenment thinkers who defended tradition, feeling and particular cultures. Defenders, such as Steven Pinker, credit Enlightenment values with long-term gains in health, knowledge and freedom."
+    ],
+    "objectives": [
+      { "key": "one-or-many", "title": "Judge whether there was one Enlightenment", "description": "Decides whether the Enlightenment had a shared core or was several different movements.",
+        "concept": "unity-of-the-enlightenment", "definition": "The debate over whether Enlightenment thinkers shared a coherent program or are grouped together only loosely.",
+        "facts": ["Kant gave the motto Dare to know.", "Rousseau criticized the arts and sciences while Diderot celebrated them.", "Israel distinguished a radical from a moderate Enlightenment.", "A strong answer names what, if anything, all these thinkers shared."],
+        "misconceptions": ["All Enlightenment thinkers held the same views.", "The Enlightenment rejected all religion."] },
+      { "key": "reason-limits", "title": "Judge the place of reason", "description": "Assesses whether reason can ground morality and politics, using Hume's challenge.",
+        "concept": "reason-and-passion", "definition": "Hume's claim that reason can serve our ends but cannot by itself determine them.",
+        "facts": ["Hume said reason is the slave of the passions.", "Kant tried to ground morality in reason itself.", "A strong answer distinguishes reason as a method from reason as a source of values.", "It considers what follows if reason cannot set ends."],
+        "misconceptions": ["Enlightenment thinkers all believed reason alone could solve every problem.", "Hume rejected reason entirely."] },
+      { "key": "universalism", "title": "Judge the gap between ideals and practice", "description": "Evaluates whether slavery, colonialism and exclusion discredit Enlightenment universalism.",
+        "concept": "universal-rights-and-exclusion", "definition": "The tension between proclaimed universal rights and the exclusions many Enlightenment thinkers accepted.",
+        "facts": ["Universal rights were proclaimed while slavery continued.", "Many thinkers excluded women or held racial hierarchies.", "Some, such as Diderot, condemned conquest and slavery.", "A strong answer asks whether ideals can be judged apart from those who held them."],
+        "misconceptions": ["Hypocrisy in its authors proves the ideals are false.", "Enlightenment thinkers all opposed slavery."] },
+      { "key": "legacy", "title": "Judge the Enlightenment's legacy", "description": "Weighs claims that it produced liberal democracy and progress against claims that it bred domination.",
+        "concept": "dialectic-of-enlightenment", "definition": "Horkheimer and Adorno's argument that instrumental reason turned into a means of domination.",
+        "facts": ["Horkheimer and Adorno published Dialectic of Enlightenment in 1944.", "Berlin studied the Counter-Enlightenment.", "Pinker credits Enlightenment values with long-term progress.", "A strong answer considers how to trace a long-run cause across centuries."],
+        "misconceptions": ["Everything modern comes from the Enlightenment.", "Critics of the Enlightenment are all opposed to reason."] }
+    ],
+    "translations": {
+      "ko": { "title": "계몽주의와 그 비판자들",
+        "objectives": { "one-or-many": "계몽주의가 하나였는지 판단하기", "reason-limits": "이성의 자리 판단하기", "universalism": "이상과 현실의 간극 판단하기", "legacy": "계몽주의의 유산 판단하기" } },
+      "es": { "title": "La Ilustración y sus críticos",
+        "objectives": { "one-or-many": "Juzgar si hubo una sola Ilustración", "reason-limits": "Juzgar el lugar de la razón", "universalism": "Juzgar la distancia entre ideales y práctica", "legacy": "Juzgar el legado de la Ilustración" } }
+    }
+  },
+  {
+    "title": "Magna Carta and the Limits of Power",
+    "category": "history",
+    "subject": "History",
+    "topic": "Medieval England",
+    "passage": [
+      "In June 1215, at Runnymede near Windsor, King John of England agreed to a charter of liberties demanded by rebel barons. John had lost Normandy to the French king in 1204, had raised heavy taxes and feudal payments to try to recover it, and had suffered a further defeat at Bouvines in 1214.",
+      "The charter dealt with many specific grievances: feudal payments, inheritance, the rights of widows, the treatment of the church and of the city of London, and forest law. Two clauses became famous. One promised that no free man would be seized, imprisoned, dispossessed or otherwise destroyed except by the lawful judgment of his peers or by the law of the land. Another promised that the king would sell, deny or delay right or justice to no one.",
+      "A security clause set up a council of twenty-five barons entitled to make war on the king if he broke the charter. John appealed to Pope Innocent III, who annulled the charter within about ten weeks, and civil war followed. After John died in 1216, the government of the young Henry III reissued the charter in revised form, without the security clause, in 1216, 1217 and 1225.",
+      "The charter protected free men, which in 1215 excluded the many unfree peasants, or villeins. Many historians therefore see it as a feudal settlement that protected the baronial class. Others, such as J. C. Holt, stressed that it stated, in writing, the principle that the king is under the law.",
+      "Its later fame came from reinterpretation. In the seventeenth century the lawyer Sir Edward Coke invoked it against the Stuart kings, and it informed the Petition of Right of 1628. American colonists and later constitution-makers treated it as a source of due process and trial by jury, readings that go beyond what the barons of 1215 meant. Whether that makes its mythic meaning less real, or more important, is a matter of debate."
+    ],
+    "objectives": [
+      { "key": "baronial-or-universal", "title": "Judge whose liberty it protected", "description": "Weighs the view that it was a baronial settlement against the view that it stated a general principle.",
+        "concept": "feudal-charter", "definition": "The reading of Magna Carta as a settlement of baronial grievances rather than a charter of general liberty.",
+        "facts": ["The protections applied to free men, excluding villeins.", "Many clauses addressed specific feudal grievances.", "The clauses on lawful judgment and on not selling justice state broad principles.", "A strong answer separates who benefited in 1215 from what the words could later support."],
+        "misconceptions": ["Magna Carta gave rights to all English people in 1215.", "It was purely about baronial money and nothing more."] },
+      { "key": "failure-or-success", "title": "Judge whether it failed", "description": "Assesses whether a charter annulled within weeks and followed by war can count as a success.",
+        "concept": "reissue-and-survival", "definition": "The charter's immediate failure in 1215 and its survival through reissue under Henry III.",
+        "facts": ["Innocent III annulled it within about ten weeks.", "Civil war followed.", "It was reissued in 1216, 1217 and 1225 without the security clause.", "A strong answer states what counts as success for a political settlement."],
+        "misconceptions": ["Magna Carta immediately ended royal tyranny.", "Because it was annulled, it had no effect."] },
+      { "key": "enforcement", "title": "Judge whether written law can limit a ruler", "description": "Interprets the security clause and asks what actually restrains power.",
+        "concept": "rule-of-law", "definition": "The principle that rulers are bound by law, and the problem of enforcing it against those who hold power.",
+        "facts": ["The security clause let twenty-five barons make war on a king who broke the charter.", "John sought papal annulment instead of complying.", "Later reissues dropped the security clause.", "A strong answer weighs written guarantees against force, institutions and custom."],
+        "misconceptions": ["Writing a right down is enough to secure it.", "Laws never restrain the powerful."] },
+      { "key": "myth", "title": "Judge the meaning of the Magna Carta myth", "description": "Evaluates whether later reinterpretations distort it or give it its real significance.",
+        "concept": "usable-past", "definition": "The way later generations reread a historical document to serve their own political struggles.",
+        "facts": ["Coke invoked it against the Stuart kings.", "It informed the Petition of Right of 1628.", "American readers treated it as a source of due process and jury trial.", "A strong answer distinguishes historical meaning from later significance."],
+        "misconceptions": ["The barons of 1215 intended modern democracy.", "A myth has no historical importance because it is inaccurate."] }
+    ],
+    "translations": {
+      "ko": { "title": "마그나 카르타와 권력의 한계",
+        "objectives": { "baronial-or-universal": "누구의 자유를 보호했는지 판단하기", "failure-or-success": "실패였는지 판단하기", "enforcement": "성문법이 통치자를 제한할 수 있는지 판단하기", "myth": "마그나 카르타 신화의 의미 판단하기" } },
+      "es": { "title": "La Carta Magna y los límites del poder",
+        "objectives": { "baronial-or-universal": "Juzgar de quién protegía la libertad", "failure-or-success": "Juzgar si fracasó", "enforcement": "Juzgar si la ley escrita puede limitar a un gobernante", "myth": "Juzgar el significado del mito de la Carta Magna" } }
+    }
+  },
+  {
+    "title": "The Treaty of Versailles",
+    "category": "history",
+    "subject": "History",
+    "topic": "The First World War settlement",
+    "passage": [
+      "The Treaty of Versailles between the Allies and Germany was signed on 28 June 1919. Its terms were shaped mainly by Georges Clemenceau of France, David Lloyd George of Britain and Woodrow Wilson of the United States, whose Fourteen Points had promised a peace based on national self-determination and a League of Nations. Germany was not allowed to negotiate the terms.",
+      "Germany lost Alsace-Lorraine to France and territory to a restored Poland, including a corridor that separated East Prussia from the rest of Germany. The Saar was placed under the League for fifteen years, the Rhineland was demilitarized, the army was limited to 100,000 men, an air force was forbidden, and Germany's colonies were taken. Union with Austria was forbidden.",
+      "Article 231 stated that Germany and its allies were responsible for causing the loss and damage of the war, and it served as the legal basis for reparations. In 1921 reparations were set at 132 billion gold marks, though much of that sum was in bonds that many historians believe the Allies never expected to collect. Germans widely called the treaty a dictated peace and the clause a war guilt lie.",
+      "John Maynard Keynes, who resigned from the British delegation, attacked the treaty in The Economic Consequences of the Peace (1919) as a Carthaginian peace that would ruin Germany and destabilize Europe. Marshal Foch, believing it too lenient, reportedly said it was not peace but an armistice for twenty years.",
+      "Many later historians, including Sally Marks and Margaret MacMillan, argued that the treaty was less harsh than its reputation: Germany remained the largest and potentially strongest state in central Europe, and its neighbours were weaker than before. On this view the failure lay less in the terms than in the Allies' unwillingness to enforce or revise them consistently, and in later choices made in the Depression and the 1930s.",
+      "Germany's hyperinflation of 1923 had several causes, including its own government's policies. Reparations were rescheduled under the Dawes Plan (1924) and the Young Plan (1929), and effectively ended in 1932."
+    ],
+    "objectives": [
+      { "key": "harsh-or-lenient", "title": "Judge whether the treaty was too harsh", "description": "Weighs Keynes's view of a Carthaginian peace against revisionist claims that the terms were moderate.",
+        "concept": "carthaginian-peace", "definition": "Keynes's charge that the treaty imposed ruinous terms meant to crush Germany.",
+        "facts": ["Germany lost territory, colonies and most of its military.", "Reparations were set at 132 billion gold marks in 1921, much of it in bonds that may never have been expected to be paid.", "Germany remained the largest state in central Europe.", "A strong answer asks harsh compared with what: earlier treaties, Germany's own war aims, or what was enforceable."],
+        "misconceptions": ["Reparations alone destroyed the German economy.", "The treaty left Germany powerless."] },
+      { "key": "caused-ww2", "title": "Judge whether it caused the Second World War", "description": "Assesses how far the treaty, rather than later decisions, led to war in 1939.",
+        "concept": "long-term-causation", "definition": "The problem of assigning responsibility for a war to a settlement made twenty years earlier.",
+        "facts": ["Foch reportedly called it an armistice for twenty years.", "Nazi propaganda exploited resentment of the treaty.", "The Depression and the choices of the 1930s intervened.", "A strong answer distinguishes a necessary condition from a sufficient cause."],
+        "misconceptions": ["The treaty made the Second World War inevitable.", "The treaty had nothing to do with the rise of Hitler."] },
+      { "key": "war-guilt", "title": "Judge Article 231", "description": "Evaluates whether assigning responsibility to Germany was fair and whether it was wise.",
+        "concept": "war-guilt-clause", "definition": "Article 231's statement of German responsibility for the loss and damage of the war, the basis for reparations.",
+        "facts": ["Article 231 was the legal basis for reparations.", "Germans called it the war guilt lie.", "The causes of the war remain debated by historians.", "A strong answer separates moral blame, legal liability and political prudence."],
+        "misconceptions": ["Article 231 said Germany alone started the war for no reason.", "If a clause is resented, it must be unjust."] },
+      { "key": "self-determination", "title": "Judge the treaty's use of self-determination", "description": "Assesses whether Wilson's principle was applied fairly or selectively.",
+        "concept": "national-self-determination", "definition": "The principle that peoples should choose their own government, central to Wilson's Fourteen Points.",
+        "facts": ["Wilson's Fourteen Points promised a peace based on self-determination.", "Union of Germany and Austria was forbidden.", "New states were created in central Europe with mixed populations.", "A strong answer notes how hard the principle was to apply where peoples were intermingled."],
+        "misconceptions": ["Self-determination could have been applied cleanly everywhere.", "The peacemakers ignored self-determination entirely."] }
+    ],
+    "translations": {
+      "ko": { "title": "베르사유 조약",
+        "objectives": { "harsh-or-lenient": "조약이 너무 가혹했는지 판단하기", "caused-ww2": "제2차 세계대전을 일으켰는지 판단하기", "war-guilt": "제231조 판단하기", "self-determination": "조약의 민족 자결 원칙 적용 판단하기" } },
+      "es": { "title": "El Tratado de Versalles",
+        "objectives": { "harsh-or-lenient": "Juzgar si el tratado fue demasiado duro", "caused-ww2": "Juzgar si causó la Segunda Guerra Mundial", "war-guilt": "Juzgar el artículo 231", "self-determination": "Juzgar el uso de la autodeterminación en el tratado" } }
+    }
+  },
+  {
+    "title": "The Rise of Fascism in Europe",
+    "category": "history",
+    "subject": "History",
+    "topic": "Interwar Europe",
+    "passage": [
+      "Fascism arose in Europe after the First World War. Benito Mussolini founded the Fascist movement in Italy in 1919, and after the March on Rome in October 1922 King Victor Emmanuel III appointed him prime minister rather than order the army to resist. Over the following years he turned the government into a dictatorship.",
+      "In Germany Adolf Hitler's National Socialists grew from a fringe party into the largest party in the Reichstag, winning about 37 percent of the vote in July 1932, during the Depression. Their vote fell to about 33 percent in November 1932. On 30 January 1933 President Hindenburg appointed Hitler chancellor, after conservative politicians, including Franz von Papen, persuaded him that they could control Hitler. After the Reichstag fire, emergency decrees and the Enabling Act of March 1933 gave Hitler's government power to rule without parliament.",
+      "Historians disagree about what fascism was. Some, like Roger Griffin, argue there is a generic fascism, defined as a myth of national rebirth through ultranationalism. Others doubt that Italian Fascism and German Nazism, with Nazism's central racial antisemitism, belong in a single category. Umberto Eco listed typical features of what he called Ur-Fascism, including the cult of action and the rejection of disagreement.",
+      "Explanations of its rise compete. Some stress the humiliation of defeat and the Treaty of Versailles; some the economic catastrophe of inflation and the Depression; some the fear of communism after the Russian Revolution. Marxist historians described fascism as a tool of capitalists against the working class. Hannah Arendt linked totalitarian movements to the breakdown of class society into isolated masses.",
+      "Robert Paxton, in The Anatomy of Fascism (2004), stressed that neither Mussolini nor Hitler seized power by force alone: both were invited into office by conservative elites who hoped to use them. Studies of Nazi voters, such as those by Jürgen Falter, found support across social classes, though stronger among Protestants, the rural population and the middle classes than among Catholics and industrial workers. The question of who bears responsibility, voters, elites, or circumstances, remains debated."
+    ],
+    "objectives": [
+      { "key": "generic-fascism", "title": "Judge whether there is a generic fascism", "description": "Decides whether Italian Fascism and Nazism belong to one category and what defines it.",
+        "concept": "generic-fascism", "definition": "The idea that fascism is a single type of movement, such as Griffin's myth of national rebirth through ultranationalism.",
+        "facts": ["Griffin defined fascism by a myth of national rebirth.", "Racial antisemitism was central to Nazism in a way it was not to early Italian Fascism.", "Eco listed recurring features of Ur-Fascism.", "A strong answer explains what a definition is for and what it would exclude."],
+        "misconceptions": ["Fascism just means any authoritarian government.", "Fascism has no ideas, only violence."] },
+      { "key": "causes", "title": "Judge what caused fascism's rise", "description": "Weighs economic crisis, wartime humiliation, fear of communism and ideology as causes.",
+        "concept": "causes-of-fascism", "definition": "The competing explanations of why fascist movements won mass support after the First World War.",
+        "facts": ["The Nazi vote rose sharply during the Depression.", "Fear of communism followed the Russian Revolution.", "Marxist historians called fascism a tool of capital.", "A strong answer explains why similar crises did not produce fascism everywhere."],
+        "misconceptions": ["The Depression alone explains fascism.", "Fascism appealed only to the poor and uneducated."] },
+      { "key": "elites-or-voters", "title": "Judge who brought fascists to power", "description": "Assesses the responsibility of conservative elites compared with voters.",
+        "concept": "elite-complicity", "definition": "Paxton's argument that fascists came to power through alliances with conservative elites rather than by force or votes alone.",
+        "facts": ["The king appointed Mussolini after the March on Rome.", "Hindenburg appointed Hitler after the Nazi vote had fallen in November 1932.", "The Nazis never won a majority in a free election.", "Their voters came from many classes."],
+        "misconceptions": ["Hitler was elected dictator by a majority of Germans.", "Fascists seized power purely by force."] },
+      { "key": "inevitability", "title": "Judge whether it could have been stopped", "description": "Argues whether fascist rule was avoidable and at what points.",
+        "concept": "historical-contingency", "definition": "The view that outcomes depended on specific decisions that could have gone otherwise.",
+        "facts": ["Victor Emmanuel III chose not to use the army against the March on Rome.", "Conservatives believed they could control Hitler.", "The Enabling Act passed in March 1933.", "A strong answer weighs structural pressures against individual choices."],
+        "misconceptions": ["Germany's history made Nazism inevitable.", "One different decision would certainly have prevented it."] }
+    ],
+    "translations": {
+      "ko": { "title": "유럽 파시즘의 부상",
+        "objectives": { "generic-fascism": "일반적 파시즘이 있는지 판단하기", "causes": "파시즘 부상의 원인 판단하기", "elites-or-voters": "누가 파시스트를 집권시켰는지 판단하기", "inevitability": "막을 수 있었는지 판단하기" } },
+      "es": { "title": "El ascenso del fascismo en Europa",
+        "objectives": { "generic-fascism": "Juzgar si existe un fascismo genérico", "causes": "Juzgar qué causó el ascenso del fascismo", "elites-or-voters": "Juzgar quién llevó a los fascistas al poder", "inevitability": "Juzgar si pudo haberse detenido" } }
+    }
+  },
+  {
+    "title": "The Decision to Drop the Atomic Bomb",
+    "category": "history",
+    "subject": "History",
+    "topic": "The end of the Second World War",
+    "passage": [
+      "On 6 August 1945 the United States dropped an atomic bomb on Hiroshima, and on 9 August a second on Nagasaki. By the end of 1945 the bombs had killed, by common estimates, roughly 70,000 to 140,000 people in Hiroshima and 40,000 to 75,000 in Nagasaki, most of them civilians. On 8 August the Soviet Union declared war on Japan and invaded Manchuria. Emperor Hirohito announced Japan's surrender on 15 August.",
+      "The Potsdam Declaration of 26 July had demanded Japan's unconditional surrender and warned of prompt and utter destruction. It gave no explicit assurance that the emperor would be kept, a point that mattered greatly to Japanese leaders. The Allies were planning an invasion of the Japanese home islands, to begin in November 1945.",
+      "The traditional view, set out by Secretary of War Henry Stimson in a 1947 article, holds that the bombs ended the war quickly and saved the many American and Japanese lives an invasion would have cost; Stimson spoke of over a million American casualties. Critics note that military planning estimates in 1945 were usually lower and varied widely.",
+      "Revisionist historians, notably Gar Alperovitz, argued that Japan was close to surrender and that a key motive was to impress the Soviet Union. Tsuyoshi Hasegawa, in Racing the Enemy (2005), argued that the Soviet entry into the war shocked Japanese leaders as much as or more than the bombs. Other historians, using Japanese records, stress that the army leadership was still resisting surrender even after both bombs.",
+      "Alternatives were discussed at the time or proposed since: a demonstration on an uninhabited area, a clear assurance about the emperor, waiting for the Soviet entry, or continuing blockade and conventional bombing, which had already destroyed many Japanese cities. Moral critics such as the philosopher Elizabeth Anscombe argued that deliberately killing civilians to break an enemy's will is murder whatever the result."
+    ],
+    "objectives": [
+      { "key": "necessity", "title": "Judge whether the bombs were necessary", "description": "Assesses whether Japan would have surrendered without the bombs or an invasion.",
+        "concept": "military-necessity", "definition": "The claim that the bombs were needed to end the war without an invasion.",
+        "facts": ["The invasion of Japan was planned to begin in November 1945.", "The Soviet Union declared war on 8 August.", "Japanese army leaders resisted surrender even after both bombs.", "A strong answer says what evidence about Japanese decision-making would settle the question."],
+        "misconceptions": ["Japan surrendered only because of the bombs.", "Japan had already decided to surrender before Hiroshima."] },
+      { "key": "motive", "title": "Judge the motives behind the decision", "description": "Weighs ending the war against impressing the Soviet Union and other motives.",
+        "concept": "atomic-diplomacy", "definition": "Alperovitz's argument that a key motive for using the bomb was to strengthen the US position against the Soviet Union.",
+        "facts": ["Alperovitz argued that impressing the Soviets was a key motive.", "Stimson's 1947 article defended the decision as saving lives.", "Motives can be mixed.", "A strong answer distinguishes a motive from a side benefit."],
+        "misconceptions": ["Leaders have only one motive for a decision.", "The Soviet Union played no part in American thinking."] },
+      { "key": "morality", "title": "Judge whether the bombings were morally right", "description": "Evaluates the bombings using consequences and the principle of civilian immunity.",
+        "concept": "noncombatant-immunity", "definition": "The principle in just war thinking that civilians may not be deliberately targeted.",
+        "facts": ["Most of those killed were civilians.", "Anscombe called deliberately killing civilians murder whatever the result.", "Defenders argue the bombs saved more lives than they took.", "A strong answer notes that conventional firebombing had also killed many civilians."],
+        "misconceptions": ["If an act shortens a war, it is automatically justified.", "Moral judgment is impossible because it was wartime."] },
+      { "key": "alternatives", "title": "Judge the alternatives", "description": "Assesses whether a demonstration, an assurance about the emperor or waiting would have worked.",
+        "concept": "counterfactual-reasoning", "definition": "Reasoning about what would have happened if different choices had been made.",
+        "facts": ["The Potsdam Declaration gave no explicit assurance about the emperor.", "A demonstration on an uninhabited area was considered and rejected.", "The emperor was in fact kept after the surrender.", "A strong answer acknowledges what decision-makers could know at the time."],
+        "misconceptions": ["There was no alternative at all.", "Hindsight shows what leaders should have known."] }
+    ],
+    "translations": {
+      "ko": { "title": "원자폭탄 투하 결정",
+        "objectives": { "necessity": "원자폭탄이 필요했는지 판단하기", "motive": "결정의 동기 판단하기", "morality": "폭격이 도덕적으로 옳았는지 판단하기", "alternatives": "대안 판단하기" } },
+      "es": { "title": "La decisión de lanzar la bomba atómica",
+        "objectives": { "necessity": "Juzgar si las bombas eran necesarias", "motive": "Juzgar los motivos de la decisión", "morality": "Juzgar si los bombardeos fueron moralmente correctos", "alternatives": "Juzgar las alternativas" } }
+    }
+  },
+  {
+    "title": "The Origins and Logic of the Cold War",
+    "category": "history",
+    "subject": "History",
+    "topic": "The Cold War",
+    "passage": [
+      "The Cold War was the rivalry between the United States and its allies and the Soviet Union and its allies from the end of the Second World War until the Soviet collapse in 1991. The two superpowers never fought each other directly, but competed through alliances, arms races, propaganda and wars fought by or through others.",
+      "Its opening years set the pattern. The Soviet Union established communist governments across Eastern Europe. In his Long Telegram of 1946, the American diplomat George Kennan described Soviet expansionism and recommended containment. The Truman Doctrine (1947) promised support to free peoples resisting subjugation, and the Marshall Plan (1947) funded European recovery. The Berlin Blockade of 1948-1949 and the founding of NATO in 1949 divided Europe.",
+      "The conflict spread worldwide: the Korean War (1950-1953), the Cuban Missile Crisis of 1962, the Vietnam War, a period of détente in the 1970s, and the Soviet invasion of Afghanistan in 1979. Millions died in wars connected to the rivalry, mostly outside Europe.",
+      "Historians have argued over who was responsible. The orthodox view blamed Soviet expansionism. Revisionists such as William Appleman Williams, in The Tragedy of American Diplomacy (1959), blamed an American drive for open markets and economic expansion. Post-revisionists sought a synthesis, stressing mutual misperception and security fears. After Soviet archives partly opened, John Lewis Gaddis, in We Now Know (1997), put more weight on Stalin and on ideology.",
+      "Historians also debate whether the Cold War was driven by ideology, communism against liberal capitalism, or by the ordinary rivalry of two great powers left standing after 1945. Gaddis called the period between the superpowers a long peace, crediting nuclear deterrence with preventing a third world war; critics note the proxy wars and the near catastrophe of 1962."
+    ],
+    "objectives": [
+      { "key": "responsibility", "title": "Judge who was responsible for the Cold War", "description": "Compares orthodox, revisionist and post-revisionist accounts of its origins.",
+        "concept": "cold-war-origins", "definition": "The historiographical debate over whether Soviet expansion, American expansion or mutual fear caused the Cold War.",
+        "facts": ["The orthodox view blamed Soviet expansionism.", "Williams blamed American economic expansion.", "Post-revisionists stressed mutual misperception.", "Gaddis put more weight on Stalin after Soviet archives partly opened."],
+        "misconceptions": ["One side was entirely to blame.", "Historians' views never change with new evidence."] },
+      { "key": "ideology-or-power", "title": "Judge whether ideology or power drove it", "description": "Assesses whether the Cold War was a conflict of ideas or of great-power interests.",
+        "concept": "ideology-and-realpolitik", "definition": "The question of whether the rivalry would have happened between any two leading powers or depended on their opposed ideologies.",
+        "facts": ["Both sides presented the conflict as a struggle of systems.", "Both superpowers sometimes supported regimes that did not share their ideals.", "The United States and Soviet Union were the two dominant powers after 1945.", "A strong answer looks for cases where ideology and interest pointed different ways."],
+        "misconceptions": ["The Cold War was purely about communism versus democracy.", "Ideology was only propaganda."] },
+      { "key": "containment", "title": "Judge the policy of containment", "description": "Evaluates whether containment was wise, and whether its later applications followed Kennan's idea.",
+        "concept": "containment", "definition": "Kennan's recommendation to resist Soviet expansion patiently until the Soviet system changed or weakened.",
+        "facts": ["Kennan proposed containment in 1946.", "The Marshall Plan and NATO applied it in Europe.", "Kennan later criticized the militarization of containment.", "A strong answer distinguishes Europe from wars such as Vietnam."],
+        "misconceptions": ["Containment meant rolling back communism by force.", "Containment worked equally well everywhere."] },
+      { "key": "long-peace", "title": "Judge the long peace", "description": "Assesses whether nuclear deterrence kept the peace or the period was peaceful at all.",
+        "concept": "nuclear-deterrence", "definition": "The theory that the threat of nuclear retaliation prevented direct war between the superpowers.",
+        "facts": ["The superpowers never fought each other directly.", "Gaddis called the period a long peace.", "Millions died in proxy and related wars.", "The Cuban Missile Crisis brought the world close to nuclear war."],
+        "misconceptions": ["The Cold War involved no fighting.", "Deterrence is proven to work because no nuclear war occurred."] }
+    ],
+    "translations": {
+      "ko": { "title": "냉전의 기원과 논리",
+        "objectives": { "responsibility": "냉전의 책임이 누구에게 있는지 판단하기", "ideology-or-power": "이념과 권력 중 무엇이 냉전을 이끌었는지 판단하기", "containment": "봉쇄 정책 판단하기", "long-peace": "긴 평화 판단하기" } },
+      "es": { "title": "Los orígenes y la lógica de la Guerra Fría",
+        "objectives": { "responsibility": "Juzgar quién fue responsable de la Guerra Fría", "ideology-or-power": "Juzgar si la impulsó la ideología o el poder", "containment": "Juzgar la política de contención", "long-peace": "Juzgar la larga paz" } }
+    }
+  },
+  {
+    "title": "The American Civil Rights Movement",
+    "category": "history",
+    "subject": "History",
+    "topic": "Twentieth-century United States",
+    "passage": [
+      "In Brown v. Board of Education (1954) the U.S. Supreme Court ruled that state-mandated racial segregation in public schools was unconstitutional. Many Southern states resisted, and in 1957 President Eisenhower sent federal troops to protect Black students integrating Central High School in Little Rock, Arkansas.",
+      "The Montgomery bus boycott of 1955-1956, begun after Rosa Parks was arrested for refusing to give up her seat, brought Martin Luther King Jr. to national prominence. Sit-ins at lunch counters, starting in Greensboro in 1960, and the Freedom Rides of 1961 spread direct action across the South. In Birmingham in 1963 police turned dogs and fire hoses on young marchers, and King wrote his Letter from Birmingham Jail defending nonviolent civil disobedience against unjust laws.",
+      "After the March on Washington in August 1963, Congress passed the Civil Rights Act of 1964, banning segregation in public accommodations and discrimination in employment, and, after the violent attack on marchers at Selma, the Voting Rights Act of 1965.",
+      "The movement included many voices. Ella Baker, who helped found the Student Nonviolent Coordinating Committee, favored grassroots organizing over reliance on charismatic leaders. Malcolm X criticized nonviolence and integration as goals; he was assassinated in 1965. In 1966 Stokely Carmichael popularized the slogan Black Power. Some activists, such as the Deacons for Defense, practiced armed self-defense alongside nonviolent campaigns.",
+      "Historians debate how change came. Some emphasize national leaders and federal legislation; others, following Jacquelyn Dowd Hall's idea of a long civil rights movement, trace the struggle back to the 1930s and forward beyond 1965, and outside the South. Gerald Rosenberg argued in The Hollow Hope (1991) that court rulings by themselves produced little change, while Michael Klarman argued Brown provoked a backlash that hardened resistance. Mary Dudziak showed that Cold War concerns about America's image abroad pushed federal officials toward civil rights."
+    ],
+    "objectives": [
+      { "key": "nonviolence", "title": "Judge the role of nonviolence", "description": "Assesses whether nonviolence was the decisive strategy and whether it was principle or tactic.",
+        "concept": "nonviolent-direct-action", "definition": "Deliberate, peaceful breaking of unjust laws or customs to expose injustice and force change.",
+        "facts": ["King defended nonviolent civil disobedience in his Letter from Birmingham Jail.", "Televised violence against peaceful protesters, as in Birmingham and Selma, built national support.", "Some activists practiced armed self-defense alongside nonviolent campaigns.", "A strong answer distinguishes nonviolence as moral principle from nonviolence as strategy."],
+        "misconceptions": ["Nonviolence meant passivity.", "Every activist in the movement embraced nonviolence."] },
+      { "key": "leaders-or-grassroots", "title": "Judge leaders versus grassroots", "description": "Weighs the role of national leaders against local organizers and ordinary participants.",
+        "concept": "grassroots-organizing", "definition": "Ella Baker's view that lasting change comes from organizing communities rather than following charismatic leaders.",
+        "facts": ["Rosa Parks was an experienced activist, not merely a tired seamstress.", "Ella Baker favored grassroots organizing.", "King's leadership drew national attention.", "A strong answer explains how leaders and local movements depended on each other."],
+        "misconceptions": ["The movement was the work of Martin Luther King alone.", "Leaders made no difference."] },
+      { "key": "courts-or-protest", "title": "Judge courts versus protest", "description": "Assesses whether court rulings, protest, federal legislation or Cold War pressure produced change.",
+        "concept": "law-and-social-change", "definition": "The debate over how much court decisions, as opposed to political action, change society.",
+        "facts": ["Brown v. Board was decided in 1954.", "Rosenberg argued courts alone produced little change.", "Klarman argued Brown provoked a backlash.", "Dudziak showed Cold War pressure on federal officials."],
+        "misconceptions": ["Brown v. Board ended school segregation immediately.", "Court rulings never matter."] },
+      { "key": "success-and-scope", "title": "Judge the movement's success and limits", "description": "Evaluates what the movement achieved and whether Black Power continued or broke from it.",
+        "concept": "long-civil-rights-movement", "definition": "Hall's argument that the movement began well before 1954, extended beyond 1965 and reached beyond the South.",
+        "facts": ["The Civil Rights Act of 1964 and Voting Rights Act of 1965 ended legal segregation and protected voting.", "Carmichael popularized Black Power in 1966.", "Hall argued for a long civil rights movement.", "A strong answer separates legal equality from economic and social equality."],
+        "misconceptions": ["The movement achieved all its goals by 1965.", "Black Power was simply a rejection of the movement."] }
+    ],
+    "translations": {
+      "ko": { "title": "미국 민권 운동",
+        "objectives": { "nonviolence": "비폭력의 역할 판단하기", "leaders-or-grassroots": "지도자와 풀뿌리 운동 판단하기", "courts-or-protest": "법원과 시위 판단하기", "success-and-scope": "운동의 성과와 한계 판단하기" } },
+      "es": { "title": "El movimiento por los derechos civiles en Estados Unidos",
+        "objectives": { "nonviolence": "Juzgar el papel de la no violencia", "leaders-or-grassroots": "Juzgar líderes frente a bases", "courts-or-protest": "Juzgar tribunales frente a protesta", "success-and-scope": "Juzgar el éxito y los límites del movimiento" } }
+    }
+  },
+  {
+    "title": "The Scramble for Africa",
+    "category": "history",
+    "subject": "History",
+    "topic": "European imperialism",
+    "passage": [
+      "Between about 1880 and 1914 European powers claimed almost the whole of Africa. In 1880 most of the continent was ruled by Africans; by 1914 only Ethiopia, which defeated an Italian invasion at Adwa in 1896, and Liberia remained independent.",
+      "At the Berlin Conference of 1884-1885, called by Bismarck, European states agreed rules for claiming African territory, including that a claim to a coast required effective occupation. The conference recognized the Congo Free State, which became the personal possession of King Leopold II of Belgium and was notorious for forced labour and atrocities in the rubber trade. No Africans took part in the conference.",
+      "Technology made conquest easier: quinine against malaria, steamships able to travel up rivers, and repeating rifles and the Maxim gun. Yet conquest also relied on African soldiers and on alliances with African rulers who saw advantage in them, while others, such as Samori Touré in West Africa, resisted for years. Colonial rule provoked major uprisings, including the Maji Maji rising in German East Africa in 1905-1907, and the German campaign against the Herero and Nama in 1904-1908, now widely described as genocide.",
+      "Historians disagree about the causes. J. A. Hobson in 1902 and Lenin in 1917 explained imperialism by the search for investments and markets. Ronald Robinson and John Gallagher, in Africa and the Victorians (1961), argued that British expansion was driven by strategic concerns, especially protecting the route to India after the occupation of Egypt in 1882, and by crises on the African frontier rather than by plans made in London. Others stress national prestige, rivalry among European states, and racial ideas presented as a civilizing mission.",
+      "The scramble's legacy is also debated. Many present-day borders were drawn by Europeans with little regard for African political and ethnic boundaries, and in 1964 the Organization of African Unity agreed to keep colonial borders. Some scholars attribute later conflicts and weak states to these borders and to colonial rule; others argue that the problems of post-colonial states have several causes, including decisions made after independence."
+    ],
+    "objectives": [
+      { "key": "causes", "title": "Judge the causes of the scramble", "description": "Weighs economic, strategic and nationalist explanations.",
+        "concept": "theories-of-imperialism", "definition": "The competing explanations of why European powers partitioned Africa in a few decades.",
+        "facts": ["Hobson and Lenin stressed investment and markets.", "Robinson and Gallagher stressed strategy and the route to India.", "European rivalry and prestige mattered in the timing.", "A strong answer asks why the scramble happened in the 1880s rather than earlier."],
+        "misconceptions": ["Europeans conquered Africa only to spread civilization.", "One cause explains every colony."] },
+      { "key": "periphery-or-metropole", "title": "Judge where the decisions were made", "description": "Assesses whether expansion was driven by European capitals or by crises and agents in Africa.",
+        "concept": "peripheral-imperialism", "definition": "Robinson and Gallagher's argument that crises on the frontier, rather than plans at home, drove expansion.",
+        "facts": ["Britain occupied Egypt in 1882.", "Robinson and Gallagher stressed crises on the African frontier.", "The Berlin Conference set rules for claims made from Europe.", "A strong answer considers the role of local officials, traders and soldiers."],
+        "misconceptions": ["Europe followed a master plan for conquering Africa.", "European governments had no control over events."] },
+      { "key": "african-agency", "title": "Judge the role of Africans", "description": "Evaluates how far Africans shaped the scramble through resistance, alliance and negotiation.",
+        "concept": "african-agency", "definition": "The recognition that Africans were active participants, not only victims, in the history of conquest.",
+        "facts": ["Ethiopia defeated Italy at Adwa in 1896.", "Samori Touré resisted French conquest for years.", "African soldiers and allied rulers took part in conquest.", "A strong answer avoids treating Africans as either passive victims or equal partners."],
+        "misconceptions": ["Africans did not resist colonial conquest.", "Recognizing African agency excuses colonial violence."] },
+      { "key": "legacy", "title": "Judge the scramble's legacy", "description": "Assesses how far present-day problems can be traced to colonial borders and rule.",
+        "concept": "colonial-legacy", "definition": "The long-term effects of colonial borders, institutions and economies on post-colonial states.",
+        "facts": ["Many borders were drawn by Europeans.", "The Organization of African Unity agreed in 1964 to keep colonial borders.", "Post-colonial states also faced decisions made after independence.", "A strong answer distinguishes a lasting cause from one cause among several."],
+        "misconceptions": ["Every problem in Africa today is caused by colonialism.", "Colonialism ended without lasting effects."] }
+    ],
+    "translations": {
+      "ko": { "title": "아프리카 쟁탈전",
+        "objectives": { "causes": "쟁탈전의 원인 판단하기", "periphery-or-metropole": "결정이 어디에서 내려졌는지 판단하기", "african-agency": "아프리카인의 역할 판단하기", "legacy": "쟁탈전의 유산 판단하기" } },
+      "es": { "title": "El reparto de África",
+        "objectives": { "causes": "Juzgar las causas del reparto", "periphery-or-metropole": "Juzgar dónde se tomaron las decisiones", "african-agency": "Juzgar el papel de los africanos", "legacy": "Juzgar el legado del reparto" } }
+    }
+  },
+  {
+    "title": "The Fall of the Berlin Wall",
+    "category": "history",
+    "subject": "History",
+    "topic": "The end of the Cold War",
+    "passage": [
+      "East Germany built the Berlin Wall in August 1961 to stop its citizens leaving for the West through Berlin. For twenty-eight years it divided the city, and people were killed trying to cross it.",
+      "In 1989 the East German state came under growing pressure. In Moscow, Mikhail Gorbachev had begun reforms and signalled that the Soviet Union would not use force to keep its allies in line. Hungary dismantled its border fence with Austria and, in September, let East Germans cross freely, and thousands fled through it. In Leipzig, weekly Monday demonstrations grew; on 9 October about 70,000 people marched and security forces did not open fire. Erich Honecker was removed as leader on 18 October. The state was also close to economic insolvency.",
+      "On the evening of 9 November 1989, the Politburo spokesman Günter Schabowski announced new travel rules at a televised press conference. Asked when they took effect, he said, apparently mistakenly, that they did so immediately. Crowds gathered at the border crossings, and at Bornholmer Strasse the officer in charge, facing a crowd he could not control and without clear orders, opened the gate. The wall was open that night.",
+      "Germany was reunified on 3 October 1990, and the Soviet Union dissolved at the end of 1991. Mary Elise Sarotte, in The Collapse (2014), stressed the accidental, contingent character of the opening. Others see it as the inevitable result of a bankrupt system, of Gorbachev's choices, of Western pressure, including Ronald Reagan's 1987 demand that Gorbachev tear down this wall, or above all of the East German people who protested and fled.",
+      "Even the name is contested. Germans speak of the peaceful revolution, of the Wende or turning point, a term used by the regime's own new leader, and some East Germans later described reunification as a takeover in which the West imposed its institutions."
+    ],
+    "objectives": [
+      { "key": "accident-or-inevitable", "title": "Judge whether the opening was an accident", "description": "Weighs the contingent events of 9 November against long-term causes of collapse.",
+        "concept": "contingency-and-structure", "definition": "The tension between explaining events by chance decisions and by underlying forces.",
+        "facts": ["Schabowski announced the rules took effect immediately, apparently by mistake.", "The officer at Bornholmer Strasse opened the gate without clear orders.", "East Germany was near economic insolvency.", "A strong answer distinguishes when and how the wall opened from whether the regime could have survived."],
+        "misconceptions": ["The wall fell because of a single press conference.", "The timing and manner of the opening did not matter."] },
+      { "key": "credit", "title": "Judge who deserves credit", "description": "Weighs the roles of East German citizens, Gorbachev, Reagan and the West.",
+        "concept": "agency-in-1989", "definition": "The debate over whether the end of the wall was driven by people, by leaders or by systemic failure.",
+        "facts": ["Leipzig's Monday demonstrations grew through autumn 1989.", "Gorbachev signalled the Soviet Union would not use force.", "Reagan demanded in 1987 that the wall be torn down.", "Hungary's open border let thousands flee."],
+        "misconceptions": ["One speech by a Western leader brought the wall down.", "Ordinary people played no part."] },
+      { "key": "nonviolence", "title": "Judge why it stayed peaceful", "description": "Explains why the regime did not use force, and whether that was choice or weakness.",
+        "concept": "peaceful-revolution", "definition": "The largely nonviolent collapse of the East German regime in 1989.",
+        "facts": ["On 9 October about 70,000 marched in Leipzig and were not fired on.", "The Soviet Union would not send troops to support the regime.", "Earlier uprisings, such as East Germany's in 1953, had been crushed.", "A strong answer considers the choices of individual officers and officials."],
+        "misconceptions": ["Violence was never a real possibility.", "The regime chose peace out of goodwill alone."] },
+      { "key": "reunification", "title": "Judge the meaning of reunification", "description": "Evaluates whether reunification was a liberation, a merger or a takeover.",
+        "concept": "reunification", "definition": "The joining of East and West Germany on 3 October 1990, and the contested terms in which it happened.",
+        "facts": ["Germany reunified on 3 October 1990.", "Germans speak of the peaceful revolution and of the Wende.", "Some East Germans described reunification as a takeover by the West.", "A strong answer separates the end of dictatorship from the terms of unification."],
+        "misconceptions": ["All East Germans welcomed every aspect of reunification.", "Criticizing reunification means wanting the dictatorship back."] }
+    ],
+    "translations": {
+      "ko": { "title": "베를린 장벽의 붕괴",
+        "objectives": { "accident-or-inevitable": "장벽 개방이 우연이었는지 판단하기", "credit": "누구의 공로인지 판단하기", "nonviolence": "왜 평화롭게 끝났는지 판단하기", "reunification": "통일의 의미 판단하기" } },
+      "es": { "title": "La caída del Muro de Berlín",
+        "objectives": { "accident-or-inevitable": "Juzgar si la apertura fue un accidente", "credit": "Juzgar a quién corresponde el mérito", "nonviolence": "Juzgar por qué fue pacífica", "reunification": "Juzgar el significado de la reunificación" } }
+    }
+  }
+]
