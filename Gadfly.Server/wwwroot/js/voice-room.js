@@ -100,7 +100,7 @@ export function init(dotnet, cfg) {
     S = {
         dotnet, cfg, running: false, allowed: false, gate: true, speaking: false, mode: "hands-free",
         segments: [], partial: "", listeningStartMs: null, startedAtUnixMs: null, cueTimer: null, captionTimers: [],
-        mic: null, pcm16ToBase64: null, speechConn: null, avatarConn: null, avatar: null, speech: null, avatarOk: false,
+        mic: null, pcm16ToBase64: null, binaryAudio: false, speechConn: null, avatarConn: null, avatar: null, speech: null, avatarOk: false,
         presenter: null, utterId: null, ours: null,   // the delivery helpers (GAD-T303); the hub id and record of this room's own utterance
         selfStream: null, waitStartMs: null, delayMs: null, delayTimer: null, face: null,
         pauses: [], lastSpeechEndAt: null,   // the student's own mid-answer pauses, which the end-of-answer cue adapts to (GAD-T264)
@@ -206,7 +206,7 @@ async function start() {
             onChunk: (c) => {
                 if (s.gate || !s.speechConn) return;
                 try { s.acoustics.push(c.pcm); } catch { }
-                sendAudio(s, s.pcm16ToBase64(c.pcm), c.captureStartMs);
+                sendAudio(s, c.pcm, c.captureStartMs);
             },
             onSpeechStart: () => {
                 s.inSpeech = true;
@@ -263,7 +263,14 @@ async function start() {
         if (S !== s || !s.running) return;
         // Typed answers (GAD-T260) need no speech recognizer: only the examiner's own hub below.
         if (!s.cfg.typed) {
-        const speechConn = s.speechConn = new signalR.HubConnectionBuilder().withUrl(SPEECH_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]).build();
+        // Microphone audio goes up as raw bytes over the MessagePack hub protocol (GAD-T499) rather than base64 text. If its
+        // script cannot be loaded, the speech hub stays on JSON and base64, as before.
+        try { await loadScript(`${LIB}/signalr/signalr-protocol-msgpack.min.js`); } catch { }
+        if (S !== s || !s.running) return;
+        s.binaryAudio = !!(signalR.protocols && signalR.protocols.msgpack);
+        const speechBuilder = new signalR.HubConnectionBuilder().withUrl(SPEECH_HUB).withAutomaticReconnect([0, 1000, 3000, 6000]);
+        if (s.binaryAudio) speechBuilder.withHubProtocol(new signalR.protocols.msgpack.MessagePackHubProtocol());
+        const speechConn = s.speechConn = speechBuilder.build();
         // A connection this room has already let go (stop(), then Try again) must not act on the new one: its late close used to
         // report "lost" and pause the exam again, and a late reconnect called into a field stop() had nulled (GAD-T316).
         const current = () => S === s && s.running && s.speechConn === speechConn;
@@ -277,7 +284,7 @@ async function start() {
             drawTranscript();
             notePartial(s);
         });
-        s.speechConn.on("final", onFinal);
+        s.speechConn.on("final", (seg) => onFinal(s.binaryAudio ? segmentFromMessagePack(seg) : seg));
         s.speechConn.on("problem", (kind, message, fatal) => { if (fatal) problem("recognizer", message, true); });
         // A dropped connection retries a few times on its own (GAD-T306) before this room gives up and asks the
         // student to press Try again: a clear status either way, never a silent stall. Audio and commits captured while it
@@ -1564,7 +1571,20 @@ function clearCue() {
 
 /** The StartSession arguments for this room: the exam's own language and vocabulary hints (GAD-T357, GAD-T358), never the browser's choosing. */
 function startSessionArgs(s) {
-    return { language: (s.cfg && s.cfg.language) || "en", diarize: true, keyterms: (s.cfg && s.cfg.keyterms) || [] };
+    const language = (s.cfg && s.cfg.language) || "en", keyterms = (s.cfg && s.cfg.keyterms) || [];
+    // MessagePack matches the server's own property names exactly; JSON matches them in camelCase.
+    return s.binaryAudio ? { Language: language, Diarize: true, Keyterms: keyterms } : { language, diarize: true, keyterms };
+}
+
+/** A final segment as the MessagePack protocol delivers it (the server's property names), in the shape onFinal reads. */
+function segmentFromMessagePack(seg) {
+    if (!seg) return seg;
+    return {
+        text: seg.Text,
+        words: (seg.Words || []).map((w) => ({
+            text: w.Text, startMs: w.StartMs, endMs: w.EndMs, confidence: w.Confidence, speakerId: w.SpeakerId, isAudioEvent: w.IsAudioEvent,
+        })),
+    };
 }
 
 /** Longest the reconnect buffer may hold (about 30 s of 100 ms mic chunks): a very long outage drops the oldest audio rather than growing without bound. */
@@ -1576,8 +1596,15 @@ function queueOrSend(s, invoke) {
     while (s.replayQueue.length > REPLAY_QUEUE_MAX) s.replayQueue.shift();
 }
 
-function sendAudio(s, pcmBase64, captureStartMs) {
-    queueOrSend(s, () => s.speechConn.send("SendAudio", pcmBase64, captureStartMs));
+function sendAudio(s, pcm, captureStartMs) {
+    if (!s.binaryAudio) {
+        const pcmBase64 = s.pcm16ToBase64(pcm);
+        queueOrSend(s, () => s.speechConn.send("SendAudio", pcmBase64, captureStartMs));
+        return;
+    }
+    // A copy: the chunk may wait in the reconnect queue after the capture pipeline has moved on.
+    const bytes = new Uint8Array(pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength));
+    queueOrSend(s, () => s.speechConn.send("SendAudioBinary", bytes, captureStartMs));
 }
 
 function sendCommit(s) {

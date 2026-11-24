@@ -23,9 +23,10 @@
     <PackageReference Include="MindAttic.Log" Version="3.0.0" />
     <PackageReference Include="MindAttic.Authentication" Version="9.0.0" />
     <!-- Voice exam room (GAD-T53): streaming speech-to-text relay and the talking-head avatar's TTS hub. -->
-    <PackageReference Include="MindAttic.SpeechRecognition.AspNetCore" Version="1.0.0" />
+    <PackageReference Include="MindAttic.SpeechRecognition.AspNetCore" Version="1.1.0" />
     <PackageReference Include="MindAttic.Avatar.AspNetCore" Version="1.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.15" />
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.AzureAppServices" Version="10.0.15" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.3" />

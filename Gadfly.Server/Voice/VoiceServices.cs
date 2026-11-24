@@ -68,7 +68,10 @@ public static class VoiceServices
         // How long the examiner's voice takes, to first byte and to the end of the audio (GAD-T413).
         services.AddHttpClient("ElevenLabsTtsClient").AddHttpMessageHandler<Diagnostics.ElevenLabsTimingHandler>();
 
+        // MessagePack beside JSON (GAD-T499): the exam room's speech connection picks it so microphone audio arrives as raw
+        // bytes (SendAudioBinary) instead of base64 text. A connection that does not ask for it still speaks JSON.
         services.AddSignalR()
+            .AddMessagePackProtocol()
             .AddHubOptions<SpeechRecognitionHub>(o => o.AddFilter<VoiceHubFilter>())
             .AddHubOptions<AvatarSpeechHub>(o => o.AddFilter<VoiceHubFilter>());
         return settings;
