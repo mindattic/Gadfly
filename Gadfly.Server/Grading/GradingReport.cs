@@ -313,7 +313,8 @@ public sealed record AssessmentReport
     private static string Csv(string? value)
     {
         if (string.IsNullOrEmpty(value)) return "";
-        if (value[0] is '=' or '+' or '-' or '@' or '\t' or '\r') value = "'" + value;
+        if (value[0] is '=' or '+' or '-' or '@' or '\t' or '\r' && !double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+            value = "'" + value;
         return value.IndexOfAny([',', '"', '\r', '\n']) >= 0 ? "\"" + value.Replace("\"", "\"\"") + "\"" : value;
     }
 }
