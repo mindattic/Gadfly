@@ -147,7 +147,7 @@ function partOf(material, mesh) {
     if (/tongue/.test(n)) return "tongue";
     if (/high-poly|wolf3d_eye|\beye/.test(n)) return "eyes";
     // MakeHuman hair assets are named by style (ponytail01, short02, bob01, afro01, long01, braid01), not "hair".
-    if (/hair|ponytail|braid|\bshort\d|\bbob\d|\bafro\d|\blong\d/.test(n)) return "hair";
+    if (/hair|beard|moustache|ponytail|braid|\bshort\d|\bbob\d|\bafro\d|\blong\d/.test(n)) return "hair";
     if (/body|skin|wolf3d_body|wolf3d_head/.test(n)) return "skin";
     return "clothing";
 }

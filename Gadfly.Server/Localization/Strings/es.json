@@ -168,6 +168,8 @@
   "getReady.examiner.choiceMale": "Examinador",
   "getReady.examiner.choiceFemale.desc": "Hace cada pregunta con su propia voz y profundiza en lo que usted dice.",
   "getReady.examiner.choiceMale.desc": "Hace cada pregunta con su propia voz y profundiza en lo que usted dice.",
+  "getReady.examiner.choiceSocrates": "Sócrates",
+  "getReady.examiner.choiceSocrates.desc": "Un viejo filósofo que pregunta despacio e insiste en lo que usted afirma saber.",
   "getReady.examiner.comingSoon": "(próximamente)",
   "getReady.step.language": "Sus idiomas",
   "getReady.language.title": "Sus idiomas",

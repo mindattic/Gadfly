@@ -54,6 +54,18 @@ public static class ExaminerCatalog
     /// </summary>
     public const string MaleDefaultVoiceId = "nPczCjzI2devNBz1zQrb";
 
+    public const string Socrates = "examiner-socrates";
+
+    /// <summary>Socrates' model (relative to wwwroot), built by tools/examiner-socrates (GAD-T724).</summary>
+    public const string SocratesModelPath = "assets/avatars/examiner-socrates.glb";
+
+    /// <summary>
+    /// Socrates' default ElevenLabs voice: "Bill", a premade voice described as an old American man, wise, mature and balanced, the
+    /// oldest-sounding of the premade male voices. Premade, so it speaks every language of the multilingual models like Brian.
+    /// Change it with <c>Gadfly:Voice:Examiners:examiner-socrates:VoiceId</c>. Used in live mode only.
+    /// </summary>
+    public const string SocratesDefaultVoiceId = "pqHfZKP75CvOlQylNhV4";
+
     /// <param name="voice">The site's voice settings: the female examiner is the configured one; <see cref="VoiceSettings.Examiners"/> overrides.</param>
     /// <param name="webRoot">wwwroot on disk, to see whether an examiner's files are installed (null: only configured URLs count).</param>
     public static IReadOnlyList<ExaminerOption> For(VoiceSettings voice, string? webRoot)
@@ -62,6 +74,8 @@ public static class ExaminerCatalog
         var m = voice.Examiners.GetValueOrDefault(Male);
         string? Local(string path) => webRoot is not null && File.Exists(Path.Combine(webRoot, path)) ? "/" + path : null;
         var maleModel = m?.ModelUrl ?? Local(MaleModelPath);
+        var s = voice.Examiners.GetValueOrDefault(Socrates);
+        var socratesModel = s?.ModelUrl ?? Local(SocratesModelPath);
         return
         [
             new(Female, "getReady.examiner.choiceFemale", f?.ModelUrl ?? voice.AvatarModelUrl, true)
@@ -73,6 +87,11 @@ public static class ExaminerCatalog
             {
                 VoiceId = m?.VoiceId ?? MaleDefaultVoiceId,
                 VoiceIds = m?.VoiceIds ?? new Dictionary<string, string>(),
+            },
+            new(Socrates, "getReady.examiner.choiceSocrates", socratesModel, socratesModel is not null)
+            {
+                VoiceId = s?.VoiceId ?? SocratesDefaultVoiceId,
+                VoiceIds = s?.VoiceIds ?? new Dictionary<string, string>(),
             },
         ];
     }
