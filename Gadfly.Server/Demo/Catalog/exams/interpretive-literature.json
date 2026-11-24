@@ -1,0 +1,487 @@
+// Interpretive literature and drama exams (GAD-T714). Format: see the header of life-sciences.json (GAD-T659).
+// Each exam asks the student to defend readings of themes, motives and moral judgments, and carries Korean and Spanish texts.
+[
+  {
+    "title": "Sophocles' Antigone: Law, Conscience and the State",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Greek tragedy",
+    "passage": [
+      "Sophocles' Antigone was first performed in Athens around 441 BCE. It follows the war between Oedipus' sons, Eteocles and Polynices, who killed each other in single combat at the gates of Thebes. Their uncle Creon, now king, gives Eteocles an honored burial and decrees that Polynices, who led a foreign army against the city, must be left unburied, on pain of death for anyone who buries him.",
+      "Antigone, their sister, defies the decree. She says she obeys the unwritten and unfailing laws of the gods, which demand burial for the dead, and that no mortal's proclamation can override them. Her sister Ismene refuses to help, saying that women cannot fight men or the power of the state. Antigone is caught, admits the act openly, and is sentenced to be walled up alive in a tomb.",
+      "Creon argues that a city cannot survive if traitors are honored like defenders and if rulers are disobeyed. He is challenged by his son Haemon, who is engaged to Antigone and reports that the city quietly sympathizes with her, and by the blind prophet Tiresias, who warns that the gods are offended by the unburied corpse. Creon relents too late: Antigone has hanged herself, Haemon kills himself beside her, and Creon's wife Eurydice kills herself on hearing the news.",
+      "The play has been read in sharply different ways. The philosopher G. W. F. Hegel argued that it stages a collision between two legitimate claims, the family and divine law on one side and the state and human law on the other, each of which is one-sided. Others read Antigone as simply right and Creon as a tyrant, pointing out that the gods side with her. Still others stress Antigone's own harshness, her contempt for Ismene and her eagerness for death.",
+      "Readers also dispute whose tragedy it is. Antigone dies in the middle of the action, while Creon survives to the end, having lost his son and wife and recognized his error. The chorus closes by saying that wisdom is the chief part of happiness and that the proud learn wisdom only through suffering.",
+      "Modern writers have used the play to think about civil disobedience, resistance to occupation and the rights of the dead. Whether its conflict can be settled, and by what standard, remains open."
+    ],
+    "objectives": [
+      { "key": "law-vs-duty", "title": "Judge Creon's law against Antigone's duty", "description": "Defends a view on whether Creon's decree or Antigone's appeal to divine law has the stronger claim, and by what standard.",
+        "concept": "law-vs-conscience", "definition": "The conflict between the authority of a state's law and a person's appeal to a higher or unwritten moral law.",
+        "facts": ["Creon's decree denies burial to Polynices because he attacked the city.", "Antigone appeals to the unwritten laws of the gods that require burial.", "Haemon reports quiet public sympathy for Antigone and Tiresias says the gods are offended.", "A strong answer weighs Creon's case for civic order rather than dismissing it."],
+        "misconceptions": ["Creon is simply an evil tyrant with no argument.", "Whatever conscience demands automatically overrides the law."] },
+      { "key": "hegel-reading", "title": "Assess the reading of two rightful claims", "description": "Evaluates Hegel's view that both sides are partly right and partly one-sided.",
+        "concept": "tragic-collision", "definition": "Hegel's reading of tragedy as a clash between two ethical powers, each justified but one-sided.",
+        "facts": ["Hegel saw the play as family and divine law against state and human law.", "On this reading each side destroys itself by refusing the other's claim.", "Critics answer that the gods' verdict in the play favors Antigone.", "A defensible position says what would count as one side being simply right."],
+        "misconceptions": ["Saying both sides have a point means neither did anything wrong.", "A play can only have one correct moral."] },
+      { "key": "antigone-character", "title": "Judge Antigone's character", "description": "Decides whether Antigone is a principled heroine, a stubborn zealot, or both, using her treatment of Ismene and of death.",
+        "concept": "heroism-and-intransigence", "definition": "The question of whether unbending conviction is a virtue or a flaw in a tragic figure.",
+        "facts": ["Antigone acts openly and accepts the penalty.", "She rejects Ismene's later offer to share the blame.", "She speaks of her death as something she has chosen.", "The chorus calls her self-willed as well as admirable."],
+        "misconceptions": ["A hero must be likable and gentle.", "Antigone acts only from love of her brother, with no pride involved."] },
+      { "key": "whose-tragedy", "title": "Argue whose tragedy it is", "description": "Argues whether Antigone or Creon is the tragic center of the play.",
+        "concept": "tragic-protagonist", "definition": "The figure whose error, suffering and recognition the tragedy is built around.",
+        "facts": ["Antigone dies before the end of the play.", "Creon loses his son and wife and acknowledges his error.", "The chorus ends with a lesson about pride and wisdom learned through suffering."],
+        "misconceptions": ["The title character must be the protagonist.", "Only a character who dies can be tragic."] }
+    ],
+    "translations": {
+      "ko": { "title": "소포클레스의 안티고네: 법, 양심, 국가",
+        "objectives": { "law-vs-duty": "크레온의 법과 안티고네의 의무 판단하기", "hegel-reading": "정당한 두 주장의 충돌이라는 해석 평가하기", "antigone-character": "안티고네의 성격 판단하기", "whose-tragedy": "누구의 비극인지 논증하기" } },
+      "es": { "title": "Antígona de Sófocles: ley, conciencia y Estado",
+        "objectives": { "law-vs-duty": "Juzgar la ley de Creonte frente al deber de Antígona", "hegel-reading": "Evaluar la lectura de dos derechos legítimos", "antigone-character": "Juzgar el carácter de Antígona", "whose-tragedy": "Argumentar de quién es la tragedia" } }
+    }
+  },
+  {
+    "title": "Crime and Punishment: Raskolnikov's Theory and Redemption",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Russian novel",
+    "passage": [
+      "Fyodor Dostoevsky's Crime and Punishment (1866) follows Rodion Raskolnikov, a poor former law student in St. Petersburg who murders an old pawnbroker, Alyona Ivanovna, with an axe. Her gentle half-sister Lizaveta walks in during the crime and he kills her too. He takes a few small items and hides them without ever using them.",
+      "Before the murder Raskolnikov had published an article arguing that humanity divides into ordinary people, who must obey the law, and a few extraordinary people, such as Napoleon, who have the right to overstep moral limits if their ideas require it. He also rehearses a utilitarian argument he overhears in a tavern: killing one harmful old woman and using her money for many good deeds would be a net good.",
+      "After the crime he falls into fever, paranoia and isolation. The investigator Porfiry Petrovich suspects him and plays a long psychological game, urging him to confess. Raskolnikov is drawn to Sonya Marmeladova, a devout young woman forced into prostitution to support her family, who reads him the story of the raising of Lazarus. He finally confesses to her and then to the police.",
+      "He is sentenced to eight years of penal servitude in Siberia, and Sonya follows him. For much of the epilogue he still regrets mainly that he failed, not that he killed. Only near the end does he weep at her feet, and the narrator says a gradual renewal is beginning, a story for another time.",
+      "Readers disagree about why he killed. Raskolnikov himself offers several motives: poverty, to help his mother and sister, to test whether he is extraordinary, and finally to admit that he killed for himself. Critics also dispute whether the novel refutes his theory by argument or only by his psychological collapse, and whether the religious epilogue is earned or tacked on.",
+      "The book is often read as Dostoevsky's answer to rationalist and utilitarian ideas of his day, but it gives those ideas strong voices, and some readers find the counter-arguments of characters such as Svidrigailov more unsettling than the official resolution."
+    ],
+    "objectives": [
+      { "key": "motive", "title": "Explain why Raskolnikov killed", "description": "Defends an account of his real motive among the several he gives.",
+        "concept": "motive", "definition": "The reason that actually moves a character to act, as distinct from the reasons he offers.",
+        "facts": ["Raskolnikov is desperately poor and worried for his mother and sister.", "He tests whether he belongs to the extraordinary few.", "He never uses the stolen goods.", "He eventually tells Sonya he killed for himself.", "A strong answer explains why some stated motives are rationalizations."],
+        "misconceptions": ["He killed simply for money.", "A character's own explanation is always the true one."] },
+      { "key": "extraordinary-man", "title": "Assess the extraordinary man theory", "description": "Judges whether the novel refutes Raskolnikov's theory by argument or only shows that he personally could not live with it.",
+        "concept": "extraordinary-man-theory", "definition": "Raskolnikov's claim that a few great people have the right to transgress moral law for the sake of their ideas.",
+        "facts": ["His article divides people into ordinary and extraordinary.", "He invokes Napoleon as a model.", "His collapse after the murder is psychological and physical.", "Readers dispute whether his failure disproves the theory or only shows he was not extraordinary."],
+        "misconceptions": ["If Raskolnikov suffers, the theory has been logically refuted.", "Great historical figures prove the theory true."] },
+      { "key": "utilitarian-murder", "title": "Weigh the one-for-many argument", "description": "Evaluates the tavern argument that killing one harmful person to help many is justified.",
+        "concept": "consequentialist-justification", "definition": "The view that an act is justified if its total good consequences outweigh its harms.",
+        "facts": ["The overheard argument treats the pawnbroker as harmful and her money as able to do much good.", "The murder of Lizaveta was never part of the calculation.", "Raskolnikov does none of the promised good deeds.", "A strong answer separates the argument's logic from how it plays out in the novel."],
+        "misconceptions": ["The ends always justify the means.", "Dostoevsky gives the argument no force at all."] },
+      { "key": "redemption", "title": "Judge the epilogue's redemption", "description": "Argues whether Raskolnikov's renewal through Sonya is earned by the novel or imposed on it.",
+        "concept": "redemption", "definition": "Moral and spiritual renewal after wrongdoing, here linked to suffering, love and faith.",
+        "facts": ["Sonya reads him the raising of Lazarus.", "In Siberia he at first regrets only his failure.", "His change comes late and the narrator calls it only a beginning.", "Some critics find the ending unconvincing; others see it prepared throughout."],
+        "misconceptions": ["Confession alone means he has repented.", "The novel ends with Raskolnikov fully transformed."] }
+    ],
+    "translations": {
+      "ko": { "title": "죄와 벌: 라스콜니코프의 이론과 구원",
+        "objectives": { "motive": "라스콜니코프가 살인한 이유 설명하기", "extraordinary-man": "비범인 이론 평가하기", "utilitarian-murder": "다수를 위한 한 사람의 희생 논리 따져 보기", "redemption": "에필로그의 구원 판단하기" } },
+      "es": { "title": "Crimen y castigo: la teoría y la redención de Raskólnikov",
+        "objectives": { "motive": "Explicar por qué mató Raskólnikov", "extraordinary-man": "Evaluar la teoría del hombre extraordinario", "utilitarian-murder": "Sopesar el argumento de uno por muchos", "redemption": "Juzgar la redención del epílogo" } }
+    }
+  },
+  {
+    "title": "Pride and Prejudice: Marriage, Judgment and Irony",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "English novel",
+    "passage": [
+      "Jane Austen's Pride and Prejudice (1813) follows the Bennet family, whose five daughters cannot inherit their father's estate because it is entailed to a male cousin, Mr. Collins. Marriage is therefore a matter of economic survival as well as feeling. The famous opening sentence ironically states that a single man with a fortune must be in want of a wife, when the novel shows it is the families of poor young women who are in want.",
+      "Elizabeth Bennet, the second daughter, is witty and confident in her judgments. At a ball she overhears the wealthy Mr. Darcy call her merely tolerable, and she forms a lasting dislike of him. She readily believes the charming officer Mr. Wickham, who claims Darcy cheated him of an inheritance.",
+      "Darcy falls in love with Elizabeth despite himself and proposes, insulting her family and her social position in the same speech. She refuses him, accusing him of ruining her sister Jane's chances with his friend Bingley and of wronging Wickham. Darcy's letter in reply reveals that Wickham tried to elope with Darcy's fifteen-year-old sister for her fortune. Elizabeth realizes she has been blind and prejudiced and says that until this moment she never knew herself.",
+      "Later Wickham runs off with Elizabeth's youngest sister, Lydia, threatening the whole family's reputation. Darcy secretly pays Wickham to marry her. Elizabeth, having seen Darcy's estate at Pemberley and his changed manners, accepts his second proposal. Earlier her friend Charlotte Lucas had accepted the absurd Mr. Collins for security, saying she was not romantic.",
+      "Critics debate how far the novel endorses or questions its world. Some read it as a romance in which merit and love are rewarded. Others note that the happy ending depends on Darcy's enormous wealth and that Austen's irony exposes the economic pressures on women without overturning them. Readers also dispute whether the title's pride belongs to Darcy and the prejudice to Elizabeth, or whether both have both."
+    ],
+    "objectives": [
+      { "key": "first-impressions", "title": "Explain Elizabeth's misjudgment", "description": "Accounts for why a perceptive heroine misjudges Darcy and Wickham, and what her self-recognition means.",
+        "concept": "judgment-and-prejudice", "definition": "Forming firm opinions of people from first impressions, wounded vanity or charm rather than evidence.",
+        "facts": ["Elizabeth overhears Darcy's slight at the first ball.", "She believes Wickham's story without checking it.", "Darcy's letter reveals Wickham's attempt to elope with Georgiana.", "She says she never knew herself until then.", "A strong answer links her error to her own pride, not only to Darcy's faults."],
+        "misconceptions": ["Elizabeth is always right about people.", "Darcy is entirely to blame for the misunderstanding."] },
+      { "key": "pride-prejudice", "title": "Decide who is proud and who prejudiced", "description": "Argues whether the title divides the faults between Darcy and Elizabeth or whether each shares both.",
+        "concept": "pride-and-prejudice", "definition": "The two faults named in the title and how they are distributed among the main characters.",
+        "facts": ["Darcy's first proposal insults Elizabeth's family and status.", "Elizabeth's dislike begins with wounded vanity.", "Both characters change their behavior and views."],
+        "misconceptions": ["Darcy is pride and Elizabeth is prejudice, and that is all."] },
+      { "key": "charlotte", "title": "Judge Charlotte Lucas's marriage", "description": "Evaluates whether Charlotte's practical marriage to Mr. Collins is sensible, tragic or a criticism of her society.",
+        "concept": "marriage-and-economics", "definition": "The way property law and women's lack of income made marriage an economic necessity.",
+        "facts": ["The Bennet estate is entailed to Mr. Collins.", "Charlotte accepts Collins for security and says she is not romantic.", "Elizabeth is at first shocked by the choice.", "A defensible answer considers Charlotte's limited options."],
+        "misconceptions": ["Charlotte is simply foolish or mercenary.", "Only marrying for love is ever reasonable in the novel's world."] },
+      { "key": "irony-and-society", "title": "Assess whether the novel challenges its society", "description": "Argues whether Austen's irony criticizes the marriage market or ultimately endorses it through a fairy-tale ending.",
+        "concept": "irony", "definition": "Saying one thing while meaning another, used here to expose the gap between social ideals and economic reality.",
+        "facts": ["The opening sentence reverses who is really in want.", "The happy ending depends on Darcy's wealth.", "Lydia's elopement shows how fragile a family's reputation is.", "Critics differ on whether Austen is conservative or subversive."],
+        "misconceptions": ["The novel is only a love story.", "Because the heroine marries rich, the novel must approve of the system."] }
+    ],
+    "translations": {
+      "ko": { "title": "오만과 편견: 결혼, 판단, 아이러니",
+        "objectives": { "first-impressions": "엘리자베스의 오판 설명하기", "pride-prejudice": "누가 오만하고 누가 편견을 가졌는지 판단하기", "charlotte": "샬럿 루카스의 결혼 판단하기", "irony-and-society": "소설이 당대 사회에 도전하는지 평가하기" } },
+      "es": { "title": "Orgullo y prejuicio: matrimonio, juicio e ironía",
+        "objectives": { "first-impressions": "Explicar el error de juicio de Elizabeth", "pride-prejudice": "Decidir quién es orgulloso y quién prejuicioso", "charlotte": "Juzgar el matrimonio de Charlotte Lucas", "irony-and-society": "Evaluar si la novela cuestiona su sociedad" } }
+    }
+  },
+  {
+    "title": "Nineteen Eighty-Four: Power, Truth and Resistance",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Dystopian novel",
+    "passage": [
+      "George Orwell's Nineteen Eighty-Four (1949) is set in Oceania, a superstate ruled by the Party under the image of Big Brother. Winston Smith works at the Ministry of Truth, rewriting old newspaper articles so that the record always agrees with what the Party says now. Telescreens watch citizens in their homes, and the Thought Police punish even private doubt.",
+      "The Party controls thought through language and memory. Newspeak shrinks the vocabulary so that rebellious ideas cannot be expressed. Doublethink is the ability to hold two contradictory beliefs and accept both. The Party's slogans declare that war is peace, freedom is slavery and ignorance is strength, and one of its principles holds that whoever controls the past controls the future.",
+      "Winston begins a diary and a forbidden love affair with Julia, a younger woman who rebels for pleasure rather than from political theory. He writes that freedom is the freedom to say that two plus two make four. He believes hope lies with the proles, the poor majority the Party largely ignores. He and Julia approach O'Brien, an Inner Party member they believe belongs to a secret resistance.",
+      "O'Brien is a loyal Party agent. Winston is arrested and tortured in the Ministry of Love. O'Brien tells him that the Party seeks power entirely for its own sake, and that reality exists only in the collective mind of the Party. In Room 101 Winston is faced with his worst fear, rats, and begs that it be done to Julia instead. Released, he no longer loves her, and the novel ends with him loving Big Brother.",
+      "Readers argue about whether the book is a warning about a particular system, Soviet totalitarianism, or about tendencies in every modern state. They also debate whether it leaves any hope. The bleak ending suggests total defeat, but the novel closes with an appendix on Newspeak written in the past tense, which some read as a sign that the Party eventually fell."
+    ],
+    "objectives": [
+      { "key": "truth-and-power", "title": "Explain the Party's control of truth", "description": "Explains how control of language and records gives the Party power, and whether objective truth survives in the novel.",
+        "concept": "control-of-truth", "definition": "The Party's claim to decide what is true by controlling memory, records and language.",
+        "facts": ["Winston rewrites records at the Ministry of Truth.", "Newspeak narrows what can be thought.", "Doublethink lets people accept contradictions.", "O'Brien claims reality exists only in the Party's mind.", "Winston's two plus two makes four stands for objective truth."],
+        "misconceptions": ["The Party rules only through violence.", "Propaganda works only on stupid people."] },
+      { "key": "power-for-itself", "title": "Assess power pursued for its own sake", "description": "Judges O'Brien's claim that the Party wants power purely for itself, and whether that is believable.",
+        "concept": "power-as-end", "definition": "The idea that a ruling group seeks domination as an end in itself rather than for any further good.",
+        "facts": ["O'Brien rejects the idea that the Party rules for others' good.", "He describes the future as a boot stamping on a human face.", "Some readers find this candid account more frightening than ideological rule.", "A strong answer asks why the Party would admit its aim."],
+        "misconceptions": ["All dictators sincerely believe they serve the people.", "Power is always a means to wealth."] },
+      { "key": "winston-defeat", "title": "Judge Winston's defeat", "description": "Argues whether Winston's betrayal of Julia means resistance is futile or that the Party could only win by destroying the person.",
+        "concept": "resistance", "definition": "Acts and inner loyalties that refuse the authority of a ruling power.",
+        "facts": ["Winston and Julia promised the Party could not get inside them.", "In Room 101 he begs that the punishment be done to Julia.", "He ends by loving Big Brother.", "Julia's rebellion is personal and sensual rather than ideological."],
+        "misconceptions": ["Winston was weak, so a braver person would have held out.", "Winston's defeat means the novel argues freedom is impossible."] },
+      { "key": "warning-or-prophecy", "title": "Decide what the novel warns against", "description": "Argues whether the book targets Soviet communism specifically or features of any modern state, and whether it leaves hope.",
+        "concept": "dystopian-warning", "definition": "A fiction that shows an imagined bad society in order to warn about tendencies in the present.",
+        "facts": ["Orwell drew on Stalinism and on wartime propaganda he saw in Britain.", "Winston places his hope in the proles.", "The Newspeak appendix is written in the past tense.", "A defensible answer uses features of Oceania to support the reading."],
+        "misconceptions": ["The novel is only about the Soviet Union.", "The novel predicts the future exactly."] }
+    ],
+    "translations": {
+      "ko": { "title": "1984: 권력, 진실, 저항",
+        "objectives": { "truth-and-power": "당의 진실 통제 설명하기", "power-for-itself": "권력 자체를 목적으로 하는 권력 평가하기", "winston-defeat": "윈스턴의 패배 판단하기", "warning-or-prophecy": "소설이 경고하는 대상 판단하기" } },
+      "es": { "title": "Mil novecientos ochenta y cuatro: poder, verdad y resistencia",
+        "objectives": { "truth-and-power": "Explicar el control de la verdad por el Partido", "power-for-itself": "Evaluar el poder buscado por sí mismo", "winston-defeat": "Juzgar la derrota de Winston", "warning-or-prophecy": "Decidir contra qué advierte la novela" } }
+    }
+  },
+  {
+    "title": "Brave New World: Happiness Against Freedom",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Dystopian novel",
+    "passage": [
+      "Aldous Huxley's Brave New World (1932) imagines a World State in which people are grown in hatcheries and conditioned before and after birth into fixed castes, from intelligent Alphas to Epsilons bred for simple labor. Each caste is taught to be content with its place. The motto of the state is community, identity, stability.",
+      "Citizens are kept happy by constant consumption, casual sex without attachment, entertainment and soma, a drug that gives pleasure without hangover. Family, parenthood, deep love, art that disturbs and religion have been abolished as sources of instability. History is dismissed as bunk, a phrase attributed to Henry Ford, whom the state treats as a near-divine founder.",
+      "Bernard Marx, an Alpha who feels out of place, brings back John, a young man raised on a savage reservation in New Mexico. John has learned his values from a battered volume of Shakespeare and from the reservation's mix of Native and Christian rituals. In London he is first a celebrity, then disgusted by what he sees.",
+      "In a long debate, the World Controller Mustapha Mond argues that stability and happiness required giving up high art, science pursued freely and religion. John replies that he wants God, poetry, real danger, freedom, goodness and sin, and Mond notes that he is claiming the right to be unhappy. John withdraws to a lighthouse to live austerely, is mobbed by crowds who come to watch him whip himself, and hangs himself.",
+      "Readers disagree about where Huxley stands. The World State is plainly meant to disturb, yet many of its people are content, and John is no clear alternative: his ideals are borrowed from books and end in self-punishment and despair. Huxley later wrote that he wished he had offered a third possibility between the two. The book also invites comparison with Nineteen Eighty-Four: control through pleasure rather than through fear."
+    ],
+    "objectives": [
+      { "key": "happiness-vs-freedom", "title": "Weigh happiness against freedom", "description": "Defends a view on whether the World State's engineered happiness is worth what it costs.",
+        "concept": "happiness-and-freedom", "definition": "The conflict between a guaranteed contented life and the freedom to choose, strive and suffer.",
+        "facts": ["Citizens are conditioned to like their place.", "Soma removes distress on demand.", "Art, religion and family were abolished for stability.", "Mond says John is claiming the right to be unhappy.", "A strong answer says why felt contentment might or might not be enough."],
+        "misconceptions": ["Anyone in the World State is secretly miserable.", "More pleasure always means a better life."] },
+      { "key": "mond-argument", "title": "Evaluate Mustapha Mond's defense", "description": "Assesses the Controller's argument that the sacrifices were necessary and worth it.",
+        "concept": "benevolent-control", "definition": "Rule that limits people's freedom on the claim that it secures their well-being.",
+        "facts": ["Mond has read the forbidden books and knows what was given up.", "He argues that stability requires suppressing truth and beauty that disturb.", "He chose to serve the state rather than pursue science freely.", "A defensible reply addresses his reasons, not only his conclusion."],
+        "misconceptions": ["Mond is a simple villain who does not understand what he destroyed."] },
+      { "key": "john-alternative", "title": "Judge John as an alternative", "description": "Argues whether John represents a real human alternative or a failed one.",
+        "concept": "the-savage", "definition": "John's outsider position, shaped by Shakespeare and reservation life, from which he condemns the World State.",
+        "facts": ["John learned his values largely from Shakespeare.", "He rejects Lenina's casual advances in disgust.", "He punishes himself at the lighthouse and dies by suicide.", "Huxley later regretted offering only these two options."],
+        "misconceptions": ["John is clearly the hero whose way of life the novel recommends.", "Rejecting the World State proves John is wise."] },
+      { "key": "pleasure-vs-fear", "title": "Compare control by pleasure and by fear", "description": "Argues whether control through pleasure is more or less dangerous than control through fear, as in Nineteen Eighty-Four.",
+        "concept": "soft-control", "definition": "Social control achieved through comfort, distraction and desire rather than punishment.",
+        "facts": ["The World State uses conditioning and pleasure more than force.", "Orwell's Party uses surveillance and torture.", "People in the World State do not feel oppressed.", "A strong answer considers which system modern societies more resemble and why."],
+        "misconceptions": ["If no one is hurt, there is no domination.", "The two novels describe the same kind of tyranny."] }
+    ],
+    "translations": {
+      "ko": { "title": "멋진 신세계: 행복 대 자유",
+        "objectives": { "happiness-vs-freedom": "행복과 자유 저울질하기", "mond-argument": "무스타파 몬드의 변론 평가하기", "john-alternative": "대안으로서의 존 판단하기", "pleasure-vs-fear": "쾌락에 의한 통제와 공포에 의한 통제 비교하기" } },
+      "es": { "title": "Un mundo feliz: felicidad frente a libertad",
+        "objectives": { "happiness-vs-freedom": "Sopesar la felicidad frente a la libertad", "mond-argument": "Evaluar la defensa de Mustafá Mond", "john-alternative": "Juzgar a John como alternativa", "pleasure-vs-fear": "Comparar el control por el placer y por el miedo" } }
+    }
+  },
+  {
+    "title": "Things Fall Apart: Okonkwo and Colonial Encounter",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "African novel",
+    "passage": [
+      "Chinua Achebe's Things Fall Apart (1958) is set among the Igbo villages of Umuofia in what is now southeastern Nigeria, in the late nineteenth century. Its protagonist Okonkwo rose from poverty to wealth and fame as a wrestler, farmer and warrior. He is driven by fear of being like his father, Unoka, a gentle debtor and musician whom the community considered a failure.",
+      "Achebe shows Igbo society in detail: its councils, religion, proverbs, justice, festivals and debates. The community admires strength but also values restraint, and many characters question its customs. Okonkwo, fearing to look weak, joins in killing Ikemefuna, a boy who had lived in his household for three years and called him father, after the Oracle decrees his death. His friend Obierika had advised him to stay away.",
+      "Okonkwo accidentally kills a clansman and is exiled for seven years to his mother's village, where his uncle Uchendu tells him that a man belongs to his motherland in times of sorrow. During this time Christian missionaries arrive, followed by a colonial administration with courts and soldiers. Okonkwo's sensitive son Nwoye, troubled by Ikemefuna's death and the abandonment of twins, joins the Christians.",
+      "When Okonkwo returns, Umuofia is divided. After a confrontation, he and other leaders are jailed and humiliated. At a meeting he kills a court messenger, but the clan does not rise with him. He hangs himself, an act that his own people regard as an abomination. The novel ends with the District Commissioner planning a book in which Okonkwo's story will earn perhaps a paragraph.",
+      "Achebe wrote partly in answer to European novels that portrayed Africans as without history or culture. Readers debate whether Okonkwo is a tragic hero brought down by his own flaw, a victim of colonialism, or a figure whose rigid idea of manhood already put him at odds with his own society. The title, from Yeats's poem The Second Coming, raises the question of what exactly falls apart and why."
+    ],
+    "objectives": [
+      { "key": "okonkwo-flaw", "title": "Judge Okonkwo's downfall", "description": "Argues whether Okonkwo falls mainly through his own flaw, through colonial power, or through both.",
+        "concept": "tragic-flaw", "definition": "A trait of a tragic figure that contributes to his own destruction.",
+        "facts": ["Okonkwo fears resembling his father Unoka.", "He kills Ikemefuna to avoid seeming weak.", "He is exiled after an accidental killing.", "His clan does not follow him when he kills the messenger.", "A strong answer weighs his choices against forces beyond his control."],
+        "misconceptions": ["Okonkwo is a simple victim with no responsibility.", "Okonkwo represents everything Igbo society values."] },
+      { "key": "masculinity", "title": "Assess Okonkwo's idea of manhood", "description": "Evaluates whether Okonkwo's view of masculinity is his society's view or a distortion of it.",
+        "concept": "masculinity", "definition": "The ideals of strength, success and emotional control a culture associates with being a man.",
+        "facts": ["Okonkwo treats gentleness as weakness.", "Obierika advises him not to take part in killing Ikemefuna.", "Uchendu teaches the importance of the motherland.", "Nwoye's departure is partly a reaction against his father."],
+        "misconceptions": ["Igbo society in the novel values only aggression.", "Okonkwo's harshness is simply admirable strength."] },
+      { "key": "colonial-encounter", "title": "Explain why things fall apart", "description": "Argues what causes Umuofia's unity to break: outside force, internal tensions, or both.",
+        "concept": "colonial-disruption", "definition": "The way missionaries and colonial government entered and divided Igbo communities.",
+        "facts": ["Missionaries first attract outcasts and the troubled, such as Nwoye.", "Some customs, such as abandoning twins, cause unease within the clan.", "Colonial courts and soldiers enforce foreign law.", "Obierika says the white man put a knife on the things that held the clan together."],
+        "misconceptions": ["Igbo society was static and perfect before contact.", "The missionaries succeeded only through force."] },
+      { "key": "counter-narrative", "title": "Assess the novel's answer to colonial writing", "description": "Judges what the novel achieves by showing Igbo life from inside and ending with the Commissioner's view.",
+        "concept": "counter-narrative", "definition": "A story told to correct or challenge a dominant account of a people.",
+        "facts": ["Achebe portrays Igbo law, religion, art and debate.", "He does not idealize the society; its flaws are shown.", "The Commissioner plans to reduce Okonkwo's life to a paragraph.", "The title comes from Yeats."],
+        "misconceptions": ["Showing a culture's flaws weakens a defense of it.", "Writing in English means Achebe accepted the colonial view."] }
+    ],
+    "translations": {
+      "ko": { "title": "모든 것이 산산이 부서지다: 오콩코와 식민지적 만남",
+        "objectives": { "okonkwo-flaw": "오콩코의 몰락 판단하기", "masculinity": "오콩코의 남성성 관념 평가하기", "colonial-encounter": "모든 것이 부서지는 이유 설명하기", "counter-narrative": "식민주의 서사에 대한 소설의 응답 평가하기" } },
+      "es": { "title": "Todo se desmorona: Okonkwo y el encuentro colonial",
+        "objectives": { "okonkwo-flaw": "Juzgar la caída de Okonkwo", "masculinity": "Evaluar la idea de hombría de Okonkwo", "colonial-encounter": "Explicar por qué todo se desmorona", "counter-narrative": "Evaluar la respuesta de la novela a la escritura colonial" } }
+    }
+  },
+  {
+    "title": "The Great Gatsby and the American Dream",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "American novel",
+    "passage": [
+      "F. Scott Fitzgerald's The Great Gatsby (1925) is narrated by Nick Carraway, a young Midwesterner who moves to West Egg on Long Island in the summer of 1922. His neighbor Jay Gatsby throws enormous parties and is the subject of wild rumors. Across the bay live Nick's cousin Daisy and her wealthy, brutal husband Tom Buchanan.",
+      "Gatsby was born James Gatz to poor farm people in North Dakota and reinvented himself. As a young officer he fell in love with Daisy, but she married Tom while he was away. He made his fortune through dealings with the gambler Meyer Wolfsheim, apparently including bootlegging, and bought his mansion to be near Daisy. He stares at the green light at the end of her dock. When Nick suggests one cannot repeat the past, Gatsby insists that of course one can.",
+      "Nick arranges a reunion, and Gatsby and Daisy begin an affair. In a confrontation at the Plaza Hotel, Tom exposes Gatsby's shady business and Daisy cannot say she never loved Tom. Driving back in Gatsby's car, Daisy strikes and kills Myrtle Wilson, Tom's mistress. Gatsby protects her. Tom lets Myrtle's husband George believe Gatsby was the driver, and George shoots Gatsby and then himself. Almost no one comes to the funeral.",
+      "Nick calls Tom and Daisy careless people who smashed things and then retreated into their money. He also says Gatsby was worth the whole rotten crowd put together. Yet Nick is not a neutral witness: he is drawn into the events, he helped arrange the affair, and he calls himself one of the few honest people he has known.",
+      "Readers dispute what the novel says about the American dream: whether Gatsby embodies its idealism, exposes its corruption by money, or shows that it was always an illusion about class mobility. They also argue whether Gatsby is a romantic hero, a criminal fraud or both, and whether Daisy is a shallow villain or a woman trapped by the choices open to her."
+    ],
+    "objectives": [
+      { "key": "gatsby-hero", "title": "Judge whether Gatsby is great", "description": "Argues whether Gatsby is a romantic idealist, a fraud, or both, and what makes him great if anything.",
+        "concept": "gatsby-character", "definition": "Gatsby as a self-invented man whose devotion to a dream coexists with crime and deception.",
+        "facts": ["Gatsby was born James Gatz and reinvented himself.", "His money comes from dealings with Meyer Wolfsheim.", "He believes he can repeat the past.", "He shields Daisy after the accident.", "Nick calls him worth the whole rotten crowd."],
+        "misconceptions": ["Gatsby is simply a romantic hero.", "The title is meant entirely sincerely or entirely ironically, with no tension."] },
+      { "key": "american-dream", "title": "Interpret the American dream in the novel", "description": "Defends a reading of what the novel says about ambition, wealth and class mobility.",
+        "concept": "american-dream", "definition": "The belief that anyone can rise through effort to prosperity and a life of their choosing.",
+        "facts": ["Gatsby rises from poverty but East Egg old money never accepts him.", "The green light represents what Gatsby reaches for.", "Myrtle and George Wilson are crushed by their pursuit and their poverty.", "A strong answer distinguishes the dream itself from its corruption."],
+        "misconceptions": ["The novel celebrates wealth and parties.", "Gatsby fails only because he chose the wrong woman."] },
+      { "key": "daisy-judgment", "title": "Judge Daisy's choices", "description": "Evaluates whether Daisy is careless and shallow or constrained by her position as a woman of her class.",
+        "concept": "daisy-buchanan", "definition": "Daisy as both the object of Gatsby's idealization and a person with her own limited choices.",
+        "facts": ["Daisy married Tom while Gatsby was away.", "She cannot say she never loved Tom.", "She kills Myrtle and lets Gatsby take the blame.", "She says she hopes her daughter will be a beautiful little fool."],
+        "misconceptions": ["Daisy is simply a villain.", "Daisy is just the passive object of men's desires with no responsibility."] },
+      { "key": "nick-reliability", "title": "Assess Nick as narrator", "description": "Argues how far Nick's judgments can be trusted and how his involvement shapes the story.",
+        "concept": "unreliable-narrator", "definition": "A narrator whose account or judgments the reader has reason to question.",
+        "facts": ["Nick says he is one of the few honest people he knows.", "He arranges Gatsby's reunion with Daisy.", "He condemns Tom and Daisy as careless.", "His admiration for Gatsby grows over the summer."],
+        "misconceptions": ["The narrator's verdicts are the novel's final word.", "A biased narrator makes the story worthless as evidence."] }
+    ],
+    "translations": {
+      "ko": { "title": "위대한 개츠비와 아메리칸 드림",
+        "objectives": { "gatsby-hero": "개츠비가 위대한지 판단하기", "american-dream": "소설 속 아메리칸 드림 해석하기", "daisy-judgment": "데이지의 선택 판단하기", "nick-reliability": "화자로서의 닉 평가하기" } },
+      "es": { "title": "El gran Gatsby y el sueño americano",
+        "objectives": { "gatsby-hero": "Juzgar si Gatsby es grande", "american-dream": "Interpretar el sueño americano en la novela", "daisy-judgment": "Juzgar las decisiones de Daisy", "nick-reliability": "Evaluar a Nick como narrador" } }
+    }
+  },
+  {
+    "title": "Macbeth: Ambition, Fate and Guilt",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Shakespearean tragedy",
+    "passage": [
+      "William Shakespeare's Macbeth (about 1606) opens with three witches and with reports of Macbeth's courage in battle for King Duncan of Scotland. The witches greet Macbeth as Thane of Glamis, Thane of Cawdor and future king, and tell his companion Banquo that his descendants will be kings. Almost at once Macbeth learns he has been made Thane of Cawdor.",
+      "Macbeth thinks of murdering Duncan and is horrified by the thought. His wife, Lady Macbeth, reading his letter, fears he is too full of the milk of human kindness. She calls on spirits to unsex her and fill her with cruelty, and when he hesitates she attacks his manhood. Macbeth kills Duncan as he sleeps under their roof, and Lady Macbeth plants the daggers on the grooms.",
+      "Macbeth becomes king but cannot rest. He has Banquo murdered, though Banquo's son Fleance escapes, and he sees Banquo's ghost at a feast. He returns to the witches, who show apparitions warning him of Macduff but promising that no man born of woman can harm him and that he is safe until Birnam Wood comes to Dunsinane. He has Macduff's wife and children slaughtered.",
+      "Lady Macbeth sleepwalks, trying to wash invisible blood from her hands, and dies, apparently by suicide. Hearing of it, Macbeth reflects that life is a tale told by an idiot, signifying nothing. The prophecies turn out to be equivocations: Malcolm's soldiers carry boughs from Birnam Wood, and Macduff was delivered from his mother's womb untimely. Macduff kills Macbeth, and Malcolm becomes king.",
+      "Critics debate how much the witches control events. Some read them as agents of fate; others note that they never tell Macbeth to kill anyone and that Banquo hears similar promises without acting on them. Readers also argue about how responsible Lady Macbeth is, and whether Macbeth keeps any of the audience's sympathy as his crimes grow."
+    ],
+    "objectives": [
+      { "key": "fate-or-choice", "title": "Decide whether fate or choice drives Macbeth", "description": "Argues how far the witches' prophecies determine Macbeth's actions and how far he chooses them.",
+        "concept": "fate-and-free-will", "definition": "The question of whether events are fixed in advance or result from a person's own decisions.",
+        "facts": ["The witches never tell Macbeth to murder.", "Banquo receives a prophecy too and does not act on it.", "Macbeth considers murder as soon as he hears he is Cawdor.", "The later prophecies are equivocal and mislead him.", "A strong answer explains how a prophecy can be both true and self-fulfilling."],
+        "misconceptions": ["The witches force Macbeth to act.", "If something is prophesied, the person who does it cannot be blamed."] },
+      { "key": "lady-macbeth", "title": "Judge Lady Macbeth's responsibility", "description": "Evaluates how responsible Lady Macbeth is for Duncan's murder and what her collapse shows.",
+        "concept": "lady-macbeth", "definition": "Lady Macbeth's role in urging the murder and her later guilt-ridden breakdown.",
+        "facts": ["She fears Macbeth is too kind to seize the crown.", "She questions his manhood when he hesitates.", "She plants the daggers on the grooms.", "She later sleepwalks trying to wash away blood."],
+        "misconceptions": ["Lady Macbeth is the real murderer and Macbeth is her tool.", "Lady Macbeth feels no guilt."] },
+      { "key": "ambition", "title": "Assess ambition as Macbeth's flaw", "description": "Argues whether ambition alone explains Macbeth or whether fear, insecurity and pride also drive him.",
+        "concept": "ambition", "definition": "The desire for advancement and power, here pursued through murder.",
+        "facts": ["Macbeth speaks of vaulting ambition as his only spur.", "After becoming king he acts from fear of losing the throne.", "Each crime leads to another, from Duncan to Banquo to Macduff's family.", "Ambition in itself is not condemned in every character."],
+        "misconceptions": ["Ambition is always wrong.", "Macbeth is evil from the start of the play."] },
+      { "key": "sympathy", "title": "Judge whether Macbeth keeps our sympathy", "description": "Argues whether Macbeth remains a tragic hero or becomes simply a tyrant by the end.",
+        "concept": "tragic-hero", "definition": "A figure of stature who falls through his own actions and still commands some pity.",
+        "facts": ["Macbeth is horrified by his first murderous thought.", "He orders the killing of Macduff's wife and children.", "His speech on hearing of his wife's death expresses total emptiness.", "He fights to the end once the prophecies fail."],
+        "misconceptions": ["A character must be good to be tragic.", "Macbeth's courage at the end redeems him."] }
+    ],
+    "translations": {
+      "ko": { "title": "맥베스: 야망, 운명, 죄책감",
+        "objectives": { "fate-or-choice": "운명과 선택 중 무엇이 맥베스를 움직이는지 판단하기", "lady-macbeth": "맥베스 부인의 책임 판단하기", "ambition": "맥베스의 결함으로서의 야망 평가하기", "sympathy": "맥베스가 공감을 유지하는지 판단하기" } },
+      "es": { "title": "Macbeth: ambición, destino y culpa",
+        "objectives": { "fate-or-choice": "Decidir si el destino o la elección mueve a Macbeth", "lady-macbeth": "Juzgar la responsabilidad de Lady Macbeth", "ambition": "Evaluar la ambición como defecto de Macbeth", "sympathy": "Juzgar si Macbeth conserva nuestra simpatía" } }
+    }
+  },
+  {
+    "title": "King Lear: Love, Power and Suffering",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Shakespearean tragedy",
+    "passage": [
+      "Shakespeare's King Lear (about 1606) begins with the aging Lear dividing his kingdom among his three daughters according to how much each says she loves him. Goneril and Regan give extravagant speeches. Cordelia, the youngest, says she loves him according to her bond, no more nor less, and that she has nothing to say that would outdo her sisters. Lear disowns her and banishes the Earl of Kent, who defends her.",
+      "Lear means to keep the name and honors of a king while giving away the power. Goneril and Regan soon cut his retinue and shut him out in a storm. On the heath, accompanied by his Fool and the disguised Kent, Lear goes mad, and begins to think about the poor wretches who have no shelter, saying he has taken too little care of this.",
+      "A parallel plot follows the Earl of Gloucester. His illegitimate son Edmund, resenting his status, deceives him into believing his legitimate son Edgar is plotting against him. Edgar flees disguised as a mad beggar. Gloucester is later blinded by Regan's husband Cornwall for helping Lear, and says that as flies to wanton boys are we to the gods; they kill us for their sport.",
+      "Cordelia returns with a French army and is reconciled with her father, who asks her forgiveness. They are defeated and captured. Edmund orders their deaths and repents too late. Cordelia is hanged, and Lear enters carrying her body and dies, perhaps believing she still breathes. Goneril poisons Regan and kills herself.",
+      "For about a century and a half the play was usually staged in Nahum Tate's rewritten version, in which Cordelia lives and marries Edgar, because the original ending seemed unbearable. Critics still argue whether the play shows any justice or meaning in the universe, whether Cordelia's refusal to flatter was integrity or pride, and whether Lear's suffering redeems him or only destroys him."
+    ],
+    "objectives": [
+      { "key": "cordelia-refusal", "title": "Judge Cordelia's refusal", "description": "Argues whether Cordelia's plain answer was admirable honesty, needless stubbornness, or both.",
+        "concept": "honesty-and-flattery", "definition": "The conflict between truthful speech and the flattering words that power rewards.",
+        "facts": ["Lear asks his daughters to state their love publicly for a share of land.", "Goneril and Regan flatter him.", "Cordelia says she loves him according to her bond.", "Kent is banished for defending her.", "A strong answer considers whether she could have been honest more gently."],
+        "misconceptions": ["Cordelia simply does not love her father enough.", "Honesty is always costless and obviously right."] },
+      { "key": "lear-responsibility", "title": "Assess Lear's responsibility for his suffering", "description": "Weighs how far Lear causes his own fate and how far he is wronged.",
+        "concept": "responsibility-and-wrong", "definition": "The balance between a tragic figure's own errors and the wrongs done to him.",
+        "facts": ["Lear wants a king's honors without a king's power.", "He disowns Cordelia and banishes Kent.", "Goneril and Regan strip his retinue and shut him out.", "He says he is a man more sinned against than sinning."],
+        "misconceptions": ["Lear deserves everything that happens to him.", "Lear is entirely an innocent victim."] },
+      { "key": "cosmic-justice", "title": "Decide whether the play shows any justice", "description": "Argues whether the play's world is governed by justice, chance or indifferent gods.",
+        "concept": "cosmic-justice", "definition": "The question of whether the universe rewards good and punishes evil.",
+        "facts": ["Gloucester compares humans to flies killed by boys for sport.", "The villains die, but so do Cordelia and Lear.", "Edmund's attempt to save Cordelia comes too late.", "Tate's version let Cordelia live because the ending seemed too cruel."],
+        "misconceptions": ["The deaths of the villains show the play is just.", "Because the good suffer, the play says morality is pointless."] },
+      { "key": "suffering-insight", "title": "Assess whether suffering brings insight", "description": "Argues whether Lear and Gloucester gain wisdom through suffering and whether it is worth anything given the ending.",
+        "concept": "suffering-and-insight", "definition": "The idea that suffering can teach truths that comfort and power hide.",
+        "facts": ["In the storm Lear thinks of the homeless poor.", "Blinded Gloucester says he stumbled when he saw.", "Lear asks Cordelia's forgiveness.", "Both fathers die soon after their recognition."],
+        "misconceptions": ["Suffering always ennobles people.", "Late insight is worthless because it saves no one."] }
+    ],
+    "translations": {
+      "ko": { "title": "리어 왕: 사랑, 권력, 고통",
+        "objectives": { "cordelia-refusal": "코델리아의 거절 판단하기", "lear-responsibility": "리어의 고통에 대한 그의 책임 평가하기", "cosmic-justice": "극에 정의가 있는지 판단하기", "suffering-insight": "고통이 통찰을 주는지 평가하기" } },
+      "es": { "title": "El rey Lear: amor, poder y sufrimiento",
+        "objectives": { "cordelia-refusal": "Juzgar la negativa de Cordelia", "lear-responsibility": "Evaluar la responsabilidad de Lear en su sufrimiento", "cosmic-justice": "Decidir si la obra muestra alguna justicia", "suffering-insight": "Evaluar si el sufrimiento trae comprensión" } }
+    }
+  },
+  {
+    "title": "Lord of the Flies: Civilization and Savagery",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "English novel",
+    "passage": [
+      "William Golding's Lord of the Flies (1954) tells of a group of British schoolboys stranded on an uninhabited tropical island after their plane is shot down during a war. With no adults, they elect Ralph as chief. He uses a conch shell to call meetings, and whoever holds it may speak. The clever, asthmatic Piggy, whom the others mock, advises him.",
+      "Ralph insists on building shelters and keeping a signal fire burning for rescue. Jack, leader of a former choir, takes charge of hunting. He grows obsessed with killing pigs, paints his face, and lets the signal fire go out at the moment a ship passes. The boys grow afraid of a beast they believe lives on the island.",
+      "Jack breaks away and forms his own tribe, which most boys join for meat, feasting and ritual dancing. The quiet, spiritual Simon has a vision in which a pig's head on a stick, the Lord of the Flies, seems to tell him that the beast is part of the boys themselves. He discovers that the beast on the mountain is a dead parachutist. Running to tell the others, he is mistaken for the beast during a frenzied dance and killed.",
+      "Jack's tribe steals Piggy's glasses, needed to make fire. When Ralph and Piggy go to demand them back, Roger, who has grown increasingly cruel, rolls a boulder that kills Piggy and shatters the conch. The tribe hunts Ralph and sets the island on fire. Running onto the beach, Ralph meets a naval officer who has seen the smoke. The boys weep, and the officer, embarrassed, turns to look at his warship.",
+      "Golding said the book traces the defects of society back to the defects of human nature. Critics debate whether it shows that humans are naturally savage once rules disappear, or whether it reflects the particular boys, schooling and wartime culture Golding portrays. Some point to real cases of stranded children who cooperated. The ending's warship suggests the adult world may be no different."
+    ],
+    "objectives": [
+      { "key": "human-nature", "title": "Judge the novel's view of human nature", "description": "Argues whether the novel shows that people are naturally savage or that these boys were shaped by their culture and situation.",
+        "concept": "human-nature", "definition": "The question of whether people are inherently cooperative or destructive when social controls fall away.",
+        "facts": ["Golding said society's defects come from human nature's defects.", "The boys bring British school habits and wartime attitudes with them.", "Not every boy becomes violent: Ralph, Piggy and Simon resist.", "Critics cite real cases of stranded children who cooperated.", "A strong answer says what evidence would test the claim."],
+        "misconceptions": ["The novel proves that all humans are evil at heart.", "Fiction cannot tell us anything about real human nature."] },
+      { "key": "ralph-jack", "title": "Compare Ralph's and Jack's leadership", "description": "Evaluates why Jack's leadership wins the boys' loyalty and what that says about authority.",
+        "concept": "leadership", "definition": "The ways a group chooses and follows authority, through consent, fear, need or excitement.",
+        "facts": ["Ralph is elected and uses the conch for orderly meetings.", "Ralph prioritizes shelter and the signal fire.", "Jack offers meat, hunting and ritual.", "Jack rules increasingly through fear."],
+        "misconceptions": ["Ralph is a perfect leader.", "The boys follow Jack only because they are bad."] },
+      { "key": "simon-beast", "title": "Interpret the beast and Simon", "description": "Explains what the beast represents and why Simon's discovery and death matter.",
+        "concept": "the-beast", "definition": "The boys' feared monster, which the novel links to the evil within themselves.",
+        "facts": ["The boys fear a beast long before any is found.", "The beast on the mountain is a dead parachutist.", "The pig's head seems to tell Simon the beast is part of them.", "Simon is killed while trying to tell the truth."],
+        "misconceptions": ["The beast is a real monster on the island.", "Simon's death is an accident with no meaning."] },
+      { "key": "ending", "title": "Assess the meaning of the rescue", "description": "Argues whether the naval officer's arrival restores civilization or shows that adults are no better.",
+        "concept": "irony-of-rescue", "definition": "The ironic contrast between the officer's rescue and the war he is fighting.",
+        "facts": ["The officer is drawn by the fire set to hunt Ralph.", "He is engaged in a war himself.", "He expected British boys to put up a better show.", "The boys weep for the end of innocence."],
+        "misconceptions": ["The rescue means everything is now fine.", "Adults in the novel represent true civilization."] }
+    ],
+    "translations": {
+      "ko": { "title": "파리대왕: 문명과 야만",
+        "objectives": { "human-nature": "소설의 인간 본성관 판단하기", "ralph-jack": "랠프와 잭의 지도력 비교하기", "simon-beast": "짐승과 사이먼 해석하기", "ending": "구조의 의미 평가하기" } },
+      "es": { "title": "El señor de las moscas: civilización y salvajismo",
+        "objectives": { "human-nature": "Juzgar la visión de la naturaleza humana en la novela", "ralph-jack": "Comparar el liderazgo de Ralph y de Jack", "simon-beast": "Interpretar la bestia y a Simon", "ending": "Evaluar el significado del rescate" } }
+    }
+  },
+  {
+    "title": "Kafka's The Metamorphosis: Alienation and Family",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "Modernist fiction",
+    "passage": [
+      "Franz Kafka's novella The Metamorphosis (1915) begins as Gregor Samsa, a traveling salesman, wakes to find himself transformed into a monstrous insect-like creature. Kafka never explains the change. Gregor's first worries are practical: he has missed his train and fears losing the job with which he supports his parents and his sister Grete and pays off his father's debt to his employer.",
+      "When the chief clerk arrives to demand an explanation and Gregor emerges, the clerk flees and his father drives him back into his room. Grete at first cares for him, bringing food and clearing furniture so he can crawl. His mother faints at the sight of him. His father, revealed to have saved some money all along, takes a job and wears his uniform even at home; at one point he pelts Gregor with apples, and one lodges in his back and festers.",
+      "The family take in lodgers and hide Gregor. When Grete plays the violin for them, Gregor is drawn out by the music and wonders whether an animal could be so moved by it. The lodgers see him and give notice. Grete declares that the creature must go: if it were really Gregor, he would have left of his own accord. Gregor dies that night, thinking of his family with tenderness.",
+      "The family feel relief. They take a day off, ride a tram into the country, and the parents notice that Grete has grown into a lovely young woman and think of finding her a husband. The story ends with her stretching her young body.",
+      "Readers interpret the transformation in many ways: as an image of alienated labor that reduces a person to his usefulness, of illness or disability and how families treat the dependent, of Kafka's own relationship with a domineering father, or of an absurd universe without explanation. Kafka asked his publisher not to depict the insect on the cover. Critics also disagree about the family: whether they are cruel, or ordinary people overwhelmed by an impossible burden."
+    ],
+    "objectives": [
+      { "key": "meaning-of-transformation", "title": "Interpret the transformation", "description": "Defends a reading of what Gregor's metamorphosis means, or argues that it resists any single meaning.",
+        "concept": "metamorphosis", "definition": "Gregor's unexplained change into a creature, read as symbol, allegory or absurd fact.",
+        "facts": ["Kafka never explains the change.", "Gregor's first concerns are about his job and his family's debts.", "Kafka asked that the insect not be pictured on the cover.", "Readings include alienated labor, illness, family conflict and absurdity.", "A strong answer ties its reading to details and admits what it leaves out."],
+        "misconceptions": ["The story has one correct hidden meaning.", "Because it is unexplained, it means nothing."] },
+      { "key": "family-judgment", "title": "Judge the Samsa family", "description": "Argues whether the family are cruel or ordinary people overwhelmed by an impossible situation.",
+        "concept": "family-obligation", "definition": "What family members owe one another when one becomes dependent rather than a provider.",
+        "facts": ["Gregor supported the whole family and his father's debt.", "His father had secretly kept some savings.", "Grete first cares for him and later says the creature must go.", "The family feel relief and renewal after his death."],
+        "misconceptions": ["The family are monsters with no excuse.", "Love requires unlimited sacrifice with no strain."] },
+      { "key": "work-and-worth", "title": "Assess work and human worth", "description": "Evaluates whether the story shows that Gregor was valued only for his usefulness.",
+        "concept": "alienated-labor", "definition": "Work that treats a person as a means of production rather than as a full human being.",
+        "facts": ["Gregor hated his job but kept it for his family.", "The chief clerk comes at once when he misses a train.", "Once he stops earning, his place in the family changes.", "The family find they can work and support themselves."],
+        "misconceptions": ["Gregor's family never loved him.", "The story is only about the evils of capitalism."] },
+      { "key": "gregor-humanity", "title": "Decide whether Gregor remains human", "description": "Argues whether Gregor keeps or loses his humanity, and who in the story decides that.",
+        "concept": "personhood", "definition": "What makes someone a person to be treated as such, regardless of outward form.",
+        "facts": ["Gregor is moved by Grete's violin playing.", "He thinks of his family with tenderness as he dies.", "Grete argues that if it were Gregor he would have left.", "The family stop calling him by name."],
+        "misconceptions": ["Gregor's mind changes as completely as his body.", "Outward form decides whether someone is a person."] }
+    ],
+    "translations": {
+      "ko": { "title": "카프카의 변신: 소외와 가족",
+        "objectives": { "meaning-of-transformation": "변신의 의미 해석하기", "family-judgment": "잠자 가족 판단하기", "work-and-worth": "노동과 인간의 가치 평가하기", "gregor-humanity": "그레고르가 인간으로 남는지 판단하기" } },
+      "es": { "title": "La metamorfosis de Kafka: alienación y familia",
+        "objectives": { "meaning-of-transformation": "Interpretar la transformación", "family-judgment": "Juzgar a la familia Samsa", "work-and-worth": "Evaluar el trabajo y el valor humano", "gregor-humanity": "Decidir si Gregor sigue siendo humano" } }
+    }
+  },
+  {
+    "title": "Moby-Dick: Ahab's Obsession and the White Whale",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "American novel",
+    "passage": [
+      "Herman Melville's Moby-Dick (1851) is narrated by Ishmael, a restless young man who signs on to the whaling ship Pequod sailing from Nantucket. He befriends Queequeg, a harpooner from a South Sea island, after first fearing him, and their friendship crosses the lines of race and religion that others draw.",
+      "The ship's captain, Ahab, lost a leg to a great white sperm whale called Moby Dick. Once at sea, he reveals that the voyage's true purpose is revenge on that whale, and he wins the crew over with a gold coin nailed to the mast and a ritual of oaths. Ahab declares that he would strike the sun if it insulted him and that the whale is a mask behind which some unknown power hides.",
+      "The first mate Starbuck, a cautious Quaker, objects that seeking vengeance on a dumb brute that acted from blind instinct is madness and blasphemy, and that the owners sent them to hunt whales for oil. He even considers shooting Ahab but cannot bring himself to do it. Ahab refuses chances to help another captain search for his lost son.",
+      "Long chapters interrupt the plot with whaling lore, classification of whales, and Ishmael's reflections, such as a chapter on the whiteness of the whale and why white can terrify as well as signify purity. After a three-day chase, Moby Dick destroys the Pequod. Ahab is dragged down by his own harpoon line. Only Ishmael survives, floating on the coffin Queequeg had carved.",
+      "Readers have seen the whale as God, nature, evil, the unknowable, or a blank on which people project meaning. Ahab has been read as a tragic hero of defiance, a tyrant who leads others to death, and a figure for American ambition. Critics also ask what to make of the ship's diverse crew and of Ishmael, who survives by drifting rather than by willing."
+    ],
+    "objectives": [
+      { "key": "ahab-judgment", "title": "Judge Ahab", "description": "Argues whether Ahab is a tragic hero of defiance, a destructive tyrant, or both.",
+        "concept": "ahab", "definition": "The captain whose quest for vengeance on the whale overrides his duty to his crew and owners.",
+        "facts": ["Ahab lost his leg to Moby Dick.", "He wins over the crew with a gold coin and oaths.", "He would strike the sun if it insulted him.", "He refuses to help search for another captain's lost son.", "His quest destroys the ship and all but one man."],
+        "misconceptions": ["Ahab is simply insane, so nothing he says matters.", "Defiance of fate is always heroic."] },
+      { "key": "whale-meaning", "title": "Interpret the white whale", "description": "Defends a reading of what Moby Dick represents, or argues that the novel shows meaning being projected onto it.",
+        "concept": "symbol", "definition": "Something that stands for more than itself, here a whale that different characters read differently.",
+        "facts": ["Ahab sees the whale as a mask hiding an unknown power.", "Starbuck sees a dumb brute acting from instinct.", "Ishmael's chapter on whiteness explores how white can terrify.", "A strong answer accounts for the different characters' readings."],
+        "misconceptions": ["The whale stands simply for evil.", "Melville intended exactly one symbolic meaning."] },
+      { "key": "starbuck", "title": "Assess Starbuck's failure to stop Ahab", "description": "Evaluates whether Starbuck should have acted against his captain and what his restraint shows.",
+        "concept": "obedience-and-conscience", "definition": "The conflict between duty to a legitimate commander and responsibility to prevent harm.",
+        "facts": ["Starbuck calls revenge on a dumb brute blasphemous.", "He reminds Ahab the voyage is for oil.", "He considers shooting Ahab but does not.", "The crew follow Ahab despite the danger."],
+        "misconceptions": ["Starbuck is simply a coward.", "Obeying the captain clears the crew of responsibility."] },
+      { "key": "ishmael-survival", "title": "Interpret Ishmael's survival", "description": "Argues why Ishmael alone survives and what his way of seeing offers against Ahab's.",
+        "concept": "narrator-perspective", "definition": "Ishmael's open, questioning and digressive way of seeing, contrasted with Ahab's single purpose.",
+        "facts": ["Ishmael overcomes his fear of Queequeg and becomes his friend.", "He fills the book with reflection and whaling lore.", "He survives on Queequeg's coffin.", "Some read his survival as chance; others as meaningful."],
+        "misconceptions": ["The digressions are irrelevant padding.", "Ishmael survives because he is the hero."] }
+    ],
+    "translations": {
+      "ko": { "title": "모비 딕: 에이해브의 집착과 흰 고래",
+        "objectives": { "ahab-judgment": "에이해브 판단하기", "whale-meaning": "흰 고래 해석하기", "starbuck": "스타벅이 에이해브를 막지 못한 것 평가하기", "ishmael-survival": "이슈메일의 생존 해석하기" } },
+      "es": { "title": "Moby Dick: la obsesión de Ahab y la ballena blanca",
+        "objectives": { "ahab-judgment": "Juzgar a Ahab", "whale-meaning": "Interpretar la ballena blanca", "starbuck": "Evaluar el fracaso de Starbuck en detener a Ahab", "ishmael-survival": "Interpretar la supervivencia de Ishmael" } }
+    }
+  },
+  {
+    "title": "To Kill a Mockingbird: Justice and Moral Growth",
+    "category": "literature",
+    "subject": "Literature",
+    "topic": "American novel",
+    "passage": [
+      "Harper Lee's To Kill a Mockingbird (1960) is set in the small Alabama town of Maycomb during the Great Depression. It is narrated by Jean Louise Finch, called Scout, looking back on her childhood. She lives with her brother Jem and her widowed father, Atticus, a lawyer. The children are fascinated by their reclusive neighbor Arthur Radley, called Boo, about whom the town tells frightening stories.",
+      "Atticus is appointed to defend Tom Robinson, a Black man falsely accused of raping a white woman, Mayella Ewell. Atticus tells Scout that you never really understand a person until you consider things from his point of view. He tells the children it is a sin to kill a mockingbird, because mockingbirds do nothing but make music.",
+      "At the trial Atticus shows that Mayella was beaten by someone who led with his left hand, as her father Bob Ewell does, while Tom's left arm was crippled in an accident. Tom testifies that he helped Mayella with chores and that he felt sorry for her. The all-white jury convicts him anyway. Tom is later shot while trying to escape from prison.",
+      "Bob Ewell, humiliated, attacks Scout and Jem on Halloween night. Boo Radley rescues them, and Ewell is found dead with a knife in him. Sheriff Tate insists that Ewell fell on his own knife, to spare the shy Boo public attention. Atticus at first resists, then agrees. Scout says that exposing Boo would be like shooting a mockingbird.",
+      "The novel was long taught as a straightforward story of moral courage. More recent critics argue that it centers a white hero, gives Tom Robinson little inner life, and treats racism as the vice of poor whites like the Ewells while sparing the respectable town. Others defend it as a child's limited view that the reader is meant to see beyond. The publication of Go Set a Watchman in 2015, an earlier draft in which an older Atticus holds segregationist views, renewed the debate about his character."
+    ],
+    "objectives": [
+      { "key": "atticus", "title": "Judge Atticus as a moral model", "description": "Argues whether Atticus is a model of moral courage or a limited figure who works within an unjust system.",
+        "concept": "moral-courage", "definition": "Doing what is right despite social pressure and personal risk.",
+        "facts": ["Atticus defends Tom knowing he will likely lose.", "He teaches empathy by considering others' point of view.","Critics note he does not challenge segregation itself.", "Go Set a Watchman renewed debate about his character."],
+        "misconceptions": ["Atticus is a perfect hero with no limits.", "Atticus is no better than the town because he works within its law."] },
+      { "key": "trial-justice", "title": "Explain what the trial shows about justice", "description": "Explains why Tom is convicted despite the evidence and what this says about law and prejudice.",
+        "concept": "legal-justice", "definition": "Whether the legal process yields fair outcomes when the community judging is prejudiced.",
+        "facts": ["Mayella's injuries point to a left-handed attacker.", "Tom's left arm is crippled.", "The all-white jury convicts him.", "Tom is shot while trying to escape."],
+        "misconceptions": ["The trial was lost because Atticus argued badly.", "A fair procedure guarantees a fair verdict."] },
+      { "key": "boo-cover-up", "title": "Judge the cover-up for Boo Radley", "description": "Evaluates whether Sheriff Tate and Atticus are right to hide Boo's role in Ewell's death.",
+        "concept": "law-and-mercy", "definition": "The tension between applying the law equally and sparing an innocent person harm.",
+        "facts": ["Boo saves the children from Bob Ewell.", "Tate says Ewell fell on his own knife.", "Atticus first wants the truth told, then agrees.", "Scout compares exposing Boo to shooting a mockingbird.", "Tom Robinson received no such mercy from the law."],
+        "misconceptions": ["Breaking the law is never right.", "Atticus's agreement shows he is a hypocrite and nothing more."] },
+      { "key": "whose-story", "title": "Assess whose story the novel tells", "description": "Argues whether the novel's focus on a white family limits its account of racism or is a deliberate choice of perspective.",
+        "concept": "point-of-view", "definition": "The perspective from which a story is told and what it includes or leaves out.",
+        "facts": ["The narrator is a white child looking back.", "Tom Robinson's inner life is barely shown.", "The worst racism is placed in the Ewells.", "Defenders say the child's limited view is part of the point."],
+        "misconceptions": ["Criticism of the novel means it has no value.", "A novel's sympathy for victims settles its view of race."] }
+    ],
+    "translations": {
+      "ko": { "title": "앵무새 죽이기: 정의와 도덕적 성장",
+        "objectives": { "atticus": "도덕적 본보기로서의 애티커스 판단하기", "trial-justice": "재판이 정의에 대해 보여 주는 것 설명하기", "boo-cover-up": "부 래들리를 위한 은폐 판단하기", "whose-story": "소설이 누구의 이야기를 하는지 평가하기" } },
+      "es": { "title": "Matar a un ruiseñor: justicia y crecimiento moral",
+        "objectives": { "atticus": "Juzgar a Atticus como modelo moral", "trial-justice": "Explicar lo que el juicio muestra sobre la justicia", "boo-cover-up": "Juzgar el encubrimiento de Boo Radley", "whose-story": "Evaluar de quién es la historia que cuenta la novela" } }
+    }
+  }
+]
