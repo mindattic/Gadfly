@@ -1068,7 +1068,7 @@ function indicatorState(g, lost) {
     return "on";
 }
 
-/ ----------------------------------------------------------------------------------------------------------- quality
+// ---------------------------------------------------------------------------------------------------------- quality
 
 /**
  * This session's tracking quality so far (GAD-T305), 0..100, from the parts weighted in GAZE.qWeights. Head direction only (no
