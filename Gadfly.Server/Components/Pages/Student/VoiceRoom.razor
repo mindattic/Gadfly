@@ -172,7 +172,8 @@
                         <p class="hint voice-recovered" data-voice-recovered aria-live="polite"></p>
                         @* Not live: the draft grows with every phrase the student says, and reading it back would talk over them
                            (WCAG 4.1.3). It is here to read on demand, and goes into the transcript once sent. *@
-                        <p class="voice-draft" data-voice-draft aria-live="off"></p>
+                        @* A fixed-height scroller (GAD-T722) so a long answer never pushes the buttons down; focusable so a keyboard can scroll it. *@
+                        <p class="voice-draft" data-voice-draft aria-live="off" tabindex="0" aria-label="@T["examRoom.voice.heard"]"></p>
                         <p class="voice-live" data-voice-live aria-live="off"></p>
                         <div class="voice-cue" data-voice-cue data-active="false" aria-hidden="true"><i></i></div>
                     </div>
