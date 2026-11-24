@@ -127,7 +127,7 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, doubl
     public double PlainSpeechSpeed { get; init; } = 0.9;
 
     /// <summary>
-    /// Per-examiner overrides (GAD-T504), <c>Gadfly:Voice:Examiners:&lt;id&gt;</c> with <c>ModelUrl</c>, <c>VoiceId</c> and <c>VoiceIds:&lt;language&gt;</c>, keyed by the examiner catalog's ids
+    /// Per-examiner overrides (GAD-T504), <c>Gadfly:Voice:Examiners:&lt;id&gt;</c> with <c>ModelUrl</c>, <c>VoiceId</c>, <c>VoiceIds:&lt;language&gt;</c> and <c>Speed</c>, keyed by the examiner catalog's ids
     /// (<see cref="Gadfly.Server.Student.ExaminerCatalog"/>). Unset parts keep the catalog's defaults.
     /// </summary>
     public IReadOnlyDictionary<string, ExaminerSettings> Examiners { get; init; } = new Dictionary<string, ExaminerSettings>();
@@ -252,7 +252,9 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, doubl
             EslCutOffBackoffFactor = Number(section["Esl:CutOffBackoffFactor"], 1, 4, 2),
             PlainSpeechSpeed = double.TryParse(section["PlainSpeechSpeed"], System.Globalization.CultureInfo.InvariantCulture, out var sp) && double.IsFinite(sp) ? Math.Clamp(sp, 0.7, 1.2) : 0.9,
             Examiners = section.GetSection("Examiners").GetChildren().ToDictionary(e => e.Key.Trim(), e => new ExaminerSettings(
-                Blank(e["ModelUrl"]), Blank(e["VoiceId"]), PerLanguage(e.GetSection("VoiceIds"))), StringComparer.Ordinal),
+                Blank(e["ModelUrl"]), Blank(e["VoiceId"]), PerLanguage(e.GetSection("VoiceIds")),
+                double.TryParse(e["Speed"], System.Globalization.CultureInfo.InvariantCulture, out var es) && double.IsFinite(es) ? Math.Clamp(es, 0.7, 1.2) : null),
+                StringComparer.Ordinal),
         };
     }
 
@@ -274,7 +276,8 @@ public sealed record VoiceSettings(VoiceMode Mode, string? AvatarModelUrl, doubl
 /// <summary>
 /// One examiner's configured overrides (GAD-T504), from <c>Gadfly:Voice:Examiners:&lt;id&gt;</c>: where the model is
 /// hosted (e.g. blob storage) and the examiner's own ElevenLabs voice, for every language
-/// (<c>VoiceId</c>) or one (<c>VoiceIds:&lt;language&gt;</c>). Voice ids are settings, not secrets.
+/// (<c>VoiceId</c>) or one (<c>VoiceIds:&lt;language&gt;</c>), and the examiner's own speaking speed (<c>Speed</c>, ElevenLabs
+/// <c>voice_settings.speed</c>, 0.7 to 1.2; GAD-T726). Voice ids are settings, not secrets.
 /// </summary>
 public sealed record ExaminerSettings(string? ModelUrl, string? VoiceId,
-    IReadOnlyDictionary<string, string> VoiceIds);
+    IReadOnlyDictionary<string, string> VoiceIds, double? Speed = null);

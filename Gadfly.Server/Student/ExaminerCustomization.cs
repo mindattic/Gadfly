@@ -46,6 +46,11 @@ public sealed record ExaminerCustomization(string? Voice = null, string? SkinTon
     public static readonly IReadOnlyList<string> MaleVoices =
         [ExaminerCatalog.MaleDefaultVoiceId, "onwK4e9ZLuTAKqWW03F9", "JBFqnCBsd6RMkjVDRZzb", "iP95p4xoKVk53GoZ742B", "cjVigY5qzO86Huf0OWal", "TX3LPaxmHKxFdv7VOQHJ"];
 
+    /// <summary>ElevenLabs premade voices for Socrates (GAD-T726): Bill, his default, then the older and deeper of the male voices
+    /// (George, Daniel, Brian).</summary>
+    public static readonly IReadOnlyList<string> SocratesVoices =
+        [ExaminerCatalog.SocratesDefaultVoiceId, "JBFqnCBsd6RMkjVDRZzb", "onwK4e9ZLuTAKqWW03F9", ExaminerCatalog.MaleDefaultVoiceId];
+
     /// <summary>
     /// Per examiner, a language's own voice list where it differs from the examiner's list for every language (none yet: the
     /// premade voices all speak Korean and Spanish with the multilingual models). Keyed by examiner id, then normalized language tag.
@@ -63,6 +68,7 @@ public sealed record ExaminerCustomization(string? Voice = null, string? SkinTon
         {
             ExaminerCatalog.Female => FemaleVoices,
             ExaminerCatalog.Male => MaleVoices,
+            ExaminerCatalog.Socrates => SocratesVoices,
             _ => [],
         };
         if (!LanguageVoices.TryGetValue(examinerId, out var byLanguage)) return all;

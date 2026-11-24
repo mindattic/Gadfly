@@ -9,14 +9,15 @@ namespace Gadfly.Server.Voice;
 /// The examiner's voice when a session needs something the avatar library's one process-wide voice can't give (GAD-T530, GAD-T555):
 /// another ElevenLabs model for the exam language (<see cref="VoiceSettings.TtsModels"/>) or for the exam's or organization's voice tier
 /// (<see cref="VoiceTier"/>, GAD-T616), or the slightly slower, plainer pace for a
-/// student answering in a second language (<see cref="VoiceSettings.PlainSpeechSpeed"/>). The library binds its model and voice
+/// student answering in a second language (<see cref="VoiceSettings.PlainSpeechSpeed"/>), or an examiner's own pace
+/// (<see cref="SessionSpeech.ExaminerSpeed"/>, GAD-T726). The library binds its model and voice
 /// settings once per process and only lets a call choose the voice id (filed as MAA-T20), so such a session gets its own
 /// <see cref="ElevenLabsTtsClient"/> built from the library's options with only the model and speed changed: same key, voice, output
 /// format and HTTP client (in mock mode <see cref="MockTextToSpeech"/> is that client's handler, so nothing leaves the process), and the
 /// library's own phrase cache, whose key already includes model and speed, so fixed lines are kept per voice, model, speed and text.
 /// <para>
 /// <see cref="For"/> returns null for every session the library's voice already fits, which includes every
-/// <see cref="SessionSpeech.IsDefault"/> one with no voice tier set (the owner's rule: an English exam by an English speaker sounds exactly
+/// <see cref="SessionSpeech.IsDefault"/> one with no voice tier or examiner speed set (the owner's rule: an English exam by an English speaker sounds exactly
 /// as before), any session whose tier is the library's own model, and a
 /// native Korean speaker on the default model (it speaks Korean). Only those sessions that need it are routed here
 /// (<see cref="VoiceHubFilter"/>, <see cref="QuestionVoiceStreams"/>).
@@ -60,7 +61,7 @@ public sealed class ExaminerTts(IServiceProvider services, VoiceSettings setting
     {
         if (speech is null || string.IsNullOrWhiteSpace(baseModel)) return null;
         var tier = VoiceTier.Find(speech.VoiceTier);
-        if (tier is null && speech.IsDefault) return null;
+        if (tier is null && speech.IsDefault && speech.Speed(settings) is null) return null;
         var tierModel = tier is not null && VoiceTier.Speaks(tier.ModelId, speech.Language) ? tier.ModelId : null;
         var model = tierModel ?? settings.TtsModelFor(speech.Language) ?? baseModel;
         var speed = speech.Speed(settings) ?? baseSpeed;

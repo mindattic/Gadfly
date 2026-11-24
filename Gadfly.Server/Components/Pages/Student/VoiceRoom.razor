@@ -279,7 +279,7 @@
     /// </summary>
     [CascadingParameter] public ExamRoomText? Room { get; set; }
 
-    private ExamRoomText T => Room ?? new ExamRoomText(Ui, examiner is { Id: ExaminerCatalog.Male });
+    private ExamRoomText T => Room ?? new ExamRoomText(Ui, examiner is { IsMale: true });
 
     /// <summary>
     /// The question said another way (GAD-T602): she says it like a question (captions, lip sync), the words already said are kept and
@@ -456,13 +456,15 @@
             // The attempt's languages (GAD-T528, GAD-T554, GAD-T555): the recognizer's language, the end-of-answer silences, the
             // examiner's voice and lines. An English exam by an English speaker gets exactly what it always did.
             speech = await SpeechAsync();
-            Grants.SetSpeech(user, SessionId, speech);
             var cues = Settings.EndCuesFor(timeMultiplier, speech);
             var (policyLanguage, vocabulary) = await VocabularyAsync();
             var language = speech.RecognizerLanguage(policyLanguage);
             Grants.SetVocabulary(user, SessionId, language, vocabulary);
             // Which examiner (GAD-T504): fixed by the exam or organization, else the one the student chose on the get-ready page.
             (examiner, examinerCustomization) = await ExaminerAsync(startupBound.Token);
+            // The examiner's own pace (GAD-T726): Socrates speaks a little slower; a second-language speaker's plainer pace still wins.
+            speech = speech with { ExaminerSpeed = examiner.Speed };
+            Grants.SetSpeech(user, SessionId, speech);
             // The exam's voice, else the examiner's own, else the organization's default, else the platform's (GAD-T475, GAD-T504):
             // chosen here, enforced by VoiceHubFilter.
             var voice = await ExaminerVoiceAsync();

@@ -50,7 +50,7 @@
         var examiner = options.FirstOrDefault(o => o.Available && string.Equals(o.Id, ExaminerId, StringComparison.OrdinalIgnoreCase))
             ?? ExaminerCatalog.Pick(options, null);
         modelUrl = examiner.ModelUrl;
-        male = examiner.Id == ExaminerCatalog.Male;
+        male = examiner.IsMale;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

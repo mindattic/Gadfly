@@ -53,10 +53,19 @@ public sealed record SessionSpeech(string ExamLanguage, string? PrimaryLanguage,
         : policyLanguage;
 
     /// <summary>
-    /// The examiner's voice speed (GAD-T555): <see cref="VoiceSettings.PlainSpeechSpeed"/> (slightly slower than normal) for a non-native
-    /// speaker, else null (the voice's own speed, as before).
+    /// The attempt's examiner's own speaking speed (GAD-T726, <see cref="Gadfly.Server.Student.ExaminerOption.Speed"/>), or null for the
+    /// voice's own. Set by the exam room once the examiner is resolved; not part of <see cref="IsDefault"/>, which is about languages.
     /// </summary>
-    public double? Speed(VoiceSettings settings) => NonNative && Math.Abs(settings.PlainSpeechSpeed - 1) > 0.001 ? settings.PlainSpeechSpeed : null;
+    public double? ExaminerSpeed { get; init; }
+
+    /// <summary>
+    /// The examiner's voice speed (GAD-T555): <see cref="VoiceSettings.PlainSpeechSpeed"/> (slightly slower than normal) for a non-native
+    /// speaker, else the examiner's own (<see cref="ExaminerSpeed"/>, GAD-T726), else null (the voice's own speed, as before).
+    /// </summary>
+    public double? Speed(VoiceSettings settings) =>
+        NonNative && Math.Abs(settings.PlainSpeechSpeed - 1) > 0.001 ? settings.PlainSpeechSpeed
+        : ExaminerSpeed is { } own && Math.Abs(own - 1) > 0.001 ? Math.Clamp(own, 0.7, 1.2)
+        : null;
 
     /// <summary>
     /// The attempt's languages, tenant-scoped; <see cref="Default"/> when the session can't be found. Outside the default case the

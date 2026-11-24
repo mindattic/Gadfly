@@ -18,6 +18,15 @@ public sealed record ExaminerOption(string Id, string NameKey, string? ModelUrl,
     /// <summary>The examiner's own voice for one exam language (normalized tag), where it differs from <see cref="VoiceId"/>.</summary>
     public IReadOnlyDictionary<string, string> VoiceIds { get; init; } = new Dictionary<string, string>();
 
+    /// <summary>A man (GAD-T726): male pronouns in the room's lines, and TalkingHead's male body for the lip-sync and posture.</summary>
+    public bool IsMale { get; init; }
+
+    /// <summary>
+    /// The examiner's own speaking speed (GAD-T726, ElevenLabs <c>voice_settings.speed</c>, 0.7 to 1.2), or null for the voice's own.
+    /// A session's own speed (<see cref="Voice.SessionSpeech.Speed"/>, a second-language speaker's plainer pace) wins over it.
+    /// </summary>
+    public double? Speed { get; init; }
+
     /// <summary>The examiner's own voice for <paramref name="language"/>, or null for the platform's. Only well-formed ids.</summary>
     public string? VoiceIdFor(string? language)
     {
@@ -66,6 +75,12 @@ public static class ExaminerCatalog
     /// </summary>
     public const string SocratesDefaultVoiceId = "pqHfZKP75CvOlQylNhV4";
 
+    /// <summary>
+    /// Socrates' default speaking speed: a little slower than Bill's own pace, so he sounds unhurried. Change it with
+    /// <c>Gadfly:Voice:Examiners:examiner-socrates:Speed</c> (0.7 to 1.2; 1 is the voice's own pace). Used in live mode only.
+    /// </summary>
+    public const double SocratesDefaultSpeed = 0.9;
+
     /// <param name="voice">The site's voice settings: the female examiner is the configured one; <see cref="VoiceSettings.Examiners"/> overrides.</param>
     /// <param name="webRoot">wwwroot on disk, to see whether an examiner's files are installed (null: only configured URLs count).</param>
     public static IReadOnlyList<ExaminerOption> For(VoiceSettings voice, string? webRoot)
@@ -82,16 +97,21 @@ public static class ExaminerCatalog
             {
                 VoiceId = f?.VoiceId,
                 VoiceIds = f?.VoiceIds ?? new Dictionary<string, string>(),
+                Speed = f?.Speed,
             },
             new(Male, "getReady.examiner.choiceMale", maleModel, maleModel is not null)
             {
                 VoiceId = m?.VoiceId ?? MaleDefaultVoiceId,
                 VoiceIds = m?.VoiceIds ?? new Dictionary<string, string>(),
+                IsMale = true,
+                Speed = m?.Speed,
             },
             new(Socrates, "getReady.examiner.choiceSocrates", socratesModel, socratesModel is not null)
             {
                 VoiceId = s?.VoiceId ?? SocratesDefaultVoiceId,
                 VoiceIds = s?.VoiceIds ?? new Dictionary<string, string>(),
+                IsMale = true,
+                Speed = s?.Speed ?? SocratesDefaultSpeed,
             },
         ];
     }

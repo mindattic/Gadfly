@@ -692,7 +692,7 @@ else
     private ExaminerCustomization customization = ExaminerCustomization.None;
 
     /// <summary>A sentence about the examiner, its pronouns following the one chosen (GAD-T606: "her", or "him" for the male examiner).</summary>
-    private string Ex(string key) => new ExamRoomText(T, examiner is { Id: ExaminerCatalog.Male })[key];
+    private string Ex(string key) => new ExamRoomText(T, examiner is { IsMale: true })[key];
 
     /// <summary>Shows the examiner the student chose last time on this device, if still offered.</summary>
     private async Task LoadExaminerChoiceAsync()
@@ -1035,7 +1035,7 @@ else
         {
             previewModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/examiner-preview.js");
             var spoke = await previewModule.InvokeAsync<bool>("say", previewCaption, T["getReady.examiner.line"].Value, UiCatalog.CultureFor(T.Language).Name,
-                new { variant = VoiceVariant, male = examiner.Id == ExaminerCatalog.Male });
+                new { variant = VoiceVariant, male = examiner.IsMale });
             previewSilent = !spoke;
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
