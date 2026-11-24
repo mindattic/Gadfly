@@ -27,7 +27,6 @@
    (no separate click), and while the microphone or camera is missing or lost the exam is paused here until it is restored.
    Typed answers (GAD-T260): for a student granted the typed-answer accommodation (TypedAnswers) the examiner and the camera run
    the same way, but no microphone is opened and the spoken-answer controls are hidden; the exam room shows the answer box. *@
-<HeadContent><link rel="stylesheet" href="voice.css" /></HeadContent>
 
 <section class="voice-room" aria-label="@T["examRoom.voice.regionLabel"]" data-state="@state.ToString().ToLowerInvariant()">
     @if (state == VoiceState.Off || state == VoiceState.Failed)
@@ -128,21 +127,20 @@
                 }
             </section>
             <div class="voice-body">
-                @* The camera-on indicator and the on-demand preview (GAD-T510). *@
-                <div class="voice-camera" data-self-state="@selfState">
-                    <span class="voice-camera-dot" aria-hidden="true"></span>
-                    <span class="voice-camera-label">@(SelfNote ?? T[selfState == "on" ? "examRoom.camera.on" : "examRoom.camera.starting"])</span>
-                    @if (selfState == "on")
-                    {
-                        <button type="button" class="link" aria-pressed="@(previewOpen ? "true" : "false")" @onclick="TogglePreview">@T[previewOpen ? "examRoom.camera.hide" : "examRoom.camera.show"]</button>
-                    }
+                @* The status strip (GAD-T723): the camera-on indicator and the on-demand preview (GAD-T510), what the examiner is doing,
+                   and the response delay, each on a line of its own fixed height. *@
+                <div class="voice-statusbar">
+                    <div class="voice-camera" data-self-state="@selfState">
+                        <span class="voice-camera-dot" aria-hidden="true"></span>
+                        <span class="voice-camera-label">@(SelfNote ?? T[selfState == "on" ? "examRoom.camera.on" : "examRoom.camera.starting"])</span>
+                        @if (selfState == "on")
+                        {
+                            <button type="button" class="ghost voice-camera-toggle" aria-pressed="@(previewOpen ? "true" : "false")" @onclick="TogglePreview">@T[previewOpen ? "examRoom.camera.hide" : "examRoom.camera.show"]</button>
+                        }
+                    </div>
+                    <p class="voice-status" role="status" aria-live="polite" data-voice-status>@T["examRoom.voice.connectingStatus"]</p>
+                    <p class="voice-delay" data-voice-delay data-state="idle" aria-live="off"></p>
                 </div>
-                <p class="voice-status" role="status" aria-live="polite" data-voice-status>@T["examRoom.voice.connectingStatus"]</p>
-                <p class="voice-delay" data-voice-delay data-state="idle" aria-live="off"></p>
-                @if (!TypedAnswers)
-                {
-                    <div class="voice-level" data-voice-level aria-hidden="true"><i></i></div>
-                }
                 @if (avatarNote is not null)
                 {
                     <p class="hint" role="note">@avatarNote</p>
@@ -165,8 +163,10 @@
                 }
                 else
                 {
-                    <div class="voice-answer">
-                        <p class="verify-label">@T["examRoom.voice.heard"]</p>
+                    @* The answer panel (GAD-T723): the words as heard, the live line, and the microphone level with the end-of-answer
+                       cue under them, together and always the same height. *@
+                    <section class="voice-answer" aria-labelledby="voice-heard-title">
+                        <h2 id="voice-heard-title" class="verify-label">@T["examRoom.voice.heard"]</h2>
                         @* A reload or a crash mid-answer keeps what was said as a draft (GAD-T306): filled in by voice-room.js,
                            never on its own a reason to submit anything. *@
                         <p class="hint voice-recovered" data-voice-recovered aria-live="polite"></p>
@@ -175,8 +175,11 @@
                         @* A fixed-height scroller (GAD-T722) so a long answer never pushes the buttons down; focusable so a keyboard can scroll it. *@
                         <p class="voice-draft" data-voice-draft aria-live="off" tabindex="0" aria-label="@T["examRoom.voice.heard"]"></p>
                         <p class="voice-live" data-voice-live aria-live="off"></p>
-                        <div class="voice-cue" data-voice-cue data-active="false" aria-hidden="true"><i></i></div>
-                    </div>
+                        <div class="voice-meter" aria-hidden="true">
+                            <div class="voice-level" data-voice-level><i></i></div>
+                            <div class="voice-cue" data-voice-cue data-active="false"><i></i></div>
+                        </div>
+                    </section>
                     <div class="actions voice-actions">
                         <button type="button" data-voice-action="done" data-voice-needs-draft disabled>@T["examRoom.voice.done"]</button>
                         <button type="button" class="secondary" data-voice-action="clear" data-voice-needs-draft disabled>@T["examRoom.voice.clear"]</button>
@@ -191,15 +194,17 @@
                     </div>
                     <p id="voice-ptt-hint" class="hint voice-ptt-hint">@T["examRoom.voice.pttHint"]</p>
                     @* The student's own pause before a silence sends the answer (GAD-T599, WCAG 2.2.1); kept on this device by voice-room.js. *@
-                    <label class="voice-pause">
-                        @T["examRoom.pause.label"]
-                        <select data-voice-pause>
-                            <option value="1">@T["examRoom.pause.standard"]</option>
-                            <option value="1.75">@T["examRoom.pause.longer"]</option>
-                            <option value="2.5">@T["examRoom.pause.longest"]</option>
-                            <option value="done">@T["examRoom.pause.done"]</option>
-                        </select>
-                    </label>
+                    <div class="voice-settings">
+                        <label class="voice-pause">
+                            @T["examRoom.pause.label"]
+                            <select data-voice-pause>
+                                <option value="1">@T["examRoom.pause.standard"]</option>
+                                <option value="1.75">@T["examRoom.pause.longer"]</option>
+                                <option value="2.5">@T["examRoom.pause.longest"]</option>
+                                <option value="done">@T["examRoom.pause.done"]</option>
+                            </select>
+                        </label>
+                    </div>
                 }
             </div>
         }

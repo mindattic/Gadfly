@@ -32,23 +32,26 @@
             <div class="exam-bar">
                 <PracticeGaze Practice="practice" MaleExaminer="maleExaminer" />
             </div>
-            <div class="exam-status">
-                <span class="timer" role="timer" aria-live="off" title="@UiLanguage["practice.clockTitle"]">@Format(practice.Clock.Remaining(Clock.GetUtcNow()))</span>
-                @if (practice.Clock.GivenBack(Clock.GetUtcNow()) is { } back && back >= TimeSpan.FromSeconds(1))
-                {
-                    <span class="hint practice-credit">@UiLanguage["practice.givenBack", Format(back)]</span>
-                }
-                <span class="progress-line">
-                    @UiLanguage["practice.stepOf", practice.StepIndex + 1, PracticeInterview.Steps.Count]
-                    <progress max="@PracticeInterview.Steps.Count" value="@(practice.StepIndex + 1)" aria-hidden="true"></progress>
+            @* The practice toolbar (GAD-T723): where the practice is, then what can be done about it. *@
+            <div class="exam-status practice-toolbar">
+                <span class="practice-where">
+                    <span class="timer" role="timer" aria-live="off" title="@UiLanguage["practice.clockTitle"]">@Format(practice.Clock.Remaining(Clock.GetUtcNow()))</span>
+                    @if (practice.Clock.GivenBack(Clock.GetUtcNow()) is { } back && back >= TimeSpan.FromSeconds(1))
+                    {
+                        <span class="hint practice-credit">@UiLanguage["practice.givenBack", Format(back)]</span>
+                    }
+                    <span class="progress-line">
+                        @UiLanguage["practice.stepOf", practice.StepIndex + 1, PracticeInterview.Steps.Count]
+                        <progress max="@PracticeInterview.Steps.Count" value="@(practice.StepIndex + 1)" aria-hidden="true"></progress>
+                    </span>
                 </span>
-                <span class="row-actions">
+                <span class="row-actions practice-actions">
                     @if (!practice.IsFinished)
                     {
-                        <button type="button" class="link" @onclick="Skip" disabled="@pondering">@UiLanguage["practice.skip"]</button>
+                        <button type="button" class="ghost" @onclick="Skip" disabled="@pondering">@UiLanguage["practice.skip"]</button>
                     }
-                    <button type="button" class="link" @onclick="Restart">@UiLanguage["practice.restart"]</button>
-                    <a href="my-exams">@UiLanguage["practice.leave"]</a>
+                    <button type="button" class="ghost" @onclick="Restart">@UiLanguage["practice.restart"]</button>
+                    <a class="button ghost" href="my-exams">@UiLanguage["practice.leave"]</a>
                 </span>
             </div>
         }
