@@ -158,6 +158,7 @@ h1 span, .brand span { font-weight: 400; color: var(--muted); }
     .nav-menu-body { position: absolute; z-index: 20; top: 100%; left: 0; right: 0; flex-direction: column; align-items: stretch; padding: var(--space-3) var(--gutter) var(--space-4); background: var(--panel); border-bottom: var(--border); box-shadow: var(--shadow-2); }
     .nav-menu-body .nav { flex-direction: column; }
     .nav-menu-body .who { margin-left: 0; }
+    .nav-menu-body .user-menu-body { position: static; margin-top: var(--space-2); box-shadow: none; }
     .nav-menu-body .nav-more[open] > div { position: static; }
 }
 /* The brand: a small temple front in Aegean blue, then the name in serif. */
@@ -174,8 +175,20 @@ h1 span, .brand span { font-weight: 400; color: var(--muted); }
 .nav-more summary { padding: var(--space-1) var(--space-3); border-radius: var(--radius-sm); cursor: pointer; color: var(--muted); list-style: none; }
 .nav-more summary::-webkit-details-marker { display: none; }
 .nav-more[open] > div { position: absolute; z-index: 10; top: 100%; left: 0; display: grid; gap: var(--space-1); min-width: 12rem; padding: var(--space-2); background: var(--panel); border: var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-2); }
-.who { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; color: var(--muted); font-size: var(--text-sm); }
+.who { margin-left: auto; color: var(--muted); font-size: var(--text-sm); }
 .who form { margin: 0; }
+/* The account menu (GAD-T720): the user's name opens a panel with organization, language, Help and Sign out. */
+.user-menu { position: relative; }
+.user-menu-toggle { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--target-min); padding: var(--space-1) var(--space-3); border: var(--border); border-radius: var(--radius-sm); cursor: pointer; list-style: none; color: var(--ink); font-weight: 600; }
+.user-menu-toggle::-webkit-details-marker { display: none; }
+.user-menu-toggle:hover, .user-menu-toggle:focus-visible { background: var(--accent-tint); }
+.user-menu-caret { width: .5rem; height: .5rem; margin-top: -.2rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+.user-menu[open] .user-menu-caret { margin-top: .2rem; transform: rotate(-135deg); }
+.user-menu-body { position: absolute; z-index: 20; top: calc(100% + var(--space-1)); right: 0; display: grid; gap: var(--space-2); min-width: 14rem; padding: var(--space-3); background: var(--panel); border: var(--border); border-radius: var(--radius-sm); box-shadow: var(--shadow-2); }
+.user-menu-body .org { color: var(--muted); padding-bottom: var(--space-2); border-bottom: var(--border); }
+.user-menu-body .nav-help { padding: var(--space-1) 0; }
+.user-menu-body .language-switch select { width: 100%; }
+.user-menu-body button.link { padding: var(--space-1) 0; text-align: left; }
 main { max-width: var(--content-max); margin: 0 auto; padding: var(--space-6) var(--gutter) var(--space-7); }
 main.bare { display: grid; place-items: center; min-height: 100vh; padding: var(--space-5) var(--gutter); }
 /* The sign-in pages sit in the painted Aegean (--scene) behind a marble card, so no text is ever on the painting. */

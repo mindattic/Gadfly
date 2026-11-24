@@ -59,38 +59,45 @@
                                 </NavLink>
                             }
                         </nav>
-                        <div class="who">
-                            @if (Tenant.Memberships.Count > 1)
-                            {
-                                <form method="post" action="/org/switch" class="org-switch" data-enhance="false">
+                        @* The account controls sit under the user's name (GAD-T720): organization and role, the language
+                           switch, Help and Sign out. *@
+                        <details class="who user-menu">
+                            <summary class="user-menu-toggle"><span class="user">@context.User.Identity?.Name</span><span class="user-menu-caret" aria-hidden="true"></span></summary>
+                            <div class="user-menu-body">
+                                @if (Tenant.Memberships.Count > 1)
+                                {
+                                    <form method="post" action="/org/switch" class="org-switch" data-enhance="false">
+                                        <AntiforgeryToken />
+                                        <select name="organizationId" onchange="this.form.submit()" aria-label="Organization">
+                                            @foreach (var m in orgNames)
+                                            {
+                                                <option value="@m.Id" selected="@(m.Id == Tenant.OrganizationId)">@m.Name (@m.Role)</option>
+                                            }
+                                        </select>
+                                    </form>
+                                }
+                                else if (orgNames.Count == 1)
+                                {
+                                    <span class="org">@orgNames[0].Name · @orgNames[0].Role</span>
+                                }
+                                @if (Tenant.Role == OrgRoles.Student && !InExamRoom)
+                                {
+                                    @* Students choose their UI language (GAD-T543); in the exam room the attempt's own language rules, so it isn't offered there. *@
+                                    <LanguageSwitch />
+                                }
+                                <a class="nav-help" href="help">@T["layout.help"]</a>
+                                <form method="post" action="/_ma-auth/logout" data-enhance="false">
                                     <AntiforgeryToken />
-                                    <select name="organizationId" onchange="this.form.submit()" aria-label="Organization">
-                                        @foreach (var m in orgNames)
-                                        {
-                                            <option value="@m.Id" selected="@(m.Id == Tenant.OrganizationId)">@m.Name (@m.Role)</option>
-                                        }
-                                    </select>
+                                    <button type="submit" class="link">@T["layout.signOut"]</button>
                                 </form>
-                            }
-                            else if (orgNames.Count == 1)
-                            {
-                                <span class="org">@orgNames[0].Name · @orgNames[0].Role</span>
-                            }
-                            <span class="user">@context.User.Identity?.Name</span>
-                            <form method="post" action="/_ma-auth/logout" data-enhance="false">
-                                <AntiforgeryToken />
-                                <button type="submit" class="link">@T["layout.signOut"]</button>
-                            </form>
-                        </div>
+                            </div>
+                        </details>
                     </Authorized>
+                    <NotAuthorized>
+                        @* Help is open to everyone, signed in or not (GAD-T292). *@
+                        <a class="nav-help" href="help">@T["layout.help"]</a>
+                    </NotAuthorized>
                 </AuthorizeView>
-                @* Help is open to everyone, signed in or not (GAD-T292). *@
-                @if (Tenant.Role == OrgRoles.Student && !InExamRoom)
-                {
-                    @* Students choose their UI language (GAD-T543); in the exam room the attempt's own language rules, so it isn't offered there. *@
-                    <LanguageSwitch />
-                }
-                <a class="nav-help" href="help">@T["layout.help"]</a>
             </div>
         </details>
     </header>
