@@ -1109,6 +1109,11 @@ else
             error = ex.In(T.For(examLanguage));   // in the exam's language (GAD-T628)
             starting = false;
         }
+        catch
+        {
+            starting = false;   // any other failure must not leave Begin dead until a reload
+            throw;
+        }
     }
 
     private async Task StopMediaAsync()
