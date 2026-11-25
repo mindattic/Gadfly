@@ -46,8 +46,8 @@ public static class ExamAuditEndpoints
             })
             .RequireAuthorization(GadflyPolicies.Instructor);
 
-        app.MapGet("/admin/audit/export.csv", (HttpContext http, CancellationToken ct) => ExportAuditAsync(http, json: false, ct)).RequireAuthorization();
-        app.MapGet("/admin/audit/export.json", (HttpContext http, CancellationToken ct) => ExportAuditAsync(http, json: true, ct)).RequireAuthorization();
+        app.MapGet("/admin/audit/export.csv", (HttpContext http, CancellationToken ct) => ExportAuditAsync(http, json: false, ct)).RequireAuthorization(GadflyPolicies.OrgAdmin);
+        app.MapGet("/admin/audit/export.json", (HttpContext http, CancellationToken ct) => ExportAuditAsync(http, json: true, ct)).RequireAuthorization(GadflyPolicies.OrgAdmin);
     }
 
     private static async Task ExportAuditAsync(HttpContext http, bool json, CancellationToken ct)

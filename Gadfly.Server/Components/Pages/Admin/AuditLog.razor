@@ -1,5 +1,5 @@
 ﻿@page "/admin/audit"
-@attribute [Authorize]
+@attribute [Authorize(Policy = GadflyPolicies.OrgAdmin)]
 @using Gadfly.Server.Admin
 @using Gadfly.Server.Data
 @inject IServiceScopeFactory Scopes
