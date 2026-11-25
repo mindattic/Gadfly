@@ -40,6 +40,8 @@ builder.Services.AddScoped<CircuitReconnectSignal>();
 builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler, ReconnectCircuitHandler>());
 
 builder.Services.AddSignalR(o => o.MaximumReceiveMessageSize = 256 * 1024);
+// On-demand hosting (GAD-T775): the site stops itself after Gadfly:IdleShutdown:Minutes with no user and no pending work.
+builder.AddIdleShutdown();
 // Voice exam room (GAD-T53): speech recognition relay and the examiner avatar, behind Gadfly:Voice:Mode (mock | live | off).
 builder.AddVoiceExam();
 // Recognizer latency and unsure-word rate, in memory, for the status page (GAD-T361).
@@ -111,6 +113,7 @@ if (args.Contains(Gadfly.Server.Demo.ClassroomSeeder.SeedArgument) || app.Config
 
 // X-Forwarded-For only from the App Service front end, never from the internet, so per-address rate limits hold (GAD-T476)
 app.UseForwardedHeaders(Gadfly.Server.Platform.ForwardedHeadersSetup.Create(app.Configuration));
+app.UseIdleActivityTracking();   // user requests (not health probes or App Service pings) keep the site up (GAD-T775)
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/error", createScopeForErrors: true);

@@ -218,6 +218,32 @@ sweeps wait until a request loads it again. To keep them running around the cloc
 `ASP-MyApps-99fe`, is Standard or higher, which the staging slot already requires, so it has the setting):
 `az webapp config set -g MyApps -n mindattic-gadfly --always-on true`.
 
+**Idle shutdown (GAD-T775).** Gadfly is hosted on demand: the site stays stopped until `/kickstart gadfly` starts it, and
+it stops itself once nobody is using it and nothing is left to do. A watchdog in the web app (`Gadfly.Server/Platform/IdleShutdown.cs`)
+checks every minute; after `Gadfly__IdleShutdown__Minutes` (default `20`; `0` turns it off; always off in Development)
+with no user activity it asks the database for pending work, and only when there is none does it stop its own site
+through ARM with its system-assigned managed identity, logging the decision and its reason (a held shutdown logs what
+held it). Pending work is: a job queued (due within the hour) or running, which covers grading and notification emails;
+an ended attempt not yet graded, or a grade waiting on the AI panel; an LTI grade passback not yet sent and not out of
+tries. Grades waiting on a person do not hold it. So a student can finish an exam, walk away, and still have it scored,
+posted to their inbox and emailed. User activity is any HTTP request and any browser call over a hub (Blazor clicks,
+voice); `/healthz*`, `/robots.txt` and App Service's own pings (health check, Always On, warm-up) do not count, Kudu
+answers on the scm host, and the watchdog's own calls go to ARM. The serverless SQL database then pauses on its own
+auto-pause delay. The site finds itself from App Service's environment (`WEBSITE_SITE_NAME`, `WEBSITE_RESOURCE_GROUP`,
+`WEBSITE_OWNER_NAME` for the subscription, `WEBSITE_SLOT_NAME` for a slot), so nothing is hard-coded; off App Service
+the watchdog stays off. Stopping needs **Website Contributor on the site itself, and nothing wider**, for the site's own
+identity; `tools/provision-azure.ps1` grants it (and the slot's on the slot). A recreated site has a new identity, so
+grant it again after one:
+
+```powershell
+$principal = az webapp identity show -g MyApps -n mindattic-gadfly --query principalId -o tsv
+$siteId = az webapp show -g MyApps -n mindattic-gadfly --query id -o tsv
+az role assignment create --assignee-object-id $principal --assignee-principal-type ServicePrincipal --role "Website Contributor" --scope $siteId
+```
+
+Without the role the stop is refused and logged as an error (the site then just keeps running); to turn the watchdog
+off, set `Gadfly__IdleShutdown__Minutes=0`.
+
 **`Gadfly:Jobs:RunInWeb`** (default `true`). While it is true the web app still runs the job worker and the sweepers
 too; that is safe, since a job is claimed by an atomic row update and several processes may share the queue (the
 schedulers only queue a sweep when none is waiting, and a grade record is keyed by its session, so two grading sweepers

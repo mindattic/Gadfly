@@ -9,7 +9,8 @@ Uses the existing MindAttic resource group, App Service plan and Azure SQL serve
   - Storage account container  gadfly-dp-keys  and Key Vault key  gadfly-dp-protect  for the Data Protection key ring
   - Key Vault references for the secrets the app reads (auth pepper, reset key, bootstrap token, LLM and ElevenLabs keys); you set the values
   - App settings: ConnectionStrings__Gadfly (Active Directory Default), DataProtection:*, Key Vault references
-  - Role assignments: the app's identity on the database (via T-SQL printed below), the blob container and the key
+  - Role assignments: the app's identity on the database (via T-SQL printed below), the blob container and the key,
+    and Website Contributor on its own site only, so the idle watchdog can stop it (GAD-T775)
   - Staging slot  mindattic-gadfly/staging (GAD-T651): cloned from production, WebSockets on, Always On off, its own system identity
     with the same blob and Key Vault roles, and its own serverless database Gadfly-staging. ConnectionStrings__Gadfly,
     DataProtection__BlobUri (keys-staging.xml on staging) and Gadfly__AiMode are slot settings on both slots, so a swap
@@ -110,6 +111,17 @@ Invoke-Az @('role','assignment','create','--assignee-object-id',$slotPrincipal,'
             '--role','Key Vault Crypto User','--scope',$vaultId)
 Invoke-Az @('role','assignment','create','--assignee-object-id',$slotPrincipal,'--assignee-principal-type','ServicePrincipal',
             '--role','Key Vault Secrets User','--scope',$vaultId)
+
+Write-Host "== Idle shutdown (GAD-T775): each identity may stop its own site, and nothing else" -ForegroundColor Green
+# On-demand hosting: /kickstart gadfly starts the stopped site, and the site stops itself through ARM once it has been idle for
+# Gadfly__IdleShutdown__Minutes with no pending work (docs/DEPLOY.md "Idle shutdown"). Website Contributor scoped to the site
+# (or the slot) alone, keyed off that site's own system identity, so a recreated site (a new identity) is granted afresh on a re-run.
+$siteId = Invoke-Az @('webapp','show','-g',$ResourceGroup,'-n',$App,'--query','id','-o','tsv')
+Invoke-Az @('role','assignment','create','--assignee-object-id',$principal,'--assignee-principal-type','ServicePrincipal',
+            '--role','Website Contributor','--scope',$siteId)
+$slotId = Invoke-Az @('webapp','show','-g',$ResourceGroup,'-n',$App,'--slot',$StagingSlot,'--query','id','-o','tsv')
+Invoke-Az @('role','assignment','create','--assignee-object-id',$slotPrincipal,'--assignee-principal-type','ServicePrincipal',
+            '--role','Website Contributor','--scope',$slotId)
 
 if ($CustomDomain) {
   Write-Host "== Custom domain $CustomDomain (HTTPS-only is on above; free App Service managed certificate, SNI)" -ForegroundColor Green
