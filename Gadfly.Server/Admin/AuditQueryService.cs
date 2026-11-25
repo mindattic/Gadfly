@@ -44,7 +44,7 @@ public sealed record AuditTarget(Guid? OrganizationId)
 public enum AuditRedaction { None, RetentionPeriod, StudentErased }
 
 public sealed record AuditRow(long Id, DateTimeOffset At, Guid? ActorUserId, string ActorName, string? ActorRole, string Action, string EntityType,
-    string? EntityId, Guid? SessionId, string? Reason, bool HasDetail, AuditRedaction Redaction)
+    string? EntityId, Guid? SessionId, string? Reason, bool HasDetail, AuditRedaction Redaction, bool ActorArchived = false)
 {
     public bool IsRedacted => Redaction != AuditRedaction.None;
 }
@@ -321,13 +321,18 @@ public sealed class AuditQueryService(GadflyDbContext db, TenantSnapshot caller,
         var actorIds = rows.Where(r => r.ActorUserId is not null).Select(r => r.ActorUserId!.Value).Distinct().ToList();
         var names = actorIds.Count == 0 ? [] : await db.AuthUsers.AsNoTracking().Where(u => actorIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.UserName, ct);
+        // Staff are never erased, only archived (their membership made inactive); their audit rows keep full detail and show as archived (GAD-T765).
+        var archived = actorIds.Count == 0 || target.OrganizationId is not { } archOrg ? []
+            : (await db.OrganizationMembers.AsNoTracking().Where(m => m.OrganizationId == archOrg && actorIds.Contains(m.UserId) && !m.IsActive)
+                .Select(m => m.UserId).ToListAsync(ct)).ToHashSet();
         var sessionIds = rows.Where(r => r.SessionId is not null).Select(r => r.SessionId!.Value).Distinct().ToList();
         var sessions = sessionIds.Count == 0 || target.OrganizationId is not { } org ? []
             : await db.ExamSessions.AsNoTracking().Where(s => s.OrganizationId == org && sessionIds.Contains(s.Id))
                 .ToDictionaryAsync(s => s.Id, s => s.RedactedAt, ct);
         return rows.Select(r => new AuditRow(r.Id, r.At, r.ActorUserId,
             r.ActorUserId is { } a ? names.GetValueOrDefault(a, "(removed account)") : "System", r.ActorRole, r.Action, r.EntityType, r.EntityId,
-            r.SessionId, r.Reason, r.HasJson, target.IsPlatform ? AuditRedaction.None : RedactionOf(r.Action, r.SessionId, r.HasJson, r.Reason, sessions))).ToList();
+            r.SessionId, r.Reason, r.HasJson, target.IsPlatform ? AuditRedaction.None : RedactionOf(r.Action, r.SessionId, r.HasJson, r.Reason, sessions),
+            r.ActorUserId is { } av && archived.Contains(av))).ToList();
     }
 
     /// <summary>

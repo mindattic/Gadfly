@@ -137,6 +137,9 @@ public static class GadflyEndpoints
             if (tenant.UserId == userId) return Results.BadRequest("You cannot erase your own account.");
             // Erasing deactivates the membership: an owner is only erased by an owner, never the last one (GAD-T76).
             var target = await db.OrganizationMembers.AsNoTracking().FirstOrDefaultAsync(m => m.OrganizationId == org && m.UserId == userId, ct);
+            // Staff are never erased, only archived (membership made inactive) so the audit rows they authored keep their detail (GAD-T765).
+            if (target is not null && target.Role != OrgRoles.Student)
+                return Results.BadRequest("Only student members can be erased; staff are archived (removed) instead.");
             if (target?.Role == OrgRoles.Owner && (tenant.Role != OrgRoles.Owner
                 || await db.OrganizationMembers.CountAsync(m => m.OrganizationId == org && m.Role == OrgRoles.Owner && m.IsActive, ct) <= 1))
                 return Results.Forbid();
