@@ -392,6 +392,7 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
 
     private static int TakeRate(ConcurrentDictionary<Guid, Queue<DateTimeOffset>> buckets, Guid sessionId, DateTimeOffset now, int want, int max)
     {
+        if (buckets.Count > 2000) Prune(buckets, now);
         var q = buckets.GetOrAdd(sessionId, _ => new Queue<DateTimeOffset>());
         lock (q)
         {
@@ -399,7 +400,6 @@ public sealed class WebcamIntegrityRecorder(GadflyDbContext db, TimeProvider clo
             var room = Math.Max(0, max - q.Count);
             var take = Math.Min(room, want);
             for (var i = 0; i < take; i++) q.Enqueue(now);
-            if (buckets.Count > 2000) Prune(buckets, now);
             return take;
         }
     }
