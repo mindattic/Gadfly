@@ -123,7 +123,7 @@ if ($Promote) {
 
 # --- 0. what are we deploying -------------------------------------------------------------------------------
 Say "Resolving $Ref in $repo"
-$sha = (& git -C $repo rev-parse --verify "$Ref^{commit}").Trim()
+$sha = ([string](& git -C $repo rev-parse --verify "$Ref^{commit}")).Trim()
 if ($LASTEXITCODE -ne 0 -or -not $sha) { Fail "cannot resolve '$Ref'" }
 & git -C $repo fetch origin main --quiet
 & git -C $repo merge-base --is-ancestor $sha origin/main
