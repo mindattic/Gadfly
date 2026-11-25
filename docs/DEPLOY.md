@@ -11,7 +11,7 @@ anywhere:
 | Piece | Name | Notes |
 |---|---|---|
 | App Service | `mindattic-gadfly` (group `MyApps`) | .NET 10, WebSockets on (Blazor Server), Always On off (since 2026-11-25, GAD-T768: unloads after 20 min idle), HTTPS only |
-| Database | `Gadfly` on `sql-mindattic-f65744` (group `rg-mindattic-data`) | Serverless, auto-pause after 60 min |
+| Database | `Gadfly` on `sql-mindattic-f65744` (group `rg-mindattic-data`) | Serverless, auto-pause after 20 min (`provision-azure.ps1` creates it so and sets it on an existing database) |
 | Data Protection keys | blob container `gadfly-dp-keys`, Key Vault key `gadfly-dp-protect` | Signs cookies, launch links and webhook secrets |
 | Secrets | Key Vault `kv-tutor-f65744` | Auth pepper, reset key, bootstrap token, LLM and ElevenLabs keys |
 | Grading worker | continuous WebJob `GadflyWorker` in `mindattic-gadfly` | `Gadfly.Worker`: the job queue, AI grading and the sweepers, in their own process (see **The worker**) |

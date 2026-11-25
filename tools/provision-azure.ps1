@@ -72,10 +72,14 @@ elseif ($slotTiers -notcontains $tier) { throw "Plan $Plan is tier '$tier', whic
 else { Write-Host "   Plan $Plan is ${tier}: deployment slots are supported." }
 
 Write-Host "== Azure SQL database" -ForegroundColor Green
+# Auto-pause after 20 idle minutes (Azure's serverless minimum is 15), matching the site's idle shutdown (GAD-T775).
+$dbAutoPauseMinutes = '20'
 $db = Get-AzValue @('sql','db','show','-g',$DataResourceGroup,'-s',$SqlServer,'-n',$Database,'--query','name','-o','tsv')
 if (-not $db) {
   Invoke-Az @('sql','db','create','-g',$DataResourceGroup,'-s',$SqlServer,'-n',$Database,'--edition','GeneralPurpose','--compute-model','Serverless',
-              '--family','Gen5','--capacity','1','--auto-pause-delay','60','--backup-storage-redundancy','Local')
+              '--family','Gen5','--capacity','1','--auto-pause-delay',$dbAutoPauseMinutes,'--backup-storage-redundancy','Local')
+} else {
+  Invoke-Az @('sql','db','update','-g',$DataResourceGroup,'-s',$SqlServer,'-n',$Database,'--auto-pause-delay',$dbAutoPauseMinutes)
 }
 
 $stagingDb = Get-AzValue @('sql','db','show','-g',$DataResourceGroup,'-s',$SqlServer,'-n',$StagingDatabase,'--query','name','-o','tsv')
