@@ -28,8 +28,11 @@ public static class CheckoutEndpoints
                 request.EnableBuffering();
                 using var reader = new StreamReader(request.Body, leaveOpen: true);
                 var payload = await reader.ReadToEndAsync(ct);
-                var completed = checkout.VerifyAndParse(payload, request.Headers["Stripe-Signature"]);
-                if (completed is null) return Results.BadRequest();
+                var signature = request.Headers["Stripe-Signature"].ToString();
+                if (!checkout.IsSignatureValid(payload, signature)) return Results.BadRequest();
+                // A genuine event that grants nothing (another type, an unpaid session, an unknown plan) is acknowledged so Stripe stops retrying it.
+                var completed = checkout.VerifyAndParse(payload, signature);
+                if (completed is null) return Results.Ok();
 
                 // Applied once per Stripe event (GAD-T482); a redelivery is acknowledged (200) so Stripe stops sending it.
                 var outcome = await CheckoutWebhook.ApplyAsync(db, completed, clock.GetUtcNow(), ct);

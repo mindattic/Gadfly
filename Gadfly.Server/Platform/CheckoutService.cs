@@ -64,15 +64,11 @@ public sealed class CheckoutService(IHttpClientFactory httpClientFactory, Paymen
         }
     }
 
-    /// <summary>
-    /// Verifies a Stripe webhook's signature (the <c>Stripe-Signature</c> header: <c>t=&lt;unix seconds&gt;,v1=&lt;hex hmac&gt;</c>,
-    /// over <c>"{t}.{payload}"</c> with the webhook secret) and, for <c>checkout.session.completed</c>, returns what to apply.
-    /// Rejects a timestamp more than 5 minutes old (replay protection) and any signature mismatch.
-    /// </summary>
-    public CheckoutCompleted? VerifyAndParse(string payload, string? signatureHeader)
+    /// <summary>True when the webhook is configured and the header's timestamp is fresh and its signature matches the payload.</summary>
+    public bool IsSignatureValid(string payload, string? signatureHeader)
     {
-        if (!settings.Available || string.IsNullOrWhiteSpace(settings.WebhookSecret)) return null;
-        if (string.IsNullOrWhiteSpace(signatureHeader)) return null;
+        if (!settings.Available || string.IsNullOrWhiteSpace(settings.WebhookSecret)) return false;
+        if (string.IsNullOrWhiteSpace(signatureHeader)) return false;
 
         string? timestamp = null;
         var signatures = new List<string>();
@@ -83,17 +79,28 @@ public sealed class CheckoutService(IHttpClientFactory httpClientFactory, Paymen
             if (kv[0] == "t") timestamp = kv[1];
             else if (kv[0] == "v1") signatures.Add(kv[1]);
         }
-        if (timestamp is null || signatures.Count == 0) return null;
-        if (!long.TryParse(timestamp, out var t) || Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - t) > 300) return null;
+        if (timestamp is null || signatures.Count == 0) return false;
+        if (!long.TryParse(timestamp, out var t) || Math.Abs(DateTimeOffset.UtcNow.ToUnixTimeSeconds() - t) > 300) return false;
 
         var expected = Convert.ToHexStringLower(HMACSHA256.HashData(Encoding.UTF8.GetBytes(settings.WebhookSecret), Encoding.UTF8.GetBytes($"{timestamp}.{payload}")));
-        if (!signatures.Any(s => CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(s), Encoding.UTF8.GetBytes(expected)))) return null;
+        if (!signatures.Any(s => CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(s), Encoding.UTF8.GetBytes(expected)))) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// Verifies a Stripe webhook's signature (the <c>Stripe-Signature</c> header: <c>t=&lt;unix seconds&gt;,v1=&lt;hex hmac&gt;</c>,
+    /// over <c>"{t}.{payload}"</c> with the webhook secret) and, for <c>checkout.session.completed</c> or <c>checkout.session.async_payment_succeeded</c> (a delayed payment that arrived), returns what to apply.
+    /// Rejects a timestamp more than 5 minutes old (replay protection) and any signature mismatch.
+    /// </summary>
+    public CheckoutCompleted? VerifyAndParse(string payload, string? signatureHeader)
+    {
+        if (!IsSignatureValid(payload, signatureHeader)) return null;
 
         try
         {
             using var doc = JsonDocument.Parse(payload);
             var root = doc.RootElement;
-            if (root.GetProperty("type").GetString() != "checkout.session.completed") return null;
+            if (root.GetProperty("type").GetString() is not ("checkout.session.completed" or "checkout.session.async_payment_succeeded")) return null;
             // Every Stripe event carries its id; without one a redelivery couldn't be told apart, so it isn't applied (GAD-T482).
             var eventId = root.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String ? id.GetString() : null;
             if (string.IsNullOrWhiteSpace(eventId) || eventId.Length > Data.StripeEventModel.MaxEventIdLength) return null;
