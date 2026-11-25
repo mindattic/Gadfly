@@ -37,6 +37,8 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
         var q = db.ExamSessions.AsNoTracking().Where(s => s.OrganizationId == organizationId);
         if (filter.ExamId is { } examId) q = q.Where(s => s.ExamId == examId);
         if (filter.NeedsInstructorReviewOnly) q = q.Where(s => s.NeedsInstructorReview);   // GAD-T603
+        if (filter.NeedsGradeOnly) q = q.Where(s => s.State == SessionState.Ended && !db.GradeDecisions.Any(g => g.SessionId == s.Id && g.OrganizationId == organizationId));
+        if (filter.NeedsHumanReviewOnly) q = q.Where(s => db.Judgments.Any(j => j.OrganizationId == organizationId && j.NeedsHumanReview && db.SessionTurns.Any(t => t.Id == j.TurnId && t.SessionId == s.Id)));
         var sessions = await q.OrderByDescending(s => s.EndedAt ?? s.StartedAt ?? s.CreatedAt).Take(take)
             .Select(s => new { s.Id, s.ExamId, s.StudentUserId, s.Attempt, s.State, s.EndedAt, s.Language, s.NeedsInstructorReview, s.ReviewReason }).ToListAsync(ct);
         if (sessions.Count == 0) return [];
@@ -82,8 +84,7 @@ public sealed class ReviewService(GadflyDbContext db, Guid organizationId, TimeP
                 // GAD-T425: the per-objective levels are what the list reports, never the running estimate.
                 AiLevels = !blind.Contains(s.Id) && reports.TryGetValue(s.Id, out var r3) ? ReportedLevels.FromReportJson(r3.ReportJson) : [],
             })
-            .Where(r => !filter.NeedsGradeOnly || r.NeedsGrade)
-            .Where(r => !filter.NeedsHumanReviewOnly || r.JudgesDisagreed > 0)
+            .Where(r => !filter.NeedsHumanReviewOnly || r.JudgesDisagreed > 0)   // a blind session's flags stay hidden
             .ToList();
         return rows;
     }
