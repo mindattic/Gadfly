@@ -14,8 +14,10 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = Join-Path $PSScriptRoot '..\Gadfly.Server\wwwroot' | Resolve-Path
-$out = Join-Path $root 'lib\voice'
+$dest = Join-Path $root 'lib\voice'
+$out = Join-Path $root 'lib\voice.new'
 $nm = Join-Path $Avatar 'web\node_modules'
+foreach ($p in $nm, (Join-Path $Avatar 'web\dist'), (Join-Path $Speech 'web\dist')) { if (-not (Test-Path $p)) { throw "Not found: $p" } }
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 
 function Copy-To($from, $to) {
@@ -45,4 +47,7 @@ Get-ChildItem (Join-Path $Speech 'web\dist') -Filter *.js -File | ForEach-Object
 # The avatar's licence note (small); the GLB itself is copied at build time.
 New-Item -ItemType Directory -Force (Join-Path $root 'assets\avatars') | Out-Null
 Copy-Item (Join-Path $Avatar 'web\assets\avatars\LICENSE.md') (Join-Path $root 'assets\avatars\LICENSE.md') -Force
+if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
+Move-Item $out $dest
+$out = $dest
 '{0} MB written to {1}' -f [math]::Round((Get-ChildItem $out -Recurse -File | Measure-Object Length -Sum).Sum / 1MB, 2), $out
