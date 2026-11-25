@@ -472,7 +472,7 @@ function speakWithBrowser(p, text) {
         const finish = (ok) => {
             clearTimeout(guard);
             clearTimeout(mouthTimer);
-            if (!p.fallbackActive) return resolve(ok);
+            if (p.browserUtterance !== u || !p.fallbackActive) return resolve(ok);
             p.fallbackActive = false;
             light(p, p.spans.length - 1);
             setMouth(p, 0);

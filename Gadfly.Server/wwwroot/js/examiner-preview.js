@@ -85,7 +85,13 @@ export async function say(caption, text, langTag, options) {
             while (k + 1 < offsets.length && offsets[k + 1] <= e.charIndex) k++;
             light(k);
         };
-        const finish = (ok) => { clearTimeout(guard); light(spans.length - 1); if (current === u) current = null; resolve(ok); };
+        const finish = (ok) => {
+            clearTimeout(guard);
+            if (current !== u) return resolve(true);
+            light(spans.length - 1);
+            current = null;
+            resolve(ok);
+        };
         u.onend = () => finish(true);
         u.onerror = () => finish(false);
         const guard = setTimeout(() => { try { synth.cancel(); } catch { } finish(true); }, 20000);
