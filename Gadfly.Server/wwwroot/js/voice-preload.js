@@ -23,7 +23,8 @@ function script(src) {
         const s = document.createElement("script");
         s.src = src;
         s.dataset.voiceSrc = src;   // voice-room.js's loadScript skips a script already added this way
-        s.onload = s.onerror = () => resolve();
+        s.onload = () => { s.dataset.voiceLoaded = "1"; resolve(); };
+        s.onerror = () => { s.remove(); resolve(); };   // a failed element is dropped so the exam room adds its own and retries
         document.head.appendChild(s);
     });
 }

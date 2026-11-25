@@ -24,12 +24,17 @@ function loadScript(src) {
     return new Promise((resolve, reject) => {
         if (window.signalR) return resolve();
         const existing = document.querySelector(`script[data-voice-src="${src}"]`);
-        if (existing) { existing.addEventListener("load", () => resolve()); existing.addEventListener("error", reject); if (window.signalR) resolve(); return; }
+        if (existing) {
+            if (existing.dataset.voiceLoaded) return resolve();
+            existing.addEventListener("load", () => resolve());
+            existing.addEventListener("error", reject);
+            return;
+        }
         const s = document.createElement("script");
         s.src = src;
         s.dataset.voiceSrc = src;
-        s.onload = () => resolve();
-        s.onerror = reject;
+        s.onload = () => { s.dataset.voiceLoaded = "1"; resolve(); };
+        s.onerror = (e) => { s.remove(); reject(e); };
         document.head.appendChild(s);
     });
 }

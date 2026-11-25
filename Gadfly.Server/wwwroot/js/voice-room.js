@@ -69,12 +69,18 @@ function hasWebGl() {
 
 function loadScript(src) {
     return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[data-voice-src="${src}"]`)) return resolve();
+        const existing = document.querySelector(`script[data-voice-src="${src}"]`);
+        if (existing) {
+            if (existing.dataset.voiceLoaded) return resolve();
+            existing.addEventListener("load", () => resolve());
+            existing.addEventListener("error", () => reject(new Error("Could not load " + src)));
+            return;
+        }
         const s = document.createElement("script");
         s.src = src;
         s.dataset.voiceSrc = src;
-        s.onload = () => resolve();
-        s.onerror = () => reject(new Error("Could not load " + src));
+        s.onload = () => { s.dataset.voiceLoaded = "1"; resolve(); };
+        s.onerror = () => { s.remove(); reject(new Error("Could not load " + src)); };
         document.head.appendChild(s);
     });
 }
