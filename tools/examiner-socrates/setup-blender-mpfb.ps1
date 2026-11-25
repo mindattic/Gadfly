@@ -66,7 +66,8 @@ addon_utils.extensions_refresh(ensure_wheels=False)
 addon_utils.enable("bl_ext.user_default.mpfb", default_set=True, persistent=True)
 bpy.ops.wm.save_userpref()
 '@
-    & $blenderExe -b --python $enableScript
+    & $blenderExe -b --python-exit-code 1 --python $enableScript
+    if ($LASTEXITCODE -ne 0) { throw "Blender failed enabling MPFB (exit $LASTEXITCODE)" }
 }
 
 # 5. The CC0 asset packs MPFB needs, straight from MakeHuman Community's file server (each zip has a "packs/" folder
@@ -97,7 +98,8 @@ settings["subdiv_levels"] = 0
 basemesh = HumanService.deserialize_from_dict(info, settings)
 print("SMOKE TEST OK:", basemesh.name, len(basemesh.data.vertices), "vertices")
 '@
-& $blenderExe -b --python $smokeScript
+& $blenderExe -b --python-exit-code 1 --python $smokeScript
+if ($LASTEXITCODE -ne 0) { throw "MPFB smoke test failed (exit $LASTEXITCODE)" }
 
 Remove-Item -Recurse -Force $downloads
 Write-Host "Blender: $blenderExe"
