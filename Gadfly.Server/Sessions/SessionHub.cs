@@ -310,9 +310,9 @@ public sealed class HubIntegrityRecorder(Data.GadflyDbContext db, TimeProvider c
     {
         // Webcam events (GAD-T57) get their own allow-list, rate limit and severity rules, whichever channel carried them.
         var webcamStored = 0;
-        if (events.Any(e => e.Source == Integrity.WebcamIntegrityRecorder.Source))
+        if (events.Any(e => e is not null && e.Source == Integrity.WebcamIntegrityRecorder.Source))
             webcamStored = (await new Integrity.WebcamIntegrityRecorder(db, clock, Microsoft.Extensions.Logging.Abstractions.NullLogger<Integrity.WebcamIntegrityRecorder>.Instance)
-                .RecordAsync(org, student, sessionId, events.Where(e => e.Source == Integrity.WebcamIntegrityRecorder.Source).ToList(), ct)).Stored;
+                .RecordAsync(org, student, sessionId, events.Where(e => e is not null && e.Source == Integrity.WebcamIntegrityRecorder.Source).ToList(), ct)).Stored;
         var session = db.ExamSessions.FirstOrDefault(s => s.Id == sessionId && s.OrganizationId == org && s.StudentUserId == student);
         if (session is null || session.State != Data.SessionState.Running) return webcamStored;
         var existing = db.IntegrityEvents.Count(e => e.SessionId == sessionId);
