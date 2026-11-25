@@ -153,15 +153,15 @@ public static class ExaminerCatalog
         return new(option, customization?.Validate(option.Id) ?? ExaminerCustomization.None);
     }
 
-    /// <summary>The exam's AvatarId and its organization's DefaultAvatarId for one assignment, tenant-scoped (both null when unknown).</summary>
+    /// <summary>The exam's AvatarId and its organization's DefaultAvatarId for one of the student's own assignments, tenant-scoped (both null when unknown).</summary>
     public static async Task<(string? Exam, string? Organization)> AvatarIdsForAssignmentAsync(
-        IServiceScopeFactory scopes, Guid organizationId, Guid assignmentId, CancellationToken ct = default)
+        IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, Guid assignmentId, CancellationToken ct = default)
     {
         await using var scope = scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(organizationId));
         var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
         var exam = await (from a in db.ExamAssignments.AsNoTracking()
                           join e in db.Exams.AsNoTracking() on a.ExamId equals e.Id
-                          where a.Id == assignmentId && a.OrganizationId == organizationId && e.OrganizationId == organizationId
+                          where a.Id == assignmentId && a.OrganizationId == organizationId && a.StudentUserId == studentUserId && e.OrganizationId == organizationId
                           select e.AvatarId).FirstOrDefaultAsync(ct);
         return (exam, await OrganizationAvatarIdAsync(db, organizationId, ct));
     }

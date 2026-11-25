@@ -625,7 +625,7 @@
         try
         {
             if (VoiceFromAssignment is { } assignment)
-                fixedBy = await ExaminerCatalog.AvatarIdsForAssignmentAsync(Scopes, org, assignment, ct);
+                fixedBy = await ExaminerCatalog.AvatarIdsForAssignmentAsync(Scopes, org, user, assignment, ct);
             else
             {
                 await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));

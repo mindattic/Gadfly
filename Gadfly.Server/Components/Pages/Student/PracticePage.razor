@@ -141,8 +141,8 @@
         (string? Exam, string? Organization) fixedBy = (null, null);
         try
         {
-            if (Assignment is { } a && Tenant.OrganizationId is { } org)
-                fixedBy = await ExaminerCatalog.AvatarIdsForAssignmentAsync(Scopes, org, a);
+            if (Assignment is { } a && Tenant.OrganizationId is { } org && Tenant.UserId is { } user)
+                fixedBy = await ExaminerCatalog.AvatarIdsForAssignmentAsync(Scopes, org, user, a);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
