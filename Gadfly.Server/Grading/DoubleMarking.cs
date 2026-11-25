@@ -182,6 +182,10 @@ public sealed class DoubleMarkingService(GadflyDbContext db, ITenantContext tena
         if (exam is null) return null;
         var sessions = await EndedSessionsAsync(org, examId, ct);
         var items = await ItemsAsync(org, examId, sessions, ct);
+        // GAD-T742: the items show the panel's and the first examiner's levels, so a viewer who then second-marks one of these sessions is no longer blind.
+        if (tenant.UserId is not null)
+            foreach (var sessionId in items.Select(i => i.SessionId).Distinct())
+                await SecondMarkerBlindness.NoteSeenAsync(db, org, Actor, sessionId, examId, SecondMarkerBlindness.SeenOn.AgreementSummary, clock.GetUtcNow(), ct);
         var calibrationItems = items.Select(i => i.ToCalibration()).ToList();
         var preview = PanelCalibration.Evaluate(calibrationItems);
         var policyRow = await db.GradingPolicies.AsNoTracking().FirstOrDefaultAsync(p => p.ExamId == examId && p.OrganizationId == org, ct);
@@ -433,13 +437,14 @@ public static class SecondMarkerBlindness
     }
 
     /// <summary>Where a viewer saw a double-marked session's grades or the panel's judgments (GAD-T468, GAD-T485).</summary>
-    public enum SeenOn { GradingPage, FullTranscript, ReviewPage }
+    public enum SeenOn { GradingPage, FullTranscript, ReviewPage, AgreementSummary }
 
     /// <summary>The audit reason for each place grades were seen.</summary>
     public static string SeenReason(SeenOn where) => where switch
     {
         SeenOn.FullTranscript => "Downloaded the full transcript of a double-marked session (the panel's judgments and integrity notes), so this person cannot second-mark it blind.",
         SeenOn.ReviewPage => "Opened the review page or its export of a double-marked session with the panel's judgments showing, so this person cannot second-mark it blind.",
+        SeenOn.AgreementSummary => "Opened the double-marking results of a double-marked session, which show the panel's and the first examiner's levels, so this person cannot second-mark it blind.",
         _ => "Opened the grading page of a double-marked session with its grades showing, so this person cannot second-mark it blind.",
     };
 
@@ -454,7 +459,7 @@ public static class SecondMarkerBlindness
     {
         if (viewer.UserId is not { } me) return;
         if (!(await PanelGovernanceService.LatestAsync(db, org, examId, ct)).DoubleMarking) return;
-        if (where != SeenOn.GradingPage)
+        if (where is SeenOn.FullTranscript or SeenOn.ReviewPage)
         {
             if (await db.HumanObjectiveGrades.AsNoTracking().AnyAsync(h => h.SessionId == sessionId && h.OrganizationId == org && h.ReviewerUserId == me, ct)) return;
             if (await IsSecondMarkerAsync(db, org, sessionId, me, ct)) return;
