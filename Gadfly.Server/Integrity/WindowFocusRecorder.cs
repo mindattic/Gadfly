@@ -80,7 +80,7 @@ public sealed class WindowFocusRecorder(GadflyDbContext db, TimeProvider clock, 
         if (duration < MinAbsence) return null;
         if (duration > MaxSpan) duration = MaxSpan;
         var now = clock.GetUtcNow();
-        var session = await db.ExamSessions
+        var session = await db.ExamSessions.AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == sessionId && s.OrganizationId == organizationId && s.StudentUserId == studentUserId, ct);
         if (session is null) return null;
         var accepting = session.State is SessionState.Running or SessionState.Paused
@@ -116,16 +116,19 @@ public sealed class WindowFocusRecorder(GadflyDbContext db, TimeProvider clock, 
         var longest = prior.Select(p => (p.EndedAt ?? p.StartedAt) - p.StartedAt).Append(span).Max();
 
         var newly = false;
-        if (!session.NeedsInstructorReview && rule.Flags(count, longest))
-        {
-            session.NeedsInstructorReview = true;
-            session.ReviewFlaggedAt = now;
-            session.ReviewReason = Truncate(ReviewReason(count, longest), ReviewReasonMax);
-            newly = true;
-        }
+        var flag = !session.NeedsInstructorReview && rule.Flags(count, longest);
+        var reason = flag ? Truncate(ReviewReason(count, longest), ReviewReasonMax) : null;
         try
         {
             await db.SaveChangesAsync(ct);
+            // A set-based update, not a save of the tracked session: the orchestrator saves the same row (row version) while this runs.
+            if (flag)
+                newly = await db.ExamSessions
+                    .Where(s => s.Id == sessionId && s.OrganizationId == organizationId && !s.NeedsInstructorReview)
+                    .ExecuteUpdateAsync(u => u
+                        .SetProperty(s => s.NeedsInstructorReview, true)
+                        .SetProperty(s => s.ReviewFlaggedAt, now)
+                        .SetProperty(s => s.ReviewReason, reason), ct) > 0;
             Admin.LiveSessionFeed.Shared.IntegrityRecorded(organizationId, sessionId, now);   // live monitor (GAD-T299)
         }
         catch (DbUpdateException ex)
