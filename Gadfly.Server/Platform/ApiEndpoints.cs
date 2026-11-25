@@ -242,7 +242,8 @@ public static class ApiEndpoints
             if (account is null)
             {
                 temporary = TemporaryPassword();
-                var member = await directory.AddMemberAsync(org, userName, body.Email, OrgRoles.Student, temporary, ct);
+                var member = await directory.AddMemberAsync(org, userName, body.Email, OrgRoles.Student, temporary, ct,
+                    actingRole: OrgRoles.Admin); // an organization caller: takes the seat lock and the plan's seat check (GAD-T744)
                 if (!member.Ok || member.Id is null) return Error(member.Message);
                 studentId = member.Id.Value;
             }
