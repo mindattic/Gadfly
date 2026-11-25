@@ -55,10 +55,10 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
         if (language is { Length: > 16 }) throw new HubException("Choose a language.");
         try
         {
-            var id = await orchestrator.CreateOrResumeAsync(org, assignmentId, user, Context.GetHttpContext()?.Request.Headers.UserAgent.ToString(),
-                language, Context.ConnectionAborted);
             if (string.IsNullOrWhiteSpace(consentTextSha256) || consentTextSha256.Length != 64)
                 throw new SessionRefusedException("Consent is required before the exam starts.");
+            var id = await orchestrator.CreateOrResumeAsync(org, assignmentId, user, Context.GetHttpContext()?.Request.Headers.UserAgent.ToString(),
+                language, Context.ConnectionAborted);
             await orchestrator.RecordConsentAsync(org, id, user, consentTextSha256, Context.ConnectionAborted);
             await JoinAsync(id);
             return id;
