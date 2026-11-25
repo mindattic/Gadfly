@@ -65,8 +65,9 @@ public static class GadflyServices
         });
 
         // Secrets: on a dev machine MindAttic.Vault's files (the shared LLM provider keys Legion reads, the
-        // Security bucket the auth stack needs: pepper, bootstrap-token); in Azure, App Service settings / Key Vault.
-        builder.Configuration.AddMindAtticVaultFiles(o => o.Buckets = new[] { "LLM", "Security", "Notifications" });
+        // Security bucket the auth stack needs: pepper, bootstrap-token; the Payments bucket PaymentSettings reads);
+        // in Azure, App Service settings / Key Vault.
+        builder.Configuration.AddMindAtticVaultFiles(o => o.Buckets = new[] { "LLM", "Security", "Notifications", "Payments" });
         // Legion reads its provider keys through this: App Service settings (Key Vault references) first, the vault files second.
         // Without it a deployed app sees no LLM keys and the live panel finds nothing (GAD-T225).
         MindAttic.Legion.MindAtticCredentialStore.UseConfiguration(builder.Configuration);
