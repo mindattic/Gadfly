@@ -1,3 +1,4 @@
+using System.Globalization;
 using Gadfly.Server.Transcripts;
 
 namespace Gadfly.Server.Grading;
@@ -46,7 +47,7 @@ public static class ClassSummaryPdf
         else
         {
             foreach (var o in r.Objectives)
-                b.Add(new(BlockKind.Body, $"{o.Title}: {(o.Average is { } a ? a.ToString("0.##") : "—")} of {o.MaxScore:0.##} "
+                b.Add(new(BlockKind.Body, $"{o.Title}: {(o.Average is { } a ? a.ToString("0.##", CultureInfo.InvariantCulture) : "—")} of {o.MaxScore.ToString("0.##", CultureInfo.InvariantCulture)} "
                     + $"(from {o.Count} released result{(o.Count == 1 ? "" : "s")})", 1));
         }
 
@@ -66,7 +67,7 @@ public static class ClassSummaryPdf
         return b;
     }
 
-    private static string Pct(decimal? v) => v is { } x ? x.ToString("0.#") + "%" : "—";
+    private static string Pct(decimal? v) => v is { } x ? x.ToString("0.#", CultureInfo.InvariantCulture) + "%" : "—";
 
     /// <summary>A plain-text bar, scaled to the largest share this distribution has: readable without colour or a chart library.</summary>
     private static string Bar(int count, int total)
