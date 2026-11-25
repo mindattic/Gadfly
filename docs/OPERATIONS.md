@@ -161,9 +161,9 @@ come from the local MindAttic Vault files instead. After changing a secret's val
 
 | Secret | Key Vault name | App setting | Rotating it |
 |---|---|---|---|
-| Password pepper | `gadfly-pepper-v1` | `MindAttic__Vault__Security__pepper-v1` | **Never replace v1 in place**: every password would stop verifying. Add a `pepper-v2` secret and setting, set `MindAttic__Auth__Crypto__CurrentPepperKeyId=v2`, keep v1. Passwords move to v2 as people sign in. See MindAttic.Authentication's OPERATIONS.md. |
-| Password-reset token key | `gadfly-reset-token-key` | `MindAttic__Vault__Security__reset-token-key` | Replace any time. Reset links already sent stop working. |
-| Bootstrap token | `gadfly-bootstrap-token` | `MindAttic__Vault__Security__bootstrap-token` | Used only when the database has no account at all, to create `admin` with this as a must-change password. Replace it with a long random value straight after the first sign-in, and again if it ever leaks. Don't delete it. |
+| Password pepper | `gadfly-pepper-v1` | `MindAttic__Vault__Security__pepper_v1` | **Never replace v1 in place**: every password would stop verifying. Add a `gadfly-pepper-v2` secret and a `MindAttic__Vault__Security__pepper_v2` setting, set `MindAttic__Auth__Crypto__CurrentPepperKeyId=v2`, keep v1. Passwords move to v2 as people sign in. See MindAttic.Authentication's OPERATIONS.md. |
+| Password-reset token key | `gadfly-reset-token-key` | `MindAttic__Vault__Security__reset_token_key` | Replace any time. Reset links already sent stop working. |
+| Bootstrap token | `gadfly-bootstrap-token` | `MindAttic__Vault__Security__bootstrap_token` | Used only when the database has no account at all, to create `admin` with this as a must-change password. Replace it with a long random value straight after the first sign-in, and again if it ever leaks. Don't delete it. |
 | Anthropic, OpenAI, Gemini, DeepSeek keys | `llm-claude`, `llm-openai`, `llm-gemini`, `llm-deepseek` | `MindAttic__Vault__LLM__<provider>__apiKey` | Create the new key at the provider, set the secret, restart, check `/healthz/providers`, then revoke the old key. OpenAI's key also serves the backup speech recognizer. |
 | ElevenLabs key | `elevenlabs` | `MindAttic__Vault__LLM__elevenlabs__apiKey` | As above; check a speech call on `/admin/status` afterwards. |
 | Stripe (only if card checkout is on) | (your choice) | `MindAttic__Vault__Payments__stripe__secretKey`, `__webhookSecret` | Roll in the Stripe dashboard, set both, restart. Without `secretKey` the plan page shows no checkout. |

@@ -145,9 +145,12 @@ $settings = @(
   "DataProtection__KeyVaultKeyId=$keyId",
   # Auth secrets (MindAttic.Authentication reads MindAttic:Vault:Security:<name>, punctuation-insensitive):
   # pepper.v1 (32+ random bytes, base64), reset-token-key (32+ random bytes, base64), bootstrap-token (first admin password).
-  "MindAttic__Vault__Security__pepper-v1=$(& $kvRef 'gadfly-pepper-v1')",
-  "MindAttic__Vault__Security__reset-token-key=$(& $kvRef 'gadfly-reset-token-key')",
-  "MindAttic__Vault__Security__bootstrap-token=$(& $kvRef 'gadfly-bootstrap-token')",
+  # Setting names use '_' not '-': Linux App Service refuses a dash in an app-setting name (GAD-T781). The library matches
+  # pepper_v1 to pepper.v1 / pepper-v1, so it is the same Key Vault secret and the same pepper bytes either way. A Windows
+  # site that still has the old dashed settings keeps working: both names point at one secret, so they never disagree.
+  "MindAttic__Vault__Security__pepper_v1=$(& $kvRef 'gadfly-pepper-v1')",
+  "MindAttic__Vault__Security__reset_token_key=$(& $kvRef 'gadfly-reset-token-key')",
+  "MindAttic__Vault__Security__bootstrap_token=$(& $kvRef 'gadfly-bootstrap-token')",
   "MindAttic__Vault__LLM__claude__apiKey=$(& $kvRef 'llm-claude')",
   "MindAttic__Vault__LLM__openai__apiKey=$(& $kvRef 'llm-openai')",
   "MindAttic__Vault__LLM__gemini__apiKey=$(& $kvRef 'llm-gemini')",
