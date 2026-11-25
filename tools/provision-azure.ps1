@@ -4,13 +4,13 @@ Creates Gadfly's Azure resources next to Tutor's (GAD-T63). Run once, by the own
 
 .DESCRIPTION
 Uses the existing MindAttic resource group, App Service plan and Azure SQL server. Creates:
-  - App Service  mindattic-gadfly (.NET 10, Windows, WebSockets on, always on, HTTPS only, system identity)
+  - App Service  mindattic-gadfly (.NET 10, Windows, WebSockets on, Always On left off (GAD-T768), HTTPS only, system identity)
   - Azure SQL database  Gadfly  (serverless, auto-pause) on the existing server
   - Storage account container  gadfly-dp-keys  and Key Vault key  gadfly-dp-protect  for the Data Protection key ring
   - Key Vault references for the secrets the app reads (auth pepper, reset key, bootstrap token, LLM and ElevenLabs keys); you set the values
   - App settings: ConnectionStrings__Gadfly (Active Directory Default), DataProtection:*, Key Vault references
   - Role assignments: the app's identity on the database (via T-SQL printed below), the blob container and the key
-  - Staging slot  mindattic-gadfly/staging (GAD-T651): cloned from production, WebSockets and always on, its own system identity
+  - Staging slot  mindattic-gadfly/staging (GAD-T651): cloned from production, WebSockets on, Always On off, its own system identity
     with the same blob and Key Vault roles, and its own serverless database Gadfly-staging. ConnectionStrings__Gadfly,
     DataProtection__BlobUri (keys-staging.xml on staging) and Gadfly__AiMode are slot settings on both slots, so a swap
     (tools/deploy-azure.ps1 -Promote) never carries them across. Slots need a Standard or higher plan: checked first.
@@ -58,7 +58,7 @@ if (-not $exists) {
   Invoke-Az @('webapp','create','-g',$ResourceGroup,'-p',$Plan,'-n',$App,'--runtime','dotnet:10')
 }
 Invoke-Az @('webapp','update','-g',$ResourceGroup,'-n',$App,'--https-only','true')
-Invoke-Az @('webapp','config','set','-g',$ResourceGroup,'-n',$App,'--web-sockets-enabled','true','--always-on','true','--min-tls-version','1.2')
+Invoke-Az @('webapp','config','set','-g',$ResourceGroup,'-n',$App,'--web-sockets-enabled','true','--always-on','false','--min-tls-version','1.2')
 $principal = Invoke-Az @('webapp','identity','assign','-g',$ResourceGroup,'-n',$App,'--query','principalId','-o','tsv')
 
 Write-Host "== Plan tier (deployment slots need Standard or higher)" -ForegroundColor Green
@@ -88,7 +88,7 @@ $slotExists = Get-AzValue @('webapp','deployment','slot','list','-g',$ResourceGr
 if (-not $slotExists) {
   Invoke-Az @('webapp','deployment','slot','create','-g',$ResourceGroup,'-n',$App,'--slot',$StagingSlot,'--configuration-source',$App)
 }
-Invoke-Az @('webapp','config','set','-g',$ResourceGroup,'-n',$App,'--slot',$StagingSlot,'--web-sockets-enabled','true','--always-on','true','--min-tls-version','1.2')
+Invoke-Az @('webapp','config','set','-g',$ResourceGroup,'-n',$App,'--slot',$StagingSlot,'--web-sockets-enabled','true','--always-on','false','--min-tls-version','1.2')
 $slotPrincipal = Invoke-Az @('webapp','identity','assign','-g',$ResourceGroup,'-n',$App,'--slot',$StagingSlot,'--query','principalId','-o','tsv')
 
 Write-Host "== Data Protection key ring" -ForegroundColor Green
