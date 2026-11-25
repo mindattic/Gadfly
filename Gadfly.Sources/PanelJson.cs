@@ -18,7 +18,7 @@ internal static class PanelJson
         for (var start = raw.IndexOf('{'); start >= 0; start = raw.IndexOf('{', start + 1))
         {
             var end = EndOfObject(raw, start);
-            if (end < 0) continue;
+            if (end < 0) return null; // unbalanced: the reply was cut off, and a nested object inside it is not the reply
             try { return JsonDocument.Parse(raw[start..(end + 1)]); }
             catch (JsonException) { }
         }
