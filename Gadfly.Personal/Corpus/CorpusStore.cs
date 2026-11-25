@@ -25,6 +25,7 @@ public class CorpusStore
     private readonly string root;
     private readonly string messagesPath;
     private readonly string manifestPath;
+    private HashSet<string>? knownIds;
 
     public CorpusStore(string? root = null)
     {
@@ -57,15 +58,21 @@ public class CorpusStore
         var manifest = LoadManifest();
         if (RepairTornTail())
         {
+            knownIds = null;
             // The torn record's id is in the manifest but its line is gone: rebuild the id set
             // from the records that actually survive, so that message is appended again.
             manifest.IngestedMessageIds = new HashSet<string>(ReadAll().Select(m => m.Id));
         }
-        else
+        else if (knownIds is null)
         {
             // A crash after the lines were written but before the manifest was saved leaves lines the manifest doesn't know:
             // count every id already in the file so they are not appended a second time.
             manifest.IngestedMessageIds.UnionWith(ReadAll().Select(m => m.Id));
+        }
+        else
+        {
+            // This store already scanned the file and has been its only writer since: reuse that id set instead of re-reading every line per call.
+            manifest.IngestedMessageIds.UnionWith(knownIds);
         }
         var appended = 0;
 
@@ -80,6 +87,7 @@ public class CorpusStore
         }
 
         SaveManifest(manifest);
+        knownIds = manifest.IngestedMessageIds;
         return appended;
     }
 

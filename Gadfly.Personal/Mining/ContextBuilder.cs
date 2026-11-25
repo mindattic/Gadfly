@@ -22,8 +22,9 @@ public class ContextBuilder
     public async Task<string> BuildCorpusDigestAsync(CancellationToken ct = default)
     {
         var humanMessages = repository.GetHumanMessages();
-        var hints = ClaimExtractor.ExtractRecurringPhrases(humanMessages);
         var hash = repository.CorpusHash();
+        if (summarizer.TryGetCached(hash, out var cached)) return cached;
+        var hints = ClaimExtractor.ExtractRecurringPhrases(humanMessages);
         return await summarizer.SummarizeAsync(humanMessages, hash, hints, ct);
     }
 

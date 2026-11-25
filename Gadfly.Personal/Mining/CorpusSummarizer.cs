@@ -29,6 +29,9 @@ public class CorpusSummarizer
             "MindAttic", "Gadfly", "corpus", "digest-cache.json");
     }
 
+    public bool TryGetCached(string corpusHash, out string digest) =>
+        LoadCache().TryGetValue(corpusHash, out digest!);
+
     public async Task<string> SummarizeAsync(
         IReadOnlyList<CorpusMessage> humanMessages,
         string corpusHash,
