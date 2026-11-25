@@ -10,7 +10,7 @@ anywhere:
 
 | Piece | Name | Notes |
 |---|---|---|
-| App Service | `mindattic-gadfly` (group `MyApps`) | .NET 10, WebSockets on (Blazor Server), always on, HTTPS only |
+| App Service | `mindattic-gadfly` (group `MyApps`) | .NET 10, WebSockets on (Blazor Server), Always On off (since 2026-11-25, GAD-T768: unloads after 20 min idle), HTTPS only |
 | Database | `Gadfly` on `sql-mindattic-f65744` (group `rg-mindattic-data`) | Serverless, auto-pause after 60 min |
 | Data Protection keys | blob container `gadfly-dp-keys`, Key Vault key `gadfly-dp-protect` | Signs cookies, launch links and webhook secrets |
 | Secrets | Key Vault `kv-tutor-f65744` | Auth pepper, reset key, bootstrap token, LLM and ElevenLabs keys |
@@ -209,9 +209,14 @@ the site. Its first line is the health line: `Gadfly.Worker V<N> <commit> starte
 ..., AI panel mock (...), job kinds [...], background services [...], web app runs jobs too: True`. Every job handler is
 built once at startup, so a missing registration stops the worker there with the error rather than failing its first job.
 
-**Always On.** A continuous WebJob only runs while the site is loaded, so the app needs **Always On**, which the Free
-and Shared tiers do not have. Gadfly qualifies: `provision-azure.ps1` turns Always On for the app and its staging slot,
-and the plan (`ASP-MyApps-99fe`) is Standard or higher, which the staging slot already requires.
+**Always On is off.** Since 2026-11-25 (GAD-T768) Always On is off for the app and its staging slot, so the site
+unloads after 20 minutes without a request and loads again on the next one; `provision-azure.ps1` leaves it off so a
+re-provision does not turn it back on. A continuous WebJob only runs while the site is loaded, so the `GadflyWorker`
+WebJob stops with it, and so do the in-process schedulers the web app hosts (exam reminders, data retention, stale
+sessions, the grading sweep and LTI grade passback): none of them runs while the site is idle, and queued jobs and due
+sweeps wait until a request loads it again. To keep them running around the clock, turn Always On back on (the plan,
+`ASP-MyApps-99fe`, is Standard or higher, which the staging slot already requires, so it has the setting):
+`az webapp config set -g MyApps -n mindattic-gadfly --always-on true`.
 
 **`Gadfly:Jobs:RunInWeb`** (default `true`). While it is true the web app still runs the job worker and the sweepers
 too; that is safe, since a job is claimed by an atomic row update and several processes may share the queue (the

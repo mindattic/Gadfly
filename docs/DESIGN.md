@@ -587,8 +587,8 @@ mock mode).
 
 | Piece | Choice |
 |---|---|
-| App | Azure App Service `mindattic-gadfly`, .NET 10, WebSockets on (Blazor Server and the exam hub), always on, HTTPS only, managed identity |
-| Worker | `Gadfly.Worker` as the continuous WebJob `GadflyWorker` in the same App Service (needs Always On): job queue, AI grading, sweepers; shares the site's settings, database and service registration (`GadflyServices`) |
+| App | Azure App Service `mindattic-gadfly`, .NET 10, WebSockets on (Blazor Server and the exam hub), Always On off since 2026-11-25 (GAD-T768), so it unloads after 20 min idle, HTTPS only, managed identity |
+| Worker | `Gadfly.Worker` as the continuous WebJob `GadflyWorker` in the same App Service: job queue, AI grading, sweepers. With Always On off it, like the in-process schedulers (reminders, retention, stale sessions, grading sweep, LTI passback), runs only while the site is loaded. Shares the site's settings, database and service registration (`GadflyServices`) |
 | Database | Azure SQL database `Gadfly` (serverless), Entra authentication, no password in the connection string |
 | Keys and secrets | Key Vault (auth pepper, reset key, bootstrap token, LLM provider keys); Data Protection key ring in Blob Storage wrapped by a Key Vault key |
 | Pipeline | `.github/workflows/azure-deploy.yml`, manual trigger: build, apply migrations with an EF bundle, deploy, smoke-test `/healthz` and `/login` |
