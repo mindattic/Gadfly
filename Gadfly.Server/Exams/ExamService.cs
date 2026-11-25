@@ -202,9 +202,14 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
         {
             return new(false, $"The exam settings are not valid: {ex.Message}");
         }
-        if (!await db.SourceCollections.AnyAsync(c => c.Id == exam.CollectionId && c.OrganizationId == org
-                                                     && c.Status == ProcessingStatus.Ready && c.ConceptMapVersion > 0, ct))
+        var mapVersion = await db.SourceCollections.Where(c => c.Id == exam.CollectionId && c.OrganizationId == org
+                                                              && c.Status == ProcessingStatus.Ready && c.ConceptMapVersion > 0)
+            .Select(c => (int?)c.ConceptMapVersion).FirstOrDefaultAsync(ct);
+        if (mapVersion is not { } currentVersion)
             return new(false, "The source collection's concept map is not ready.");
+        // A summative examination runs only on a concept map and rubric an instructor has approved, same as AssessmentService.PublishProblemsAsync (GAD-T740).
+        if (RubricApprovalService.PublishProblem(exam.AssessmentMode, policy, currentVersion) is { } approvalProblem)
+            return new(false, "Not ready to publish: " + approvalProblem);
         var keys = (await ConceptsAsync(exam.CollectionId, ct)).Select(c => c.Key).ToHashSet(StringComparer.Ordinal);
         var missing = policy.ConceptIds.Where(k => !keys.Contains(k)).ToList();
         if (missing.Count > 0)
