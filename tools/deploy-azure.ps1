@@ -168,11 +168,18 @@ if (-not $DryRun) {
     $settingsJson = & az webapp config appsettings list -g $ResourceGroup -n $App @slotArgs -o json
     if ($LASTEXITCODE -ne 0) { Fail "cannot read the app settings of $targetName" }
     $mode = '(unset)'
+    $voiceMode = '(unset)'
     foreach ($setting in (ConvertFrom-Json -InputObject ($settingsJson -join "`n"))) {
         if ($setting.name -eq 'Gadfly__AiMode') { $mode = [string]$setting.value }
+        if ($setting.name -eq 'Gadfly__Voice__Mode') { $voiceMode = [string]$setting.value }
     }
     Write-Host "   Gadfly__AiMode on $targetName = $mode"
     if ($mode -ne 'mock' -and -not $AllowLive) { Fail "Gadfly__AiMode is '$mode', not 'mock'; pass -AllowLive to deploy anyway." }
+    # Staging carries production's ElevenLabs key, so live voice there would spend on paid TTS (GAD-T734). Unset is voice off, which is safe.
+    if ($toStaging) {
+        Write-Host "   Gadfly__Voice__Mode on $targetName = $voiceMode"
+        if ($voiceMode -eq 'live' -and -not $AllowLive) { Fail "Gadfly__Voice__Mode is 'live' on staging; set it to mock (tools/provision-azure.ps1) or pass -AllowLive to deploy anyway." }
+    }
 }
 
 # --- 1. clean export ----------------------------------------------------------------------------------------

@@ -152,7 +152,7 @@ $settings += @(
   "Gadfly__ClaudeModel=claude-sonnet-5"
 )
 # These stay with their slot through a swap (GAD-T651): each slot keeps its own database, key ring blob and AI mode.
-$slotSettingNames = @('ConnectionStrings__Gadfly', 'DataProtection__BlobUri', 'Gadfly__AiMode')
+$slotSettingNames = @('ConnectionStrings__Gadfly', 'DataProtection__BlobUri', 'Gadfly__AiMode', 'Gadfly__Voice__Mode')
 function Set-AppSettings([string[]]$Lines, [string[]]$SlotArgs) {
   $file = Join-Path ([IO.Path]::GetTempPath()) "gadfly-appsettings-$([guid]::NewGuid().ToString('N')).json"
   $Lines | ForEach-Object { $i = $_.IndexOf('='); $n = $_.Substring(0, $i); [pscustomobject]@{ name = $n; value = $_.Substring($i + 1); slotSetting = ($slotSettingNames -contains $n) } } |
@@ -169,6 +169,8 @@ $stagingSettings = $settings | ForEach-Object {
   elseif ($_ -like 'Gadfly__AiMode=*') { 'Gadfly__AiMode=mock' }
   else { $_ }
 }
+# Staging holds a copy of production's ElevenLabs key, so its voice is mock too (GAD-T734); sticky, so a swap never carries it to production.
+$stagingSettings = @($stagingSettings | Where-Object { $_ -notlike 'Gadfly__Voice__Mode=*' }) + 'Gadfly__Voice__Mode=mock'
 Set-AppSettings $stagingSettings @('--slot', $StagingSlot)
 
 Write-Host ""
