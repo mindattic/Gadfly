@@ -22,16 +22,25 @@ public sealed record EvidenceSyncRequest(Guid OrganizationId, Guid SessionId, Gu
 public sealed class EvidenceSyncQueue
 {
     private readonly Channel<EvidenceSyncRequest> _queue = Channel.CreateBounded<EvidenceSyncRequest>(
-        new BoundedChannelOptions(500) { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true });
+        new BoundedChannelOptions(500) { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true },
+        dropped => Console.Error.WriteLine($"Evidence sync for session {dropped.SessionId} dropped: the queue is full."));
 
     internal ChannelReader<EvidenceSyncRequest> Reader => _queue.Reader;
 
     public void Enqueue(EvidenceSyncRequest request) => _queue.Writer.TryWrite(request);
 }
 
-/// <summary>Writes queued evidence syncs (GAD-T404). A failed sync is logged and dropped; the next step's queued sync retries from scratch.</summary>
+/// <summary>
+/// Writes queued evidence syncs (GAD-T404). A failed sync is retried a few times with a short pause, because the last
+/// step of a session has no later step to retry it; queued syncs still waiting at shutdown are written before the
+/// host stops. A sync that still fails is logged and dropped.
+/// </summary>
 public sealed class EvidenceSyncWriter(EvidenceSyncQueue queue, IServiceScopeFactory scopes, ILogger<EvidenceSyncWriter> log) : BackgroundService
 {
+    private const int Attempts = 3;
+    private static readonly TimeSpan RetryPause = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan DrainBudget = TimeSpan.FromSeconds(5);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var reader = queue.Reader;
@@ -39,27 +48,47 @@ public sealed class EvidenceSyncWriter(EvidenceSyncQueue queue, IServiceScopeFac
         {
             while (await reader.WaitToReadAsync(stoppingToken))
             {
-                while (reader.TryRead(out var request))
-                {
-                    try
-                    {
-                        using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(request.OrganizationId));
-                        var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
-                        await EvidenceWriter.SyncAsync(db, request.OrganizationId, request.SessionId, request.ExamId, request.Evidence,
-                            request.Now, stoppingToken);
-                        await db.SaveChangesAsync(stoppingToken);
-                    }
-                    catch (Exception ex) when (ex is not OperationCanceledException)
-                    {
-                        log.LogWarning(ex, "Evidence for session {SessionId} was not synced this pass; the next step's queued sync retries.",
-                            request.SessionId);
-                    }
-                }
+                while (reader.TryRead(out var request)) await WriteAsync(request, stoppingToken);
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            // Shutting down.
+            // Shutting down: write what is still queued, within a short budget.
+            using var drain = new CancellationTokenSource(DrainBudget);
+            try
+            {
+                while (reader.TryRead(out var request)) await WriteAsync(request, drain.Token, retry: false);
+            }
+            catch (OperationCanceledException) when (drain.IsCancellationRequested)
+            {
+                log.LogWarning("Queued evidence syncs were left unwritten at shutdown.");
+            }
+        }
+    }
+
+    private async Task WriteAsync(EvidenceSyncRequest request, CancellationToken ct, bool retry = true)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(request.OrganizationId));
+                var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+                await EvidenceWriter.SyncAsync(db, request.OrganizationId, request.SessionId, request.ExamId, request.Evidence,
+                    request.Now, ct);
+                await db.SaveChangesAsync(ct);
+                return;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                if (!retry || attempt >= Attempts)
+                {
+                    log.LogWarning(ex, "Evidence for session {SessionId} was not synced after {Attempts} attempt(s); a later step's queued sync, if any, retries.",
+                        request.SessionId, attempt);
+                    return;
+                }
+                await Task.Delay(RetryPause, ct);
+            }
         }
     }
 }
