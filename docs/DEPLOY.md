@@ -215,6 +215,16 @@ the site. Its first line is the health line: `Gadfly.Worker V<N> <commit> starte
 ..., AI panel mock (...), job kinds [...], background services [...], web app runs jobs too: True`. Every job handler is
 built once at startup, so a missing registration stops the worker there with the error rather than failing its first job.
 
+**On Linux the worker runs inside the web app.** Since GAD-T772 the site runs on the Linux plan `ASP-MyApps-linux-tmp`,
+and the Linux App Service does not run WebJobs (Kudu answers "not configured to run the web job"). The packaged
+`GadflyWorker` therefore never starts there; leave `Gadfly:Jobs:RunInWeb` at its default `true` so the web app itself
+runs the job queue and the sweepers. Do not set it to `false` on Linux.
+
+**A cold database does not crash startup.** The first database call of a start (`AuthBootstrapper.SeedAdminAsync` in
+`Gadfly.Server/Program.cs`) is retried 8 times, 15 s apart, because the serverless database may still be resuming after
+its 20-minute auto-pause and resets or drops the first logins (SqlException 35); the cause of the exit-134 crash loop on Linux is not yet confirmed (GAD-T787 follow-up) and the
+platform kept restarting it (GAD-T787).
+
 **Always On is off.** Since 2026-11-25 (GAD-T768) Always On is off for the app and its staging slot, so the site
 unloads after 20 minutes without a request and loads again on the next one; `provision-azure.ps1` leaves it off so a
 re-provision does not turn it back on. A continuous WebJob only runs while the site is loaded, so the `GadflyWorker`

@@ -76,7 +76,19 @@ using (var scope = app.Services.GetRequiredService<IServiceScopeFactory>().Creat
     var sp = scope.ServiceProvider;
     if (app.Environment.IsDevelopment() || args.Contains("--migrate"))
         await sp.GetRequiredService<GadflyDbContext>().Database.MigrateAsync();
-    await sp.GetRequiredService<AuthBootstrapper>().SeedAdminAsync();
+    // The first database touch of a cold start: a serverless Azure SQL database that auto-paused takes up to a
+    // minute to resume and resets or drops the first logins (SqlException 35 on Linux), which EF's short
+    // per-command retry does not outlast. Retry the whole step so the host waits for the resume instead of
+    // crashing and being restarted by the platform (GAD-T787).
+    for (var attempt = 1; ; attempt++)
+    {
+        try { await sp.GetRequiredService<AuthBootstrapper>().SeedAdminAsync(); break; }
+        catch (Exception ex) when (attempt < 8 && ex is Microsoft.Data.SqlClient.SqlException or InvalidOperationException or TimeoutException)
+        {
+            app.Logger.LogWarning(ex, "Database not ready at startup (attempt {Attempt} of 8); retrying in 15 s.", attempt);
+            await Task.Delay(TimeSpan.FromSeconds(15));
+        }
+    }
 }
 
 _ = app.Services.GetRequiredService<IPanelInfo>();   // decide live/mock at startup (GAD-T100)
