@@ -33,6 +33,7 @@ import { getModelUrl } from "./model-cache.js";
 // Every line this module writes is in the attempt's language (GAD-T606): the exam room renders <UiTextData Prefix="examRoom.js." />
 // in ExamSession.Language, and each call names the English as its fallback.
 import { t } from "./ui-text.js";
+import * as prefs from "./device-prefs.js";
 
 const LIB = "/lib/voice";
 const SPEECH_HUB = "/hubs/speech";
@@ -204,8 +205,10 @@ async function start() {
         // 1. The microphone first, inside the click that asked for it.
         const speechPkg = await import(`${LIB}/speech/index.js`);
         s.pcm16ToBase64 = speechPkg.pcm16ToBase64;
+        const micDeviceId = prefs.get("microphone");
         s.mic = new speechPkg.MicCapture({
             mode: "hands-free",
+            ...(micDeviceId ? { deviceId: micDeviceId } : {}),
             // The silence that closes one stretch of speech and commits it (GAD-T498, Gadfly:Voice:SpeechHangoverMs): a commit is
             // not the end of the answer, it only lets the recognizer's final, and so the end-of-answer countdown, start sooner.
             ...(s.cfg.hangoverMs > 0 ? { hangoverMs: s.cfg.hangoverMs } : {}),
@@ -1902,7 +1905,7 @@ async function startSelfView(s) {
     if (!video || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { selfState(s, "unavailable"); return "unavailable"; }
     selfState(s, "starting");
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+        const stream = await prefs.open("camera", { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } });
         if (S !== s || !s.running) { stream.getTracks().forEach((t) => t.stop()); return "unavailable"; }
         if (!stream.getVideoTracks().some((t) => t.readyState === "live")) { stream.getTracks().forEach((t) => t.stop()); selfState(s, "unavailable"); return "unavailable"; }
         s.selfStream = stream;
