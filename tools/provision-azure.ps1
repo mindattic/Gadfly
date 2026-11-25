@@ -153,6 +153,15 @@ $settings = @(
   "MindAttic__Vault__LLM__gemini__apiKey=$(& $kvRef 'llm-gemini')",
   "MindAttic__Vault__LLM__deepseek__apiKey=$(& $kvRef 'llm-deepseek')",
   "MindAttic__Vault__LLM__elevenlabs__apiKey=$(& $kvRef 'elevenlabs')",
+  # Outgoing email (result notifications, invitations, resets; GAD-T778): the same Gmail SMTP account mindattic-tutor uses,
+  # its app password in Key Vault as smtp-password. Without these every staged email is marked Failed "not configured".
+  "MindAttic__Vault__Notifications__email__smtpHost=smtp.gmail.com",
+  "MindAttic__Vault__Notifications__email__smtpPort=587",
+  "MindAttic__Vault__Notifications__email__username=mindatticinteractive@gmail.com",
+  "MindAttic__Vault__Notifications__email__from=mindatticinteractive@gmail.com",
+  "MindAttic__Vault__Notifications__email__password=$(& $kvRef 'smtp-password')",
+  # Public address emailed links are joined to (EmailTemplates.PublicBaseUrlKeys); without it a button link is a bare path.
+  "MindAttic__Auth__Reset__PublicBaseUrl=https://$App.azurewebsites.net",
   "ASPNETCORE_ENVIRONMENT=Production"
 )
 # az is a .cmd wrapper: values with ';' or '(' break on the command line, so the settings go in a JSON file.
@@ -168,7 +177,7 @@ $settings += @(
   "Gadfly__ClaudeModel=claude-sonnet-5"
 )
 # These stay with their slot through a swap (GAD-T651): each slot keeps its own database, key ring blob and AI mode.
-$slotSettingNames = @('ConnectionStrings__Gadfly', 'DataProtection__BlobUri', 'Gadfly__AiMode', 'Gadfly__Voice__Mode')
+$slotSettingNames = @('ConnectionStrings__Gadfly', 'DataProtection__BlobUri', 'Gadfly__AiMode', 'Gadfly__Voice__Mode', 'MindAttic__Auth__Reset__PublicBaseUrl')
 function Set-AppSettings([string[]]$Lines, [string[]]$SlotArgs) {
   $file = Join-Path ([IO.Path]::GetTempPath()) "gadfly-appsettings-$([guid]::NewGuid().ToString('N')).json"
   $Lines | ForEach-Object { $i = $_.IndexOf('='); $n = $_.Substring(0, $i); [pscustomobject]@{ name = $n; value = $_.Substring($i + 1); slotSetting = ($slotSettingNames -contains $n) } } |
@@ -183,6 +192,7 @@ $stagingSettings = $settings | ForEach-Object {
   if ($_ -like 'ConnectionStrings__Gadfly=*') { $_.Replace("Database=$Database;", "Database=$StagingDatabase;") }
   elseif ($_ -like 'DataProtection__BlobUri=*') { $_.Replace('/keys.xml', '/keys-staging.xml') }
   elseif ($_ -like 'Gadfly__AiMode=*') { 'Gadfly__AiMode=mock' }
+  elseif ($_ -like 'MindAttic__Auth__Reset__PublicBaseUrl=*') { "MindAttic__Auth__Reset__PublicBaseUrl=https://$App-$StagingSlot.azurewebsites.net" }
   else { $_ }
 }
 # Staging holds a copy of production's ElevenLabs key, so its voice is mock too (GAD-T734); sticky, so a swap never carries it to production.
@@ -194,6 +204,7 @@ Write-Host "== Still to do by hand" -ForegroundColor Yellow
 Write-Host "1. Put these secrets in Key Vault $KeyVault (az keyvault secret set --vault-name $KeyVault -n <name> --value <value>):"
 Write-Host "   gadfly-pepper-v1 and gadfly-reset-token-key (each: 32 random bytes, base64 - see New-Secret in docs/DEPLOY.md; RandomNumberGenerator.GetBytes needs PowerShell 7),"
 Write-Host "   gadfly-bootstrap-token (the first admin's initial password, 12+ chars), llm-claude, llm-openai, llm-gemini, llm-deepseek, elevenlabs"
+Write-Host "   (smtp-password, the Gmail app password for mindatticinteractive@gmail.com, is already there: mindattic-tutor uses it too.)"
 Write-Host "2. In the Gadfly database (Azure portal Query editor, signed in as the server's Entra admin), run:"
 Write-Host "   CREATE USER [$App] FROM EXTERNAL PROVIDER; ALTER ROLE db_datareader ADD MEMBER [$App]; ALTER ROLE db_datawriter ADD MEMBER [$App];"
 Write-Host "   CREATE USER [gh-mindattic-webapps-deploy] FROM EXTERNAL PROVIDER; ALTER ROLE db_ddladmin ADD MEMBER [gh-mindattic-webapps-deploy];"

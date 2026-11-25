@@ -176,6 +176,12 @@ is running.
   without the voice id turns voice off). Neither `provision-azure.ps1` nor this page sets it for you.
 - **AI mode.** `Gadfly__AiMode` must be `mock` unless the owner has approved live spending; the script refuses
   otherwise without `-AllowLive`.
+- **Email.** Production email (result notifications, invitations, resets) goes through Gmail SMTP, the same account
+  mindattic-tutor uses: `MindAttic__Vault__Notifications__email__smtpHost=smtp.gmail.com`, `__smtpPort=587`,
+  `__username` and `__from` `mindatticinteractive@gmail.com`, and `__password` a Key Vault reference to `smtp-password`
+  in `kv-tutor-f65744` (the app identity reads it as Key Vault Secrets User). `MindAttic__Auth__Reset__PublicBaseUrl`
+  (`https://mindattic-gadfly.azurewebsites.net`) makes the links in emails absolute. `provision-azure.ps1` sets all six
+  (GAD-T778); without them every email is marked Failed "not configured". Rotation is in OPERATIONS.md.
 
 The full release checklist and smoke checks are in [OPERATIONS.md](OPERATIONS.md).
 
