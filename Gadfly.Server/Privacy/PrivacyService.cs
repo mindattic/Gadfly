@@ -90,6 +90,8 @@ public sealed class PrivacyService(GadflyDbContext db, ITenantContext tenant, Ti
                 g.AmbiguitiesJson = "[]";
             }
             await db.SaveChangesAsync(ct);
+            // The student's inbox messages quote the answers and the instructor's comments (GAD-T702): keep that they were sent, drop the text.
+            await db.InboxMessages.Where(m => m.SessionId == sessionId).ExecuteUpdateAsync(u => u.SetProperty(m => m.Body, Redacted), ct);
             await db.IntegrityEvents.Where(e => e.SessionId == sessionId).ExecuteUpdateAsync(u => u.SetProperty(e => e.DataJson, (string?)null), ct);
             await db.ExamSessions.Where(s => s.Id == sessionId).ExecuteUpdateAsync(u => u
                 .SetProperty(s => s.TranscriptJson, (string?)null)
@@ -222,6 +224,8 @@ public sealed class PrivacyService(GadflyDbContext db, ITenantContext tenant, Ti
                 .Select(g => new { g.SessionId, status = g.Status.ToString(), g.FinalPercent, g.LetterOrLabel, g.UpdatedAt }).ToListAsync(ct),
             appeals = await db.GradeAppeals.AsNoTracking().Where(a => ids.Contains(a.SessionId)).OrderBy(a => a.OpenedAt)
                 .Select(a => new { a.SessionId, a.Reason, state = a.State.ToString(), a.Resolution, a.OpenedAt, a.ResolvedAt }).ToListAsync(ct),
+            inboxMessages = await db.InboxMessages.AsNoTracking().Where(m => m.OrganizationId == organizationId && m.RecipientUserId == studentUserId)
+                .OrderBy(m => m.CreatedAt).Select(m => new { m.Kind, m.Title, m.Body, m.SessionId, m.CreatedAt, m.ReadAt }).ToListAsync(ct),
             // The student's research choices (GAD-T452), each with the hash of the text they were shown.
             researchConsents = await db.ResearchConsents.AsNoTracking().Where(c => c.OrganizationId == organizationId && c.StudentUserId == studentUserId)
                 .OrderBy(c => c.RecordedAt)
@@ -293,6 +297,7 @@ public sealed class PrivacyService(GadflyDbContext db, ITenantContext tenant, Ti
                 .ExecuteUpdateAsync(u => u.SetProperty(e => e.Status, EmailLogStatus.Skipped).SetProperty(e => e.Error, "The student's data was erased before this email was sent."), ct);
             await db.Set<EmailLog>().Where(e => e.OrganizationId == organizationId && e.ToUserId == studentUserId)
                 .ExecuteUpdateAsync(u => u.SetProperty(e => e.ToEmail, (string?)null), ct);
+            await db.InboxMessages.Where(m => m.OrganizationId == organizationId && m.RecipientUserId == studentUserId).ExecuteDeleteAsync(ct);
             await db.ExamAssignments.Where(a => a.OrganizationId == organizationId && a.StudentUserId == studentUserId).ExecuteDeleteAsync(ct);
             await db.OrganizationMembers.Where(m => m.OrganizationId == organizationId && m.UserId == studentUserId)
                 .ExecuteUpdateAsync(u => u.SetProperty(m => m.IsActive, false), ct);
