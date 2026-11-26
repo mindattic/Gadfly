@@ -38,11 +38,12 @@ function New-Secret { $b = New-Object byte[] 32; $r = New-Object Security.Crypto
 az keyvault secret set --vault-name $kv -n gadfly-pepper-v1       --value (New-Secret) --query id -o tsv
 az keyvault secret set --vault-name $kv -n gadfly-reset-token-key --value (New-Secret) --query id -o tsv
 az keyvault secret set --vault-name $kv -n gadfly-bootstrap-token --value '<first admin password, 12+ characters>' --query id -o tsv
-az keyvault secret set --vault-name $kv -n llm-claude    --value '<Anthropic API key>' --query id -o tsv
-az keyvault secret set --vault-name $kv -n llm-openai    --value '<OpenAI API key>'    --query id -o tsv
-az keyvault secret set --vault-name $kv -n llm-gemini    --value '<Gemini API key>'    --query id -o tsv
-az keyvault secret set --vault-name $kv -n llm-deepseek  --value '<DeepSeek API key>'  --query id -o tsv
-az keyvault secret set --vault-name $kv -n elevenlabs    --value '<ElevenLabs API key>' --query id -o tsv
+az keyvault secret set --vault-name $kv -n gadfly-classroom-password --value '<seeded accounts temporary password>' --query id -o tsv
+az keyvault secret set --vault-name $kv -n llm-claude-apikey     --value '<Anthropic API key>'  --query id -o tsv
+az keyvault secret set --vault-name $kv -n llm-openai-apikey     --value '<OpenAI API key>'     --query id -o tsv
+az keyvault secret set --vault-name $kv -n llm-gemini-apikey     --value '<Gemini API key>'     --query id -o tsv
+az keyvault secret set --vault-name $kv -n llm-deepseek-apikey   --value '<DeepSeek API key>'   --query id -o tsv
+az keyvault secret set --vault-name $kv -n llm-elevenlabs-apikey --value '<ElevenLabs API key>' --query id -o tsv
 ```
 
 Each `az keyvault secret set` prints the secret's URL; an error instead means the step failed.

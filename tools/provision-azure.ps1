@@ -151,11 +151,14 @@ $settings = @(
   "MindAttic__Vault__Security__pepper_v1=$(& $kvRef 'gadfly-pepper-v1')",
   "MindAttic__Vault__Security__reset_token_key=$(& $kvRef 'gadfly-reset-token-key')",
   "MindAttic__Vault__Security__bootstrap_token=$(& $kvRef 'gadfly-bootstrap-token')",
-  "MindAttic__Vault__LLM__claude__apiKey=$(& $kvRef 'llm-claude')",
-  "MindAttic__Vault__LLM__openai__apiKey=$(& $kvRef 'llm-openai')",
-  "MindAttic__Vault__LLM__gemini__apiKey=$(& $kvRef 'llm-gemini')",
-  "MindAttic__Vault__LLM__deepseek__apiKey=$(& $kvRef 'llm-deepseek')",
-  "MindAttic__Vault__LLM__elevenlabs__apiKey=$(& $kvRef 'elevenlabs')",
+  # The provider keys' Key Vault names are the ones the live app's references use (GAD-T803).
+  "MindAttic__Vault__LLM__claude__apiKey=$(& $kvRef 'llm-claude-apikey')",
+  "MindAttic__Vault__LLM__openai__apiKey=$(& $kvRef 'llm-openai-apikey')",
+  "MindAttic__Vault__LLM__gemini__apiKey=$(& $kvRef 'llm-gemini-apikey')",
+  "MindAttic__Vault__LLM__deepseek__apiKey=$(& $kvRef 'llm-deepseek-apikey')",
+  "MindAttic__Vault__LLM__elevenlabs__apiKey=$(& $kvRef 'llm-elevenlabs-apikey')",
+  # Temporary password for accounts --seed-classroom / --seed-pilot create (DemoSeeder.PasswordSetting).
+  "Gadfly__Demo__Password=$(& $kvRef 'gadfly-classroom-password')",
   # Outgoing email (result notifications, invitations, resets; GAD-T778): the same Gmail SMTP account mindattic-tutor uses,
   # its app password in Key Vault as smtp-password. Without these every staged email is marked Failed "not configured".
   "MindAttic__Vault__Notifications__email__smtpHost=smtp.gmail.com",
@@ -206,7 +209,8 @@ Write-Host ""
 Write-Host "== Still to do by hand" -ForegroundColor Yellow
 Write-Host "1. Put these secrets in Key Vault $KeyVault (az keyvault secret set --vault-name $KeyVault -n <name> --value <value>):"
 Write-Host "   gadfly-pepper-v1 and gadfly-reset-token-key (each: 32 random bytes, base64 - see New-Secret in docs/DEPLOY.md; RandomNumberGenerator.GetBytes needs PowerShell 7),"
-Write-Host "   gadfly-bootstrap-token (the first admin's initial password, 12+ chars), llm-claude, llm-openai, llm-gemini, llm-deepseek, elevenlabs"
+Write-Host "   gadfly-bootstrap-token (the first admin's initial password, 12+ chars), gadfly-classroom-password (seeded accounts' temporary password),"
+Write-Host "   llm-claude-apikey, llm-openai-apikey, llm-gemini-apikey, llm-deepseek-apikey, llm-elevenlabs-apikey"
 Write-Host "   (smtp-password, the Gmail app password for mindatticinteractive@gmail.com, is already there: mindattic-tutor uses it too.)"
 Write-Host "2. In the Gadfly database (Azure portal Query editor, signed in as the server's Entra admin), run:"
 Write-Host "   CREATE USER [$App] FROM EXTERNAL PROVIDER; ALTER ROLE db_datareader ADD MEMBER [$App]; ALTER ROLE db_datawriter ADD MEMBER [$App];"
