@@ -41,7 +41,8 @@ The head on Socrates' own body and clothes (GAD-T793, `examiner-bust-body.glb`) 
   - The beard takes the face's morph targets from the nearest face point, so it opens with the jaw.
   - The bust's head and neck take the nearest MPFB vertex's weights, so the neck turns, nods and talks with the face.
   - With `on_plinth`, everything below the neck hangs on a root bone, `BustBase`. TalkingHead never moves that bone, so its
-    spine sway doesn't tilt the stone.
+    spine sway doesn't tilt the stone. The app also holds Hips and the spine at their bind pose on any model with `BustBase`
+    (`holdBust` in `avatar-look.js`, GAD-T805), so the head doesn't drift off the stone, and it frames the bust closer.
   - The eye material is renamed `Human.high-poly-glow`, which gives the irises the green glow approved for this examiner.
   - With `on_plinth=False`, the head is built for Socrates' own body (GAD-T793).
 - `build.py` is the bust on its plinth. It drops the suit and cuts the MPFB body below the jaw. It keeps Socrates' eye level

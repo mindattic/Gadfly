@@ -203,9 +203,57 @@ export function useExaminerLook(el, options) {
     if (!el || el.gadflyLookWatch) return;
     el.gadflyLookWatch = true;
     keepEyesNatural(el);
-    const apply = () => { try { if (el.mode === "3d") applyExaminerLook(el, options); } catch { /* the default look is fine */ } };
+    const apply = () => {
+        try { if (el.mode === "3d") holdBust(el); } catch { /* she sways as any examiner does */ }
+        try { if (el.mode === "3d") applyExaminerLook(el, options); } catch { /* the default look is fine */ }
+    };
     el.addEventListener("ready", apply);
     apply();
+}
+
+/** The bones a bust (a model with a BustBase bone, tools/examiner-bust) keeps at rest: the chain under its head and neck. */
+const BUST_STILL_BONES = ["Hips", "Spine", "Spine1", "Spine2"];
+/** The bust's head-and-shoulders framing (TalkingHead camera options): head, beard and the plinth's top, not half plinth. */
+export const BUST_UPPER_CAMERA = { cameraDistance: -1, cameraY: -0.2 };
+
+/**
+ * A bust stays on its plinth (GAD-T805). TalkingHead sways a standing body (its 'side', 'hip' poses turn Hips and the spine); the
+ * bust's head and neck hang on that chain while its stone hangs on BustBase, which never moves, so the head drifted off the
+ * plinth and leant. On a bust, Hips and the spine are put back to their bind pose every frame (TalkingHead's own `update` hook,
+ * after its pose and before the render), so only Neck and Head nod, turn and talk; and its head-and-shoulders ("upper") view is
+ * closer.
+ * Any other model is left alone. Returns true when the model is a bust.
+ */
+export function holdBust(el) {
+    const head = el && el.head, arm = head && head.armature;
+    if (!arm || !head.opt || arm.userData.gadflyBust !== undefined) return !!(arm && arm.userData.gadflyBust);
+    let base = null, mesh = null;
+    arm.traverse((o) => { if (o.isBone && o.name === "BustBase") base = o; if (o.isSkinnedMesh && !mesh) mesh = o; });
+    arm.userData.gadflyBust = !!(base && mesh);
+    if (!arm.userData.gadflyBust) return false;
+    const sk = mesh.skeleton, M = mesh.bindMatrix.constructor;
+    const bindOf = (b) => { const i = sk.bones.indexOf(b); return i < 0 ? null : new M().copy(mesh.bindMatrix).invert().multiply(new M().copy(sk.boneInverses[i]).invert()); };
+    const rest = [];
+    for (const name of BUST_STILL_BONES) {
+        const b = sk.bones.find((x) => x.name === name);
+        const w = b && bindOf(b);
+        if (!w) continue;
+        const pw = b.parent && b.parent.isBone ? bindOf(b.parent) : null;
+        const local = pw ? pw.invert().multiply(w) : w;
+        const position = b.position.clone(), quaternion = b.quaternion.clone(), scale = b.scale.clone();
+        local.decompose(position, quaternion, scale);
+        rest.push({ bone: b, position, quaternion, root: !(b.parent && b.parent.isBone) });
+    }
+    const previous = head.opt.update;
+    head.opt.update = (dt) => {
+        if (previous) previous(dt);
+        for (const r of rest) { r.bone.quaternion.copy(r.quaternion); if (r.root) r.bone.position.copy(r.position); }
+    };
+    // Only the head-and-shoulders view moves in; the close and seated framings stay TalkingHead's own.
+    const setView = head.setView.bind(head);
+    head.setView = (view, opt) => setView(view, (view || head.viewName) === "upper" ? { ...BUST_UPPER_CAMERA, ...(opt || {}) } : opt);
+    head.setView(head.viewName || head.opt.cameraView);
+    return true;
 }
 
 /**
