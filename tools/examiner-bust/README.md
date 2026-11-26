@@ -21,6 +21,9 @@ python ../examiner-m/alignrig.py ../../Gadfly.Server/wwwroot/assets/avatars/mpfb
 python ../examiner-socrates/trim.py aligned.glb ../../Gadfly.Server/wwwroot/assets/avatars/examiner-bust.glb
 ```
 
+The head on Socrates' own body and clothes (GAD-T793, `examiner-bust-body.glb`) is built the same way, with `body.py` in place of
+`build.py` and `examiner-bust-body.glb` as trim's output.
+
 `still.png` is optional. Passing it renders stills using a stand-in for the app's blue look: `still-front`, `still-34`,
 `still-viseme-aa-blink`, `still-viseme-o-look`, `still-turn-nod` and `still-turn-back` (Neck and Head turned while talking),
 `still-nose` (a close-up of the face) and `still-full`.
@@ -44,5 +47,8 @@ python ../examiner-socrates/trim.py aligned.glb ../../Gadfly.Server/wwwroot/asse
 - `build.py` is the bust on its plinth. It drops the suit and cuts the MPFB body below the jaw. It keeps Socrates' eye level
   (1.68 m). It also leaves a 0.1 mm triangle where his left sole was. TalkingHead lowers the hips every frame until the model's
   lowest point is on the floor, so without that speck the bust would sink out of frame.
+- `body.py` is the head with `on_plinth=False` on his full body and clothes, unmoved, so his eye level and framing are
+  Socrates'. The bust's shell stops at the neck, where its rim lies flush on the MPFB neck and takes that neck's weights.
+- `head.stills()` renders the stills for both.
 
 The bust's carved moustache sits behind the MPFB upper lip, so it doesn't show yet.

@@ -92,6 +92,15 @@ public static class ExaminerCatalog
     /// <summary>The bust's model (relative to wwwroot), built by tools/examiner-bust (GAD-T792).</summary>
     public const string BustModelPath = "assets/avatars/examiner-bust.glb";
 
+    /// <summary>
+    /// The bust's head on Socrates' own body and clothes (GAD-T793), at his eye level. Offered, not the default (the bust is).
+    /// Socrates' voice and pace unless <c>Gadfly:Voice:Examiners:examiner-bust-body</c> says otherwise.
+    /// </summary>
+    public const string BustBody = "examiner-bust-body";
+
+    /// <summary>Its model (relative to wwwroot), built by tools/examiner-bust/body.py (GAD-T793).</summary>
+    public const string BustBodyModelPath = "assets/avatars/examiner-bust-body.glb";
+
     /// <param name="voice">The site's voice settings: the female examiner is the configured one; <see cref="VoiceSettings.Examiners"/> overrides.</param>
     /// <param name="webRoot">wwwroot on disk, to see whether an examiner's files are installed (null: only configured URLs count).</param>
     public static IReadOnlyList<ExaminerOption> For(VoiceSettings voice, string? webRoot)
@@ -104,6 +113,8 @@ public static class ExaminerCatalog
         var socratesModel = s?.ModelUrl ?? Local(SocratesModelPath);
         var b = voice.Examiners.GetValueOrDefault(Bust);
         var bustModel = b?.ModelUrl ?? Local(BustModelPath);
+        var bb = voice.Examiners.GetValueOrDefault(BustBody);
+        var bustBodyModel = bb?.ModelUrl ?? Local(BustBodyModelPath);
         return
         [
             new(Bust, "getReady.examiner.choiceBust", bustModel, bustModel is not null)
@@ -132,6 +143,13 @@ public static class ExaminerCatalog
                 VoiceIds = s?.VoiceIds ?? new Dictionary<string, string>(),
                 IsMale = true,
                 Speed = s?.Speed ?? SocratesDefaultSpeed,
+            },
+            new(BustBody, "getReady.examiner.choiceBustBody", bustBodyModel, bustBodyModel is not null)
+            {
+                VoiceId = bb?.VoiceId ?? SocratesDefaultVoiceId,
+                VoiceIds = bb?.VoiceIds ?? new Dictionary<string, string>(),
+                IsMale = true,
+                Speed = bb?.Speed ?? SocratesDefaultSpeed,
             },
         ];
     }

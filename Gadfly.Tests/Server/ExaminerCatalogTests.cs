@@ -20,7 +20,7 @@ public class ExaminerCatalogTests
         try
         {
             var options = ExaminerCatalog.For(Voice, empty);
-            Assert.That(options.Select(o => o.Id), Is.EqualTo(new[] { ExaminerCatalog.Bust, ExaminerCatalog.Female, ExaminerCatalog.Male, ExaminerCatalog.Socrates }));
+            Assert.That(options.Select(o => o.Id), Is.EqualTo(new[] { ExaminerCatalog.Bust, ExaminerCatalog.Female, ExaminerCatalog.Male, ExaminerCatalog.Socrates, ExaminerCatalog.BustBody }));
             Assert.That(Of(options, ExaminerCatalog.Female).Available, Is.True);
             Assert.That(Of(options, ExaminerCatalog.Female).ModelUrl, Is.EqualTo("/assets/avatars/mpfb.glb"));
             Assert.That(Of(options, ExaminerCatalog.Male).Available, Is.False, "no model installed yet");

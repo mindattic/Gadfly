@@ -68,7 +68,7 @@ public sealed record ExaminerCustomization(string? Voice = null, string? SkinTon
         {
             ExaminerCatalog.Female => FemaleVoices,
             ExaminerCatalog.Male => MaleVoices,
-            ExaminerCatalog.Socrates or ExaminerCatalog.Bust => SocratesVoices,
+            ExaminerCatalog.Socrates or ExaminerCatalog.Bust or ExaminerCatalog.BustBody => SocratesVoices,
             _ => [],
         };
         if (!LanguageVoices.TryGetValue(examinerId, out var byLanguage)) return all;

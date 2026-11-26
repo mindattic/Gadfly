@@ -172,6 +172,8 @@
   "getReady.examiner.choiceBust.desc": "Socrates as a living statue: the carved philosopher who asks slowly and presses on what you claim to know.",
   "getReady.examiner.choiceSocrates": "Socrates",
   "getReady.examiner.choiceSocrates.desc": "An old philosopher who asks slowly and presses on what you claim to know.",
+  "getReady.examiner.choiceBustBody": "Socrates, carved and standing",
+  "getReady.examiner.choiceBustBody.desc": "The carved Socrates of the bust, standing in his own body: he asks slowly and presses on what you claim to know.",
   "getReady.examiner.comingSoon": "(coming soon)",
   "getReady.step.language": "Your languages",
   "getReady.language.title": "Your languages",
