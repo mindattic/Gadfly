@@ -2,11 +2,11 @@
 
 | | |
 |---|---|
-| File | `examiner-bust-body.glb` (11.0 MB), committed |
-| SHA-256 | `016572ecfdb7502d9513ba80d0c30e286bd23c738010b06b80d40f007753c1f3` |
+| File | `examiner-bust-body.glb` (11.7 MB), committed |
+| SHA-256 | `87f47dbb04634b5ba8017ff8e5a2d8f4a6a4239743424f4994e0852acc1e47ff` |
 | Made with | Blender 4.4.3 (headless), by `tools/examiner-bust/body.py` (with `head.py`), then `tools/examiner-m/postprocess.py`, `tools/examiner-m/alignrig.py` and `tools/examiner-socrates/trim.py` (see `tools/examiner-bust/README.md`) |
 | Sculpt | `Socrates_Burt.glb`, a marble bust of Socrates generated with Meshy.ai: decimated to 7%, scaled onto the MPFB head, its head and neck kept as one shell (skin and hair) and the beard. Not committed (20.7 MB); see the README for where it lives |
-| Body | From `examiner-socrates.glb`: the full MPFB body (its face drawn onto the bust's) and his clothes (`male_casualsuit06`), eyes `high-poly` with `brown_eye`, eyebrows, eyelashes, teeth and tongue; 52 ARKit + 15 viseme targets on the face, 44 of them carried onto the bust's beard |
+| Body | From `examiner-socrates.glb`: the full MPFB body (its face drawn onto the bust's) and his clothes (`male_casualsuit06`), eyes `high-poly` with `brown_eye`, eyebrows, eyelashes, teeth and tongue; 52 ARKit + 15 viseme targets on the face, 46 of them carried onto the bust's beard |
 | Rig | As `examiner-socrates.glb`: Mixamo-style bones without the `mixamorig:` prefix, `LeftEye`/`RightEye` under `Head`, bone frames of TalkingHead's `mpfb.glb`. The bust's head and neck take the nearest MPFB vertex's weights |
 
 ## Licenses

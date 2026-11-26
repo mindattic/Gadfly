@@ -51,4 +51,7 @@ The head on Socrates' own body and clothes (GAD-T793, `examiner-bust-body.glb`) 
   Socrates'. The bust's shell stops at the neck, where its rim lies flush on the MPFB neck and takes that neck's weights.
 - `head.stills()` renders the stills for both.
 
-The bust's carved moustache sits behind the MPFB upper lip, so it doesn't show yet.
+Below the nose, `conform` tucks the MPFB face (the upper lip's skin and the cheeks) `BUST_TUCK` behind the bust's carved
+surface, so the moustache and beard stand in front. Everything of the bust there is beard, except the lips (`BUST_LIPS`), which
+stay MPFB's and uncovered. The moustache takes the upper lip's morphs from the tucked skin under it. The pull above the nose
+reaches `BUST_REACH` with `BUST_SMOOTHING` passes, so the nose's wings and tip, the brow and the cheekbones take the bust's shape.

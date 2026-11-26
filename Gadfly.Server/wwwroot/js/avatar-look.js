@@ -24,8 +24,8 @@
 
 // ---- the palette (hex sRGB) and glow strengths: tune here ----------------------------------------------------------------------
 
-/** Skin: a soft, saturated electric blue. */
-export const LOOK_SKIN = 0x2779ea;
+/** Skin: a saturated electric blue, deep enough that the examiner's lights don't wash it out to near-white close up. */
+export const LOOK_SKIN = 0x1446c2;
 /** Clothing: a deeper blue of the same family, so the neckline reads. */
 export const LOOK_CLOTHING = 0x1c4bb0;
 /** Hair: deeper still; its strands keep their shape from the texture's alpha. */
@@ -55,11 +55,13 @@ export const LOOK_SKIN_DETAIL = 0.45;
 export const LOOK_IRIS_GLOW = 0;
 /**
  * The exception, approved by the owner for the talking bust (GAD-T792): a model whose eye material is named "...-glow" gets this
- * glow on the iris only (the pupil stays dark and sharp, so where he looks still reads). The other examiners keep none.
+ * glow on the iris only (the pupil stays dark and sharp, so where he looks still reads), in a deeper emerald that the glow
+ * doesn't wash out to mint (GAD-T795, tuned at the close framing). The other examiners keep none.
  */
-export const LOOK_IRIS_GLOW_OWN = 0.6;
+export const LOOK_IRIS_GLOW_OWN = 0.9;
+export const LOOK_IRIS_OWN = 0x00b450;
 /** How much of the room's reflected light reaches skin, hair and clothing: below 1 keeps the blue saturated, not washed out. */
-export const LOOK_ENV_LIGHT = 0.5;
+export const LOOK_ENV_LIGHT = 0.3;
 /** Eye surface roughness: low, so the light catches them (a catchlight) and they look alive. */
 export const LOOK_EYE_ROUGHNESS = 0.08;
 
@@ -184,7 +186,7 @@ export function applyExaminerLook(target, options = {}) {
             if (!m || !m.color || (m.userData && m.userData.gadflyLook)) continue;
             const part = partOf(m, mesh);
             const glowing = part === "eyes" && /-glow\b/.test(m.name || "");
-            restyle(m, part, glowing ? { ...o, irisGlow: Math.max(o.irisGlow, LOOK_IRIS_GLOW_OWN) } : o, circuit, mesh);
+            restyle(m, part, glowing ? { ...o, irisGlow: Math.max(o.irisGlow, LOOK_IRIS_GLOW_OWN), iris: LOOK_IRIS_OWN } : o, circuit, mesh);
             m.userData = { ...(m.userData || {}), gadflyLook: true };
             m.needsUpdate = true;
             count++;

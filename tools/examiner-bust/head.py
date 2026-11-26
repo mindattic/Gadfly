@@ -21,9 +21,15 @@ BUST_SHOULDERS_Z = 0.05
 BUST_PLINTH_Z = -0.62
 # How far above the eyes the MPFB face reaches into the bust's bald crown (metres), and how many passes smooth its fit.
 FOREHEAD = 0.09
-SMOOTHING = int(os.environ.get("BUST_SMOOTHING", "12"))
+SMOOTHING = int(os.environ.get("BUST_SMOOTHING", "8"))
+# How far the MPFB face reaches to meet the bust's (metres): farther than this, it keeps its own shape.
+REACH = float(os.environ.get("BUST_REACH", "0.03"))
+# How far behind the bust's moustache and beard the face's skin under them is tucked (metres).
+TUCK = float(os.environ.get("BUST_TUCK", "0.003"))
+# The lips' size (metres, in _lips()'s ellipse): the face shows and moves there, uncovered by the moustache.
+LIPS = float(os.environ.get("BUST_LIPS", "0.012"))
 # How far the bust's surface must stand out from the MPFB face to count as beard or moustache (metres).
-PROUD = float(os.environ.get("BUST_PROUD", "0.004"))
+PROUD = float(os.environ.get("BUST_PROUD", "0.0025"))
 # The root bone the bust's shoulders and plinth hang on.
 BASE_BONE = "BustBase"
 # The beard's tip, this far below the eyes (metres, after scaling); the chest below it is skin.
@@ -38,6 +44,11 @@ def _bvh(o):
     bm = bmesh.new(); bm.from_mesh(o.data); bm.transform(o.matrix_world)
     t = BVHTree.FromBMesh(bm); bm.free()
     return t
+
+
+def _lips(p, mouth):
+    """How far p is from the middle of the mouth, in an ellipse as wide as the lips: under LIPS is the lips themselves."""
+    return Vector(((p.x - mouth.x) * 0.55, p.z - mouth.z)).length
 
 
 def _smooth(a, b, x):
@@ -108,9 +119,10 @@ def load_bust(path, human, eyes):
     return bust
 
 
-def conform(human, bust, eyes, mouth):
-    """Draws the MPFB face onto the bust's: nose, cheeks, brow and forehead, where the two surfaces are within a couple of
-    centimetres. The lids and lips stay as MPFB made them, so blinks and the mouth shapes still close cleanly."""
+def conform(human, bust, eyes, mouth, nose_z):
+    """Draws the MPFB face onto the bust's: nose, cheeks, brow and forehead, where the two surfaces are within REACH. Below the
+    nose it tucks the face's skin behind the bust's moustache and beard. The lids and lips stay as MPFB made them, so blinks and
+    the mouth shapes still close cleanly."""
     bb = _bvh(bust)
     eye = (eyes[0] + eyes[1]) / 2
 
@@ -119,22 +131,41 @@ def conform(human, bust, eyes, mouth):
             return Vector()
         de = min(Vector((p.x - e.x, p.z - e.z)).length for e in eyes)
         dm = Vector(((p.x - mouth.x) * 0.7, p.z - mouth.z)).length
-        # Nothing below the nose: the bust's moustache and beard lie there, and the lips stay MPFB's.
-        w = (_smooth(0.019, 0.03, de) * _smooth(0.02, 0.032, dm) * (1 - _smooth(0.06, 0.08, abs(p.x)))
-             * _smooth(mouth.z + 0.014, mouth.z + 0.022, p.z) * (1 - _smooth(eye.z + FOREHEAD - 0.02, eye.z + FOREHEAD + 0.02, p.z)))
+        # Nothing below the nose (tuck() lays that under the moustache and beard), and the lips stay MPFB's. The nose's wings and
+        # tip, the brow and the cheekbones take the bust's broad snub nose, heavy brow and wide cheeks in full.
+        w = (_smooth(0.018, 0.027, de) * _smooth(0.014, 0.02, dm) * (1 - _smooth(0.065, 0.085, abs(p.x)))
+             * _smooth(nose_z - 0.008, nose_z - 0.002, p.z) * (1 - _smooth(eye.z + FOREHEAD - 0.02, eye.z + FOREHEAD + 0.02, p.z)))
         q = bb.find_nearest(p)[0]
         if q is None or w <= 0: return Vector()
         d = q - p
-        return d * w * (1 - _smooth(0.016, 0.024, d.length))
+        return d * w * (1 - _smooth(REACH - 0.008, REACH, d.length))
+
+    def tuck(p):
+        # The upper lip's skin and the cheeks under the beard: pushed back until they sit TUCK behind the bust's carved surface,
+        # so the moustache and beard stand out in front of them; the lips themselves stay where MPFB made them.
+        if p.y > eye.y + 0.05 or abs(p.x) > 0.075 or not (mouth.z - 0.035 < p.z < nose_z):
+            return Vector()
+        w = (_smooth(LIPS, LIPS + 0.005, _lips(p, mouth)) * (1 - _smooth(nose_z - 0.006, nose_z - 0.001, p.z))
+             * (1 - _smooth(0.06, 0.075, abs(p.x))))
+        hit = bb.ray_cast(Vector((p.x, p.y - 0.05, p.z)), Vector((0, 1, 0)), 0.08)[0]
+        if hit is None or w <= 0: return Vector()
+        push = hit.y + TUCK - p.y
+        return Vector((0, min(push, 0.012) * w, 0)) if push > 0 else Vector()
     # Each vertex snapping to its own nearest point folds the skin where neighbours land on different carved wrinkles (the cracks
     # on the nose and cheeks), so the pull is smoothed over the mesh before it is applied: one smooth surface, the bust's shape.
     ds = [pull(p) for p in _world(human)]
     nbrs = [[] for _ in ds]
     for e in human.data.edges:
         a, b = e.vertices; nbrs[a].append(b); nbrs[b].append(a)
-    for _ in range(SMOOTHING):
-        ds = [d * 0.5 + (sum((ds[j] for j in n), Vector()) / len(n)) * 0.5 if n else d for d, n in zip(ds, nbrs)]
-    reshape(human, lambda i, p: ds[i])
+    def smoothed(ds, passes):
+        for _ in range(passes):
+            ds = [d * 0.5 + (sum((ds[j] for j in n), Vector()) / len(n)) * 0.5 if n else d for d, n in zip(ds, nbrs)]
+        return ds
+    ds = smoothed(ds, SMOOTHING)
+    ws = _world(human)
+    lips = [_lips(p, mouth) < LIPS for p in ws]
+    ts = smoothed([tuck(p) for p in ws], 4)
+    reshape(human, lambda i, p: ds[i] + (Vector() if lips[i] else ts[i]))
 
 
 def _material(name):
@@ -161,10 +192,12 @@ def split_bust(bust, human, eyes, mouth, nose_z, keep_torso=True):
         front = p.y < eye.y + 0.03
         if front and min(Vector((p.x - e.x, p.z - e.z)).length for e in eyes) < 0.024:
             return None                                                                          # eyes and lids
-        if front and Vector(((p.x - mouth.x) * 0.75, p.z - mouth.z)).length < 0.02:
-            return "beard" if p.z > mouth.z + 0.008 and gap > 0.003 else None                  # moustache, not the lips
+        if front and _lips(p, mouth) < LIPS:
+            return None                                                                          # the lips
+        # Under the nose the face is tucked behind the bust (conform), so all of it there is moustache and beard.
+        tucked = abs(p.x) < 0.06 and mouth.z - 0.03 < p.z
         if (eye.z - BEARD_DROP < p.z < nose_z - 0.004 and p.y < eye.y + 0.07 and abs(p.x) < 0.085
-                and (gap > PROUD or p.z < mouth.z - 0.04)):
+                and (tucked or gap > PROUD or p.z < mouth.z - 0.04)):
             return "beard"
         if front and abs(p.x) < 0.075 and mouth.z - 0.03 < p.z < eye.z + FOREHEAD:
             return None                                                                          # the face: MPFB's, drawn on the bust's
@@ -332,7 +365,7 @@ def build(examiner_glb, bust_glb, on_plinth=True):
     mouth = Vector((0, min(ty) - 0.012, (max(tz) + min(tz)) / 2 + 0.006))
     nose_z = mouth.z + 0.022
     bust = load_bust(bust_glb, human, eyes)
-    conform(human, bust, eyes, mouth)
+    conform(human, bust, eyes, mouth, nose_z)
     bparts = split_bust(bust, human, eyes, mouth, nose_z, keep_torso=on_plinth)
     transfer_morphs(bparts["beard"], human, fade=lambda p: 1 - _smooth(nose_z - 0.01, nose_z, p.z))
     if on_plinth:
@@ -352,7 +385,7 @@ def stills(arm, parts, bparts, keep, eye, still):
     """Renders the stills (README.md) in a stand-in for the app's look: avatar-look.js's palette with a soft glow, and the brown
     irises turned green. Parts it doesn't name (his suit) take the clothing's blue."""
     hexrgb = lambda h, k=1.0: tuple(((h >> s) & 255) / 255 * k for s in (16, 8, 0)) + (1,)
-    look = {"Bust.skin": 0x2779ea, "Bust.hair": 0x142f7a, "Bust.beard": 0x142f7a, "Bust.plinth": 0x1c4bb0, "body": 0x2779ea,
+    look = {"Bust.skin": 0x1446c2, "Bust.hair": 0x142f7a, "Bust.beard": 0x142f7a, "Bust.plinth": 0x1c4bb0, "body": 0x1446c2,
             "eyebrow001": 0x0b1736, "eyelashes01": 0x0b1736, "teeth_base": 0xeef3ff, "tongue01": 0x8a4f73}
     for o in bparts.values():
         for m in o.data.materials:
