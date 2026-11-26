@@ -216,7 +216,9 @@ dotnet build Gadfly.slnx
 dotnet run --project Gadfly.Server
 ```
 
-`.\run.ps1` does the same in one step, always in mock mode; add `-SeedDemo`, `-SeedClassroom` or `-Tour` (below).
+`.\run.ps1` (or `run.bat`) is the MindAttic run menu: `1` Redeploy builds the server, worker and CLI into
+`R:\MindAttic\Apps\Gadfly\Debug` and `\Release`, `2` Run Debug serves the Debug copy in mock mode, `3` Run Release
+starts the Release copy, `13` redeploys then runs it. Details in [docs/DEPLOY.md](docs/DEPLOY.md#running-it-locally).
 
 Open `https://localhost:7311` (HTTP on 5311). In Development the database `Gadfly` on
 `(localdb)\MSSQLLocalDB` is created and migrated on start, and the AI panel is the mock: every page shows
@@ -272,8 +274,8 @@ dotnet build Gadfly.Tour\Gadfly.Tour.csproj
 dotnet run --project Gadfly.Tour -- --fresh
 ```
 
-`.\run.ps1 -Tour` builds both and runs exactly that; `.\run.ps1 -SeedDemo` and `-SeedClassroom` start the
-server with the matching seeder (`-Password` chooses the account password). The other options (`--keep`,
+`.\run.ps1 -RunDebug --seed-demo` and `.\run.ps1 -RunDebug --seed-classroom` start the deployed Debug server with
+the matching seeder (`Gadfly:Demo:Password` chooses the account password). The tour's other options (`--keep`,
 `--url`, `--verbose` and more) are in [docs/TOUR.md](docs/TOUR.md).
 
 ## Configuration

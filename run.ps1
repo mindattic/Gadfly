@@ -1,53 +1,72 @@
+#Requires -Version 5.1
 <#
 .SYNOPSIS
-  Runs Gadfly.Server locally in mock mode against LocalDB (Development). No LLM provider is called.
+    This repo's run menu: 1) Redeploy  2) Run Debug  3) Run Release  (the MindAttic standard, MAT-T279).
 
 .DESCRIPTION
-  Default: starts the server on https://localhost:7311 (database Gadfly on (localdb)\MSSQLLocalDB, migrated on start).
-  -SeedDemo       seeds Gadfly Demo Academy (demo.owner, demo.teacher, ... demo.student), then serves.
-  -SeedClassroom  seeds the classroom (Classroom_Owner, Teacher_A..C, Student_A..Z), then serves.
-  -Worker         runs Gadfly.Worker instead (the job queue, grading and sweepers, docs/DEPLOY.md "The worker"), against
-                  the same LocalDB. Start it beside a server running with Gadfly__Jobs__RunInWeb=false to try the split.
-  -Tour           runs the demo tour (docs/TOUR.md): its own server and database GadflyTour, mock panel. Exits with
-                  the tour's exit code and prints its "Tour: N passed, ..." line.
-  Seeders use -Password, else Gadfly:Demo:Password from the environment, else generate one and print it in the log.
-  Windows PowerShell 5.1 compatible.
+    Copied from MindAttic.Agency\shared\templates\run.ps1 (Write-RunPs1 in deploy-lib.ps1). run.bat beside it
+    (Write-RunBat) opens the same menu on a double-click. Everything else lives in deploy-lib.ps1's Invoke-AppRun:
+      1) Redeploy     build and deploy Debug and Release to R:\MindAttic\Apps\<repo>\{Debug,Release}
+      2) Run Debug    the dev/test copy, in this console; extra arguments pass through to the app
+      3) Run Release  the standalone copy, started the way a double-click would start it
+    Picks combine: 13 is Deploy & Run (redeploy, then run the installed Release copy).
+
+    Finding deploy-lib.ps1, first match wins:
+      1. $env:MINDATTIC_DEPLOY_LIB, the full path of a deploy-lib.ps1 (a dev copy, or a workspace elsewhere)
+      2. walking up from this folder, at each ancestor <dir>:
+           <dir>\MindAttic.Agency\shared\deploy-lib.ps1           (the canonical copy, current with main)
+           <dir>\mindattic-agent-standard\shared\deploy-lib.ps1   (the workspace-root mirror; lags until
+                                                                    sync-workspace-copy.ps1 runs)
+      3. the same two under D:\Projects\MindAttic (repos in another workspace root, e.g. D:\Projects\GunGreenEyes)
+
+    The repo's own differences go in the override block below (or in .agent\run.json; this block's keys win).
+
+.EXAMPLE
+    .\run.ps1                    the menu
+    .\run.ps1 -Redeploy -RunDebug --level 3     (a pass-through spelled like a common parameter, e.g. --verbose,
+                                                 is taken by PowerShell itself; put it in DebugArgs instead)
+    .\run.ps1 -RunRelease                       Run: the installed copy, no build
+    .\run.ps1 -Redeploy -RunRelease             Deploy & Run
+    .\run.ps1 -Redeploy -DryRun  print what would be built and launched, do nothing
 #>
-[CmdletBinding()]
 param(
-    [switch]$SeedDemo,
-    [switch]$SeedClassroom,
-    [switch]$Tour,
-    [switch]$Worker,
-    [string]$Password
+    [switch]$Redeploy,
+    [switch]$RunDebug,
+    [switch]$RunRelease,
+    [switch]$DryRun,
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$AppArgs = @()
 )
-
 $ErrorActionPreference = 'Stop'
-Set-Location $PSScriptRoot
-$env:ASPNETCORE_ENVIRONMENT = 'Development'
-$env:Gadfly__AiMode = 'mock'     # never a live provider from this script
-if ($Password) { $env:Gadfly__Demo__Password = $Password }
 
-if ($Tour) {
-    dotnet build Gadfly.Server\Gadfly.Server.csproj --nologo -v q
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    dotnet build Gadfly.Tour\Gadfly.Tour.csproj --nologo -v q
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    $tourArgs = @('--fresh')
-    dotnet run --no-build --project Gadfly.Tour -- @tourArgs
-    exit $LASTEXITCODE
+# The override block: every key is optional; delete what you don't need. See deploy-lib.ps1's header for each key.
+# Gadfly runs locally only (LocalDB 'Gadfly'): Production needs Azure Data Protection, so both runs are Development.
+# Run Debug is mock mode; seed with a pass-through flag, last: .\run.ps1 -RunDebug --seed-demo (or --seed-classroom).
+# Gadfly.Worker.exe and the CLI (gadfly.exe) deploy beside the server; the tour runs from source (docs/TOUR.md).
+$Override = @{
+    Exe         = 'Gadfly.Server.exe'
+    DebugArgs   = @('--environment', 'Development', '--urls', 'https://localhost:7311;http://localhost:5311', '--Gadfly:AiMode=mock')
+    ReleaseArgs = @('--environment', 'Development', '--urls', 'https://localhost:7311;http://localhost:5311')
+    Plan        = @{ Kind = 'dotnet'; Projects = @(
+            "$PSScriptRoot\Gadfly.Server\Gadfly.Server.csproj",
+            "$PSScriptRoot\Gadfly.Worker\Gadfly.Worker.csproj",
+            "$PSScriptRoot\Gadfly.Cli\Gadfly.Cli.csproj") }
 }
 
-if ($Worker) {
-    Write-Host 'Gadfly.Worker: mock mode, Development (Ctrl+C stops it)' -ForegroundColor Cyan
-    dotnet run --project Gadfly.Worker
-    exit $LASTEXITCODE
+function Find-DeployLib {
+    if ($env:MINDATTIC_DEPLOY_LIB -and (Test-Path -LiteralPath $env:MINDATTIC_DEPLOY_LIB)) { return $env:MINDATTIC_DEPLOY_LIB }
+    $roots = @()
+    $d = $PSScriptRoot
+    while ($d) { $roots += $d; $d = Split-Path -Parent $d }
+    $roots += 'D:\Projects\MindAttic'
+    foreach ($r in $roots) {
+        foreach ($rel in 'MindAttic.Agency\shared\deploy-lib.ps1', 'mindattic-agent-standard\shared\deploy-lib.ps1') {
+            $p = Join-Path $r $rel
+            if (Test-Path -LiteralPath $p) { return $p }
+        }
+    }
+    throw 'deploy-lib.ps1 not found: clone MindAttic.Agency beside this repo, or set MINDATTIC_DEPLOY_LIB to its path.'
 }
 
-$serverArgs = @()
-# Seed flags must come last (Program.cs); the classroom seeder serves afterwards unless --then-exit is added.
-if ($SeedDemo) { $serverArgs += '--seed-demo' }
-if ($SeedClassroom) { $serverArgs += '--seed-classroom' }
-Write-Host 'Gadfly.Server: mock mode, Development, https://localhost:7311 (Ctrl+C stops it)' -ForegroundColor Cyan
-dotnet run --project Gadfly.Server -- @serverArgs
-exit $LASTEXITCODE
+. (Find-DeployLib)
+Invoke-AppRun -Repo $PSScriptRoot -Redeploy:$Redeploy -RunDebug:$RunDebug -RunRelease:$RunRelease -DryRun:$DryRun `
+    -AppArgs $AppArgs -Override $Override

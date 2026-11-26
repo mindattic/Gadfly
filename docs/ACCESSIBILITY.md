@@ -278,7 +278,7 @@ screen reader.
 
 ## How to re-check
 
-1. Run the app in mock mode with the demo seed: `.\run.ps1 -SeedDemo -Password '<a password>'` (https://localhost:7311).
+1. Run the app in mock mode with the demo seed: `$env:Gadfly__Demo__Password = '<a password>'; .\run.ps1 -Redeploy -RunDebug --seed-demo` (https://localhost:7311).
    If the working tree doesn't build because of someone else's in-progress change, export `HEAD` to a scratch folder
    (`git archive HEAD | tar -x -C <dir>`), copy your changed files in, and run it there with
    `ConnectionStrings__Gadfly` pointing at a separate LocalDB database and `ASPNETCORE_URLS` at a free port.

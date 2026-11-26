@@ -285,23 +285,30 @@ dashboard; its log should show the health line above and then `Running job <id> 
 ends). In the portal: the app → Settings → WebJobs. With `RunInWeb=false`, a finished exam still being graded is the
 end-to-end check.
 
-**Locally**, `.un.ps1 -Worker` runs the worker in Development against LocalDB, in mock mode; start the server with
-`$env:Gadfly__Jobs__RunInWeb='false'` beside it to try the split.
+**Locally**, `.\run.ps1 -Redeploy` puts `Gadfly.Worker.exe` beside the server in `R:\MindAttic\Apps\Gadfly\Debug`. Run
+it from there with `--environment Development --Gadfly:AiMode=mock` (LocalDB, mock mode), and start the server with
+`.\run.ps1 -RunDebug --Gadfly:Jobs:RunInWeb=false` beside it to try the split.
 
 ## Running it locally
 
-`run.ps1` at the repo root starts Gadfly.Server in Development on `https://localhost:7311`, in mock mode (it sets
-`Gadfly__AiMode=mock`, so no provider is called), against LocalDB (database `Gadfly`, migrated on start):
+`run.ps1` at the repo root (or a double-click on `run.bat`) is the MindAttic standard run menu: `1` Redeploy builds
+Gadfly.Server, Gadfly.Worker and the CLI (`gadfly.exe`) into `R:\MindAttic\Apps\Gadfly\Debug` and `\Release`, `2` Run
+Debug starts the Debug server in this console, `3` Run Release starts the Release one on its own, and `13` redeploys
+then runs Release. Both runs are Development on `https://localhost:7311` against LocalDB (database `Gadfly`, migrated
+on start); Run Debug also passes `--Gadfly:AiMode=mock`, so no provider is called. Arguments after the switches go to
+the Debug server, so a seed flag goes last:
 
 ```powershell
-.\run.ps1                  # serve
-.\run.ps1 -SeedDemo        # also seed Gadfly Demo Academy (demo.owner ... demo.student)
-.\run.ps1 -SeedClassroom   # also seed the classroom (Teacher_A..C, Student_A..Z)
-.\run.ps1 -Tour            # run the demo tour (docs/TOUR.md) on its own database and print its result line
+.\run.ps1                                  # the menu
+.\run.ps1 -Redeploy -RunDebug              # build, deploy and serve
+.\run.ps1 -RunDebug --seed-demo            # also seed Gadfly Demo Academy (demo.owner ... demo.student)
+.\run.ps1 -RunDebug --seed-classroom       # also seed the classroom (Teacher_A..C, Student_A..Z)
+.\run.ps1 -Redeploy -DryRun                # print what would be built and launched
 ```
 
-The seeders use `-Password <text>` (or `Gadfly:Demo:Password`) as every account's password, or generate one and
-print it once in the log.
+The seeders use `Gadfly:Demo:Password` (for example `$env:Gadfly__Demo__Password`) as every account's password, or
+generate one and print it once in the log. The demo tour runs from source: `dotnet run --project Gadfly.Tour -- --fresh`
+(docs/TOUR.md).
 
 ## After the first deploy
 
