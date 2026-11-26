@@ -122,6 +122,13 @@ if (args.Contains(Gadfly.Server.Admin.AdminOnlyRoles.Argument))
     catch (Exception ex) { app.Logger.LogError(ex, "Admin-only roles failed."); }
     if (args.Contains("--then-exit")) return;
 }
+// Development only: set local accounts' passwords from GADFLY_LOCAL_PASSWORD (GAD-T801).
+if (args.Contains(Gadfly.Server.Admin.LocalPasswords.Argument))
+{
+    try { await Gadfly.Server.Admin.LocalPasswords.RunAsync(app, args); }
+    catch (Exception ex) { app.Logger.LogError(ex, "Setting local passwords failed."); }
+    if (args.Contains("--then-exit")) return;
+}
 // Classroom test accounts: Teacher_A..C, Student_A..Z across their assessments (GAD-T151). --then-exit makes it a one-shot.
 if (args.Contains(Gadfly.Server.Demo.ClassroomSeeder.SeedArgument) || app.Configuration["Gadfly:Demo:SeedClassroomOnStartup"] == "true")
 {
