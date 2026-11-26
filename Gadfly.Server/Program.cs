@@ -115,6 +115,13 @@ if (args.Contains(Gadfly.Server.Privacy.UserDataReset.ResetArgument))
     catch (Exception ex) { app.Logger.LogError(ex, "User data reset failed."); }
     if (args.Contains("--then-exit")) return;
 }
+// Only one account keeps admin rights; everyone else is a Student in the classroom organization (GAD-T791); --dry-run only lists.
+if (args.Contains(Gadfly.Server.Admin.AdminOnlyRoles.Argument))
+{
+    try { await Gadfly.Server.Admin.AdminOnlyRoles.RunAsync(app, args); }
+    catch (Exception ex) { app.Logger.LogError(ex, "Admin-only roles failed."); }
+    if (args.Contains("--then-exit")) return;
+}
 // Classroom test accounts: Teacher_A..C, Student_A..Z across their assessments (GAD-T151). --then-exit makes it a one-shot.
 if (args.Contains(Gadfly.Server.Demo.ClassroomSeeder.SeedArgument) || app.Configuration["Gadfly:Demo:SeedClassroomOnStartup"] == "true")
 {
