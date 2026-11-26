@@ -10,6 +10,8 @@ public class ExaminerCatalogTests
 {
     private static readonly VoiceSettings Voice = new(VoiceMode.Mock, "/assets/avatars/mpfb.glb", 4);
 
+    private static ExaminerOption Of(IReadOnlyList<ExaminerOption> options, string id) => options.Single(o => o.Id == id);
+
     [Test]
     public void TheConfiguredExaminer_IsOffered_AndTheMaleOneOnlyOnceInstalled()
     {
@@ -18,14 +20,14 @@ public class ExaminerCatalogTests
         try
         {
             var options = ExaminerCatalog.For(Voice, empty);
-            Assert.That(options.Select(o => o.Id), Is.EqualTo(new[] { ExaminerCatalog.Female, ExaminerCatalog.Male, ExaminerCatalog.Socrates }));
-            Assert.That(options[0].Available, Is.True);
-            Assert.That(options[0].ModelUrl, Is.EqualTo("/assets/avatars/mpfb.glb"));
-            Assert.That(options[1].Available, Is.False, "no model installed yet");
+            Assert.That(options.Select(o => o.Id), Is.EqualTo(new[] { ExaminerCatalog.Bust, ExaminerCatalog.Female, ExaminerCatalog.Male, ExaminerCatalog.Socrates, ExaminerCatalog.BustBody }));
+            Assert.That(Of(options, ExaminerCatalog.Female).Available, Is.True);
+            Assert.That(Of(options, ExaminerCatalog.Female).ModelUrl, Is.EqualTo("/assets/avatars/mpfb.glb"));
+            Assert.That(Of(options, ExaminerCatalog.Male).Available, Is.False, "no model installed yet");
 
             Directory.CreateDirectory(Path.Combine(empty, "assets", "avatars"));
             File.WriteAllBytes(Path.Combine(empty, ExaminerCatalog.MaleModelPath), [1]);
-            Assert.That(ExaminerCatalog.For(Voice, empty)[1].Available, Is.True);
+            Assert.That(Of(ExaminerCatalog.For(Voice, empty), ExaminerCatalog.Male).Available, Is.True);
         }
         finally { Directory.Delete(empty, recursive: true); }
     }
@@ -41,10 +43,10 @@ public class ExaminerCatalogTests
     [Test]
     public void TheMaleExaminer_HasHisOwnVoice_AndSettingsOverrideThem()
     {
-        var male = ExaminerCatalog.For(Voice, webRoot: null)[1];
+        var male = Of(ExaminerCatalog.For(Voice, webRoot: null), ExaminerCatalog.Male);
         Assert.That(male.VoiceIdFor("en"), Is.EqualTo(ExaminerCatalog.MaleDefaultVoiceId));
         Assert.That(male.VoiceIdFor("ko"), Is.EqualTo(ExaminerCatalog.MaleDefaultVoiceId), "the premade voice speaks Korean too");
-        Assert.That(ExaminerCatalog.For(Voice, webRoot: null)[0].VoiceIdFor("en"), Is.Null, "hers stays the platform voice");
+        Assert.That(Of(ExaminerCatalog.For(Voice, webRoot: null), ExaminerCatalog.Female).VoiceIdFor("en"), Is.Null, "hers stays the platform voice");
 
         var configured = Voice with
         {
@@ -54,7 +56,7 @@ public class ExaminerCatalogTests
                     new Dictionary<string, string> { ["ko"] = "koreanMaleVoice0123" }),
             },
         };
-        var m = ExaminerCatalog.For(configured, webRoot: null)[1];
+        var m = Of(ExaminerCatalog.For(configured, webRoot: null), ExaminerCatalog.Male);
         Assert.That((m.ModelUrl, m.Available), Is.EqualTo(("https://cdn.example/m.glb", true)));
         Assert.That((m.VoiceIdFor("en"), m.VoiceIdFor("ko")), Is.EqualTo(("maleVoice0123456789", "koreanMaleVoice0123")));
     }
@@ -152,7 +154,7 @@ public class ExaminerCatalogTests
     [Test]
     public void ResolvedExaminer_RechecksTheVoiceForTheLanguage()
     {
-        var female = ExaminerCatalog.For(Voice, webRoot: null)[0];
+        var female = Of(ExaminerCatalog.For(Voice, webRoot: null), ExaminerCatalog.Female);
         var tampered = new ResolvedExaminer(female, new ExaminerCustomization(Voice: ExaminerCatalog.MaleDefaultVoiceId));
         Assert.That(tampered.VoiceIdFor("en"), Is.Null, "a voice not on her list is never spoken with, even if it reaches here unvalidated");
         Assert.That(new ResolvedExaminer(female, new ExaminerCustomization(Voice: "XB0fDUnXU5powFXDhCwa")).VoiceIdFor("es"), Is.EqualTo("XB0fDUnXU5powFXDhCwa"));
