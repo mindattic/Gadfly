@@ -208,8 +208,26 @@ new, separate study, never as routine rotation. Platform staff should not change
 What the app does: Gadfly's AI panel is several providers voting. A provider that fails calls in a row is marked
 failing (logged once as an error) and the panel carries on without it; `/admin/status` and `/healthz/ready` show
 *AI panel: warning*. If every provider fails, AI grading and question generation stall or fall back (the check says
-so). The mode is chosen **once at startup** and never flips during a run: with `Gadfly:AiMode=auto` the app probes the
-providers at startup and uses the labelled mock panel only if none answered; with `live` it stays live.
+so). `Gadfly:AiMode` sets the mode at startup: with `auto` the app probes the providers and uses the labelled mock panel
+only if none answered; with `live` it stays live. The platform admin can then switch it between mock and live on
+`/admin/status` with no restart (GAD-T802, section 4.1a below).
+
+### 4.1a Switching between mock and live (GAD-T802)
+
+The platform admin's **Switch AI panel to live / mock** button on `/admin/status` (System status, "App, AI and voice";
+shown to the platform admin only, after a confirm step) flips the AI panel at runtime, on localhost and Azure alike:
+
+- **Stored.** Each flip is an audit event (`platform.ai-mode.switched`, entity `AiMode`, no organization: who, from, to);
+  the latest is in force and survives restarts and redeploys. `Gadfly:AiMode` is only the default until the first flip.
+- **Every process follows.** The web app and the worker (and any other instance) re-read the stored choice every 15
+  seconds (`AiModeSync`), so email, grading jobs and new exams follow within that.
+- **Sessions keep their mode.** A session records the mode it started in (`ExamSessions.AiMode`) and its questions,
+  judgments and AI grading all run in that mode (`PanelPin`), so an exam is never half mock, half live. New sessions
+  use the new mode. Sessions started before the column existed follow the server.
+- **Live needs keys.** Switching to live is refused, with the reason, when no provider key is found (MindAttic Vault's
+  LLM providers) or the live-turn model's provider (`Gadfly:LiveTurn:Provider`, Claude by default) has none. A process
+  that cannot see the keys stays mock and logs a warning once.
+- **Email** follows the same switch: a server switched to mock sends no real email (`EmailDeliveryGate`).
 
 Steps:
 

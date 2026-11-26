@@ -142,6 +142,9 @@ public static class GadflyServices
         builder.Services.AddGadflyPanel(builder.Configuration, builder.Environment.IsDevelopment());
         // How long every outside call on a live exam takes, in gadfly.ApiCallTimings and the log (GAD-T413).
         Diagnostics.ApiCallTimingServices.AddApiCallTimings(builder.Services);
+        // The platform admin's runtime switch between mock and live, stored and followed by every process (GAD-T802).
+        builder.Services.AddSingleton<Admin.AiModeSwitch>();
+        builder.Services.AddHostedService<Admin.AiModeSync>();
 
         // Source material: text extractors (.txt/.md, and PDF/DOCX/EPUB/HTML through Tutor.Ingestion, GAD-T155) and processing jobs.
         builder.Services.AddSingleton<IDocumentTextExtractor, PlainTextExtractor>();

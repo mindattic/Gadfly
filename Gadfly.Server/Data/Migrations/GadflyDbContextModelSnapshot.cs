@@ -969,6 +969,10 @@ namespace Gadfly.Server.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("AiMode")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
                     b.Property<Guid>("AssignmentId")
                         .HasColumnType("uniqueidentifier");
 

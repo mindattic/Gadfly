@@ -101,9 +101,11 @@ public sealed partial class SessionOrchestrator(
     IConfiguration? configuration = null,
     IPanelInfo? panelInfo = null)
 {
-    private sealed class Live(SourceExamEngine engine, Guid organizationId, Guid studentUserId, AssessmentMode mode)
+    private sealed class Live(SourceExamEngine engine, Guid organizationId, Guid studentUserId, AssessmentMode mode, ISocraticVotingClient panel)
     {
         public AssessmentMode Mode { get; } = mode;
+        /// <summary>The panel held to the AI mode the session started in (GAD-T802).</summary>
+        public ISocraticVotingClient Panel { get; } = panel;
         /// <summary>Set by a step for the view it returns (cleared on every step).</summary>
         public string? Notice { get; set; }
         /// <summary>The key of <see cref="Notice"/> in the exam room's string files, so the room shows it in the attempt's language (GAD-T629).</summary>
@@ -133,16 +135,18 @@ public sealed partial class SessionOrchestrator(
     /// mock mode or with no live model, so the check compares with the source alone. <see cref="MachineTranslator"/> caches per
     /// process, so a passage repeated across turns and sessions costs one call.
     /// </summary>
-    private readonly Func<string, string, CancellationToken, Task<string?>>? _sourceTranslator =
-        liveModel is null || (panelInfo ?? panel as IPanelInfo) is not { IsMock: false } info ? null
-            : TranslateSource(new MachineTranslator(info, liveModel));
+    private static Func<string, string, CancellationToken, Task<string?>>? SourceTranslatorFor(ISocraticVotingClient panel, ILiveTurnModel? model) =>
+        model is null || panel is not IPanelInfo { IsMock: false } info ? null : TranslateSource(new MachineTranslator(info, model));
+
+    /// <summary>The server-wide AI mode, recorded on a new session so it keeps it (GAD-T802).</summary>
+    private string? ServerAiMode => (panelInfo ?? panel as IPanelInfo)?.Mode;
 
     private static Func<string, string, CancellationToken, Task<string?>> TranslateSource(MachineTranslator translator) =>
         async (text, language, ct) => (await translator.TranslateAsync(text, ExamLanguage.English, language, ct)).Text;
 
     /// <summary>The verifier on the attempt's prompt set (GAD-T535): the shared English one for an English attempt.</summary>
     private ResponseVerifier VerifierFor(Live live) =>
-        live.Engine.Subject.Language.IsDefault ? _verifier : new ResponseVerifier(panel, live.Engine.Subject.PromptSet);
+        live.Engine.Subject.Language.IsDefault && live.Panel == panel ? _verifier : new ResponseVerifier(live.Panel, live.Engine.Subject.PromptSet);
     private readonly ConcurrentDictionary<Guid, SemaphoreSlim> _loadGates = new();
     private readonly ConcurrentDictionary<(Guid Collection, int Version), SourceMaterialSubject> _subjects = new();
 
@@ -234,6 +238,7 @@ public sealed partial class SessionOrchestrator(
             PrimaryLanguage = primary,
             ConceptMapVersion = collection.ConceptMapVersion,
             ClientInfo = clientInfo is { Length: > 500 } ci ? ci[..500] : clientInfo,
+            AiMode = ServerAiMode,
         };
         FlagCrossLingual(session, now);
         db.ExamSessions.Add(session);
@@ -1028,6 +1033,9 @@ public sealed partial class SessionOrchestrator(
 
             // The attempt's languages (GAD-T534): an English attempt by an English-primary student gets the English subject itself.
             subject = subject.ForLanguage(new AttemptLanguage(row.Language, row.PrimaryLanguage));
+            // The AI mode the session started in, whatever the server has been switched to since (GAD-T802).
+            var sessionPanel = PanelPin.For(panel, row.AiMode);
+            var sessionModel = PanelPin.For(liveModel, row.AiMode);
             SourceExamEngine engine;
             if (row.TranscriptJson is { Length: > 0 } transcript)
             {
@@ -1048,7 +1056,7 @@ public sealed partial class SessionOrchestrator(
                         sessionId, session.PromptSetSha256[..12], subject.PromptSet.Sha256[..12]);
                     throw new SessionRefusedException(new StudentText("refusal.promptSetChanged"));
                 }
-                engine = await SourceExamEngine.ResumeAsync(panel, subject, session, ClaimLedger.FromJson(row.LedgerJson), clock, ct);
+                engine = await SourceExamEngine.ResumeAsync(sessionPanel, subject, session, ClaimLedger.FromJson(row.LedgerJson), clock, ct);
                 log.LogInformation("Resumed exam session {SessionId} at turn {Turn}.", sessionId, session.Turns.Count);
             }
             else
@@ -1059,7 +1067,7 @@ public sealed partial class SessionOrchestrator(
                 var policy = await SessionObjectives.ForSessionAsync(db, ReadPolicy(row.PolicyJson), exam, multiplier, ct);
                 if (policy.ConceptIds.Count == 0)
                     policy = policy with { ConceptIds = subject.Map.Concepts.Select(c => c.Key).ToList() };
-                engine = await SourceExamEngine.StartAsync(panel, subject, policy, clock, sessionId, ct);
+                engine = await SourceExamEngine.StartAsync(sessionPanel, subject, policy, clock, sessionId, ct);
                 // Voice and camera are mandatory (GAD-T239): the clock waits for the examiner to begin the first question.
                 engine.Session.HoldClock();
                 var recorded = JsonSerializer.Serialize(policy, Json);
@@ -1074,13 +1082,13 @@ public sealed partial class SessionOrchestrator(
             engine.AssessTextStyle = false;
             // The next question and its leak guard come from one fast model, not the panel vote (GAD-T494): the examiner answers in
             // conversational time. The panel still judges every answer.
-            engine.LiveTurnModel = liveModel;
+            engine.LiveTurnModel = sessionModel;
             // A Korean or Spanish answer recited from a translation of the English notes is caught too (GAD-T600, GAD-T643): the
             // recitation check also compares it with the passages machine-translated into the exam language by the same fast model.
-            engine.SourceTranslator = _sourceTranslator;
+            engine.SourceTranslator = SourceTranslatorFor(sessionPanel, sessionModel);
             // The fast model's provisional judgment steers the next move and the panel's full judgment runs off the turn (GAD-T508).
             engine.DeferFullJudgment = DeferJudging;
-            var live = new Live(engine, organizationId, row.StudentUserId, exam.AssessmentMode);
+            var live = new Live(engine, organizationId, row.StudentUserId, exam.AssessmentMode, sessionPanel);
             _live[sessionId] = live;
             // A restart (or an evicted cache) left answers judged only provisionally: their full judgments resume now.
             if (engine.Session.PendingFullJudgments.Count > 0) ResumeJudging(live);

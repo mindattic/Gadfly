@@ -82,6 +82,9 @@ public class LegionVotingClient : ISocraticVotingClient, IPanelModels, IDisposab
         }
     }
 
+    /// <summary>The allowed providers that have a key (GAD-T802), read from configuration; no provider is called.</summary>
+    public IReadOnlyList<string> KeyedProviders => [.. config.ActiveProviderIds.Distinct(StringComparer.OrdinalIgnoreCase)];
+
     public async Task<IReadOnlyList<PanelReply>> FanOutAsync(string systemPrompt, string userMessage, int maxTokens = 4096,
         double temperature = 0.2, CancellationToken ct = default)
     {

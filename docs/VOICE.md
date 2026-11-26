@@ -385,8 +385,9 @@ after the other, while ElevenLabs' first audio byte takes about 0.17 s. Now:
 
 If the fast model fails (provider down, timeout), that attempt goes back to the panel vote and the panel guard, so a
 provider outage costs speed, never safety. Every call is still metered (`PanelCall`, kind `live-turn`) and timed
-(`ApiCallTimings`, with a `.firstChunk` row for the streamed reply, GAD-T495 below). Mock mode (`Gadfly:AiMode=mock`) uses the mock
-panel's own template replies, so nothing is called or billed.
+(`ApiCallTimings`, with a `.firstChunk` row for the streamed reply, GAD-T495 below). Mock mode (`Gadfly:AiMode=mock`, or the platform admin's
+switch on `/admin/status`, GAD-T802) uses the mock panel's own template replies, so nothing is called or billed. A session
+keeps the live-turn model of the mode it started in (`PanelPin`), even if the switch is flipped while it runs.
 
 **The panel judges off the turn (GAD-T508).** The multi-model panel's judgment of an answer (aporia check, judges,
 analysis, claim extraction and contradiction checks) no longer blocks the next question. What is provisional and what

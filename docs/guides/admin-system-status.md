@@ -24,7 +24,9 @@ anonymous. It answers 200 while nothing fails and 503 when something does.
 ## App, AI and voice
 
 - The app's version and environment.
-- The AI panel's mode (live or mock), the `Gadfly:AiMode` setting and why that mode is in force.
+- The AI panel's mode (live or mock), the `Gadfly:AiMode` setting, the last switch and why that mode is in force. The
+  platform admin sees **Switch AI panel to live / mock** here: it asks you to confirm, takes effect without a restart,
+  is recorded in the audit log, and leaves exams already in progress in the mode they started in.
 - Each AI provider on the panel: its model, whether it is answering or failing, how many calls it made and failed, and
   when it last answered and last failed, since this server started. The platform admin also sees each provider's last
   error.

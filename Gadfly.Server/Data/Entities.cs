@@ -437,6 +437,11 @@ public sealed class ExamSession : ITenantOwned
     /// <summary>Why <see cref="NeedsInstructorReview"/> was set, in plain words for the instructor.</summary>
     public string? ReviewReason { get; set; }
     public DateTimeOffset? ReviewFlaggedAt { get; set; }
+    /// <summary>
+    /// The AI mode the attempt started in, "live" or "mock" (GAD-T802): it keeps it, and is graded in it, whatever the platform
+    /// admin switches the server to meanwhile. Null for attempts started before it was recorded (they follow the server's mode).
+    /// </summary>
+    public string? AiMode { get; set; }
     public List<SessionTurn> Turns { get; set; } = [];
 }
 

@@ -148,10 +148,10 @@ public sealed partial class SessionOrchestrator
         var ct = speculation.Cancel.Token;
         try
         {
-            var copy = await SourceExamEngine.ResumeAsync(panel, live.Engine.Subject, SessionTranscriptSerializer.Deserialize(speculation.BaseTranscript),
+            var copy = await SourceExamEngine.ResumeAsync(live.Panel, live.Engine.Subject, SessionTranscriptSerializer.Deserialize(speculation.BaseTranscript),
                 ClaimLedger.FromJson(speculation.BaseLedger), clock, ct);
             copy.AssessTextStyle = false;
-            copy.LiveTurnModel = liveModel;
+            copy.LiveTurnModel = live.Engine.LiveTurnModel;
             copy.SourceTranslator = live.Engine.SourceTranslator;
             // Judged provisionally like the live step (GAD-T508); a copy never runs the panel on answers still pending.
             copy.DeferFullJudgment = live.Engine.DeferFullJudgment;

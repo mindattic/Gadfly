@@ -5,6 +5,7 @@
 @inject IServiceScopeFactory Scopes
 @inject ITenantContext Tenant
 @inject ILogger<SystemStatus> Log
+@inject AiModeSwitch AiMode
 
 @* Whether the examiner, speech and background work are healthy (GAD-T300, GAD-T302): the platform's checks, version, AI and
    voice mode, providers, database and migrations (GAD-T353); the organization's jobs with retry and cancel, and its webhook
@@ -79,7 +80,28 @@ else
                 <span class="value @(platform.VoiceMode == "live" ? "ok" : "error")">@VoiceWord(platform.VoiceMode)</span>
             </div>
         </div>
-        <p class="hint">AI mode setting: @(string.IsNullOrEmpty(platform.ConfiguredAiMode) ? "default" : platform.ConfiguredAiMode). @platform.AiModeReason</p>
+        <p class="hint">AI mode setting: @(string.IsNullOrEmpty(platform.ConfiguredAiMode) ? "default" : platform.ConfiguredAiMode)@(lastSwitch is { } ls ? $", switched to {ls.Mode} on {When(ls.ChangedAt)}" : ""). @platform.AiModeReason</p>
+        @if (Tenant.IsSuperAdmin)
+        {
+            @* The platform admin's switch between mock and live (GAD-T802): stored, audited, no restart. *@
+            var target = platform.AiMode == "mock" ? "live" : "mock";
+            <div class="row-actions" role="group" aria-label="Switch the AI panel">
+                @if (confirmSwitch)
+                {
+                    <span>
+                        @(target == "live"
+                            ? "Switch to live? New exams call the AI providers and spend credit, and email is sent. Exams already in progress stay mock."
+                            : "Switch to mock? New exams are simulated and no email is sent. Exams already in progress stay live.")
+                    </span>
+                    <button type="button" disabled="@switching" @onclick="() => SwitchAsync(target)">Switch to @target</button>
+                    <button type="button" class="link" disabled="@switching" @onclick="() => confirmSwitch = false">Cancel</button>
+                }
+                else
+                {
+                    <button type="button" disabled="@(loading || switching)" @onclick="() => confirmSwitch = true">Switch AI panel to @target</button>
+                }
+            </div>
+        }
 
         <h3>AI panel providers</h3>
         @if (platform.Providers.Count == 0)
@@ -357,7 +379,8 @@ else
     private SystemStatusReport? data;
     private PlatformStatus? platform;
     private string? error, message;
-    private bool loading;
+    private bool loading, confirmSwitch, switching;
+    private StoredAiMode? lastSwitch;
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
@@ -372,6 +395,7 @@ else
             await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
             data = await ActivatorUtilities.CreateInstance<AdminStatusService>(scope.ServiceProvider).LoadAsync();
             platform = await ActivatorUtilities.CreateInstance<SystemReadinessService>(scope.ServiceProvider).LoadAsync(includeErrorText: Tenant.IsSuperAdmin);
+            lastSwitch = await AiModeSwitch.LatestAsync(scope.ServiceProvider.GetRequiredService<GadflyDbContext>());
         }
         catch (UnauthorizedAccessException)
         {
@@ -383,6 +407,28 @@ else
             error = "Something went wrong reading the numbers. Try again in a moment.";
         }
         finally { loading = false; }
+    }
+
+    private async Task SwitchAsync(string mode)
+    {
+        if (switching) return;
+        switching = true;
+        try
+        {
+            var result = await AiMode.SwitchAsync(Tenant, mode);
+            message = result.Message;
+        }
+        catch (Exception ex)
+        {
+            Log.LogError(ex, "Switching the AI panel to {Mode} failed", mode);
+            message = "The AI panel could not be switched. Try again in a moment.";
+        }
+        finally
+        {
+            switching = false;
+            confirmSwitch = false;
+        }
+        await LoadAsync();
     }
 
     private async Task ActAsync(JobLine job, bool retry)

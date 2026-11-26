@@ -8,7 +8,7 @@ namespace Gadfly.Server.Notifications;
 /// stop it, and both are checked at send time, not at queue time, so the log always says why nothing went out:
 /// <list type="bullet">
 /// <item>No SMTP configured (MindAttic.Authentication's <see cref="AuthEmailStatus"/> has no settings).</item>
-/// <item>The server runs the mock AI panel (<c>Gadfly:AiMode=mock</c>): a mock server is a demo or a test bed, and
+/// <item>The server runs the mock AI panel (<c>Gadfly:AiMode=mock</c>, or the platform admin switched it to mock, GAD-T802): a mock server is a demo or a test bed, and
 /// must never email real people. <c>Gadfly:Notifications:SendInMockMode=true</c> lifts this for a developer who has
 /// pointed SMTP at a local catcher on purpose.</item>
 /// </list>

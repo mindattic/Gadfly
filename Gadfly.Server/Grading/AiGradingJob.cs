@@ -78,7 +78,8 @@ public sealed class AiGradingJob(GadflyDbContext db, ISocraticVotingClient panel
         var objectives = await GradingInputs.EnsureObjectivesAsync(db, exam, now, ct);
         if (objectives.Count == 0) throw new InvalidOperationException("The exam has no learning objectives and no concepts to derive them from.");
         var done = (await db.AiObjectiveGrades.AsNoTracking().Where(g => g.SessionId == session.Id).Select(g => g.ObjectiveId).ToListAsync(ct)).ToHashSet();
-        var grader = new AiObjectiveGrader(panel);
+        // Graded in the AI mode the session ran in (GAD-T802), whatever the server has been switched to since.
+        var grader = new AiObjectiveGrader(Gadfly.Socrates.Mock.PanelPin.For(panel, session.AiMode));
         var lastAttempt = job.Attempts >= job.MaxAttempts;
         var i = 0;
         foreach (var objective in objectives)

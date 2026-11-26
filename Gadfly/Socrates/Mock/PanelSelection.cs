@@ -8,7 +8,8 @@ namespace Gadfly.Socrates.Mock;
 /// <summary>
 /// The panel the host injects as <see cref="ISocraticVotingClient"/> (GAD-T100): live Legion, the mock, or — in
 /// auto mode — whichever a one-time startup probe allows (live when at least one provider answers, otherwise
-/// mock). The choice is made once per process and never flips mid-run, so a session is never half live, half mock.
+/// mock). An admin may switch it at runtime (<see cref="Switch"/>, GAD-T802); a session already running stays in the mode it
+/// started in (<see cref="PanelPin"/>), so a session is never half live, half mock.
 /// </summary>
 public sealed class SelectedPanel : ISocraticVotingClient, IPanelInfo, IPanelModels
 {
@@ -45,17 +46,41 @@ public sealed class SelectedPanel : ISocraticVotingClient, IPanelInfo, IPanelMod
     /// <summary>How long the auto-mode probe waits for any provider.</summary>
     public static TimeSpan ProbeTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
-    // Blocks only until the startup probe finishes (auto mode); constant afterwards.
-    private (bool Mock, string Reason) Decision => _decision.GetAwaiter().GetResult();
+    private volatile Tuple<bool, string>? _switched;
 
-    public bool IsMock => Decision.Mock;
+    // Blocks only until the startup probe finishes (auto mode); afterwards it changes only when switched.
+    private (bool Mock, string Reason) Decision => _switched is { } s ? (s.Item1, s.Item2) : _decision.GetAwaiter().GetResult();
+
+    /// <summary>The server-wide mode, whatever the current call is pinned to.</summary>
+    public bool ServerIsMock => Decision.Mock;
+
+    /// <summary>
+    /// Switches the server-wide mode now (GAD-T802), for sessions started from now on and everything not tied to a session.
+    /// Returns true when the mode changed.
+    /// </summary>
+    public bool Switch(bool mock, string reason)
+    {
+        var changed = Decision.Mock != mock;
+        _switched = Tuple.Create(mock, reason);
+        return changed;
+    }
+
+    /// <summary>The live members' providers that have a key (read from configuration; no provider is called).</summary>
+    public IReadOnlyList<string> KeyedProviders => _live.KeyedProviders;
+
+    public bool IsMock => PanelPin.Mock ?? Decision.Mock;
     public string Mode => IsMock ? PanelModes.Mock : PanelModes.Live;
     public string Reason => Decision.Reason;
 
     /// <summary>The models of the panel actually in use: the mock's in mock mode, the live members' otherwise (GAD-T429).</summary>
     public IReadOnlyDictionary<string, string> ConfiguredModels => IsMock ? _mock.ConfiguredModels : _live.ConfiguredModels;
 
-    private async Task<ISocraticVotingClient> PanelAsync() => (await _decision.ConfigureAwait(false)).Mock ? _mock : _live;
+    private async Task<ISocraticVotingClient> PanelAsync()
+    {
+        if (PanelPin.Mock is { } pinned) return pinned ? _mock : _live;
+        await _decision.ConfigureAwait(false);
+        return Decision.Mock ? _mock : _live;
+    }
 
     public async Task<VotingResult> AskAsync(string question, string context, Quorum quorum, CancellationToken ct = default) =>
         await (await PanelAsync()).AskAsync(question, context, quorum, ct);

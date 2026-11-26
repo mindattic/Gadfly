@@ -640,8 +640,10 @@ platform staff can open any organization's log, and that is recorded in it. See 
 
 When the AI panel runs without a real provider, every page shows a **MOCK MODE** banner: "No AI provider is in use.
 Questions, scores, grades and reports on this site are simulated by fixed rules to test the workflow; they are not
-genuine AI evaluations and must not be used to grade anyone." It is set by the server setting `Gadfly:AiMode`
-(`live`, `mock` or `auto`). A mock-mode server never sends notification emails (see **Email notifications**).
+genuine AI evaluations and must not be used to grade anyone." The server setting `Gadfly:AiMode` (`live`, `mock` or
+`auto`) sets it at startup; the platform admin can switch it between mock and live on **System status** without a
+restart. Exams already in progress keep the mode they started in, and switching to live is refused while a provider key
+is missing. A mock-mode server never sends notification emails (see **Email notifications**).
 
 ## Server settings worth knowing
 
