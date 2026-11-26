@@ -108,6 +108,13 @@ if (args.Contains(Gadfly.Server.Demo.CatalogSeeder.SeedArgument))
     catch (Exception ex) { app.Logger.LogError(ex, "Catalog seeding failed."); }
     if (args.Contains("--then-exit")) return;
 }
+// Erase every user's exam activity, keeping accounts, organizations, courses and exams (GAD-T789); --dry-run only counts.
+if (args.Contains(Gadfly.Server.Privacy.UserDataReset.ResetArgument))
+{
+    try { await Gadfly.Server.Privacy.UserDataReset.RunAsync(app, args); }
+    catch (Exception ex) { app.Logger.LogError(ex, "User data reset failed."); }
+    if (args.Contains("--then-exit")) return;
+}
 // Classroom test accounts: Teacher_A..C, Student_A..Z across their assessments (GAD-T151). --then-exit makes it a one-shot.
 if (args.Contains(Gadfly.Server.Demo.ClassroomSeeder.SeedArgument) || app.Configuration["Gadfly:Demo:SeedClassroomOnStartup"] == "true")
 {
