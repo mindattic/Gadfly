@@ -21,16 +21,28 @@ python ../examiner-m/alignrig.py ../../Gadfly.Server/wwwroot/assets/avatars/mpfb
 python ../examiner-socrates/trim.py aligned.glb ../../Gadfly.Server/wwwroot/assets/avatars/examiner-bust.glb
 ```
 
-`still.png` is optional. Passing it renders `still-front`, `still-34`, `still-viseme-aa-blink` and `still-viseme-o-look`, using
-a stand-in for the app's blue look.
+`still.png` is optional. Passing it renders stills using a stand-in for the app's blue look: `still-front`, `still-34`,
+`still-viseme-aa-blink`, `still-viseme-o-look`, `still-turn-nod` and `still-turn-back` (Neck and Head turned while talking),
+`still-nose` (a close-up of the face) and `still-full`.
 
 ## Parts
 
-- `head.py` is the reusable step. It imports Socrates and drops his MPFB hair, beard and moustache. It decimates the bust,
-  scales it onto his head (`BUST_SCALE`; the landmarks were read off orthographic renders) and draws the MPFB face onto the
-  bust's. It then splits the bust into `Bust.skin`, `Bust.hair`, `Bust.beard` and `Bust.torso`, named so `avatar-look.js`
-  styles them as skin, hair, hair and clothing. The beard gets the face's morph targets from the nearest face point, so it
-  opens with the jaw. Hair and skin are rigid to `Head`, blended to `Spine2` through the neck. The eye material is renamed
-  `Human.high-poly-glow`, which gives the irises the brighter green glow approved for this examiner.
-- `build.py` is the bust on its plinth. It drops the suit, cuts the MPFB body below the jaw, keeps the bust's shoulders and
-  plinth rigid on `Spine2` and keeps Socrates' eye level (1.68 m).
+- `head.py` is the reusable step: `head.build(examiner_glb, bust_glb, on_plinth=True)`. It imports Socrates and drops his MPFB
+  hair, beard and moustache. It decimates the bust and scales it onto his head (`BUST_SCALE`; the landmarks were read off
+  orthographic renders).
+  - It draws the MPFB face onto the bust's nose, brow, cheeks and forehead. The pull is smoothed over the mesh so the skin
+    doesn't fold, and it leaves the lids and lips alone.
+  - It then splits the bust into one shell, `Bust`, with `Bust.skin` and `Bust.hair` material slots, plus `Bust.beard` and
+    `Bust.plinth`. `avatar-look.js` styles these as skin, hair, hair and clothing.
+  - It cuts out the face's middle and lays the cut rims flush on the MPFB face.
+  - The beard takes the face's morph targets from the nearest face point, so it opens with the jaw.
+  - The bust's head and neck take the nearest MPFB vertex's weights, so the neck turns, nods and talks with the face.
+  - With `on_plinth`, everything below the neck hangs on a root bone, `BustBase`. TalkingHead never moves that bone, so its
+    spine sway doesn't tilt the stone.
+  - The eye material is renamed `Human.high-poly-glow`, which gives the irises the green glow approved for this examiner.
+  - With `on_plinth=False`, the head is built for Socrates' own body (GAD-T793).
+- `build.py` is the bust on its plinth. It drops the suit and cuts the MPFB body below the jaw. It keeps Socrates' eye level
+  (1.68 m). It also leaves a 0.1 mm triangle where his left sole was. TalkingHead lowers the hips every frame until the model's
+  lowest point is on the floor, so without that speck the bust would sink out of frame.
+
+The bust's carved moustache sits behind the MPFB upper lip, so it doesn't show yet.

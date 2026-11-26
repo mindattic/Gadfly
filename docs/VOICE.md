@@ -582,7 +582,7 @@ counters above.
   for that filtered value. An id not shaped like an ElevenLabs voice id is skipped (logged) rather than sent. The fixed
   examiner lines are pre-warmed per voice. Mock mode is unchanged: no id is passed and the fake voice speaks.
 - **Which examiner (GAD-T504, GAD-T595, GAD-T792).** Four examiners are offered (`Gadfly.Server/Student/ExaminerCatalog.cs`), in
-  this order: the **talking bust**, the default (`examiner-bust`, `wwwroot/assets/avatars/examiner-bust.glb`, 9.1 MB, built by
+  this order: the **talking bust**, the default (`examiner-bust`, `wwwroot/assets/avatars/examiner-bust.glb`, 8.9 MB, built by
   `tools/examiner-bust` from the owner's Meshy.ai bust and Socrates' face rig; Socrates' voice and pace), the female examiner
   (`examiner-f`, the deployment's `Gadfly:Voice:AvatarModelUrl`), the male one (`examiner-m`,
   `wwwroot/assets/avatars/examiner-m.glb`, 9.5 MB, CC0, committed) and Socrates (`examiner-socrates`). Each is offered when its

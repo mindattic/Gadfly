@@ -17,8 +17,17 @@ BUST_EYES = Vector((-0.009, 0.0, 0.525))
 BUST_SCALE = float(os.environ.get("BUST_SCALE", "0.35"))
 # The bust's chest begins under the beard at this height (bust units); below it are the bare shoulders and the plinth.
 BUST_SHOULDERS_Z = 0.05
-# The bust's carved eye sockets, either side of BUST_EYES (half of 0.219), mapped below.
-BUST_EYE_HALF = 0.1095
+# The plinth's top (bust units): below it the plinth, its own mesh.
+BUST_PLINTH_Z = -0.62
+# How far above the eyes the MPFB face reaches into the bust's bald crown (metres), and how many passes smooth its fit.
+FOREHEAD = 0.09
+SMOOTHING = int(os.environ.get("BUST_SMOOTHING", "12"))
+# How far the bust's surface must stand out from the MPFB face to count as beard or moustache (metres).
+PROUD = float(os.environ.get("BUST_PROUD", "0.004"))
+# The root bone the bust's shoulders and plinth hang on.
+BASE_BONE = "BustBase"
+# The beard's tip, this far below the eyes (metres, after scaling); the chest below it is skin.
+BEARD_DROP = 0.26
 
 
 def _world(o):
@@ -100,22 +109,32 @@ def load_bust(path, human, eyes):
 
 
 def conform(human, bust, eyes, mouth):
-    """Draws the MPFB face onto the bust's: nose, cheeks, brow and forehead, where the two surfaces are already within a centimetre
-    or so. The lids and lips stay as MPFB made them, so blinks and the mouth shapes still close cleanly."""
+    """Draws the MPFB face onto the bust's: nose, cheeks, brow and forehead, where the two surfaces are within a couple of
+    centimetres. The lids and lips stay as MPFB made them, so blinks and the mouth shapes still close cleanly."""
     bb = _bvh(bust)
     eye = (eyes[0] + eyes[1]) / 2
 
-    def move(i, p):
-        if p.y > eye.y + 0.03 or abs(p.x) > 0.08 or not (mouth.z - 0.03 < p.z < eye.z + 0.08):
+    def pull(p):
+        if p.y > eye.y + 0.03 or abs(p.x) > 0.08 or not (mouth.z - 0.03 < p.z < eye.z + FOREHEAD + 0.02):
             return Vector()
         de = min(Vector((p.x - e.x, p.z - e.z)).length for e in eyes)
         dm = Vector(((p.x - mouth.x) * 0.7, p.z - mouth.z)).length
-        w = _smooth(0.019, 0.03, de) * _smooth(0.02, 0.032, dm) * (1 - _smooth(0.06, 0.08, abs(p.x)))
+        # Nothing below the nose: the bust's moustache and beard lie there, and the lips stay MPFB's.
+        w = (_smooth(0.019, 0.03, de) * _smooth(0.02, 0.032, dm) * (1 - _smooth(0.06, 0.08, abs(p.x)))
+             * _smooth(mouth.z + 0.014, mouth.z + 0.022, p.z) * (1 - _smooth(eye.z + FOREHEAD - 0.02, eye.z + FOREHEAD + 0.02, p.z)))
         q = bb.find_nearest(p)[0]
         if q is None or w <= 0: return Vector()
         d = q - p
-        return d * w * (1 - _smooth(0.008, 0.014, d.length))
-    reshape(human, move)
+        return d * w * (1 - _smooth(0.016, 0.024, d.length))
+    # Each vertex snapping to its own nearest point folds the skin where neighbours land on different carved wrinkles (the cracks
+    # on the nose and cheeks), so the pull is smoothed over the mesh before it is applied: one smooth surface, the bust's shape.
+    ds = [pull(p) for p in _world(human)]
+    nbrs = [[] for _ in ds]
+    for e in human.data.edges:
+        a, b = e.vertices; nbrs[a].append(b); nbrs[b].append(a)
+    for _ in range(SMOOTHING):
+        ds = [d * 0.5 + (sum((ds[j] for j in n), Vector()) / len(n)) * 0.5 if n else d for d, n in zip(ds, nbrs)]
+    reshape(human, lambda i, p: ds[i])
 
 
 def _material(name):
@@ -125,50 +144,87 @@ def _material(name):
     return m
 
 
-def split_bust(bust, human, eyes, mouth, nose_z, face_zone_drop=True):
-    """Splits the bust into its parts, each its own object and material, named so avatar-look.js styles them (Bust.skin: skin,
-    Bust.hair and Bust.beard: hair, Bust.torso: clothing). The face's middle (eyes, lids, nose, cheeks, lips) is cut out of the
-    bust so the MPFB face shows and moves there. Returns {"skin", "hair", "beard", "torso"}."""
+def split_bust(bust, human, eyes, mouth, nose_z, keep_torso=True):
+    """Splits the bust into its parts, named so avatar-look.js styles them. "Bust" is one shell, so no cut edge shows between its
+    parts: skin (Bust.skin: the crown, neck and, with keep_torso, the bare shoulders) and hair (Bust.hair) are material slots
+    of it. The beard with the moustache (Bust.beard, styled as hair) and the plinth (Bust.plinth, styled as clothing) are their
+    own meshes. The face's middle (eyes, lids, nose, cheeks, lips) is cut out so the MPFB face shows and moves there.
+    Returns {"bust", "beard", "plinth"} (no plinth without keep_torso)."""
     hb = _bvh(human)
     eye = (eyes[0] + eyes[1]) / 2
     shoulders = eye.z + (BUST_SHOULDERS_Z - BUST_EYES.z) * BUST_SCALE
-
-    def face_zone(p, gap):
-        if p.y > eye.y + 0.03: return False
-        if min(Vector((p.x - e.x, p.z - e.z)).length for e in eyes) < 0.024: return True                   # eyes and lids
-        if Vector(((p.x - mouth.x) * 0.75, p.z - mouth.z)).length < 0.02: return True                      # the lips
-        return abs(p.x) < 0.07 and mouth.z - 0.01 < p.z < eye.z + 0.06 and gap < 0.006                     # where MPFB lies on it
+    plinth_top = eye.z + (BUST_PLINTH_Z - BUST_EYES.z) * BUST_SCALE
 
     def kind(p):
         q = hb.find_nearest(p)
         gap = q[3] if q[0] is not None else 1.0
-        if face_zone_drop and face_zone(p, gap): return None
-        if p.z < shoulders and not (p.y < eye.y + 0.05 and abs(p.x) < 0.09 and p.z > shoulders - 0.07): return "torso"
-        if p.z < nose_z - 0.004 and p.y < eye.y + 0.07 and abs(p.x) < 0.085: return "beard"
+        front = p.y < eye.y + 0.03
+        if front and min(Vector((p.x - e.x, p.z - e.z)).length for e in eyes) < 0.024:
+            return None                                                                          # eyes and lids
+        if front and Vector(((p.x - mouth.x) * 0.75, p.z - mouth.z)).length < 0.02:
+            return "beard" if p.z > mouth.z + 0.008 and gap > 0.003 else None                  # moustache, not the lips
+        if (eye.z - BEARD_DROP < p.z < nose_z - 0.004 and p.y < eye.y + 0.07 and abs(p.x) < 0.085
+                and (gap > PROUD or p.z < mouth.z - 0.04)):
+            return "beard"
+        if front and abs(p.x) < 0.075 and mouth.z - 0.03 < p.z < eye.z + FOREHEAD:
+            return None                                                                          # the face: MPFB's, drawn on the bust's
+        if p.z < plinth_top: return "plinth" if keep_torso else None
+        if p.z < shoulders: return "skin" if keep_torso else None
         return "skin" if gap < 0.012 else "hair"
 
     kinds = [kind(p) for p in _world(bust)]
+    bm0 = bmesh.new(); bm0.from_mesh(bust.data); bm0.verts.ensure_lookup_table()
+    fkind = []
+    for f in bm0.faces:
+        ks = [kinds[v.index] for v in f.verts]
+        fkind.append(None if None in ks else max(set(ks), key=ks.count))
+    bm0.free()
+    pieces = {"bust": ("skin", "hair"), "beard": ("beard",), "plinth": ("plinth",)}
+    if not keep_torso: del pieces["plinth"]
     out = {}
-    for k in ("skin", "hair", "beard", "torso"):
-        o = bust.copy(); o.data = bust.data.copy(); o.name = o.data.name = "Bust." + k
+    for name, ks in pieces.items():
+        o = bust.copy(); o.data = bust.data.copy()
+        o.name = o.data.name = "Bust" if name == "bust" else "Bust." + name
         bpy.context.scene.collection.objects.link(o)
-        bm = bmesh.new(); bm.from_mesh(o.data)
-        bm.verts.ensure_lookup_table()
-        bmesh.ops.delete(bm, geom=[v for v in bm.verts if kinds[v.index] != k], context="VERTS")
+        o.data.materials.clear()
+        for k in ks: o.data.materials.append(_material("Bust." + k))
+        bm = bmesh.new(); bm.from_mesh(o.data); bm.faces.ensure_lookup_table()
+        for f in bm.faces:
+            if fkind[f.index] in ks: f.material_index = ks.index(fkind[f.index])
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if fkind[f.index] not in ks], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
         bm.to_mesh(o.data); bm.free()
-        o.data.materials.clear(); o.data.materials.append(_material("Bust." + k))
-        out[k] = o
+        out[name] = o
         print("PART", o.name, len(o.data.vertices))
     bpy.data.objects.remove(bust, do_unlink=True)
+    for k in ("bust", "beard"):
+        snap_rims(out[k], human)
     return out
 
 
+def snap_rims(o, human, reach=0.016):
+    """Lays the cut rims of o (round the face's hole, the beard's top edge) flush on the MPFB face, and the next ring halfway,
+    so no lip or crack shows where the two surfaces meet."""
+    hb = _bvh(human)
+    bm = bmesh.new(); bm.from_mesh(o.data)
+    rim = {v for e in bm.edges if e.is_boundary for v in e.verts}
+    ring = {w for v in rim for e in v.link_edges for w in e.verts} - rim
+    mw = o.matrix_world; mwi = mw.inverted_safe()
+    for vs, k in ((rim, 1.0), (ring, 0.5)):
+        for v in vs:
+            p = mw @ v.co
+            q, n, _, d = hb.find_nearest(p)
+            if q is not None and d < reach:
+                v.co = mwi @ (p.lerp(q + n * 0.0004, k))
+    bm.to_mesh(o.data); bm.free(); o.data.update()
+
+
 def rig(o, arm, groups):
-    """Parents o to the armature, weighted by groups(world position) -> {bone: weight}."""
+    """Parents o to the armature, weighted by groups(index, world position) -> {bone: weight}."""
     for vg in list(o.vertex_groups): o.vertex_groups.remove(vg)
     vgs = {}
     for i, p in enumerate(_world(o)):
-        for bone, w in groups(p).items():
+        for bone, w in groups(i, p).items():
             if w <= 0: continue
             if bone not in vgs: vgs[bone] = o.vertex_groups.new(name=bone)
             vgs[bone].add([i], w, "REPLACE")
@@ -176,14 +232,56 @@ def rig(o, arm, groups):
     mod = o.modifiers.new("Armature", "ARMATURE"); mod.object = arm
 
 
-def neck_blend(arm):
-    """Head above the jaw, Spine2 at the shoulders, blended through the neck: the bust's hair and skin follow the head's turns and the
-    shoulders stay with the chest."""
-    head = (arm.matrix_world @ arm.data.bones["Head"].head_local).z
+def add_base_bone(arm, at):
+    """A root bone for the bust's shoulders and plinth (BustBase, not in TalkingHead's rig, so nothing ever moves it): the idle
+    sway of the spine would otherwise tilt the whole stone bust."""
+    bpy.context.view_layer.objects.active = arm
+    bpy.ops.object.mode_set(mode="EDIT")
+    b = arm.data.edit_bones.new(BASE_BONE)
+    ami = arm.matrix_world.inverted()
+    b.head = ami @ at; b.tail = ami @ (at + Vector((0, 0, 0.1))); b.use_deform = True
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+def _nearest(human):
+    from mathutils.kdtree import KDTree
+    ws = _world(human)
+    kd = KDTree(len(ws))
+    for i, p in enumerate(ws): kd.insert(p, i)
+    kd.balance()
+    return kd
+
+
+def neck_weights(human, arm, base=None):
+    """Weights for the bust's head and neck: the nearest MPFB vertex's own, so the bust's neck turns, nods and talks with the face
+    it meets. With a base bone (the bust on its plinth): only Head and Neck (the rest folded into the base, so neither the spine's
+    sway nor an arm gesture pulls at it), all base from the shoulders down, and the MPFB neck's own weights folded the same way."""
+    names = {g.index: g.name for g in human.vertex_groups}
+    kd = _nearest(human)
+    if base is None:
+        return lambda i, p: {names[g.group]: g.weight for g in human.data.vertices[kd.find(p)[1]].groups}
     neck = (arm.matrix_world @ arm.data.bones["Neck"].head_local).z
-    def groups(p):
-        t = _smooth(neck - 0.04, head + 0.01, p.z)
-        return {"Head": t, "Spine2": 1 - t}
+    def folded(i):
+        w = {}
+        for g in human.data.vertices[i].groups:
+            b = names[g.group] if names[g.group] in ("Head", "Neck") else base
+            w[b] = w.get(b, 0) + g.weight
+        t = sum(w.values()) or 1
+        return {b: x / t for b, x in w.items()}
+    fold = [folded(i) for i in range(len(human.data.vertices))]
+    def groups(i, p):
+        t = _smooth(neck - 0.06, neck - 0.01, p.z)
+        w = {b: x * t for b, x in fold[kd.find(p)[1]].items()}
+        w[base] = w.get(base, 0) + (1 - t)
+        return w
+    # The MPFB neck's own weights, folded the same way so it moves as the bust round it does.
+    for vg in list(human.vertex_groups):
+        if vg.name not in ("Head", "Neck"): human.vertex_groups.remove(vg)
+    for b in ("Head", "Neck", base):
+        if b not in human.vertex_groups: human.vertex_groups.new(name=b)
+    for i, w in enumerate(fold):
+        for b, x in w.items():
+            human.vertex_groups[b].add([i], x, "REPLACE")
     return groups
 
 
@@ -220,9 +318,10 @@ def transfer_morphs(o, human, min_delta=0.0006, fade=None):
     print("MORPHS", o.name, kept, "of", len(keys) - 1)
 
 
-def build(examiner_glb, bust_glb):
+def build(examiner_glb, bust_glb, on_plinth=True):
     """The head on its own: returns (armature, examiner parts, bust parts, landmarks). Socrates' MPFB hair, beard and moustache are
-    dropped (the bust's sculpt replaces them); his brows and lashes stay, so the expressions still read."""
+    dropped (the bust's sculpt replaces them); his brows and lashes stay, so the expressions still read. on_plinth keeps the bust's
+    shoulders and plinth, rigid on their own root bone; without it the bust stops at the neck, for Socrates' own body (GAD-T793)."""
     arm, parts = load_examiner(examiner_glb)
     for k in ("afro01", "rehmanpolanski_beard_viking", "rehmanpolanski_moustache_viking"):
         bpy.data.objects.remove(parts.pop(k), do_unlink=True)
@@ -234,12 +333,15 @@ def build(examiner_glb, bust_glb):
     nose_z = mouth.z + 0.022
     bust = load_bust(bust_glb, human, eyes)
     conform(human, bust, eyes, mouth)
-    bparts = split_bust(bust, human, eyes, mouth, nose_z)
-    blend = neck_blend(arm)
-    for k in ("skin", "hair"):
-        rig(bparts[k], arm, blend)
-    rig(bparts["beard"], arm, lambda p: {"Head": 1.0})
+    bparts = split_bust(bust, human, eyes, mouth, nose_z, keep_torso=on_plinth)
     transfer_morphs(bparts["beard"], human, fade=lambda p: 1 - _smooth(nose_z - 0.01, nose_z, p.z))
+    if on_plinth:
+        add_base_bone(arm, Vector((0, eyes[0].y, min(p.z for p in _world(bparts["plinth"])))))
+    weights = neck_weights(human, arm, base=BASE_BONE if on_plinth else None)
+    rig(bparts["bust"], arm, weights)
+    rig(bparts["beard"], arm, weights)
+    if on_plinth:
+        rig(bparts["plinth"], arm, lambda i, p: {BASE_BONE: 1.0})
     # The look's iris glow (GAD-T792) is per model: avatar-look.js gives eyes whose material is named "...-glow" a stronger glow.
     for m in parts["high-poly"].data.materials:
         m.name = "Human.high-poly-glow"

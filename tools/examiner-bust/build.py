@@ -8,8 +8,8 @@
 # With still.png it also renders front and three-quarter stills, and the mouth open (viseme_aa) with the eyes shut, in a stand-in
 # for avatar-look.js's blue look.
 import sys, os, math
-import bpy
-from mathutils import Vector
+import bpy, bmesh
+from mathutils import Vector, Matrix
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import head
@@ -26,8 +26,19 @@ eye = (marks["eyes"][0] + marks["eyes"][1]) / 2
 
 # No body below the bust: his suit goes, and the MPFB body is cut a little under the jaw (inside the bust's neck from there on).
 bpy.data.objects.remove(parts.pop("male_casualsuit06"), do_unlink=True)
+# TalkingHead lowers the hips every frame until the model's lowest point is on the floor (its "hip-feet balance"), which would
+# sink a bust out of frame. A speck of the plinth (a triangle a tenth of a millimetre across, too small to see) stays where his
+# left sole was, on the toe bone, so the model still reaches the floor as a full body does and the bust stays at eye level.
+sole = min((parts["body"].matrix_world @ v.co for v in parts["body"].data.vertices if v.co.x > 0), key=lambda p: p.z)
+plinth = bparts["plinth"]
+bm = bmesh.new(); bm.from_mesh(plinth.data)
+speck = [bm.verts.new(plinth.matrix_world.inverted() @ (sole + Vector(d))) for d in ((0, 0, 0), (0.0001, 0, 0), (0, 0.0001, 0))]
+bm.faces.new(speck)
+bm.to_mesh(plinth.data); bm.free()
+toe = plinth.vertex_groups.get("LeftToeBase") or plinth.vertex_groups.new(name="LeftToeBase")
+ids = list(range(len(plinth.data.vertices) - 3, len(plinth.data.vertices)))
+toe.add(ids, 1.0, "REPLACE"); plinth.vertex_groups[head.BASE_BONE].remove(ids)
 head.cut(parts["body"], lambda p: p.z < eye.z - 0.15)
-head.rig(bparts["torso"], arm, lambda p: {"Spine2": 1.0})
 
 for im in bpy.data.images:
     if im.size[0] > 1024:
@@ -40,9 +51,14 @@ print("EYE LEVEL", round(eye.z, 4), "(examiner-socrates: 1.68)")
 if still:
     # A stand-in for the app's look: avatar-look.js's palette, with a soft glow, and the brown irises turned green.
     hexrgb = lambda h, k=1.0: tuple(((h >> s) & 255) / 255 * k for s in (16, 8, 0)) + (1,)
-    look = {"skin": 0x2779ea, "hair": 0x142f7a, "beard": 0x142f7a, "torso": 0x1c4bb0, "body": 0x2779ea,
+    look = {"Bust.skin": 0x2779ea, "Bust.hair": 0x142f7a, "Bust.beard": 0x142f7a, "Bust.plinth": 0x1c4bb0, "body": 0x2779ea,
             "eyebrow001": 0x0b1736, "eyelashes01": 0x0b1736, "teeth_base": 0xeef3ff, "tongue01": 0x8a4f73}
-    for k, o in list(parts.items()) + list(bparts.items()):
+    for o in bparts.values():
+        for m in o.data.materials:
+            bsdf = next(n for n in m.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+            bsdf.inputs["Base Color"].default_value = hexrgb(look[m.name.split(".0")[0]])
+            bsdf.inputs["Emission Color"].default_value = hexrgb(0x1f6dff); bsdf.inputs["Emission Strength"].default_value = 0.2
+    for k, o in parts.items():
         if k == "high-poly":
             for m in o.data.materials:
                 nt = m.node_tree; tex = next((n for n in nt.nodes if n.type == "TEX_IMAGE"), None)
@@ -59,7 +75,7 @@ if still:
             for l in list(m.node_tree.links):
                 if l.to_node == bsdf and l.to_socket.name == "Base Color": m.node_tree.links.remove(l)
             bsdf.inputs["Base Color"].default_value = hexrgb(look[k])
-            if k in ("skin", "body", "hair", "beard", "torso"):
+            if k == "body":
                 bsdf.inputs["Emission Color"].default_value = hexrgb(0x1f6dff); bsdf.inputs["Emission Strength"].default_value = 0.2
     centre = eye + Vector((0, 0, -0.1))
     sc = bpy.context.scene
@@ -86,7 +102,26 @@ if still:
         sc.render.filepath = base + suffix + ext
         bpy.ops.render.render(write_still=True)
         print("RENDERED", sc.render.filepath)
+    # The neck while the head turns and nods (as TalkingHead moves Neck and Head), talking.
+    def turn(bone, axis, degrees):
+        pb = arm.pose.bones[bone]; rest = pb.bone.matrix_local.to_3x3()
+        pb.rotation_mode = "QUATERNION"
+        pb.rotation_quaternion = (rest.inverted() @ Matrix.Rotation(math.radians(degrees), 3, axis) @ rest).to_quaternion()
+    for suffix, yaw, rot, values in (("-turn-nod", 0.5, (("Neck", "Z", 18), ("Head", "X", 12)), {"viseme_E": 1.0}),
+                                     ("-turn-back", -0.5, (("Neck", "Z", -18), ("Head", "X", -8)), {"jawOpen": 0.5})):
+        for b, ax, d in rot: turn(b, ax, d)
+        shapes(values)
+        cam.location = centre + Vector((-1.6 * math.sin(yaw), -1.6 * math.cos(yaw), 0))
+        cam.rotation_euler = (math.pi / 2, 0, -yaw)
+        sc.render.filepath = base + suffix + ext
+        bpy.ops.render.render(write_still=True)
+        for pb in arm.pose.bones: pb.rotation_quaternion = (1, 0, 0, 0)
+    shapes({})
+    cam.data.lens = 200
+    cam.location = Vector((0, -1.6, eye.z - 0.02)); cam.rotation_euler = (math.pi / 2, 0, 0)
+    sc.render.filepath = base + "-nose" + ext
+    bpy.ops.render.render(write_still=True)
     cam.data.lens = 50
     cam.location = Vector((0, -2.2, eye.z - 0.25)); cam.rotation_euler = (math.pi / 2, 0, 0)
-    shapes({}); sc.render.filepath = base + "-full" + ext
+    sc.render.filepath = base + "-full" + ext
     bpy.ops.render.render(write_still=True)
