@@ -412,6 +412,49 @@ public sealed class StudentAdminService(IServiceProvider sp)
               (live ? " An exam they had open stops with their sign-in." : ""), userId);
     }
 
+    /// <summary>
+    /// Erases the student's results for the chosen exams as if they had never taken them, so they can sit them again (GAD-T790):
+    /// every attempt at those exams and everything hanging off it, through <see cref="Privacy.UserDataReset.ResetAttemptsAsync"/>
+    /// (the platform reset's tables, scoped to these attempts), in one transaction. Unlike Reset attempt on the assignments console,
+    /// nothing is archived: one <c>admin.results-reset</c> audit entry keeps the exams and the row counts. Needs a reason; refused
+    /// while one of those attempts is open. Other students and other exams are untouched. No model is called and no email is sent.
+    /// </summary>
+    public async Task<DeskResult> ResetResultsAsync(Guid userId, IReadOnlyCollection<Guid> examIds, string? reason, CancellationToken ct = default)
+    {
+        if (!await Gate.RequireAsync("Resetting a student's results", "User", userId.ToString(), ct)) return new(false, AdminGate.DeniedMessage);
+        var why = AdminPeople.Reason(reason);
+        if (why is null) return new(false, "Say why these results are being reset; the reason is kept in the audit log.");
+        if (examIds.Count == 0) return new(false, "Choose at least one exam.");
+        var db = Db;
+        var org = Gate.Org;
+        if (!await db.OrganizationMembers.AnyAsync(m => m.OrganizationId == org && m.UserId == userId && m.Role == OrgRoles.Student, ct))
+            return new(false, "That person is not a student of this organization.");
+        var exams = examIds.Distinct().ToList();
+        var assignments = await db.ExamAssignments.AsNoTracking()
+            .Where(a => a.OrganizationId == org && a.StudentUserId == userId && exams.Contains(a.ExamId))
+            .Select(a => new { a.Id, a.ExamId }).ToListAsync(ct);
+        if (assignments.Count == 0) return new(false, "Those exams are not assigned to this student.");
+        var assignmentIds = assignments.Select(a => a.Id).ToList();
+        var sessions = await db.ExamSessions.AsNoTracking()
+            .Where(s => s.OrganizationId == org && s.StudentUserId == userId && assignmentIds.Contains(s.AssignmentId))
+            .Select(s => new { s.Id, s.State }).ToListAsync(ct);
+        if (sessions.Any(s => s.State is not (SessionState.Ended or SessionState.Failed)))
+            return new(false, "One of those exams is open right now. End the attempt (or wait for it to finish) and reset it then.");
+        var resetExams = assignments.Select(a => a.ExamId).Distinct().ToList();
+        var lines = await Privacy.UserDataReset.ResetAttemptsAsync(db, sessions.Select(s => s.Id).ToList(), assignmentIds,
+            l => Gate.Audit(ResultsResetAction, "User", userId.ToString(), after: new
+            {
+                ExamIds = resetExams,
+                Rows = l.Where(x => x.Rows > 0).ToDictionary(x => x.Table, x => x.Rows),
+            }, reason: why), ct);
+        db.ChangeTracker.Clear();
+        var attempts = sessions.Count;
+        return new(true, $"Reset {resetExams.Count} exam{(resetExams.Count == 1 ? "" : "s")}: {attempts} attempt{(attempts == 1 ? "" : "s")} " +
+            $"and {lines.Sum(x => x.Rows)} record{(lines.Sum(x => x.Rows) == 1 ? "" : "s")} erased. They can take {(resetExams.Count == 1 ? "it" : "them")} again.", userId);
+    }
+
+    public const string ResultsResetAction = "admin.results-reset";
+
     /// <summary>Sets a new password (the admin desk's rule: a student of this organization only, never staff). Audited.</summary>
     public async Task<DeskResult> ResetPasswordAsync(Guid userId, string password, bool mustChange, CancellationToken ct = default)
     {

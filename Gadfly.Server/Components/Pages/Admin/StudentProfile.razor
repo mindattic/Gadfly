@@ -141,11 +141,46 @@ else
     }
     else
     {
+        var resettable = p.Assignments.Where(HasResults).ToList();
+        @if (resettable.Count > 0)
+        {
+            <div class="row-actions">
+                <label class="check">
+                    <input type="checkbox" checked="@(resettable.All(a => chosen.Contains(a.ExamId)))" @onchange="e => ChooseAll(resettable, e.Value is true)" />
+                    Select all exams with results
+                </label>
+                <button type="button" class="secondary danger-text" @onclick='() => Open("reset")' disabled="@(chosen.Count == 0)">Reset results (@chosen.Count)</button>
+            </div>
+            @if (panel == "reset" && chosen.Count > 0)
+            {
+                <div class="people-form people-danger" role="alertdialog" aria-labelledby="reset-h">
+                    <p id="reset-h"><strong>Reset @p.Name's results for @chosen.Count exam@(chosen.Count == 1 ? "" : "s")?</strong></p>
+                    <ul>
+                        @foreach (var a in p.Assignments.Where(a => chosen.Contains(a.ExamId)))
+                        {
+                            <li>@a.ExamTitle (@a.Attempts.Count attempt@(a.Attempts.Count == 1 ? "" : "s"))</li>
+                        }
+                    </ul>
+                    <p>Every attempt at these exams is erased with its transcript, grades, reports, reviewer notes and appeals, as if they had never taken them, and they can take them again. This cannot be undone. Other students and other exams are not touched.</p>
+                    <label>Reason <span class="hint">(kept in the audit log)</span> <input @bind="reason" maxlength="500" /></label>
+                    <div class="row-actions">
+                        <button type="button" class="danger" @onclick="ResetResultsAsync" disabled="@(busy || string.IsNullOrWhiteSpace(reason))">Reset results</button>
+                        <button type="button" class="link" @onclick="() => panel = null">Cancel</button>
+                    </div>
+                </div>
+            }
+        }
         @foreach (var a in p.Assignments)
         {
             <section class="panel people-assignment" aria-label="@a.ExamTitle">
                 <div class="people-assignment-head">
-                    <h3>@a.ExamTitle @if (a.ExamStatus == ExamStatus.Archived) { <span class="hint">(archived)</span> }</h3>
+                    <h3>
+                        @if (HasResults(a))
+                        {
+                            <input type="checkbox" checked="@chosen.Contains(a.ExamId)" @onchange="e => Choose(a.ExamId, e.Value is true)" aria-label="Choose @a.ExamTitle to reset" />
+                        }
+                        @a.ExamTitle @if (a.ExamStatus == ExamStatus.Archived) { <span class="hint">(archived)</span> }
+                    </h3>
                     <span class="pill @AdminPeople.Css(a.Progress)">@AdminPeople.Describe(a.Progress)</span>
                 </div>
                 <p class="hint">
@@ -281,13 +316,34 @@ else
         panel = panel == which ? null : which;
         if (panel == "edit") { editName = profile?.DisplayName; editEmail = profile?.Email; }
         if (panel == "password") { newPassword = null; mustChange = true; }
-        if (panel == "deactivate") reason = null;
+        if (panel is "deactivate" or "reset") reason = null;
     }
 
     private Task SaveEditAsync() => ActAsync(s => s.UpdateAsync(Id, editName, editEmail));
     private Task ResetPasswordAsync() => ActAsync(s => s.ResetPasswordAsync(Id, newPassword ?? "", mustChange));
     private Task DeactivateAsync() => ActAsync(s => s.SetActiveAsync(Id, false, reason));
     private Task ReactivateAsync() => ActAsync(s => s.SetActiveAsync(Id, true, null));
+
+    private readonly HashSet<Guid> chosen = [];
+
+    private static bool HasResults(ProfileAssignment a) => a.Attempts.Count > 0 || a.ReleasedAt is not null;
+
+    private void Choose(Guid examId, bool on)
+    {
+        if (on) chosen.Add(examId); else chosen.Remove(examId);
+        if (chosen.Count == 0 && panel == "reset") panel = null;
+    }
+
+    private void ChooseAll(IEnumerable<ProfileAssignment> all, bool on)
+    {
+        foreach (var a in all) Choose(a.ExamId, on);
+    }
+
+    private async Task ResetResultsAsync()
+    {
+        await ActAsync(s => s.ResetResultsAsync(Id, [.. chosen], reason));
+        if (ok) chosen.Clear();
+    }
 
     private static string Window(ProfileAssignment a) => (a.OpensAt, a.ClosesAt) switch
     {

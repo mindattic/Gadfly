@@ -209,4 +209,92 @@ public static class UserDataReset
         foreach (var (entity, count) in KeptCounts) lines.Add(new(Name(db, entity), "keep", await count(db, ct)));
         return lines;
     }
+
+    // ------------------------------------------------------------------ one student's attempts at some exams (GAD-T790)
+
+    /// <summary>
+    /// The SQL condition, on rows of <paramref name="t"/> aliased <paramref name="alias"/>, that picks the rows hanging off the
+    /// attempts in <paramref name="ids"/> (a list of quoted GUIDs): the attempts themselves, rows with one of them as their
+    /// SessionId, and rows whose parent in the session tables is picked, followed up the same foreign keys <see cref="SessionTables"/> uses.
+    /// </summary>
+    private static string Scope(IEntityType t, string alias, HashSet<IEntityType> erased, string ids, ref int aliases)
+    {
+        var table = StoreObjectIdentifier.Table(t.GetTableName()!, t.GetSchema());
+        if (t.ClrType == typeof(ExamSession)) return $"{alias}.[{t.FindPrimaryKey()!.Properties.Single().GetColumnName(table)}] IN ({ids})";
+        var parts = new List<string>();
+        foreach (var fk in t.GetForeignKeys().Where(fk => fk.PrincipalEntityType != t && erased.Contains(fk.PrincipalEntityType)))
+        {
+            var p = fk.PrincipalEntityType;
+            var parent = StoreObjectIdentifier.Table(p.GetTableName()!, p.GetSchema());
+            var a = $"p{++aliases}";
+            var on = string.Join(" AND ", fk.Properties.Zip(fk.PrincipalKey.Properties,
+                (c, k) => $"{a}.[{k.GetColumnName(parent)}] = {alias}.[{c.GetColumnName(table)}]"));
+            parts.Add($"EXISTS (SELECT 1 FROM [{p.GetSchema()}].[{p.GetTableName()}] AS {a} WHERE {on} AND {Scope(p, a, erased, ids, ref aliases)})");
+        }
+        if (t.GetSchema() == GadflyDbContext.Schema && t.FindProperty(SessionIdName) is { } sessionId)
+            parts.Add($"{alias}.[{sessionId.GetColumnName(table)}] IN ({ids})");
+        return parts.Count == 0 ? "1 = 0" : "(" + string.Join(" OR ", parts) + ")";
+    }
+
+    /// <summary>The session tables, children first, each with the statement body (after DELETE/SELECT) scoped to the attempts.</summary>
+    public static IReadOnlyList<(SessionTable Table, string From)> ScopedSessionTables(IModel model, IReadOnlyCollection<Guid> sessionIds)
+    {
+        if (sessionIds.Count == 0) return [];
+        var tables = SessionTables(model);
+        var erased = tables.Select(t => t.Entity).ToHashSet();
+        var ids = string.Join(", ", sessionIds.Distinct().Select(id => $"'{id:D}'"));
+        return tables.Select(t =>
+        {
+            var aliases = 0;
+            return (t, $"[{t.Entity.GetSchema()}].[{t.Entity.GetTableName()}] AS t WHERE {Scope(t.Entity, "t", erased, ids, ref aliases)}");
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Erases the attempts <paramref name="sessionIds"/> (one student's, at the exams of <paramref name="assignmentIds"/>) as if they
+    /// were never taken, in one transaction: the same session tables as the platform-wide reset, scoped to those attempts and deleted
+    /// children first; their grading jobs; the result and appeal emails about them or the assignments; and on those assignments only,
+    /// the released-result mark and LTI grade passback state. Attempts used is counted from the attempts, so it goes back too.
+    /// <paramref name="audit"/> adds the audit entry (it is saved in the same transaction). No model is called and no email is sent.
+    /// </summary>
+    public static async Task<IReadOnlyList<Line>> ResetAttemptsAsync(GadflyDbContext db, IReadOnlyCollection<Guid> sessionIds,
+        IReadOnlyCollection<Guid> assignmentIds, Action<IReadOnlyList<Line>> audit, CancellationToken ct)
+    {
+        var sessions = sessionIds.Distinct().ToList();
+        var assignments = assignmentIds.Distinct().ToList();
+        var keys = sessions.Select(s => s.ToString()).ToList();
+        var lines = new List<Line>();
+        await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
+        {
+            lines.Clear();
+            db.ChangeTracker.Clear();
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
+            var jobs = 0;
+            foreach (var key in keys)
+                jobs += await db.Jobs.Where(j => j.Kind != SourceProcessingJob.JobKind && j.PayloadJson.Contains(key)).ExecuteDeleteAsync(ct);
+            lines.Add(new(Name(db, typeof(Job)), "delete", jobs));
+            var appeals = await db.GradeAppeals.Where(a => sessions.Contains(a.SessionId)).Select(a => a.Id).ToListAsync(ct);
+            var about = sessions.Concat(assignments).Concat(appeals).Select(id => (Guid?)id).ToList();
+            lines.Add(new(Name(db, typeof(EmailLog)), "delete", await db.EmailLogs
+                .Where(e => SessionEmailKinds.Contains(e.Kind) && about.Contains(e.RelatedId)).ExecuteDeleteAsync(ct)));
+            lines.Add(new(Name(db, typeof(ExamAssignment)), "update", await db.ExamAssignments
+                .Where(a => assignments.Contains(a.Id) && a.ResultsReleasedAt != null)
+                .ExecuteUpdateAsync(u => u.SetProperty(a => a.ResultsReleasedAt, (DateTimeOffset?)null), ct)));
+            lines.Add(new(Name(db, typeof(LtiAssignmentLink)), "update", await Passback(db)
+                .Where(l => assignments.Contains(l.AssignmentId))
+                .ExecuteUpdateAsync(u => u
+                    .SetProperty(l => l.PassbackSentAt, (DateTimeOffset?)null).SetProperty(l => l.LastPassbackPercent, (decimal?)null)
+                    .SetProperty(l => l.PassbackPendingPercent, (decimal?)null).SetProperty(l => l.PassbackAttempts, 0)
+                    .SetProperty(l => l.PassbackRetryAt, (DateTimeOffset?)null).SetProperty(l => l.PassbackError, (string?)null)
+                    .SetProperty(l => l.PassbackFailedAt, (DateTimeOffset?)null), ct)));
+            foreach (var (t, from) in ScopedSessionTables(db.Model, sessions))
+#pragma warning disable EF1002   // the table and column names come from the EF model and the ids are GUIDs, never input text
+                lines.Add(new(t.Name, "delete", await db.Database.ExecuteSqlRawAsync($"DELETE t FROM {from}", ct)));
+#pragma warning restore EF1002
+            audit(lines);
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        });
+        return lines;
+    }
 }
