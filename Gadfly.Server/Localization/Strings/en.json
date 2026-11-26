@@ -168,6 +168,8 @@
   "getReady.examiner.choiceMale": "Male examiner",
   "getReady.examiner.choiceFemale.desc": "Asks each question in her own voice and follows up on what you say.",
   "getReady.examiner.choiceMale.desc": "Asks each question in his own voice and follows up on what you say.",
+  "getReady.examiner.choiceBust": "Socrates, the bust",
+  "getReady.examiner.choiceBust.desc": "Socrates as a living statue: the carved philosopher who asks slowly and presses on what you claim to know.",
   "getReady.examiner.choiceSocrates": "Socrates",
   "getReady.examiner.choiceSocrates.desc": "An old philosopher who asks slowly and presses on what you claim to know.",
   "getReady.examiner.comingSoon": "(coming soon)",

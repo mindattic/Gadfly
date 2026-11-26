@@ -36,7 +36,8 @@ public sealed record ExaminerOption(string Id, string NameKey, string? ModelUrl,
 }
 
 /// <summary>
-/// The examiners Gadfly offers (GAD-T595, GAD-T504): the female examiner (TalkingHead's CC0 mpfb.glb, the deployment's
+/// The examiners Gadfly offers (GAD-T595, GAD-T504): the talking bust (GAD-T792, first, so the default where nothing else
+/// chooses), the female examiner (TalkingHead's CC0 mpfb.glb, the deployment's
 /// <c>Gadfly:Voice:AvatarModelUrl</c>) and the male counterpart (<c>wwwroot/assets/avatars/examiner-m.glb</c>, CC0, built by
 /// tools/examiner-m), each with its own voice. A list rather than one hard-coded examiner, so adding one is a row
 /// here. Any part can be overridden per examiner with <c>Gadfly:Voice:Examiners:&lt;id&gt;</c> (<see cref="ExaminerSettings"/>).
@@ -81,6 +82,16 @@ public static class ExaminerCatalog
     /// </summary>
     public const double SocratesDefaultSpeed = 0.9;
 
+    /// <summary>
+    /// The talking bust (GAD-T792): Socrates' face rig given the owner's Meshy.ai marble bust's face, hair and beard, on its own
+    /// shoulders and plinth. The default examiner: first in the list. Socrates' voice and pace unless
+    /// <c>Gadfly:Voice:Examiners:examiner-bust</c> says otherwise.
+    /// </summary>
+    public const string Bust = "examiner-bust";
+
+    /// <summary>The bust's model (relative to wwwroot), built by tools/examiner-bust (GAD-T792).</summary>
+    public const string BustModelPath = "assets/avatars/examiner-bust.glb";
+
     /// <param name="voice">The site's voice settings: the female examiner is the configured one; <see cref="VoiceSettings.Examiners"/> overrides.</param>
     /// <param name="webRoot">wwwroot on disk, to see whether an examiner's files are installed (null: only configured URLs count).</param>
     public static IReadOnlyList<ExaminerOption> For(VoiceSettings voice, string? webRoot)
@@ -91,8 +102,17 @@ public static class ExaminerCatalog
         var maleModel = m?.ModelUrl ?? Local(MaleModelPath);
         var s = voice.Examiners.GetValueOrDefault(Socrates);
         var socratesModel = s?.ModelUrl ?? Local(SocratesModelPath);
+        var b = voice.Examiners.GetValueOrDefault(Bust);
+        var bustModel = b?.ModelUrl ?? Local(BustModelPath);
         return
         [
+            new(Bust, "getReady.examiner.choiceBust", bustModel, bustModel is not null)
+            {
+                VoiceId = b?.VoiceId ?? SocratesDefaultVoiceId,
+                VoiceIds = b?.VoiceIds ?? new Dictionary<string, string>(),
+                IsMale = true,
+                Speed = b?.Speed ?? SocratesDefaultSpeed,
+            },
             new(Female, "getReady.examiner.choiceFemale", f?.ModelUrl ?? voice.AvatarModelUrl, true)
             {
                 VoiceId = f?.VoiceId,

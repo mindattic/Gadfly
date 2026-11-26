@@ -581,12 +581,14 @@ counters above.
   grant's choice, whatever the browser sent, so `MindAttic:Avatar:Hub:AllowClientVoiceId` is switched on in live mode only
   for that filtered value. An id not shaped like an ElevenLabs voice id is skipped (logged) rather than sent. The fixed
   examiner lines are pre-warmed per voice. Mock mode is unchanged: no id is passed and the fake voice speaks.
-- **Which examiner (GAD-T504, GAD-T595).** Two examiners are offered (`Gadfly.Server/Student/ExaminerCatalog.cs`): the female
-  examiner (`examiner-f`, the deployment's `Gadfly:Voice:AvatarModelUrl`) and the male one (`examiner-m`,
-  `wwwroot/assets/avatars/examiner-m.glb`, 9.5 MB, CC0, committed; offered when his model is installed or configured). An exam's
-  **Examiner avatar id** (`Exams.AvatarId`), else the organization's default avatar id, fixes the examiner (`examiner-f` or
-  `examiner-m`; an unknown id fixes nothing); otherwise the student chooses on the get-ready page, remembered on the device
-  (device-prefs.js `getExaminer`). The exam room resolves it again on the server (`ExaminerCatalog.Resolve`), so the browser's
+- **Which examiner (GAD-T504, GAD-T595, GAD-T792).** Four examiners are offered (`Gadfly.Server/Student/ExaminerCatalog.cs`), in
+  this order: the **talking bust**, the default (`examiner-bust`, `wwwroot/assets/avatars/examiner-bust.glb`, 9.1 MB, built by
+  `tools/examiner-bust` from the owner's Meshy.ai bust and Socrates' face rig; Socrates' voice and pace), the female examiner
+  (`examiner-f`, the deployment's `Gadfly:Voice:AvatarModelUrl`), the male one (`examiner-m`,
+  `wwwroot/assets/avatars/examiner-m.glb`, 9.5 MB, CC0, committed) and Socrates (`examiner-socrates`). Each is offered when its
+  model is installed or configured. An exam's **Examiner avatar id** (`Exams.AvatarId`), else the organization's default avatar
+  id, fixes the examiner (any of the four ids; an unknown id fixes nothing); otherwise the student chooses on the get-ready page,
+  remembered on the device (device-prefs.js `getExaminer`), and with no choice yet the first available, the bust, is shown. The exam room resolves it again on the server (`ExaminerCatalog.Resolve`), so the browser's
   choice is only a preference among what the exam allows, and shows that examiner's model. Each
   examiner can have **his or her own voice**: in live mode the order is the exam's voice, then the student's chosen voice (see
   [Making the examiner your own](#making-the-examiner-your-own-gad-t505-gad-t646-gad-t663-gad-t649-gad-t671)), then the examiner's
@@ -694,7 +696,7 @@ measurements yet"; `/healthz/call-timings` lists the rows too.
 |---|---|
 | `Gadfly:Voice:Mode` | `off`, `mock` or `live`. Default `mock` in Development, `off` elsewhere. |
 | `Gadfly:Voice:AvatarModelUrl` | The avatar GLB. Default `/assets/avatars/mpfb.glb` when the file exists, otherwise her live presence. The examiner everywhere is this one model in the blue look (`avatar-look.js`, GAD-T687): set it only to a hosted copy of the same `mpfb.glb` (e.g. blob storage), never another model. |
-| `Gadfly:Voice:Examiners:<id>:ModelUrl` | One examiner's model (`examiner-f`, `examiner-m`; GAD-T504). Unset: hers is the setting above, his the committed `/assets/avatars/examiner-m.glb`. |
+| `Gadfly:Voice:Examiners:<id>:ModelUrl` | One examiner's model (`examiner-bust`, `examiner-f`, `examiner-m`, `examiner-socrates`; GAD-T504, GAD-T792). Unset: hers is the setting above, his the committed `/assets/avatars/examiner-m.glb`. |
 | `Gadfly:Voice:Examiners:<id>:VoiceId` / `:VoiceIds:<lang>` | That examiner's own ElevenLabs voice, for every language or one (live only). Unset: the male examiner's is `nPczCjzI2devNBz1zQrb` ("Brian"), hers the platform voice. |
 | `Gadfly:Voice:TtsModel` | The examiner's ElevenLabs voice model when `MindAttic:Avatar:ElevenLabs:ModelId` isn't set (default `eleven_flash_v2_5`, low latency). |
 | Organization / exam **voice quality** (database, not configuration) | The examiner's tier, `fast` or `quality` (GAD-T617): set on Organization settings and per exam; wins over `TtsModels:<lang>` and `TtsModel` when its model speaks the exam language. Unset: the settings below and above, as before. |

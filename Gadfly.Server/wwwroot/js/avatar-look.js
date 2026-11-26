@@ -53,6 +53,11 @@ export const LOOK_RIM_POWER = 2.4;
 export const LOOK_SKIN_DETAIL = 0.45;
 /** Glow on the irises: none (GAD-T558). The eyes stay outside every glow, so her gaze reads like a person's. */
 export const LOOK_IRIS_GLOW = 0;
+/**
+ * The exception, approved by the owner for the talking bust (GAD-T792): a model whose eye material is named "...-glow" gets this
+ * glow on the iris only (the pupil stays dark and sharp, so where he looks still reads). The other examiners keep none.
+ */
+export const LOOK_IRIS_GLOW_OWN = 0.6;
 /** How much of the room's reflected light reaches skin, hair and clothing: below 1 keeps the blue saturated, not washed out. */
 export const LOOK_ENV_LIGHT = 0.5;
 /** Eye surface roughness: low, so the light catches them (a catchlight) and they look alive. */
@@ -177,7 +182,9 @@ export function applyExaminerLook(target, options = {}) {
         if (!mesh.isMesh) return;
         for (const m of materialsOf(mesh)) {
             if (!m || !m.color || (m.userData && m.userData.gadflyLook)) continue;
-            restyle(m, partOf(m, mesh), o, circuit, mesh);
+            const part = partOf(m, mesh);
+            const glowing = part === "eyes" && /-glow\b/.test(m.name || "");
+            restyle(m, part, glowing ? { ...o, irisGlow: Math.max(o.irisGlow, LOOK_IRIS_GLOW_OWN) } : o, circuit, mesh);
             m.userData = { ...(m.userData || {}), gadflyLook: true };
             m.needsUpdate = true;
             count++;
