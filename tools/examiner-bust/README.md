@@ -47,8 +47,13 @@ The head on Socrates' own body and clothes (GAD-T793, `examiner-bust-body.glb`) 
 - `build.py` is the bust on its plinth. It drops the suit and cuts the MPFB body below the jaw. It keeps Socrates' eye level
   (1.68 m). It also leaves a 0.1 mm triangle where his left sole was. TalkingHead lowers the hips every frame until the model's
   lowest point is on the floor, so without that speck the bust would sink out of frame.
-- `body.py` is the head with `on_plinth=False` on his full body and clothes, unmoved, so his eye level and framing are
-  Socrates'. The bust's shell stops at the neck, where its rim lies flush on the MPFB neck and takes that neck's weights.
+- `body.py` is the head with `on_plinth=False` on his full body, unmoved, so his eye level and framing are Socrates'. The
+  bust's shell stops at the neck, where its rim lies flush on the MPFB neck and takes that neck's weights. He wears a himation
+  modelled by `toga()` (GAD-T800; no CC0 MakeHuman toga exists): a folded band over the left shoulder to the right hip, lifted
+  off his shirt with its weights, and a skirt to the ankles hung on the hips. MakeHuman deletes the body under his clothes, so
+  the shirt stays under the band as the chiton, in diagonal folds.
+- The sculpt is despiked after decimation, and each part's cut edges are tidied (small islands and hanging faces dropped, the
+  rim's saw-tooth evened), so the outlines read as carved stone. His MPFB eyebrows are dropped: the carved brow is the brow.
 - `head.stills()` renders the stills for both.
 
 Below the nose, `conform` tucks the MPFB face (the upper lip's skin and the cheeks) `BUST_TUCK` behind the bust's carved

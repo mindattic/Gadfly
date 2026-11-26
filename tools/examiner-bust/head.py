@@ -23,7 +23,7 @@ BUST_PLINTH_Z = -0.62
 FOREHEAD = 0.09
 SMOOTHING = int(os.environ.get("BUST_SMOOTHING", "8"))
 # How far the MPFB face reaches to meet the bust's (metres): farther than this, it keeps its own shape.
-REACH = float(os.environ.get("BUST_REACH", "0.03"))
+REACH = float(os.environ.get("BUST_REACH", "0.04"))
 # How far behind the bust's moustache and beard the face's skin under them is tucked (metres).
 TUCK = float(os.environ.get("BUST_TUCK", "0.003"))
 # The lips' size (metres, in _lips()'s ellipse): the face shows and moves there, uncovered by the moustache.
@@ -109,6 +109,7 @@ def load_bust(path, human, eyes):
         p = mw @ v.co
         v.co = (p - BUST_EYES) * BUST_SCALE + Vector((eye.x, 0, eye.z))
     bust.matrix_world.identity()
+    _despike(bust)
     # Depth: the bridge of the nose between the eyes on both, found by casting a ray from the front.
     hb, bb = _bvh(human), _bvh(bust)
     ray = lambda t: t.ray_cast(Vector((eye.x, -1.0, eye.z + 0.01)), Vector((0, 1, 0)))[0]
@@ -133,7 +134,7 @@ def conform(human, bust, eyes, mouth, nose_z):
         dm = Vector(((p.x - mouth.x) * 0.7, p.z - mouth.z)).length
         # Nothing below the nose (tuck() lays that under the moustache and beard), and the lips stay MPFB's. The nose's wings and
         # tip, the brow and the cheekbones take the bust's broad snub nose, heavy brow and wide cheeks in full.
-        w = (_smooth(0.018, 0.027, de) * _smooth(0.014, 0.02, dm) * (1 - _smooth(0.065, 0.085, abs(p.x)))
+        w = (_smooth(0.016, 0.023, de) * _smooth(0.014, 0.02, dm) * (1 - _smooth(0.065, 0.085, abs(p.x)))
              * _smooth(nose_z - 0.008, nose_z - 0.002, p.z) * (1 - _smooth(eye.z + FOREHEAD - 0.02, eye.z + FOREHEAD + 0.02, p.z)))
         q = bb.find_nearest(p)[0]
         if q is None or w <= 0: return Vector()
@@ -226,6 +227,7 @@ def split_bust(bust, human, eyes, mouth, nose_z, keep_torso=True):
             if fkind[f.index] in ks: f.material_index = ks.index(fkind[f.index])
         bmesh.ops.delete(bm, geom=[f for f in bm.faces if fkind[f.index] not in ks], context="FACES")
         bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        _tidy_edges(bm)
         bm.to_mesh(o.data); bm.free()
         out[name] = o
         print("PART", o.name, len(o.data.vertices))
@@ -233,6 +235,53 @@ def split_bust(bust, human, eyes, mouth, nose_z, keep_torso=True):
     for k in ("bust", "beard"):
         snap_rims(out[k], human)
     return out
+
+
+def _tidy_edges(bm, min_faces=60, passes=4):
+    """Clean cut edges, so a part reads as carved stone rather than torn: drops the small islands the per-face split leaves (the
+    shards along the beard's and hair's outlines), then evens out each cut rim's saw-tooth by moving its vertices toward their
+    neighbours along the rim."""
+    seen, small = set(), []
+    for f in bm.faces:
+        if f in seen: continue
+        island, stack = [], [f]
+        seen.add(f)
+        while stack:
+            g = stack.pop(); island.append(g)
+            for e in g.edges:
+                for h in e.link_faces:
+                    if h not in seen: seen.add(h); stack.append(h)
+        if len(island) < min_faces: small.extend(island)
+    bmesh.ops.delete(bm, geom=small, context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    # Faces hanging on the rim by one vertex or edge (the spikes) go too.
+    for _ in range(2):
+        spikes = [f for f in bm.faces if sum(1 for e in f.edges if e.is_boundary) >= 2]
+        bmesh.ops.delete(bm, geom=spikes, context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    rim = [v for v in bm.verts if any(e.is_boundary for e in v.link_edges)]
+    for _ in range(passes):
+        moved = {}
+        for v in rim:
+            ns = [e.other_vert(v) for e in v.link_edges if e.is_boundary]
+            if len(ns) == 2:
+                moved[v] = v.co * 0.5 + (ns[0].co + ns[1].co) * 0.25
+        for v, c in moved.items(): v.co = c
+
+
+def _despike(o, limit=0.002, passes=2):
+    """Pulls in the decimated sculpt's spikes: a vertex standing out from its neighbours' average by more than limit (metres) is
+    moved onto it, so the hair's and beard's outlines don't break into thin shards."""
+    bm = bmesh.new(); bm.from_mesh(o.data)
+    for _ in range(passes):
+        moved = {}
+        for v in bm.verts:
+            if len(v.link_edges) < 3: continue
+            avg = sum((e.other_vert(v).co for e in v.link_edges), Vector()) / len(v.link_edges)
+            if (v.co - avg).length > limit: moved[v] = avg
+        for v, c in moved.items(): v.co = c
+    print("DESPIKE", o.name)
+    bm.to_mesh(o.data); bm.free(); o.data.update()
 
 
 def snap_rims(o, human, reach=0.016):
@@ -353,10 +402,10 @@ def transfer_morphs(o, human, min_delta=0.0006, fade=None):
 
 def build(examiner_glb, bust_glb, on_plinth=True):
     """The head on its own: returns (armature, examiner parts, bust parts, landmarks). Socrates' MPFB hair, beard and moustache are
-    dropped (the bust's sculpt replaces them); his brows and lashes stay, so the expressions still read. on_plinth keeps the bust's
+    dropped (the bust's sculpt replaces them), and so are his eyebrows (the bust's carved brow is the brow); his lashes stay. on_plinth keeps the bust's
     shoulders and plinth, rigid on their own root bone; without it the bust stops at the neck, for Socrates' own body (GAD-T793)."""
     arm, parts = load_examiner(examiner_glb)
-    for k in ("afro01", "rehmanpolanski_beard_viking", "rehmanpolanski_moustache_viking"):
+    for k in ("afro01", "rehmanpolanski_beard_viking", "rehmanpolanski_moustache_viking", "eyebrow001"):
         bpy.data.objects.remove(parts.pop(k), do_unlink=True)
     human = parts["body"]
     eyes = eye_centres(arm)

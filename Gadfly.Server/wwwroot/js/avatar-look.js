@@ -258,9 +258,10 @@ function restyle(m, part, o, circuit, mesh) {
             shade(m, o, { flat: true, rim: true });
             break;
         case "brows":
-            m.map = null;
+            // One flat colour, but the texture's alpha still cuts out the strands: without it brows and lashes are solid strips.
             m.color.setHex(o.brows);
             glow(0x000000, 0);
+            shade(m, o, { flat: true });
             break;
         case "eyes":
             m.color.setHex(0xffffff);   // stylized in the shader below: clean sclera, smooth iris; never glowing
