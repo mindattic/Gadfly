@@ -98,10 +98,16 @@ public static class GadflyServices
             o.IsProduction = !builder.Environment.IsDevelopment();
             o.ConfigureAdditionalPolicies = TenancyAuthorization.Configure;
             // Key ring: the library's default unless DataProtection:KeysPath names a folder to keep it in
-            // (the Azure Blob/Key Vault key ring went with the Azure decommission, 2026-11-26).
+            // (the Azure Blob/Key Vault key ring went with the Azure decommission, 2026-11-26). It must be an
+            // absolute path shared by the web app and Gadfly.Worker, or each process ends up with its own ring
+            // and cannot unprotect what the other protected.
             var keysPath = builder.Configuration["DataProtection:KeysPath"];
             if (o.IsProduction && !string.IsNullOrWhiteSpace(keysPath))
+            {
+                if (!Path.IsPathRooted(keysPath))
+                    throw new InvalidOperationException("DataProtection:KeysPath must be an absolute path.");
                 o.ConfigureDataProtection = dp => dp.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+            }
         });
         builder.Services.AddScoped<IAuthorizationHandler, OrgRoleHandler>();
         builder.Services.AddAuthentication().AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(

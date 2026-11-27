@@ -9,7 +9,8 @@ were removed in GAD-T804; the resource names, slots, Key Vault and Blob key-ring
 
 - **Data Protection keys** (cookies, launch links, webhook secrets): Production no longer requires a Blob Storage / Key
   Vault key ring. Set `DataProtection:KeysPath` (env `DataProtection__KeysPath`) to a persistent, private folder so keys
-  survive restarts; without it the library's default key location is used.
+  survive restarts; without it the library's default key location is used. It must be an **absolute path** that the
+  web app and `Gadfly.Worker` both point at, so they share one key ring (startup throws otherwise).
 - **Secrets**: every credential comes from MindAttic.Vault (never a literal).
 - **Database**: `ConnectionStrings:Gadfly`, a SQL Server database. Development migrates on start; elsewhere run the
   server once with `--migrate` before the new code serves (GAD-T63).
