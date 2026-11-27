@@ -22,7 +22,7 @@
 @* The exam room's talking examiner (GAD-T53): the examiner speaks each question (<ma-avatar>, captions) and the student answers
    out loud with a live transcript. All browser work is in wwwroot/js/voice-room.js.
    The interview room (GAD-T231): the student's own camera with the examiner (picture in picture since GAD-T416), an on-screen transcript of every question and
-   spoken answer, and each answer's response delay as it happens.
+   spoken answer: only who said what, never a measure of how it was said (GAD-T819).
    Voice and camera are mandatory (GAD-T239): there is no typed answer mode. The examiner starts on its own when the page opens
    (no separate click), and while the microphone or camera is missing or lost the exam is paused here until it is restored.
    Typed answers (GAD-T260): for a student granted the typed-answer accommodation (TypedAnswers) the examiner and the camera run
@@ -113,22 +113,14 @@
                             <li @key="line.Id" class="voice-line @(line.Examiner ? "voice-line-examiner" : "voice-line-you")">
                                 <span class="voice-who">@T[line.Examiner ? "examRoom.voice.examiner" : "examRoom.voice.you"]</span>
                                 <span class="voice-said">@line.Text</span>
-                                @if (line.DelaySeconds is { } delay)
-                                {
-                                    <span class="voice-line-delay">@T["examRoom.transcript.delay", FormatDelay(delay)]</span>
-                                }
-                                @if (line.Voice is { } voice)
-                                {
-                                    <span class="voice-line-delay voice-line-strain">@voice</span>
-                                }
                             </li>
                         }
                     </ol>
                 }
             </section>
             <div class="voice-body">
-                @* The status strip (GAD-T723): the camera-on indicator and the on-demand preview (GAD-T510), what the examiner is doing,
-                   and the response delay, each on a line of its own fixed height. *@
+                @* The status strip (GAD-T723): the camera-on indicator and the on-demand preview (GAD-T510) and what the examiner is
+                   doing, each on a line of its own fixed height. *@
                 <div class="voice-statusbar">
                     <div class="voice-camera" data-self-state="@selfState">
                         <span class="voice-camera-dot" aria-hidden="true"></span>
@@ -139,7 +131,6 @@
                         }
                     </div>
                     <p class="voice-status" role="status" aria-live="polite" data-voice-status>@T["examRoom.voice.connectingStatus"]</p>
-                    <p class="voice-delay" data-voice-delay data-state="idle" aria-live="off"></p>
                 </div>
                 @if (avatarNote is not null)
                 {
@@ -288,7 +279,7 @@
     public async Task SpeakAnotherWayAsync(string text)
     {
         if (module is null || state != VoiceState.On || string.IsNullOrWhiteSpace(text)) return;
-        AddLine(true, text, null);
+        AddLine(true, text);
         StateHasChanged();
         try { await SpeakAsync(text.Trim(), repeat: true); }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException)
@@ -326,10 +317,7 @@
     private Guid org, user;
     private readonly CancellationTokenSource stop = new();
 
-    private sealed record TranscriptLine(int Id, bool Examiner, string Text, double? DelaySeconds, string? Voice = null);
-
-    /// <summary>The longest response delay worth showing; anything longer is a clock problem, not a pause.</summary>
-    private const double MaxDelaySeconds = 6 * 60 * 60;
+    private sealed record TranscriptLine(int Id, bool Examiner, string Text);
 
     /// <summary>The student opened the small camera preview (GAD-T510); it closes itself after <see cref="PreviewFor"/>.</summary>
     private bool previewOpen;
@@ -356,58 +344,15 @@
         _ => null,
     };
 
-    private static string FormatDelay(double seconds) => seconds.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
-
     /// <summary>The next transcript line's key: lines can be taken out again (an answer not taken, GAD-T473), so never the count.</summary>
     private int nextLineId;
 
-    /// <summary>
-    /// The answer's voice line for the student's transcript (GAD-T232, GAD-T259): English exactly as <see cref="VoiceStrainReading.Brief"/>
-    /// words it; another language from the room's strings, naming the measures beyond the usual range (never a named state).
-    /// </summary>
-    /// <summary>
-    /// The prefix of the voice line's measure names, completed by <see cref="VoiceStrainIndicator.Feature"/> (pitch, pitchVariability,
-    /// jitter, loudness, rate, pauses). A constant, so the localization scanner does not read the built key as a missing literal one;
-    /// every built key is checked by name in ExamRoomLocalizationTests (GAD-T638).
-    /// </summary>
-    public const string VoiceFeatureKey = "examRoom.voiceLine.feature.";
-
-    private string VoiceLine(VoiceStrainReading reading)
-    {
-        if (T.Text.IsEnglish) return reading.Brief;
-        if (reading.IsBaseline) return T["examRoom.voiceLine.baseline"];
-        var notable = reading.Indicators.Where(i => i.Notable).Select(i => T[VoiceFeatureKey + i.Feature]).Distinct().ToList();
-        return notable.Count == 0 ? T["examRoom.voiceLine.close"] : T["examRoom.voiceLine.against", string.Join(", ", notable)];
-    }
-
-    private TranscriptLine? AddLine(bool examiner, string text, double? delaySeconds, string? voice = null)
+    private TranscriptLine? AddLine(bool examiner, string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return null;
-        var line = new TranscriptLine(++nextLineId, examiner, text.Trim(), delaySeconds, voice);
+        var line = new TranscriptLine(++nextLineId, examiner, text.Trim());
         transcript.Add(line);
         return line;
-    }
-
-    /// <summary>
-    /// The answer's voice against the student's own first spoken answers (GAD-T232), as the exam room will store it, in a short
-    /// descriptive line for the student's transcript. Null when it can't be measured; never blocks the answer.
-    /// </summary>
-    private async Task<string?> VoiceLineAsync(VoiceAnswerPayload? payload)
-    {
-        if (payload?.Acoustics is null) return null;
-        try
-        {
-            var built = VoiceAnswerBuilder.Build(payload, Clock.GetUtcNow());
-            if (built is null) return null;
-            await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.ForOrganization(org));
-            var answer = await VoiceStrain.ApplyAsync(scope.ServiceProvider.GetRequiredService<Gadfly.Server.Data.GadflyDbContext>(), SessionId, built.Answer, stop.Token);
-            return VoiceStrain.Describe(answer.SpeechMetrics) is { } reading ? VoiceLine(reading) : null;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            Log.LogDebug(ex, "Voice strain line could not be computed for session {SessionId}.", SessionId);
-            return null;
-        }
     }
 
     private bool CanRepeat => state == VoiceState.On && !string.IsNullOrWhiteSpace(SpokenText);
@@ -716,7 +661,7 @@
                 if (key != loggedKey)
                 {
                     loggedKey = key;
-                    AddLine(true, Prompt is { Length: > 0 } p ? p : Question ?? text, null);
+                    AddLine(true, Prompt is { Length: > 0 } p ? p : Question ?? text);
                 }
                 await OnExaminerSpeaks.InvokeAsync();
                 if (!await FinishStreamAsync(text)) await SpeakAsync(text);
@@ -1012,13 +957,12 @@
             // below can let the exam move on first). An answer kept and sent again (GAD-T473) still names its own question, so it can
             // never become the answer to the next one.
             payload.Turn ??= TurnIndex;
-            // The words as heard, joined the way VoiceAnswerBuilder joins them; the delay is the one the student watched (display only).
+            // The words as heard, joined the way VoiceAnswerBuilder joins them.
             var said = string.Join(' ', payload.Segments.Select(s => (s.Text ?? "").Trim()).Where(t => t.Length > 0));
-            var delay = payload.ResponseDelayMs is { } ms && double.IsFinite(ms) && ms >= 0 && ms / 1000 <= MaxDelaySeconds ? ms / 1000 : (double?)null;
             // Numbers and punctuation normalized for this on-screen line only (GAD-T360): the answer built from payload below
             // (VoiceAnswerBuilder.Build, in OnAnswer's handler) still uses the words exactly as the recognizer gave them. Added before
             // the answer is handed on, so it comes before the next question's line.
-            var line = AddLine(false, TranscriptDisplay.ForDisplay(said), delay, await VoiceLineAsync(payload));
+            var line = AddLine(false, TranscriptDisplay.ForDisplay(said));
             StateHasChanged();
             // The answer a cut-off marker that follows belongs to (GAD-T462): set now, since the marker can arrive while it is judged.
             cutOffTurn = payload.Turn;
@@ -1113,7 +1057,7 @@
     /// <summary>A typed answer was handed in (GAD-T260): it joins the on-screen transcript like a spoken one.</summary>
     public void NoteTypedAnswer(string text)
     {
-        AddLine(false, text, null);
+        AddLine(false, text);
         StateHasChanged();
     }
 

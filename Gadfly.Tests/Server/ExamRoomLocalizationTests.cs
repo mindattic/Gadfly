@@ -60,20 +60,19 @@ public class ExamRoomLocalizationTests
             Assert.That(Catalog.Find("en", "examRoom.js.gaze." + state), Is.Not.Null, state);
     }
 
-    /// <summary>GAD-T638: VoiceRoom builds its voice-line measure keys from the feature name; every one exists in every UI language.</summary>
+    /// <summary>
+    /// GAD-T819: the student's live transcript shows only who said what, so the response-delay and voice-comparison strings are gone
+    /// from every UI language.
+    /// </summary>
     [Test]
-    public void VoiceLineFeatureKeys_ExistInEveryLanguage()
+    public void DeliveryMeasureStrings_AreGone()
     {
-        string[] features = [Gadfly.Server.Voice.VoiceStrain.Pitch, Gadfly.Server.Voice.VoiceStrain.PitchVariability, Gadfly.Server.Voice.VoiceStrain.Jitter,
-            Gadfly.Server.Voice.VoiceStrain.Loudness, Gadfly.Server.Voice.VoiceStrain.Rate, Gadfly.Server.Voice.VoiceStrain.Pauses];
-        foreach (var feature in features)
-        {
-            var en = Catalog.Find(UiCatalog.English, VoiceRoom.VoiceFeatureKey + feature);
-            Assert.That(en, Is.Not.Null, feature);
-            // Find falls back to English, so a translation must differ from it (none of these words is the same in Korean or Spanish).
-            foreach (var lang in UiCatalog.Languages.Where(l => l != UiCatalog.English))
-                Assert.That(Catalog.Find(lang, VoiceRoom.VoiceFeatureKey + feature), Is.Not.EqualTo(en), $"{lang}: {feature}");
-        }
+        string[] keys = ["examRoom.transcript.delay", "examRoom.voiceLine.baseline", "examRoom.voiceLine.close", "examRoom.voiceLine.against",
+            "examRoom.voiceLine.feature.pitch", "examRoom.voiceLine.feature.pitchVariability", "examRoom.voiceLine.feature.jitter",
+            "examRoom.voiceLine.feature.loudness", "examRoom.voiceLine.feature.rate", "examRoom.voiceLine.feature.pauses"];
+        foreach (var lang in UiCatalog.Languages)
+            foreach (var key in keys)
+                Assert.That(Catalog.Find(lang, key), Is.Null, $"{lang}: {key}");
     }
 
     [Test]

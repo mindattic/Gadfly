@@ -68,8 +68,6 @@
 .voice-self-frame video { display: block; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .voice-self:not([data-self-state="on"]) .voice-self-frame video { visibility: hidden; }
 .voice-self-note { position: absolute; inset: auto 0 0 0; margin: 0; padding: var(--space-1) var(--space-2); color: var(--stage-ink); font-size: var(--text-xs); line-height: var(--leading-tight); background: var(--stage-veil); }
-.voice-delay { margin: 0; min-height: 1.2em; font-size: var(--text-sm); font-variant-numeric: tabular-nums; color: var(--muted); }
-.voice-delay[data-state="final"] { color: var(--ink); font-weight: 600; }
 /* contain: size takes the transcript out of the row's height (it fills the height the stage gives the row and scrolls), so a
    long interview can never stretch the examiner's window (GAD-T501). */
 .voice-transcript { grid-area: log; align-self: stretch; contain: size; display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; min-height: 12rem; }
@@ -88,7 +86,6 @@
 .voice-room[data-answering="true"] .voice-log { visibility: hidden; }
 .voice-who { font-size: var(--text-xs); font-weight: 600; color: var(--muted); }
 .voice-said { white-space: pre-wrap; overflow-wrap: anywhere; }
-.voice-line .voice-line-delay { justify-self: start; padding: 0 var(--space-2); border: var(--border); border-radius: var(--radius-pill); background: var(--panel); font-size: var(--text-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
 .voice-body { grid-area: side; display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; min-height: 0; }
 .voice-body > * { flex: none; }
 .voice-body > .hint { margin: 0; font-size: var(--text-sm); }
