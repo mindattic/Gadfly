@@ -21,6 +21,7 @@
   "refusal.questionSaving": "Your question is still being saved; please submit again.",
   "refusal.answerRequestFirst": "Please answer the request about your last answer first.",
   "refusal.clarificationTooLong": "That clarification is too long.",
+  "refusal.reflectionTooLong": "That reflection is too long.",
   "refusal.correctionNeedsText": "The corrected answer needs text.",
   "refusal.spokenNotCorrected": "A spoken answer is kept as it was heard; it can't be corrected.",
   "refusal.spokenNotCorrectedAfter": "A spoken answer is kept as it was heard; it can't be corrected afterwards.",

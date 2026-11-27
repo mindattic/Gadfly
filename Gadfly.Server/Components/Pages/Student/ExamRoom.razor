@@ -24,7 +24,7 @@
 @* The attempt's language and examiner (GAD-T606): everything the room hosts reads its text from here. *@
 <CascadingValue Value="T" IsFixed="false">
 <UiTextData Prefix="examRoom.js." Language="@language" />
-<div class="exam-room @(phase is Phase.Answering or Phase.Thinking && voiceAvailable ? "exam-live" : null)" lang="@language">
+<div class="exam-room @(phase is Phase.Answering or Phase.Thinking or Phase.Reflecting && voiceAvailable ? "exam-live" : null)" lang="@language">
     @* Each question or request is announced to screen readers exactly once, when the examiner begins to say it (GAD-T599, WCAG 4.1.3):
        one live region that stays on the page, since the question card is rebuilt between phases and her caption is aria-hidden. *@
     <p class="exam-announce" role="status" aria-live="polite" aria-atomic="true">@announced</p>
@@ -52,7 +52,8 @@
                 </div>
             }
         </div>
-        @if (phase is Phase.Answering or Phase.Thinking && step is not null)
+        @* No clock or progress while the closing reflection is asked (GAD-T818): the exam is over and nothing is timed. *@
+        @if (phase is Phase.Answering or Phase.Thinking && step is { Reflection: null })
         {
             <div class="exam-status">
                 <span class="timer @(TimeLeft <= TimeSpan.FromMinutes(2) ? "timer-low" : "")" role="timer" aria-live="off" title="@T["examRoom.timer.title"]">@Format(TimeLeft)</span>
@@ -64,13 +65,13 @@
         }
     </header>
 
-    @if (phase is Phase.Answering or Phase.Thinking)
+    @if (phase is Phase.Answering or Phase.Thinking or Phase.Reflecting)
     {
         if (voiceAvailable)
         {
             @* The talking examiner (GAD-T53, mandatory since GAD-T239): kept outside the phase switch so the microphone, the camera and
-               the examiner persist from question to question. *@
-            <VoiceRoom SessionId="SessionId" TurnIndex="step?.TurnIndex" Question="@step?.Question" Move="@step?.Move" Prompt="@VoicePrompt"
+               the examiner persist from question to question, and on to the closing reflection (GAD-T818). *@
+            <VoiceRoom SessionId="SessionId" TurnIndex="VoiceTurn" Question="@VoiceQuestion" Move="@(step?.Reflection is null ? step?.Move : null)" Prompt="@VoicePrompt"
                        PromptId="step?.Verification?.ResponseId" CanAnswer="VoiceCanAnswer" HeldByStaff="staffHeld" Active="voiceOn" ActiveChanged="OnVoiceActive"
                        OnAnswer="OnVoiceAnswerAsync" OnExaminerSpeaks="OnExaminerSpeaksAsync" TypedAnswers="typedAnswers" @ref="voiceRoom" Pondering="VoicePondering"
                        OnPartialAnswer="OnPartialAnswerAsync" OnSayAnotherWay="SayAnotherWayAsync" CanSayAnotherWay="CanSayAnotherWay" />
@@ -301,6 +302,39 @@
             </section>
             break;
 
+        case Phase.Reflecting:
+            @* The closing reflection (GAD-T818): asked aloud after the examiner ended the exam, outside the clock and never graded. No
+               timer, no progress and no "I don't know"; one plain Skip (Elenchus at Scale 2.5.1, 5.3.4). *@
+            <section class="panel wide exam-card" aria-labelledby="reflection-title">
+                <h2 id="reflection-title" class="verify-label">@T["examRoom.reflection.title"]</h2>
+                <p class="exam-question">@step?.Reflection</p>
+                <p class="hint">@T["examRoom.reflection.notGraded"]</p>
+                @if (typedAnswers)
+                {
+                    <label>
+                        @T["examRoom.typed.label"]
+                        <textarea id="reflection-box" rows="5" @bind="typedReflection" @bind:event="oninput" placeholder="@T["examRoom.typed.placeholder"]"></textarea>
+                    </label>
+                    <p class="hint">@T["examRoom.reflection.typed"]</p>
+                    <div class="actions">
+                        <button type="button" @onclick="SubmitTypedReflectionAsync" disabled="@(busy || string.IsNullOrWhiteSpace(typedReflection))">@T["examRoom.reflection.send"]</button>
+                        <button type="button" class="secondary" @onclick="SkipReflectionAsync" disabled="@busy">@T["examRoom.reflection.skip"]</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="actions">
+                        <p class="hint" role="status">@T["examRoom.reflection.spoken"]</p>
+                        <button type="button" class="secondary" @onclick="SkipReflectionAsync" disabled="@busy">@T["examRoom.reflection.skip"]</button>
+                    </div>
+                }
+                @if (error is not null)
+                {
+                    <p class="error" role="alert">@error</p>
+                }
+            </section>
+            break;
+
         case Phase.Ended:
             <section class="panel wide exam-card">
                 <h2>@T["examRoom.ended.title"]</h2>
@@ -334,7 +368,7 @@
 @code {
     [Parameter] public Guid SessionId { get; set; }
 
-    private enum Phase { Loading, NotFound, Thinking, Answering, Ended, Error }
+    private enum Phase { Loading, NotFound, Thinking, Answering, Reflecting, Ended, Error }
     private enum ThinkingAbout { Question, Answer, Finish, Saving }
     private enum LastMode { None, Typo }
 
@@ -447,7 +481,14 @@
                 Nav.NavigateTo($"my-exams/{s.AssignmentId}/start");
                 return;
             case SessionState.Ended:
+                // A reload while the closing reflection waits comes back to it (GAD-T818); otherwise the ended card.
                 phase = Phase.Ended;
+                await RunStepAsync(ThinkingAbout.Saving, () => Sessions.CurrentAsync(org, SessionId, user));
+                if (phase == Phase.Error)
+                {
+                    error = null;
+                    phase = Phase.Ended;
+                }
                 return;
             case SessionState.Failed:
                 phase = Phase.Error;
@@ -577,7 +618,7 @@
         catch (SessionRefusedException ex)
         {
             error = ex.In(T.Text);   // in the attempt's language (GAD-T628)
-            phase = previous == Phase.Answering ? Phase.Answering : Phase.Error;
+            phase = previous is Phase.Answering or Phase.Reflecting ? previous : Phase.Error;
             ran = false;
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !stop.IsCancellationRequested)
@@ -598,6 +639,12 @@
     {
         step = next;
         deadline = Clock.GetUtcNow() + next.Remaining;
+        if (next.Reflection is not null)
+        {
+            // The examiner ended the exam and asks the closing reflection (GAD-T818); answering or skipping it shows the ended card.
+            phase = Phase.Reflecting;
+            return;
+        }
         if (next.State == SessionState.Ended || next.Question is null)
         {
             phase = Phase.Ended;

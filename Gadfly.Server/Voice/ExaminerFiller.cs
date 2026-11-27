@@ -153,14 +153,16 @@ public static class ExaminerFiller
 
     /// <summary>
     /// Every fixed line for <paramref name="language"/>, in the order they are needed (acknowledgements, backchannels when on, wait
-    /// fillers, remarks, then the rest of the gentle reminders), for the phrase cache (GAD-T303). The cache is keyed by voice, model
-    /// and text, so each language's lines are prepared and kept separately for each examiner voice. The gentle reminders (GAD-T605)
-    /// are in it so the first one the examiner says plays at once instead of waiting on synthesis; each line appears once.
+    /// fillers, remarks, the rest of the gentle reminders, then the closing reflection), for the phrase cache (GAD-T303). The cache is
+    /// keyed by voice, model and text, so each language's lines are prepared and kept separately for each examiner voice. The gentle
+    /// reminders (GAD-T605) are in it so the first one the examiner says plays at once instead of waiting on synthesis, and the closing
+    /// reflection (GAD-T818) so it follows the last answer without a wait; each line appears once.
     /// </summary>
     public static IEnumerable<string> FixedLines(string? language, bool backchannels)
     {
         var set = For(language);
         return set.Acknowledgements.Concat(backchannels ? set.Backchannels : []).Concat(set.First).Concat(set.Again).Concat(set.Remarks.Values)
-            .Concat(Integrity.WebcamIntegrityRecorder.RemindersFor(language)).Distinct(StringComparer.Ordinal);
+            .Concat(Integrity.WebcamIntegrityRecorder.RemindersFor(language))
+            .Append(Sessions.ClosingReflection.Prompt(Gadfly.Engine.ExamLanguage.Normalize(language))).Distinct(StringComparer.Ordinal);
     }
 }

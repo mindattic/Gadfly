@@ -21,6 +21,7 @@
   "refusal.questionSaving": "Su pregunta todavía se está guardando; envíe de nuevo, por favor.",
   "refusal.answerRequestFirst": "Primero responda, por favor, la solicitud sobre su última respuesta.",
   "refusal.clarificationTooLong": "Esa aclaración es demasiado larga.",
+  "refusal.reflectionTooLong": "Esa reflexión es demasiado larga.",
   "refusal.correctionNeedsText": "La respuesta corregida necesita texto.",
   "refusal.spokenNotCorrected": "Una respuesta hablada se conserva tal como se oyó; no se puede corregir.",
   "refusal.spokenNotCorrectedAfter": "Una respuesta hablada se conserva tal como se oyó; no se puede corregir después.",

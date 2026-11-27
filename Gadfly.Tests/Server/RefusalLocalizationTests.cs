@@ -38,6 +38,7 @@ public class RefusalLocalizationTests
         Assert.That(new StudentText("refusal.alreadyConfirmed").English,
             Is.EqualTo("That answer was already confirmed or clarified, so it can't be edited. Use \"I want to change my answer\" instead."));
         Assert.That(new SessionRefusedException(new StudentText("refusal.closed")).Message, Is.EqualTo("That exam has closed."));
+        Assert.That(new StudentText("refusal.reflectionTooLong").English, Is.EqualTo("That reflection is too long."));
 
         var approval = new SessionPolicy { RubricApproval = new RubricApproval(2, Guid.NewGuid(), DateTimeOffset.UnixEpoch) };
         Assert.That(RubricApprovalService.AttemptRefusal(AssessmentMode.Examination, approval, 3)!.English, Is.EqualTo(

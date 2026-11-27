@@ -21,6 +21,7 @@
   "refusal.questionSaving": "질문을 아직 저장하고 있어요. 다시 제출해 주세요.",
   "refusal.answerRequestFirst": "먼저 지난 답변에 대한 요청에 답해 주세요.",
   "refusal.clarificationTooLong": "설명이 너무 길어요.",
+  "refusal.reflectionTooLong": "답변이 너무 길어요.",
   "refusal.correctionNeedsText": "고친 답변에 내용이 있어야 해요.",
   "refusal.spokenNotCorrected": "말로 한 답변은 들린 그대로 남아요. 고칠 수 없어요.",
   "refusal.spokenNotCorrectedAfter": "말로 한 답변은 들린 그대로 남아요. 나중에 고칠 수 없어요.",

@@ -64,8 +64,8 @@ public partial class ExamRoom
     private async Task OnExaminerSpeaksAsync()
     {
         examinerHasSpoken = true;
-        announced = VoicePrompt ?? step?.Question;   // read out once by screen readers (GAD-T599)
-        if (step is not { ClockStarted: false } || clockStarting) return;
+        announced = VoicePrompt ?? VoiceQuestion;   // read out once by screen readers (GAD-T599)
+        if (step is not { ClockStarted: false, Reflection: null } || clockStarting) return;
         if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return;
         clockStarting = true;
         try
@@ -100,10 +100,12 @@ public partial class ExamRoom
 
     /// <summary>
     /// An answer may be given by voice when a question is waiting, or a meaning clarification left over from before GAD-T405 is (it
-    /// is answered out loud). A spoken answer is never read back, said again or corrected (GAD-T405).
+    /// is answered out loud), and while the closing reflection waits (GAD-T818). A spoken answer is never read back, said again or
+    /// corrected (GAD-T405).
     /// </summary>
-    private bool VoiceCanAnswer => phase == Phase.Answering && !busy && !staffHeld && step is { } s
-        && (s.Verification is null || s.Verification.Kind == ResponseLedger.MeaningKind);
+    private bool VoiceCanAnswer => phase == Phase.Reflecting ? !busy
+        : phase == Phase.Answering && !busy && !staffHeld && step is { } s
+            && (s.Verification is null || s.Verification.Kind == ResponseLedger.MeaningKind);
 
     /// <summary>
     /// Staff have paused the exam from the live monitor (GAD-T299), as <see cref="StaffNoticeBanner"/> learns it from the live feed
@@ -167,7 +169,7 @@ public partial class ExamRoom
             // Loop until the server's clock matches the room: the devices may come and go again while a call is in flight.
             for (var tries = 0; tries < 4; tries++)
             {
-                if (phase is not (Phase.Answering or Phase.Thinking) || step is not { ClockStarted: true } s) return;
+                if (phase is not (Phase.Answering or Phase.Thinking) || step is not { ClockStarted: true, Reflection: null } s) return;
                 var wantPaused = !voiceOn && examinerHasSpoken;
                 if (wantPaused == s.ClockPaused) return;
                 if (wantPaused && s.PauseAllowanceLeft <= TimeSpan.Zero) return;
@@ -238,9 +240,9 @@ public partial class ExamRoom
         // When the answer came in: the next question's spoken-as-written timings (GAD-T495) count the student's wait from here.
         var committedAt = System.Diagnostics.Stopwatch.GetTimestamp();
         var committedAtUtc = Clock.GetUtcNow();
-        if (busy || phase != Phase.Answering || step is null || !VoiceCanAnswer) return false;
-        // Meant for another question (GAD-T321): never the answer to this one.
-        if (payload.Turn is { } turn && turn != step.TurnIndex) return false;
+        if (busy || step is null || !VoiceCanAnswer) return false;
+        // Meant for another question (GAD-T321): never the answer to this one, nor a late answer to the reflection (GAD-T818).
+        if (payload.Turn is { } turn && turn != VoiceTurn) return false;
         if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user) return false;
         var built = VoiceAnswerBuilder.Build(payload, Clock.GetUtcNow());
         if (built is null)
@@ -253,6 +255,8 @@ public partial class ExamRoom
         }
         var text = built.Answer.Text;
         error = null;
+        // The closing reflection (GAD-T818): stored as said, never judged, so no voice comparison and no step speech.
+        if (phase == Phase.Reflecting) return await AnswerReflectionAsync(text, "voice");
         switch (step.Verification)
         {
             case null:

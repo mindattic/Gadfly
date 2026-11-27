@@ -725,7 +725,7 @@ public sealed partial class SessionOrchestrator(
         CancellationToken ct = default)
     {
         var answer = (text ?? "").Trim();
-        if (answer.Length > ClosingReflection.MaxLength) throw new SessionRefusedException("That reflection is too long.");
+        if (answer.Length > ClosingReflection.MaxLength) throw new SessionRefusedException(new StudentText("refusal.reflectionTooLong"));
         return ResolveReflectionAsync(organizationId, sessionId, studentUserId, answer.Length == 0 ? null : answer, mode == "voice" ? "voice" : "text", ct);
     }
 

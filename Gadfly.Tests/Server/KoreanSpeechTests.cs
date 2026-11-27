@@ -55,7 +55,7 @@ public class KoreanSpeechTests
         Assert.That(ExaminerFiller.For("ko-KR"), Is.SameAs(ExaminerFiller.Korean));
         var before = ExaminerFiller.Acknowledgements.Concat(ExaminerFiller.Backchannels).Concat(ExaminerFiller.First).Concat(ExaminerFiller.Again)
             .Concat(Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks.Values)
-            .Concat(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleReminders).Distinct();
+            .Concat(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleReminders).Append(Gadfly.Server.Sessions.ClosingReflection.English).Distinct();
         Assert.That(ExaminerFiller.FixedLines("en", backchannels: true), Is.EqualTo(before));
         Assert.That(ExaminerFiller.Remark("look-away", "en"), Is.EqualTo(Gadfly.Server.Integrity.WebcamIntegrityRecorder.ExaminerRemarks["look-away"]));
         Assert.That(ExaminerFiller.Remark("look-away", "ko"), Is.EqualTo(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleRemindersKorean[0]));
@@ -75,6 +75,9 @@ public class KoreanSpeechTests
         Assert.That(en, Is.SupersetOf(Gadfly.Server.Integrity.WebcamIntegrityRecorder.GentleReminders));
         Assert.That(ko, Is.Unique);
         Assert.That(en, Is.Unique);
+        // The closing reflection is prepared with the other fixed lines, in the exam language (GAD-T818).
+        Assert.That(ko, Does.Contain(Gadfly.Server.Sessions.ClosingReflection.Korean));
+        Assert.That(ExaminerFiller.FixedLines("es-MX", false), Does.Contain(Gadfly.Server.Sessions.ClosingReflection.Spanish));
     }
 
     [Test]
