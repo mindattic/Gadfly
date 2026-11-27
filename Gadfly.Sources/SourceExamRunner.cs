@@ -297,21 +297,26 @@ public sealed class SourceExamEngine
             Objective = objective,
             Misconception = misconception,
         }, ct);
+        // The turn records the move actually asked (GAD-T814): a fixed fallback for a Counterexample, an Apply, or a Contradiction
+        // without both quoted claims asks another move, so its probed level and dimensions follow the question and it never credits transfer.
+        var move = _generator.LastMove;
         // An Apply question's reason carries its transfer label, so reviewers see how its situation differs from the source,
         // and that the transfer measured is sequestered (GAD-T268).
         // Whether the Apply situation is really new (GAD-T442): word overlap with the passages the question was grounded in and
         // with the student's earlier answers. Deterministic and local, so it adds no wait; a reused situation is not redrafted
         // (that would be another panel round trip) but recorded, and its answer is credited as extrapolation, not transfer.
-        var novelty = decision.Move == MoveKind.Apply
+        var novelty = move == MoveKind.Apply
             ? ApplyNovelty.Check(question, grounding.Text, Session, concept.Title, objective?.Title, related)
             : null;
-        var reason = decision.Move == MoveKind.Apply
+        var reason = move == MoveKind.Apply
             ? $"{decision.Reason} Transfer item ({TransferLabels.Label(TransferLabels.Next(Session, decision.ObjectiveKey ?? concept.Key))}). {TransferLabels.Caveat} {novelty!.Describe()}"
             : decision.Reason;
+        if (move != decision.Move)
+            reason = $"{reason} Planned {decision.Move}; the fixed fallback question asks {move} instead, and the turn is recorded as {move}.".Trim();
         if (_generator.LastOutcome == QuestionGenerator.FixedOpeningOutcome)
             reason = $"{reason} Fixed opening question: approved by the instructor and asked word for word to every student (GAD-T436).".Trim();
-        Diagnostics?.Report($"[{decision.Move} on {decision.ObjectiveKey ?? concept.Key}{(decision.IsReplacement ? " (replacement)" : "")}: {reason} Question {_generator.LastOutcome}.]");
-        return Session.Ask(concept.Key, decision.Move, question, _clock.GetUtcNow(), decision.TargetClaimIds, reason,
+        Diagnostics?.Report($"[{move} on {decision.ObjectiveKey ?? concept.Key}{(decision.IsReplacement ? " (replacement)" : "")}: {reason} Question {_generator.LastOutcome}.]");
+        return Session.Ask(concept.Key, move, question, _clock.GetUtcNow(), decision.TargetClaimIds, reason,
             decision.ObjectiveKey, decision.IsReplacement, novelty, _generator.LastAuthor);
     }
 

@@ -65,6 +65,12 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     /// <summary>Who wrote the last question (GAD-T431): the drafting provider(s) and their models, or a fixed source.</summary>
     public QuestionAuthorship? LastAuthor { get; private set; }
 
+    /// <summary>
+    /// The move the last question actually asks (GAD-T814): the planned move, or, when the fixed fallback stood in for a move it cannot
+    /// ask without a model-written case or the student's quoted claims, the move it asked instead (<see cref="FallbackMove"/>).
+    /// </summary>
+    public MoveKind LastMove { get; private set; }
+
     /// <summary>The provider whose judge synthesizes a fused question (Legion's judge; Gadfly configures claude).</summary>
     public string JudgeProviderId { get; init; } = "claude";
 
@@ -78,6 +84,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     {
         var dialogue = Dialogue(r.Session);
         LastAuthor = null;
+        LastMove = r.Decision.Move;
         if (MoveProfiles.IsAssistance(r.Decision.Move))
         {
             LastAuthor = QuestionAuthorship.Fixed(QuestionAuthorship.HintLadder);
@@ -229,7 +236,8 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         // Only a guard verdict is reported as one: with no draft to check (or no rubric), no guard ran.
         LastGuard = !guarded ? LeakGuardResult.Skipped : undecided ? LeakGuardResult.UndecidedReplaced : LeakGuardResult.LeakedReplaced;
         LastAuthor = QuestionAuthorship.Fixed(QuestionAuthorship.FallbackText);
-        return Fallback(r.Decision.Move, r.ConceptTitle, r.RelatedConceptTitle, Language.Exam);
+        (LastMove, var fallback) = Fallback(r, Language.Exam);
+        return fallback;
     }
 
     /// <summary>
@@ -538,8 +546,8 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
                 guardOn ? LeakGuardResult.Safe : LeakGuardResult.Skipped);
         }
         // Something was said already: what failed is never said, and the plain question for the move follows what was.
-        var fallback = Fallback(move, r.ConceptTitle, r.RelatedConceptTitle, Language.Exam);
-        speech.Say(fallback, move);
+        (LastMove, var fallback) = Fallback(r, Language.Exam);
+        speech.Say(fallback, LastMove);
         var question = string.Join(" ", spoken.Append(fallback));
         speech.Finish(question);
         var guardResult = stopVerdict == true ? LeakGuardResult.LeakedReplaced : stopVerdict is null ? LeakGuardResult.UndecidedReplaced
@@ -772,61 +780,96 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
     private static partial System.Text.RegularExpressions.Regex Introspection();
 
-    internal static string Fallback(MoveKind move, string concept, string? related, string? language = null) =>
-        ExamLanguage.IsKorean(language) ? KoreanFallback(move, concept, related)
-        : ExamLanguage.IsSpanish(language) ? SpanishFallback(move, concept, related) : move switch
+    /// <summary>
+    /// The fixed fallback question for <paramref name="r"/>'s move and the move it actually asks (GAD-T814). A Contradiction quotes
+    /// the two claims it confronts from the ledger (the student's own words, so nothing can leak); see <see cref="FallbackMove"/>.
+    /// </summary>
+    internal static (MoveKind Move, string Question) Fallback(QuestionRequest r, string? language)
     {
-        MoveKind.Clarify => $"Could you say more precisely what you mean, in your own words, when you talk about {concept}?",
-        MoveKind.Probe => "Why do you think that is true? Walk me through your reasoning.",
-        MoveKind.Counterexample => $"Can you think of a case where your explanation of {concept} would not hold? What would happen then?",
-        MoveKind.Contradiction => "Earlier you said something that seems to conflict with what you just said. How do both fit together?",
-        MoveKind.Apply => $"Imagine a situation you haven't seen before where {concept} matters. What would you expect to happen, and why?",
-        MoveKind.Synthesize => $"How does {concept} relate to {related ?? "the other ideas we have discussed"}?",
-        MoveKind.CausalReasoning => "What do you think causes that to happen? Explain the chain of cause and effect.",
-        MoveKind.ScenarioVariation => "Suppose one of the conditions in that situation changed while everything else stayed the same. What would change, and why?",
-        MoveKind.AssumptionTesting => "What has to be true for your explanation to hold? Which of those assumptions could fail?",
-        MoveKind.IndependentExplanation => $"Without using a textbook definition, how would you explain {concept} from your own reasoning?",
-        MoveKind.Hint => $"Here is a hint: think about what {concept} needs in order to happen. With that in mind, how would you explain it now?",
-        MoveKind.GuidedExplanation => $"Let's look at {concept} step by step, starting from what you already said. Which step do you think comes first, and why?",
-        _ => $"In your own words, what is {concept}?",
+        var quotes = ContradictionQuotes(r);
+        return (FallbackMove(r.Decision.Move, quotes is not null), Fallback(r.Decision.Move, r.ConceptTitle, r.RelatedConceptTitle, language, quotes));
+    }
+
+    /// <summary>The first two target claims' quotes for a Contradiction; null for another move or when the ledger has fewer.</summary>
+    private static (string First, string Second)? ContradictionQuotes(QuestionRequest r)
+    {
+        if (r.Decision.Move != MoveKind.Contradiction) return null;
+        var quotes = r.Decision.TargetClaimIds.Select(id => r.Ledger.Find(id)?.Quote?.Trim()).Where(q => !string.IsNullOrEmpty(q)).Take(2).ToList();
+        return quotes.Count == 2 ? (quotes[0]!, quotes[1]!) : null;
+    }
+
+    /// <summary>
+    /// The move a fixed fallback question asks for <paramref name="planned"/> (GAD-T814). A Counterexample needs a case and an Apply
+    /// a situation new to the student, which only the examiner can set (ElenchusAtScale 3.2, M5), so their fallback asks the nearest
+    /// move that needs neither: assumption testing and an independent explanation. A Contradiction counts only once both claims are
+    /// put to the student (Proposition 3.2, M7); without their quotes it tests the assumptions instead. The turn records this move,
+    /// so its probed level and dimensions match the question asked and no fallback is credited as transfer.
+    /// </summary>
+    internal static MoveKind FallbackMove(MoveKind planned, bool quotesBothClaims = false) => planned switch
+    {
+        MoveKind.Counterexample => MoveKind.AssumptionTesting,
+        MoveKind.Apply => MoveKind.IndependentExplanation,
+        MoveKind.Contradiction when !quotesBothClaims => MoveKind.AssumptionTesting,
+        _ => planned,
     };
+
+    /// <summary>
+    /// The plain fallback question for <paramref name="move"/>, worded for the move <see cref="FallbackMove"/> asks. None is yes/no,
+    /// presupposes an answer point, or asks about the student's own thought process (ElenchusAtScale 2.2.2, 2.3.1, 2.3.2, 3.3; M3),
+    /// and each is at most 40 words besides the quoted claims.
+    /// </summary>
+    internal static string Fallback(MoveKind move, string concept, string? related, string? language = null, (string First, string Second)? quotes = null)
+    {
+        var asked = FallbackMove(move, quotes is not null);
+        return ExamLanguage.IsKorean(language) ? KoreanFallback(asked, concept, related, quotes)
+            : ExamLanguage.IsSpanish(language) ? SpanishFallback(asked, concept, related, quotes) : asked switch
+        {
+            MoveKind.Clarify => $"When you talk about {concept}, what exactly do you mean, in your own words?",
+            MoveKind.Probe => $"Why does what you just said about {concept} hold, and what shows that it is so?",
+            MoveKind.Contradiction => $"You said \"{quotes!.Value.First}\", and you also said \"{quotes.Value.Second}\". How do those two fit together, or which one would you change?",
+            MoveKind.Synthesize => $"What connection, if any, is there between {concept} and {related ?? "the other ideas we have discussed"}, and why?",
+            MoveKind.CausalReasoning => $"In what you said about {concept}, what depends on what, and what shows that it is so?",
+            MoveKind.ScenarioVariation => "Suppose one of the conditions you described changed while everything else stayed the same. What would happen then, and why?",
+            MoveKind.AssumptionTesting => $"What has to be true for your explanation of {concept} to hold? What would follow if one of those things were false?",
+            MoveKind.IndependentExplanation => $"Without using a textbook definition, how would you explain {concept} from your own reasoning?",
+            MoveKind.Hint => $"Here is a hint: think about what {concept} needs in order to happen. With that in mind, how would you explain it now?",
+            MoveKind.GuidedExplanation => $"Let's look at {concept} step by step, starting from what you already said. Which step comes first, and why?",
+            _ => $"In your own words, what is {concept}?",
+        };
+    }
 
     /// <summary>
     /// The plain fallback questions in Spanish (GAD-T610): neutral Latin American Spanish, usted, no gendered wording, worded so any
     /// concept title (English or Spanish) fits.
     /// </summary>
-    internal static string SpanishFallback(MoveKind move, string concept, string? related) => move switch
+    private static string SpanishFallback(MoveKind move, string concept, string? related, (string First, string Second)? quotes) => move switch
     {
-        MoveKind.Clarify => $"¿Podría explicar con sus propias palabras, con más precisión, qué quiere decir cuando habla de {concept}?",
-        MoveKind.Probe => "¿Por qué piensa que eso es cierto? Explíqueme su razonamiento paso a paso.",
-        MoveKind.Counterexample => $"¿Se le ocurre un caso en el que su explicación de {concept} no se cumpliría? ¿Qué pasaría entonces?",
-        MoveKind.Contradiction => "Antes dijo algo que parece no coincidir con lo que acaba de decir. ¿Cómo encajan las dos cosas?",
-        MoveKind.Apply => $"Imagine una situación nueva en la que {concept} sea importante. ¿Qué esperaría que pasara y por qué?",
-        MoveKind.Synthesize => $"¿Qué relación hay entre {concept} y {related ?? "las otras ideas que hemos comentado"}?",
-        MoveKind.CausalReasoning => "¿Qué cree que hace que eso ocurra? Explique la cadena de causas y efectos.",
-        MoveKind.ScenarioVariation => "Supongamos que cambia una de las condiciones de esa situación y todo lo demás sigue igual. ¿Qué cambiaría y por qué?",
-        MoveKind.AssumptionTesting => "¿Qué tiene que ser cierto para que su explicación funcione? ¿Cuál de esos supuestos podría fallar?",
+        MoveKind.Clarify => $"Cuando habla de {concept}, ¿qué quiere decir exactamente, con sus propias palabras?",
+        MoveKind.Probe => $"¿Por qué se sostiene lo que acaba de decir sobre {concept}, y qué muestra que es así?",
+        MoveKind.Contradiction => $"Usted dijo \"{quotes!.Value.First}\" y también dijo \"{quotes.Value.Second}\". ¿Cómo encajan esas dos cosas, o cuál de ellas cambiaría?",
+        MoveKind.Synthesize => $"¿Qué relación hay, si la hay, entre {concept} y {related ?? "las otras ideas que hemos comentado"}, y por qué?",
+        MoveKind.CausalReasoning => $"En lo que dijo sobre {concept}, ¿qué depende de qué, y qué muestra que es así?",
+        MoveKind.ScenarioVariation => "Supongamos que cambia una de las condiciones que describió y todo lo demás sigue igual. ¿Qué pasaría entonces y por qué?",
+        MoveKind.AssumptionTesting => $"¿Qué tiene que ser cierto para que su explicación de {concept} se sostenga? ¿Qué pasaría si una de esas cosas fuera falsa?",
         MoveKind.IndependentExplanation => $"Sin usar una definición de libro, ¿cómo explicaría {concept} a partir de su propio razonamiento?",
         MoveKind.Hint => $"Le doy una pista: piense en qué necesita {concept} para ocurrir. Con eso en mente, ¿cómo lo explicaría ahora?",
-        MoveKind.GuidedExplanation => $"Veamos {concept} paso a paso, a partir de lo que ya dijo. ¿Qué paso cree que va primero y por qué?",
+        MoveKind.GuidedExplanation => $"Veamos {concept} paso a paso, a partir de lo que ya dijo. ¿Qué paso va primero y por qué?",
         _ => $"Con sus propias palabras, ¿qué es {concept}?",
     };
 
     /// <summary>The plain fallback questions in Korean (GAD-T535), polite 해요체, worded so any concept title (English or Korean) fits.</summary>
-    internal static string KoreanFallback(MoveKind move, string concept, string? related) => move switch
+    private static string KoreanFallback(MoveKind move, string concept, string? related, (string First, string Second)? quotes) => move switch
     {
-        MoveKind.Clarify => $"{concept}에 대해 말씀하실 때 정확히 어떤 뜻인지 자신의 말로 조금 더 설명해 주시겠어요?",
-        MoveKind.Probe => "왜 그것이 맞다고 생각하세요? 이유를 차근차근 설명해 주세요.",
-        MoveKind.Counterexample => $"{concept}에 대한 설명이 맞지 않는 경우를 생각해 볼 수 있을까요? 그때는 어떻게 될까요?",
-        MoveKind.Contradiction => "앞에서 하신 말씀과 방금 하신 말씀이 서로 맞지 않는 것 같아요. 두 가지가 어떻게 함께 성립할 수 있을까요?",
-        MoveKind.Apply => $"{concept}이(가) 중요한, 처음 보는 상황을 하나 떠올려 보세요. 어떤 일이 일어날 것 같고, 왜 그렇게 생각하세요?",
-        MoveKind.Synthesize => $"{concept}은(는) {related ?? "지금까지 이야기한 다른 개념들"}과(와) 어떻게 연결되나요?",
-        MoveKind.CausalReasoning => "그런 일이 일어나는 원인은 무엇이라고 생각하세요? 원인과 결과의 흐름을 설명해 주세요.",
-        MoveKind.ScenarioVariation => "그 상황에서 다른 조건은 그대로 두고 한 가지 조건만 바뀐다고 해 볼게요. 무엇이 달라지고, 왜 그럴까요?",
-        MoveKind.AssumptionTesting => "그 설명이 맞으려면 무엇이 사실이어야 하나요? 그 가정 중 어떤 것이 틀릴 수 있을까요?",
+        MoveKind.Clarify => $"{concept}에 대해 말씀하실 때, 자신의 말로 하면 정확히 어떤 뜻인가요?",
+        MoveKind.Probe => $"방금 {concept}에 대해 하신 말씀은 왜 성립하나요? 무엇이 그렇다는 것을 보여 주나요?",
+        MoveKind.Contradiction => $"앞에서 \"{quotes!.Value.First}\"라고 하셨고, \"{quotes.Value.Second}\"라고도 하셨어요. 이 두 말씀은 서로 어떻게 맞아떨어지나요, 아니면 어느 쪽을 고치시겠어요?",
+        MoveKind.Synthesize => $"{concept}과(와) {related ?? "지금까지 이야기한 다른 개념들"} 사이에 관계가 있다면 그것은 무엇이고, 왜 그런가요?",
+        MoveKind.CausalReasoning => $"{concept}에 대해 하신 설명에서 무엇이 무엇에 달려 있나요? 무엇이 그렇다는 것을 보여 주나요?",
+        MoveKind.ScenarioVariation => "말씀하신 조건 중 하나만 바뀌고 나머지는 그대로라고 해 볼게요. 그러면 어떻게 되고, 왜 그럴까요?",
+        MoveKind.AssumptionTesting => $"{concept}에 대한 설명이 성립하려면 무엇이 사실이어야 하나요? 그중 하나가 사실이 아니라면 어떻게 될까요?",
         MoveKind.IndependentExplanation => $"교과서 정의를 쓰지 않고, {concept}에 대해 자신의 생각으로 어떻게 설명하시겠어요?",
         MoveKind.Hint => $"힌트를 드릴게요. {concept}에 무엇이 필요한지 생각해 보세요. 그렇다면 이제 어떻게 설명하시겠어요?",
-        MoveKind.GuidedExplanation => $"이미 말씀하신 내용에서 시작해서 {concept}에 대해 한 단계씩 살펴볼게요. 어떤 단계가 먼저 온다고 생각하세요? 왜 그런가요?",
-        _ => $"{concept}에 대해 자신의 말로 설명해 주시겠어요?",
+        MoveKind.GuidedExplanation => $"이미 말씀하신 내용에서 시작해서 {concept}에 대해 한 단계씩 살펴볼게요. 어떤 단계가 먼저 오고, 왜 그런가요?",
+        _ => $"{concept}은(는) 자신의 말로 하면 무엇인가요?",
     };
 }
