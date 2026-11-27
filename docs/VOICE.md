@@ -780,6 +780,7 @@ two spoken answers in the session and stores the differences as `strain.*` metri
 | `strain.vsBaseline` | mean of the rises, each scaled so its notable point is 1: 0 at baseline, 1 clearly above | recorded for reviewers; not a probing cue since GAD-T258 (it was one at 0.5 under GAD-T233) |
 
 The review transcript shows one descriptive line per spoken answer ("possible vocal strain / hesitation compared with this
-student's first answers: ...") with its caveat, hidden from blinded graders; the student's live interview transcript shows a
-short form. These describe the voice, never emotion, honesty or deception; they are not integrity events, never change a grade,
+student's first answers: ...") with its caveat, hidden from blinded graders. The student's live interview transcript shows none of it: since GAD-T819 it
+shows only who said what, with no response delay and no voice comparison, so no delivery measure is put in front of the
+student mid-exam (ElenchusAtScale 2.10.3, 5.6.2). These describe the voice, never emotion, honesty or deception; they are not integrity events, never change a grade,
 and since GAD-T258 never change how hard the examiner probes (that comes from what the answer says, `AnswerDelivery`).

@@ -402,7 +402,7 @@ Finish) or `Failed`, and `null` while running. An empty array when there are non
         "conceptId": "osmosis",
         "title": "Osmosis",
         "mastery": 0.84,
-        "status": "Mastered",
+        "status": "settled-conceptual-or-above",
         "turns": 3,
         "averageScore": 0.81,
         "evidence": [
@@ -436,7 +436,7 @@ Finish) or `Failed`, and `null` while running. An empty array when there are non
 | `objectiveLevels` | The AI report's result: the level the evidence supports for each learning objective, 1 to 5, with its label. Level 0 (`insufficient: true`) means the evidence was insufficient to assess reliably, never zero understanding. Empty until the attempt ends, and for reports written before learning objectives. Use this, not the two fields below, wherever you show an AI result. |
 | `recommendation` | **Deprecated; not a score.** The examiner's running-estimate band (`mastered`, `partial`, `not-demonstrated`), which only steers which question comes next. Kept so existing integrations don't break; do not show it as the student's result. `null` until the attempt ends. |
 | `overallScore` | **Deprecated; not a score.** The mean of the examiner's running estimate over the examined concepts, 0 to 1: a steering aid, never a grade. |
-| `report` | The full AI report (per-concept mastery and status, quoted evidence with source citations, disputed turns), or `null` until the attempt ends. Concept `status` is `NotStarted`, `Open`, `Mastered`, `Aporia` or `Exhausted`. |
+| `report` | The full AI report (per-concept mastery and status, quoted evidence with source citations, disputed turns), or `null` until the attempt ends. Concept `status` is `not-examined`, `not-started`, `open`, `settled-conceptual-or-above` (sufficient evidence at Level 3 or above), `settled-below-conceptual` (sufficient evidence below Level 3) or `insufficient-evidence` (GAD-T823); reports saved earlier may say `mastered`, `aporia` or `exhausted`. Like `mastery`, it describes the examiner's steering, not the result. |
 | `grade` | The latest decision of the older single-grader review, or `null`. The graded result comes from the grading workflow (see "Grading workflow" below): AI grades are preliminary, and a final grade exists only after human grading and approval. |
 
 #### When `recommendation` and `overallScore` go away

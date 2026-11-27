@@ -444,7 +444,8 @@ public sealed class ExamSession : ITenantOwned
     public string? AiMode { get; set; }
     /// <summary>
     /// The closing reflection (GAD-T817, Gadfly.Server.Sessions.ClosingReflection): null when it was never offered, else Pending,
-    /// Answered or Skipped. Offered once, when the examiner ends the exam; it is not a turn and never reaches a judge, grade or report.
+    /// Answered or Skipped. Offered once, when the examiner ends the exam; it is not a turn and never reaches a judge or grade. An answered
+    /// reflection appears in the student's own published result (GAD-T821), never in a staff report.
     /// </summary>
     public string? ClosingReflectionState { get; set; }
     /// <summary>The student's reflection, word for word (null when skipped or not yet answered); redacted with the answers.</summary>

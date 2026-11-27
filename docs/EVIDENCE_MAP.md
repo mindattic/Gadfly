@@ -91,6 +91,19 @@ minimum from (docs/PILOT.md).
   only on a Contradiction move, where it measures the resolution and feeds `ObjectiveAssessor.ResolutionScore`. Every
   other answer's overall score is the weighted mean of accuracy, reasoning and completeness (0.35/0.25/0.25 renormalised,
   `PanelAnswerJudge.WeightsFor`); a consistency score a judge returns anyway is ignored.
+- One question per turn (GAD-T815; 3.1, 3.2, 4.3.4). A draft is cut after its first question and a first question past
+  `QuestionGenerator.MaxQuestionWords` (50 by default) is redrafted, so each answer responds to one question and the
+  recorded question is the one said. The fixed fallbacks follow the same rules (GAD-T814; 2.3.1, 3.3, M3, M5): no yes/no,
+  presupposing or process-report forms, at most 40 words, and a fallback that cannot ask its move (a Counterexample or
+  Apply, or a Contradiction without both ledger quotes) is recorded as the move it asks (`QuestionGenerator.LastMove`),
+  so it never credits transfer.
+- Closing reflection and the student's elenctic record (GAD-T817, GAD-T818, GAD-T821; 3.4 Prop. 3.1, 2.6.1). An exam
+  the examiner ends offers one unscored reflection ("which claim are you least sure you could defend?"), never a turn or
+  grade input. The student's published result lists each contradiction put to them in their own words, with no verdict
+  on which claim was wrong, and their answered reflection; staff reports carry neither.
+- No delivery measures in the live view (GAD-T819; 2.10.3, 5.6.2). The student's live transcript shows only who said
+  what: no response delay and no voice comparison mid-exam. The stored speech metrics and the reviewers' views are
+  unchanged.
 - Contradiction detector honesty (GAD-T440; M7, 3.4, 4.4). The detector is a filter, so its silence is reported as "no
   contradiction detected", never "consistent": each objective's report states one of "no contradiction detected",
   "contradiction resolved", "contradiction withdrawn by the student", "contradiction pending" or "contradiction not
@@ -124,7 +137,7 @@ reason or example where the move asked for one (Probe, CausalReasoning, Scenario
 IndependentExplanation, Apply, Synthesize, Counterexample, Contradiction), a judged overall score below 0.6 (not yet
 positive evidence), the response analysis's evidence against understanding (a misconception, or contradicting evidence)
 or unclear meaning, and the recitation flag. One cue sets the probing pressure to Some, two or more to Shaky, and a
-recitation flag to Recited. The prompt (since prompt set version 8; version 9 now) then asks the examiner to press harder.
+recitation flag to Recited. The prompt (since prompt set version 8; version 11 now) then asks the examiner to press harder.
 
 Nothing from the voice steers it: not the voice comparison (pitch, jitter, loudness, `strain.vsBaseline`), and not the
 wait before the first word, the hesitation count or long pauses. The owner reversed decision (b) on 2026-11-21 (mechanic

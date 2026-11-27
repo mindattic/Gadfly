@@ -108,12 +108,43 @@ A live spoken cross-examination is far harder to fake:
    | Close | End the concept: mastery shown, aporia reached, or the time budget spent. |
 
 3. **Each turn**: the student's spoken answer → transcript plus speech metrics → **claim extraction**
-   (the claim ledger) → **judge** (Legion panel: accuracy against the source, depth of reasoning, consistency
-   with earlier claims, completeness; each criterion cites chunks; voters can dissent) → **mastery update** for
-   the concept → the **question generator** (Legion drafts, a judge fuses the sharpest question), grounded in
-   the concept's chunks, the conversation and the ledger, and never revealing the answer.
+   (the claim ledger) → **judge** (Legion panel: accuracy against the source, depth of reasoning,
+   completeness; each criterion cites chunks; voters can dissent) → **mastery update** for the concept → the
+   **question generator** (Legion drafts, a judge fuses the sharpest question), grounded in the concept's
+   chunks, the conversation and the ledger, and never revealing the answer.
+   - **Consistency only when confronted** (GAD-T816, prompt set v11; ElenchusAtScale 3.4, M7). The judge
+     scores consistency on a Contradiction move alone, as the quality of the student's resolution of the two
+     claims put to them. On every other move `PanelAnswerJudge.WeightsFor` weighs accuracy, reasoning and
+     completeness (0.35/0.25/0.25, renormalised) and ignores a consistency score returned anyway; a
+     contradiction detected but never put to the student counts against nothing.
+   - **One question per turn** (GAD-T815; ElenchusAtScale 3.1, 3.2, 4.3.4). A draft is cut after its first
+     question (the first `?`, the full-width `？` in Korean, the closing mark of a Spanish `¿…?` pair; a
+     question mark inside a quotation belongs to the quoted words), and a first question longer than
+     `QuestionGenerator.MaxQuestionWords` (50 by default; the prompt asks for 40) is redrafted like an empty
+     draft. On the streamed path nothing after the first question is read, guarded or said, so the recorded
+     question is what the student heard.
+   - **Fallback questions follow the same rules** (GAD-T814; ElenchusAtScale 2.3.1, 3.3, 3.4). When no draft
+     survives the leak guard, the fixed English, Spanish and Korean fallbacks ask one open question of at most
+     40 words: no yes/no form, no presupposed cause, no report of the student's own thinking process. A
+     Contradiction fallback quotes both claims from the ledger; a Counterexample or Apply fallback, or a
+     Contradiction without both quotes, is recorded by the move it actually asks (AssumptionTesting or
+     IndependentExplanation, `QuestionGenerator.LastMove`), so it never credits transfer.
 4. **Report.** Per-concept mastery, overall recommendation, quoted evidence with citations, judge dissent,
-   integrity summary. **The instructor finalizes the grade** (D13). The AI recommends.
+   integrity summary. **The instructor finalizes the grade** (D13). The AI recommends. Each concept's
+   steering status reads NotStarted, Open, SettledConceptualOrAbove, SettledBelowConceptual or Inconclusive
+   (`ConceptStatus`, GAD-T823): "aporia" is kept for the student's honest "I don't know", never a settled
+   level below Level 3. Stored rows written as Mastered, Aporia or Exhausted read as the new names
+   (`ConceptStatusNames.Parse`).
+5. **Closing reflection** (GAD-T817, GAD-T818; ElenchusAtScale 3.4, 2.6.1). When the examiner ends the exam
+   (EvidenceComplete, TurnLimit, TimeUp), it asks one fixed question aloud in the exam language: which claim
+   the student is least sure they could defend, and why. The student answers aloud (typed only under the
+   typed-answer accommodation) or skips. It is stored on the session (`ClosingReflectionState`, `Text`,
+   `Mode`, `At`), never as a turn, ledger entry, judgment or grade input.
+6. **The student's elenctic record** (GAD-T821; ElenchusAtScale 3.4 Prop. 3.1, 5.9). The student's published
+   result lists each contradiction the examiner put to them, both claims in their own words, withdrawn ones
+   marked as withdrawn by them, with the examiner's question and their answer and no verdict on which claim
+   was wrong; detections never confronted do not appear. Their answered closing reflection follows. Both
+   are in the student's report (page, Markdown, PDF) only, never in staff views.
 
 Prompt sets are versioned constants. Each session records the SHA-256 of the prompt set it ran, for audit.
 Gadfly's three existing irrevocable prompts (Interrogation, Reflection, Master) are untouched: they become

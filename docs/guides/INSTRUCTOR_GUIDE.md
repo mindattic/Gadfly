@@ -287,7 +287,9 @@ questions, and what it means in plain words. They are evidence to weigh, never f
 See [Reading integrity notes](integrity-notes.md) for what each one means and how weak it is.
 
 **Running estimate and the AI report.** **Examiner's running estimate by concept** shows where the examiner's
-steering estimate ended for each concept and how questioning on it closed (Mastered, Aporia, Exhausted, Open). It is
+steering estimate ended for each concept and how questioning on it closed (SettledConceptualOrAbove: sufficient evidence at Level 3 or above;
+SettledBelowConceptual: sufficient evidence below Level 3; Inconclusive: insufficient evidence; Open; sessions recorded
+before GAD-T823 show the older names Mastered, Aporia and Exhausted). It is
 labelled as a steering aid: it is not a score, a level or a grade. The admin assignment and student pages likewise
 show the AI levels (not a percentage) until a final grade exists. The **AI report** is the panel's write-up, with quoted evidence and citations.
 
@@ -337,7 +339,11 @@ questions. After 180 days the page asks for the calibration and probes to be re-
 ## 8. Analytics
 
 **Analytics** shows aggregates for all your assessments, one course or one assessment, with **Export CSV**:
-completion, mastery by learning objective (human or AI), the engine's mastery estimate by concept, class-wide
+completion, mastery by learning objective (human or AI), the engine's running estimate by concept (a steering aid,
+not a level, with how many sessions left each concept settled at Level 3 or above, open, settled below Level 3 or with
+insufficient evidence; in the CSV the columns `mean_running_estimate`, `settled_level_3_or_above`, `open`,
+`settled_below_level_3`, `insufficient_evidence` and `not_started`, which replaced `mean_estimate`, `mastered`, `aporia`
+and `exhausted` in GAD-T823), class-wide
 knowledge gaps, recurring misconceptions, AI–human agreement ("agreement is not validity"), transcript corrections
 and clarifications, and reliability indicators. Two fairness views help you spot a problem with the tool rather than
 the students: **speech recognition accuracy by group** and **eye-contact flag rates by group** (groups smaller than

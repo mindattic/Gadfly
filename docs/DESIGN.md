@@ -277,7 +277,7 @@ stateDiagram-v2
     Created --> ConsentGiven: consent text hash recorded
     ConsentGiven --> Running: first question planned
     Running --> Running: answer → verify → judge/analyse → plan next
-    Running --> Ended: EndReason Mastery | Aporia | TimeUp | TurnLimit | Abandoned
+    Running --> Ended: EndReason EvidenceComplete | Mastery | Aporia | TimeUp | TurnLimit | Abandoned | PromptSetChanged
     Running --> Failed: unrecoverable error (EndReason Failed)
     Ended --> [*]
     Failed --> [*]
@@ -542,15 +542,26 @@ flowchart LR
     L[Sign in<br/>or launch link] --> M[/my-exams/]
     M --> St[/my-exams/{assignment}/start<br/>instructions, consent, system check/]
     St --> R[/exam/{session}<br/>Socratic conversation/]
-    R --> V[Confirm or correct transcript,<br/>answer clarifications,<br/>revise an answer]
+    R --> V[Answer a meaning<br/>clarification]
     V --> R
+    R --> C[Closing reflection:<br/>answer aloud or skip,<br/>not graded]
     R --> E[Session ends:<br/>no score shown]
-    E --> P[/my-results/{session}<br/>after publication only/]
+    C --> E
+    E --> P[/my-results/{session}<br/>after publication only:<br/>contradictions put to them,<br/>their closing reflection/]
     P --> Ap[Appeal]
 ```
 
-The student never sees an AI score during or after the examination; results appear only once a grade is
-Published (with its report), and an appeal moves it to Under Appeal.
+Spoken answers are taken as heard: there is no transcript read-back or revision step (GAD-T405, GAD-T407); only a
+meaning clarification can interrupt the conversation. When the examiner ends the exam (EvidenceComplete, TurnLimit,
+TimeUp), it asks one closing reflection aloud (`Gadfly.Server.Sessions.ClosingReflection`, GAD-T817, GAD-T818): which
+claim the student is least sure they could defend. The student answers aloud (typed only under the typed-answer
+accommodation) or skips; it is not a turn and never reaches a judge or grade (ElenchusAtScale 3.4, 2.6.1). The student
+never sees an AI score during or after the examination, and the live view shows only who said what, no delivery
+measures (GAD-T819). Results appear only once a grade is Published (with its report), and an appeal moves it to Under
+Appeal. The published result lists each contradiction the examiner put to the student (a Contradiction turn naming two
+ledger claims), both claims quoted in their own words, withdrawn ones marked, with no verdict on which was wrong, and
+their answered closing reflection (GAD-T821; `GradingReport` with `forStudent`); staff reports carry neither section
+(ElenchusAtScale 3.4 Prop. 3.1, 5.9).
 
 ### Teacher (Instructor) and institution
 

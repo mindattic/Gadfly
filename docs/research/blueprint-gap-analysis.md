@@ -272,3 +272,24 @@ No ticket was filed for any of these. Each is the owner's to make; the dissertat
    on the turn and in the audit trail (`judgment.provisional.disagreed`), so the single model's steering error is
    measurable. How often it steered differently from the panel, and whether that changed which objectives were
    probed, is unmeasured.
+
+## Addendum, 26 November 2026: since `fccba6d`
+
+**Closed since this analysis.** Every ticket in "Tickets filed" above (GAD-T425 to GAD-T454) has closed. The rows and
+counts above still record the code at `fccba6d` and were not re-graded row by row; read them with this addendum.
+
+**Pure elenchus cleanup (epic GAD-T808, planned at `0df308e`, landed by `9923ca8`).** Checked against the code, not
+against this table; only gaps still present in the code were filed. The rows each task acted on:
+
+| Ticket | What changed | Rows |
+|---|---|---|
+| GAD-T814 | The fixed English, Spanish and Korean fallback questions are open questions of at most 40 words: no yes/no, presupposing or process-report forms. A Contradiction fallback quotes both ledger claims; one that cannot ask its move is recorded as the move it asks (`QuestionGenerator.LastMove`), so it never credits transfer. | A3, A5, B2 |
+| GAD-T815 | One question per turn: a draft is cut after its first question, and a first question past `QuestionGenerator.MaxQuestionWords` (50) is redrafted; on the streamed path the recorded question is what was said. The mock panel's questions follow the same rules. | A3, A4 |
+| GAD-T816 | Consistency is scored only on a Contradiction move, as the quality of the resolution (prompt set v11, `PanelAnswerJudge.WeightsFor`). | A7, B1 |
+| GAD-T817, GAD-T818 | Closing reflection: when the examiner ends the exam it asks, aloud, which claim the student is least sure they could defend; answered aloud or skipped, never a turn or grade input (`Gadfly.Server/Sessions/ClosingReflection.cs`). | B10, A7 (2.6.1, 3.4) |
+| GAD-T819 | No delivery measures in the student's live view: no response delay, no voice comparison; stored metrics and reviewer views unchanged. | B19, D7 |
+| GAD-T820 | The get-ready page no longer claims the voice comparison can add a follow-up question, and says the examiner will not confirm, hint or correct. | B4, B19, E14 |
+| GAD-T821 | The student's published result lists the contradictions put to them in their own words, withdrawn ones marked, with no verdict, and their answered reflection; staff reports carry neither. | A7, B1, B10, E18 |
+| GAD-T823 | `ConceptStatus` is NotStarted, Open, SettledConceptualOrAbove, SettledBelowConceptual, Inconclusive: "aporia" is kept for an honest "I don't know", and insufficient evidence is not called "exhausted". Older stored names are read as the new ones; analytics CSV headers renamed. | A8, A11 |
+| GAD-T822 | The `ExamPromptsV3` alias is gone; code and docs name `ExamPrompts` (prompt set id, version and SHA-256 unchanged). | E18, H12 |
+| GAD-T824 | `docs/DESIGN.md`, `docs/VOICE.md`, `docs/SOCRATIC_PLATFORM.md`, `docs/SCIENCE.md`, `docs/EVIDENCE_MAP.md`, `docs/API.md` and the instructor guide describe the above (stale read-back student flow, live-view voice line, concept status names). | H12 (6.7) |
