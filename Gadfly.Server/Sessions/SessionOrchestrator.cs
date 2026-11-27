@@ -62,6 +62,12 @@ public sealed record SessionStep
     public TimeSpan PauseAllowanceLeft { get; init; }
     /// <summary>True while staff have paused the exam from the live monitor (GAD-T299): the clock stands still and answers wait.</summary>
     public bool HeldByStaff { get; init; }
+    /// <summary>
+    /// The closing reflection question (GAD-T817) while it waits for the student, in the exam language: set only on an ended step, after
+    /// the examiner ended the exam, until <see cref="SessionOrchestrator.AnswerReflectionAsync"/> or
+    /// <see cref="SessionOrchestrator.SkipReflectionAsync"/>. Outside the clock and never graded.
+    /// </summary>
+    public string? Reflection { get; init; }
 }
 
 /// <summary>Why a session could not be started or advanced, in words a student can read.</summary>
@@ -710,6 +716,40 @@ public sealed partial class SessionOrchestrator(
             return null;
         }, ct);
 
+    /// <summary>
+    /// The student's answer to the closing reflection (GAD-T817), stored word for word on the session: not a turn, never judged, graded or
+    /// reported. An empty answer skips it. Once it is answered or skipped (or when none is waiting) this changes nothing and returns the
+    /// current step, so a resend is harmless. <paramref name="mode"/> is "voice", or "text" under the typed-answer accommodation.
+    /// </summary>
+    public Task<SessionStep> AnswerReflectionAsync(Guid organizationId, Guid sessionId, Guid studentUserId, string? text, string mode,
+        CancellationToken ct = default)
+    {
+        var answer = (text ?? "").Trim();
+        if (answer.Length > ClosingReflection.MaxLength) throw new SessionRefusedException("That reflection is too long.");
+        return ResolveReflectionAsync(organizationId, sessionId, studentUserId, answer.Length == 0 ? null : answer, mode == "voice" ? "voice" : "text", ct);
+    }
+
+    /// <summary>The student skipped the closing reflection (GAD-T817); nothing is held against it.</summary>
+    public Task<SessionStep> SkipReflectionAsync(Guid organizationId, Guid sessionId, Guid studentUserId, CancellationToken ct = default) =>
+        ResolveReflectionAsync(organizationId, sessionId, studentUserId, null, null, ct);
+
+    private Task<SessionStep> ResolveReflectionAsync(Guid organizationId, Guid sessionId, Guid studentUserId, string? text, string? mode, CancellationToken ct) =>
+        StepAsync(organizationId, sessionId, studentUserId, async live =>
+        {
+            var s = live.Engine.Session;
+            if (!s.IsEnded) return s.OpenTurn;
+            using var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId));
+            var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
+            var at = clock.GetUtcNow();
+            var state = text is null ? ClosingReflection.Skipped : ClosingReflection.Answered;
+            await db.ExamSessions.Where(x => x.Id == s.Id && x.OrganizationId == live.OrganizationId && x.ClosingReflectionState == ClosingReflection.Pending)
+                .ExecuteUpdateAsync(u => u.SetProperty(x => x.ClosingReflectionState, state)
+                    .SetProperty(x => x.ClosingReflectionText, text)
+                    .SetProperty(x => x.ClosingReflectionMode, text is null ? null : mode)
+                    .SetProperty(x => x.ClosingReflectionAt, at), ct);
+            return null;
+        }, ct);
+
     /// <summary>The exam ends with an answer saved for the open question but never judged (GAD-T323): judged as recorded, for a human to review.</summary>
     private async Task JudgeOrphanOnEndAsync(Live live, GadflyDbContext db, ResponseLedger ledger, StudentResponse orphan, CancellationToken ct)
     {
@@ -949,10 +989,14 @@ public sealed partial class SessionOrchestrator(
         var objectives = live.Engine.Assessments();
         PendingVerification? pending = null;
         LastAnswer? last = null;
+        string? reflection = null;
         using (var scope = scopes.CreateScopeFor(TenantSnapshot.ForOrganization(live.OrganizationId)))
         {
             var db = scope.ServiceProvider.GetRequiredService<GadflyDbContext>();
             var ledger = new ResponseLedger(db, clock);
+            if (s.IsEnded && await db.ExamSessions.Where(x => x.Id == s.Id && x.OrganizationId == live.OrganizationId)
+                    .Select(x => x.ClosingReflectionState).FirstOrDefaultAsync(ct) == ClosingReflection.Pending)
+                reflection = ClosingReflection.Prompt(live.Engine.Subject.Language.Exam);
             if (!s.IsEnded && question is not null && s.OpenTurn is { } open && open.Index == question.Index
                 && await TurnIdAsync(db, s.Id, open.Index, ct) is { } openId
                 && await ledger.PendingAsync(s.Id, openId, ct) is { Request: { } request } p)
@@ -998,6 +1042,7 @@ public sealed partial class SessionOrchestrator(
             ClockPaused = s.IsPaused && !s.IsEnded,
             PauseAllowanceLeft = s.PauseAllowanceLeft(clock.GetUtcNow()),
             HeldByStaff = s.IsHeld && !s.IsEnded,
+            Reflection = reflection,
         };
     }
 
@@ -1138,6 +1183,9 @@ public sealed partial class SessionOrchestrator(
         row.TranscriptJson = SessionTranscriptSerializer.Serialize(s);
         row.LedgerJson = live.Engine.Ledger.ToJson();
         row.StartedAt = s.StartedAt;   // moves once, when a held clock starts (GAD-T239)
+        // The closing reflection is offered once, in the step that ends the exam, when the examiner ended it (GAD-T817).
+        if (s.IsEnded && row.State != SessionState.Ended && row.ClosingReflectionState is null && ClosingReflection.IsOfferedAfter(s.EndReason))
+            row.ClosingReflectionState = ClosingReflection.Pending;
         row.State = s.IsEnded ? SessionState.Ended : s.IsHeld ? SessionState.Paused : SessionState.Running;   // Paused: by staff (GAD-T299)
         row.EndedAt = s.EndedAt;
         row.EndReason = s.IsEnded ? s.EndReason.ToString() : null;

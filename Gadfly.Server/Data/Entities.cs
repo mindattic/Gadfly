@@ -442,6 +442,17 @@ public sealed class ExamSession : ITenantOwned
     /// admin switches the server to meanwhile. Null for attempts started before it was recorded (they follow the server's mode).
     /// </summary>
     public string? AiMode { get; set; }
+    /// <summary>
+    /// The closing reflection (GAD-T817, Gadfly.Server.Sessions.ClosingReflection): null when it was never offered, else Pending,
+    /// Answered or Skipped. Offered once, when the examiner ends the exam; it is not a turn and never reaches a judge, grade or report.
+    /// </summary>
+    public string? ClosingReflectionState { get; set; }
+    /// <summary>The student's reflection, word for word (null when skipped or not yet answered); redacted with the answers.</summary>
+    public string? ClosingReflectionText { get; set; }
+    /// <summary>"voice", or "text" under the typed-answer accommodation.</summary>
+    public string? ClosingReflectionMode { get; set; }
+    /// <summary>When the student answered or skipped the reflection.</summary>
+    public DateTimeOffset? ClosingReflectionAt { get; set; }
     public List<SessionTurn> Turns { get; set; } = [];
 }
 

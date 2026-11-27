@@ -268,6 +268,8 @@ public sealed class GadflyDbContext : DbContext, IOrganizationDataContext
             e.Property(x => x.ConsentTextSha256).HasMaxLength(64);
             e.Property(x => x.ClientInfo).HasMaxLength(500);
             e.Property(x => x.AiMode).HasMaxLength(8);
+            e.Property(x => x.ClosingReflectionState).HasMaxLength(16);
+            e.Property(x => x.ClosingReflectionMode).HasMaxLength(8);
             e.Property(x => x.RowVersion).IsRowVersion();
             e.HasOne(x => x.Assignment).WithMany().HasForeignKey(x => x.AssignmentId);
             e.HasOne<Exam>().WithMany().HasForeignKey(x => x.ExamId);

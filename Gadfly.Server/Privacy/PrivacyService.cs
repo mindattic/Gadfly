@@ -97,6 +97,8 @@ public sealed class PrivacyService(GadflyDbContext db, ITenantContext tenant, Ti
                 .SetProperty(s => s.TranscriptJson, (string?)null)
                 .SetProperty(s => s.LedgerJson, (string?)null)
                 .SetProperty(s => s.ClientInfo, (string?)null)
+                // The closing reflection is the student's words too (GAD-T817): whether it was answered stays, the text goes.
+                .SetProperty(s => s.ClosingReflectionText, s => s.ClosingReflectionText == null ? null : Redacted)
                 .SetProperty(s => s.RedactedAt, now), ct);
             await tx.CommitAsync(ct);
         });
@@ -189,6 +191,10 @@ public sealed class PrivacyService(GadflyDbContext db, ITenantContext tenant, Ti
             {
                 s.Id, s.AssignmentId, s.ExamId, s.Attempt, state = s.State.ToString(), s.CreatedAt, s.StartedAt, s.EndedAt, s.EndReason,
                 s.ConsentRecordedAt, s.ConsentTextSha256, s.RedactedAt,
+                closingReflection = s.ClosingReflectionState is null ? null : new
+                {
+                    state = s.ClosingReflectionState, text = s.ClosingReflectionText, mode = s.ClosingReflectionMode, at = s.ClosingReflectionAt,
+                },
                 turns = turns.Where(t => t.SessionId == s.Id).Select(t => new
                 {
                     t.Index, t.ConceptKey, t.Move, t.Question, t.AskedAt, t.AnswerText, t.AnswerMode, t.AnswerStartedAt, t.AnswerCompletedAt,

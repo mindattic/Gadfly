@@ -983,6 +983,20 @@ namespace Gadfly.Server.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<DateTimeOffset?>("ClosingReflectionAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ClosingReflectionMode")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("ClosingReflectionState")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("ClosingReflectionText")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("ConceptMapVersion")
                         .HasColumnType("int");
 

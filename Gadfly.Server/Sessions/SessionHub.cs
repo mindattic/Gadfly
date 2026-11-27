@@ -226,6 +226,26 @@ public sealed class SessionHub(SessionOrchestrator orchestrator, IServiceScopeFa
         return Guard(() => orchestrator.EndAsync(org, sessionId, user, EndReason.Abandoned, Context.ConnectionAborted));
     }
 
+    /// <summary>
+    /// Answers the closing reflection (step.Reflection, GAD-T817) once the examiner has ended the exam: stored on the session, never
+    /// judged or graded. Empty text skips it. <paramref name="mode"/> is "voice", or "text" under the typed-answer accommodation.
+    /// </summary>
+    public async Task<SessionStep> AnswerReflection(Guid sessionId, string? text, string mode = "voice")
+    {
+        var (org, user) = Caller();
+        if (text is { Length: > ClosingReflection.MaxLength }) throw new HubException("That reflection is too long.");
+        if (mode is not "voice" && !string.IsNullOrWhiteSpace(text) && !await TypedAnswersAllowedAsync(org, user, sessionId))
+            throw new HubException("This exam is answered out loud. Typed answers are an accommodation only your instructor can grant.");
+        return await Guard(() => orchestrator.AnswerReflectionAsync(org, sessionId, user, text, mode, Context.ConnectionAborted));
+    }
+
+    /// <summary>Skips the closing reflection (GAD-T817).</summary>
+    public Task<SessionStep> SkipReflection(Guid sessionId)
+    {
+        var (org, user) = Caller();
+        return Guard(() => orchestrator.SkipReflectionAsync(org, sessionId, user, Context.ConnectionAborted));
+    }
+
     /// <summary>Records client-side integrity signals for the session (capped, never shown to the student as accusations).</summary>
     public async Task<int> Integrity(Guid sessionId, IReadOnlyList<HubIntegrityEvent> events)
     {
