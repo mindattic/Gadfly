@@ -140,7 +140,7 @@ else
             <h3>Engine mastery estimate by concept</h3>
             <p class="hint">The Socratic engine's running estimate (0–1) at the end of each session. It steers questioning; it is not a rubric level or a grade.</p>
             <table class="grid">
-                <thead><tr><th scope="col">Concept</th>@if (ShowExam) { <th scope="col">Assessment</th> }<th scope="col">Sessions</th><th scope="col">Mean estimate</th><th scope="col">Mastered</th><th scope="col">Open</th><th scope="col">Aporia</th><th scope="col">Exhausted</th></tr></thead>
+                <thead><tr><th scope="col">Concept</th>@if (ShowExam) { <th scope="col">Assessment</th> }<th scope="col">Sessions</th><th scope="col">Mean running estimate (not a level)</th><th scope="col">Settled at Level 3+</th><th scope="col">Open</th><th scope="col">Settled below Level 3</th><th scope="col">Insufficient evidence</th></tr></thead>
                 <tbody>
                     @foreach (var c in report.ConceptMastery)
                     {
@@ -148,7 +148,7 @@ else
                             <td>@c.Concept</td>@if (ShowExam) { <td>@c.ExamTitle</td> }
                             <td>@c.Sessions</td>
                             <td><Meter Fraction="c.MeanEstimate" /> @c.MeanEstimate.ToString("0.00")</td>
-                            <td>@c.Mastered</td><td>@c.Open</td><td>@c.Aporia</td><td>@c.Exhausted</td>
+                            <td>@c.SettledConceptualOrAbove</td><td>@c.Open</td><td>@c.SettledBelowConceptual</td><td>@c.InsufficientEvidence</td>
                         </tr>
                     }
                 </tbody>

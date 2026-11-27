@@ -265,12 +265,12 @@ public class QuestionPlannerTests
         Assert.That(a.Status, Is.EqualTo(ObjectiveStatus.Sufficient));
         Assert.That(a.Level, Is.EqualTo(MasteryLevel.TransferAndCriticalReasoning));
         Assert.That(a.Corroborated && a.ReasoningShown && a.TransferShown && a.CriticalReasoningShown, Is.True);
-        Assert.That(QuestionPlanner.StatusOf(s, "a"), Is.EqualTo(ConceptStatus.Mastered));
+        Assert.That(QuestionPlanner.StatusOf(s, "a"), Is.EqualTo(ConceptStatus.SettledConceptualOrAbove));
         Assert.That(Planner("a").Next(s, T0.AddMinutes(1)).End, Is.EqualTo(EndReason.EvidenceComplete));
     }
 
     [Test]
-    public void SufficientBelowLevel3_ReadsAsAporia()
+    public void SufficientBelowLevel3_ReadsAsSettledBelowConceptual_NotAporia()
     {
         var s = Session();
         s.Judged("a", MoveKind.Elicit, 0.9, 0.6);
@@ -280,8 +280,20 @@ public class QuestionPlannerTests
         var a = ObjectiveAssessor.Assess(s, ExamObjectives.Implicit("a", "a"));
         Assert.That(a.Status, Is.EqualTo(ObjectiveStatus.Sufficient), a.Explanation);
         Assert.That(a.Level, Is.EqualTo(MasteryLevel.BasicExplanation));
-        Assert.That(QuestionPlanner.StatusOf(s, "a"), Is.EqualTo(ConceptStatus.Aporia));
+        Assert.That(QuestionPlanner.StatusOf(s, "a"), Is.EqualTo(ConceptStatus.SettledBelowConceptual));
     }
+
+    [TestCase("Mastered", ConceptStatus.SettledConceptualOrAbove)]
+    [TestCase("Aporia", ConceptStatus.SettledBelowConceptual)]
+    [TestCase("Exhausted", ConceptStatus.Inconclusive)]
+    [TestCase("SettledBelowConceptual", ConceptStatus.SettledBelowConceptual)]
+    [TestCase("Open", ConceptStatus.Open)]
+    [TestCase("NotStarted", ConceptStatus.NotStarted)]
+    public void StoredStatusNames_OldAndNew_ReadAsTheRenamedStatus(string stored, ConceptStatus expected) =>
+        Assert.That(ConceptStatusNames.Parse(stored), Is.EqualTo(expected));
+
+    [Test]
+    public void UnknownStoredStatusName_ReadsAsNone() => Assert.That(ConceptStatusNames.Parse("Bogus"), Is.Null);
 
     [Test]
     public void PerObjectiveLimit_ClosesItInconclusive_AndMovesOn()
@@ -293,7 +305,7 @@ public class QuestionPlannerTests
         Assert.That(a.Status, Is.EqualTo(ObjectiveStatus.Inconclusive));
         Assert.That(a.Level, Is.EqualTo(MasteryLevel.InsufficientEvidence), "never a guessed level");
         Assert.That(a.Explanation, Does.Contain("Insufficient Evidence"));
-        Assert.That(QuestionPlanner.StatusOf(s, "a"), Is.EqualTo(ConceptStatus.Exhausted));
+        Assert.That(QuestionPlanner.StatusOf(s, "a"), Is.EqualTo(ConceptStatus.Inconclusive));
         var d = Planner("a", "b").Next(s, T0);
         Assert.That((d.ConceptId, d.Move), Is.EqualTo(("b", MoveKind.Elicit)));
         Assert.That(Planner("a").Next(s, T0).End, Is.EqualTo(EndReason.EvidenceComplete));

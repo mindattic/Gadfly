@@ -93,8 +93,11 @@ public static class AnalyticsEndpoints
                 m.Counts[4], m.Counts[5], N(m.MeanConclusiveLevel), N(m.LowShare));
 
         Section("engine_concept_mastery");
-        Row("assessment", "concept", "sessions", "mean_estimate", "mastered", "open", "aporia", "exhausted", "not_started");
-        foreach (var c in r.ConceptMastery) Row(c.ExamTitle, c.Concept, c.Sessions, N(c.MeanEstimate), c.Mastered, c.Open, c.Aporia, c.Exhausted, c.NotStarted);
+        Row("assessment", "concept", "sessions", "mean_running_estimate", "settled_level_3_or_above", "open", "settled_below_level_3",
+            "insufficient_evidence", "not_started");
+        foreach (var c in r.ConceptMastery)
+            Row(c.ExamTitle, c.Concept, c.Sessions, N(c.MeanEstimate), c.SettledConceptualOrAbove, c.Open, c.SettledBelowConceptual,
+                c.InsufficientEvidence, c.NotStarted);
 
         Section("recurring_misconceptions");
         Row("misconception", "objective", "sessions", "mentions", "sources");

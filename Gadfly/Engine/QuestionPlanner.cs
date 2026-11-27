@@ -16,8 +16,35 @@ public sealed record ContradictionCandidate(string ConceptId, string FirstClaimI
     public int? WithdrawnAtTurn { get; init; }
 }
 
-/// <summary>Where a concept stands in the session.</summary>
-public enum ConceptStatus { NotStarted, Open, Mastered, Aporia, Exhausted }
+/// <summary>
+/// Where a concept stands in the session. Settled means its evidence is sufficient, at Conceptual Understanding
+/// (Level 3) or above, or below it; Inconclusive means its limits were hit first (Insufficient Evidence).
+/// "Aporia" is reserved for the student's honest "I don't know", never a settled level.
+/// </summary>
+public enum ConceptStatus { NotStarted, Open, SettledConceptualOrAbove, SettledBelowConceptual, Inconclusive }
+
+/// <summary>Stored <see cref="ConceptStatus"/> names, including the older ones still in existing rows.</summary>
+public static class ConceptStatusNames
+{
+    /// <summary>The status a stored name stands for: Mastered, Aporia and Exhausted read as their renamed values.</summary>
+    public static ConceptStatus? Parse(string? stored) => stored switch
+    {
+        "Mastered" => ConceptStatus.SettledConceptualOrAbove,
+        "Aporia" => ConceptStatus.SettledBelowConceptual,
+        "Exhausted" => ConceptStatus.Inconclusive,
+        _ => Enum.TryParse<ConceptStatus>(stored, out var s) && Enum.IsDefined(s) ? s : null,
+    };
+
+    /// <summary>The name a session report shows, e.g. "settled-below-conceptual".</summary>
+    public static string ReportName(ConceptStatus status) => status switch
+    {
+        ConceptStatus.NotStarted => "not-started",
+        ConceptStatus.SettledConceptualOrAbove => "settled-conceptual-or-above",
+        ConceptStatus.SettledBelowConceptual => "settled-below-conceptual",
+        ConceptStatus.Inconclusive => "insufficient-evidence",
+        _ => "open",
+    };
+}
 
 /// <summary>The planner's decision: the next move, or the end of the session.</summary>
 public sealed record PlanDecision
@@ -73,7 +100,8 @@ public sealed class QuestionPlanner
 
     /// <summary>
     /// The status of <paramref name="conceptId"/> in <paramref name="session"/>, derived from the objective it
-    /// grounds: Sufficient at Level 3+ reads as Mastered, Sufficient below as Aporia, Inconclusive as Exhausted.
+    /// grounds: Sufficient at Level 3+ reads as SettledConceptualOrAbove, Sufficient below as SettledBelowConceptual,
+    /// Inconclusive as Inconclusive.
     /// </summary>
     public static ConceptStatus StatusOf(SocraticSession session, string conceptId)
     {
@@ -83,8 +111,9 @@ public sealed class QuestionPlanner
         var statuses = mine.Select(o => ObjectiveAssessor.Assess(session, o)).ToList();
         if (statuses.All(a => a.Status == ObjectiveStatus.NotStarted)) return ConceptStatus.NotStarted;
         if (statuses.Any(a => a.Status is ObjectiveStatus.Open or ObjectiveStatus.NotStarted)) return ConceptStatus.Open;
-        if (statuses.Any(a => a.Status == ObjectiveStatus.Inconclusive)) return ConceptStatus.Exhausted;
-        return statuses.All(a => a.Level >= MasteryLevel.ConceptualUnderstanding) ? ConceptStatus.Mastered : ConceptStatus.Aporia;
+        if (statuses.Any(a => a.Status == ObjectiveStatus.Inconclusive)) return ConceptStatus.Inconclusive;
+        return statuses.All(a => a.Level >= MasteryLevel.ConceptualUnderstanding)
+            ? ConceptStatus.SettledConceptualOrAbove : ConceptStatus.SettledBelowConceptual;
     }
 
     /// <summary>The objectives this planner examines in <paramref name="session"/> (validated against its concepts).</summary>

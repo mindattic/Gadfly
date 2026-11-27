@@ -52,7 +52,7 @@ public class MasterPlanScenarioTests
 
         // No mastery from the initial answer: the concept stays open and a targeted follow-up comes next.
         Assert.That(engine.Session.IsEnded, Is.False);
-        Assert.That(QuestionPlanner.StatusOf(engine.Session, "photosynthesis"), Is.Not.EqualTo(ConceptStatus.Mastered));
+        Assert.That(QuestionPlanner.StatusOf(engine.Session, "photosynthesis"), Is.Not.EqualTo(ConceptStatus.SettledConceptualOrAbove));
         Assert.That(engine.Session.Mastery["photosynthesis"].Estimate, Is.LessThan(policy.MasteryThreshold));
         var followUp = await engine.NextQuestionAsync();
         Assert.That(followUp, Is.Not.Null, "the examiner keeps probing");
@@ -208,7 +208,7 @@ public class MasterPlanScenarioTests
 
         Assert.That(engine.Session.EndReason, Is.EqualTo(EndReason.TurnLimit));
         var status = QuestionPlanner.StatusOf(engine.Session, "photosynthesis");
-        Assert.That(status, Is.Not.EqualTo(ConceptStatus.Mastered).And.Not.EqualTo(ConceptStatus.Aporia), "no invented certainty either way");
+        Assert.That(status, Is.Not.EqualTo(ConceptStatus.SettledConceptualOrAbove).And.Not.EqualTo(ConceptStatus.SettledBelowConceptual), "no invented certainty either way");
         var report = engine.Report();
         Assert.That(report.Recommendation, Is.Not.EqualTo(Gadfly.Engine.SessionReport.Mastered));
         Assert.That(report.TurnsNeedingReview, Is.GreaterThanOrEqualTo(1), "the split judgment goes to a human");

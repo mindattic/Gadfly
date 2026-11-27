@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json;
 using Gadfly.Assessment;
 using Gadfly.Server.Data;
+using ConceptStatus = Gadfly.Engine.ConceptStatus;
 using Microsoft.EntityFrameworkCore;
 
 namespace Gadfly.Server.Analytics;
@@ -40,9 +41,12 @@ public sealed record ObjectiveMasteryRow(Guid ObjectiveId, string Objective, str
     public double? InsufficientShare => Total == 0 ? null : Counts[0] / (double)Total;
 }
 
-/// <summary>The Socratic engine's running mastery estimate for a concept (0..1), from existing sessions.</summary>
+/// <summary>
+/// The Socratic engine's running estimate for a concept (0..1, a steering aid, not a level or a score), from existing
+/// sessions, with how many sessions left the concept in each <see cref="Gadfly.Engine.ConceptStatus"/>.
+/// </summary>
 public sealed record ConceptMasteryRow(string ConceptKey, string Concept, string ExamTitle, int Sessions, double MeanEstimate,
-    int Mastered, int Open, int Aporia, int Exhausted, int NotStarted);
+    int SettledConceptualOrAbove, int Open, int SettledBelowConceptual, int InsufficientEvidence, int NotStarted);
 
 public sealed record MisconceptionRow(string Text, string Objective, int Sessions, int Mentions, string Sources);
 
@@ -207,9 +211,11 @@ public sealed class AnalyticsService(GadflyDbContext db, Guid organizationId, Ti
         }
 
         // ---- engine concept mastery (existing sessions, before objective grading exists)
-        var conceptRecords = await db.ConceptMastery.AsNoTracking()
+        // Rows written under the older names (Mastered, Aporia, Exhausted) count as their renamed statuses.
+        var conceptRecords = (await db.ConceptMastery.AsNoTracking()
             .Where(c => c.OrganizationId == organizationId && openIds.Contains(c.SessionId))
-            .Select(c => new { c.SessionId, c.ConceptKey, c.Estimate, c.Status }).ToListAsync(ct);
+            .Select(c => new { c.SessionId, c.ConceptKey, c.Estimate, c.Status }).ToListAsync(ct))
+            .Select(c => new { c.SessionId, c.ConceptKey, c.Estimate, Status = Gadfly.Engine.ConceptStatusNames.Parse(c.Status) }).ToList();
         var collectionIds = exams.Select(e => e.CollectionId).Distinct().ToList();
         var conceptTitles = (await db.Concepts.AsNoTracking()
                 .Where(c => c.OrganizationId == organizationId && collectionIds.Contains(c.CollectionId))
@@ -221,8 +227,9 @@ public sealed class AnalyticsService(GadflyDbContext db, Guid organizationId, Ti
             .Select(g => new ConceptMasteryRow(g.Key.ConceptKey,
                 conceptTitles.GetValueOrDefault((examCollection[g.Key.Exam], g.Key.ConceptKey), g.Key.ConceptKey),
                 examTitle[g.Key.Exam], g.Select(x => x.SessionId).Distinct().Count(), g.Average(x => x.Estimate),
-                g.Count(x => x.Status == "Mastered"), g.Count(x => x.Status == "Open"), g.Count(x => x.Status == "Aporia"),
-                g.Count(x => x.Status == "Exhausted"), g.Count(x => x.Status == "NotStarted")))
+                g.Count(x => x.Status == ConceptStatus.SettledConceptualOrAbove), g.Count(x => x.Status == ConceptStatus.Open),
+                g.Count(x => x.Status == ConceptStatus.SettledBelowConceptual), g.Count(x => x.Status == ConceptStatus.Inconclusive),
+                g.Count(x => x.Status == ConceptStatus.NotStarted)))
             .OrderBy(r => r.ExamTitle).ThenBy(r => r.MeanEstimate).ToList();
 
         // ---- misconceptions: AI grades' identified misconceptions + evidence recorded with stance Misconception

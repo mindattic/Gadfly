@@ -62,7 +62,7 @@ public class PlannerSimulationTests
             Assert.That(a.Level, Is.LessThan(MasteryLevel.ConceptualUnderstanding), a.Explanation);
             Assert.That(a.Questions, Is.GreaterThan(1), "follow-ups always come after the definition");
         }
-        Assert.That(QuestionPlanner.StatusOf(r.Session, "a"), Is.Not.EqualTo(ConceptStatus.Mastered));
+        Assert.That(QuestionPlanner.StatusOf(r.Session, "a"), Is.Not.EqualTo(ConceptStatus.SettledConceptualOrAbove));
     }
 
     [Test]

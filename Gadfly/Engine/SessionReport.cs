@@ -11,6 +11,7 @@ public sealed record ConceptReport
     public required string ConceptId { get; init; }
     public string Title { get; init; } = "";
     public required double Mastery { get; init; }
+    /// <summary>"not-examined" or <see cref="ConceptStatusNames.ReportName"/>; reports saved earlier may say "mastered", "aporia" or "exhausted".</summary>
     public required string Status { get; init; }
     public int Turns { get; init; }
     public double? AverageScore { get; init; }
@@ -190,7 +191,7 @@ public sealed record SessionReport
             // A recited answer (GAD-T242) is left out of the average, as it is of mastery and evidence.
             var graded = judged.Where(t => !ObjectiveAssessor.IsUnjudged(t.Judgment!) && !ObjectiveAssessor.IsRecited(t)).ToList();
             var mastery = session.Mastery.TryGetValue(id, out var m) ? m.Estimate : (judged.Count == 0 ? 0 : MasteryModel.Prior);
-            var status = turns.Count == 0 ? "not-examined" : QuestionPlanner.StatusOf(session, id).ToString().ToLowerInvariant();
+            var status = turns.Count == 0 ? "not-examined" : ConceptStatusNames.ReportName(QuestionPlanner.StatusOf(session, id));
             // Strongest and weakest answers both make good evidence: show the extremes first.
             var evidence = judged
                 .OrderByDescending(t => Math.Abs(t.Judgment!.OverallScore - 0.5))
