@@ -29,7 +29,7 @@ public sealed record AnalysisInput
 /// </summary>
 public sealed class ResponseAnalyzer(ISocraticVotingClient panel, PromptSet? prompts = null)
 {
-    private readonly PromptSet _prompts = prompts ?? ExamPromptsV3.Set;
+    private readonly PromptSet _prompts = prompts ?? ExamPrompts.Set;
 
     /// <summary>Longest quote kept (characters).</summary>
     public const int MaxQuote = 400;
@@ -42,7 +42,7 @@ public sealed class ResponseAnalyzer(ISocraticVotingClient panel, PromptSet? pro
     {
         var turn = input.Turn;
         if (turn.Answer is null) throw new ArgumentException("The turn has no answer to analyse.", nameof(input));
-        var prompt = ExamPrompts.Fill(_prompts[ExamPromptsV3.AnalysisKey], new Dictionary<string, string?>
+        var prompt = ExamPrompts.Fill(_prompts[ExamPrompts.AnalysisKey], new Dictionary<string, string?>
         {
             ["objectives"] = string.Join("\n", input.Objectives.Select(o =>
                 $"- {o.Key}: {o.Title} [{string.Join(", ", o.Dimensions.Select(DimensionName))}]")),

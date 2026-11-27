@@ -51,7 +51,7 @@ public enum LeakGuardResult
 /// </summary>
 public sealed partial class QuestionGenerator(ISocraticVotingClient panel, PromptSet? prompts = null)
 {
-    private readonly PromptSet _prompts = prompts ?? ExamPromptsV3.Set;
+    private readonly PromptSet _prompts = prompts ?? ExamPrompts.Set;
 
     public const string Leaks = "LEAKS";
     public const string Safe = "SAFE";

@@ -13,7 +13,7 @@ public static partial class ExamPrompts
     /// <summary>2: student text fenced and declared data, never instructions (GAD-T77).
     /// 3: response verification and neutral meaning clarification prompts (GAD-T87).
     /// 4: objective-driven examination: the question prompt names the objective and all eight strategies,
-    /// plus the Learning Mode and response-analysis prompts (GAD-T89..T93, merged from ExamPromptsV3 in GAD-T120).
+    /// plus the Learning Mode and response-analysis prompts (GAD-T89..T93, merged into this set in GAD-T120).
     /// 5: adaptive Socratic probing: the question prompt carries how each recent answer was delivered (delay, hesitations,
     /// strain against the student's baseline, hedging) and presses harder where understanding looks shaky (GAD-T233;
     /// delivery replaced by content in 8).

@@ -22,10 +22,10 @@ public sealed class SourceMaterialSubject : ISubjectMatter
     public string Id => _map.CollectionId;
     public string Title { get; }
     /// <summary>
-    /// The exam prompt set with the objective-driven prompts merged (GAD-T89..T93; see <see cref="ExamPromptsV3"/>), in the attempt's
+    /// The exam prompt set (<see cref="ExamPrompts.Set"/>, with the objective-driven prompts of GAD-T89..T93), in the attempt's
     /// language (GAD-T535): the English set itself for an English attempt by an English-primary student.
     /// </summary>
-    public PromptSet PromptSet => ExamPromptLanguages.For(ExamPromptsV3.Set, Language);
+    public PromptSet PromptSet => ExamPromptLanguages.For(ExamPrompts.Set, Language);
 
     /// <summary>The attempt's languages (GAD-T534). The source material, concept map and rubric stay in their own language.</summary>
     public AttemptLanguage Language { get; init; } = AttemptLanguage.Default;

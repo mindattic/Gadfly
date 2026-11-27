@@ -24,37 +24,37 @@ public class KoreanExamTests
     [Test]
     public void AnEnglishAttempt_RunsOnTheEnglishPromptSetItself()
     {
-        Assert.That(ExamPromptLanguages.For(ExamPromptsV3.Set, AttemptLanguage.Default), Is.SameAs(ExamPromptsV3.Set));
-        Assert.That(ExamPromptLanguages.For(ExamPromptsV3.Set, new AttemptLanguage("en", "en")), Is.SameAs(ExamPromptsV3.Set));
-        Assert.That(ExamPromptLanguages.For(ExamPromptsV3.Set, new AttemptLanguage("EN-us", null)), Is.SameAs(ExamPromptsV3.Set));
-        Assert.That(EngineKit.Biology().PromptSet.Sha256, Is.EqualTo(ExamPromptsV3.Set.Sha256));
-        Assert.That(EngineKit.Biology().ForLanguage(AttemptLanguage.Default).PromptSet, Is.SameAs(ExamPromptsV3.Set));
+        Assert.That(ExamPromptLanguages.For(ExamPrompts.Set, AttemptLanguage.Default), Is.SameAs(ExamPrompts.Set));
+        Assert.That(ExamPromptLanguages.For(ExamPrompts.Set, new AttemptLanguage("en", "en")), Is.SameAs(ExamPrompts.Set));
+        Assert.That(ExamPromptLanguages.For(ExamPrompts.Set, new AttemptLanguage("EN-us", null)), Is.SameAs(ExamPrompts.Set));
+        Assert.That(EngineKit.Biology().PromptSet.Sha256, Is.EqualTo(ExamPrompts.Set.Sha256));
+        Assert.That(EngineKit.Biology().ForLanguage(AttemptLanguage.Default).PromptSet, Is.SameAs(ExamPrompts.Set));
     }
 
     [Test]
     public void AKoreanAttempt_HasItsOwnPromptSet_ThatOnlyAppendsToTheEnglishWording()
     {
-        var ko = ExamPromptLanguages.For(ExamPromptsV3.Set, Korean);
+        var ko = ExamPromptLanguages.For(ExamPrompts.Set, Korean);
         Assert.That(ko.Id, Is.EqualTo("exam-ko"));
-        Assert.That(ko.Version, Is.EqualTo(ExamPromptsV3.Set.Version));
-        Assert.That(ko.Sha256, Is.Not.EqualTo(ExamPromptsV3.Set.Sha256));
-        foreach (var (key, english) in ExamPromptsV3.Set.Prompts)
+        Assert.That(ko.Version, Is.EqualTo(ExamPrompts.Set.Version));
+        Assert.That(ko.Sha256, Is.Not.EqualTo(ExamPrompts.Set.Sha256));
+        foreach (var (key, english) in ExamPrompts.Set.Prompts)
             Assert.That(ko[key], Does.StartWith(english), key);
         Assert.That(ko[ExamPrompts.QuestionKey], Does.Contain("Exam language: ko").And.Contain("해요체"));
         Assert.That(ko[ExamPrompts.JudgeKey], Does.Contain("English gloss"));
         Assert.That(ko[ExamPrompts.QuestionGuardKey], Does.Contain("LEAKS or SAFE"));
-        Assert.That(ko[ExamPrompts.ConceptMapKey], Is.EqualTo(ExamPromptsV3.Set[ExamPrompts.ConceptMapKey]), "the source is not re-mapped per language");
-        Assert.That(ExamPromptLanguages.For(ExamPromptsV3.Set, Korean), Is.SameAs(ko), "one set per language, cached");
+        Assert.That(ko[ExamPrompts.ConceptMapKey], Is.EqualTo(ExamPrompts.Set[ExamPrompts.ConceptMapKey]), "the source is not re-mapped per language");
+        Assert.That(ExamPromptLanguages.For(ExamPrompts.Set, Korean), Is.SameAs(ko), "one set per language, cached");
     }
 
     [Test]
     public void ANonNativeSpeaker_GetsThePlainLanguageExaminer_ButTheJudgesAreNeverTold()
     {
-        var plain = ExamPromptLanguages.For(ExamPromptsV3.Set, EnglishByKoreanSpeaker);
+        var plain = ExamPromptLanguages.For(ExamPrompts.Set, EnglishByKoreanSpeaker);
         Assert.That(plain.Id, Is.EqualTo("exam-en-plain"));
         Assert.That(plain[ExamPrompts.QuestionKey], Does.Contain("at most about 20 words").And.Contain("negative questions"));
         foreach (var key in new[] { ExamPrompts.JudgeKey, ExamPrompts.AnalysisKey, ExamPrompts.ClaimsKey, ExamPrompts.AporiaKey, ExamPrompts.VerificationKey })
-            Assert.That(plain[key], Is.EqualTo(ExamPromptsV3.Set[key]), key);
+            Assert.That(plain[key], Is.EqualTo(ExamPrompts.Set[key]), key);
         foreach (var text in plain.Prompts.Values)
             Assert.That(text, Does.Not.Contain("Korean").And.Not.Contain("first language").And.Not.Contain("non-native"));
     }
@@ -171,7 +171,7 @@ public class KoreanExamTests
     public async Task AKoreanSession_AsksInKorean_JudgesKoreanAnswers_AndNeedsAHumanForEveryScore()
     {
         var engine = await StartAsync(Korean);
-        Assert.That(engine.Session.PromptSetSha256, Is.EqualTo(ExamPromptLanguages.For(ExamPromptsV3.Set, Korean).Sha256));
+        Assert.That(engine.Session.PromptSetSha256, Is.EqualTo(ExamPromptLanguages.For(ExamPrompts.Set, Korean).Sha256));
 
         var first = await engine.NextQuestionAsync();
         Assert.That(first, Is.Not.Null);
@@ -251,7 +251,7 @@ public class KoreanExamTests
     public async Task AnEnglishSession_IsUnchanged_NoReviewFlagAndTheEnglishPromptSet()
     {
         var engine = await StartAsync(AttemptLanguage.Default);
-        Assert.That(engine.Session.PromptSetSha256, Is.EqualTo(ExamPromptsV3.Set.Sha256));
+        Assert.That(engine.Session.PromptSetSha256, Is.EqualTo(ExamPrompts.Set.Sha256));
         var first = await engine.NextQuestionAsync();
         Assert.That(LanguageText.HasHangul(first!.Question), Is.False);
         var judged = await engine.SubmitAnswerAsync(Said("Photosynthesis turns light energy into chemical energy stored in glucose, because chlorophyll absorbs light."));

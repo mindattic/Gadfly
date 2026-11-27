@@ -24,23 +24,23 @@ public class SpanishExamTests
     [Test]
     public void ASpanishAttempt_HasItsOwnPromptSet_ThatOnlyAppendsToTheEnglishWording()
     {
-        var es = ExamPromptLanguages.For(ExamPromptsV3.Set, Spanish);
+        var es = ExamPromptLanguages.For(ExamPrompts.Set, Spanish);
         Assert.That(es.Id, Is.EqualTo("exam-es"));
-        Assert.That(es.Version, Is.EqualTo(ExamPromptsV3.Set.Version));
-        Assert.That(es.Sha256, Is.Not.EqualTo(ExamPromptsV3.Set.Sha256).And.Not.EqualTo(ExamPromptLanguages.For(ExamPromptsV3.Set, new AttemptLanguage("ko", "ko")).Sha256));
-        foreach (var (key, english) in ExamPromptsV3.Set.Prompts)
+        Assert.That(es.Version, Is.EqualTo(ExamPrompts.Set.Version));
+        Assert.That(es.Sha256, Is.Not.EqualTo(ExamPrompts.Set.Sha256).And.Not.EqualTo(ExamPromptLanguages.For(ExamPrompts.Set, new AttemptLanguage("ko", "ko")).Sha256));
+        foreach (var (key, english) in ExamPrompts.Set.Prompts)
             Assert.That(es[key], Does.StartWith(english), key);
         Assert.That(es[ExamPrompts.QuestionKey], Does.Contain("Exam language: es (Spanish)").And.Contain("usted").And.Contain("Latin American"));
         Assert.That(es[ExamPrompts.JudgeKey], Does.Contain("English gloss"));
         Assert.That(es[ExamPrompts.AporiaKey], Does.Contain("no lo sé").And.Contain("ni idea"));
-        Assert.That(es[ExamPrompts.ConceptMapKey], Is.EqualTo(ExamPromptsV3.Set[ExamPrompts.ConceptMapKey]));
-        Assert.That(ExamPromptLanguages.For(ExamPromptsV3.Set, new AttemptLanguage("es", "en")).Id, Is.EqualTo("exam-es-plain"));
+        Assert.That(es[ExamPrompts.ConceptMapKey], Is.EqualTo(ExamPrompts.Set[ExamPrompts.ConceptMapKey]));
+        Assert.That(ExamPromptLanguages.For(ExamPrompts.Set, new AttemptLanguage("es", "en")).Id, Is.EqualTo("exam-es-plain"));
     }
 
     [Test]
     public void ASpanishSpeakerInAnEnglishExam_GetsThePlainExaminer_AndTheJudgesAreNeverTold()
     {
-        var plain = ExamPromptLanguages.For(ExamPromptsV3.Set, EnglishBySpanishSpeaker);
+        var plain = ExamPromptLanguages.For(ExamPrompts.Set, EnglishBySpanishSpeaker);
         Assert.That(plain.Id, Is.EqualTo("exam-en-plain"));
         foreach (var text in plain.Prompts.Values)
             Assert.That(text, Does.Not.Contain("Spanish").And.Not.Contain("first language"));
@@ -168,7 +168,7 @@ public class SpanishExamTests
     public async Task ASpanishSession_AsksInSpanish_JudgesSpanishAnswers_AndNeedsAHumanForEveryScore()
     {
         var engine = await StartAsync(Spanish);
-        Assert.That(engine.Session.PromptSetSha256, Is.EqualTo(ExamPromptLanguages.For(ExamPromptsV3.Set, Spanish).Sha256));
+        Assert.That(engine.Session.PromptSetSha256, Is.EqualTo(ExamPromptLanguages.For(ExamPrompts.Set, Spanish).Sha256));
 
         var first = await engine.NextQuestionAsync();
         Assert.That(first, Is.Not.Null);
