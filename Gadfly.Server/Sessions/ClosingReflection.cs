@@ -6,7 +6,8 @@ namespace Gadfly.Server.Sessions;
 /// The closing reflection (GAD-T817): after the examiner ends the exam, one fixed question invites the student to examine their own
 /// claim to know (Elenchus at Scale 2.2.1, Apology 21d; 2.2.2, Meno 84a-b). It is asked word for word to every student with no model
 /// call, after the clock has stopped, and the student may skip it. It asks for reasons, never for the process of thinking (2.3.2), and
-/// belongs to no objective: it is not a turn and never reaches a judge, a grade, a report or a model prompt (3.2).
+/// belongs to no objective: it is not a turn and never reaches a judge, a grade, a staff report or a model prompt (3.2). Only the
+/// student's own published result shows it back to them (GAD-T821).
 /// </summary>
 public static class ClosingReflection
 {

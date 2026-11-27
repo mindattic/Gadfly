@@ -24,6 +24,13 @@ public sealed record ReportObjective(string Key, string Title, decimal MaxScore,
 public sealed record ReportEvidence(int Sequence, string Question, string VerifiedText, bool Corrected);
 
 /// <summary>
+/// One contradiction the examiner put to the student (GAD-T821): the two claims in the student's own words, earlier first, each
+/// marked when the student withdrew it, the question asked and the student's answer. No score and no verdict on which claim was
+/// wrong: a contradiction shows only that two claims cannot both stand (ElenchusAtScale 3.4 Prop. 3.1, 2.2.3).
+/// </summary>
+public sealed record ReportContradiction(string FirstQuote, bool FirstWithdrawn, string SecondQuote, bool SecondWithdrawn, string Question, string Answer);
+
+/// <summary>
 /// The assessment report (Feature 10; Part 11 Stage 11): final grade, per-objective AI, human and combined
 /// scores, evidence, knowledge gaps and approval status. Reviewers see everything; a student sees it only
 /// after publication with an approval record, without reviewer-only detail (voters, audit, unresolved flags).
@@ -64,6 +71,15 @@ public sealed record AssessmentReport
     /// the score covers, and the answers excluded by reason (the last two only once the AI's view is visible). Empty for students.
     /// </summary>
     public IReadOnlyDictionary<string, ObjectivePath> Paths { get; init; } = new Dictionary<string, ObjectivePath>();
+    /// <summary>
+    /// The student's report only (GAD-T821): each contradiction that was put to them, in turn order. A contradiction the detector
+    /// found but the examiner never asked about is unconfirmed and never listed (ElenchusAtScale 3.4, M7). Empty for staff.
+    /// </summary>
+    public IReadOnlyList<ReportContradiction> Contradictions { get; init; } = [];
+    /// <summary>The student's report only (GAD-T821): the question of the closing reflection, when they answered it (GAD-T817).</summary>
+    public string? ReflectionQuestion { get; init; }
+    /// <summary>The student's report only (GAD-T821): their closing reflection, never graded; null when skipped, not offered or redacted.</summary>
+    public string? Reflection { get; init; }
 
     /// <summary>An objective scoring below this share of its maximum is reported as a knowledge gap.</summary>
     public const decimal GapBelowPercent = 60m;
@@ -109,6 +125,8 @@ public sealed record AssessmentReport
         var (followUps, examined) = ThreadLengths(w.Session);
         var sessionPolicy = GradingJson.Read<SessionPolicy>(w.Session.PolicyJson) ?? new SessionPolicy();
         var (scoreUse, scoreUseReason) = ExamObjectives.ScoreUse(sessionPolicy, examined ?? w.Objectives.Count);
+        var reflection = forStudent && w.Session.RedactedAt is null && w.Session.ClosingReflectionState == Sessions.ClosingReflection.Answered
+                         && !string.IsNullOrWhiteSpace(w.Session.ClosingReflectionText) ? w.Session.ClosingReflectionText.Trim() : null;
         return new AssessmentReport
         {
             SessionId = w.Session.Id, StudentName = w.StudentName, ExamTitle = w.ExamTitle, Attempt = w.Session.Attempt, EndedAt = w.Session.EndedAt,
@@ -125,7 +143,41 @@ public sealed record AssessmentReport
             IsMock = w.AiVisible && w.AnyMock, ForStudent = forStudent, IsApproved = w.HasFinalizeApproval,
             ScoreUse = scoreUse, ScoreUseReason = scoreUseReason, FollowUps = forStudent ? new Dictionary<string, int>() : followUps,
             Paths = forStudent ? new Dictionary<string, ObjectivePath>() : ObjectivePath.ForSession(w.Session, w.Objectives, w.AiVisible, w.Policy.AllowAssistedEvidence),
+            Contradictions = forStudent ? PutToStudent(w) : [],
+            ReflectionQuestion = reflection is null ? null : Sessions.ClosingReflection.Prompt(w.Session.Language),
+            Reflection = reflection,
         };
+    }
+
+    /// <summary>
+    /// The contradictions put to the student (GAD-T821): every answered Contradiction turn whose targets name two claims in the
+    /// ledger, with both claims quoted as the student said them and the answer as verified (the transcript's text when no verified
+    /// response is stored). A Contradiction fallback without both quotes is recorded as another move (GAD-T814), so is never listed.
+    /// </summary>
+    private static IReadOnlyList<ReportContradiction> PutToStudent(GradingWorkspace w)
+    {
+        if (string.IsNullOrWhiteSpace(w.Session.TranscriptJson) || string.IsNullOrWhiteSpace(w.Session.LedgerJson)) return [];
+        try
+        {
+            var ledger = ClaimLedger.FromJson(w.Session.LedgerJson);
+            var verified = w.Responses.GroupBy(r => r.TurnIndex).ToDictionary(g => g.Key, g => g.First().Response.VerifiedText);
+            var list = new List<ReportContradiction>();
+            foreach (var t in SessionTranscriptSerializer.Deserialize(w.Session.TranscriptJson).Turns.Where(t => t.Move == MoveKind.Contradiction))
+            {
+                var claims = t.TargetClaimIds.Select(ledger.Find).OfType<StudentClaim>().DistinctBy(c => c.Id).Take(2).OrderBy(c => c.TurnIndex).ToList();
+                var answer = verified.GetValueOrDefault(t.Index) is { } v && !string.IsNullOrWhiteSpace(v) ? v : t.Answer?.Text;
+                if (claims.Count < 2 || string.IsNullOrWhiteSpace(answer)) continue;
+                list.Add(new ReportContradiction(Said(claims[0]), ledger.IsWithdrawn(claims[0].Id), Said(claims[1]), ledger.IsWithdrawn(claims[1].Id),
+                    t.Question.Trim(), answer.Trim()));
+            }
+            return list;
+        }
+        catch (Exception e) when (e is System.Text.Json.JsonException or NotSupportedException or ArgumentException or InvalidOperationException)
+        {
+            return [];
+        }
+
+        static string Said(StudentClaim c) => string.IsNullOrWhiteSpace(c.Quote) ? c.Text : c.Quote;
     }
 
     /// <summary>
@@ -228,6 +280,23 @@ public sealed record AssessmentReport
             foreach (var e in o.Evidence)
                 sb.AppendLine($"- Evidence (response {e.Sequence}{(e.Corrected ? ", verified correction" : "")}): \"{Quote(e.VerifiedText)}\"");
         }
+        if (Contradictions.Count > 0)
+        {
+            sb.AppendLine().AppendLine($"## {ContradictionsHeading}").AppendLine().AppendLine(ContradictionsIntro);
+            foreach (var c in Contradictions)
+            {
+                sb.AppendLine().AppendLine($"- Earlier you said: \"{Quote(c.FirstQuote)}\"{(c.FirstWithdrawn ? " (you withdrew this)" : "")}");
+                sb.AppendLine($"- You also said: \"{Quote(c.SecondQuote)}\"{(c.SecondWithdrawn ? " (you withdrew this)" : "")}");
+                sb.AppendLine($"- The examiner asked: {Quote(c.Question)}");
+                sb.AppendLine($"- You answered: \"{Quote(c.Answer)}\"");
+            }
+        }
+        if (Reflection is not null)
+        {
+            sb.AppendLine().AppendLine("## Your closing reflection").AppendLine();
+            if (ReflectionQuestion is not null) sb.AppendLine($"*{Quote(ReflectionQuestion)}*").AppendLine();
+            sb.AppendLine($"> {Quote(Reflection)}");
+        }
         sb.AppendLine().AppendLine("## Knowledge gaps").AppendLine();
         if (KnowledgeGaps.Count == 0) sb.AppendLine("None identified.");
         foreach (var g in KnowledgeGaps) sb.AppendLine($"- {g}");
@@ -241,6 +310,12 @@ public sealed record AssessmentReport
         }
         return sb.ToString();
     }
+
+    /// <summary>The English heading and introduction of the contradictions section in the Markdown and PDF downloads (GAD-T821).</summary>
+    public const string ContradictionsHeading = "Where two of your statements met";
+    public const string ContradictionsIntro = "At these moments the examiner set two things you said side by side and asked you about them. They are shown in " +
+        "your own words, with your answer. Nothing here is scored, and nothing here says which statement was right: two statements that pull " +
+        "apart can be settled either way, and deciding which one you hold is the point of the question.";
 
     public string ToCsv()
     {

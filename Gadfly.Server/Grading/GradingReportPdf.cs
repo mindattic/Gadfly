@@ -69,6 +69,26 @@ public static class GradingReportPdf
                 b.Add(new(BlockKind.Quote, [new Run($"Response {e.Sequence}{(e.Corrected ? ", verified correction" : "")}: ", Italic: true), new Run("\"" + e.VerifiedText + "\"")], 1));
         }
 
+        // GAD-T821: the student's copy only; staff reports carry no contradictions and no reflection.
+        if (r.Contradictions.Count > 0)
+        {
+            b.Add(new(BlockKind.Heading, AssessmentReport.ContradictionsHeading));
+            b.Add(new(BlockKind.Small, AssessmentReport.ContradictionsIntro));
+            foreach (var c in r.Contradictions)
+            {
+                b.Add(new(BlockKind.Quote, [new Run("Earlier you said: ", Italic: true), new Run("\"" + c.FirstQuote + "\"" + (c.FirstWithdrawn ? " (you withdrew this)" : ""))], 1));
+                b.Add(new(BlockKind.Quote, [new Run("You also said: ", Italic: true), new Run("\"" + c.SecondQuote + "\"" + (c.SecondWithdrawn ? " (you withdrew this)" : ""))], 1));
+                b.Add(new(BlockKind.Small, [new Run("The examiner asked: ", Italic: true), new Run(c.Question)], 1));
+                b.Add(new(BlockKind.Quote, [new Run("You answered: ", Italic: true), new Run("\"" + c.Answer + "\"")], 1));
+            }
+        }
+        if (r.Reflection is not null)
+        {
+            b.Add(new(BlockKind.Heading, "Your closing reflection"));
+            if (r.ReflectionQuestion is not null) b.Add(new(BlockKind.Small, [new Run(r.ReflectionQuestion, Italic: true)]));
+            b.Add(new(BlockKind.Quote, r.Reflection, 1));
+        }
+
         b.Add(new(BlockKind.Heading, "Knowledge gaps"));
         if (r.KnowledgeGaps.Count == 0) b.Add(new(BlockKind.Body, "None identified."));
         foreach (var g in r.KnowledgeGaps) b.Add(new(BlockKind.Body, g, 1));

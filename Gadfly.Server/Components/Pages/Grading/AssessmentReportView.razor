@@ -75,6 +75,31 @@
         </div>
     }
 
+    @* GAD-T821: the student's own elenctic record; staff reports carry neither section. *@
+    @if (Report.ForStudent && Report.Contradictions.Count > 0)
+    {
+        <h2 class="gr-section">@T["report.contradictions"]</h2>
+        <p class="hint">@T["report.contradictionsIntro"]</p>
+        @foreach (var c in Report.Contradictions)
+        {
+            <div class="gr-objective">
+                <p class="hint">@T["report.contradictionFirst"]@if (c.FirstWithdrawn) { <text> </text>@T["report.withdrawn"] }</p>
+                <blockquote>@c.FirstQuote</blockquote>
+                <p class="hint">@T["report.contradictionSecond"]@if (c.SecondWithdrawn) { <text> </text>@T["report.withdrawn"] }</p>
+                <blockquote>@c.SecondQuote</blockquote>
+                <p><strong>@T["report.contradictionQuestion"]</strong> @c.Question</p>
+                <p class="hint">@T["report.contradictionAnswer"]</p>
+                <blockquote>@c.Answer</blockquote>
+            </div>
+        }
+    }
+    @if (Report.ForStudent && Report.Reflection is not null)
+    {
+        <h2 class="gr-section">@T["report.reflection"]</h2>
+        @if (Report.ReflectionQuestion is not null) { <p class="hint">@Report.ReflectionQuestion</p> }
+        <blockquote>@Report.Reflection</blockquote>
+    }
+
     <h2 class="gr-section">@T["report.gaps"]</h2>
     @if (Report.KnowledgeGaps.Count == 0)
     {
