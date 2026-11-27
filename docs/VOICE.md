@@ -583,13 +583,13 @@ counters above.
   for that filtered value. An id not shaped like an ElevenLabs voice id is skipped (logged) rather than sent. The fixed
   examiner lines are pre-warmed per voice. Mock mode is unchanged: no id is passed and the fake voice speaks.
 - **Which examiner (GAD-T504, GAD-T595, GAD-T792).** Four examiners are offered (`Gadfly.Server/Student/ExaminerCatalog.cs`), in
-  this order: the **talking bust**, the default (`examiner-bust`, `wwwroot/assets/avatars/examiner-bust.glb`, 8.9 MB, built by
-  `tools/examiner-bust` from the owner's Meshy.ai bust and Socrates' face rig; Socrates' voice and pace), the female examiner
-  (`examiner-f`, the deployment's `Gadfly:Voice:AvatarModelUrl`), the male one (`examiner-m`,
+  this order: the **female examiner**, the default (`examiner-f`, the deployment's `Gadfly:Voice:AvatarModelUrl`; GAD-T807),
+  the talking bust (`examiner-bust`, `wwwroot/assets/avatars/examiner-bust.glb`, 9.4 MB, built by `tools/examiner-bust` from the
+  owner's Meshy.ai bust and Socrates' face rig; Socrates' voice and pace), the male one (`examiner-m`,
   `wwwroot/assets/avatars/examiner-m.glb`, 9.5 MB, CC0, committed) and Socrates (`examiner-socrates`). Each is offered when its
   model is installed or configured. An exam's **Examiner avatar id** (`Exams.AvatarId`), else the organization's default avatar
   id, fixes the examiner (any of the four ids; an unknown id fixes nothing); otherwise the student chooses on the get-ready page,
-  remembered on the device (device-prefs.js `getExaminer`), and with no choice yet the first available, the bust, is shown. The exam room resolves it again on the server (`ExaminerCatalog.Resolve`), so the browser's
+  remembered on the device (device-prefs.js `getExaminer`), and with no choice yet the first available, the female examiner, is shown. The exam room resolves it again on the server (`ExaminerCatalog.Resolve`), so the browser's
   choice is only a preference among what the exam allows, and shows that examiner's model. Each
   examiner can have **his or her own voice**: in live mode the order is the exam's voice, then the student's chosen voice (see
   [Making the examiner your own](#making-the-examiner-your-own-gad-t505-gad-t646-gad-t663-gad-t649-gad-t671)), then the examiner's

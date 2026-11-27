@@ -36,9 +36,8 @@ public sealed record ExaminerOption(string Id, string NameKey, string? ModelUrl,
 }
 
 /// <summary>
-/// The examiners Gadfly offers (GAD-T595, GAD-T504): the talking bust (GAD-T792, first, so the default where nothing else
-/// chooses), the female examiner (TalkingHead's CC0 mpfb.glb, the deployment's
-/// <c>Gadfly:Voice:AvatarModelUrl</c>) and the male counterpart (<c>wwwroot/assets/avatars/examiner-m.glb</c>, CC0, built by
+/// The examiners Gadfly offers (GAD-T595, GAD-T504): the female examiner (TalkingHead's CC0 mpfb.glb, the deployment's
+/// <c>Gadfly:Voice:AvatarModelUrl</c>; first, so the default where nothing else chooses, GAD-T807), the talking bust (GAD-T792) and the male counterpart (<c>wwwroot/assets/avatars/examiner-m.glb</c>, CC0, built by
 /// tools/examiner-m), each with its own voice. A list rather than one hard-coded examiner, so adding one is a row
 /// here. Any part can be overridden per examiner with <c>Gadfly:Voice:Examiners:&lt;id&gt;</c> (<see cref="ExaminerSettings"/>).
 /// <para>
@@ -93,7 +92,7 @@ public static class ExaminerCatalog
     public const string BustModelPath = "assets/avatars/examiner-bust.glb";
 
     /// <summary>
-    /// The bust's head on Socrates' own body and clothes (GAD-T793), at his eye level. Offered, not the default (the bust is).
+    /// The bust's head on Socrates' own body and clothes (GAD-T793), at his eye level. Offered, not the default (the female examiner is).
     /// Socrates' voice and pace unless <c>Gadfly:Voice:Examiners:examiner-bust-body</c> says otherwise.
     /// </summary>
     public const string BustBody = "examiner-bust-body";
@@ -117,18 +116,18 @@ public static class ExaminerCatalog
         var bustBodyModel = bb?.ModelUrl ?? Local(BustBodyModelPath);
         return
         [
+            new(Female, "getReady.examiner.choiceFemale", f?.ModelUrl ?? voice.AvatarModelUrl, true)
+            {
+                VoiceId = f?.VoiceId,
+                VoiceIds = f?.VoiceIds ?? new Dictionary<string, string>(),
+                Speed = f?.Speed,
+            },
             new(Bust, "getReady.examiner.choiceBust", bustModel, bustModel is not null)
             {
                 VoiceId = b?.VoiceId ?? SocratesDefaultVoiceId,
                 VoiceIds = b?.VoiceIds ?? new Dictionary<string, string>(),
                 IsMale = true,
                 Speed = b?.Speed ?? SocratesDefaultSpeed,
-            },
-            new(Female, "getReady.examiner.choiceFemale", f?.ModelUrl ?? voice.AvatarModelUrl, true)
-            {
-                VoiceId = f?.VoiceId,
-                VoiceIds = f?.VoiceIds ?? new Dictionary<string, string>(),
-                Speed = f?.Speed,
             },
             new(Male, "getReady.examiner.choiceMale", maleModel, maleModel is not null)
             {
