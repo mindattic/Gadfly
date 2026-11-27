@@ -86,6 +86,11 @@ minimum from (docs/PILOT.md).
   call. The withdrawn claim stays on record (marked withdrawn in the earlier-claims list the judges see, and on the review
   page) but is never checked against new claims, and a contradiction resting on it is not put to the student; one already
   put to them is still judged on how they resolved it.
+- Consistency only when confronted (GAD-T816, prompt set v11; M7, 3.4). A contradiction detected but not put to the
+  student is an unconfirmed observation (it may be a misreading or a corrected view), so the judges score consistency
+  only on a Contradiction move, where it measures the resolution and feeds `ObjectiveAssessor.ResolutionScore`. Every
+  other answer's overall score is the weighted mean of accuracy, reasoning and completeness (0.35/0.25/0.25 renormalised,
+  `PanelAnswerJudge.WeightsFor`); a consistency score a judge returns anyway is ignored.
 - Contradiction detector honesty (GAD-T440; M7, 3.4, 4.4). The detector is a filter, so its silence is reported as "no
   contradiction detected", never "consistent": each objective's report states one of "no contradiction detected",
   "contradiction resolved", "contradiction withdrawn by the student", "contradiction pending" or "contradiction not

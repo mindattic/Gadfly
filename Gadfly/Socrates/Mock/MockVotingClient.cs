@@ -547,10 +547,11 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         var answer = StudentAfter(prompt, "Student's answer:");
         var hasPassages = Regex.IsMatch(Section(prompt, "Source passages:", "Question:"), @"(?m)^\s*\[1\]");
         int[] cite = hasPassages ? [1] : [];
+        var confronted = Line(prompt, "Question move:") == nameof(Gadfly.Engine.MoveKind.Contradiction);
 
         if (SaysDontKnow(answer))
         {
-            return JudgeJson(0, 0, 0, 0, cite, "the student said they do not know",
+            return JudgeJson(0, 0, confronted ? 0 : null, 0, cite, "the student said they do not know",
                 $"{Marker} The student said they do not know; no understanding was shown in this answer.");
         }
 
@@ -585,7 +586,7 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         var accuracy = Math.Clamp((int)Math.Round(2 + 16 * coverage), 0, 10) - (wrong ? 4 : 0);
         var reasoning = coverage == 0 ? Math.Min(2, markers) : Math.Clamp(2 + 3 * markers, 0, 10);
         var completeness = points.Count == 0 ? (int)Math.Round(10 * Math.Min(1, coverage * 2)) : (int)Math.Round(10.0 * hits / points.Count);
-        var consistency = 8;
+        int? consistency = confronted ? 8 : null;
         if (wordCount < 4)
         {
             accuracy = Math.Min(accuracy, 3);
@@ -602,18 +603,19 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
         return JudgeJson(accuracy, reasoning, consistency, completeness, cite, coveredText, verdict);
     }
 
-    private static string JudgeJson(int accuracy, int reasoning, int consistency, int completeness, int[] cite, string basis, string verdict) =>
-        JsonSerializer.Serialize(new
+    /// <summary>The judge's reply; <paramref name="consistency"/> is null on any move but Contradiction, which leaves it out (GAD-T816).</summary>
+    private static string JudgeJson(int accuracy, int reasoning, int? consistency, int completeness, int[] cite, string basis, string verdict)
+    {
+        var criteria = new List<object>
         {
-            criteria = new object[]
-            {
-                new { criterion = "accuracy", score = accuracy, rationale = $"{Marker} Accuracy estimated from {basis}.", passages = cite },
-                new { criterion = "reasoning", score = reasoning, rationale = $"{Marker} Reasoning estimated from explanatory words (because, so, therefore).", passages = cite },
-                new { criterion = "consistency", score = consistency, rationale = $"{Marker} Consistency is not checked in mock mode; a neutral score is given.", passages = Array.Empty<int>() },
-                new { criterion = "completeness", score = completeness, rationale = $"{Marker} Completeness estimated from rubric points whose key terms appear.", passages = cite },
-            },
-            verdict,
-        }, Json);
+            new { criterion = "accuracy", score = accuracy, rationale = $"{Marker} Accuracy estimated from {basis}.", passages = cite },
+            new { criterion = "reasoning", score = reasoning, rationale = $"{Marker} Reasoning estimated from explanatory words (because, so, therefore).", passages = cite },
+            new { criterion = "completeness", score = completeness, rationale = $"{Marker} Completeness estimated from rubric points whose key terms appear.", passages = cite },
+        };
+        if (consistency is { } c)
+            criteria.Add(new { criterion = "consistency", score = c, rationale = $"{Marker} The resolution is not checked in mock mode; a neutral score is given.", passages = Array.Empty<int>() });
+        return JsonSerializer.Serialize(new { criteria, verdict }, Json);
+    }
 
     // ------------------------------------------------------------------ objective grading (AiObjectiveGrader)
 

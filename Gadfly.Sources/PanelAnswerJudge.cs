@@ -16,7 +16,7 @@ public sealed record JudgeInput
 }
 
 /// <summary>
-/// Judges an answer with the Legion panel (GAD-T36): every provider grades the four criteria
+/// Judges an answer with the Legion panel (GAD-T36): every provider grades the criteria for the move
 /// against the numbered source passages and the rubric, citing passages; Gadfly averages the
 /// scores, keeps each voter's verdict for the reviewer, and measures agreement. Low agreement
 /// marks the answer for human review instead of letting a split panel decide.
@@ -32,6 +32,18 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
         ["completeness"] = 0.25,
         ["consistency"] = 0.15,
     };
+
+    /// <summary>
+    /// The weights an answer to <paramref name="move"/> is scored on (GAD-T816, ElenchusAtScale 3.4 and M7): consistency counts only
+    /// on a Contradiction move, where it scores the student's resolution of a conflict put to them; on every other move a conflict
+    /// the judge notices on its own is an unconfirmed observation, so the overall rests on the other three, renormalised.
+    /// </summary>
+    public static IReadOnlyDictionary<string, double> WeightsFor(MoveKind move) =>
+        move == MoveKind.Contradiction ? CriterionWeights : UnconfrontedWeights;
+
+    private static readonly IReadOnlyDictionary<string, double> UnconfrontedWeights = CriterionWeights
+        .Where(w => w.Key != "consistency")
+        .ToDictionary(w => w.Key, w => w.Value / CriterionWeights.Where(x => x.Key != "consistency").Sum(x => x.Value));
 
     /// <summary>Agreement below which the answer needs a human look.</summary>
     public double ReviewBelowAgreement { get; init; } = 0.6;
@@ -111,6 +123,7 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
     private AnswerJudgment Aggregate(JudgeInput input, int rubricVersion, IReadOnlyList<(string ProviderId, string Model, string Text)> replies)
     {
         var turn = input.Turn;
+        var weights = WeightsFor(turn.Move);
         var votes = new List<(string Provider, Dictionary<string, (double Score, string Rationale, List<string> Refs)> Criteria, string Verdict, string Model)>();
         foreach (var reply in replies)
         {
@@ -120,7 +133,7 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
             foreach (var c in PanelJson.Arr(doc.RootElement, "criteria"))
             {
                 var name = PanelJson.Str(c, "criterion").ToLowerInvariant();
-                if (!CriterionWeights.ContainsKey(name)) continue;
+                if (!weights.ContainsKey(name)) continue;
                 var score = Math.Clamp(PanelJson.Num(c, "score", double.NaN), 0, 10);
                 if (double.IsNaN(score)) continue;
                 parsed[name] = (score / 10.0, PanelJson.Str(c, "rationale"), PanelJson.PassageRefs(c, input.Passages));
@@ -145,7 +158,7 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
         double Overall(Dictionary<string, (double Score, string, List<string>)> crit)
         {
             double sum = 0, weight = 0;
-            foreach (var (name, w) in CriterionWeights)
+            foreach (var (name, w) in weights)
                 if (crit.TryGetValue(name, out var v)) { sum += v.Score * w; weight += w; }
             return weight == 0 ? 0 : sum / weight;
         }
@@ -155,7 +168,7 @@ public sealed class PanelAnswerJudge(ISocraticVotingClient panel, PromptSet? pro
         var spread = Math.Sqrt(overalls.Sum(o => (o - mean) * (o - mean)) / overalls.Count);
         var agreement = votes.Count == 1 ? 1.0 : Math.Clamp(1 - spread / 0.35, 0, 1);
 
-        var criteria = CriterionWeights.Keys.Select(name =>
+        var criteria = weights.Keys.Select(name =>
         {
             var given = votes.Where(v => v.Criteria.ContainsKey(name)).Select(v => v.Criteria[name]).ToList();
             if (given.Count == 0) return null;

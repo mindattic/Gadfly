@@ -106,10 +106,10 @@ public class PanelAnswerJudgeTests
 {
     private static readonly SourcePassage[] Passages = [Passage("bio:0", "Photosynthesis makes glucose."), Passage("bio:1", "Chlorophyll absorbs light.")];
 
-    private static JudgeInput Input(string answer = "Plants make glucose from light.")
+    private static JudgeInput Input(string answer = "Plants make glucose from light.", MoveKind move = MoveKind.Elicit)
     {
         var s = Session();
-        var t = s.AskAnswer("photosynthesis", MoveKind.Elicit, answer);
+        var t = s.AskAnswer("photosynthesis", move, answer);
         return new JudgeInput
         {
             Turn = t,
@@ -132,19 +132,51 @@ public class PanelAnswerJudgeTests
         Assert.That(j.RubricVersion, Is.EqualTo(4));
         Assert.That(j.Votes.Select(v => v.ProviderId), Is.EqualTo(new[] { "alpha", "beta" }));
         Assert.That(j.Votes.Select(v => v.Model), Is.EqualTo(new[] { "alpha-model", "beta-model" }));
-        Assert.That(j.Criteria.Select(c => c.Criterion), Is.EquivalentTo(new[] { "accuracy", "reasoning", "completeness", "consistency" }));
+        Assert.That(j.Criteria.Select(c => c.Criterion), Is.EquivalentTo(new[] { "accuracy", "reasoning", "completeness" }),
+            "an Elicit answer is not scored on consistency (GAD-T816)");
         Assert.That(j.Criteria.All(c => c.Citations.Single().ChunkId == "bio:0"), Is.True);
         Assert.That(j.Criteria[0].Citations[0].Quote, Is.EqualTo("Photosynthesis makes glucose."));
     }
 
+    private static string FourCriteria(int accuracy, int consistency) =>
+        $"{{\"criteria\": [{{\"criterion\": \"accuracy\", \"score\": {accuracy}}}, {{\"criterion\": \"reasoning\", \"score\": 0}},"
+        + $" {{\"criterion\": \"completeness\", \"score\": 0}}, {{\"criterion\": \"consistency\", \"score\": {consistency}}}], \"verdict\": \"v\"}}";
+
     [Test]
     public async Task CriterionWeights_ShapeTheOverall()
     {
-        var json = "{\"criteria\": [{\"criterion\": \"accuracy\", \"score\": 10}, {\"criterion\": \"reasoning\", \"score\": 0},"
-                 + " {\"criterion\": \"completeness\", \"score\": 0}, {\"criterion\": \"consistency\", \"score\": 0}], \"verdict\": \"v\"}";
-        var j = await new PanelAnswerJudge(Replies(new PanelReply("a", json))).JudgeAsync(Input(), 1);
-        Assert.That(j.OverallScore, Is.EqualTo(0.35).Within(1e-9));
-        Assert.That(PanelAnswerJudge.CriterionWeights.Values.Sum(), Is.EqualTo(1).Within(1e-12));
+        var contradiction = await new PanelAnswerJudge(Replies(new PanelReply("a", FourCriteria(10, 0)))).JudgeAsync(Input(move: MoveKind.Contradiction), 1);
+        Assert.That(contradiction.OverallScore, Is.EqualTo(0.35).Within(1e-9));
+        var elicit = await new PanelAnswerJudge(Replies(new PanelReply("a", FourCriteria(10, 0)))).JudgeAsync(Input(), 1);
+        Assert.That(elicit.OverallScore, Is.EqualTo(Math.Round(0.35 / 0.85, 3)).Within(1e-9), "accuracy, reasoning and completeness renormalised");
+    }
+
+    [Test]
+    public void Weights_SumToOne_OnEveryMove_AndCountConsistencyOnlyOnAContradiction()
+    {
+        foreach (var move in Enum.GetValues<MoveKind>())
+        {
+            var w = PanelAnswerJudge.WeightsFor(move);
+            Assert.That(w.Values.Sum(), Is.EqualTo(1).Within(1e-12), move.ToString());
+            Assert.That(w.ContainsKey("consistency"), Is.EqualTo(move == MoveKind.Contradiction), move.ToString());
+        }
+    }
+
+    [TestCase(0)]
+    [TestCase(10)]
+    public async Task AnUnconfrontedAnswer_IsNotMovedByAConsistencyScore(int consistency)
+    {
+        var j = await new PanelAnswerJudge(Replies(new PanelReply("a", FourCriteria(10, consistency)))).JudgeAsync(Input(move: MoveKind.Probe), 1);
+        Assert.That(j.OverallScore, Is.EqualTo(Math.Round(0.35 / 0.85, 3)).Within(1e-9));
+        Assert.That(j.Criteria.Select(c => c.Criterion), Does.Not.Contain("consistency"), "a consistency score returned anyway is ignored");
+    }
+
+    [Test]
+    public async Task AContradictionAnswer_StillFeedsTheResolutionScore()
+    {
+        var j = await new PanelAnswerJudge(Replies(new PanelReply("a", FourCriteria(10, 3)))).JudgeAsync(Input(move: MoveKind.Contradiction), 1);
+        Assert.That(ObjectiveAssessor.ResolutionScore(j), Is.EqualTo(0.3).Within(1e-9));
+        Assert.That(j.OverallScore, Is.EqualTo(0.35 + 0.15 * 0.3).Within(1e-9));
     }
 
     [Test]

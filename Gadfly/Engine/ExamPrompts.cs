@@ -31,8 +31,11 @@ public static partial class ExamPrompts
     /// is correct and connected, never whether it reports how the student thought (GAD-T445; Nisbett and Wilson 1977,
     /// Ericsson and Simon 1980).
     /// 10: claim retractions: the analysis and the claims prompt record an earlier claim the student explicitly withdrew ("I was
-    /// wrong earlier"), so the ledger keeps it for the record but no longer treats it as a premise (GAD-T441).</summary>
-    public const int Version = 10;
+    /// wrong earlier"), so the ledger keeps it for the record but no longer treats it as a premise (GAD-T441).
+    /// 11: consistency only when confronted: the judge scores consistency on a Contradiction move alone (the quality of the
+    /// resolution) and leaves it out on every other move, so a conflict never put to the student lowers no score (GAD-T816;
+    /// ElenchusAtScale 3.4, M7).</summary>
+    public const int Version = 11;
 
     /// <summary>Delimits text the student wrote or said; <see cref="Student"/> strips forged copies of these tags from the text it wraps.</summary>
     public const string StudentOpen = "<student_text>", StudentClose = "</student_text>";
@@ -261,9 +264,12 @@ public static partial class ExamPrompts
           is correct and connected to the claim it supports. An account of how the student thought, felt
           or arrived at the answer is not a justification: it earns no credit by itself, and its absence
           costs nothing.
-        - consistency: no conflict with the student's earlier claims (listed below), unless they
-          explicitly corrected themselves, which is a strength.
         - completeness: covers the rubric points this question called for.
+        - consistency (Contradiction move only): how well the student resolves the conflict put to them.
+
+        Score consistency only when the question move is Contradiction. On every other move leave it
+        out: a conflict you notice with the student's earlier claims has not been put to them, may be a
+        misreading or a corrected view, and never lowers any score.
 
         When the question move is Contradiction, the question put two of the student's own conflicting
         claims to them. A contradiction shows only that the two claims cannot both stand; it never shows
@@ -290,9 +296,10 @@ public static partial class ExamPrompts
         Student's answer:
         {answer}
 
-        Return JSON only, scores 0 (absent or wrong) to 10 (fully demonstrated):
+        Return JSON only, scores 0 (absent or wrong) to 10 (fully demonstrated); include the consistency
+        entry only on a Contradiction move:
         {"criteria": [{"criterion": "accuracy", "score": <0-10>, "rationale": "<one sentence>", "passages": [<numbers>]},
-                      {"criterion": "reasoning", ...}, {"criterion": "consistency", ...}, {"criterion": "completeness", ...}],
+                      {"criterion": "reasoning", ...}, {"criterion": "completeness", ...}, {"criterion": "consistency", ...}],
          "verdict": "<one sentence on what the answer shows about the student's understanding>"}
         """;
 
