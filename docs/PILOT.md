@@ -18,7 +18,7 @@ feedback becomes tickets. It is ready to start as soon as the owner says go. Not
 
 ## What Erin does
 
-1. Signs in at https://mindattic-gadfly.azurewebsites.net and sets up her authenticator app.
+1. Signs in to the hosted instance (once Gadfly is hosted again, GAD-T784) and sets up her authenticator app.
 2. Creates a course and uploads her source material: Markdown, text, PDF, Word (.docx), EPUB or HTML, up to 20 MB each.
 3. Processes it and reads the concept map. She fixes any concept that is wrong or missing and adjusts the rubric.
 4. Builds an exam on two or three concepts and picks the integrity level (Strict adds the camera integrity checks, with the student's consent). Every exam is spoken to the examiner on camera; a student who cannot answer aloud can be granted typed answers on that one exam (GAD-T260), and the examiner still speaks every question.

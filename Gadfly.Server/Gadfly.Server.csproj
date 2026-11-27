@@ -29,8 +29,6 @@
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="10.0.15" />
     <PackageReference Include="Azure.Identity" Version="1.21.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.AzureAppServices" Version="10.0.15" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.5.3" />
-    <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.3" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.8" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.8" />
     <!-- LTI 1.3 (GAD-T312): signing/validating the OIDC launch JWT and Gadfly's own deep-linking response and
@@ -55,7 +53,7 @@
   </ItemGroup>
 
   <!-- The in-app help center (GAD-T292): every file under docs/guides is embedded in the app as "Gadfly.Help/<path>", so the
-       published app (tools/deploy-azure.ps1 publishes a git-archive export of the repository) always carries the guides of the
+       published app always carries the guides of the
        commit it was built from. HelpLibrary reads, renders and indexes them at startup. -->
   <ItemGroup>
     <EmbeddedResource Include="..\docs\guides\**\*" LogicalName="Gadfly.Help/%(RecursiveDir)%(Filename)%(Extension)" WithCulture="false" Visible="false" />
@@ -80,7 +78,7 @@
   </Target>
 
   <!-- App version shown in the tab title and header (GAD-T291, docs/DEPLOY.md "Versions"). Whole numbers only:
-       tools/deploy-azure.ps1 passes /p:GadflyVersion=N (the next one after the highest vN tag) and tags the deployed
+       the deploy passes /p:GadflyVersion=N (the next one after the highest vN tag) and tags the deployed
        commit vN, so the build shows "VN". Without it (a local build) the label is the highest vN tag plus " dev",
        or just "dev" before the first tag. Read at run time by AppVersion.Label. -->
   <PropertyGroup Condition="'$(GadflyVersion)' != ''">

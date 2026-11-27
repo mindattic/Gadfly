@@ -60,8 +60,8 @@ public static class GadflyEndpoints
         app.MapHealthChecks("/healthz").AllowAnonymous();
         // Readiness (GAD-T356): the system status page's checks; 503 when one fails. Names and states only, so anonymous.
         Admin.SystemReadinessService.MapReady(app).AllowAnonymous();
-        // Build identity (GAD-T336): "V<N> <commit>" as plain text. tools/deploy-azure.ps1 -Promote reads it from the staging
-        // slot to know which build it is swapping into production. The version is already in every page header; no data.
+        // Build identity (GAD-T336): "V<N> <commit>" as plain text, so a deploy can check which build is running. The
+        // version is already in every page header; no data.
         app.MapGet("/healthz/version", () => Results.Text((AppVersion.Label + " " + AppVersion.Commit).TrimEnd()))
             .AllowAnonymous();
         app.MapGet("/healthz/providers", (Gadfly.Socrates.LegionVotingClient panel) => Results.Json(panel.Health.Snapshot()))

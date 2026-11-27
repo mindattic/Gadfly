@@ -39,7 +39,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 # The override block: every key is optional; delete what you don't need. See deploy-lib.ps1's header for each key.
-# Gadfly runs locally only (LocalDB 'Gadfly'): Production needs Azure Data Protection, so both runs are Development.
+# Gadfly runs locally only (LocalDB 'Gadfly'): both runs are Development.
 # Run Debug is mock mode; seed with a pass-through flag, last: .\run.ps1 -RunDebug --seed-demo (or --seed-classroom).
 # Gadfly.Worker.exe and the CLI (gadfly.exe) deploy beside the server; the tour runs from source (docs/TOUR.md).
 $Override = @{

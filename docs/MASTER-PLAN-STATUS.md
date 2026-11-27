@@ -34,7 +34,7 @@ human grading accountability; functional correctness; maintainability; performan
 | Part 16 isolation, RBAC basics, privacy | Tenant filter + write guard, org roles, MFA, retention, export/erase | Gadfly.Server |
 | Part 12.2 review (single grader) | Review timeline, evidence, integrity summary, grade, release | Components/Pages/Review |
 | Part 17 API | Platform API v1, webhooks, SessionHub | Gadfly.Server/Platform, Sessions |
-| Part 19 Phase 7 deployment | Workflow, provisioning script, guide; live at mindattic-gadfly.azurewebsites.net in mock mode | docs/DEPLOY.md |
+| Part 19 Phase 7 deployment | Workflow and provisioning script (removed in the Azure decommission, GAD-T804), guide | docs/DEPLOY.md |
 
 ## What changes because of the master plan
 

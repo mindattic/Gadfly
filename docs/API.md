@@ -9,7 +9,7 @@ owns the API key. A machine-readable description is at [`/openapi/v1.json`](#ope
 
 > Every exam, however it was created, is taken in the spoken exam room, on camera: the student answers aloud to the
 > talking examiner (see [VOICE.md](VOICE.md)); typed answers exist only as an accommodation staff grant per student
-> and exam. The examples use a local server; the hosted instance is at https://mindattic-gadfly.azurewebsites.net.
+> and exam. The examples use a local server; the Azure-hosted instance was decommissioned on 2026-11-26 (GAD-T804).
 
 ## Authentication
 

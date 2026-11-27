@@ -310,24 +310,13 @@ Before:
       only on the owner's word).
 - [ ] The databases are awake (`/kickstart gadfly`) so the migration step doesn't time out on a paused database.
 
-Deploy through staging (per [DEPLOY.md](DEPLOY.md) "Staging and production slots"):
+Deploy: the Azure deploy scripts (`tools/deploy-azure.ps1`, staging slot and promote) were removed with the Azure
+decommission on 2026-11-26 (GAD-T804). Until Gadfly is hosted again (GAD-T784, GAD-T786), there is no production
+deploy; the steps for the new host belong here once it exists. Whatever deploys it must keep these rules:
 
-- [ ] `tools/deploy-azure.ps1 -Slot staging` (or the workflow with target `staging`): migrates `Gadfly-staging`,
-      deploys to the staging slot, prints `Deployed <sha> as V<N> to staging ... not tagged`. Nothing is tagged.
-- [ ] Run the smoke checks under *After* against the staging slot's address; its `/healthz/version` shows
-      `V<N> <sha>`.
-- [ ] `tools/deploy-azure.ps1 -Promote` (or target `promote`): migrates the production database with that commit's
-      migrations, swaps staging into production (slot settings stay with their slot), checks production reports that
-      commit, then tags `vN`. It printed `Deployed <sha> as V<N> ... tagged vN`.
-
-Or straight to production (no staging step):
-
-- [ ] `npm run deploy -- --app gadfly` from `MindAttic.Deploy` (it runs `tools/deploy-azure.ps1`): clean export of the
-      commit, migrations first (a failure stops it before any code goes out), publish, zip deploy, `/healthz` and
-      `/login` checks, then the `vN` tag.
-- [ ] The script printed `Deployed <sha> as V<N> ... tagged vN`. The version is the next whole number after the highest
-      `vN` tag (GAD-T291); a failed deploy uses no number. If it says the app is live but the tag failed, tag that
-      commit `vN` by hand and push the tag; never otherwise create or move a `vN` tag.
+- [ ] Migrations run first, and a failure stops the deploy before any code goes out.
+- [ ] The version is the next whole number after the highest `vN` tag (GAD-T291), and only a successful deploy tags
+      its commit `vN`; never otherwise create or move a `vN` tag.
 
 After (smoke checks, all without spending provider credit):
 

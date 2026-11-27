@@ -5,9 +5,9 @@ using Gadfly.Server.Tenancy;
 using Gadfly.Socrates;
 using Gadfly.Worker;
 
-// Gadfly.Worker — the job queue, AI grading and the sweepers that feed them, outside the web process (GAD-T700). Runs as the
-// continuous WebJob GadflyWorker in the site's App Service, so it sees the site's app settings as environment variables,
-// and its own copy of the site's appsettings.json (docs/DEPLOY.md "The worker").
+// Gadfly.Worker — the job queue, AI grading and the sweepers that feed them, outside the web process (GAD-T700). Runs beside
+// the site with the same settings (environment variables and its own copy of the site's appsettings.json) and database
+// (docs/DEPLOY.md "The worker").
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
     Args = args,
@@ -18,7 +18,7 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 builder.Logging.AddSimpleConsole(o => { o.SingleLine = true; o.TimestampFormat = "yyyy-MM-dd HH:mm:ss "; });
 builder.AddGadflyServices(runBackgroundWork: true);
 builder.Services.AddHostedService<ShutdownFileWatcher>();
-// Inside settings.job's stopping_wait_time, so a running job releases its lease before Azure kills the process.
+// Time for a running job to release its lease before a host (a service manager, or a WebJob-style shutdown file) kills it.
 builder.Services.Configure<HostOptions>(o => o.ShutdownTimeout = TimeSpan.FromSeconds(50));
 
 using var host = builder.Build();

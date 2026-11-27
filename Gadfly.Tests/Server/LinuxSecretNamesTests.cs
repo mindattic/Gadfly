@@ -5,7 +5,7 @@ using NUnit.Framework;
 namespace Gadfly.Tests.Server;
 
 /// <summary>
-/// Linux App Service refuses app-setting names with a dash (GAD-T781), so provision-azure.ps1 sets the auth secrets as
+/// Linux App Service refuses app-setting names with a dash (GAD-T781), so the (since removed, GAD-T804) Azure provisioning set the auth secrets as
 /// MindAttic__Vault__Security__pepper_v1 / reset_token_key / bootstrap_token. The MindAttic.Authentication version Gadfly
 /// ships must resolve those to the very same values the dashed Windows names gave, or every stored password stops verifying.
 /// </summary>

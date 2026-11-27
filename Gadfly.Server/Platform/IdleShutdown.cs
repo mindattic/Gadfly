@@ -14,7 +14,7 @@ namespace Gadfly.Server.Platform;
 /// nothing is left to do. When no user has touched the site for <c>Gadfly:IdleShutdown:Minutes</c> (default 20; 0 turns it off;
 /// always off in Development) and <see cref="IdleShutdownPendingWork"/> finds no pending background work, the watchdog stops its
 /// own App Service site through Azure Resource Manager with the site's system-assigned managed identity (Website Contributor on
-/// that site only: tools/provision-azure.ps1, docs/DEPLOY.md). The serverless SQL database then auto-pauses on its own delay.
+/// that site only; the Azure provisioning script went with the 2026-11-26 decommission, GAD-T804). The serverless SQL database then auto-pauses on its own delay.
 /// Pending work keeps the site up, so a student who finishes an exam and walks away still gets it scored, posted to the inbox
 /// and emailed. The site reads its own identity from App Service's environment (WEBSITE_SITE_NAME, WEBSITE_RESOURCE_GROUP,
 /// WEBSITE_OWNER_NAME for the subscription, WEBSITE_SLOT_NAME); without them (not on App Service) the watchdog stays off.
@@ -234,7 +234,7 @@ public sealed class IdleShutdownWatchdog(
             return;
         }
         var body = await response.Content.ReadAsStringAsync(ct);
-        log.LogError("Idle shutdown: Azure refused to stop {ResourceId} ({Status}): {Body}. Does the site's managed identity have Website Contributor on it (tools/provision-azure.ps1)?",
+        log.LogError("Idle shutdown: Azure refused to stop {ResourceId} ({Status}): {Body}. Does the site's managed identity have Website Contributor on it?",
             resourceId, (int)response.StatusCode, body.Length > 500 ? body[..500] : body);
     }
 }

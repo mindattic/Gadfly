@@ -307,13 +307,9 @@ to MindAttic.Log's database for `Gadfly.Server`. Health is at `/healthz` and rea
 
 ## Deployment
 
-Gadfly.Server deploys to Azure App Service with Azure SQL, Key Vault and a managed identity.
-`npm run deploy -- --app gadfly` in MindAttic.Deploy (which runs `tools/deploy-azure.ps1`) exports the commit
-cleanly, migrates the database first, deploys, checks `/healthz` and `/login`, and tags the release `vN` (the
-app shows V&lt;N&gt; in its title). A manual GitHub Actions workflow also deploys, but without the version, tag and
-mock-mode check. [docs/DEPLOY.md](docs/DEPLOY.md) has the procedure and the app settings a release must check;
-[docs/OPERATIONS.md](docs/OPERATIONS.md) the release checklist, monitoring, backups and incident steps. The instance at
-https://mindattic-gadfly.azurewebsites.net runs in mock mode.
+The Azure deployment was decommissioned on 2026-11-26 (GAD-T804 removed its scripts); Gadfly runs locally until it is
+hosted again (GAD-T784). [docs/DEPLOY.md](docs/DEPLOY.md) has the production configuration and the worker;
+[docs/OPERATIONS.md](docs/OPERATIONS.md) the release checklist, monitoring, backups and incident steps.
 
 ## Using Gadfly from your own app
 
@@ -520,7 +516,7 @@ Gadfly.Personal/    The personal introspection subject: ingestion, corpus, minin
 Gadfly.Tour/        The end-to-end demo tour that drives a real server as real users
 Gadfly.Tests/       NUnit tests and fixtures
 samples/            InProcess (the engine as packages) and HostedApi (the platform API)
-tools/              deploy-azure.ps1, provision-azure.ps1 and sync-voice-assets.ps1
+tools/              sync-voice-assets.ps1 and the other helper scripts
 lib/                Vendored MindAttic NuGet packages used by CI builds
 ```
 

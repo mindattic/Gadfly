@@ -21,8 +21,8 @@ using MindAttic.Vault.Configuration;
 namespace Gadfly.Server;
 
 /// <summary>
-/// The services both hosts share (GAD-T700): the web app (Program.cs) and the grading worker (Gadfly.Worker, an Azure
-/// continuous WebJob beside the site, docs/DEPLOY.md "The worker"). Same configuration keys, same database, same job
+/// The services both hosts share (GAD-T700): the web app (Program.cs) and the grading worker (Gadfly.Worker, its own
+/// process beside the site, docs/DEPLOY.md "The worker"). Same configuration keys, same database, same job
 /// handlers; only the web host adds the UI, hubs and voice on top.
 /// </summary>
 public static class GadflyServices
@@ -97,20 +97,11 @@ public static class GadflyServices
             o.AppName = "Gadfly";
             o.IsProduction = !builder.Environment.IsDevelopment();
             o.ConfigureAdditionalPolicies = TenancyAuthorization.Configure;
-            if (o.IsProduction)
-            {
-                // Production key ring (GAD-T63): persisted in Blob Storage and wrapped by a Key Vault key, reached
-                // with the App Service's managed identity. Missing settings stop startup (fail closed).
-                o.ConfigureDataProtection = dp =>
-                {
-                    var cred = new Azure.Identity.DefaultAzureCredential();
-                    var blobUri = builder.Configuration["DataProtection:BlobUri"]
-                        ?? throw new InvalidOperationException("DataProtection:BlobUri is required in production.");
-                    var keyId = builder.Configuration["DataProtection:KeyVaultKeyId"]
-                        ?? throw new InvalidOperationException("DataProtection:KeyVaultKeyId is required in production.");
-                    dp.PersistKeysToAzureBlobStorage(new Uri(blobUri), cred).ProtectKeysWithAzureKeyVault(new Uri(keyId), cred);
-                };
-            }
+            // Key ring: the library's default unless DataProtection:KeysPath names a folder to keep it in
+            // (the Azure Blob/Key Vault key ring went with the Azure decommission, 2026-11-26).
+            var keysPath = builder.Configuration["DataProtection:KeysPath"];
+            if (o.IsProduction && !string.IsNullOrWhiteSpace(keysPath))
+                o.ConfigureDataProtection = dp => dp.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
         });
         builder.Services.AddScoped<IAuthorizationHandler, OrgRoleHandler>();
         builder.Services.AddAuthentication().AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(

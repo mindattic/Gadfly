@@ -30,7 +30,7 @@ using MindAttic.Vault.Configuration;
 // Gadfly.Server — the hosted Socratic platform and the Gadfly Exams web app (docs/SOCRATIC_PLATFORM.md).
 var builder = WebApplication.CreateBuilder(args);
 // The services the grading worker shares (GadflyServices, GAD-T700). Gadfly:Jobs:RunInWeb=false leaves the job queue and its
-// sweepers to Gadfly.Worker, the WebJob beside the site, and this process only enqueues (docs/DEPLOY.md "The worker").
+// sweepers to Gadfly.Worker, its own process beside the site, and this process only enqueues (docs/DEPLOY.md "The worker").
 builder.AddGadflyServices(runBackgroundWork: builder.Configuration.GetValue(GadflyServices.RunJobsInWebSetting, true));
 
 // A circuit pins its tenant when it opens and never falls back to the (often absent) HttpContext (GAD-T73).

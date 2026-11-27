@@ -1,8 +1,9 @@
 namespace Gadfly.Worker;
 
 /// <summary>
-/// Stops the host when Azure asks a continuous WebJob to stop: it creates the file named by WEBJOBS_SHUTDOWN_FILE and
-/// waits settings.job's stopping_wait_time before killing the process. SIGTERM and Ctrl+C are the host's own console lifetime.
+/// Stops the host when a WebJobs-style shutdown signal appears: a host that creates the file named by
+/// WEBJOBS_SHUTDOWN_FILE and waits before killing the process gets a clean stop instead. SIGTERM and Ctrl+C are the
+/// host's own console lifetime.
 /// </summary>
 public sealed class ShutdownFileWatcher(IHostApplicationLifetime lifetime, ILogger<ShutdownFileWatcher> log) : BackgroundService
 {
@@ -18,7 +19,7 @@ public sealed class ShutdownFileWatcher(IHostApplicationLifetime lifetime, ILogg
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 if (!File.Exists(path)) continue;
-                log.LogInformation("Gadfly.Worker: the WebJob shutdown file appeared; stopping.");
+                log.LogInformation("Gadfly.Worker: the shutdown file appeared; stopping.");
                 lifetime.StopApplication();
                 return;
             }

@@ -136,7 +136,7 @@ flowchart LR
 | Panel seam | `Gadfly/Socrates` | `ISocraticVotingClient` (`AskAsync`, `AskWithProfilesAsync`, `DecideAsync`, `FanOutAsync`) over MindAttic.Legion (`LegionVotingClient`), with `ProviderHealth`, `PanelUsage`; mock panel in `Socrates/Mock` (GAD-T100). |
 | Source material and AI analysis | `Gadfly.Sources` | Ingestion and chunking, concept map, cited rubrics, hybrid retrieval, `SourceExamEngine` (the resumable step engine), `PanelAnswerJudge`, `TextStyleAssessor`; `ResponseAnalyzer`, `Verification/ResponseVerifier`, `Grading/AiObjectiveGrader`. |
 | Web host | `Gadfly.Server` | Blazor Server UI, `SessionHub` (SignalR), Platform API, tenancy, jobs, privacy, review, grading, analytics. |
-| Worker host | `Gadfly.Worker` | The job queue, AI grading and the sweepers outside the web process (Azure continuous WebJob, GAD-T700). |
+| Worker host | `Gadfly.Worker` | The job queue, AI grading and the sweepers outside the web process (its own process beside the site, GAD-T700). |
 | CLI | `Gadfly.Cli` | Local runs of the engine against source folders (development and corpus work). |
 | Tests and tour | `Gadfly.Tests`, `Gadfly.Tour` | NUnit suites (run only when the owner asks); the tour drives the whole workflow through the real server (GAD-T105). |
 
@@ -156,7 +156,7 @@ flowchart LR
   through `IJobHandler`s: `SourceProcessingJob` (ingest, concept map, rubrics), `WebhookDeliveryJob`,
   `RetentionJob` (scheduled by `RetentionScheduler`), and `AiGradingJob` (GAD-T94, started by
   `GradingSweeper` when a session ends). The worker and its sweepers also run in `Gadfly.Worker`, a separate
-  process deployed as the continuous WebJob `GadflyWorker` beside the site; `Gadfly:Jobs:RunInWeb=false` leaves them
+  process beside the site; `Gadfly:Jobs:RunInWeb=false` leaves them
   to it and the web app only enqueues (GAD-T700, [DEPLOY.md](DEPLOY.md) "The worker").
 - **SQL Server.** EF Core 10, schema `gadfly` (application) and `auth` (MindAttic.Authentication). LocalDB in
   development, Azure SQL in production; migrations in `Gadfly.Server/Data/Migrations`.
@@ -593,8 +593,8 @@ publish.
 
 ## 12 Deployment
 
-[DEPLOY.md](DEPLOY.md) has the full procedure (live at https://mindattic-gadfly.azurewebsites.net, running in
-mock mode).
+Until 2026-11-26 Gadfly ran on Azure as below; that deployment was decommissioned (GAD-T804) and its scripts removed.
+The table records how it was hosted; [DEPLOY.md](DEPLOY.md) has the configuration that still applies.
 
 | Piece | Choice |
 |---|---|
@@ -602,7 +602,7 @@ mock mode).
 | Worker | `Gadfly.Worker` as the continuous WebJob `GadflyWorker` in the same App Service: job queue, AI grading, sweepers. With Always On off it, like the in-process schedulers (reminders, retention, stale sessions, grading sweep, LTI passback), runs only while the site is loaded. Shares the site's settings, database and service registration (`GadflyServices`) |
 | Database | Azure SQL database `Gadfly` (serverless), Entra authentication, no password in the connection string |
 | Keys and secrets | Key Vault (auth pepper, reset key, bootstrap token, LLM provider keys); Data Protection key ring in Blob Storage wrapped by a Key Vault key |
-| Pipeline | `.github/workflows/azure-deploy.yml`, manual trigger: build, apply migrations with an EF bundle, deploy, smoke-test `/healthz` and `/login` |
+| Pipeline | Was `.github/workflows/azure-deploy.yml` and `tools/deploy-azure.ps1` (removed in GAD-T804): build, migrations first, deploy, smoke-test `/healthz` and `/login` |
 | Health | `/healthz` (database), `/healthz/providers` (panel provider health) |
 | AI mode | `Gadfly:AiMode` (`live` by default outside Development, `mock` in Development; production sets it explicitly): a deployment without working provider keys runs clearly labelled mock mode rather than failing or pretending |
 
