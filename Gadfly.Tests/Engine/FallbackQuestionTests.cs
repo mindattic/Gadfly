@@ -39,6 +39,7 @@ public class FallbackQuestionTests
                 var q = QuestionGenerator.Fallback(move, "Photosynthesis", "Respiration", language, ("plants eat soil", "mass comes from air"));
                 var label = $"{language} {move}: {q}";
                 Assert.That(QuestionGenerator.Usable(q), Is.EqualTo(q), label);
+                Assert.That(q.Count(c => c is '?' or '？'), Is.EqualTo(1), $"one question per turn (GAD-T815): {label}");
                 Assert.That(QuestionGenerator.IsIntrospective(q), Is.False, label);
                 Assert.That(LanguageText.WordCount(q), Is.LessThanOrEqualTo(40), label);
                 var lower = q.ToLowerInvariant();

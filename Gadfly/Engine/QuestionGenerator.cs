@@ -177,7 +177,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             if (single is { Failed: false } drafted)
             {
                 var fusedOne = Clean(drafted.Text);
-                question = Usable(fusedOne);
+                question = Usable(fusedOne, MaxQuestionWords);
                 if (question.Length == 0)
                 {
                     introspective = IsIntrospective(fusedOne);
@@ -191,7 +191,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
                 if (single is { } failed) reasons.Add($"live model failed ({failed.Text}); panel drafted instead");
                 var result = await panel.AskAsync(ask, "", Quorum.Plurality, ct);
                 var fused = Clean(PanelText(result));
-                question = Usable(fused);
+                question = Usable(fused, MaxQuestionWords);
                 var how = QuestionAuthorship.PanelDraft;
                 if (question.Length == 0)
                 {
@@ -247,7 +247,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     /// </summary>
     private QuestionAuthorship Author(VotingResult result, string question, string how)
     {
-        var drafters = result.IndividualVotes.Where(v => !v.IsError && string.Equals(Usable(Clean(v.Decision)), question, StringComparison.Ordinal))
+        var drafters = result.IndividualVotes.Where(v => !v.IsError && string.Equals(Usable(Clean(v.Decision), MaxQuestionWords), question, StringComparison.Ordinal))
             .Select(v => v.ProviderId).Where(p => p.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         if (drafters.Count == 0)
         {
@@ -375,7 +375,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             draft = Clean(PanelText(result));
             viaLive = false;
         }
-        draft = Usable(draft);
+        draft = Usable(draft, MaxQuestionWords);
         if (draft.Length == 0 || string.Equals(draft, question, StringComparison.Ordinal)) return null;
         if (string.IsNullOrWhiteSpace(rubric)) return draft;
         var verdict = viaLive ? await CheckLeakLiveAsync(draft, rubric, dialogue, ct) : await CheckLeakAsync(draft, rubric, dialogue, ct);
@@ -424,7 +424,9 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     /// only once its own guard said SAFE. The first part that leaks, is undecided, or is not usable (talks about "the student", asks
     /// about the student's own thought process) stops the reply: nothing after it is said. If nothing was said yet, the caller redrafts
     /// as for a one-shot draft; if something was, the plain fallback question for the move is said after it, and the question recorded
-    /// is exactly what was said. A provider failure before anything was said hands the attempt to the panel.
+    /// is exactly what was said. A provider failure before anything was said hands the attempt to the panel. One question per turn
+    /// (GAD-T815): the part that ends the reply's first question is cut there and nothing after it is read or said, and a reply that
+    /// runs past <see cref="MaxQuestionWords"/> words before its question ends stops like a part that cannot be said.
     /// </summary>
     private async Task<Streamed> StreamDraftAsync(ILiveTurnModel live, string prompt, QuestionRequest r, string dialogue, IQuestionSpeech speech,
         CancellationToken ct)
@@ -442,18 +444,32 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         bool? stopVerdict = false;
         var stopIntrospective = false;
         string? failure = null;
+        var asked = false;                          // a formed part ended the first question: nothing after it is said (GAD-T815)
 
         void Form(bool final)
         {
-            if (stopReason is not null || building.Count == 0) return;
+            if (stopReason is not null || asked || building.Count == 0) return;
             var text = string.Join(" ", building);
             var words = LanguageText.WordCount(text);   // Korean words in English-word units (GAD-T537); English unchanged
             if (formed.Count == 0 && words < FirstPartMinWords && !final) return;   // too short to start on: wait for the next sentence
             building.Clear();
+            // One question per turn (GAD-T815): the part that ends the first question is cut there and is the last part said.
+            var before = string.Join(" ", formed);
+            var offset = before.Length == 0 ? 0 : before.Length + 1;
+            if (FirstQuestionEnd(before.Length == 0 ? text : before + " " + text) - offset is var end and >= 0)
+            {
+                text = text[..(end + 1)].TrimEnd();
+                asked = true;
+            }
             if (PartProblem(text, formed.Count == 0) is { } problem)
             {
                 stopReason = problem;
                 stopIntrospective = IsIntrospective(text);
+                return;
+            }
+            if (LanguageText.WordCount(before.Length == 0 ? text : before + " " + text) > MaxQuestionWords)
+            {
+                stopReason = $"draft ran past {MaxQuestionWords} words";
                 return;
             }
             formed.Add(text);
@@ -487,7 +503,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             var e = live.StreamAsync(LiveSystemPrompt, prompt, maxTokens: 300, temperature: 0.4, ct: stop.Token).GetAsyncEnumerator(stop.Token);
             try
             {
-                while (stopReason is null && !reply.LineEnded)
+                while (stopReason is null && !reply.LineEnded && !asked)
                 {
                     bool more;
                     try
@@ -510,7 +526,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
                 stop.Cancel();   // a reply cut short (a stop, a second line) is not read any further
                 try { await e.DisposeAsync(); } catch (Exception) { /* the provider's own teardown */ }
             }
-            if (failure is null && stopReason is null)
+            if (failure is null && stopReason is null && !asked)
             {
                 building.AddRange(reply.Finish());
                 Form(final: true);
@@ -678,7 +694,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     /// </summary>
     private async Task<string> PickDraftAsync(VotingResult result, MoveKind move, string dialogue, CancellationToken ct)
     {
-        var drafts = result.IndividualVotes.Where(v => !v.IsError).Select(v => Usable(Clean(v.Decision)))
+        var drafts = result.IndividualVotes.Where(v => !v.IsError).Select(v => Usable(Clean(v.Decision), MaxQuestionWords))
             .Where(d => d.Length > 0).Distinct(StringComparer.Ordinal).ToList();
         if (drafts.Count <= 1) return drafts.FirstOrDefault() ?? "";
         var ballot = $"""
@@ -742,12 +758,61 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     }
 
     /// <summary>
-    /// The draft when it reads as a question, else "": a reply that is only a label or the move's name (a panel
-    /// sometimes answers "ScenarioVariation") or a fragment of a few words is not asked.
+    /// The draft up to the end of its first question (GAD-T815): the text before it (a situation, the quoted claims) stays, anything
+    /// after it is dropped. A draft with no question mark is returned whole.
     /// </summary>
-    internal static string Usable(string draft)
+    internal static string FirstQuestion(string? draft)
     {
-        if (LanguageText.WordCount(draft) < 4) return "";   // Korean words in English-word units (GAD-T537); English unchanged
+        if (string.IsNullOrEmpty(draft)) return "";
+        var end = FirstQuestionEnd(draft);
+        return end < 0 ? draft : draft[..(end + 1)].TrimEnd();
+    }
+
+    /// <summary>
+    /// Where the first question in <paramref name="text"/> ends (the index of its last question mark), or -1: the first ASCII question
+    /// mark or full-width U+FF1F (Korean), which is also the closing mark of a Spanish ¿...? pair. A question mark inside a quotation
+    /// (“...”, «...», 「...」, or one followed straight by a closing ") is the quoted words, not the examiner's question.
+    /// </summary>
+    private static int FirstQuestionEnd(string text)
+    {
+        var quoted = 0;
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c is '“' or '«' or '「' or '『') quoted++;
+            else if (c is '”' or '»' or '」' or '』') quoted = Math.Max(0, quoted - 1);
+            else if (c is '?' or '？')
+            {
+                var end = i;
+                while (end + 1 < text.Length && text[end + 1] is '?' or '？' or '!') end++;
+                if (quoted > 0 || (end + 1 < text.Length && text[end + 1] == '"')) { i = end; continue; }
+                return end;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>The default for <see cref="MaxQuestionWords"/>.</summary>
+    public const int DefaultMaxQuestionWords = 50;
+
+    /// <summary>
+    /// The most words a drafted question may run to, up to the end of its first question (GAD-T815). The prompt asks for at most 40;
+    /// a draft well past that is redrafted.
+    /// </summary>
+    public int MaxQuestionWords { get; init; } = DefaultMaxQuestionWords;
+
+    /// <summary>
+    /// The draft when it reads as one question, else "": cut after its first question (<see cref="FirstQuestion"/>); a reply that is
+    /// only a label or the move's name (a panel sometimes answers "ScenarioVariation"), a fragment of a few words, or a question longer
+    /// than <paramref name="maxWords"/> words is not asked.
+    /// </summary>
+    internal static string Usable(string draft, int maxWords = DefaultMaxQuestionWords)
+    {
+        // One question per turn (GAD-T815; ElenchusAtScale 3.1, 3.2, 4.3.4): a second question is cut off, and a first question that
+        // runs well past the prompt's 40 words is redrafted like an empty draft.
+        draft = FirstQuestion(draft);
+        var words = LanguageText.WordCount(draft);   // Korean words in English-word units (GAD-T537); English unchanged
+        if (words < 4 || words > maxWords) return "";
         if (Enum.TryParse<MoveKind>(draft.Trim('.', '?', ' '), ignoreCase: true, out _)) return "";
         if (IsPanelFailureText(draft)) return "";
         // A draft that talks about the student instead of to them ("...and ask the student to explain") is an instruction, not a question.
@@ -816,7 +881,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     /// <summary>
     /// The plain fallback question for <paramref name="move"/>, worded for the move <see cref="FallbackMove"/> asks. None is yes/no,
     /// presupposes an answer point, or asks about the student's own thought process (ElenchusAtScale 2.2.2, 2.3.1, 2.3.2, 3.3; M3),
-    /// and each is at most 40 words besides the quoted claims.
+    /// and each is one question (GAD-T815) of at most 40 words besides the quoted claims.
     /// </summary>
     internal static string Fallback(MoveKind move, string concept, string? related, string? language = null, (string First, string Second)? quotes = null)
     {
@@ -830,7 +895,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
             MoveKind.Synthesize => $"What connection, if any, is there between {concept} and {related ?? "the other ideas we have discussed"}, and why?",
             MoveKind.CausalReasoning => $"In what you said about {concept}, what depends on what, and what shows that it is so?",
             MoveKind.ScenarioVariation => "Suppose one of the conditions you described changed while everything else stayed the same. What would happen then, and why?",
-            MoveKind.AssumptionTesting => $"What has to be true for your explanation of {concept} to hold? What would follow if one of those things were false?",
+            MoveKind.AssumptionTesting => $"What has to be true for your explanation of {concept} to hold, and what would follow if one of those things were false?",
             MoveKind.IndependentExplanation => $"Without using a textbook definition, how would you explain {concept} from your own reasoning?",
             MoveKind.Hint => $"Here is a hint: think about what {concept} needs in order to happen. With that in mind, how would you explain it now?",
             MoveKind.GuidedExplanation => $"Let's look at {concept} step by step, starting from what you already said. Which step comes first, and why?",
@@ -850,7 +915,7 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
         MoveKind.Synthesize => $"¿Qué relación hay, si la hay, entre {concept} y {related ?? "las otras ideas que hemos comentado"}, y por qué?",
         MoveKind.CausalReasoning => $"En lo que dijo sobre {concept}, ¿qué depende de qué, y qué muestra que es así?",
         MoveKind.ScenarioVariation => "Supongamos que cambia una de las condiciones que describió y todo lo demás sigue igual. ¿Qué pasaría entonces y por qué?",
-        MoveKind.AssumptionTesting => $"¿Qué tiene que ser cierto para que su explicación de {concept} se sostenga? ¿Qué pasaría si una de esas cosas fuera falsa?",
+        MoveKind.AssumptionTesting => $"¿Qué tiene que ser cierto para que su explicación de {concept} se sostenga, y qué pasaría si una de esas cosas fuera falsa?",
         MoveKind.IndependentExplanation => $"Sin usar una definición de libro, ¿cómo explicaría {concept} a partir de su propio razonamiento?",
         MoveKind.Hint => $"Le doy una pista: piense en qué necesita {concept} para ocurrir. Con eso en mente, ¿cómo lo explicaría ahora?",
         MoveKind.GuidedExplanation => $"Veamos {concept} paso a paso, a partir de lo que ya dijo. ¿Qué paso va primero y por qué?",
@@ -861,12 +926,12 @@ public sealed partial class QuestionGenerator(ISocraticVotingClient panel, Promp
     private static string KoreanFallback(MoveKind move, string concept, string? related, (string First, string Second)? quotes) => move switch
     {
         MoveKind.Clarify => $"{concept}에 대해 말씀하실 때, 자신의 말로 하면 정확히 어떤 뜻인가요?",
-        MoveKind.Probe => $"방금 {concept}에 대해 하신 말씀은 왜 성립하나요? 무엇이 그렇다는 것을 보여 주나요?",
+        MoveKind.Probe => $"방금 {concept}에 대해 하신 말씀은 왜 성립하고, 무엇이 그렇다는 것을 보여 주나요?",
         MoveKind.Contradiction => $"앞에서 \"{quotes!.Value.First}\"라고 하셨고, \"{quotes.Value.Second}\"라고도 하셨어요. 이 두 말씀은 서로 어떻게 맞아떨어지나요, 아니면 어느 쪽을 고치시겠어요?",
         MoveKind.Synthesize => $"{concept}과(와) {related ?? "지금까지 이야기한 다른 개념들"} 사이에 관계가 있다면 그것은 무엇이고, 왜 그런가요?",
-        MoveKind.CausalReasoning => $"{concept}에 대해 하신 설명에서 무엇이 무엇에 달려 있나요? 무엇이 그렇다는 것을 보여 주나요?",
+        MoveKind.CausalReasoning => $"{concept}에 대해 하신 설명에서 무엇이 무엇에 달려 있고, 무엇이 그렇다는 것을 보여 주나요?",
         MoveKind.ScenarioVariation => "말씀하신 조건 중 하나만 바뀌고 나머지는 그대로라고 해 볼게요. 그러면 어떻게 되고, 왜 그럴까요?",
-        MoveKind.AssumptionTesting => $"{concept}에 대한 설명이 성립하려면 무엇이 사실이어야 하나요? 그중 하나가 사실이 아니라면 어떻게 될까요?",
+        MoveKind.AssumptionTesting => $"{concept}에 대한 설명이 성립하려면 무엇이 사실이어야 하고, 그중 하나가 사실이 아니라면 어떻게 될까요?",
         MoveKind.IndependentExplanation => $"교과서 정의를 쓰지 않고, {concept}에 대해 자신의 생각으로 어떻게 설명하시겠어요?",
         MoveKind.Hint => $"힌트를 드릴게요. {concept}에 무엇이 필요한지 생각해 보세요. 그렇다면 이제 어떻게 설명하시겠어요?",
         MoveKind.GuidedExplanation => $"이미 말씀하신 내용에서 시작해서 {concept}에 대해 한 단계씩 살펴볼게요. 어떤 단계가 먼저 오고, 왜 그런가요?",

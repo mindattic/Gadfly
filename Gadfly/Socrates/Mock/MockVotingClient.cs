@@ -183,32 +183,32 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
                 $"You said \"{phrase}\". What exactly do you mean by that?",
                 $"When you say \"{phrase}\", what are you referring to, in your own words?",
             ],
-            "Clarify" => [$"Could you say more precisely what you mean when you talk about {concept}?"],
+            "Clarify" => [$"When you talk about {concept}, what exactly do you mean?"],
             "Probe" =>
             [
-                phrase.Length > 0 ? $"Why is it that \"{phrase}\"? Walk me through your reasoning." : $"Why is that true of {concept}? Walk me through your reasoning.",
+                phrase.Length > 0 ? $"You said \"{phrase}\". Why does that hold, and what shows that it is so?" : $"What reason do you have for what you said about {concept}?",
                 $"What follows from what you just said about {concept}, and how do you know?",
-                $"How would you convince a classmate that your explanation of {concept} is right?",
+                $"What would you say to a classmate who doubted your explanation of {concept}?",
             ],
             "Counterexample" =>
             [
-                $"Can you think of a case where your explanation of {concept} would not hold? What happens then?",
-                $"Is there a situation where {concept} behaves differently from how you described it? Describe it.",
+                $"Suppose someone pointed to a case where {concept} turned out differently from how you described it. What would your explanation say about that case?",
+                $"Where, if anywhere, would your explanation of {concept} stop holding, and what would happen there?",
             ],
             "Contradiction" when targets.Count >= 2 =>
             [
-                $"Earlier you said \"{Clip(targets[0], 80)}\", and later \"{Clip(targets[1], 80)}\". How can both be true?",
+                $"Earlier you said \"{Clip(targets[0], 80)}\", and later \"{Clip(targets[1], 80)}\". How do those two fit together, or which one would you change?",
             ],
-            "Contradiction" => ["Earlier you said something that seems to conflict with what you just said. How do both fit together?"],
+            "Contradiction" => [$"Think back to what you said earlier about {concept}. How does it fit with what you just said?"],
             "Apply" =>
             [
                 $"Imagine a new situation, one we have not discussed, where {concept} matters. What would you expect to happen, and why?",
-                $"Suppose you had to use {concept} to solve an everyday problem. Describe the problem and how you would reason about it.",
+                $"Suppose you had to use {concept} to solve an everyday problem. Which problem would you pick, and what would {concept} tell you about it?",
             ],
-            "Synthesize" => [$"How does {concept} relate to {(related is { Length: > 0 } r && r != "(none)" ? r : "the other ideas we have discussed")}?"],
+            "Synthesize" => [$"What connection, if any, is there between {concept} and {(related is { Length: > 0 } r && r != "(none)" ? r : "the other ideas we have discussed")}?"],
             "CausalReasoning" =>
             [
-                $"What causes the outcome you just described, and what would follow if that cause changed?",
+                "In the outcome you just described, what depends on what, and what would follow if that changed?",
                 $"Thinking about {concept}, why does that happen rather than something else?",
             ],
             "ScenarioVariation" =>
@@ -261,30 +261,30 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
             "Clarify" when phrase.Length > 0 =>
             [
                 $"“{phrase}”라고 하셨는데, 정확히 어떤 뜻인가요?",
-                $"“{phrase}”라고 말씀하실 때 무엇을 가리키는지 자신의 말로 설명해 주시겠어요?",
+                $"“{phrase}”라고 말씀하실 때, 자신의 말로 하면 무엇을 가리키나요?",
             ],
-            "Clarify" => [$"{concept}에 대해 말씀하실 때 어떤 뜻인지 조금 더 정확하게 설명해 주시겠어요?"],
+            "Clarify" => [$"{concept}에 대해 말씀하실 때, 정확히 어떤 뜻인가요?"],
             "Probe" =>
             [
-                phrase.Length > 0 ? $"왜 “{phrase}”라고 생각하세요? 이유를 차근차근 설명해 주세요." : $"{concept}에 대해 왜 그것이 맞다고 생각하세요? 이유를 설명해 주세요.",
-                $"방금 {concept}에 대해 하신 말씀에서 무엇이 따라 나오나요? 그것을 어떻게 아세요?",
-                $"{concept}에 대한 설명이 맞다는 것을 친구에게 어떻게 설득하시겠어요?",
+                phrase.Length > 0 ? $"“{phrase}”라고 하셨는데, 그것은 왜 성립하고 무엇이 그렇다는 것을 보여 주나요?" : $"{concept}에 대해 하신 말씀에는 어떤 근거가 있나요?",
+                $"방금 {concept}에 대해 하신 말씀에서 무엇이 따라 나오고, 그것을 어떻게 아세요?",
+                $"{concept}에 대한 설명을 의심하는 친구에게 무엇이라고 말하시겠어요?",
             ],
             "Counterexample" =>
             [
-                $"{concept}에 대한 설명이 맞지 않는 경우를 생각해 볼 수 있을까요? 그때는 어떻게 될까요?",
-                $"{concept}이(가) 말씀하신 것과 다르게 작동하는 상황이 있을까요? 설명해 주세요.",
+                $"누군가 {concept}이(가) 말씀하신 것과 다르게 된 경우를 든다고 해 볼게요. 그 경우를 설명으로 어떻게 다루시겠어요?",
+                $"{concept}에 대한 설명이 성립하지 않는 곳이 있다면 어디이고, 거기서는 어떻게 될까요?",
             ],
-            "Contradiction" => ["앞에서 하신 말씀과 방금 하신 말씀이 서로 맞지 않는 것 같아요. 두 가지가 어떻게 함께 성립할 수 있을까요?"],
+            "Contradiction" => [$"앞에서 {concept}에 대해 하신 말씀을 떠올려 보세요. 그것은 방금 하신 말씀과 어떻게 맞아떨어지나요?"],
             "Apply" =>
             [
                 $"아직 이야기하지 않은 새로운 상황에서 {concept}이(가) 중요하다고 상상해 보세요. 어떤 일이 일어날 것 같고, 왜 그럴까요?",
-                $"일상의 문제를 {concept}(으)로 풀어야 한다고 해 볼게요. 어떤 문제이고, 어떻게 생각해 보시겠어요?",
+                $"일상의 문제를 {concept}(으)로 풀어야 한다고 해 볼게요. 어떤 문제를 고르고, {concept}이(가) 그 문제에 대해 무엇을 알려 줄까요?",
             ],
-            "Synthesize" => [$"{concept}은(는) {(related is { Length: > 0 } r && r != "(none)" ? r : "지금까지 이야기한 다른 개념들")}과(와) 어떻게 연결되나요?"],
+            "Synthesize" => [$"{concept}과(와) {(related is { Length: > 0 } r && r != "(none)" ? r : "지금까지 이야기한 다른 개념들")} 사이에 관계가 있다면 그것은 무엇인가요?"],
             "CausalReasoning" =>
             [
-                "방금 말씀하신 결과의 원인은 무엇이고, 그 원인이 바뀌면 무엇이 달라질까요?",
+                "방금 말씀하신 결과에서 무엇이 무엇에 달려 있고, 그것이 바뀌면 무엇이 달라질까요?",
                 $"{concept}을(를) 생각해 볼 때, 왜 다른 일이 아니라 그 일이 일어날까요?",
             ],
             "ScenarioVariation" =>
@@ -295,12 +295,12 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
             "AssumptionTesting" =>
             [
                 $"{concept}에 대한 설명이 맞으려면 무엇이 사실이어야 하나요?",
-                "그 답변에서 무엇을 가정하고 계신가요? 그 가정이 틀리면 어떻게 될까요?",
+                "그 답변에서 무엇을 가정하고 계시고, 그 가정이 틀리면 어떻게 될까요?",
             ],
             "IndependentExplanation" => [$"교과서 정의를 쓰지 않고, {concept}에 대해 자신의 생각으로 어떻게 설명하시겠어요?"],
             _ =>
             [
-                $"{concept}이(가) 무엇인지 자신의 말로 설명하고, 예를 하나 들어 주시겠어요?",
+                $"자신의 말로 하면 {concept}은(는) 무엇이고, 어떤 예로 설명하시겠어요?",
                 $"이제 {concept}에 대해 이야기해 볼게요. 자신의 말로 어떻게 설명하시겠어요?",
                 $"{concept}에 대해 가장 중요하게 이해해야 할 점은 무엇이고, 왜 그런가요?",
             ],
@@ -335,28 +335,28 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
                 $"Usted dijo «{phrase}». ¿Qué quiere decir exactamente con eso?",
                 $"Cuando dice «{phrase}», ¿a qué se refiere, con sus propias palabras?",
             ],
-            "Clarify" => [$"¿Podría explicar con más precisión qué quiere decir cuando habla de {concept}?"],
+            "Clarify" => [$"Cuando habla de {concept}, ¿qué quiere decir exactamente?"],
             "Probe" =>
             [
-                phrase.Length > 0 ? $"¿Por qué «{phrase}»? Explíqueme su razonamiento paso a paso." : $"¿Por qué es cierto eso de {concept}? Explíqueme su razonamiento.",
+                phrase.Length > 0 ? $"Usted dijo «{phrase}». ¿Por qué se sostiene eso, y qué muestra que es así?" : $"¿Qué razón tiene para lo que dijo sobre {concept}?",
                 $"¿Qué se deduce de lo que acaba de decir sobre {concept}, y cómo lo sabe?",
-                $"¿Cómo convencería a un compañero de clase de que su explicación de {concept} es correcta?",
+                $"¿Qué le diría a un compañero de clase que dudara de su explicación de {concept}?",
             ],
             "Counterexample" =>
             [
-                $"¿Se le ocurre un caso en el que su explicación de {concept} no se cumpliría? ¿Qué pasaría entonces?",
-                $"¿Hay alguna situación en la que {concept} funcione de otra manera de como lo describió? Descríbala.",
+                $"Suponga que alguien señala un caso en el que {concept} resultó distinto de como lo describió. ¿Qué diría su explicación sobre ese caso?",
+                $"¿Dónde, si en algún lugar, dejaría de sostenerse su explicación de {concept}, y qué pasaría allí?",
             ],
-            "Contradiction" => ["Antes dijo algo que parece no coincidir con lo que acaba de decir. ¿Cómo encajan las dos cosas?"],
+            "Contradiction" => [$"Piense en lo que dijo antes sobre {concept}. ¿Cómo encaja con lo que acaba de decir?"],
             "Apply" =>
             [
                 $"Imagine una situación nueva, que no hayamos comentado, en la que {concept} sea importante. ¿Qué esperaría que pasara y por qué?",
-                $"Suponga que tiene que usar {concept} para resolver un problema cotidiano. Describa el problema y cómo razonaría.",
+                $"Suponga que tiene que usar {concept} para resolver un problema cotidiano. ¿Qué problema elegiría y qué le diría {concept} sobre él?",
             ],
-            "Synthesize" => [$"¿Qué relación hay entre {concept} y {(related is { Length: > 0 } r && r != "(none)" ? r : "las otras ideas que hemos comentado")}?"],
+            "Synthesize" => [$"¿Qué relación hay, si la hay, entre {concept} y {(related is { Length: > 0 } r && r != "(none)" ? r : "las otras ideas que hemos comentado")}?"],
             "CausalReasoning" =>
             [
-                "¿Qué causa el resultado que acaba de describir, y qué pasaría si esa causa cambiara?",
+                "En el resultado que acaba de describir, ¿qué depende de qué, y qué pasaría si eso cambiara?",
                 $"Pensando en {concept}, ¿por qué ocurre eso y no otra cosa?",
             ],
             "ScenarioVariation" =>
@@ -372,7 +372,7 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
             "IndependentExplanation" => [$"Sin usar una definición de libro, ¿cómo reconstruiría la idea de {concept} a partir de su propio razonamiento?"],
             _ =>
             [
-                $"Con sus propias palabras, ¿qué es {concept}? ¿Cómo lo explicaría con un ejemplo?",
+                $"Con sus propias palabras, ¿qué es {concept} y cómo lo explicaría con un ejemplo?",
                 $"Pasemos a {concept}. ¿Cómo lo describiría con sus propias palabras?",
                 $"¿Qué es lo más importante que hay que entender sobre {concept}, y por qué?",
             ],
@@ -400,14 +400,14 @@ public sealed partial class MockVotingClient : ISocraticVotingClient, IPanelInfo
     {
         var phrase = StudentAfter(prompt, "The unclear phrase:");
         if (IsKorean(prompt))
-            return phrase.Length > 0 ? $"“{Clip(phrase, 80)}”라고 하셨는데, 자신의 말로 어떤 뜻이었는지 설명해 주시겠어요?"
-                : "제가 제대로 이해했는지 확인하고 싶어요. 자신의 말로 다시 한번 말씀해 주시겠어요?";
+            return phrase.Length > 0 ? $"“{Clip(phrase, 80)}”라고 하셨는데, 자신의 말로 하면 어떤 뜻이었나요?"
+                : "제가 제대로 이해했는지 확인하고 싶어요. 자신의 말로 하면 어떤 뜻이었나요?";
         if (IsSpanish(prompt))
             return phrase.Length > 0 ? $"Usted dijo «{Clip(phrase, 80)}». ¿Qué quiso decir con eso, con sus propias palabras?"
-                : "¿Podría decirlo otra vez con sus propias palabras, para asegurarme de haber entendido lo que quiso decir?";
+                : "Quiero asegurarme de haber entendido. Con sus propias palabras, ¿qué quiso decir?";
         return phrase.Length > 0
             ? $"You said \"{Clip(phrase, 80)}\". What did you mean by that, in your own words?"
-            : "Could you say that again in your own words, so I'm sure I understood what you meant?";
+            : "I want to be sure I understood. In your own words, what did you mean just now?";
     }
 
     private static string LearningTurn(string prompt)

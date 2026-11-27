@@ -158,6 +158,43 @@ public class QuestionStreamingTests
         Assert.That(q, Is.EqualTo(string.Join(" ", speech.Said)));
     }
 
+    [TestCase("You said plants store energy. Where does that energy come from first? And why does it matter to the plant?",
+        "You said plants store energy. Where does that energy come from first?")]
+    [TestCase("Usted dijo que las plantas almacenan energía. ¿De dónde viene esa energía primero? ¿Y por qué le importa a la planta?",
+        "Usted dijo que las plantas almacenan energía. ¿De dónde viene esa energía primero?")]
+    [TestCase("식물이 에너지를 저장한다고 하셨어요. 그 에너지는 처음에 어디에서 오나요？ 그것이 식물에게 왜 중요한가요?",
+        "식물이 에너지를 저장한다고 하셨어요. 그 에너지는 처음에 어디에서 오나요？")]
+    public async Task OnceAPartEndsAQuestion_NothingFurtherIsSaid_AndTheQuestionIsWhatWasSaid(string reply, string asked)
+    {
+        var model = new StreamingModel { Question = _ => reply };
+        var speech = new RecordingSpeech();
+        var gen = new QuestionGenerator(new ScriptedPanel()) { LiveModel = model };
+
+        var q = await GenerateSpokenAsync(gen, speech);
+
+        Assert.That(q, Is.EqualTo(asked), "one question per turn (GAD-T815)");
+        Assert.That(string.Join(" ", speech.Said), Is.EqualTo(q));
+        Assert.That(speech.Finished, Is.EqualTo(q));
+        Assert.That(model.GuardPrompts.Any(p => p.Contains(reply[asked.Length..].Trim(), StringComparison.Ordinal)), Is.False,
+            "the second question is never guarded, let alone said");
+    }
+
+    [Test]
+    public async Task AReplyRunningPastTheWordLimit_IsNeverSaid_AndIsRedrafted()
+    {
+        var drafts = 0;
+        var overlong = "Suppose " + string.Join(" ", Enumerable.Repeat("leaf", 55)) + " why?";
+        var model = new StreamingModel { Question = _ => ++drafts == 1 ? overlong : "What happens to the light a leaf absorbs?" };
+        var speech = new RecordingSpeech();
+        var gen = new QuestionGenerator(new ScriptedPanel()) { LiveModel = model };
+
+        var q = await GenerateSpokenAsync(gen, speech);
+
+        Assert.That(q, Is.EqualTo("What happens to the light a leaf absorbs?"));
+        Assert.That(speech.Said, Is.EqualTo(new[] { q }));
+        Assert.That(gen.LastOutcome, Does.Contain("redrafted"));
+    }
+
     [Test]
     public async Task WithoutAVoice_TheQuestionComesWhole_AsBefore()
     {
