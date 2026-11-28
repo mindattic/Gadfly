@@ -32,7 +32,7 @@ confirmed, corrected, said again or changed (see step 5 under "How an answer flo
   exam (`SocraticSession.PauseAllowance`: 10 minutes, or half the budget if shorter), it only counts after the clock
   started, and any answer ends an open pause by the server's clock. No 3D graphics shows her live presence (a glowing
   circuitry sphere, never a picture of her) that glows with her voice; reduced motion keeps the 3D examiner, only calmer
-  (GAD-T694). If the avatar fails entirely, questions are read out by the
+  (GAD-T694). The examiner is now always that glowing orb; no 3D head loads (GAD-T838, GAD-T839). If the avatar fails entirely, questions are read out by the
   browser's own speech and shown as text, and answers are still spoken (see "The examiner's delivery"). See
   "Resilience" below for what a dropped connection to the page itself (not just a device or a hub) does, and for the
   words-already-spoken draft a reload or a crash no longer loses.
@@ -130,7 +130,9 @@ screens are untouched.
 
 ## The examiner's delivery (GAD-T303)
 
-How she looks and sounds while she speaks. The avatar library (`<ma-avatar>`, MindAttic.Avatar) does the 3D head, streaming and
+How she looks and sounds while she speaks. The 3D examiner models described here are replaced by a glowing orb that pulses
+in rhythm with her spoken words (GAD-T838, GAD-T839): `<ma-avatar>` gets no model and plays her voice through its plain Web
+Audio path; the voice, timing and caption behaviour below stay. The avatar library (`<ma-avatar>`, MindAttic.Avatar) does the 3D head, streaming and
 word-timed lip sync; `wwwroot/js/examiner-voice.js` adds the rest, and `voice-room.js` tells it when each utterance is prepared,
 starts and ends.
 
