@@ -6,6 +6,7 @@
 @inject ITenantContext Tenant
 @inject TimeProvider Clock
 @inject Gadfly.Server.Localization.UiText T
+@inject IJSRuntime JS
 
 <HeadContent><link rel="stylesheet" href="student.css" /><link rel="stylesheet" href="practice.css" /></HeadContent>
 <PageTitle>@T["myExams.pageTitle"]</PageTitle>
@@ -40,7 +41,20 @@ else
     <section class="exam-catalog page-section" aria-labelledby="exam-list-heading">
         <div class="exam-list-header">
             <h2 id="exam-list-heading">@T["myExams.list.heading"]</h2>
-            <div class="exam-list-tools"></div>
+            @if (cards.Count > 0)
+            {
+                <span id="exam-filter-count" class="hint" role="status">@(filter.Trim().Length > 0 ? T["myExams.filter.count", Visible().Count, cards.Count] : "")</span>
+                <div class="exam-list-tools exam-filter" role="search">
+                    <label for="exam-filter-input" class="visually-hidden">@T["myExams.filter.label"]</label>
+                    <input id="exam-filter-input" type="search" autocomplete="off" spellcheck="false" data-slash-focus
+                           placeholder="@T["myExams.filter.placeholder"]" aria-describedby="exam-filter-count"
+                           @ref="filterInput" @bind="filter" @bind:event="oninput" @onkeydown="FilterKeyAsync" />
+                    @if (filter.Length > 0)
+                    {
+                        <button type="button" class="exam-filter-clear" aria-label="@T["myExams.filter.clear"]" @onclick="ClearFilterAsync">&times;</button>
+                    }
+                </div>
+            }
         </div>
         @if (cards.Count == 0)
         {
@@ -48,8 +62,13 @@ else
         }
         else
         {
+            var visible = Visible();
+            @if (visible.Count == 0)
+            {
+                <p class="notice info">@T["myExams.filter.none"]</p>
+            }
             <div class="exam-list">
-                @foreach (var c in cards)
+                @foreach (var c in visible)
                 {
                     var r = c.Row;
                     var pub = r is null ? null : Published(r.AssignmentId);
@@ -131,6 +150,43 @@ else
 
     private IReadOnlyList<Card>? cards;
     private IReadOnlyList<Gadfly.Server.Grading.StudentResultRow> published = [];
+    private string filter = "";
+    private ElementReference filterInput;
+    private bool slashBound;
+
+    // Every word typed must appear somewhere in the card's title, category or languages (GAD-T846).
+    private List<Card> Visible()
+    {
+        var words = filter.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return words.Length == 0 ? cards!.ToList() : cards!.Where(c => words.All(w => Haystack(c).Contains(w, StringComparison.CurrentCultureIgnoreCase))).ToList();
+    }
+
+    private string Haystack(Card c) => string.Join(' ',
+        [c.Title, c.Category.Length > 0 ? c.Category : T["myExams.catalog.uncategorized"], .. c.Languages, .. c.Languages.Select(Gadfly.Engine.ExamLanguage.NativeName)]);
+
+    private async Task FilterKeyAsync(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") await ClearFilterAsync();
+    }
+
+    private async Task ClearFilterAsync()
+    {
+        filter = "";
+        await filterInput.FocusAsync();
+    }
+
+    // '/' focuses the filter from anywhere on the page outside a text field.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (slashBound || cards is not { Count: > 0 }) return;
+        slashBound = true;
+        try
+        {
+            await using var module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/slash-focus.js");
+            await module.InvokeVoidAsync("install");
+        }
+        catch (JSDisconnectedException) { }
+    }
 
     // Results reach students only through the grading workflow: approved and published (GAD-T98).
     private Gadfly.Server.Grading.StudentResultRow? Published(Guid assignmentId) =>
