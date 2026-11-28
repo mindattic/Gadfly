@@ -17,7 +17,8 @@ namespace Gadfly.Server.Platform;
 /// worklet and that same model's internal worker, and <c>connect-src wss:</c> for the SignalR hubs (voice relay,
 /// session hub) and the speech/avatar services. <c>style-src 'unsafe-inline'</c> covers the handful of literal
 /// <c>style="…"</c> attributes in the markup (Blazor has no practical way to nonce those); nothing here reaches
-/// script-src, which stays nonce-only. Nothing is loaded from a CDN (GAD-T53, GAD-T57): default-src 'self' covers it.
+/// script-src, which stays nonce-only. Nothing is loaded from a CDN (GAD-T53, GAD-T57): default-src 'self' covers it,
+/// except the Outfit Google Font (GAD-T855), allowed by name in style-src and font-src.
 /// </remarks>
 public static class SecurityHeadersMiddleware
 {
@@ -26,9 +27,9 @@ public static class SecurityHeadersMiddleware
         // blob: in script-src: an AudioWorklet module is checked against script-src, not worker-src, and the microphone
         // capture loads its worklet from a blob: URL, so without it the exam room's microphone never opens (GAD-T493).
         "script-src 'self' 'wasm-unsafe-eval' blob: 'nonce-{0}'; " +
-        "style-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
         "img-src 'self' data: blob:; " +
-        "font-src 'self'; " +
+        "font-src 'self' https://fonts.gstatic.com; " +
         "media-src 'self' blob:; " +
         // {1}: the examiner avatar's storage origin when Gadfly:Voice:AvatarModelUrl points off-site (GAD-T493). blob: is the
         // model read back from Cache Storage (model-cache.js, GAD-T698), which the 3D loader fetches.

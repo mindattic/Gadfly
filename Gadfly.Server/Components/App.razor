@@ -7,6 +7,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <title>Gadfly Exams · @AppVersion.Label</title>
+    @* Outfit, the app's one typeface (GAD-T855): --font-sans in app.css reads it everywhere, with the system stack as fallback. *@
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="app.css" />
     @* The mock-mode banner's styles (GAD-T507): linked here, not from the banner's own HeadContent, because Blazor keeps only
        one HeadContent per page and a page's stylesheet link replaced the banner's, leaving it unstyled in the app shell. *@

@@ -36,9 +36,11 @@
     /* The coarse-pointer target (44 CSS px): buttons and other controls grow to it on a touch screen. */
     --target-touch: 2.75rem;
     /* Type scale: h1 xl-2xl (fluid), h2 xl, h3 lg, h4 base; body base; hints and table cells sm; badges xs. Everything is
-       set in the system UI sans (no web font is loaded, so the CSP is untouched). --font-serif is kept as a name other
-       sheets read and points at the same sans stack. */
-    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+       set in Outfit (owner request 2026-11-28, GAD-T855), loaded from Google Fonts in App.razor's <head>; the CSP's
+       style-src and font-src allow fonts.googleapis.com / fonts.gstatic.com for it. The system stack remains the
+       fallback while the font loads or if it fails. --font-serif is kept as a name other sheets read and points at
+       the same sans stack. */
+    --font-sans: 'Outfit', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-serif: var(--font-sans);
     --text-xs: .8rem; --text-sm: .9rem; --text-base: 1rem; --text-lg: 1.1rem; --text-xl: 1.25rem;
     --text-2xl: clamp(1.4rem, 1.2rem + 1vw, 1.6rem);
