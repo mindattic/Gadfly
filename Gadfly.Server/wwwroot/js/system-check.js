@@ -50,9 +50,16 @@ export function chooseDevice(kind, id) {
 
 // ------------------------------------------------------------------------------------- microphone and camera (GAD-T239)
 
-/** Speech louder than this (dBFS) for a few frames in a row counts as "we heard you". */
+/**
+ * "We heard you": HEARD_FRAMES loud 100 ms frames, not necessarily in a row, within the last WINDOW_FRAMES, so a short or
+ * soft "hello" counts. A frame is loud above HEARD_DBFS, or above the room's own noise floor by FLOOR_MARGIN_DB in a quiet
+ * room, but never below QUIETEST_DBFS, so a silent or dead microphone still fails.
+ */
 const HEARD_DBFS = -45;
+const QUIETEST_DBFS = -58;
+const FLOOR_MARGIN_DB = 12;
 const HEARD_FRAMES = 3;
+const WINDOW_FRAMES = 20;
 
 let M = null;
 
@@ -77,7 +84,7 @@ function outcome(err) {
 export async function startMedia(dotnet, video, level, options) {
     // options.microphone === false: the student has the typed-answer accommodation (GAD-T260), so only the camera is opened.
     stopMedia();
-    const m = { dotnet, video, level, streams: [], ctx: null, timer: null, loud: 0, microphone: null, camera: null, onGesture: null };
+    const m = { dotnet, video, level, streams: [], ctx: null, timer: null, recent: [], floor: null, microphone: null, camera: null, onGesture: null };
     M = m;
     if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) || window.isSecureContext === false) {
         report(m, "microphone", "unsupported");
@@ -125,8 +132,14 @@ async function openMicrophone(m) {
             for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
             const dbfs = 20 * Math.log10(Math.sqrt(sum / buf.length) + 1e-9);
             if (m.level) m.level.style.setProperty("--level", String(Math.max(0, Math.min(1, (dbfs + 60) / 55))));
-            m.loud = dbfs > HEARD_DBFS ? m.loud + 1 : 0;
-            if (m.loud >= HEARD_FRAMES && m.microphone === "listening") report(m, "microphone", "ok");
+            // The floor follows the room down at once and back up slowly, so speech itself barely lifts it.
+            // Digital silence (audio still suspended, a muted input) says nothing about the room and is left out.
+            if (dbfs > -100) m.floor = m.floor === null || dbfs < m.floor ? dbfs : m.floor + (dbfs - m.floor) * 0.02;
+            const threshold = m.floor === null ? HEARD_DBFS : Math.max(QUIETEST_DBFS, Math.min(HEARD_DBFS, m.floor + FLOOR_MARGIN_DB));
+            m.recent.push(dbfs > threshold);
+            if (m.recent.length > WINDOW_FRAMES) m.recent.shift();
+            const loud = m.recent.filter(Boolean).length;
+            if (loud >= HEARD_FRAMES && m.microphone === "listening") report(m, "microphone", "ok");
         }, 100);
         void startMicCheck(m, stream);
     } catch {

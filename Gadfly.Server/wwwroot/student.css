@@ -98,7 +98,11 @@ textarea { width: 100%; resize: vertical; }
     .exam-live .thinking { flex-wrap: wrap; }
     .exam-live .thinking .hint { font-weight: 400; }
     .exam-live .exam-card .actions .hint { margin: 0; }
-    .exam-live .finish { margin: 0; }
+    /* The finish link sits in the last card's right-hand corner instead of a row of its own below it, which fell under the fold
+       on a 1440x900 laptop. */
+    .exam-live { position: relative; }
+    .exam-live .finish { margin: 0; position: absolute; right: var(--space-4); bottom: var(--space-3); }
+    .exam-live:has(> .finish) > :is(.exam-card, .last-answer) { padding-right: 17rem; }
     .exam-live .finish .notice { position: fixed; z-index: 30; left: 50%; bottom: var(--space-4); transform: translateX(-50%); width: min(36rem, calc(100% - 2rem)); box-shadow: var(--shadow-3); }
 }
 

@@ -115,7 +115,7 @@
     else
     {
         <div class="table-scroll">
-            <table class="grid">
+            <table class="grid stacked">
                 <caption class="visually-hidden">Exams</caption>
                 <thead><tr><th scope="col">Exam</th><th scope="col">Status</th><th scope="col">Notes</th><th scope="col" class="num">Objectives</th><th scope="col" class="num">With terms</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
                 <tbody>
@@ -136,10 +136,10 @@
                                     </label>
                                 }
                             </td>
-                            <td>@e.Status</td>
-                            <td>@(e.Processing ?? (e.CollectionStatus == ProcessingStatus.Ready ? "Ready" : e.CollectionStatus.ToString()))</td>
-                            <td class="num">@e.Objectives</td>
-                            <td class="num">@e.Assigned</td>
+                            <td data-label="Status">@e.Status</td>
+                            <td data-label="Notes">@(e.Processing ?? (e.CollectionStatus == ProcessingStatus.Ready ? "Ready" : e.CollectionStatus.ToString()))</td>
+                            <td class="num" data-label="Objectives">@e.Objectives</td>
+                            <td class="num" data-label="With terms">@e.Assigned</td>
                             <td>
                                 <div class="row-actions">
                                     <button class="link" type="button" @onclick="() => EditAsync(e.Id)" disabled="@busy">Edit</button>
@@ -217,7 +217,7 @@ else if (CurrentTab == "students")
     else
     {
         <div class="table-scroll">
-            <table class="grid">
+            <table class="grid stacked">
                 <caption class="visually-hidden">Students</caption>
                 <thead><tr><th scope="col">User name</th><th scope="col">Name</th><th scope="col">Email</th><th scope="col" class="num">Exams</th><th scope="col">Last sign-in</th><th scope="col">Password</th></tr></thead>
                 <tbody>
@@ -225,11 +225,11 @@ else if (CurrentTab == "students")
                     {
                         <tr class="@(s.Active ? null : "muted")">
                             <td>@s.UserName@(s.Active ? "" : " (removed)")</td>
-                            <td>@s.DisplayName</td>
-                            <td>@s.Email</td>
-                            <td class="num">@s.Assigned</td>
-                            <td>@(s.LastLogin is { } l ? l.ToString("yyyy-MM-dd HH:mm") + " UTC" : "never")</td>
-                            <td>
+                            <td data-label="Name">@s.DisplayName</td>
+                            <td data-label="Email">@s.Email</td>
+                            <td class="num" data-label="Exams">@s.Assigned</td>
+                            <td data-label="Last sign-in">@(s.LastLogin is { } l ? l.ToString("yyyy-MM-dd HH:mm") + " UTC" : "never")</td>
+                            <td data-label="Password">
                                 @if (resetFor == s.UserId)
                                 {
                                     <div class="row-actions">
@@ -300,7 +300,7 @@ else
             </select>
         </label>
         <div class="table-scroll">
-            <table class="grid">
+            <table class="grid stacked">
                 <caption class="visually-hidden">Student exams</caption>
                 <thead><tr><th scope="col">Student</th><th scope="col">Exam</th><th scope="col">Attempts</th><th scope="col">Answers</th><th scope="col">Status</th><th scope="col">Latest score</th><th scope="col">Transcript</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
                 <tbody>
@@ -308,8 +308,8 @@ else
                     {
                         <tr>
                             <td>@a.StudentName</td>
-                            <td>@a.ExamTitle</td>
-                            <td>
+                            <td data-label="Exam">@a.ExamTitle</td>
+                            <td data-label="Attempts">
                                 @if (attemptsFor == a.Id)
                                 {
                                     <div class="row-actions">
@@ -323,11 +323,11 @@ else
                                     <button class="link" type="button" title="Change attempts allowed" @onclick="() => { attemptsFor = a.Id; attemptsValue = a.AttemptsAllowed; }">@a.AttemptsUsed of @a.AttemptsAllowed used</button>
                                 }
                             </td>
-                            <td title="GAD-T260: typed answers are an accommodation for one student on one exam (documented speech, hearing or anxiety need); camera, spoken questions and eye-contact check stay. Audited.">
+                            <td data-label="Answers" title="GAD-T260: typed answers are an accommodation for one student on one exam (documented speech, hearing or anxiety need); camera, spoken questions and eye-contact check stay. Audited.">
                                 @(a.TypedAnswers ? "typed (accommodation)" : "spoken")
                                 <button class="link" type="button" disabled="@busy" @onclick="() => TypedAnswersAsync(a, !a.TypedAnswers)">@(a.TypedAnswers ? "Withdraw" : "Grant typed answers")</button>
                             </td>
-                            <td>
+                            <td data-label="Status">
                                 @a.Status
                                 @if (a.HeldSessionId is { } held)
                                 {
@@ -335,8 +335,8 @@ else
                                     <a class="tag warn" href="review/@held" title="@(a.ReviewReason ?? "Marked for an instructor's review"). The result is held until someone clears the mark or approves with a note.">@Gadfly.Server.Review.InstructorReview.Badge: @Gadfly.Server.Review.InstructorReview.ShortReason(a.ReviewReason, a.HeldLanguage)</a>
                                 }
                             </td>
-                            <td>@(a.LatestScore ?? "—")</td>
-                            <td>
+                            <td data-label="Latest score">@(a.LatestScore ?? "—")</td>
+                            <td data-label="Transcript">
                                 @if (a.LatestSessionId is { } sid)
                                 {
                                     <div class="row-actions">

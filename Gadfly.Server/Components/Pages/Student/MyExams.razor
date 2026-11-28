@@ -80,23 +80,10 @@ else
                                 <span class="badge badge-@r.Standing.ToString().ToLowerInvariant()">@StudentExams.Describe(r.Standing, T)</span>
                             }
                         </div>
-                        <p class="hint">
-                            @(c.Category.Length > 0 ? c.Category : T["myExams.catalog.uncategorized"])
-                            @if (c.Languages.Count > 0)
-                            {
-                                <span> · @T["myExams.catalog.languages"]: @string.Join(", ", c.Languages.Select(Gadfly.Engine.ExamLanguage.NativeName))</span>
-                            }
-                            @if (r is not null && (r.OpensAt is not null || r.ClosesAt is not null))
-                            {
-                                <span> · @Window(r)</span>
-                            }
-                            @if (r is not null && r.AttemptsUsed > 0)
-                            {
-                                <span> · @T["myExams.attempts", r.AttemptsUsed, r.AttemptsAllowed]</span>
-                            }
-                            @* Every exam is spoken on camera (GAD-T239); typing is only an accommodation the instructor grants (GAD-T260). *@
-                            <span> · @(r is { TypedAnswers: true } ? T["myExams.typed"] : T["myExams.spoken"])</span>
-                        </p>
+                        @if (Facts(c, r) is { Count: > 0 } facts)
+                        {
+                            <p class="hint">@string.Join(" · ", facts)</p>
+                        }
                         @if (r is { ExamArchived: true, ActiveSessionId: not null })
                         {
                             <p class="hint">@T["myExams.archivedInProgress"]</p>
@@ -162,7 +149,7 @@ else
     }
 
     private string Haystack(Card c) => string.Join(' ',
-        [c.Title, c.Category.Length > 0 ? c.Category : T["myExams.catalog.uncategorized"], .. c.Languages, .. c.Languages.Select(Gadfly.Engine.ExamLanguage.NativeName)]);
+        [c.Title, c.Category, .. c.Languages, .. c.Languages.Select(Gadfly.Engine.ExamLanguage.NativeName)]);
 
     private async Task FilterKeyAsync(KeyboardEventArgs e)
     {
@@ -222,4 +209,16 @@ else
         (null, { } c) => T["myExams.window.closes", T.DateTime(c)],
         ({ } o, { } c) => T["myExams.window.range", T.DateTime(o), T.DateTime(c)],
     };
+
+    // Every exam is spoken on camera (GAD-T239), so only the typed-answer accommodation (GAD-T260) is worth a word.
+    private List<string> Facts(Card c, StudentAssignmentView? r)
+    {
+        var facts = new List<string>();
+        if (c.Category.Length > 0) facts.Add(c.Category);
+        if (c.Languages.Count > 0) facts.Add($"{T["myExams.catalog.languages"]}: {string.Join(", ", c.Languages.Select(Gadfly.Engine.ExamLanguage.NativeName))}");
+        if (r is not null && (r.OpensAt is not null || r.ClosesAt is not null)) facts.Add(Window(r));
+        if (r is not null && r.AttemptsUsed > 0) facts.Add(T["myExams.attempts", r.AttemptsUsed, r.AttemptsAllowed]);
+        if (r is { TypedAnswers: true }) facts.Add(T["myExams.typed"]);
+        return facts;
+    }
 }
