@@ -35,7 +35,7 @@ function selectionInQuestion() {
     const sel = document.getSelection ? document.getSelection() : null;
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return 0;
     const node = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
-    if (!node || !node.closest || !node.closest(".exam-question")) return 0;
+    if (!node || !node.closest || !node.closest(".exam-question, .voice-caption, .voice-line-examiner")) return 0;
     return String(sel).length;
 }
 

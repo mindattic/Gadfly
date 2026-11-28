@@ -50,7 +50,6 @@ textarea { width: 100%; resize: vertical; }
 /* The exam room's one live region for the question (GAD-T599): read by screen readers, not shown. */
 .exam-announce { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
 .exam-question { font-size: 1.35rem; line-height: 1.45; font-weight: 600; }
-.muted-question { color: var(--muted); font-size: var(--text-lg); }
 .thinking { display: flex; gap: var(--space-3); align-items: center; font-weight: 600; }
 .dots { display: inline-flex; gap: var(--space-1); }
 .dots i { width: .5rem; height: .5rem; border-radius: 50%; background: var(--accent); animation: gadfly-pulse 1.2s infinite ease-in-out; }
@@ -90,12 +89,11 @@ textarea { width: 100%; resize: vertical; }
     .exam-live > .voice-room:has(> .voice-interview:not([hidden])) { flex: 1 0 auto; min-height: 17rem; }
     .exam-live .exam-head { margin: 0; align-items: center; gap: var(--space-2) var(--space-4); }
     .exam-live .exam-head h1 { font-size: var(--text-xl); }
-    .exam-live .exam-card { max-width: none; margin: 0; padding: var(--space-2) var(--space-4); gap: var(--space-1); align-content: start; height: 7.75rem; overflow-y: auto; box-sizing: border-box; }
+    .exam-live .exam-card { max-width: none; margin: 0; padding: var(--space-2) var(--space-4); gap: var(--space-1); align-content: start; height: 5.5rem; overflow-y: auto; box-sizing: border-box; }
     /* A typed answer, a clarification or a typo fix needs its box: the card grows and the stage gives way. */
     .exam-live .exam-card:has(textarea, .verify) { height: auto; max-height: 50vh; }
     .exam-live .last-answer { max-width: none; margin: 0; padding: var(--space-2) var(--space-4); }
     .exam-live .exam-question { font-size: var(--text-lg); line-height: 1.4; }
-    .exam-live .muted-question { font-size: var(--text-base); }
     .exam-live .concept { font-size: var(--text-xs); }
     .exam-live .thinking { flex-wrap: wrap; }
     .exam-live .thinking .hint { font-weight: 400; }

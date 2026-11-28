@@ -255,7 +255,7 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
             if (course.IsArchived) return new(false, "That course is archived; choose an active one.");
             exam = new Exam
             {
-                OrganizationId = org, Status = ExamStatus.Draft, CreatedByUserId = User, CreatedAt = clock.GetUtcNow(), Mode = ExamMode.Text,
+                OrganizationId = org, Status = ExamStatus.Draft, CreatedByUserId = User, CreatedAt = clock.GetUtcNow(), Mode = ExamMode.Voice,
                 PolicyJson = JsonSerializer.Serialize(new SessionPolicy { Seed = Random.Shared.Next() }, Json),
             };
             db.Exams.Add(exam);

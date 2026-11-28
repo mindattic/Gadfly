@@ -153,7 +153,7 @@ public static class StudentExams
                 ExamId = a.ExamId,
                 ExamTitle = texts?.Title ?? a.Exam?.Title ?? "Exam",
                 Instructions = texts is not null ? texts.Instructions : a.Exam?.Instructions,
-                Mode = a.Exam?.Mode ?? ExamMode.Text,
+                Mode = a.Exam?.Mode ?? ExamMode.Voice,
                 Integrity = a.Exam?.IntegrityLevel ?? IntegrityLevel.Standard,
                 OpensAt = a.OpensAt,
                 ClosesAt = a.ClosesAt,

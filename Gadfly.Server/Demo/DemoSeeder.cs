@@ -431,4 +431,4 @@ public static class DemoSeeder
 public sealed record DemoObjective(string Key, string Title, string Description, string ConceptTitle, decimal MaxScore);
 
 public sealed record DemoAssessment(string Title, string Course, string Subject, string Topic, string Collection, string MaterialFile,
-    string Instructions, IReadOnlyList<DemoObjective> Objectives, ExamMode Mode = ExamMode.Text);
+    string Instructions, IReadOnlyList<DemoObjective> Objectives, ExamMode Mode = ExamMode.Voice);

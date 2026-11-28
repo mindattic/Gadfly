@@ -1538,8 +1538,11 @@ function sendAudio(s, pcm, captureStartMs) {
         queueOrSend(s, () => s.speechConn.send("SendAudio", pcmBase64, captureStartMs));
         return;
     }
-    // A copy: the chunk may wait in the reconnect queue after the capture pipeline has moved on.
-    const bytes = new Uint8Array(pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength));
+    // A copy: the chunk may wait in the reconnect queue after the capture pipeline has moved on. MicCapture hands over the PCM16
+    // as an ArrayBuffer; reading .buffer off it threw on the first chunk of speech and paused the exam as "microphone" (GAD-T853).
+    const bytes = pcm instanceof ArrayBuffer
+        ? new Uint8Array(pcm.slice(0))
+        : new Uint8Array(pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength));
     queueOrSend(s, () => s.speechConn.send("SendAudioBinary", bytes, captureStartMs));
 }
 

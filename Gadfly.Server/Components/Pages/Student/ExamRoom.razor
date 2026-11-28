@@ -127,10 +127,9 @@
 
         case Phase.Thinking:
             <section class="panel wide exam-card" aria-busy="true">
-                @if (step?.Question is { } asked && thinkingAbout == ThinkingAbout.Answer)
+                @if (step?.Question is not null && thinkingAbout == ThinkingAbout.Answer)
                 {
                     <p class="hint">@step.ConceptTitle</p>
-                    <p class="exam-question muted-question">@asked</p>
                 }
                 <div class="thinking" role="status">
                     <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -162,7 +161,8 @@
                 {
                     <p class="concept">@step.ConceptTitle</p>
                 }
-                <p class="exam-question">@step?.Question</p>
+                @* The question shows as the caption under the examiner, in step with her speech, and in the transcript; screen
+                   readers hear it from the exam-announce region (GAD-T599), so the card doesn't repeat it. *@
                 @if (step?.Verification is { Kind: ResponseLedger.TranscriptKind })
                 {
                     @* A read-back request left over from before GAD-T405: there is nothing to confirm or correct any more. The page takes

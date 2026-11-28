@@ -117,7 +117,7 @@
         <div class="table-scroll">
             <table class="grid">
                 <caption class="visually-hidden">Exams</caption>
-                <thead><tr><th scope="col">Exam</th><th scope="col">Mode</th><th scope="col">Status</th><th scope="col">Notes</th><th scope="col" class="num">Objectives</th><th scope="col" class="num">With terms</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+                <thead><tr><th scope="col">Exam</th><th scope="col">Status</th><th scope="col">Notes</th><th scope="col" class="num">Objectives</th><th scope="col" class="num">With terms</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
                 <tbody>
                     @foreach (var e in exams)
                     {
@@ -136,7 +136,6 @@
                                     </label>
                                 }
                             </td>
-                            <td>@(e.Voice ? "Voice" : "Text")</td>
                             <td>@e.Status</td>
                             <td>@(e.Processing ?? (e.CollectionStatus == ProcessingStatus.Ready ? "Ready" : e.CollectionStatus.ToString()))</td>
                             <td class="num">@e.Objectives</td>
@@ -162,7 +161,7 @@
                         @if (edit is not null && edit.Id == e.Id)
                         {
                             <tr class="desk-edit">
-                                <td colspan="7">
+                                <td colspan="6">
                                     <div class="desk-form">
                                         @if (e.Status != ExamStatus.Draft)
                                         {
@@ -262,7 +261,7 @@ else
                     <option value="">Choose…</option>
                     @foreach (var e in (exams ?? []).Where(x => x.Status == ExamStatus.Published))
                     {
-                        <option value="@e.Id">@e.Title@(e.Voice ? " (voice)" : "")</option>
+                        <option value="@e.Id">@e.Title</option>
                     }
                 </select>
             </label>
@@ -309,7 +308,7 @@ else
                     {
                         <tr>
                             <td>@a.StudentName</td>
-                            <td>@a.ExamTitle@(a.Voice ? " (voice)" : "")</td>
+                            <td>@a.ExamTitle</td>
                             <td>
                                 @if (attemptsFor == a.Id)
                                 {

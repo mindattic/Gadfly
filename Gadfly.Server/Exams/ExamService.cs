@@ -22,8 +22,8 @@ public sealed class ExamDraft
     public int Difficulty { get; set; } = 3;
     /// <summary>Follow-up questions allowed per concept after the opening question.</summary>
     public int MaxFollowUps { get; set; } = 5;
-    /// <summary>Text by default; Voice adds the talking examiner and spoken answers where the deployment has voice on.</summary>
-    public ExamMode Mode { get; set; } = ExamMode.Text;
+    /// <summary>Voice: every exam is spoken on camera; typed answers are a per-student accommodation, not an exam mode.</summary>
+    public ExamMode Mode { get; set; } = ExamMode.Voice;
     public IntegrityLevel IntegrityLevel { get; set; } = IntegrityLevel.Standard;
     public string? VoiceId { get; set; }
     public string? AvatarId { get; set; }

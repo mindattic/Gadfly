@@ -115,7 +115,7 @@ public static class TourCatalog
         [
             new(null, "Student terms",
                 "Every published exam is open to every student. Terms give one student their own opening and due dates, attempts and accommodations on one exam."),
-            new(".people-head .row-actions", "Set terms",
+            new(".page-header .row-actions", "Set terms",
                 "Pick a published exam, then choose whose terms to set: students ticked on the grid, a list of user names or emails, or every active student. Dates, attempts and extra time are set here."),
             new(".console-tabs", "List or grid",
                 "The list shows one row per student and exam with terms. The grid shows students down the side and exams across the top, so students on the default terms are easy to spot."),

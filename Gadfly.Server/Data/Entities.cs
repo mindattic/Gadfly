@@ -277,7 +277,7 @@ public sealed class Exam : ITenantOwned
     public string? Instructions { get; set; }
     /// <summary>Serialized Gadfly.Engine.SessionPolicy (concept keys, budget, difficulty...).</summary>
     public string PolicyJson { get; set; } = "{}";
-    public ExamMode Mode { get; set; } = ExamMode.Text;   // Voice arrives with the speech and avatar libraries
+    public ExamMode Mode { get; set; } = ExamMode.Voice;   // every exam is spoken on camera; typing is a per-student accommodation
     public IntegrityLevel IntegrityLevel { get; set; } = IntegrityLevel.Standard;
     public string? VoiceId { get; set; }
     public string? AvatarId { get; set; }

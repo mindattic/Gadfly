@@ -25,7 +25,7 @@ public static class ApiEndpoints
     public sealed record CreateCollection(string? Title);
     public sealed record ProcessRequest(bool RebuildConceptMap = false);
     public sealed record CreateExam(Guid CollectionId, string? Title, IReadOnlyList<string>? ConceptKeys, int Minutes = 20,
-        int Difficulty = 3, int MaxTurns = 30, string? Mode = "Text", string? Instructions = null);
+        int Difficulty = 3, int MaxTurns = 30, string? Mode = "Voice", string? Instructions = null);
     public sealed record AssignStudent(string? UserName, string? Email, DateTimeOffset? OpensAt, DateTimeOffset? ClosesAt, int? AttemptsAllowed = null);
     public sealed record CreateWebhook(string? Url, IReadOnlyList<string>? Events);
 
@@ -208,7 +208,7 @@ public static class ApiEndpoints
             {
                 OrganizationId = t.OrganizationId!.Value, CollectionId = body.CollectionId, Title = title,
                 Instructions = body.Instructions, PolicyJson = JsonSerializer.Serialize(policy, Camel),
-                Mode = string.Equals(mode, "Voice", StringComparison.OrdinalIgnoreCase) ? ExamMode.Voice : ExamMode.Text,
+                Mode = string.Equals(mode, "Text", StringComparison.OrdinalIgnoreCase) ? ExamMode.Text : ExamMode.Voice,
                 PromptSetId = ExamPrompts.SetId, PromptSetVersion = ExamPrompts.Version,
                 Status = ExamStatus.Published, CreatedByUserId = createdBy, CreatedAt = clock.GetUtcNow(), PublishedAt = clock.GetUtcNow(),
             };

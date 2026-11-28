@@ -874,7 +874,7 @@
     public Task OnVoiceProblem(string kind, string message, bool fatal) => InvokeAsync(async () =>
     {
         if (!fatal) return;
-        Log.LogInformation("The examiner paused for session {SessionId}: {Kind}.", SessionId, kind);
+        Log.LogInformation("The examiner paused for session {SessionId}: {Kind} ({Detail}).", SessionId, kind, message);
         await StopVoiceAsync();
         needsClick = kind == "gesture";
         notice = kind switch

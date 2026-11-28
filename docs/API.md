@@ -253,7 +253,7 @@ Archived concepts are left out. `404` until the collection has been processed.
   "minutes": 20,
   "difficulty": 3,
   "maxTurns": 30,
-  "mode": "Text",
+  "mode": "Voice",
   "instructions": "Explain in your own words. 'I don't know' is fine."
 }
 ```
@@ -266,7 +266,7 @@ Archived concepts are left out. `404` until the collection has been processed.
 | `minutes` | 20 | Clamped to 1–240. |
 | `difficulty` | 3 | Clamped to 1–5 (gentle to rigorous). |
 | `maxTurns` | 30 | Questions in the whole exam, clamped to 1–200. |
-| `mode` | `"Text"` | `"Text"` or `"Voice"` (any case). Kept for compatibility and stored, but it no longer changes anything: every exam is taken spoken, on camera. |
+| `mode` | `"Voice"` | `"Text"` or `"Voice"` (any case). Kept for compatibility and stored, but it no longer changes anything: every exam is taken spoken, on camera. |
 | `instructions` | none | Shown to students. |
 
 The exam is **published immediately**, so its settings are frozen. Each concept gets up to six
