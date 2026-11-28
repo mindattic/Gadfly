@@ -259,30 +259,11 @@ else
 
         <section class="panel wide examiner-preview" data-tour="ready-examiner" aria-labelledby="ready-examiner-title">
             <h2 id="ready-examiner-title">@T["getReady.examiner.title"]</h2>
-            @* Choose the examiner (GAD-T595): from the examiner catalog, remembered on this device for the exam room. No choice when
-               the exam or organization fixes the examiner (GAD-T504). *@
-            @if (examiners.Count > 1)
-            {
-            <fieldset class="examiner-choices">
-                <legend>@T["getReady.examiner.choose"]</legend>
-                @foreach (var x in examiners)
-                {
-                    <label class="examiner-choice" aria-disabled="@(x.Available ? null : "true")">
-                        <input type="radio" name="examiner" value="@x.Id" checked="@(x.Id == examiner.Id)" disabled="@(!x.Available)"
-                               aria-describedby="examiner-choice-@x.Id" @onchange="() => ChooseExaminerAsync(x)" />
-                        <span class="examiner-choice-text">
-                            <span class="examiner-choice-name">@T[x.NameKey]@(x.Available ? "" : " " + T["getReady.examiner.comingSoon"].Value)</span>
-                            <span class="examiner-choice-desc" id="examiner-choice-@x.Id">@T[x.NameKey + ".desc"]</span>
-                        </span>
-                    </label>
-                }
-            </fieldset>
-            }
             <div class="examiner-preview-row">
-                @* The examiner herself, live, in the student's choices (GAD-T663, GAD-T693): another examiner loads the other model; a
-                   customization restyles the one shown, in place. *@
+                @* The examiner is the glowing orb (GAD-T839): no 3D head, no choice of examiner and no customization; the same orb as
+                   in the exam room. *@
                 <div class="examiner-preview-figure">
-                    <LiveExaminer ExaminerId="@examiner.Id" Customization="@customization" Framing="@(customization.Look ?? ExaminerCustomization.Looks[0])" />
+                    <div class="live-examiner"><ExaminerPresence /></div>
                 </div>
                 <div class="examiner-preview-body">
                     <p>@Ex("getReady.examiner.intro")</p>
@@ -297,45 +278,6 @@ else
                     <p class="hint">@Ex("getReady.examiner.voiceNote")</p>
                 </div>
             </div>
-            @* Make the examiner your own (GAD-T663, GAD-T646): bounded choices only, remembered on this device with the examiner. None
-               when the exam or organization fixes the examiner: then it is shown exactly as configured. *@
-            @if (!examinerFixed)
-            {
-                <section class="examiner-customize" aria-labelledby="ready-customize-title">
-                    <h3 id="ready-customize-title">@T["examRoom.customize.title"]</h3>
-                    <p class="hint">@T["examRoom.customize.hint"]</p>
-                    <label class="customize-voice">
-                        @T["examRoom.customize.voice"]
-                        <select @onchange="ChooseVoiceAsync">
-                            <option value="" selected="@(customization.Voice is null)">@T["examRoom.customize.voice.own"]</option>
-                            @foreach (var v in VoiceChoices)
-                            {
-                                <option value="@v" selected="@(v == customization.Voice)">@VoiceName(v)</option>
-                            }
-                        </select>
-                    </label>
-                    <p class="hint">@T["examRoom.customize.voice.previewNote"]</p>
-                    @Swatches("skin", ExaminerCustomization.SkinTones, customization.SkinTone, v => customization with { SkinTone = v })
-                    @Swatches("hair", ExaminerCustomization.HairColours, customization.Hair, v => customization with { Hair = v })
-                    @Swatches("attire", ExaminerCustomization.Attires, customization.Attire, v => customization with { Attire = v })
-                    <fieldset class="customize-group customize-looks">
-                        <legend>@T["examRoom.customize.look"]</legend>
-                        <div class="segmented">
-                            @foreach (var l in ExaminerCustomization.Looks)
-                            {
-                                <label>
-                                    <input type="radio" name="examiner-look" value="@l" checked="@(l == (customization.Look ?? ExaminerCustomization.Looks[0]))"
-                                           @onchange="() => CustomizeAsync(customization with { Look = l })" />
-                                    <span>@T[$"examRoom.customize.look.{l}"]</span>
-                                </label>
-                            }
-                        </div>
-                    </fieldset>
-                    <div class="actions">
-                        <button type="button" class="secondary" @onclick="() => CustomizeAsync(ExaminerCustomization.None)" disabled="@customization.IsEmpty">@T["examRoom.customize.reset"]</button>
-                    </div>
-                </section>
-            }
             @* A full practice run with the same examiner (GAD-T560): the best-supported way to feel calm on the day. *@
             <p class="practice-link">@T["getReady.practiceRun.lead"] <a href="my-exams/practice?assignment=@AssignmentId">@T["getReady.practiceRun.link"]</a></p>
         </section>
@@ -681,119 +623,16 @@ else
         catch (Exception ex) when (ex is not OperationCanceledException) { }
     }
 
-    /// <summary>The examiners on offer and the one chosen (GAD-T595); the remembered choice is read once the page is live.</summary>
-    private IReadOnlyList<ExaminerOption> examiners = [];
+    /// <summary>The examiner whose voice and pronouns the student meets (GAD-T839): the exam's or organization's, else the default.</summary>
     private ExaminerOption examiner = null!;
-    private IJSObjectReference? prefsModule;
-
-    private sealed record RememberedExaminer(string? Id, string? ModelUrl, ExaminerCustomization? Customization);
-
-    /// <summary>The student's customization of the examiner as remembered on this device (GAD-T646), validated for the one shown;
-    /// kept when the choice is saved again. None while the exam or organization fixes the examiner.</summary>
-    private ExaminerCustomization customization = ExaminerCustomization.None;
 
     /// <summary>A sentence about the examiner, its pronouns following the one chosen (GAD-T606: "her", or "him" for the male examiner).</summary>
     private string Ex(string key) => new ExamRoomText(T, examiner is { IsMale: true })[key];
 
-    /// <summary>Shows the examiner the student chose last time on this device, if still offered.</summary>
-    private async Task LoadExaminerChoiceAsync()
-    {
-        try
-        {
-            prefsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/device-prefs.js");
-            var remembered = await prefsModule.InvokeAsync<RememberedExaminer?>("getExaminer");
-            var pick = ExaminerCatalog.Pick(examiners, remembered?.Id);
-            if (!examinerFixed) customization = remembered?.Customization?.Validate(pick.Id) ?? ExaminerCustomization.None;
-            if (pick.Id != examiner.Id) { examiner = pick; StateHasChanged(); }
-        }
-        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
-    }
-
-    /// <summary>The student picked an examiner: shown at once, remembered for the exam room, and her preview stops mid-line.</summary>
-    private async Task ChooseExaminerAsync(ExaminerOption choice)
-    {
-        if (!choice.Available) return;
-        examiner = choice;
-        customization = customization.Validate(choice.Id);
-        await SaveExaminerAsync();
-        try
-        {
-            if (previewModule is not null) await previewModule.InvokeVoidAsync("stop");
-        }
-        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
-        preloading = false;
-        _ = PreloadExaminerAsync();
-    }
-
-    /// <summary>Remembers the examiner shown and its customization on this device for the exam room (device-prefs.js setExaminer).</summary>
-    private async Task SaveExaminerAsync()
-    {
-        try
-        {
-            prefsModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/device-prefs.js");
-            await prefsModule.InvokeVoidAsync("setExaminer", new
-            {
-                id = examiner.Id, modelUrl = examiner.ModelUrl,
-                customization = customization.IsEmpty ? null : customization,
-            });
-        }
-        catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException) { }
-    }
-
-    /// <summary>True when the exam or organization fixes the examiner (GAD-T504): no choice and no customization then.</summary>
-    private bool examinerFixed;
-
-    /// <summary>The ElevenLabs premade voices' names, in the order of ExaminerCustomization's lists.</summary>
-    private static readonly IReadOnlyDictionary<string, string> VoiceNames =
-        ExaminerCustomization.FemaleVoices.Zip(["Rachel", "Sarah", "Charlotte", "Alice", "Matilda", "Lily"])
-            .Concat(ExaminerCustomization.MaleVoices.Zip(["Brian", "Daniel", "George", "Chris", "Eric", "Liam"]))
-            .ToDictionary(p => p.First, p => p.Second);
-
-    private static string VoiceName(string id) => VoiceNames.TryGetValue(id, out var n) ? n : id;
-
-    /// <summary>The voices the student may give this examiner in this language, less the examiner's own (offered as the first option).</summary>
-    private IReadOnlyList<string> VoiceChoices =>
-        ExaminerCustomization.AllowedVoices(examiner.Id, T.Language).Where(v => v != examiner.VoiceIdFor(T.Language)).ToList();
-
-    /// <summary>The browser voice the preview uses for the chosen voice (examiner-preview.js say): 0 for the examiner's own.</summary>
-    private int VoiceVariant => customization.Voice is { } v && VoiceChoices.ToList().IndexOf(v) is var i and >= 0 ? i + 1 : 0;
-
-    /// <summary>One customization change (GAD-T663): validated, shown, and remembered; a voice change replays the preview line.</summary>
-    private async Task CustomizeAsync(ExaminerCustomization next, bool replay = false)
-    {
-        customization = next.Validate(examiner.Id);
-        await SaveExaminerAsync();
-        if (replay) await PlayPreviewAsync();
-    }
-
-    private Task ChooseVoiceAsync(ChangeEventArgs e) =>
-        CustomizeAsync(customization with { Voice = e.Value as string is { Length: > 0 } v ? v : null }, replay: true);
-
-    /// <summary>A swatch radio group (skin tone, hair colour, clothing) with a Default option first.</summary>
-    private RenderFragment Swatches(string group, IReadOnlyList<string> values, string? current, Func<string?, ExaminerCustomization> with) => __builder =>
-    {
-        <fieldset class="customize-group swatches">
-            <legend>@T[$"examRoom.customize.{group}"]</legend>
-            <label class="swatch-choice" title="@T["examRoom.customize.default"]">
-                <input type="radio" class="visually-hidden" name="examiner-@group" value="" checked="@(current is null)" @onchange="() => CustomizeAsync(with(null))" />
-                <span class="swatch swatch-default" aria-hidden="true"></span>
-                <span class="visually-hidden">@T["examRoom.customize.default"]</span>
-            </label>
-            @foreach (var v in values)
-            {
-                <label class="swatch-choice" title="@T[$"examRoom.customize.{group}.{v}"]">
-                    <input type="radio" class="visually-hidden" name="examiner-@group" value="@v" checked="@(v == current)" @onchange="() => CustomizeAsync(with(v))" />
-                    <span class="swatch" @attributes="@(new Dictionary<string, object> { [$"data-{group}"] = v })" aria-hidden="true"></span>
-                    <span class="visually-hidden">@T[$"examRoom.customize.{group}.{v}"]</span>
-                </label>
-            }
-        </fieldset>
-    };
-
     protected override async Task OnInitializedAsync()
     {
         T.Changed += OnLanguageChanged;
-        examiners = ExaminerCatalog.For(VoiceConfig, Env.WebRootPath);
+        var examiners = ExaminerCatalog.For(VoiceConfig, Env.WebRootPath);
         examiner = ExaminerCatalog.Pick(examiners, null);
         if (ExamId is { } examId && Tenant.OrganizationId is { } eorg && Tenant.UserId is { } euser)
         {
@@ -812,13 +651,9 @@ else
             assignment = await StudentExams.FindAsync(Scopes, org, user, AssignmentId, Clock.GetUtcNow(), T.Language);
             if (assignment is not null)
             {
-                // An exam's or its organization's examiner (GAD-T504) is the only one offered; otherwise the student chooses.
+                // An exam's or its organization's examiner (GAD-T504) gives the voice; otherwise the default examiner's.
                 var (examAvatar, orgAvatar) = await ExaminerCatalog.AvatarIdsForAssignmentAsync(Scopes, org, user, AssignmentId);
-                if (ExaminerCatalog.Fixed(examiners, examAvatar, orgAvatar) is { } fixedExaminer)
-                {
-                    (examiners, examiner) = ([fixedExaminer], fixedExaminer);
-                    examinerFixed = true;
-                }
+                if (ExaminerCatalog.Fixed(examiners, examAvatar, orgAvatar) is { } fixedExaminer) examiner = fixedExaminer;
                 (orgName, retentionDays) = await StudentExams.OrganizationAsync(Scopes, org);
                 await LoadLanguagesAsync(org, user);
                 BuildNotice();
@@ -848,7 +683,6 @@ else
         if (firstRender && assignment is { CanStart: true, CanResumeDirectly: false })
         {
             if (rememberLanguage) await LanguageSwitch.RememberAsync(JS, T.Language);
-            await LoadExaminerChoiceAsync();
             await RunChecksAsync();
             StateHasChanged();
             return;
@@ -1006,7 +840,7 @@ else
     private bool preloading;
 
     /// <summary>
-    /// Starts loading the talking examiner (scripts and avatar model) in the background while the student is still here (GAD-T303),
+    /// Starts loading the talking examiner's scripts in the background while the student is still here (GAD-T303),
     /// so the exam room shows her without a long first load. Best effort: any failure just leaves the loading to the exam room.
     /// </summary>
     private async Task PreloadExaminerAsync()
@@ -1017,7 +851,7 @@ else
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             await using var preload = await JS.InvokeAsync<IJSObjectReference>("import", cts.Token, "./js/voice-preload.js");
-            await preload.InvokeAsync<bool>("preload", cts.Token, new { modelUrl = examiner.ModelUrl });
+            await preload.InvokeAsync<bool>("preload", cts.Token);
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or OperationCanceledException or ObjectDisposedException or InvalidOperationException)
         {
@@ -1036,7 +870,7 @@ else
         {
             previewModule ??= await JS.InvokeAsync<IJSObjectReference>("import", "./js/examiner-preview.js");
             var spoke = await previewModule.InvokeAsync<bool>("say", previewCaption, T["getReady.examiner.line"].Value, UiCatalog.CultureFor(T.Language).Name,
-                new { variant = VoiceVariant, male = examiner.IsMale });
+                new { variant = 0, male = examiner.IsMale });
             previewSilent = !spoke;
         }
         catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException or InvalidOperationException)
@@ -1142,11 +976,6 @@ else
         if (previewModule is not null)
         {
             try { await previewModule.InvokeVoidAsync("stop"); await previewModule.DisposeAsync(); }
-            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
-        }
-        if (prefsModule is not null)
-        {
-            try { await prefsModule.DisposeAsync(); }
             catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or ObjectDisposedException) { }
         }
         self?.Dispose();

@@ -1,6 +1,5 @@
 using Gadfly.Server.Localization;
 using Gadfly.Server.Student;
-using Microsoft.JSInterop;
 
 namespace Gadfly.Server.Components.Pages.Student;
 
@@ -41,26 +40,9 @@ public sealed class ExamRoomText(UiText text, bool maleExaminer = false)
 
     /// <summary>
     /// Whether the examiner the student sees is a man (GAD-T726, <see cref="ExaminerOption.IsMale"/>): an exam's examiner (its AvatarId, else its organization's
-    /// DefaultAvatarId) when it names an available one, else the student's choice remembered on this device on the get-ready page
-    /// (device-prefs.js getExaminer, GAD-T595), else the first available. False on any failure: the female examiner is the default.
+    /// DefaultAvatarId) when it names an available one, else the first available (GAD-T839: the student no longer chooses one).
     /// </summary>
-    public static async Task<bool> MaleExaminerAsync(IJSRuntime js, IReadOnlyList<ExaminerOption> options, string? examAvatarId, string? organizationAvatarId,
-        CancellationToken ct)
-    {
-        try
-        {
-            // The same resolution VoiceRoom uses to show the examiner (GAD-T504).
-            if (ExaminerCatalog.Fixed(options, examAvatarId, organizationAvatarId) is { } fixedExaminer) return fixedExaminer.IsMale;
-            await using var prefs = await js.InvokeAsync<IJSObjectReference>("import", ct, "./js/device-prefs.js");
-            var remembered = await prefs.InvokeAsync<RememberedExaminer?>("getExaminer", ct);
-            return ExaminerCatalog.Resolve(options, examAvatarId, organizationAvatarId, remembered?.Id).IsMale;
-        }
-        catch (Exception ex) when (ex is JSException or JSDisconnectedException or OperationCanceledException or ObjectDisposedException
-                                       or InvalidOperationException or System.Text.Json.JsonException)
-        {
-            return false;
-        }
-    }
-
-    private sealed record RememberedExaminer(string? Id);
+    public static bool IsMaleExaminer(IReadOnlyList<ExaminerOption> options, string? examAvatarId, string? organizationAvatarId) =>
+        // The same resolution VoiceRoom uses for the examiner's voice (GAD-T504).
+        ExaminerCatalog.Resolve(options, examAvatarId, organizationAvatarId, null).IsMale;
 }

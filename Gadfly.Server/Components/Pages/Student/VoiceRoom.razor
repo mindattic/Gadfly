@@ -436,11 +436,6 @@
                 hangoverMs = Settings.SpeechHangoverMs,
                 // The listening "Mm-hm." after a finished sentence (GAD-T496); 0 is off.
                 backchannelMs = Settings.BackchannelMs,
-                // The attempt's examiner (GAD-T504): her model. No picture of her is ever shown: where 3D can't run, her live
-                // presence stands in (GAD-T694).
-                modelUrl = examiner.ModelUrl,
-                // The student's customization (GAD-T646, GAD-T649), validated in ExaminerAsync: colours and framing for her 3D model.
-                examinerLook = new { skinTone = examinerCustomization.SkinTone, hair = examinerCustomization.Hair, attire = examinerCustomization.Attire, look = examinerCustomization.Look },
                 // Typed answers (GAD-T260): the examiner and the camera without a microphone.
                 typed = TypedAnswers,
                 // Per-exam language and vocabulary hints (GAD-T357, GAD-T358): computed here, on the server, from the exam
@@ -555,13 +550,9 @@
     /// <summary>The student's validated customization of <see cref="examiner"/> (GAD-T646); none when the exam or organization fixes it.</summary>
     private ExaminerCustomization examinerCustomization = ExaminerCustomization.None;
 
-    private sealed record RememberedExaminer(string? Id, ExaminerCustomization? Customization);
-
     /// <summary>
-    /// This attempt's examiner (GAD-T504, <see cref="ExaminerCatalog.Resolve"/>): the exam's AvatarId, else the organization's
-    /// default, else the one the student chose on the get-ready page (remembered on this device), else the first available. The
-    /// browser's choice is only a preference among what the exam allows; any failure reading it gives the first available. The
-    /// student's customization (GAD-T646) comes with it, validated here, and is off when the examiner is fixed.
+    /// This attempt's examiner voice (GAD-T504, <see cref="ExaminerCatalog.Resolve"/>): the exam's AvatarId, else the organization's
+    /// default, else the first available. The student no longer chooses or customizes one (GAD-T839: the orb is the only examiner).
     /// </summary>
     private async Task<(ExaminerOption, ExaminerCustomization)> ExaminerAsync(CancellationToken ct)
     {
@@ -581,18 +572,7 @@
         {
             Log.LogDebug(ex, "The examiner settings could not be read for session {SessionId}.", SessionId);
         }
-        RememberedExaminer? remembered = null;
-        if (ExaminerCatalog.Fixed(options, fixedBy.Exam, fixedBy.Organization) is null)
-        {
-            try
-            {
-                await using var prefs = await JS.InvokeAsync<IJSObjectReference>("import", ct, "./js/device-prefs.js");
-                remembered = await prefs.InvokeAsync<RememberedExaminer?>("getExaminer", ct);
-            }
-            catch (Exception ex) when (ex is JSException or JSDisconnectedException or TaskCanceledException or InvalidOperationException
-                                           or System.Text.Json.JsonException) { }
-        }
-        var resolved = ExaminerCatalog.Resolve(options, fixedBy.Exam, fixedBy.Organization, remembered?.Id, remembered?.Customization);
+        var resolved = ExaminerCatalog.Resolve(options, fixedBy.Exam, fixedBy.Organization, null, null);
         return (resolved.Option, resolved.Customization);
     }
 
@@ -866,21 +846,9 @@
     public Task OnAvatarMode(string mode, string reason) => InvokeAsync(() =>
     {
         noTalkingHead = mode == "none";
-        avatarNote = mode switch
-        {
-            // Her live presence instead of the 3D head (GAD-T694). Reduced motion keeps her in 3D, only calmer.
-            "presence" => T[reason switch
-            {
-                "no-webgl" => "examRoom.avatar.presence.noWebgl",
-                "load-failed" => "examRoom.avatar.presence.loadFailed",
-                "slow-device" => "examRoom.avatar.presence.slowDevice",
-                "graphics-lost" => "examRoom.avatar.presence.graphicsLost",
-                _ => "examRoom.avatar.presence",
-            }],
-            // voice-room.js sends its own line, already in the page's language (examRoom.js.avatar.none).
-            "none" => reason.Length > 0 ? reason : T["examRoom.avatar.none"],
-            _ => null,
-        };
+        // The orb is the examiner (GAD-T839), not a stand-in for a 3D head: only a voice that could not start is news.
+        // voice-room.js sends its own line, already in the page's language (examRoom.js.avatar.none).
+        avatarNote = mode == "none" ? (reason.Length > 0 ? reason : T["examRoom.avatar.none"]) : null;
         StateHasChanged();
     });
 

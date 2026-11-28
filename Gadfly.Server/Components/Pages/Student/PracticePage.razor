@@ -148,7 +148,7 @@
         {
             Log.LogDebug(ex, "The practice's examiner could not be read.");
         }
-        if (await ExamRoomText.MaleExaminerAsync(JS, ExaminerCatalog.For(Settings, Env.WebRootPath), fixedBy.Exam, fixedBy.Organization, CancellationToken.None))
+        if (ExamRoomText.IsMaleExaminer(ExaminerCatalog.For(Settings, Env.WebRootPath), fixedBy.Exam, fixedBy.Organization))
         {
             maleExaminer = true;
             StateHasChanged();

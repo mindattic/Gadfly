@@ -29,7 +29,6 @@ import { VoiceAcoustics } from "./voice-acoustics.js";
 import * as VoiceDraft from "./voice-draft.js";
 import { useExaminerLook, customLookOptions, framingOf } from "./avatar-look.js";
 import { mountPresence, calm } from "./live-examiner.js";
-import { getModelUrl } from "./model-cache.js";
 // Every line this module writes is in the attempt's language (GAD-T606): the exam room renders <UiTextData Prefix="examRoom.js." />
 // in ExamSession.Language, and each call names the English as its fallback.
 import { t } from "./ui-text.js";
@@ -324,19 +323,15 @@ async function start() {
     }
     if (S !== s || !s.running) return;
 
-    // 3. The talking head. Voice answers work without it: the question is then only shown as text.
-    // The 3D model can take a long while to load on a slow connection (it used to hold the first question for up to 90 s). When this
-    // device will show 3D, her live presence stands in at once and asks the questions, glowing with her voice (GAD-T328, GAD-T694),
-    // while the model loads out of sight behind it; the 3D examiner takes over between sentences once she is ready (promote3d).
-    // Never a picture of her: wherever 3D can't run, the presence stays.
+    // 3. The examiner: the glowing orb (GAD-T839), glowing with her voice. The <ma-avatar> is given no model, so it is only her
+    // voice: the library's plain Web Audio path plays the hub's speech and raises the same speaking events, and no 3D head is ever
+    // loaded. Voice answers work without it: the question is then only shown as text.
     try {
         const stage = q("stage");
         showPresence(s, stage);
         const pkg = await import(`${LIB}/avatar/index.js`);
         if (S !== s || !s.running) return;
-        const standIn = !!s.cfg.modelUrl && hasWebGl();
-        const el = createAvatar(s, standIn ? null : await getModelUrl(s.cfg.modelUrl));
-        if (S !== s || !s.running) return;
+        const el = createAvatar(s, null);
         stage.appendChild(el);
         s.avatar = el;
         s.presenter = await createPresenter(s, el);
@@ -355,23 +350,17 @@ async function start() {
         // Back again: the status line said "Reconnecting…" until something else happened to replace it (GAD-T316).
         s.avatarConn.onreconnected(() => { if (currentAvatar()) status(roomStatus(s)); });
         s.avatarConn.onclose(() => { if (currentAvatar()) problem("hub", "The connection to the examiner was lost.", true); });
-        // The model starts downloading now, alongside the hub connect below, not after it.
-        if (standIn) load3d(s, stage);
         // Bounded (GAD-T306), like the hub above: a connect that never resolves must not hold up the fallback below.
         await withTimeout(s.avatarConn.start(), CONNECT_TIMEOUT_MS);
-        // With the stand-in this is at once (it has nothing to load); without one it is the library's own quick fallback (the
-        // presence stays), or a 3D model the get-ready page already put in the browser's cache.
+        // At once: with no model there is nothing to load.
         await Promise.race([el.ready, new Promise((r) => setTimeout(r, 90000))]);
         if (S !== s || !s.running) return;
         s.avatarOk = true;
         syncPresence(s);
-        void startFaceFollow(s);   // the self-view may already be on: the examiner looks toward the student's face
-        // The stand-in is not a fallback: no "instead of the 3D head" note while the 3D examiner is still on her way.
-        s.dotnet.invokeMethodAsync("OnAvatarMode", standIn || el.mode !== "portrait" ? "3d" : "presence", standIn ? "" : el.gadflyFallback || "").catch(() => { });
+        s.dotnet.invokeMethodAsync("OnAvatarMode", "presence", "").catch(() => { });
     } catch (err) {
         if (S !== s || !s.running) return;
         s.avatarOk = false;
-        dropLoading3d(s);
         // Without the talking head the questions are still read out by the browser's own speech, with the caption lit word by word.
         try { s.presenter?.dispose(); } catch { }
         try { s.presenter = (await import("./examiner-voice.js")).createPresenter(null, null, q("caption"), { language: s.cfg.examLanguage, presence: presenceLevel(s) }, () => { }); } catch { s.presenter = null; }
@@ -484,7 +473,7 @@ function createAvatar(s, src) {
     el.addEventListener("fallback", (e) => {
         const reason = (e.detail && e.detail.reason) || "";
         el.gadflyFallback = reason;
-        // The stand-in has no model on purpose, and a model still loading behind it is settled by load3d: neither is news.
+        // The voice-only examiner has no model on purpose (GAD-T839): its fallback is not news.
         if (el.gadflyRole !== "examiner") return;
         if (s.avatar === el) syncPresence(s);
         s.dotnet.invokeMethodAsync("OnAvatarMode", "presence", reason).catch(() => { });
@@ -516,67 +505,6 @@ function presenterFor(s, el) {
     // examLanguage (GAD-T531): her lip-sync language and the browser-speech fallback's voice.
     return s.delivery.createPresenter(el, q("stage"), q("caption"), { presence: presenceLevel(s), language: s.cfg.examLanguage },
         (reason) => { syncPresence(s); s.dotnet.invokeMethodAsync("OnAvatarMode", "presence", reason).catch(() => { }); });
-}
-
-/**
- * Loads the 3D examiner out of sight behind the presence that stands in for her (GAD-T328). Invisible but laid out at full size,
- * so the 3D scene is framed for the stage it will fill. A model that can't load leaves the presence where it is, with the usual note.
- */
-async function load3d(s, stage) {
-    const src = await getModelUrl(s.cfg.modelUrl);   // once per browser, from Cache Storage after that (GAD-T698)
-    if (S !== s || !s.running) return;
-    const el = createAvatar(s, src);
-    el.gadflyRole = "loading";
-    el.style.cssText = "position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .45s ease";
-    stage.appendChild(el);
-    s.loading3d = el;
-    el.ready.then(() => {
-        if (S !== s || !s.running || s.loading3d !== el) return;
-        if (el.mode === "3d") { promote3d(s, el); return; }
-        dropLoading3d(s);
-        s.dotnet.invokeMethodAsync("OnAvatarMode", "presence", el.gadflyFallback || "load-failed").catch(() => { });
-    }, () => dropLoading3d(s));
-}
-
-function dropLoading3d(s) {
-    if (s.promoteTimer) { clearTimeout(s.promoteTimer); s.promoteTimer = null; }
-    const el = s.loading3d;
-    s.loading3d = null;
-    try { el && el.remove(); } catch { }
-}
-
-/**
- * The 3D examiner is ready: she takes over from the presence between sentences, never while she (or a filler line or a gaze
- * remark) is speaking, and not while the student is mid-sentence. Her voice moves to her, she fades in as the presence fades out,
- * and the stand-in is released.
- */
-function promote3d(s, el) {
-    const attempt = () => {
-        s.promoteTimer = null;
-        if (S !== s || !s.running || s.loading3d !== el) return;
-        const old = s.avatar;
-        const busy = !s.avatarOk || !s.speech || !s.avatarPkg || !s.delivery || s.speaking || s.speakToken || s.fillPlaying || s.remarkHold
-            || (old && old.state === "speaking") || (s.inSpeech && !s.gate);
-        if (busy) { s.promoteTimer = setTimeout(attempt, 250); return; }
-        s.loading3d = null;
-        try { s.speech.dispose(); } catch { }
-        s.speech = s.avatarPkg.attachSpeechHub(el, s.avatarConn);
-        const presenter = s.presenter;
-        el.gadflyRole = "examiner";
-        el.state = old ? old.state : "idle";
-        s.avatar = el;
-        try { presenter && presenter.dispose(); } catch { }
-        try { s.presenter = presenterFor(s, el); } catch { s.presenter = null; }
-        el.style.opacity = "1";
-        syncPresence(s);
-        setTimeout(() => {
-            if (old && old !== s.avatar) { try { old.remove(); } catch { } }
-            if (s.avatar === el) el.style.cssText = "";
-        }, 500);
-        void startFaceFollow(s);   // she can look at the student now (the presence can't)
-        s.dotnet.invokeMethodAsync("OnAvatarMode", "3d", "").catch(() => { });
-    };
-    attempt();
 }
 
 /** Who is reading her lines: the voice provider, or the browser's own speech when the provider failed. Told to the page on a change. */
@@ -1213,7 +1141,6 @@ export function stop() {
     try { s.avatarConn && s.avatarConn.stop(); } catch { }
     try { s.speech && s.speech.dispose(); } catch { }
     try { s.avatar && s.avatar.remove(); } catch { }
-    dropLoading3d(s);   // a 3D examiner still loading behind the presence (GAD-T328)
     dropPresence(s);
     s.voiceSource = null;
     s.mic = s.speechConn = s.avatarConn = s.avatar = s.speech = null;

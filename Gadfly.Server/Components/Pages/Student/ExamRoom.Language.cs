@@ -50,12 +50,15 @@ public partial class ExamRoom
         }
     }
 
-    /// <summary>Which examiner is on screen, for the pronouns (once interactive: the student's choice is kept in the browser).</summary>
-    private async Task LoadExaminerAsync()
+    /// <summary>Which examiner's voice the student hears, for the pronouns.</summary>
+    private Task LoadExaminerAsync()
     {
-        var male = await ExamRoomText.MaleExaminerAsync(JS, ExaminerCatalog.For(VoiceConfig, Env.WebRootPath), examAvatarId, organizationAvatarId, stop.Token);
-        if (male == maleExaminer) return;
-        maleExaminer = male;
-        roomText = null;
+        var male = ExamRoomText.IsMaleExaminer(ExaminerCatalog.For(VoiceConfig, Env.WebRootPath), examAvatarId, organizationAvatarId);
+        if (male != maleExaminer)
+        {
+            maleExaminer = male;
+            roomText = null;
+        }
+        return Task.CompletedTask;
     }
 }
