@@ -2,8 +2,8 @@
 @attribute [AllowAnonymous]
 @attribute [ExcludeFromInteractiveRouting]
 @layout Gadfly.Server.Components.Pages.Site.HomeLayout
-@* Signed out: the public landing page in the site layout; signed in: the dashboard in the app shell (GAD-T308). Static
-   rendering, so a visitor at "/" never opens a Blazor circuit. *@
+@* Signed out: straight to the sign-in page, the brochure lives at /about (GAD-T843); signed in: the reader's role home
+   in the app shell. Static rendering, so a visitor at "/" never opens a Blazor circuit. *@
 @inject ITenantContext Tenant
 @inject NavigationManager Nav
 @inject IAuthorizationService Authz
@@ -11,11 +11,7 @@
 
 <PageTitle>Gadfly Exams</PageTitle>
 
-@if (!signedIn)
-{
-    <Gadfly.Server.Components.Pages.Site.Landing />
-}
-else if (toDashboard)
+@if (redirecting)
 {
     <p class="hint">Opening your dashboard…</p>
 }
@@ -52,10 +48,6 @@ else
             <a class="card" href="admin"><h2>Dashboard</h2><p>What needs attention today, and the last 7 and 30 days in numbers.</p></a>
             <a class="card" href="org/members"><h2>Members</h2><p>Add instructors and students.</p></a>
         }
-        @if (Tenant.Role == OrgRoles.Student)
-        {
-            <a class="card" href="my-exams"><h2>My exams</h2><p>Take an assigned exam and see released results.</p></a>
-        }
         @if (Tenant.IsSuperAdmin)
         {
             <a class="card" href="platform/organizations"><h2>Organizations</h2><p>MindAttic: create customer organizations and their owners.</p></a>
@@ -66,7 +58,7 @@ else
 @code {
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
-    private bool toDashboard, signedIn;
+    private bool redirecting;
 
     private string Greeting => Tenant.Role switch
     {
@@ -76,17 +68,28 @@ else
     };
 
     /// <summary>
-    /// Owners and admins land on the dashboard (GAD-T300). Only when they may actually open it: an owner whose sign-in
-    /// lacks the second step stays here with the cards rather than being sent to a page that refuses them.
+    /// A signed-out visitor goes to the sign-in page (GAD-T843) and a student to their exams. Owners and admins land on
+    /// the dashboard (GAD-T300), only when they may actually open it: an owner whose sign-in lacks the second step stays
+    /// here with the cards rather than being sent to a page that refuses them. Instructors keep the cards.
     /// </summary>
     protected override async Task OnInitializedAsync()
     {
-        if (AuthState is null) return;
-        var user = (await AuthState).User;
-        signedIn = user.Identity?.IsAuthenticated == true;
-        if (!signedIn || !Gadfly.Server.Admin.AdminArea.IsOrgAdmin(Tenant.Role)) return;
+        var user = AuthState is null ? null : (await AuthState).User;
+        if (user?.Identity?.IsAuthenticated != true)
+        {
+            redirecting = true;
+            Nav.NavigateTo("login", replace: true);
+            return;
+        }
+        if (Tenant.Role == OrgRoles.Student)
+        {
+            redirecting = true;
+            Nav.NavigateTo("my-exams", replace: true);
+            return;
+        }
+        if (!Gadfly.Server.Admin.AdminArea.IsOrgAdmin(Tenant.Role)) return;
         if (!(await Authz.AuthorizeAsync(user, GadflyPolicies.OrgAdmin)).Succeeded) return;
-        toDashboard = true;
+        redirecting = true;
         Nav.NavigateTo("admin", replace: true);
     }
 }

@@ -1,5 +1,5 @@
-@* The home page's layout (GAD-T308): a signed-out visitor at "/" gets the public site, a signed-in user the app shell
-   and their dashboard, at the same address. *@
+@* The home page's layout (GAD-T308): a signed-in user gets the app shell and their dashboard; a signed-out visitor is
+   only passing through on the way to the sign-in page (GAD-T843), so gets the bare layout. *@
 @inherits LayoutComponentBase
 
 <LayoutView Layout="@Chosen">@Body</LayoutView>
@@ -7,11 +7,11 @@
 @code {
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
-    private Type Chosen { get; set; } = typeof(PublicLayout);
+    private Type Chosen { get; set; } = typeof(EmptyLayout);
 
     protected override async Task OnParametersSetAsync()
     {
         var user = AuthState is null ? null : (await AuthState).User;
-        Chosen = user?.Identity?.IsAuthenticated == true ? typeof(MainLayout) : typeof(PublicLayout);
+        Chosen = user?.Identity?.IsAuthenticated == true ? typeof(MainLayout) : typeof(EmptyLayout);
     }
 }

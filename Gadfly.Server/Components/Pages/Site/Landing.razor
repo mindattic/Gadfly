@@ -1,9 +1,13 @@
+@page "/about"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout PublicLayout
 @inherits SitePage
-@* The public landing page (GAD-T308), shown at "/" to signed-out visitors by Home.razor. Every claim here comes from
+@* The public landing page (GAD-T308), at /about since "/" opens on the sign-in page (GAD-T843). Every claim here comes from
    README.md, docs/SCIENCE.md, docs/PRIVACY.md, docs/VOICE.md, docs/LOCALIZATION.md or docs/research/attention-and-gaze.md;
    keep it that way when editing. Text in Localization/Strings/site.<lang>.json (GAD-T592). *@
 
-<SiteMeta Title="@T["site.landing.metaTitle"]" Path="/" Description="@T["site.landing.metaDescription"]" />
+<SiteMeta Title="@T["site.landing.metaTitle"]" Path="/about" Description="@T["site.landing.metaDescription"]" />
 
 <section class="hero" aria-labelledby="hero-heading">
     <div class="wrap">
