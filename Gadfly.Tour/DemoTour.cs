@@ -58,6 +58,7 @@ public sealed partial class DemoTour(TourOptions o, ServerProcess server)
                 _list.Blocked("Student exam and grading stages", "the exam could not start");
                 return _list;
             }
+            await _list.RunAsync("Typed-answer accommodation granted over HTTP (GAD-T260, GAD-T858)", TypedAnswerAccommodationAsync);
             await _list.RunAsync("A good answer is judged", GoodAnswerAsync);
             await _list.RunAsync("Ambiguous answer gets a neutral clarification (GAD-T87)", ClarificationAsync);
             await _list.RunAsync("Typo correction keeps the original (GAD-T88)", TypoCorrectionAsync);
@@ -289,6 +290,53 @@ public sealed partial class DemoTour(TourOptions o, ServerProcess server)
         var row = (await _db.RowsAsync("SELECT State, ConsentRecordedAt FROM gadfly.ExamSessions WHERE Id = @s", ("@s", _sessionId))).Single();
         Expect.True((string)row["State"]! == "Running" && row["ConsentRecordedAt"] is not null, $"the session is {row["State"]} (consent {(row["ConsentRecordedAt"] is null ? "missing" : "recorded")})");
         return $"session {_sessionId:N} running; first question: \"{question}\"";
+    }
+
+    private const string AssignmentActions = "/exams/actions";
+    private bool? _assignmentActionsMapped;
+
+    private async Task EnsureAssignmentActionsAsync(string ticket)
+    {
+        if (_assignmentActionsMapped is null)
+        {
+            var teacher = _users.GetValueOrDefault("demo.teacher") ?? throw new TourAssertException("demo.teacher is not signed in");
+            var (status, body) = await teacher.GetJsonAsync($"{AssignmentActions}/antiforgery");
+            _assignmentActionsMapped = status == HttpStatusCode.OK && body.ValueKind == JsonValueKind.Object;
+        }
+        if (_assignmentActionsMapped != true)
+            throw new NotBuiltException(ticket, $"the exam assignment HTTP actions are not mapped ({AssignmentActions}/*; app.MapExamAssignmentActions() in Program.cs)");
+    }
+
+    /// <summary>
+    /// Exams are voice-only (GAD-T239): a typed answer is refused unless an instructor granted the student's assignment a
+    /// typed-answer accommodation (GAD-T260). The tour first proves the refusal with no accommodation, then grants one as
+    /// demo.teacher over the real HTTP action (antiforgery token, cookie, audited), the same path an instructor's browser
+    /// would use, so every later stage that depends on an answered turn (judging, grading, review, exports, ...) can run
+    /// as a real accommodated student would (GAD-T858).
+    /// </summary>
+    private async Task<string> TypedAnswerAccommodationAsync()
+    {
+        await EnsureAssignmentActionsAsync("GAD-T858");
+        var refused = false;
+        try
+        {
+            await _hub!.InvokeCoreAsync<JsonElement>("Answer", [_sessionId, new { text = "Tour: trying to type without an accommodation.", mode = "text" }]);
+        }
+        catch (HubException ex) when (ex.Message.Contains("answered out loud", StringComparison.OrdinalIgnoreCase))
+        {
+            refused = true;
+        }
+        Expect.True(refused, "a typed answer was accepted although demo.student has no typed-answer accommodation yet");
+
+        var (status, result) = await _users["demo.teacher"].PostJsonAsync($"{AssignmentActions}/{_mathAssignmentId:D}/typed-answer-accommodation",
+            new { on = true }, $"{AssignmentActions}/antiforgery");
+        Expect.True(status == HttpStatusCode.OK, $"granting the typed-answer accommodation answered {(int)status}: {Str(result, "message")}");
+
+        var granted = await _db.ScalarAsync<bool>("SELECT TypedAnswerAccommodation FROM gadfly.ExamAssignments WHERE Id = @a", ("@a", _mathAssignmentId));
+        Expect.True(granted, "the assignment's TypedAnswerAccommodation column is still off after the grant");
+        var audited = await _db.CountAsync("SELECT COUNT(*) FROM gadfly.AuditEvents WHERE OrganizationId = @org AND Action = 'assessment.accommodation.typed-answers.granted'", ("@org", _orgId));
+        Expect.True(audited >= 1, "no assessment.accommodation.typed-answers.granted audit event was recorded");
+        return "no accommodation: a typed Answer was refused; demo.teacher granted one over POST /exams/actions (antiforgery), audited";
     }
 
     private async Task<string> GoodAnswerAsync()
@@ -971,7 +1019,13 @@ public sealed partial class DemoTour(TourOptions o, ServerProcess server)
             ("@s", _sessionId), ("@i", index))).SingleOrDefault() ?? throw new TourAssertException("the answered turn is not in the database");
         Expect.True(turn["AnswerText"] is string { Length: > 0 }, "the answer was not stored on the turn");
         var turnId = (Guid)turn["Id"]!;
-        var judgment = (await _db.RowsAsync("SELECT TOP 1 Id, OverallScore, Summary FROM gadfly.Judgments WHERE TurnId = @t ORDER BY CreatedAt DESC", ("@t", turnId))).SingleOrDefault();
+        // The full panel judgment is applied off the turn in the background (GAD-T508): give it a moment to land.
+        Dictionary<string, object?>? judgment = null;
+        await TourDb.WaitAsync(async () =>
+        {
+            judgment = (await _db.RowsAsync("SELECT TOP 1 Id, OverallScore, Summary FROM gadfly.Judgments WHERE TurnId = @t ORDER BY CreatedAt DESC", ("@t", turnId))).SingleOrDefault();
+            return judgment is not null;
+        }, TimeSpan.FromSeconds(20), TimeSpan.FromMilliseconds(500));
         return (turnId, judgment);
     }
 

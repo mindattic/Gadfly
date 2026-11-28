@@ -5,6 +5,7 @@ using Gadfly.Server.Desk;
 using Gadfly.Server.Analytics;
 using Gadfly.Server.Verification;
 using Gadfly.Server.Assessments;
+using Gadfly.Server.Exams;
 using Gadfly.Server.Grading;
 using Gadfly.Server.Jobs;
 using Gadfly.Server.Platform;
@@ -170,6 +171,7 @@ Gadfly.Server.Localization.LocalizationSetup.MapLanguageChoice(app);   // the pu
 app.MapVoiceExam();
 app.MapGrading();
 app.MapGradingActions();   // HTTP grading workflow for integrators and the demo tour (GAD-T105)
+app.MapExamAssignmentActions();   // HTTP accommodation grants for integrators and the demo tour (GAD-T858)
 
 app.Run();
 
