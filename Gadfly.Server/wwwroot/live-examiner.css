@@ -1,17 +1,16 @@
 /* The examiner shown live (GAD-T691): <LiveExaminer> and <ExaminerPresence> (Components/Shared), drawn by js/live-examiner.js.
    Linked from App.razor, so every page that places her gets it. Never a picture of her: until the 3D examiner is up, and wherever
    she can't be, the presence shows instead, a blue sphere with glowing circuitry (WebGL) over a CSS orb with the same pattern.
-   On the light classical theme (GAD-T718) she keeps her deep Aegean twilight (--stage-bg, the dark ground her blue circuitry skin was
-   tuned for; her own skin code is untouched) and the page gets the frame: a marble mat (--stage-frame) with a white inner line and a
-   gold keyline around the stage, so the one dark thing on the page reads as a painting in a frame, not a hole in it. */
+   On every theme she keeps her dark stage (--stage-bg, the ground her blue circuitry skin was tuned for; her own skin code is
+   untouched), set in a plain panel with a thin border. */
 
 .live-examiner {
     --live-examiner-ratio: 4 / 5;
-    --live-frame: var(--space-2);
+    --live-frame: 0px;
     position: relative;
     width: 100%;
     aspect-ratio: var(--live-examiner-ratio);
-    background: var(--stage-frame);
+    background: var(--stage-bg);
     border: var(--border);
     border-radius: var(--live-examiner-radius, var(--radius-sm));
     box-shadow: var(--shadow-1);
@@ -23,7 +22,6 @@
     overflow: hidden;
     border-radius: var(--live-examiner-radius, var(--radius-sm));
     background: var(--live-examiner-bg, var(--stage-bg));
-    box-shadow: 0 0 0 var(--space-0) var(--panel), 0 0 0 calc(var(--space-0) + 1px) var(--gold);
 }
 
 .live-examiner-stage { position: absolute; inset: 0; }
