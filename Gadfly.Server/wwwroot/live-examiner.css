@@ -66,6 +66,8 @@
         0 0 calc(30px + 40px * var(--presence-level)) rgba(31, 109, 255, calc(.45 + .4 * var(--presence-level))),
         inset 0 0 24px rgba(184, 236, 255, .45);
     opacity: calc(.85 + .15 * var(--presence-level));
+    /* One swell per spoken word (GAD-T840; examiner-voice.js shapes it), the same size as the WebGL sphere's. */
+    scale: calc(1 + .12 * var(--presence-level));
     animation: examiner-presence-drift 40s linear infinite, examiner-presence-breathe 6s ease-in-out infinite;
 }
 
@@ -87,6 +89,6 @@
 @keyframes examiner-presence-breathe { 50% { transform: scale(1.03); filter: brightness(1.08); } }
 
 @media (prefers-reduced-motion: reduce) {
-    .examiner-presence-orb { animation: none; }
+    .examiner-presence-orb { animation: none; scale: none; }
     .live-examiner ma-avatar, .live-examiner .examiner-presence { transition: none; }
 }

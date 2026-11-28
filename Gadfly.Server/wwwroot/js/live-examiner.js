@@ -127,6 +127,12 @@ void main() {
 }`;
 
 /**
+ * How the sphere answers her voice (GAD-T840): at full level it is `scale` larger (the CSS orb's --presence-level scale matches),
+ * following the level at `rise`/`fall` per second; silent, it breathes once every `breathS` seconds. Reduced motion: glow only.
+ */
+const PULSE = { scale: 0.12, rise: 40, fall: 16, breathS: 6, breathScale: 0.015, breathGlow: 0.08 };
+
+/**
  * Starts the presence in `el` (an `.examiner-presence`): the WebGL sphere over the CSS orb, or the CSS orb alone without WebGL.
  * Returns `{ setLevel(0..1), dispose() }`, also kept as `el.examinerPresence`. Draws only while visible.
  */
@@ -142,11 +148,16 @@ export function mountPresence(el) {
         if (disposed || !gl) return;
         const dt = last ? Math.min(0.1, (now - last) / 1000) : 0;
         last = now;
-        shown += (level - shown) * (calm ? 1 : Math.min(1, dt * 8));
-        gl.uniforms.level.value = shown;
-        if (!calm) {
+        // examiner-voice.js already shapes each word's swell; this only takes the frame-to-frame edge off, quicker rising than falling.
+        shown += (level - shown) * (calm ? 1 : 1 - Math.exp(-dt * (level > shown ? PULSE.rise : PULSE.fall)));
+        if (calm) gl.uniforms.level.value = shown;
+        else {
             gl.uniforms.time.value += dt;
             gl.sphere.rotation.y += dt * 0.12;
+            // Silent, she breathes: a slow small swell and glow that gives way to her voice as it rises.
+            const breath = (0.5 + 0.5 * Math.sin((gl.uniforms.time.value * 2 * Math.PI) / PULSE.breathS)) * (1 - shown);
+            gl.uniforms.level.value = shown + PULSE.breathGlow * breath;
+            gl.sphere.scale.setScalar(1 + PULSE.scale * shown + PULSE.breathScale * breath);
         }
         gl.renderer.render(gl.scene, gl.camera);
         if (!calm && visible) raf = requestAnimationFrame(draw);

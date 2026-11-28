@@ -305,10 +305,9 @@ Pages: landing, how it works, science, pricing, security, contact, privacy, term
   contact form's controls `--target-touch`.
 - **Status.** The contact form's success and error notices use the `--ok`/`--error` border on their tints, as app.css's
   `.notice.ok`/`.error`; the wording says which it is, so colour isn't the only signal.
-- **The live examiner.** The landing hero's plate shows `<LiveExaminer Framing="head-and-shoulders">` instead of the
-  portrait image; its accessible name is `site.landing.plate.alt` ("One of Gadfly's two examiners, shown live and
-  silent"). These pages are static (no circuit), so `LiveExaminer` writes its mount config into `data-live-examiner` when
-  rendered statically and `site.js` mounts her; she loads only once scrolled into view. The hero stacks below 820px with
+- **The live examiner.** The landing hero's plate shows the examiner's orb (`<ExaminerPresence>` in a `.live-examiner`
+  panel, GAD-T840) with `role="img"` and the accessible name `site.landing.plate.alt`. These pages are static (no
+  circuit), so `site.js` starts its WebGL sphere; without script or WebGL the CSS orb shows. The hero stacks below 820px with
   the plate after the headline, lede and actions, and below 40rem the examiner sits above the exchange at most 14rem wide,
   so the h1 is the first thing on a phone screen.
 - **Statement.** `/accessibility` now states WCAG 2.2 AA as the target for every page, explicitly not a conformance claim,

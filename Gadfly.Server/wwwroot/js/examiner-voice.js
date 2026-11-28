@@ -8,8 +8,9 @@
 //   - Speaking style: a fixed server-side style per kind of question (Voice/ExaminerStyle.cs) played as a small head tilt and brow
 //     lift on the 3D head. No style carries valence: all share the same mild baseline, so her face never hints at the grade.
 //   - Her presence speaking (GAD-T694): while the 3D head is not showing (still loading, or a fallback) the room shows her live
-//     presence (live-examiner.js mountPresence), never a picture of her, and its glow follows the same word timings (one swell per
-//     syllable), so she still visibly speaks.
+//     presence (live-examiner.js mountPresence), never a picture of her, and it pulses with the same word timings (GAD-T840: one
+//     swell per word, a fast attack decaying over the word), so she visibly speaks. With no 3D head her voice plays through the
+//     avatar's own AudioContext, and the words are timed on that context's clock (when the audio is heard), not on when it arrived.
 //   - Quality tiers: the 3D examiner's frame rate is watched and, on a slow device, her render resolution and animation rate are
 //     lowered step by step; if it is still too slow she becomes the presence (between utterances, never mid-sentence). The tier is
 //     remembered for this tab, so a reload starts where it ended.
@@ -20,9 +21,9 @@
 //     its word boundaries); with no browser speech the question stays on screen as text.
 //
 //   - The exam language (GAD-T531): in a Korean exam her 3D head lip-syncs Korean (lipsync-ko.js, registered on the head once it
-//     has loaded), the presence swells once per Hangul syllable, and the browser-speech fallback reads with a Korean voice.
-//     An English exam is unchanged. A Spanish exam (GAD-T608) lip-syncs with lipsync-es.js the same way, the presence counts
-//     accented vowels as vowels, and the fallback reads with a Spanish voice (a Latin American one first).
+//     has loaded), and the browser-speech fallback reads with a Korean voice.
+//     An English exam is unchanged. A Spanish exam (GAD-T608) lip-syncs with lipsync-es.js the same way, and the fallback reads
+//     with a Spanish voice (a Latin American one first).
 //
 // Gaps in the library that this works around are filed as MindAttic.Avatar tickets (see docs/VOICE.md).
 
@@ -35,6 +36,8 @@ const LIPSYNC = { ko: registerKorean, es: registerSpanish };
 const SPEECH_LANG = { ko: "ko-KR", es: "es-419" };
 
 const STYLE_FADE_MS = 450;
+// Each spoken word's pulse on the presence (swell()).
+const SWELL = { attackMs: 60, hold: 0.2, releaseMs: 160 };
 const TIER_KEY = "gadfly.examiner.tier";
 // Each tier: render resolution (share of the device pixel ratio, capped) and animation frames per second.
 const TIERS = [
@@ -65,7 +68,7 @@ export function createPresenter(avatar, stage, caption, cfg, onPortrait) {
         language: String((cfg && cfg.language) || "en").toLowerCase().split(/[-_]/)[0],
         avatar, stage, caption, cfg: cfg || {}, onPortrait: onPortrait || (() => { }),
         tokens: [], spans: [], words: [], lit: -1,
-        clock: { running: false, startedAt: 0, pausedAt: 0, pausedTotal: 0, paused: false },
+        clock: { running: false, startedAt: 0, pausedAt: 0, pausedTotal: 0, paused: false, ctx: null, origin: null, streamStart: 0, wordsSeen: false },
         raf: 0, fallbackActive: false, tier: readTier(), fps: null, portraitPending: null, disposed: false,
         listeners: [],
     };
@@ -171,7 +174,11 @@ function addWords(p, words) {
         if (!Number.isFinite(start)) continue;
         p.words.push({ word: String(w.word || ""), startMs: start, durationMs: Number.isFinite(dur) && dur > 0 ? dur : 250 });
     }
-    if (p.clock.running) loop(p);
+    const c = p.clock;
+    c.wordsSeen = true;
+    // A streamed utterance's first chunk, arriving after she started: it is scheduled now, or at the stream's start if that is later.
+    if (c.ctx && c.origin === null) c.origin = Math.max(c.streamStart, c.ctx.currentTime);
+    if (c.running) loop(p);
 }
 
 function light(p, upTo) {
@@ -207,21 +214,47 @@ function endUtterance(p) {
 
 function resetClock(p) {
     stopLoop(p);
-    p.clock = { running: false, startedAt: 0, pausedAt: 0, pausedTotal: 0, paused: false };
+    p.clock = { running: false, startedAt: 0, pausedAt: 0, pausedTotal: 0, paused: false, ctx: null, origin: null, streamStart: 0, wordsSeen: false };
 }
 
 function startClock(p) {
-    if (p.clock.running) return;
-    p.clock.running = true;
-    p.clock.startedAt = now();
-    p.clock.pausedTotal = 0;
-    if (p.clock.paused) p.clock.pausedAt = now();
+    const c = p.clock;
+    if (c.running) return;
+    c.running = true;
+    c.startedAt = now();
+    c.pausedTotal = 0;
+    if (c.paused) c.pausedAt = now();
+    useAudioClock(p);
     loop(p);
+}
+
+/**
+ * Her audio on the plain Web Audio path (no 3D head): the words are counted on its AudioContext's clock from the moment her first
+ * sample plays. That clock holds while the context is suspended (pause), and never runs ahead of audio that arrived late. A whole
+ * clip plays at once; a stream's first chunk plays at the stream's start, or when it arrives if that is later (addWords).
+ */
+function useAudioClock(p) {
+    const el = p.avatar, c = p.clock;
+    const ctx = el && !el.head && el.ctx && el.ctx.state !== "closed" ? el.ctx : null;
+    if (!ctx) return;
+    c.ctx = ctx;
+    const streaming = el.streamGen === el.speechGen && Number.isFinite(el.nextPlayTime);
+    if (!streaming) c.origin = ctx.currentTime;
+    else {
+        c.streamStart = el.nextPlayTime;
+        // Chunks held while the stream was starting (their words came first) play from its start.
+        c.origin = c.wordsSeen ? c.streamStart : null;
+    }
 }
 
 function elapsed(p) {
     const c = p.clock;
     if (!c.running) return 0;
+    if (c.ctx) {
+        if (c.origin === null) return -1;   // no audio yet
+        const heard = c.ctx.currentTime - (c.ctx.outputLatency || c.ctx.baseLatency || 0);
+        return Math.max(0, (heard - c.origin) * 1000);
+    }
     const end = c.paused ? c.pausedAt : now();
     return Math.max(0, end - c.startedAt - c.pausedTotal);
 }
@@ -237,7 +270,7 @@ function loop(p) {
             const w = p.words[i];
             if (w.startMs > t) break;
             upTo = i;
-            if (t < w.startMs + w.durationMs) open = mouthOpen(w, t);
+            open = Math.max(open, swell(w, t));
         }
         light(p, upTo);
         setMouth(p, open);
@@ -251,19 +284,20 @@ function stopLoop(p) {
     p.raf = 0;
 }
 
-/** How open her mouth is (the presence's swell) at time t inside word w: one opening per syllable, eased at the edges of the word. */
-function mouthOpen(w, t) {
-    const syl = syllables(w.word);
-    const x = Math.min(1, Math.max(0, (t - w.startMs) / w.durationMs));
-    const edge = Math.min(1, x * 6, (1 - x) * 6);
-    return Math.min(1, 0.25 + 0.75 * Math.abs(Math.sin(Math.PI * syl * x))) * edge;
-}
-
-function syllables(word) {
-    const w = String(word || "").toLowerCase();
-    const m = w.match(/[aeiouyáéíóúü]+/g);   // accented vowels for Spanish (GAD-T608); English has none
-    const hangul = w.match(/[\uac00-\ud7a3]/g);   // one Hangul block is one syllable (GAD-T531)
-    return Math.max(1, (m ? m.length : 0) + (hangul ? hangul.length : 0));
+/**
+ * The presence's swell at time t for word w (GAD-T840): up to full in `attackMs` (eased), easing down to `hold` over the rest of the
+ * word, then gone `releaseMs` after it. The next word rises from what is left, so each word is one clear pulse with no jitter.
+ */
+function swell(w, t) {
+    const x = t - w.startMs;
+    if (x < 0) return 0;
+    if (x < SWELL.attackMs) { const a = x / SWELL.attackMs; return a * a * (3 - 2 * a); }
+    if (x < w.durationMs) {
+        const k = 1 - (x - SWELL.attackMs) / Math.max(1, w.durationMs - SWELL.attackMs);
+        return SWELL.hold + (1 - SWELL.hold) * k * k;
+    }
+    const r = 1 - (x - w.durationMs) / SWELL.releaseMs;
+    return r > 0 ? SWELL.hold * r * r : 0;
 }
 
 function estimateMs(text) {
@@ -468,10 +502,10 @@ function speakWithBrowser(p, text) {
         const offsets = [];
         let at = 0;
         for (const t of p.tokens) { const i = text.indexOf(t, at); offsets.push(i < 0 ? at : i); at = (i < 0 ? at : i) + t.length; }
-        let mouthTimer = 0;
+        let mouthRaf = 0;
         const finish = (ok) => {
             clearTimeout(guard);
-            clearTimeout(mouthTimer);
+            cancelAnimationFrame(mouthRaf);
             if (p.browserUtterance !== u || !p.fallbackActive) return resolve(ok);
             p.fallbackActive = false;
             light(p, p.spans.length - 1);
@@ -483,14 +517,16 @@ function speakWithBrowser(p, text) {
             let k = 0;
             while (k + 1 < offsets.length && offsets[k + 1] <= e.charIndex) k++;
             light(p, k);
+            // No audio clock to read here: the word's pulse starts at its boundary, and lasts about as long as it takes to say.
             const word = p.tokens[k] || "";
-            const ms = 140 + 55 * word.length, start = now();
-            clearTimeout(mouthTimer);
+            const w = { word, startMs: now(), durationMs: 140 + 55 * word.length };
+            cancelAnimationFrame(mouthRaf);
             const step = () => {
-                const t = now() - start;
-                if (t >= ms || !p.fallbackActive) { setMouth(p, 0); return; }
-                setMouth(p, mouthOpen({ word, startMs: 0, durationMs: ms }, t));
-                mouthTimer = setTimeout(step, 33);
+                mouthRaf = 0;
+                if (!p.fallbackActive) return;
+                const t = now();
+                setMouth(p, swell(w, t));
+                if (t < w.startMs + w.durationMs + SWELL.releaseMs) mouthRaf = requestAnimationFrame(step);
             };
             step();
         };
