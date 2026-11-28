@@ -1,3 +1,6 @@
 @inherits LayoutComponentBase
+@* A fallback for any page that sets no <PageTitle> of its own (GAD-T857); the page's own PageTitle, rendered after
+   this one, replaces it as HeadOutlet's single <title> tag. *@
+<PageTitle>Gadfly Exams</PageTitle>
 <Gadfly.Server.Components.Shared.MockBanner />
 <main class="bare">@Body</main>

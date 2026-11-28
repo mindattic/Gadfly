@@ -7,6 +7,9 @@
 @inject Gadfly.Server.Inbox.InboxBadgeSignal InboxBadge
 @implements IDisposable
 
+@* A fallback for any page that sets no <PageTitle> of its own (GAD-T857); the page's own PageTitle, rendered after
+   this one, replaces it as HeadOutlet's single <title> tag. *@
+<PageTitle>Gadfly Exams</PageTitle>
 <div class="shell">
     @* Keyboard reach (GAD-T365): the first focusable thing in the app, so Tab from the address bar reaches the page
        content without walking through the whole top bar and admin sub-nav first. Mirrors the public site's (GAD-T308). *@

@@ -6,7 +6,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
-    <title>Gadfly Exams · @AppVersion.Label</title>
+    @* No static <title> here (GAD-T857): HeadOutlet below renders the page's own <PageTitle> (MainLayout/EmptyLayout
+       supply a default for any page that sets none) as the document's one <title>; a second static tag here duplicated it. *@
     @* Outfit, the app's one typeface (GAD-T855): --font-sans in app.css reads it everywhere, with the system stack as fallback. *@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
