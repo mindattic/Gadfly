@@ -69,8 +69,8 @@
 /* The opt-in dark variant: neutral slate grounds, light ink, a lighter blue accent. */
 :root[data-theme="dark"] {
     --bg: #0f172a; --bg-deep: #0b1220; --panel: #1e293b;
-    --ink: #e2e8f0; --muted: #94a3b8;
-    --line: #334155; --line-strong: #64748b;
+    --ink: #e2e8f0; --muted: #9aa8bc;
+    --line: #334155; --line-strong: #7c8ba1;
     --accent: #60a5fa; --accent-ink: #0f172a; --accent-tint: #1e3a5f;
     --clay: #cbd5e1;
     --gold: #64748b; --gold-soft: #475569;

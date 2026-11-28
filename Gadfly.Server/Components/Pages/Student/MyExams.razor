@@ -10,9 +10,9 @@
 
 <HeadContent><link rel="stylesheet" href="student.css" /><link rel="stylesheet" href="practice.css" /></HeadContent>
 <PageTitle>@T["myExams.pageTitle"]</PageTitle>
-<Tour Id="@Tours.TourIds.MyExams" Float="true" />
 <header class="page-header">
     <h1>@T["myExams.heading"] <HelpLink Topic="student-guide" Anchor="finding-your-exam-my-exams" /></h1>
+    <Tour Id="@Tours.TourIds.MyExams" />
 </header>
 @if (Tenant.UserId is { } me)
 {

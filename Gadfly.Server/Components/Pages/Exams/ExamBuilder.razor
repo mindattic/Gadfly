@@ -6,11 +6,12 @@
 @inject IOrganizationDirectory Directory
 @inject TimeProvider Clock
 @inject NavigationManager Nav
-@inject IServiceScopeFactory Scopes
 @using Gadfly.Server.Admin
 
 <PageTitle>@(Id is null ? "New exam" : draft?.Title ?? "Exam") · Gadfly Exams</PageTitle>
-<h1>@(Id is null ? "New exam" : draft?.Title ?? "Exam") @if (draft?.Id is not null) { <span>· @draft.Status</span> }</h1>
+<header class="page-header">
+    <h1>@(Id is null ? "New exam" : draft?.Title ?? "Exam")@if (draft?.Id is not null) { <span class="badge eb-status">@draft.Status</span> }</h1>
+</header>
 <p class="eb-toolbar"><a href="exams">← All exams</a>@if (Id is { } aid) { <text> · </text><a href="assessments/@aid">Open in assessment setup</a> }</p>
 <HeadContent><link rel="stylesheet" href="exams.css" /></HeadContent>
 
@@ -57,22 +58,6 @@ else
         </div>
     }
 
-    @if (draft.Id is not null && openToAll is not null)
-    {
-        @* GAD-T669: who can take the exam is access, not a frozen setting, so it can change on published exams too. *@
-        <div class="panel">
-            <h2>Who can take it</h2>
-            <label class="eb-check">
-                <input type="checkbox" checked="@openToAll.Value" disabled="@busy" @onchange="e => OpenToAllChangedAsync(e.Value is true)" />
-                <span>Open to every student in the organization (no assignment needed)</span>
-            </label>
-            <p class="hint">Unticked, only the students assigned can take it. Assignments already made are kept either way.</p>
-            @if (openMessage is not null)
-            {
-                <p role="status" class="@(openOk ? "ok" : "error")">@openMessage</p>
-            }
-        </div>
-    }
 
     <div class="panel">
         <h2>Source and concepts</h2>
@@ -221,34 +206,6 @@ else
     private string? categoryMessage;
     private bool categoryOk;
 
-    // GAD-T669: open to every student (owners and admins only; null hides the panel).
-    private bool? openToAll;
-    private string? openMessage;
-    private bool openOk;
-
-    private async Task<T> WithAssignmentsAsync<T>(Func<AssignmentAdminService, Task<T>> work)
-    {
-        await using var scope = Scopes.CreateAsyncScopeFor(TenantSnapshot.Of(Tenant));
-        return await work(new AssignmentAdminService(scope.ServiceProvider));
-    }
-
-    private async Task LoadOpenToAllAsync(Guid examId) =>
-        openToAll = AdminArea.IsOrgAdmin(Tenant.Role) ? await WithAssignmentsAsync(s => s.OpenToAllStudentsAsync(examId)) : null;
-
-    private async Task OpenToAllChangedAsync(bool open)
-    {
-        if (draft?.Id is not { } id || busy) return;
-        busy = true;
-        try
-        {
-            var r = await WithAssignmentsAsync(s => s.SetOpenToAllStudentsAsync(id, open));
-            openOk = r.Ok;
-            openMessage = r.Message;
-            await LoadOpenToAllAsync(id);
-        }
-        finally { busy = false; }
-    }
-
     protected override void OnInitialized()
     {
         svc = new ExamService(Db, Tenant, Directory, Clock);
@@ -303,7 +260,6 @@ else
                 return;
             }
             await LoadCategoryAsync(id);
-            await LoadOpenToAllAsync(id);
         }
         else if (draft?.Id is not null || draft is null)
         {

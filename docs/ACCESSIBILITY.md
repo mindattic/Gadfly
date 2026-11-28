@@ -108,7 +108,7 @@ Light tokens: `--bg` #f8fafc, `--bg-deep` #f1f5f9, `--panel` #ffffff, `--ink` #0
 `--line-strong` #64748b, `--accent` #2563eb, `--accent-tint` #eff6ff, `--clay` #334155, `--gold` #94a3b8, `--ok` #15803d,
 `--error` #b91c1c, `--info` #1d4ed8, `--warn` #b45309, tints `--info-tint` #eff6ff, `--ok-tint` #f0fdf4, `--warn-tint`
 #fffbeb, `--error-tint` #fef2f2, `--accent-ink`/`--danger-ink`/`--warn-ink` #ffffff. Dark: `--bg` #0f172a, `--bg-deep`
-#0b1220, `--panel` #1e293b, `--ink` #e2e8f0, `--muted` #94a3b8, `--line` #334155, `--line-strong` #64748b, `--accent`
+#0b1220, `--panel` #1e293b, `--ink` #e2e8f0, `--muted` #9aa8bc, `--line` #334155, `--line-strong` #7c8ba1, `--accent`
 #60a5fa, `--accent-tint` #1e3a5f, `--clay` #cbd5e1, `--gold` #64748b, `--ok` #4ade80, `--error` #f87171, `--info` #60a5fa,
 `--warn` #fbbf24, tints `--info-tint` #172554, `--ok-tint` #052e16, `--warn-tint` #3b2a06, `--error-tint` #3f1414,
 `--accent-ink`/`--danger-ink`/`--warn-ink` #0f172a. The palest tint is `--info-tint`/`--accent-tint` in light and
@@ -118,8 +118,8 @@ Light tokens: `--bg` #f8fafc, `--bg-deep` #f1f5f9, `--panel` #ffffff, `--ink` #0
 | --- | --- | --- |
 | `--ink` on `--bg` / `--bg-deep` / `--panel` | 17.1 / 16.3 / 17.9 | 14.5 / 15.2 / 11.9 |
 | `--ink` on the palest tint | 16.4 | 9.3 |
-| `--muted` on `--bg` / `--bg-deep` / `--panel` (hints, placeholders, table cells) | 7.2 / 6.9 / 7.6 | 7.0 / 7.3 / 5.7 |
-| `--muted` on `--info-tint` / `--accent-tint` | 7.0 / 7.0 | 5.7 / **4.5 (4.49, fails)** |
+| `--muted` on `--bg` / `--bg-deep` / `--panel` (hints, placeholders, table cells) | 7.2 / 6.9 / 7.6 | 7.4 / 7.8 / 6.1 |
+| `--muted` on `--info-tint` / `--accent-tint` | 7.0 / 7.0 | 6.1 / 4.8 |
 | `--accent` (links, secondary buttons, focus ring) on `--bg` / `--bg-deep` / `--panel` / `--accent-tint` | 4.9 / 4.7 / 5.2 / 4.8 | 7.0 / 7.4 / 5.8 / 4.5 |
 | `--accent-ink` on `--accent` (primary buttons, active nav, tour launch) | 5.2 | 7.0 |
 | `--clay` (numerals, concept labels, marks) on `--bg` / `--bg-deep` / `--panel` | 9.9 / 9.5 / 10.4 | 12.0 / 12.6 / 9.9 |
@@ -129,8 +129,8 @@ Light tokens: `--bg` #f8fafc, `--bg-deep` #f1f5f9, `--panel` #ffffff, `--ink` #0
 | `--warn` on `--bg` / `--panel` / `--warn-tint` | 4.8 / 5.0 / 4.8 | 10.7 / 8.8 / 8.3 |
 | `--danger-ink` on `--error` (danger buttons) | 6.5 | 6.5 |
 | `--warn-ink` on `--warn` (mock tag); `--ink` on `--warn-tint` (mock banner) | 5.0; 17.2 | 10.7; 11.2 |
-| `--line-strong` (control borders) on `--bg` / `--bg-deep` / `--panel` | 4.6 / 4.3 / 4.8 | 3.8 / 3.9 / 3.1 |
-| `--line-strong` on `--accent-tint` / `--info-tint` / `--ok-tint` / `--warn-tint` / `--error-tint` | 4.4 / 4.4 / 4.6 / 4.6 / 4.4 | **2.4 (fails)** / 3.1 / 3.1 / **2.9 (fails)** / 3.3 |
+| `--line-strong` (control borders) on `--bg` / `--bg-deep` / `--panel` | 4.6 / 4.3 / 4.8 | 5.2 / 5.4 / 4.2 |
+| `--line-strong` on `--accent-tint` / `--info-tint` / `--ok-tint` / `--warn-tint` / `--error-tint` | 4.4 / 4.4 / 4.6 / 4.6 / 4.4 | 3.3 / 4.2 / 4.3 / 4.0 / 4.6 |
 | Focus ring: `--accent` on `--bg` / `--panel` (above); `--focus-on-stage` white on the stage's lightest slate (#1e293b) | 4.9 / 5.2; 14.6 | 7.0 / 5.8; 14.6 |
 | Analytics meter: `--meter` fill on `--track` (non-text, 3:1; `analytics.css`, not part of GAD-T835) | 3.2 | not re-checked |
 
@@ -138,10 +138,9 @@ Light tokens: `--bg` #f8fafc, `--bg-deep` #f1f5f9, `--panel` #ffffff, `--ink` #0
 only boundary uses `--line-strong`. `--gold` (2.5 on `--bg` light, 3.8 dark) is a neutral edge, never text or state.
 Every status is also said in words (WCAG 1.4.1).
 
-**Dark-variant gaps (opt-in only, nothing sets it).** In the dark variant `--muted` text on `--accent-tint` is 4.49:1, just
-under 4.5, and `--line-strong` as a control's only boundary on `--accent-tint` (2.4) or `--warn-tint` (2.9) is under 3:1.
-Lighten `--accent-tint` / `--warn-tint` or `--line-strong` in `:root[data-theme="dark"]` before turning the dark variant
-on. The light theme, which every visitor gets, passes every pair above.
+**Dark variant.** GAD-T848 lightened the dark `--muted` (#94a3b8 to #9aa8bc) and `--line-strong` (#64748b to #7c8ba1),
+which were 4.49:1 on `--accent-tint` and 2.4 / 2.9 on `--accent-tint` / `--warn-tint`; both variants now pass every pair
+above.
 
 The landing hero and sign-in page no longer have a painted backdrop (`--scene` is gone), so text there sits on `--bg` or
 `--panel` and the rows above apply.
@@ -167,7 +166,7 @@ scrim tokens.
 
 - **Light everywhere, by default.** The app does not follow `prefers-color-scheme: dark` (`app.css`, `site.css`,
   `demo.css`, `grading.css`, `analytics.css`, the LTI picker and the transcript-verify page). The neutral slate dark
-  variant is an opt-in: set `data-theme="dark"` on `<html>`. Nothing sets it yet; see its gaps under the contrast table.
+  variant is an opt-in: set `data-theme="dark"` on `<html>`. Nothing sets it yet; its contrast is in the dark column of the table.
 - **Palette.** Slate ink on near-white grounds, one blue accent, semantic status colours (see "Shared tokens"). `--gold`,
   `--gold-soft`, `--clay` and `--font-serif` remain only as neutral aliases other sheets still read.
 - **Type.** The system UI sans everywhere, headings included; nothing is downloaded, so the CSP is unchanged.

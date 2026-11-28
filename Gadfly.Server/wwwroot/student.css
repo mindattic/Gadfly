@@ -4,8 +4,11 @@
 .panel h3 { font-size: var(--text-base); margin: var(--space-1) 0 0; }
 .panel p { margin: 0; }
 .actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
-.exam-list { display: grid; gap: var(--space-4); }
-.exam-item { max-width: var(--measure); margin: 0; }
+.exam-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); gap: var(--space-4); }
+.exam-item { max-width: none; margin: 0; }
+.exam-item > .hint { max-width: var(--measure); }
+.exam-list .exam-item { display: flex; flex-direction: column; }
+.exam-list .exam-item .actions { margin-top: auto; }
 .exam-item-head { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: baseline; justify-content: space-between; }
 /* .badge itself is app.css's shared one (GAD-T393); only these status variants are specific to the student pages. */
 .badge-open, .badge-inprogress { border-color: var(--accent); color: var(--accent); }
@@ -110,13 +113,14 @@ textarea { width: 100%; resize: vertical; }
 .last-answer { display: grid; gap: var(--space-3); margin-top: var(--space-4); }
 .last-answer .notice { margin: 0; }
 /* Every exam, one list (GAD-T845): the heading on the left, the list's tools (a filter box) on the right. */
-.exam-catalog { max-width: var(--measure); display: grid; gap: var(--space-3); }
+.exam-catalog { display: grid; gap: var(--space-3); }
 .exam-list-header { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; justify-content: space-between; }
 .exam-list-header h2 { margin: 0; }
 .exam-list-tools { display: flex; gap: var(--space-2); margin-left: auto; }
 .exam-filter { position: relative; align-items: center; width: min(18rem, 100%); }
 .exam-filter input { width: 100%; padding-right: calc(var(--target-min) + var(--space-1)); }
 .exam-filter input::-webkit-search-cancel-button { display: none; }
+@media (max-width: 40rem) { .exam-filter { width: 100%; } }
 .exam-filter-clear { position: absolute; right: var(--space-1); min-height: 0; width: var(--target-min); height: var(--target-min); padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); font-size: var(--text-xl); line-height: 1; cursor: pointer; }
 .exam-filter-clear:hover, .exam-filter-clear:focus-visible { background: var(--accent-tint); color: var(--ink); }
 .exam-item .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }

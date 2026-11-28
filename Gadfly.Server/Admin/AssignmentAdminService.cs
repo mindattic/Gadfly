@@ -317,37 +317,6 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
         return new BulkResult(r.Ok, r.Message, 0, []);
     }
 
-    /// <summary>Whether the exam is open to every student of the organization (GAD-T669); null when it isn't this organization's.</summary>
-    public async Task<bool?> OpenToAllStudentsAsync(Guid examId, CancellationToken ct = default)
-    {
-        Gate.EnsureReader();
-        var org = Gate.Org;
-        return await Db.Exams.AsNoTracking().Where(e => e.Id == examId && e.OrganizationId == org)
-            .Select(e => (bool?)e.OpenToAllStudents).FirstOrDefaultAsync(ct);
-    }
-
-    /// <summary>
-    /// Opens the exam to every student of the organization, or limits it to the students assigned (GAD-T669). Only who can start
-    /// it changes: assignments already made (open or assigned) stay as they are. Allowed on published exams, since it is access,
-    /// not a frozen exam setting. Audited as <c>exam.open-to-all</c>.
-    /// </summary>
-    public async Task<BulkResult> SetOpenToAllStudentsAsync(Guid examId, bool open, CancellationToken ct = default)
-    {
-        if (!await Gate.RequireAsync("Changing who can take an exam", "Exam", examId.ToString(), ct)) return BulkResult.Fail(AdminGate.DeniedMessage);
-        var db = Db;
-        var org = Gate.Org;
-        var exam = await db.Exams.FirstOrDefaultAsync(e => e.Id == examId && e.OrganizationId == org, ct);
-        if (exam is null) return BulkResult.Fail("That exam does not exist in this organization.");
-        if (exam.OpenToAllStudents == open) return new BulkResult(true, "No change.", 0, []);
-        Gate.Audit("exam.open-to-all", "Exam", exam.Id.ToString(), new { exam.OpenToAllStudents }, new { OpenToAllStudents = open });
-        exam.OpenToAllStudents = open;
-        await db.SaveChangesAsync(ct);
-        db.ChangeTracker.Clear();
-        return new BulkResult(true, open
-            ? "Every student in the organization can now take this exam."
-            : "Only the students assigned can take this exam now. Assignments already made are kept.", 1, []);
-    }
-
     /// <summary>
     /// Active students named in pasted text (user names or emails, one per line or separated by commas or semicolons), and the
     /// entries that matched nobody.
