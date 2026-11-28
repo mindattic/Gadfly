@@ -73,8 +73,8 @@
 
 /* Once the WebGL sphere draws, the orb is only its halo: the circuitry and body come from the sphere. */
 .examiner-presence[data-presence="gl"] .examiner-presence-orb {
-    background: radial-gradient(circle, rgba(31, 109, 255, .35) 0%, rgba(31, 109, 255, 0) 70%);
-    box-shadow: 0 0 calc(40px + 50px * var(--presence-level)) rgba(31, 109, 255, calc(.35 + .4 * var(--presence-level)));
+    background: radial-gradient(circle, rgba(31, 109, 255, .5) 0%, rgba(31, 109, 255, 0) 70%);
+    box-shadow: 0 0 calc(48px + 50px * var(--presence-level)) rgba(31, 109, 255, calc(.5 + .35 * var(--presence-level)));
     animation: none;
 }
 

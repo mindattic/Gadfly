@@ -3,7 +3,7 @@
 .dash-error p { margin: 0 0 var(--space-2); }
 .dash-badge { display: inline-block; min-width: 1.6rem; margin-left: var(--space-1); padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-ink); font-size: var(--text-sm); text-align: center; vertical-align: middle; }
 
-.dash-setup { display: block; max-width: 48rem; border-left: 4px solid var(--accent); }
+.dash-setup { display: block; max-width: none; border-left: 4px solid var(--accent); }
 .dash-setup h2 { margin-bottom: var(--space-3); }
 .dash-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
 .dash-steps li { display: flex; gap: var(--space-3); align-items: flex-start; }
@@ -24,10 +24,9 @@
 .dash-group.k-NotStartedNearDue, .dash-group.k-Approval { border-left-color: var(--warn); }
 .dash-group.k-InProgress { border-left-color: var(--ok); }
 
-.dash-numbers { max-width: 48rem; }
 .dash-numbers th[scope="row"] { color: var(--ink); font-weight: 500; }
 .dash-numbers th[scope="row"] .hint { display: block; font-weight: 400; font-size: var(--text-sm); }
 .dash-numbers td.num { font-size: var(--text-lg); font-weight: 600; }
 
 .dash-actions .card h3 { font-size: var(--text-base); margin: 0 0 var(--space-1); }
-.dash-actions { grid-template-columns: repeat(auto-fill, minmax(min(100%, 12.5rem), 1fr)); }
+.dash-actions { grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); }

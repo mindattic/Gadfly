@@ -10,11 +10,11 @@ time it was last read is shown beside it, in UTC.
 A new organization sees a **Getting started** checklist at the top until every step is done. Each step ticks itself off
 once it has happened, and each open step links to the page where you do it:
 
-1. **Create an exam**: paste or upload the notes the examiner should draw on, then publish it.
+1. **Publish an exam**: paste or upload the notes the examiner should draw on, then publish it. Every published exam is
+   open to every student, so there is nothing to assign.
 2. **Add students**: give each a user name and password, or invite them by email.
-3. **Assign the exam**: choose who sits it, how many attempts they get and when it closes.
-4. **Watch a practice interview**: add yourself a test student, sign in as them and take the practice interview from
-   **My exams**, then the exam you assigned. The step is done once any interview in your organization has ended.
+3. **Watch a practice interview**: add yourself a test student, sign in as them and take the practice interview from
+   **My exams**, then the exam you published. The step is done once any interview in your organization has ended.
 
 ## Needs attention
 
@@ -40,15 +40,14 @@ with nothing in it is left out; when nothing at all is waiting, the page says so
 | Median interview length | From start to end, over the interviews that ended in the period |
 | Grading turnaround | The median time from the end of the interview to the grade's final approval, over grades approved in the period. Hover to see how many |
 
-Underneath: how many exams are published out of all your exams, how many active students you have and how many
-assignments there are, with links to **Analytics** and **Usage** for more detail. A dash means there was nothing to
+Underneath: how many exams are published out of all your exams, how many active students you have, with links to **Analytics** and **Usage** for more detail. A dash means there was nothing to
 count.
 
 ## Quick actions
 
-Shortcuts to **Create an exam** ([Exams](admin-exams.md)), **Add students** ([Students](admin-students.md)), **Assign an
-exam** ([Assignments](admin-assignments.md)), **Watch live** ([Live sessions](admin-live-sessions.md)), **Grade** (the
-grading queue) and **Invite staff** (Members).
+Shortcuts to **Create an exam** ([Exams](admin-exams.md)), **Add students** ([Students](admin-students.md)), **Watch live**
+([Live sessions](admin-live-sessions.md)), **Grade** (the grading queue), **See results** (Analytics) and **Invite staff**
+(Members).
 
 ## If the dashboard does not load
 

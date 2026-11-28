@@ -150,8 +150,6 @@ else
             }
             <p class="hint">Signals are evidence for you to review. Nobody is failed automatically.</p>
         </fieldset>
-        <label>Examiner voice id <input @bind="draft.VoiceId" placeholder="default voice" /></label>
-        <p class="hint">Voice id: an ElevenLabs voice id; empty uses the organization's default voice, else the platform's.</p>
         <label>Instructions shown to students <textarea rows="4" @bind="draft.Instructions"></textarea></label>
 
         <div class="eb-actions">
@@ -177,7 +175,7 @@ else
 
     @if (draft.Id is { } examId && draft.Status != ExamStatus.Draft)
     {
-        <ExamAssignments @key="examId" Service="svc" Gate="gate" ExamId="examId" CanAssign="@(draft.Status == ExamStatus.Published)" />
+        <ExamAssignments @key="examId" Service="svc" Gate="gate" ExamId="examId" CanAdjust="@(draft.Status == ExamStatus.Published)" />
     }
 }
 

@@ -1,73 +1,22 @@
 @inject IJSRuntime JS
 
-@* Assigning a published exam and releasing results (GAD-T50). Hosted by ExamBuilder. *@
+@* The students who have opened a published exam, with their terms and accommodations (GAD-T50). Every published exam is open
+   to every student (GAD-T845), so there is nothing to assign here. Hosted by ExamBuilder. *@
 
-@if (CanAssign)
-{
-    <div class="panel">
-        <h2>Assign to students</h2>
-        @if (students is null)
-        {
-            <p class="hint" role="status">Loading…</p>
-        }
-        else if (students.Count == 0)
-        {
-            <p class="hint">This organization has no students yet. Add them under Members.</p>
-        }
-        else
-        {
-            <label class="eb-check">
-                <input type="checkbox" checked="@allStudents" @onchange="e => allStudents = e.Value is true" />
-                <span>All students (@students.Count)</span>
-            </label>
-            @if (!allStudents)
-            {
-                <fieldset class="eb-list scroll">
-                    <legend>Students</legend>
-                    @foreach (var s in students)
-                    {
-                        var already = assignedIds.Contains(s.UserId);
-                        <label class="eb-check">
-                            <input type="checkbox" disabled="@already" checked="@(already || picked.Contains(s.UserId))"
-                                   @onchange="e => Pick(s.UserId, e.Value is true)" />
-                            <span>@s.UserName @if (!string.IsNullOrEmpty(s.Email)) { <span class="hint">@s.Email</span> } @if (already) { <span class="hint">(assigned)</span> }</span>
-                        </label>
-                    }
-                </fieldset>
-            }
-            <label>Opens (optional, your time @OffsetLabel) <input type="datetime-local" @bind="opensLocal" /></label>
-            <label>Closes (optional, your time @OffsetLabel) <input type="datetime-local" @bind="closesLocal" /></label>
-            <label>Attempts allowed <input type="number" min="1" max="20" @bind="attempts" /></label>
-            <label>Extra time (accommodation)
-                <select @bind="timeMultiplier" @bind:culture="System.Globalization.CultureInfo.InvariantCulture">
-                    @foreach (var m in ExamService.TimeMultipliers)
-                    {
-                        <option value="@m.ToString(System.Globalization.CultureInfo.InvariantCulture)">@MultiplierLabel(m)</option>
-                    }
-                </select>
-            </label>
-            <p class="hint">Students already assigned to this exam are skipped. Email invitations arrive with M.AUTH-T35; for now students see the exam under My exams.</p>
-            <button type="button" disabled="@busy" @onclick="AssignAsync">Assign</button>
-        }
-        @if (message is not null)
-        {
-            <p role="status" class="@(ok ? "ok" : "error")">@message</p>
-        }
-    </div>
-}
-
-<h2>Assignments</h2>
+<h2>Students</h2>
+<p class="hint">Every published exam is open to every student; a student appears here once they open it. To set a closing date, attempts, extra time or another accommodation before a student starts, use <a href="admin/assignments">Assignments</a>.</p>
 @if (rows is null)
 {
     <p class="hint" role="status">Loading…</p>
 }
 else if (rows.Count == 0)
 {
-    <p class="hint">Not assigned to anyone yet.</p>
+    <p class="hint">No student has opened this exam yet.</p>
 }
 else
 {
     <p class="hint"><a href="@($"grading/exam/{ExamId:D}/class-summary.pdf")" download data-enhance-nav="false">Download class summary (PDF)</a>: score distribution, per-objective average and who hasn't completed, over this exam's released results.</p>
+    <div class="table-scroll">
     <table class="grid">
         <thead><tr><th scope="col">Student</th><th scope="col">Window</th><th scope="col">Attempts</th><th scope="col">Extra time</th><th scope="col">Answers</th><th scope="col">Eye contact</th><th scope="col">Leaving the window</th><th scope="col">Lives in EU/EEA</th><th scope="col">Latest session</th><th scope="col">Results</th></tr></thead>
         <tbody>
@@ -80,21 +29,21 @@ else
                     <td>@MultiplierLabel(r.TimeMultiplier)</td>
                     <td>
                         @(r.TypedAnswerAccommodation ? "typed (accommodation)" : "spoken")
-                        @if (CanAssign)
+                        @if (CanAdjust)
                         {
                             <button type="button" class="link" disabled="@busy" @onclick="() => TypedAnswersAsync(r, !r.TypedAnswerAccommodation)">@(r.TypedAnswerAccommodation ? "Withdraw" : "Grant typed answers")</button>
                         }
                     </td>
                     <td>
                         @(r.GazeAccommodation ? "not expected (accommodation)" : "expected")
-                        @if (CanAssign)
+                        @if (CanAdjust)
                         {
                             <button type="button" class="link" disabled="@busy" @onclick="() => GazeAccommodationAsync(r, !r.GazeAccommodation)">@(r.GazeAccommodation ? "Withdraw" : "Declare accommodation")</button>
                         }
                     </td>
                     <td>
                         @{ var wa = r.WindowAbsence ?? Gadfly.Server.Integrity.WindowAbsenceRule.Standard; }
-                        @if (CanAssign)
+                        @if (CanAdjust)
                         {
                             <select aria-label="When leaving the exam window marks @r.StudentName's attempt for review" disabled="@busy" value="@WindowPreset(wa)"
                                     @onchange="e => WindowAbsenceAsync(r, e.Value?.ToString())">
@@ -112,7 +61,7 @@ else
                     </td>
                     <td title="GAD-T259: by default a student living in the EU/EEA gets no voice measurements in voice exams (EU AI Act Art. 5(1)(f)).">
                         @(r.StudentInEuropeanUnion ? "yes (voice not measured by default)" : "no")
-                        @if (CanAssign)
+                        @if (CanAdjust)
                         {
                             <button type="button" class="link" disabled="@busy" @onclick="() => StudentInEuAsync(r, !r.StudentInEuropeanUnion)">@(r.StudentInEuropeanUnion ? "Unmark" : "Mark as EU/EEA")</button>
                         }
@@ -136,11 +85,12 @@ else
             }
         </tbody>
     </table>
+    </div>
     <p class="hint">Answers: exams are spoken. Grant typed answers only to a student with a documented speech, hearing or anxiety need: they then type each answer instead of speaking it. Their camera stays on, the examiner still speaks the questions and the eye-contact check still applies (unless you also declare the eye-contact accommodation). Their typed answers are marked as typed for reviewers, and pasting into the answer box is noted for review. Students can't turn this on themselves; every grant and withdrawal is recorded in the audit log. It applies the next time the student opens the exam.</p>
     <p class="hint">Eye contact: in the voice interview, a long look away from the examiner while answering brings gentle reminders: her head tilt, a slight dim around her that clears at once, then at most one warm line at a pause. Declare the accommodation for a student who should not be held to eye contact (for example autism, low vision, nystagmus or a cultural norm): none of these happen. It applies from their next answer.</p>
     <p class="hint">Leaving the window: the exam pauses whenever a student leaves the exam window, and three absences or one of a minute mark the attempt for your review (nothing is cancelled). For a student whose assistive technology takes the focus, or who has a documented need to step away, raise the thresholds or turn the review mark off. Absences are still noted and the exam still pauses. Every change is recorded in the audit log and applies from the next absence.</p>
     <p class="hint">Results reach a student only through Grading: AI and human grades, reconciliation when they disagree, then an authorized approval and publication.</p>
-    @if (!CanAssign && message is not null)
+    @if (!CanAdjust && message is not null)
     {
         <p role="status" class="@(ok ? "ok" : "error")">@message</p>
     }
@@ -149,36 +99,27 @@ else
 @code {
     [Parameter, EditorRequired] public ExamService Service { get; set; } = default!;
     [Parameter, EditorRequired] public Guid ExamId { get; set; }
-    [Parameter] public bool CanAssign { get; set; }
+    [Parameter] public bool CanAdjust { get; set; }
     /// <summary>The builder's gate over the circuit's DbContext (one operation at a time); loads and assigns wait on it (GAD-T189).</summary>
     [Parameter] public SemaphoreSlim? Gate { get; set; }
 
     private Guid loadedFor;
-    private bool loadedCanAssign;
+    private bool loadedCanAdjust;
 
-    private IReadOnlyList<StudentOption>? students;
     private IReadOnlyList<AssignmentRow>? rows;
-    private HashSet<Guid> assignedIds = [];
-    private readonly HashSet<Guid> picked = [];
-    private bool allStudents = true;
-    private DateTime? opensLocal, closesLocal;
-    private int attempts = 1;
-    private decimal timeMultiplier = 1m;
     private TimeSpan offset = TimeSpan.Zero;
     /// <summary>The browser's own time zone; null until known (then <see cref="offset"/>, today's UTC offset, stands in).</summary>
     private TimeZoneInfo? zone;
     private string? message;
     private bool ok, busy;
 
-    private string OffsetLabel => offset == TimeSpan.Zero ? "(UTC)" : $"(UTC{(offset < TimeSpan.Zero ? "-" : "+")}{offset.Duration():hh\\:mm})";
-
     protected override async Task OnParametersSetAsync()
     {
-        // Every parent re-render sets the parameters again: reload only for a different exam or when assigning becomes possible,
+        // Every parent re-render sets the parameters again: reload only for a different exam or when changes become possible,
         // never on each render (that overlapped the parent's own saves on the shared DbContext).
-        if (loadedFor == ExamId && (loadedCanAssign || !CanAssign)) return;
+        if (loadedFor == ExamId && (loadedCanAdjust || !CanAdjust)) return;
         loadedFor = ExamId;
-        loadedCanAssign = CanAssign;
+        loadedCanAdjust = CanAdjust;
         await LoadLockedAsync();
     }
 
@@ -215,31 +156,6 @@ else
     private async Task LoadAsync()
     {
         rows = await Service.AssignmentsAsync(ExamId);
-        assignedIds = rows.Select(r => r.StudentUserId).ToHashSet();
-        if (CanAssign) students = await Service.StudentsAsync();
-    }
-
-    private void Pick(Guid id, bool on)
-    {
-        if (on) picked.Add(id); else picked.Remove(id);
-    }
-
-    private async Task AssignAsync()
-    {
-        if (busy) return;   // the service shares the circuit's DbContext: one operation at a time (GAD-T189)
-        busy = true;
-        try
-        {
-            ExamResult r;
-            if (Gate is { } g) await g.WaitAsync();
-            try { r = await Service.AssignAsync(ExamId, allStudents ? null : picked.ToList(), ToUtc(opensLocal), ToUtc(closesLocal), attempts, timeMultiplier); }
-            finally { Gate?.Release(); }
-            ok = r.Ok;
-            message = r.Message;
-            if (r.Ok) picked.Clear();
-            await LoadLockedAsync();
-        }
-        finally { busy = false; }
     }
 
     private async Task TypedAnswersAsync(AssignmentRow row, bool on)
@@ -333,7 +249,6 @@ else
         finally { busy = false; }
     }
 
-    private DateTimeOffset? ToUtc(DateTime? local) => local is { } l ? AssignmentTime.ToUtc(l, zone, offset) : null;
 
     private string Local(DateTimeOffset t) => AssignmentTime.ToLocal(t, zone, offset).ToString("yyyy-MM-dd HH:mm");
 

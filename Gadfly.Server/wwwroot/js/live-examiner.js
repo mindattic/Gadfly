@@ -121,8 +121,8 @@ void main() {
     // A soft shimmer travelling along the traces; still when time stands still (reduced motion).
     float shimmer = 0.6 + 0.4 * sin( time * 0.9 - vUv.x * 18.0 + vUv.y * 7.0 );
     vec3 col = base * ( 0.32 + 0.68 * facing )
-        + trace * c * ( 0.55 * shimmer + 0.9 * level ) * ( 0.35 + 0.65 * facing )
-        + rim * fres * ( 0.75 + 0.6 * level );
+        + trace * c * ( 0.85 * shimmer + 0.7 * level ) * ( 0.45 + 0.55 * facing )
+        + rim * fres * ( 0.95 + 0.5 * level );
     gl_FragColor = vec4( col, 1.0 );
 }`;
 

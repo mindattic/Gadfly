@@ -43,7 +43,7 @@ public class AdminDashboardTests : ServerTest
         Assert.That(d.Last30.MedianDuration, Is.Null);
         Assert.That(d.Last30.MedianTurnaround, Is.Null);
         Assert.That(d.IsNew, Is.True);
-        Assert.That(d.Setup.Select(s => s.Key), Is.EqualTo(new[] { "exam", "students", "assign", "watch" }));
+        Assert.That(d.Setup.Select(s => s.Key), Is.EqualTo(new[] { "exam", "students", "watch" }));
         Assert.That(d.Setup.All(s => !s.Done), Is.True);
     }
 
@@ -55,7 +55,6 @@ public class AdminDashboardTests : ServerTest
         var d = await LoadAsync(w.Org);
         Assert.That(d.Setup.Single(s => s.Key == "exam").Done, Is.True);
         Assert.That(d.Setup.Single(s => s.Key == "students").Done, Is.True);
-        Assert.That(d.Setup.Single(s => s.Key == "assign").Done, Is.True);
         Assert.That(d.Setup.Single(s => s.Key == "watch").Done, Is.False, "no interview has ended yet");
 
         var now = Clock.GetUtcNow();
@@ -233,8 +232,8 @@ public class AdminDashboardHelperTests
     [Test]
     public void Setup_IsDoneOnlyWhenEveryStepIs()
     {
-        Assert.That(AdminDashboardService.Setup(1, 1, 1, true).All(s => s.Done), Is.True);
-        Assert.That(AdminDashboardService.Setup(1, 0, 1, true).Single(s => s.Key == "students").Done, Is.False);
+        Assert.That(AdminDashboardService.Setup(1, 1, true).All(s => s.Done), Is.True);
+        Assert.That(AdminDashboardService.Setup(1, 0, true).Single(s => s.Key == "students").Done, Is.False);
     }
 
     [Test]

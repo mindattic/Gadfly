@@ -95,11 +95,7 @@
 .site .sheet > ul > li:first-child { border-top: 0; }
 .site .sheet strong { display: block; font-family: var(--sans); font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--space-1); }
 .site .sheet span { color: var(--muted); }
-
-/* ---- quotation from the research */
-.site .quote { margin: 0; padding: 0 0 0 var(--space-5); border-left: 3px solid var(--accent); }
-.site .quote p { font: 400 clamp(1.35rem, 1.1rem + 1vw, 1.85rem)/1.4 var(--sans); margin: 0 0 var(--space-2); max-width: 38ch; }
-.site .quote cite { font-style: normal; color: var(--muted); font-size: var(--text-sm); }
+.site .sheet > .science-refs { margin: 0; padding: var(--space-3) 0 var(--space-4); border-top: var(--border); color: var(--muted); font-size: var(--text-sm); max-width: none; }
 
 /* ---- closing call to action */
 .site .closing { position: relative; background: var(--sheet); }

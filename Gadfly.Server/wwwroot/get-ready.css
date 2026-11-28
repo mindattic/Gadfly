@@ -5,8 +5,9 @@
 .ready-rules { display: grid; gap: var(--space-2); margin: var(--space-2) 0 0; }
 
 .examiner-preview-row { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: flex-start; }
-/* The examiner, live (GAD-T693): <LiveExaminer> fills this box at 4:5; no portrait and no tint overlays. */
+/* The examiner (GAD-T693, GAD-T839): the orb on a square stage, so it fills the box instead of floating in a tall dark portrait. */
 .examiner-preview-figure { flex: 0 1 16rem; max-width: 100%; }
+.examiner-preview-figure .live-examiner { --live-examiner-ratio: 1 / 1; }
 .examiner-preview-body { flex: 1 1 18rem; display: grid; gap: var(--space-2); min-width: 0; }
 .examiner-preview-caption { font-size: var(--text-lg); font-weight: 600; line-height: var(--leading); }
 /* Words not yet said are muted ink, not faded: opacity .55 dropped them to about 2.5:1 (WCAG 1.4.3, GAD-T718). */

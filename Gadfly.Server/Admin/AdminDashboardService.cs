@@ -109,18 +109,20 @@ public sealed class AdminDashboardService(GadflyDbContext db, ITenantContext ten
         var assignments = await db.ExamAssignments.AsNoTracking().CountAsync(a => a.OrganizationId == org, ct);
         var anyEnded = await db.ExamSessions.AsNoTracking().AnyAsync(s => s.OrganizationId == org && s.State == SessionState.Ended, ct);
 
-        var setup = Setup(exams?.All ?? 0, students, assignments, anyEnded);
+        var setup = Setup(exams?.Published ?? 0, students, anyEnded);
         return new AdminDashboard(now, attention, last7, last30, setup, exams?.All ?? 0, exams?.Published ?? 0, students, assignments);
     }
 
-    /// <summary>The getting-started checklist, in the order a new organization does it.</summary>
-    public static IReadOnlyList<SetupStep> Setup(int exams, int students, int assignments, bool anyInterviewEnded) =>
+    /// <summary>
+    /// The getting-started checklist, in the order a new organization does it. Every published exam is open to every student
+    /// (GAD-T845), so there is no assigning step.
+    /// </summary>
+    public static IReadOnlyList<SetupStep> Setup(int publishedExams, int students, bool anyInterviewEnded) =>
     [
-        new("exam", "Create an exam", "Paste or upload the notes the examiner should draw on, then publish it.", "admin/exams", exams > 0),
+        new("exam", "Publish an exam", "Paste or upload the notes the examiner should draw on, then publish it. Every student can then take it.", "admin/exams", publishedExams > 0),
         new("students", "Add students", "Give each student a user name and password, or invite them by email.", "admin/students", students > 0),
-        new("assign", "Assign the exam", "Choose who sits it, how many attempts they get and when it closes.", "admin/assignments", assignments > 0),
         new("watch", "Watch a practice interview",
-            "Add yourself a test student, sign in as them and take the practice interview from My exams, then the exam you assigned. You can follow it live here.",
+            "Add yourself a test student, sign in as them and take the practice interview from My exams, then the exam you published. You can follow it live here.",
             "admin/live", anyInterviewEnded),
     ];
 

@@ -132,6 +132,17 @@
     /* The controls column takes the height her stage and caption give the row and scrolls inside it (GAD-T725), like the
        transcript: contain: size keeps a long column from making the row, and so the room, taller than the screen. */
     .exam-live .voice-body { contain: size; align-self: stretch; overflow-y: auto; }
+    /* A laptop screen (GAD-T850): the answer box keeps three lines, not four, so the buttons fit beside her; when the column still
+       runs past the stage, a soft shadow at its bottom (or top) edge says there is more, drawn only while there is, as on the caption. */
+    .exam-live .voice-draft { height: calc(3 * var(--leading, 1.5) * 1em); }
+    .exam-live .voice-live { height: 1.5em; }
+    .exam-live .voice-body {
+        background:
+            linear-gradient(var(--panel) 40%, transparent) top / 100% 1.5rem no-repeat local,
+            linear-gradient(transparent, var(--panel) 60%) bottom / 100% 1.5rem no-repeat local,
+            linear-gradient(color-mix(in srgb, var(--ink) 16%, transparent), transparent) top / 100% .75rem no-repeat scroll,
+            linear-gradient(transparent, color-mix(in srgb, var(--ink) 16%, transparent)) bottom / 100% .75rem no-repeat scroll;
+    }
     .exam-live .voice-actions button { padding: var(--space-1) var(--space-3); font-size: var(--text-sm); }
     .exam-live .voice-actions [data-voice-action="done"] { font-size: var(--text-base); }
 }
