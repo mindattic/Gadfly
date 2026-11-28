@@ -58,4 +58,8 @@ grade. Underneath sit the Socratic engine and the original personal-introspectio
 ## 7. Decision record
 - 2026-11-27 — charter drafted from README/DESIGN/MASTER-PLAN-STATUS/PILOT/DEPLOY and the open tickets; Legion
   vote: Approve, 9/9 voters (plurality quorum reached, consensus 1.0); no dissent (all voters routed through the xai provider).
+- 2026-11-28 — owner-requested epic GAD-T833 "Professional UI overhaul" (priority 1000) worked ahead of the pilot epics and
+  closed: Greek theme replaced, orb-only examiner pulsing per spoken word, login-first startup (brochure at /about), every
+  published exam open to every student with a type-to-filter list, exams always spoken (Text mode removed), five
+  screenshot refinement passes (GAD-T848, T850, T852, T853, T854).
 - Triage: 13 open (plus this job ticket) → done 2 (GAD-T806, GAD-T596), duplicate 1 (GAD-T514 of GAD-T670), wont-do 3 (GAD-T784..T786, Hetzner hosting), kept 7, new tasks 2 (GAD-T831, GAD-T832).
