@@ -32,7 +32,7 @@
 {
     <section class="panel xm-panel" aria-labelledby="import-h">
         <h2 id="import-h">Import an exam</h2>
-        <p class="hint">A file exported from Gadfly (<code>.gadfly-exam.json</code>). It arrives as a draft on the source material you choose; nothing is published or assigned.</p>
+        <p class="hint">A file exported from Gadfly (<code>.gadfly-exam.json</code>). It arrives as a draft on the source material you choose; nothing is published.</p>
         @if (collections.Count == 0)
         {
             <p class="notice">There is no processed source material yet. <a href="sources">Add source material</a> first: an exam examines what its material covers.</p>
@@ -129,7 +129,7 @@ else
                         <th scope="col">Exam</th>
                         <th scope="col">Status</th>
                         <th scope="col" class="num">Objectives</th>
-                        <th scope="col" class="num">Assigned</th>
+                        <th scope="col" class="num">With terms</th>
                         <th scope="col" class="num">Completed</th>
                         <th scope="col" class="num">Average time</th>
                         <th scope="col">Window</th>
@@ -168,7 +168,7 @@ else
                                         <a href="admin/exams/@r.Id/preview">Preview as a student</a>
                                         <button type="button" class="link" @onclick="() => RunAsync(r.Id, s => s.DuplicateAsync(r.Id))" disabled="@busy">Duplicate</button>
                                         <a href="@ExamAuditEndpoints.ExamExportPath(r.Id)" download>Export as JSON</a>
-                                        <a href="admin/assignments">Assign…</a>
+                                        <a href="admin/assignments">Student terms…</a>
                                         <a href="admin/audit?exam=@r.Id">History</a>
                                         @if (r.Status == ExamStatus.Archived)
                                         {
@@ -186,7 +186,7 @@ else
                 </tbody>
             </table>
         </div>
-        <p class="hint">Average time counts completed attempts only. Archived exams can't be started or assigned; their attempts and results are kept.</p>
+        <p class="hint">Average time counts completed attempts only. Archived exams can't be started; their attempts and results are kept.</p>
     }
 }
 
@@ -269,11 +269,11 @@ else
         <h2 id="window-h">Window: @wf.Title</h2>
         @if (wf.Assigned == 0)
         {
-            <p class="notice">It isn't assigned to anyone yet. <a href="admin/assignments">Assign it</a>; the window is set on each assignment.</p>
+            <p class="notice">No student has terms for it yet. <a href="admin/assignments">Set terms</a>; the window is set per student.</p>
         }
         else
         {
-            <p class="hint">Sets the same window on all @wf.Assigned assignment@(wf.Assigned == 1 ? "" : "s"). Times are UTC. Leave a box empty for no limit at that end.
+            <p class="hint">Sets the same window for all @wf.Assigned student@(wf.Assigned == 1 ? "" : "s") with terms. Times are UTC. Leave a box empty for no limit at that end.
                 An attempt already in progress can always be finished.</p>
             <label>Opens (UTC) <input type="datetime-local" @bind="windowOpens" /></label>
             <label>Closes (UTC) <input type="datetime-local" @bind="windowCloses" /></label>

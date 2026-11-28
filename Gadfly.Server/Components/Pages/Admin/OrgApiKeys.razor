@@ -31,7 +31,7 @@
 <EditForm Model="form" OnValidSubmit="CreateAsync" FormName="create-api-key" class="panel">
     <h2>Create a key</h2>
     <label>Name <InputText @bind-Value="form.Name" autocomplete="off" placeholder="e.g. LMS integration" maxlength="120" /></label>
-    <p class="hint">A name tells keys apart later. A key can create exams from uploaded sources, assign students, open launch links and read results for this organization.</p>
+    <p class="hint">A name tells keys apart later. A key can create exams from uploaded sources, set student terms, open launch links and read results for this organization.</p>
     <button type="submit" disabled="@busy">Create key</button>
     @if (message is not null)
     {

@@ -1,6 +1,6 @@
 {
   "_about": "Why the server refused a student's step (GAD-T628): SessionRefusedException, the plan and rubric-approval checks and the correction rules. The English is the earlier literal, byte for byte: logs, the staff live monitor and SessionHub keep reading it.",
-  "refusal.notAssigned": "That exam is not assigned to you.",
+  "refusal.notAssigned": "That exam is not open to you.",
   "refusal.archived": "That exam is closed to new attempts.",
   "refusal.notOpenYet": "That exam is not open yet.",
   "refusal.opensAt": "That exam opens at {0:u}.",

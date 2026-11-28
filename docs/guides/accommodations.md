@@ -43,17 +43,17 @@ These aren't accommodations, but they help many students:
 
 ## For instructors and admins: setting an accommodation
 
-- **In the assessment**: open it, go to **6. Assign** (the exam's assignments list).
-  - **Extra time**: choose it under **Extra time (accommodation)** when you assign the exam. It applies to the
-    students you assign in that batch; to give extra time to one student, assign them on their own.
+- **In the assessment**: open it, go to **6. Students** (the table of students who have opened the exam).
+  - **Extra time**: an owner or admin sets it under **Extra time** in **Set terms** on the Student terms page (below);
+    to give extra time to one student, set terms for them on their own.
   - **Typed answers**: press **Grant typed answers** in the student's **Answers** column; **Withdraw** takes it back.
   - **Eye contact**: press **Declare accommodation** in the student's **Eye contact** column; **Withdraw** takes it
     back.
   - **Leaving the window**: choose a setting in the student's **Leaving the window** column: standard (3 absences or 1
     min), raised (6 absences or 5 min), raised (10 absences or 15 min) or never marks for review. You are asked to confirm;
-    it applies from the next absence. This one is set on the exam's Assignments page only, not on the Assignments console.
-- **On the Assignments console** (`/admin/assignments`, owners and admins): select one or more assignments and press
+    it applies from the next absence. This one is set in the exam's **Students** table only, not on the Student terms page.
+- **On the Student terms page** (`/admin/assignments`, owners and admins): select one or more rows and press
   **Accommodations** to set extra time, eye contact and typed answers for all of them at once. The **Accommodation**
-  filter finds who has one. See [Assignments console](admin-assignments.md).
+  filter finds who has one. See [Student terms](admin-assignments.md).
 
 You don't need to record the reason in Gadfly. The [Instructor guide](INSTRUCTOR_GUIDE.md) has the details.

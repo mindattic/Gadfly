@@ -34,7 +34,7 @@ public class RefusalLocalizationTests
         var opens = new DateTimeOffset(2026, 12, 1, 9, 30, 0, TimeSpan.Zero);
         Assert.That(new StudentText("refusal.opensAt", opens).English, Is.EqualTo($"That exam opens at {opens:u}."));
         Assert.That(new StudentText("refusal.changeLimit", 3).English, Is.EqualTo("You've already changed this answer 3 times."));
-        Assert.That(new StudentText("refusal.notAssigned").English, Is.EqualTo("That exam is not assigned to you."));
+        Assert.That(new StudentText("refusal.notAssigned").English, Is.EqualTo("That exam is not open to you."));
         Assert.That(new StudentText("refusal.alreadyConfirmed").English,
             Is.EqualTo("That answer was already confirmed or clarified, so it can't be edited. Use \"I want to change my answer\" instead."));
         Assert.That(new SessionRefusedException(new StudentText("refusal.closed")).Message, Is.EqualTo("That exam has closed."));

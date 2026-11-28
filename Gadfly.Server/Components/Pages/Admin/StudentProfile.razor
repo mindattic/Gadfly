@@ -37,7 +37,7 @@ else
         <h1>@p.Name <span>@p.UserName</span> <HelpLink Topic="admin-students" Anchor="a-students-profile" /></h1>
         <div class="row-actions">
             <span class="pill state-@(p.Active ? "active" : "deactivated")">@(p.Active ? "Active" : "Deactivated")</span>
-            <a href="admin/assignments?student=@Uri.EscapeDataString(p.UserName)">Manage assignments</a>
+            <a href="admin/assignments?student=@Uri.EscapeDataString(p.UserName)">Manage terms</a>
         </div>
     </div>
 
@@ -137,7 +137,7 @@ else
     <h2 class="section">Exams and attempts</h2>
     @if (p.Assignments.Count == 0)
     {
-        <div class="notice"><p>No exams assigned yet. <a href="admin/assignments?student=@Uri.EscapeDataString(p.UserName)">Assign one</a>.</p></div>
+        <div class="notice"><p>No exam terms of their own yet; every published exam is open to them. <a href="admin/assignments?student=@Uri.EscapeDataString(p.UserName)">Set terms</a>.</p></div>
     }
     else
     {

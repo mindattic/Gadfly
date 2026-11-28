@@ -48,7 +48,6 @@
         }
         <div class="desk-row">
             <label>Duration (minutes) <input type="number" min="1" max="240" @bind="newExam.DurationMinutes" /></label>
-            <label class="check"><input type="checkbox" @bind="newExam.VoiceOnly" /> Voice exam (the examiner speaks, the student answers aloud)</label>
         </div>
         <label>Instructions for the student <span class="hint">(optional)</span> <textarea @bind="newExam.Instructions" rows="2"></textarea></label>
         <p class="hint">The panel reads the notes and finds their concepts; then "Build objectives &amp; publish" turns them into the exam's objectives.</p>
@@ -118,7 +117,7 @@
         <div class="table-scroll">
             <table class="grid">
                 <caption class="visually-hidden">Exams</caption>
-                <thead><tr><th scope="col">Exam</th><th scope="col">Mode</th><th scope="col">Status</th><th scope="col">Notes</th><th scope="col" class="num">Objectives</th><th scope="col" class="num">Assigned</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+                <thead><tr><th scope="col">Exam</th><th scope="col">Mode</th><th scope="col">Status</th><th scope="col">Notes</th><th scope="col" class="num">Objectives</th><th scope="col" class="num">With terms</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
                 <tbody>
                     @foreach (var e in exams)
                     {
@@ -175,7 +174,6 @@
                                             <label>Topic <input @bind="edit.Topic" maxlength="200" /></label>
                                             <label>Duration (minutes) <input type="number" min="1" max="240" @bind="edit.DurationMinutes" disabled="@(e.Status != ExamStatus.Draft)" /></label>
                                         </div>
-                                        <label class="check"><input type="checkbox" @bind="edit.VoiceOnly" /> Voice exam</label>
                                         <label>Instructions <textarea @bind="edit.Instructions" rows="2"></textarea></label>
                                         <div class="row-actions">
                                             <button type="button" @onclick="SaveEditAsync" disabled="@busy">Save</button>
@@ -257,7 +255,7 @@ else if (CurrentTab == "students")
 else
 {
     <div class="panel desk-form">
-        <h2>Assign an exam</h2>
+        <h2>Set a student's attempts</h2>
         <div class="desk-row">
             <label>Exam
                 <select @bind="assignExam">
@@ -279,8 +277,8 @@ else
             </label>
             <label>Attempts allowed <input type="number" min="1" max="20" @bind="assignAttempts" /></label>
         </div>
-        <p class="hint">Only published exams can be assigned. Assigning one that is already assigned changes its attempts allowed.</p>
-        <button type="button" @onclick="AssignAsync" disabled="@busy">Assign</button>
+        <p class="hint">Every published exam is open to every student. Set the attempts one student is allowed on one exam; saving again changes them.</p>
+        <button type="button" @onclick="AssignAsync" disabled="@busy">Save attempts</button>
     </div>
 
     @if (assignments is null)
@@ -289,7 +287,7 @@ else
     }
     else if (assignments.Count == 0)
     {
-        <p class="notice">No exams assigned yet.</p>
+        <p class="notice">No student has terms of their own yet.</p>
     }
     else
     {

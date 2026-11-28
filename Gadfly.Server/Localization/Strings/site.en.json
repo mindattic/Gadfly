@@ -235,7 +235,7 @@
   "site.pricing.faq.prices.q": "Why don't you list prices?",
   "site.pricing.faq.prices.a": "The cost of running an exam depends on its length and on the AI providers it uses, and institutions buy in very different ways. We'd rather quote a price that fits your term dates and volume than publish one that doesn't.",
   "site.pricing.faq.exam.q": "What counts as an exam?",
-  "site.pricing.faq.exam.a": "One student's attempt at an assigned exam.",
+  "site.pricing.faq.exam.a": "One student's attempt at a published exam.",
   "site.pricing.faq.seat.q": "What is a staff seat?",
   "site.pricing.faq.seat.a": "An account with any staff role: owner, admin, instructor, examiner or second reviewer. Students are counted separately.",
   "site.pricing.faq.trial.q": "Can we try it before we commit?",

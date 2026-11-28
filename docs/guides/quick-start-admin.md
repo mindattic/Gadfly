@@ -1,4 +1,4 @@
-﻿# Quick start for admins and owners
+# Quick start for admins and owners
 
 Setting up an organization and running a first exam. The [Admin guide](ADMIN_GUIDE.md) has the detail.
 
@@ -12,10 +12,10 @@ Setting up an organization and running a first exam. The [Admin guide](ADMIN_GUI
 4. **Add your students** on **Admin > Students**: one at a time, by email invitation, or a whole class from a CSV
    file (**Check the file** shows what it would do before anything is saved). Or connect your LMS on
    **LMS connection** and let its roster bring them in ([LTI setup](lti-setup.md)).
-5. **Create and assign an exam.** Either an instructor builds an assessment from source material (see the
+5. **Create and publish an exam.** Either an instructor builds an assessment from source material (see the
    [instructor quick start](quick-start-instructor.md)), or, if your deployment has the admin desk turned on, you use
-   its **Exams** tab: paste or upload notes, **Create exam**, then **Build objectives & publish**. Assign exams on
-   **Admin > Assignments**, where you also set due dates, attempts and accommodations.
+   its **Exams** tab: paste or upload notes, **Create exam**, then **Build objectives & publish**. Every published exam is open to every
+   student; on **Admin > Student terms** you can set due dates, attempts and accommodations.
 6. **Try it as a student.** Add yourself a test student, sign in as them in a private window, and take the
    five-minute practice interview and then the exam. The dashboard's **Getting started** checklist tracks these steps.
 7. **Watch it through to a result.** **Live sessions** shows exams in progress; grading, approval and publishing
@@ -29,6 +29,6 @@ Setting up an organization and running a first exam. The [Admin guide](ADMIN_GUI
   **Allow a single grader**; each use is recorded in the audit log.
 - **Privacy requests.** **Members** has **Export data** and **Erase data…** for each person. Erasure can't be undone.
 - **Plan & usage** shows your plan's seat and exam limits and how much is used.
-- **Show me around** at the top of the dashboard, Students, Exams, Assignments and Live sessions gives a short guided
+- **Show me around** at the top of the dashboard, Students, Exams, Student terms and Live sessions gives a short guided
   tour; the **?** beside each admin page's title opens its help. The help topics are under **Running your
   organization**.

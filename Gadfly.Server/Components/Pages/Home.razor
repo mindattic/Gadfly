@@ -27,7 +27,7 @@ else
     <div class="cards">
         <AuthorizeView Policy="@Gadfly.Server.Desk.DeskAccess.Policy">
             <Authorized>
-                <a class="card" href="admin/desk"><h2>Admin desk</h2><p>Exams, students and who sits what: create, assign, and reset an attempt in one click.</p></a>
+                <a class="card" href="admin/desk"><h2>Admin desk</h2><p>Exams, students and their terms: create, publish, and reset an attempt in one click.</p></a>
             </Authorized>
             <NotAuthorized>
                 @if (Gadfly.Server.Desk.DeskAccess.NeedsMfaForDesk(context.User, Tenant, Config))
@@ -40,7 +40,7 @@ else
         @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin or OrgRoles.Instructor)
         {
             <a class="card" href="sources"><h2>Source material</h2><p>Upload what students learn from; review the concepts and rubrics built from it.</p></a>
-            <a class="card" href="exams"><h2>Exams</h2><p>Build an oral exam from your concepts and assign it.</p></a>
+            <a class="card" href="exams"><h2>Exams</h2><p>Build an oral exam from your concepts and publish it.</p></a>
             <a class="card" href="review"><h2>Review</h2><p>Read each session, its evidence and integrity notes, and decide the grade.</p></a>
         }
         @if (Tenant.Role is OrgRoles.Owner or OrgRoles.Admin)

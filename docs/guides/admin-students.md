@@ -1,7 +1,7 @@
 # Students directory
 
 **Students** (`/admin/students`, in the admin navigation) lists every student in your organization, and each student's
-**profile** shows their account, every exam assigned to them and every attempt. Only the organization's owners and admins
+**profile** shows their account, every exam they have opened or have terms on, and every attempt. Only the organization's owners and admins
 open these pages. Every change made here is recorded in the [audit log](admin-audit-log.md).
 
 ## The list
@@ -11,8 +11,8 @@ open these pages. Every change made here is recorded in the [audit log](admin-au
 | Name | Their name (or user name if they have none); it opens their profile |
 | User name, Email | As on their account |
 | Status | **Active**, **Never signed in** (active, but has not signed in yet) or **Deactivated** |
-| Exams | How many exams are assigned to them |
-| Accommodations | *extra time* and *no eye contact expected*, if any of their assignments has them |
+| Exams | How many exams they have opened or have terms on |
+| Accommodations | *extra time* and *no eye contact expected*, if any of their exams has them |
 | Last sign-in | In UTC, or *never* |
 
 A deactivated student's row is dimmed.
@@ -20,11 +20,11 @@ A deactivated student's row is dimmed.
 ### Finding students
 
 - **Search**: part of a name, user name or email.
-- **Assigned to**: students who have one exam.
+- **Exam**: students who have opened one exam or have terms on it.
 - **Status**: everyone, active, never signed in, deactivated, or **Invited, not accepted** (invitations still waiting; see
   below).
 - **Accommodation**: anyone with an accommodation, extra time, or no eye contact expected.
-- **Sort** by name, last sign-in, exams assigned or date added, ascending or descending.
+- **Sort** by name, last sign-in, number of exams or date added, ascending or descending.
 
 25 students to a page by default (up to 200). The filters are part of the page's address, so the browser's Back button
 and a saved link bring the same view back. **Clear filters** shows everyone again.
@@ -46,7 +46,7 @@ and a saved link bring the same view back. **Clear filters** shows everyone agai
   still go through; if the import stops part way, check the file again and the rows already done show as no change.
 
 **Export CSV** downloads every student matching the current filters (not just this page), up to 50,000, with their email,
-name, user name, status, exams assigned, accommodations, last sign-in and date added. Exporting personal data is itself
+name, user name, status, number of exams, accommodations, last sign-in and date added. Exporting personal data is itself
 recorded in the audit log.
 
 ## A student's profile
@@ -58,14 +58,14 @@ Open a name to see:
 - **Reviewer notes**: how many integrity notes their attempts carry and how many were raised for a reviewer to look at.
   These are low-confidence signals for a reviewer to weigh, never a verdict and never part of a grade; open an attempt's
   review to see them in context.
-- **Exams and attempts**: each assigned exam with its status (see [Assignments](admin-assignments.md#statuses)), its
+- **Exams and attempts**: each exam they have opened or have terms on, with its status (see [Student terms](admin-assignments.md#statuses)), its
   window, attempts used of those allowed, extra time, the eye-contact accommodation and when results were released; and
   under it each attempt with its state, start and end, score and reviewer notes, and a link to its **Review and
   transcript**. An attempt that does not count (the exam changed under it) is dimmed.
-- **History**: the newest 100 audit entries about the student (their account, membership, assignments and attempts),
+- **History**: the newest 100 audit entries about the student (their account, membership, terms and attempts),
   with who did what and when. The full record is on the [audit log](admin-audit-log.md).
 
-**Manage assignments** opens the [assignments console](admin-assignments.md) filtered to this student.
+**Manage terms** opens the [Student terms page](admin-assignments.md) filtered to this student.
 
 ### Changing a student
 

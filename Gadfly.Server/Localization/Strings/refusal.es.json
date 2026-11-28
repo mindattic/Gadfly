@@ -1,6 +1,6 @@
 {
   "_about": "Why the server refused a student's step (GAD-T628), in Spanish (GAD-T612): neutral Latin American Spanish, usted. The English file stays the literal that logs and staff read.",
-  "refusal.notAssigned": "Ese examen no le fue asignado.",
+  "refusal.notAssigned": "Ese examen no está disponible para usted.",
   "refusal.archived": "Ese examen ya no acepta nuevos intentos.",
   "refusal.notOpenYet": "Ese examen todavía no está abierto.",
   "refusal.opensAt": "Ese examen se abre el {0:u}.",

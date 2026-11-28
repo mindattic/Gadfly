@@ -33,6 +33,8 @@ else
         </p>
     }
 
+    <div class="eb-panels">
+    <div class="eb-col">
     @if (draft.Id is not null && admin.CanManage)
     {
         @* GAD-T656: the category is how the exam is listed, not a frozen setting, so it can change on published exams too. *@
@@ -114,6 +116,7 @@ else
             </fieldset>
         }
     </div>
+    </div>
 
     <div class="panel">
         <h2>Exam settings</h2>
@@ -129,16 +132,7 @@ else
         </label>
         <label>Most follow-up questions per concept <input type="number" min="0" max="@ExamService.MaxFollowUpsLimit" @bind="draft.MaxFollowUps" /></label>
         <p class="hint">The examiner moves on sooner when a concept is clearly mastered or clearly not understood.</p>
-        <label>Mode
-            <select @bind="draft.Mode">
-                <option value="@ExamMode.Text">Text: questions and answers are typed</option>
-                <option value="@ExamMode.Voice">Voice: the examiner speaks and the student answers aloud (typing stays available)</option>
-            </select>
-        </label>
-        @if (draft.Mode == ExamMode.Voice)
-        {
-            <p class="hint">Students speak when voice is turned on for this deployment; otherwise they answer by typing.</p>
-        }
+        <p class="hint">The examiner speaks each question and the student answers aloud on camera. Typed answers are an accommodation granted to one student at a time, from the Students table or Student terms.</p>
         <fieldset class="eb-list">
             <legend>Integrity monitoring</legend>
             @foreach (var level in Enum.GetValues<IntegrityLevel>())
@@ -171,6 +165,7 @@ else
         {
             <p role="status" class="@(ok ? "ok" : "error")">@message</p>
         }
+    </div>
     </div>
 
     @if (draft.Id is { } examId && draft.Status != ExamStatus.Draft)
@@ -264,6 +259,7 @@ else
             draft = new ExamDraft();
             if (collections.Count == 1) draft.CollectionId = collections[0].Id;
         }
+        draft.Mode = ExamMode.Voice;
         concepts = draft.CollectionId == Guid.Empty ? [] : await svc.ConceptsAsync(draft.CollectionId);
     }
 

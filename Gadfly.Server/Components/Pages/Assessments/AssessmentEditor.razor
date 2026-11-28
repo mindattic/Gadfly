@@ -7,7 +7,7 @@
 @inject ITenantContext Tenant
 @inject NavigationManager Nav
 
-@* Teacher assessment setup (GAD-T85): details → objectives → rubric → policy → review & publish → assign.
+@* Teacher assessment setup (GAD-T85): details → objectives → rubric → policy → review & publish → students.
    Grading policy lock and approved changes: GAD-T82. Permission checks and audited refusals: GAD-T83. *@
 
 <PageTitle>@(view?.Details.Title is { Length: > 0 } t ? t : "New assessment") · Assessments · Gadfly Exams</PageTitle>
@@ -102,7 +102,7 @@ else
     private static readonly (string Key, string Label)[] Steps =
     [
         ("details", "1. Details"), ("objectives", "2. Objectives"), ("rubric", "3. Rubric"),
-        ("policy", "4. Grading policy"), ("review", "5. Review & publish"), ("assign", "6. Assign"),
+        ("policy", "4. Grading policy"), ("review", "5. Review & publish"), ("assign", "6. Students"),
     ];
 
     private AssessmentCapabilities? caps;
@@ -809,7 +809,7 @@ else
                 else
                 {
                     <div class="eb-actions">
-                        <a href="@StepHref("assign")">Assign to students →</a>
+                        <a href="@StepHref("assign")">Students and accommodations →</a>
                         @if (view.Status != ExamStatus.Archived)
                         {
                             <button type="button" class="link" disabled="@busy" @onclick="() => RunAsync(s => s.ArchiveAsync(Id!.Value))">Archive</button>
@@ -833,10 +833,10 @@ else
     private RenderFragment AssignStep => __builder =>
     {
         <section class="as-section" aria-labelledby="assign-h">
-            <h2 id="assign-h" class="as-sr">Assign</h2>
+            <h2 id="assign-h" class="as-sr">Students</h2>
             @if (view is { IsDraft: true })
             {
-                <p class="notice info">Publish the assessment before assigning it. <a href="@StepHref("review")">Review and publish</a></p>
+                <p class="notice info">Publish the assessment first; once published, every student can take it. <a href="@StepHref("review")">Review and publish</a></p>
             }
             else if (assignService is not null && Id is { } examId)
             {

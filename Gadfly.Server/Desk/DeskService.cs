@@ -335,7 +335,7 @@ public sealed class DeskService(IServiceProvider sp)
         var e = await Db.Exams.AsNoTracking().FirstOrDefaultAsync(x => x.Id == examId && x.OrganizationId == org, ct);
         return e is null ? null : new DeskExamEdit
         {
-            Id = e.Id, Title = e.Title, Subject = e.Subject, Topic = e.Topic, Instructions = e.Instructions, VoiceOnly = e.Mode == ExamMode.Voice,
+            Id = e.Id, Title = e.Title, Subject = e.Subject, Topic = e.Topic, Instructions = e.Instructions, VoiceOnly = true,
             DurationMinutes = (int)Math.Round(ExamService.ReadPolicy(e.PolicyJson).TimeBudget.TotalMinutes),
         };
     }

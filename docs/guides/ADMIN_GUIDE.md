@@ -17,7 +17,7 @@ entries their role can open.
 |---|---|
 | Overview | **Dashboard** (`/admin`), **Live sessions** (`/admin/live`) |
 | People | **Students** (`/admin/students`, and one student at `/admin/students/{id}`), **Members** (`/org/members`) |
-| Exams | **Exams** (`/admin/exams`), **Assignments** (`/admin/assignments`), **Desk** (`/admin/desk`, when the admin desk is turned on), **Source material**, **Assessments**, **Exam builder** |
+| Exams | **Exams** (`/admin/exams`), **Student terms** (`/admin/assignments`), **Desk** (`/admin/desk`, when the admin desk is turned on), **Source material**, **Assessments**, **Exam builder** |
 | Results | **Grading** (`/grading`), **Review** (`/review`), **Analytics** (`/analytics`) |
 | Organization | **Settings**, **Plan & usage**, **Usage**, **API keys**, **Webhooks**, **Research**, **LMS connection** (all under `/org/...`), **Audit log** (`/admin/audit`), **System status** (`/admin/status`), **Email preview** (`/admin/email-preview`) |
 | Platform | **Organizations** (`/platform/organizations`, with each organization's **Plan & limits**), MindAttic staff only; demo requests from the public site are at `/platform/requests` |
@@ -26,7 +26,7 @@ Instructors keep their own links in the top bar (source material, assessments, r
 examiners and second reviewers see **Grading**.
 
 The **?** beside a page's title opens the help for that page. The dashboard, the admin desk, Students, Exams,
-Assignments and Live sessions each have a short guided tour: it starts by itself the first time you open the page, and
+Student terms and Live sessions each have a short guided tour: it starts by itself the first time you open the page, and
 **Show me around** at the top of the page replays it whenever you like. See [Guided tours](guided-tours.md).
 
 The **admin desk** (exams, students and resets on one page) moved from `/admin` to `/admin/desk`.
@@ -35,8 +35,8 @@ The **admin desk** (exams, students and resets on one page) moved from `/admin` 
 
 The dashboard (`/admin`) is the owner's and admin's home. It has four parts.
 
-**Getting started.** Until an organization has done each of them, a checklist leads: create an exam, add
-students, assign the exam, and watch a practice interview (add yourself a test student, sign in as them and
+**Getting started.** Until an organization has done each of them, a checklist leads: publish an exam, add
+students, and watch a practice interview (add yourself a test student, sign in as them and
 take the practice interview from **My exams**). Each step links to the page where it is done and ticks
 itself off; the checklist goes away once an interview has ended.
 
@@ -50,7 +50,7 @@ row links straight to the place to act.
 | Grades to reconcile | Attempts where the AI and the grader disagree by enough to need a reconciliation | That attempt's grading page |
 | Grades waiting for final approval | Grades ready to approve | That attempt's grading page |
 | Open appeals | Appeals a student opened and nobody has resolved | That attempt's grading page |
-| Not started, closing within 3 days | Assignments of a published exam that close in the next 3 days and the student has not started | The student |
+| Not started, closing within 3 days | Published exams with a due date in the next 3 days that the student has not started | The student |
 | Background work that failed | Jobs of this organization (reading notes, AI grading, webhook delivery, retention) that failed in the last 7 days, with the error | System status |
 
 When nothing is waiting the dashboard says so.
@@ -62,20 +62,20 @@ its grade's final approval, over grades approved in the period). An attempt that
 was cut off by an update to the examiner, is left out. A dash means there is nothing to measure yet. Hover a
 figure to see what it was worked out from; **Analytics** and **Usage** have more detail.
 
-**Quick actions.** Create an exam, add students, assign an exam, watch live, grade, and invite staff.
+**Quick actions.** Create an exam, add students, see results, watch live, grade, and invite staff.
 
 The dashboard only reads: it changes nothing. It shows your current organization only, and **Refresh**
 reloads it.
 
 ## Exams
 
-**Exams** (`/admin/exams`) lists every exam with its status, objectives, how many students it is assigned to, completed
+**Exams** (`/admin/exams`) lists every exam with its status, objectives, how many students have opened it, completed
 attempts, average completed time and whether its window is open. From a row's **Actions** you can change its
 **settings** (duration and minimum objectives are frozen once it is published; integrity level, read-out check and
 examiner voice (the avatar id is saved but not used yet, GAD-T475) apply to attempts that start from then on, with a reason once anyone has started), see
 **objective coverage** (how many attempts examined each objective), set its **window**, **open now** or **close now**
-for everyone it is assigned to, **preview it as a student** (the real examiner logic on the practice panel; nothing is
-saved and it never counts as an attempt), **duplicate** it (a new draft with everything but its assignments and
+for every student, **preview it as a student** (the real examiner logic on the practice panel; nothing is
+saved and it never counts as an attempt), **duplicate** it (a new draft with everything but its student terms and
 attempts), **export** it as JSON, see its **history**, and **archive** or **restore** it. **Import from a file** brings in
 an exported exam as a draft, listing every problem in the file if it can't. Every change is in the audit log. See
 [Exams manager](admin-exams.md).
@@ -93,10 +93,10 @@ grading policy are never translated: answers in every language are judged agains
 audit log. See [Exams in English and Korean](exams-in-other-languages.md) and [LOCALIZATION.md](../LOCALIZATION.md).
 
 Attempts whose student left the exam window repeatedly or for long, and attempts taken in Korean while the panel is not yet
-calibrated on Korean, are marked **Needs instructor review** (a badge on the desk's assignments, the review list and the
+calibrated on Korean, are marked **Needs instructor review** (a badge on the desk's student exams, the review list and the
 grading queue) and held until someone who approves final grades decides: see
 [Attempts marked for instructor review](attempts-marked-for-review.md). An instructor can change when leaving the window marks
-an attempt, per student, with the [window-absence accommodation](accommodations.md) on the exam's Assignments page.
+an attempt, per student, with the [window-absence accommodation](accommodations.md) on the exam builder's **Students** table.
 
 ## Live sessions
 
@@ -107,7 +107,7 @@ an attempt, per student, with the [window-absence accommodation](accommodations.
 
 **Students** (`/admin/students`) lists every student of your organization, a page at a time.
 
-- **Search** by name, user name or email. **Filter** by the exam they are assigned, by status (active, never
+- **Search** by name, user name or email. **Filter** by an exam they have opened or have terms on, by status (active, never
   signed in, deactivated, or invited and not yet accepted) and by accommodation (extra time, no eye contact
   expected). **Sort** by name, last sign-in, number of exams or date added, either way round. The filters are
   part of the address, so a filtered list can be bookmarked or shared with another admin.
@@ -136,46 +136,46 @@ Click a name to open the student's **profile** (`/admin/students/{id}`):
   log; it signs them out and stops them signing in to your organization, and keeps their exams, attempts and
   results, which reactivating gives back. An account that also belongs to another organization, or is staff
   anywhere, can be deactivated here but its name, email and password are changed only by its owner.
-- **Exams and attempts**: every assigned exam with its dates, attempts used, status (not started, in
+- **Exams and attempts**: every exam they have opened or have terms on, with its dates, attempts used, status (not started, in
   progress, interrupted, awaiting grading, graded but not released, released), accommodations and each
   attempt with its score and a link to its review and transcript. An attempt replaced by an update to the
   examiner is greyed out and does not count.
 - **Reviewer notes**: how many integrity notes their attempts carry and how many were raised for a reviewer.
   These are low-confidence signals for a reviewer to weigh, never a verdict and never part of a grade.
-- **History**: the newest 100 audit entries about this student (account changes, membership, assignments,
+- **History**: the newest 100 audit entries about this student (account changes, membership, terms,
   grading); the full log is on **Audit log**.
 
 Every change on these pages is recorded in the audit log with who made it.
 
-## Assignments
+## Student terms
 
-**Assignments** (`/admin/assignments`) shows who sits what, in two views.
+**Student terms** (`/admin/assignments`) shows each student's terms on each exam, in two views. Every published exam is open to every student on default terms; this page changes the terms.
 
 - **List**: one row per student and exam, with its status (not started, in progress, interrupted, awaiting
   grading, graded but not released, released), opening and due dates in your own time zone, attempts used of
   those allowed, the latest score and any accommodations. Filter by exam, student, status, accommodation and
-  due date range, sort by student, exam, due date or date assigned, and page through. **Export CSV** downloads
+  due date range, sort by student, exam, due date or date set, and page through. **Export CSV** downloads
   every row the filters match (the export is recorded in the audit log).
 - **Grid: students by exam**: active students down the side, published exams across the top (or one exam you
-  choose). Each assigned cell shows its status, attempts and due date; an empty cell says "not assigned".
+  choose). Each cell with terms shows its status, attempts and due date; an empty cell says "default terms".
 
-**Assign an exam** takes a published exam, an optional opening and due date, the attempts allowed and extra
-time, and assigns it to the students you tick on the grid (each ticked exam goes to its own students), to a
-pasted list of user names or emails (names that are not active students are listed and skipped), or to every
-active student. Students who already have the exam are skipped.
+**Set terms** takes a published exam, an optional opening and due date, the attempts allowed and extra
+time, and sets them for the students you tick on the grid (each ticked exam goes to its own students), for a
+pasted list of user names or emails (names that are not active students are listed and skipped), or for every
+active student; press **Save terms**. Students who already have terms for the exam are skipped.
 
-Tick rows in the list (or assigned cells in the grid) to change many at once:
+Tick rows in the list (or cells with terms in the grid) to change many at once:
 
 | Action | What it does |
 |---|---|
 | **Set dates** | Sets or removes the opening time and the due date. A window that would close before it opens is left alone and listed. |
-| **Move due date** | Moves each due date by a number of days, forward or back; assignments with no due date are skipped. |
+| **Move due date** | Moves each due date by a number of days, forward or back; rows with no due date are skipped. |
 | **Grant another attempt** | One more attempt each (at most 20). Needs a reason. |
 | **Reset attempt** | Clears the scores of the attempts so far, keeping an archived copy of every grade, report, reconciliation, approval and appeal in the audit log (the same rule as the desk's **Clear scores**); the attempts and transcripts stay, still count, and are not graded again unless someone decides to; then grants one more attempt so the student can sit it again. Needs a reason; refused while an attempt is in progress or when there is no attempt yet. |
 | **Accommodations** | Extra time (from the next attempt), no eye contact expected (from the next answer), and typed answers (the next time the student opens the exam). Granted by staff for one student on one exam; students never see a switch for them. |
-| **Unassign** | Removes assignments with no attempt yet. An assignment with an attempt is kept, since its transcript and grades belong to it. Needs a reason. |
+| **Remove terms** | Removes terms from rows with no attempt yet; the exam stays open to the student on default terms. A row with an attempt is kept, since its transcript and grades belong to it. Needs a reason. |
 
-Every change is recorded in the audit log once per assignment, with the reason where one is asked for, so it
+Every change is recorded in the audit log once per row, with the reason where one is asked for, so it
 also shows in the student's history.
 
 ## The admin desk
@@ -205,8 +205,8 @@ choose their own password at first sign-in** if you want them to. **Reset passwo
 sign-ins end within about a minute). An account that is also staff somewhere is reset from its own organization's
 members page instead.
 
-**Student exams.** **Assign an exam**: a published exam, an active student and the **Attempts allowed** (default
-3; assigning an exam that is already assigned changes its attempts). The table shows each student's attempts
+**Student exams.** **Set a student's attempts**: a published exam, an active student and the **Attempts allowed** (default
+3; saving again for the same exam and student changes their attempts); press **Save attempts**. The table shows each student's attempts
 ("2 of 3 used", click to change), status (**Not started**, **In progress**, **Finished**, **Failed**), the latest
 score, and the **Transcript**. Two repair actions:
 
@@ -245,10 +245,10 @@ Owners and admins manage people at **Members** (`/org/members`).
 |---|---|
 | Owner | Everything an admin can, plus add, change or remove other owners. An organization always keeps at least one active owner. |
 | Admin | Members, settings, API keys, webhooks, usage, privacy requests; everything an instructor can except entering human scores. |
-| Instructor | Source material, assessments, assignments and accommodations, review, grading (scoring, reconciling, approving, publishing, appeals) and analytics, for what they created (see **What instructors see**). |
+| Instructor | Source material, assessments, student terms and accommodations, review, grading (scoring, reconciling, approving, publishing, appeals) and analytics, for what they created (see **What instructors see**). |
 | Examiner | Grading: reads transcripts and enters human scores, independently of the AI. |
 | SecondReviewer | Grading: reconciles disagreements between the AI and human scores. |
-| Student | Takes assigned exams and sees published results. |
+| Student | Takes published exams and sees published results. |
 
 ### Invite people by email
 
@@ -327,7 +327,7 @@ During each spoken answer the browser measures pitch, its steadiness, loudness a
 compares them with the student's own first answers. Reviewers see the raw differences; they never name a state such
 as stress, and they never change a grade. Because the EU AI Act prohibits emotion recognition in education, the
 measurements are **off by default** for an organization marked as in the EU or EEA and for any student marked as
-living there (instructors mark students on the assessment's assignments list). When off, the numbers are discarded
+living there (instructors mark students on the assessment's Students table). When off, the numbers are discarded
 before anything is stored. Choose **On for everyone** only after counsel has confirmed it is lawful for you. Each
 change is recorded in the audit log. See [Privacy in plain words](privacy-in-plain-words.md).
 
@@ -336,10 +336,10 @@ change is recorded in the audit log. See [Privacy in plain words](privacy-in-pla
 **Instructors see and manage only what they created** is on by default.
 
 - **On:** an instructor sees only the courses, source collections and assessments they created, and the
-  assignments, sessions, review pages, grading queue and analytics under those. Opening another instructor's item
+  student terms, sessions, review pages, grading queue and analytics under those. Opening another instructor's item
   by its address shows "not found" and writes an `access.denied` entry to the audit log.
-- **Owners, admins, examiners and second reviewers** always see the whole organization (grading isn't assigned to
-  individual examiners), and so does the platform API. Students see only their own assignments.
+- **Owners, admins, examiners and second reviewers** always see the whole organization (grading isn't allocated to
+  individual examiners), and so does the platform API. Students see only their own exams.
 - **Off:** every instructor sees everything in the organization. The change is audited
   (`settings.instructor-scope.changed`) and applies within about 15 seconds.
 - Ownership is the item's creator; there is no transfer of ownership yet. Items created through the API have no
@@ -374,8 +374,8 @@ Gadfly emails students on its own (separate from invitation and password emails)
 
 | Email | Sent when |
 |---|---|
-| **Exam assigned** | An exam is assigned to them. |
-| **Reminder before the due date** | An assigned exam closes within the next 48 hours and they haven't finished it. One reminder per assignment, ever. |
+| **Exam assigned** | Staff set terms for them on an exam. |
+| **Reminder before the due date** | An exam they have terms on closes within the next 48 hours and they haven't finished it. One reminder per exam, ever. |
 | **Result released** | Their result is published. |
 | **Appeal received**, **Appeal decided** | They appeal a grade, and when the appeal is decided (with the outcome and the reason). |
 | **Attempt reset** | Their attempts at an exam are reset from the admin desk. |
@@ -432,7 +432,7 @@ Apps that integrate Gadfly (an LMS, a student-information system) call the platf
 key** (developers: see `docs/API.md` in the repository).
 
 - A key looks like `gfk_<8 hex characters>_<secret>` and is sent as `Authorization: Bearer gfk_...`. It acts for the
-  whole organization, not for a person: it can create exams from uploaded sources, assign students, open launch links
+  whole organization, not for a person: it can create exams from uploaded sources, set student terms, open launch links
   and read results.
 - Only a SHA-256 hash of the key is stored. The key is shown once, when it is created, and can't be recovered.
 - A revoked key, or any key of a deactivated organization, is refused. The last use of each key is recorded.
@@ -509,7 +509,7 @@ text-to-speech are not yet counted.
 and admins get. Those use the AI panel's levels and the integrity notes, which a grader who is still grading blind must not
 see, and instructors, examiners and second reviewers can all be such a grader. Every view below works on the scope picked at
 the top (all assessments, a course or one assessment), names no student, and withholds a group with fewer than 5 students
-(its size is still shown). Groups are the accommodations each assignment declared ("No accommodation", "Typed answers",
+(its size is still shown). Groups are the accommodations each student's terms declared ("No accommodation", "Typed answers",
 "Eye-contact accommodation", "Extra time", or a combination), or a grouping you paste in: one line per student with their
 email or user name, a comma and a group label (first language, or a self-described group from a voluntary survey). A pasted
 grouping is used for that comparison only and never stored; lines that match no member are counted, never shown.
@@ -568,7 +568,7 @@ examiner, the recognizer, the judges and the graders, not a finding about the st
 fairness tables, after the usual sections (GAD-T463): `fairness_score_gaps`, `fairness_path_drivers` (with the cut-off
 rate), `fairness_typed_vs_spoken` (and its by-objective rows), `fairness_camera_episodes` (the eye-contact rates, face
 episodes and tracking quality) and `fairness_fade_cost`. Each starts with its caveat and any warnings follow its rows. The
-export groups by the accommodations each assignment declared; a pasted grouping is never stored, so it is not in the file.
+export groups by the accommodations each student's terms declared; a pasted grouping is never stored, so it is not in the file.
 A group under 5 students keeps its name and size and every other cell reads `withheld`. While any group is withheld, the
 totals beside the groups are withheld too (on the page, the counts of objectives, answers, sessions and spoken answers in
 each table's caption; in the export and on the page, the all-students count of faded answers), since the total minus the
@@ -581,13 +581,13 @@ The thresholds and their reasons are in docs/EVIDENCE_MAP.md (mechanics 2, 4 and
 
 | Request | Where | What it does | Who |
 |---|---|---|---|
-| **Export** | **Download my data** on the student's **My exams**; **Export data** on **Members** | One JSON file with everything held about that person in this organization: assignments, attempts with questions, answers, judgments and votes, integrity notes, reports, grades and appeals. | The person themselves, or an owner or admin |
-| **Erasure** | **Erase data…** on **Members** (type DELETE, then **Erase**) | Deletes every exam record of that person in this organization (answers, judgments, integrity notes, reports, grades, appeals, sessions and assignments), redacts them from the audit log's details, deactivates the membership and signs them out. Usage records are kept but unlinked. | Owner or admin |
+| **Export** | **Download my data** on the student's **My exams**; **Export data** on **Members** | One JSON file with everything held about that person in this organization: terms, attempts with questions, answers, judgments and votes, integrity notes, reports, grades and appeals. | The person themselves, or an owner or admin |
+| **Erasure** | **Erase data…** on **Members** (type DELETE, then **Erase**) | Deletes every exam record of that person in this organization (answers, judgments, integrity notes, reports, grades, appeals, sessions and terms), redacts them from the audit log's details, deactivates the membership and signs them out. Usage records are kept but unlinked. | Owner or admin |
 
 Students can't erase their own data; they ask you. The sign-in account itself is not deleted, because the person may
 belong to other organizations. Only an owner can erase an owner, and never the last one. Export first if the data
 may be needed: erasure can't be undone. Erasure also removes the person's research choices and study arms, so they
-are never in a later research export. For a student who came in through an LMS, it removes their assignments' grade
+are never in a later research export. For a student who came in through an LMS, it removes their exams' grade
 links to the LMS gradebook and any LMS sign-in waiting to be linked to their account. Notification emails still waiting
 to go out are not sent, and the email log keeps that an email was sent but no longer the address it went to.
 
@@ -610,7 +610,7 @@ the pilot in docs/PILOT.md. Nothing here is on until you turn it on.
 - **Study arms.** Pick an exam, add its arms ("control", "relay", "feedback withheld"...), then put each student in
   one, or press **Put students without an arm into one at random** (keeps the arms even). An arm is a label carried
   into the export: it doesn't change how Gadfly runs the exam. What the participants in an arm do differently, and
-  whether their results are released, is arranged by the study team with the normal assignment and release controls.
+  whether their results are released, is arranged by the study team with the normal terms and release controls.
   A condition that would switch off one of Gadfly's own exam rules (for example the eye-contact fade) is not offered and
   needs the product owner's approval first. A student's arm is fixed once they start an attempt; **Close** an arm to
   stop new students going into it.

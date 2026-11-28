@@ -292,12 +292,12 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
     /// <summary>The assignments named, in this organization only; caps the selection.</summary>
     private async Task<(List<ExamAssignment> Rows, string? Problem)> LoadAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
     {
-        if (ids.Count == 0) return ([], "Choose at least one assignment.");
-        if (ids.Count > MaxBulk) return ([], $"Choose at most {MaxBulk:N0} assignments at a time.");
+        if (ids.Count == 0) return ([], "Choose at least one row.");
+        if (ids.Count > MaxBulk) return ([], $"Choose at most {MaxBulk:N0} rows at a time.");
         var org = Gate.Org;
         var list = ids.Distinct().ToList();
         var rows = await Db.ExamAssignments.Where(a => a.OrganizationId == org && list.Contains(a.Id)).ToListAsync(ct);
-        return rows.Count == 0 ? ([], "Those assignments no longer exist.") : (rows, null);
+        return rows.Count == 0 ? ([], "Those student terms no longer exist.") : (rows, null);
     }
 
     private static string Count(int n, string one) => $"{n} {one}{(n == 1 ? "" : "s")}";
@@ -310,7 +310,7 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
     public async Task<BulkResult> AssignAsync(Guid examId, IReadOnlyCollection<Guid>? studentUserIds, DateTimeOffset? opensAt, DateTimeOffset? closesAt,
         int attemptsAllowed, decimal timeMultiplier, CancellationToken ct = default)
     {
-        if (!await Gate.RequireAsync("Assigning an exam", "Exam", examId.ToString(), ct)) return BulkResult.Fail(AdminGate.DeniedMessage);
+        if (!await Gate.RequireAsync("Setting student terms", "Exam", examId.ToString(), ct)) return BulkResult.Fail(AdminGate.DeniedMessage);
         if (studentUserIds is { Count: 0 }) return BulkResult.Fail("Choose at least one student.");
         if (studentUserIds is { Count: > MaxBulk }) return BulkResult.Fail($"Choose at most {MaxBulk:N0} students at a time.");
         var r = await Exams.AssignAsync(examId, studentUserIds?.Distinct().ToList(), opensAt, closesAt, attemptsAllowed, timeMultiplier, ct);
@@ -346,9 +346,9 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
     /// </summary>
     public async Task<BulkResult> UnassignAsync(IReadOnlyCollection<Guid> assignmentIds, string? reason, CancellationToken ct = default)
     {
-        if (!await Gate.RequireAsync("Removing assignments", "ExamAssignment", null, ct)) return BulkResult.Fail(AdminGate.DeniedMessage);
+        if (!await Gate.RequireAsync("Removing student terms", "ExamAssignment", null, ct)) return BulkResult.Fail(AdminGate.DeniedMessage);
         var why = AdminPeople.Reason(reason);
-        if (why is null) return BulkResult.Fail("Say why these assignments are being removed; the reason is kept in the audit log.");
+        if (why is null) return BulkResult.Fail("Say why these terms are being removed; the reason is kept in the audit log.");
         var (rows, problem) = await LoadAsync(assignmentIds, ct);
         if (problem is not null) return BulkResult.Fail(problem);
         var db = Db;
@@ -371,8 +371,8 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
         db.ChangeTracker.Clear();
         var kept = rows.Count - removable.Count;
         var problems = kept == 0 ? (IReadOnlyList<string>)[] :
-            [$"{Count(kept, "assignment")} kept because the student has already made an attempt. Reset the attempt instead, or leave it."];
-        return new BulkResult(removable.Count > 0, removable.Count == 0 ? problems[0] : $"Removed {Count(removable.Count, "assignment")}.", removable.Count, problems);
+            [$"{Count(kept, "student term")} kept because the student has already made an attempt. Reset the attempt instead, or leave it."];
+        return new BulkResult(removable.Count > 0, removable.Count == 0 ? problems[0] : $"Removed {Count(removable.Count, "student term")}.", removable.Count, problems);
     }
 
     /// <summary>
@@ -382,7 +382,7 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
     public async Task<BulkResult> SetDatesAsync(IReadOnlyCollection<Guid> assignmentIds, bool changeOpens, DateTimeOffset? opensAt, bool changeCloses,
         DateTimeOffset? closesAt, CancellationToken ct = default)
     {
-        if (!await Gate.RequireAsync("Changing assignment dates", "ExamAssignment", null, ct)) return BulkResult.Fail(AdminGate.DeniedMessage);
+        if (!await Gate.RequireAsync("Changing student term dates", "ExamAssignment", null, ct)) return BulkResult.Fail(AdminGate.DeniedMessage);
         if (!changeOpens && !changeCloses) return BulkResult.Fail("Choose which date to change.");
         var (rows, problem) = await LoadAsync(assignmentIds, ct);
         if (problem is not null) return BulkResult.Fail(problem);
@@ -399,7 +399,7 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
         var undated = rows.Count(a => a.ClosesAt is null);
         var r = await ChangeDatesAsync(rows.Where(a => a.ClosesAt is not null).ToList(), a => (a.OpensAt, a.ClosesAt!.Value.AddDays(days)),
             "admin.assignment-due-moved", $"Due date moved by {days} day{(Math.Abs(days) == 1 ? "" : "s")}.", ct);
-        return undated == 0 ? r : r with { Problems = [.. r.Problems, $"{Count(undated, "assignment")} skipped: no due date to move."], Ok = r.Ok || r.Changed > 0 };
+        return undated == 0 ? r : r with { Problems = [.. r.Problems, $"{Count(undated, "student term")} skipped: no due date to move."], Ok = r.Ok || r.Changed > 0 };
     }
 
     private async Task<BulkResult> ChangeDatesAsync(List<ExamAssignment> rows, Func<ExamAssignment, (DateTimeOffset? Opens, DateTimeOffset? Closes)> next,
@@ -420,8 +420,8 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
         }
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
-        IReadOnlyList<string> problems = bad == 0 ? [] : [$"{Count(bad, "assignment")} left alone: the window would close before it opens."];
-        return new BulkResult(changed > 0 || bad == 0, changed == 0 && bad == 0 ? "No change: those dates were already set." : $"Dates changed on {Count(changed, "assignment")}.", changed, problems);
+        IReadOnlyList<string> problems = bad == 0 ? [] : [$"{Count(bad, "student term")} left alone: the window would close before it opens."];
+        return new BulkResult(changed > 0 || bad == 0, changed == 0 && bad == 0 ? "No change: those dates were already set." : $"Dates changed on {Count(changed, "student term")}.", changed, problems);
     }
 
     /// <summary>Gives each chosen assignment one more attempt (up to <see cref="MaxAttempts"/>), with a reason. Audited per assignment.</summary>
@@ -444,8 +444,8 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
         var capped = rows.Count - changed;
-        IReadOnlyList<string> problems = capped == 0 ? [] : [$"{Count(capped, "assignment")} already at the most attempts allowed ({MaxAttempts})."];
-        return new BulkResult(changed > 0, changed == 0 ? problems[0] : $"Another attempt granted on {Count(changed, "assignment")}.", changed, problems);
+        IReadOnlyList<string> problems = capped == 0 ? [] : [$"{Count(capped, "student term")} already at the most attempts allowed ({MaxAttempts})."];
+        return new BulkResult(changed > 0, changed == 0 ? problems[0] : $"Another attempt granted on {Count(changed, "student term")}.", changed, problems);
     }
 
     /// <summary>
@@ -472,7 +472,7 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
         var done = 0;
         foreach (var a in rows)
         {
-            if (!attempted.Contains(a.Id)) { problems.Add("No attempt to reset yet on one assignment; it was left alone."); continue; }
+            if (!attempted.Contains(a.Id)) { problems.Add("No attempt to reset yet for one student; it was left alone."); continue; }
             var cleared = await Desk.ClearScoresAsync(a.Id, ct);
             if (!cleared.Ok) { problems.Add(cleared.Message); continue; }
             var tracked = await db.ExamAssignments.FirstAsync(x => x.Id == a.Id && x.OrganizationId == org, ct);
@@ -509,7 +509,7 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
         return new BulkResult(true, changed == 0 ? "No change." :
-            $"Extra time set to {AdminPeople.Time(multiplier)} on {Count(changed, "assignment")}. It applies from the next attempt.", changed, []);
+            $"Extra time set to {AdminPeople.Time(multiplier)} on {Count(changed, "student term")}. It applies from the next attempt.", changed, []);
     }
 
     /// <summary>Turns the eye-contact accommodation on or off (the exam service's rule and audit, one assignment at a time).</summary>
@@ -541,7 +541,7 @@ public sealed class AssignmentAdminService(IServiceProvider sp)
             else problems.Add(r.Message);
         }
         var distinct = problems.Distinct().ToList();
-        return new BulkResult(changed > 0, changed == 0 ? distinct.FirstOrDefault() ?? "No change." : $"{done} for {Count(changed, "assignment")}.", changed, distinct);
+        return new BulkResult(changed > 0, changed == 0 ? distinct.FirstOrDefault() ?? "No change." : $"{done} for {Count(changed, "student term")}.", changed, distinct);
     }
 
     public static string Describe(AssignmentProgressFilter f) => f switch

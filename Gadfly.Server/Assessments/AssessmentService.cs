@@ -717,7 +717,7 @@ public sealed class AssessmentService(GadflyDbContext db, ITenantContext tenant,
         });
         guard.Audit("policy.locked", "GradingPolicy", exam.Id.ToString(), after: PolicySnapshot.Of(policy));
         await SaveAsync(ct);
-        return new(true, "Published. The assessment and its grading policy are locked; assign it to students next.", exam.Id);
+        return new(true, "Published. The assessment and its grading policy are locked, and every student can now take it.", exam.Id);
     }
 
     /// <summary>Archives an assessment: no new attempts start; sessions, results and the audit trail stay.</summary>

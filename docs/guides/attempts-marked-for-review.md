@@ -22,7 +22,7 @@ finding.
 
 - **Review list** and **grading queue**: a **Needs instructor review** badge with a short reason; both lists can be filtered to
   marked attempts.
-- **Admin desk, assignments**: the same badge.
+- **Admin desk, student exams**: the same badge.
 - **Review page** and **grading page**: a panel with the reason and when it was marked, each absence from the exam window (time,
   length, question), the student's explanation (or "The student left no explanation"), the language reason, and how many AI
   objective grades are cross-lingual and uncalibrated.

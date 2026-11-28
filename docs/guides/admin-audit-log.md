@@ -17,8 +17,8 @@ The newest events come first, 50 to a page (**Newer**, **Older**, **Newest**). F
 | Search | Words in the action, the record, the reason or the before/after detail, or part of a person's user name |
 | Who | Events done by one member of staff |
 | Action | One action (`assessment.published`), or a whole family (`grade.*`) |
-| Student | Events by the student, about them, or in one of their attempts or assignments |
-| Exam | Events about the exam, its objectives, its assignments and its attempts |
+| Student | Events by the student, about them, or in one of their attempts or terms |
+| Exam | Events about the exam, its objectives, its student terms and its attempts |
 | Session id | One attempt's events (paste its id; **all its events** in an event's details fills it in) |
 | From / To | A range of days, in UTC, both ends included |
 

@@ -10,8 +10,8 @@ From your course notes to a published result, in seven steps. Each links to the 
    that's wrong. Your edits are kept when you re-process.
 3. **Build the assessment.** **Assessments > New course**, then **New assessment**, and work through the six steps:
    details, objectives (**Add N as objectives** from the suggestions), rubric, grading policy, then **Publish**.
-4. **Assign it.** In step **6. Assign**, choose students, an optional window, the attempts allowed and any extra
-   time. Students see it under **My exams** and are sent an **Exam assigned** email. Grant **typed answers** or declare
+4. **Share it.** Publishing opens the exam to every student, who sees it under **My exams**. In step **6. Students**
+   you see who has opened it; an admin can set a window, attempts and extra time on **Student terms**. Grant **typed answers** or declare
    the **eye-contact accommodation** for any student who needs it.
 5. **Try it yourself.** Ask your admin for a test student account, sign in as it in a private window, and take the
    exam once. You'll see exactly what students see.

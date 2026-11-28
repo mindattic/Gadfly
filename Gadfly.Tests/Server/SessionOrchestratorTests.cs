@@ -67,7 +67,7 @@ public class SessionOrchestratorTests : ServerTest
     {
         var w = await Seed.ExamAsync();
         var ex = Assert.ThrowsAsync<SessionRefusedException>(() => Orchestrator.CreateOrResumeAsync(w.Org, w.AssignmentId, Guid.NewGuid(), null));
-        Assert.That(ex!.Message, Does.Contain("not assigned to you"));
+        Assert.That(ex!.Message, Does.Contain("not open to you"));
         var otherOrg = await Seed.OrganizationAsync();
         Assert.ThrowsAsync<SessionRefusedException>(() => Orchestrator.CreateOrResumeAsync(otherOrg, w.AssignmentId, w.StudentId, null));
     }

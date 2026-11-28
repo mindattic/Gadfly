@@ -6,9 +6,21 @@
 .admin-nav a { display: inline-flex; align-items: center; min-height: var(--target-min); padding: var(--space-1) var(--space-2); border: 1px solid transparent; border-radius: var(--radius-sm); text-decoration: none; color: var(--ink); font-size: var(--text-sm); white-space: nowrap; }
 .admin-nav a:hover { background: var(--panel); }
 .admin-nav a.active { background: var(--panel); border-color: var(--line-strong); color: var(--accent); font-weight: 600; }
-@media (pointer: coarse) { .admin-nav a { min-height: var(--target-touch); } }
+@media (pointer: coarse) { .admin-nav a, .admin-nav-list a { min-height: var(--target-touch); } }
+.admin-nav-compact { display: none; }
+@media (max-width: 40rem) {
+    .admin-nav { display: none; }
+    .admin-nav-compact { display: block; margin: 0 0 var(--space-4); border: var(--border); border-radius: var(--radius-sm); background: var(--panel); }
+    .admin-nav-compact > summary { min-height: var(--target-touch); display: flex; align-items: center; padding: 0 var(--space-3); cursor: pointer; font-weight: 600; list-style: none; }
+    .admin-nav-compact > summary::-webkit-details-marker { display: none; }
+    .admin-nav-compact > summary::after { content: ""; margin-left: auto; width: .5rem; height: .5rem; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg) translateY(-2px); }
+    .admin-nav-compact[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+    .admin-nav-list { display: grid; gap: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-3); border-top: var(--border); }
+    .admin-nav-list a { display: inline-flex; align-items: center; min-height: var(--target-min); padding: var(--space-1) var(--space-2); border: 1px solid transparent; border-radius: var(--radius-sm); text-decoration: none; color: var(--ink); font-size: var(--text-sm); }
+    .admin-nav-list a.active { border-color: var(--line-strong); color: var(--accent); font-weight: 600; }
+}
 .admin-soon { max-width: 40rem; }
-@media print { .admin-nav { display: none; } }
+@media print { .admin-nav, .admin-nav-compact { display: none; } }
 h2.section { font-size: var(--text-lg); margin: var(--space-6) 0 var(--space-3); }
 .secret-once { max-width: 48rem; border-left: 4px solid var(--error); }
 .secret-once .warn { color: var(--error); font-weight: 600; margin: 0; }

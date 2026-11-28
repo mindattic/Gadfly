@@ -10,13 +10,13 @@
 @inject ILogger<AssignmentsConsole> Log
 
 @* The assignments console (GAD-T298): who sits what, as a list or a students-by-exams grid, with bulk changes. *@
-<PageTitle>Assignments · Gadfly Exams</PageTitle>
+<PageTitle>Student terms · Gadfly Exams</PageTitle>
 <HeadContent><link rel="stylesheet" href="admin.css" /><link rel="stylesheet" href="admin-desk.css" /><link rel="stylesheet" href="admin-people.css" /></HeadContent>
 
 <div class="page-header">
-    <h1>Assignments <HelpLink Topic="admin-assignments" /></h1>
+    <h1>Student terms <HelpLink Topic="admin-assignments" /></h1>
     <div class="row-actions">
-        <button type="button" class="@(assignOpen ? null : "secondary")" aria-expanded="@(assignOpen ? "true" : "false")" aria-controls="assign-panel" @onclick="ToggleAssign">Assign an exam</button>
+        <button type="button" class="@(assignOpen ? null : "secondary")" aria-expanded="@(assignOpen ? "true" : "false")" aria-controls="assign-panel" @onclick="ToggleAssign">Set terms</button>
         @if (!IsGrid)
         {
             <a class="button secondary" href="@PeopleExportEndpoints.AssignmentsCsv(CurrentQuery)" download data-enhance-nav="false">Export CSV</a>
@@ -44,7 +44,7 @@
 @if (assignOpen)
 {
     <section class="panel people-form" id="assign-panel" aria-labelledby="assign-h">
-        <h2 id="assign-h">Assign an exam</h2>
+        <h2 id="assign-h">Set terms for an exam</h2>
         <label>Exam
             <select @bind="assign.ExamId">
                 <option value="@Guid.Empty">Choose a published exam…</option>
@@ -81,9 +81,9 @@
                 </select>
             </label>
         </div>
-        <p class="hint">Students who already have this exam are skipped. Eye-contact and typed-answer accommodations are set per student afterwards, from the list.</p>
+        <p class="hint">Every published exam is open to every student; terms only set dates, attempts and extra time for the students chosen here. Students who already have terms for this exam are skipped. Eye-contact and typed-answer accommodations are set per student afterwards, from the list.</p>
         <div class="row-actions">
-            <button type="button" @onclick="AssignAsync" disabled="@(busy || assign.ExamId == Guid.Empty)">Assign</button>
+            <button type="button" @onclick="AssignAsync" disabled="@(busy || assign.ExamId == Guid.Empty)">Save terms</button>
             <button type="button" class="link" @onclick="ToggleAssign">Cancel</button>
         </div>
     </section>
@@ -126,7 +126,7 @@
                 <option value="Student" selected="@(CurrentSort == AssignmentSort.Student)">Student</option>
                 <option value="Exam" selected="@(CurrentSort == AssignmentSort.Exam)">Exam</option>
                 <option value="Due" selected="@(CurrentSort == AssignmentSort.Due)">Due date</option>
-                <option value="Assigned" selected="@(CurrentSort == AssignmentSort.Assigned)">Date assigned</option>
+                <option value="Assigned" selected="@(CurrentSort == AssignmentSort.Assigned)">Date set</option>
             </select>
         </label>
         <button type="button" class="link" @onclick="() => Go(desc: !Descending)">@(Descending ? "↓ descending" : "↑ ascending")</button>
@@ -157,14 +157,14 @@ else
 @if (selected.Count > 0)
 {
     <section class="panel console-bulk" aria-labelledby="bulk-h">
-        <h2 id="bulk-h">@selected.Count assignment@(selected.Count == 1 ? "" : "s") selected <button type="button" class="link" @onclick="() => selected.Clear()">clear</button></h2>
+        <h2 id="bulk-h">@selected.Count student term@(selected.Count == 1 ? "" : "s") selected <button type="button" class="link" @onclick="() => selected.Clear()">clear</button></h2>
         <div class="row-actions">
             <button type="button" class="@(bulk == "dates" ? null : "secondary")" aria-expanded="@(bulk == "dates" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("dates")'>Set dates</button>
             <button type="button" class="@(bulk == "move" ? null : "secondary")" aria-expanded="@(bulk == "move" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("move")'>Move due date</button>
             <button type="button" class="@(bulk == "attempt" ? null : "secondary")" aria-expanded="@(bulk == "attempt" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("attempt")'>Grant another attempt</button>
             <button type="button" class="@(bulk == "reset" ? null : "secondary")" aria-expanded="@(bulk == "reset" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("reset")'>Reset attempt</button>
             <button type="button" class="@(bulk == "access" ? null : "secondary")" aria-expanded="@(bulk == "access" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("access")'>Accommodations</button>
-            <button type="button" class="secondary danger-text" aria-expanded="@(bulk == "remove" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("remove")'>Unassign</button>
+            <button type="button" class="secondary danger-text" aria-expanded="@(bulk == "remove" ? "true" : "false")" aria-controls="bulk-action" @onclick='() => Bulk("remove")'>Remove terms</button>
         </div>
         <div id="bulk-action" class="bulk-action">
         @switch (bulk)
@@ -182,7 +182,7 @@ else
                 <button type="button" @onclick="SetDatesAsync" disabled="@busy">Apply to @selected.Count</button>
                 break;
             case "move":
-                <label>Move the due date by <input type="number" min="-365" max="365" @bind="form.Days" style="width:6rem" /> days <span class="hint">(negative moves it earlier; assignments with no due date are skipped)</span></label>
+                <label>Move the due date by <input type="number" min="-365" max="365" @bind="form.Days" style="width:6rem" /> days <span class="hint">(negative moves it earlier; terms with no due date are skipped)</span></label>
                 <button type="button" @onclick="MoveAsync" disabled="@busy">Move</button>
                 break;
             case "attempt":
@@ -218,9 +218,9 @@ else
                 <p class="hint">Accommodations are granted per student and exam, by staff only; a student can never switch them on. Extra time applies from the next attempt; the eye-contact accommodation from the next answer@(TypedAvailable ? "; typed answers the next time the student opens the exam" : ""). Every change is audited.</p>
                 break;
             case "remove":
-                <p>Only assignments with no attempt yet are removed; one with an attempt is kept, since its transcript and grades belong to it.</p>
+                <p>Only terms with no attempt yet are removed, and the exam stays open to the student on the default terms; terms with an attempt are kept, since the transcript and grades belong to them.</p>
                 <label>Reason <span class="hint">(kept in the audit log)</span> <input @bind="form.Reason" maxlength="500" /></label>
-                <button type="button" class="danger" @onclick="UnassignAsync" disabled="@(busy || string.IsNullOrWhiteSpace(form.Reason))">Unassign</button>
+                <button type="button" class="danger" @onclick="UnassignAsync" disabled="@(busy || string.IsNullOrWhiteSpace(form.Reason))">Remove terms</button>
                 break;
         }
         </div>
@@ -230,7 +230,7 @@ else
 @if (error is not null)
 {
     <div class="notice error" role="alert">
-        <p><strong>The assignments could not load.</strong> @error</p>
+        <p><strong>The student terms could not load.</strong> @error</p>
         <button type="button" @onclick="LoadAsync" disabled="@busy">Try again</button>
     </div>
 }
@@ -250,10 +250,10 @@ else if (IsGrid)
     }
     else
     {
-        <p class="hint">Tick an empty cell to pick that student for the exam, then <strong>Assign an exam</strong>. Tick an assigned cell to select it for the changes above. @(grid.Exams.Count == AssignmentAdminService.MaxGridExams ? $"Showing the first {AssignmentAdminService.MaxGridExams} exams; choose one to narrow it." : "")</p>
+        <p class="hint">Tick an empty cell to pick that student for the exam, then <strong>Set terms</strong>. Tick a cell with terms to select it for the changes above. @(grid.Exams.Count == AssignmentAdminService.MaxGridExams ? $"Showing the first {AssignmentAdminService.MaxGridExams} exams; choose one to narrow it." : "")</p>
         <div class="table-scroll">
             <table class="grid console-grid">
-                <caption class="visually-hidden">Assignments: students by exam</caption>
+                <caption class="visually-hidden">Student terms: students by exam</caption>
                 <thead>
                     <tr>
                         <th scope="col">Student</th>
@@ -283,9 +283,9 @@ else if (IsGrid)
                                 else
                                 {
                                     <td class="cell-empty">
-                                        <label title="Pick for assigning">
+                                        <label title="Pick for setting terms">
                                             <input type="checkbox" checked="@pickedPairs.Contains((s.UserId, e.Id))" @onchange="ev => TogglePair(s.UserId, e.Id, ev)" aria-label="Pick @s.Name for @e.Title" />
-                                            <span>not assigned</span>
+                                            <span>default terms</span>
                                         </label>
                                     </td>
                                 }
@@ -311,23 +311,23 @@ else if (list.Total == 0)
     <div class="notice">
         @if (HasFilters)
         {
-            <p>No assignment matches these filters. <a href="admin/assignments">Show all</a>.</p>
+            <p>No student terms match these filters. <a href="admin/assignments">Show all</a>.</p>
         }
         else
         {
-            <p><strong>Nothing assigned yet.</strong> Use <strong>Assign an exam</strong>, or the grid to pick students exam by exam.</p>
+            <p><strong>No student terms yet.</strong> Every published exam is open to every student on its default terms. Use <strong>Set terms</strong>, or the grid, to give students their own dates, attempts or accommodations.</p>
         }
     </div>
 }
 else
 {
-    <p class="hint" role="status">@list.Total.ToString("N0") assignment@(list.Total == 1 ? "" : "s")@(HasFilters ? " match" : "")</p>
+    <p class="hint" role="status">@list.Total.ToString("N0") student term@(list.Total == 1 ? "" : "s")@(HasFilters ? " match" : "")</p>
     <div class="table-scroll">
         <table class="grid people-table">
-            <caption class="visually-hidden">Assignments</caption>
+            <caption class="visually-hidden">Student terms</caption>
             <thead>
                 <tr>
-                    <th scope="col" class="console-row-check"><input type="checkbox" checked="@AllOnPageSelected" @onchange="TogglePage" aria-label="Select every assignment on this page" /></th>
+                    <th scope="col" class="console-row-check"><input type="checkbox" checked="@AllOnPageSelected" @onchange="TogglePage" aria-label="Select every row on this page" /></th>
                     <th scope="col">Student</th><th scope="col">Exam</th><th scope="col">Status</th><th scope="col">Due</th>
                     <th scope="col" class="num">Attempts</th><th scope="col">Score</th><th scope="col">Accommodations</th>
                 </tr>
@@ -479,7 +479,7 @@ else
         catch (Exception ex)
         {
             Log.LogWarning(ex, "Assignments console failed to load");
-            error = "Something went wrong reading the assignments. Try again in a moment.";
+            error = "Something went wrong reading the student terms. Try again in a moment.";
         }
     }
 
@@ -545,7 +545,7 @@ else
                     var title = exams.FirstOrDefault(e => e.Id == g.Key).Title ?? "exam";
                     (r.Ok ? changed : issues).Add($"{title}: {r.Message}");
                 }
-                return new BulkResult(changed.Count > 0, changed.Count > 0 ? string.Join(" ", changed) : issues.FirstOrDefault() ?? "Nothing assigned.", 0, issues);
+                return new BulkResult(changed.Count > 0, changed.Count > 0 ? string.Join(" ", changed) : issues.FirstOrDefault() ?? "No terms set.", 0, issues);
             });
             if (ok) { pickedPairs.Clear(); assignOpen = false; }
             return;

@@ -151,7 +151,7 @@ else if (panel == "import")
         <select @onchange='e => Go(sort: PeopleExportEndpoints.Enum(e.Value?.ToString(), StudentSort.Name))' disabled="@(CurrentStatus == StudentStatusFilter.Invited)">
             <option value="Name" selected="@(CurrentSort == StudentSort.Name)">Name</option>
             <option value="LastSignIn" selected="@(CurrentSort == StudentSort.LastSignIn)">Last sign-in</option>
-            <option value="Assigned" selected="@(CurrentSort == StudentSort.Assigned)">Exams assigned</option>
+            <option value="Assigned" selected="@(CurrentSort == StudentSort.Assigned)">Exams with terms</option>
             <option value="Added" selected="@(CurrentSort == StudentSort.Added)">Date added</option>
         </select>
     </label>

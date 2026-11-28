@@ -218,7 +218,7 @@ public sealed class AdminDashboardService(GadflyDbContext db, ITenantContext ten
         var rows = count == 0 ? [] : await q.OrderBy(r => r.ClosesAt).Take(ItemsPerGroup).ToListAsync(ct);
         var items = rows.Select(r => new AttentionItem(AttentionKind.NotStartedNearDue, Student(r.StudentUserId),
             $"{r.Title} · closes in {Ago(r.ClosesAt!.Value - now)} ({When(r.ClosesAt)})", $"admin/students/{r.StudentUserId}", r.ClosesAt)).ToList();
-        return new(AttentionKind.NotStartedNearDue, $"Not started, closing within {NearDueDays} days", count, items, "admin/assignments", "Open assignments");
+        return new(AttentionKind.NotStartedNearDue, $"Not started, closing within {NearDueDays} days", count, items, "admin/assignments", "Open student terms");
     }
 
     private async Task<AttentionGroup> FailedJobsAsync(Guid org, DateTimeOffset now, CancellationToken ct)

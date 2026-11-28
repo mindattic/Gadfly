@@ -7,3 +7,7 @@ label.eb-check input { margin-top: var(--space-1); }
 .eb-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
 .eb-toolbar { margin: 0 0 var(--space-4); }
 .eb-status { margin-left: var(--space-3); vertical-align: middle; font-weight: 400; }
+.eb-panels { display: grid; gap: var(--space-5); align-items: start; margin-bottom: var(--space-5); }
+.eb-panels .panel { max-width: none; }
+.eb-col > .panel:last-child, .eb-panels > .panel { margin-bottom: 0; }
+@media (min-width: 64rem) { .eb-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -6,12 +6,12 @@ material by a panel of AI models, with citations. The AI's grades are preliminar
 independently, large disagreements are reconciled, and an authorized person approves before a student sees anything.
 
 This guide covers everything an instructor does: uploading material, checking the concepts and rubrics built from
-it, building and assigning assessments, setting accommodations, reviewing sessions, grading and publishing results,
+it, building and publishing assessments, setting accommodations, reviewing sessions, grading and publishing results,
 transcripts and analytics. Owners and admins can do all of it too. Examiners and second reviewers, who only grade,
 can start with the [Grading guide](grading-guide.md).
 
 > **Note.** **You see what you own.** By default an instructor sees and manages only the courses, source
-> collections and assessments *they created*, plus the assignments, sessions, review pages, grading queue and
+> collections and assessments *they created*, plus the student terms, sessions, review pages, grading queue and
 > analytics under them. Another instructor's items are not listed, and opening one by its address shows "not found"
 > and records the attempt in the audit log. Owners and admins see the whole organization; ask one if you need to
 > share or hand over an item. Your admin can switch this off in **Settings > What instructors see**. Examiners and
@@ -189,28 +189,24 @@ note asking you to approve. Duplicating an assessment does not copy its approval
 
 Your organization's owners and admins also see every exam in the [exams manager](admin-exams.md) (`/admin/exams`).
 There they can **duplicate** an assessment (a new draft with the same objectives, rubric, hint ladders, settings and
-grading policy, but none of its assignments or attempts: the way to change a published assessment's duration), set
+grading policy, but none of its student terms or attempts: the way to change a published assessment's duration), set
 its integrity level, read-out check and examiner, open or close its window for everyone at once, see how many attempts
 examined each objective, **export** it as a JSON file or **import** one, and **preview it as a student** (the real
 examiner logic on the practice panel; nothing is saved and it never counts as an attempt). Ask them if you need any of
 these.
 
-### 6. Assign
+### 6. Students
 
-A published assessment's last step is **Assign to students**:
+Publishing an assessment makes it open to every student in the organization; there is no assigning step. Students must
+already be members of the organization (an admin invites them). The exam appears under each student's **My exams**, and
+a student appears in this step's **Students** table once they open it. Use the **Students and accommodations** link
+after publishing to reach it.
 
-| Field | Detail |
-|---|---|
-| All students / pick students | Everyone in the organization with the Student role, or the ones you tick. |
-| Opens / Closes | Optional, in your local time (the label shows your UTC offset). Students can't start before it opens or after it closes. |
-| Attempts allowed | 1 to 20. |
-| Extra time (accommodation) | None, 1.25×, 1.5× or 2×, for the students you assign in this batch. |
+To set a closing date, the attempts allowed or extra time for a student before they start, an owner or admin uses the
+[Student terms page](admin-assignments.md) (**Set terms**). A student who is given terms is sent an **Exam assigned**
+email (when your organization's email is on and an email sender is configured).
 
-Students who already have this assessment are skipped. Students must already be members of the organization (an
-admin invites them). The exam appears under the student's **My exams**, and each newly assigned student is sent an
-**Exam assigned** email (when your organization's email is on and an email sender is configured).
-
-The **Assignments** table shows each student's window, attempts used, extra time, answers (spoken or typed), eye
+The **Students** table shows each student's window, attempts used, extra time, answers (spoken or typed), eye
 contact, leaving the window (the [window-absence accommodation](accommodations.md): when leaving the exam window marks an
 attempt for review, or never), EU/EEA residence, the
 latest session's state (opened, consented, in progress, paused, ended, failed) and results ("Grade and publish in
@@ -223,13 +219,13 @@ awaiting grading or release is counted but never named.
 
 | Accommodation | Where | Effect |
 |---|---|---|
-| **Extra time** | **Extra time (accommodation)** when assigning | Multiplies the time limit, and lengthens the pause before an answer is taken as finished. |
+| **Extra time** | **Extra time** in **Set terms** on the [Student terms page](admin-assignments.md) (owners and admins) | Multiplies the time limit, and lengthens the pause before an answer is taken as finished. |
 | **Eye contact not expected** | **Declare accommodation** / **Withdraw** in the **Eye contact** column | The examiner's head tilt, the slight dim and her warm line don't happen (face presence is still noticed). Applies from their next answer. Use it for, for example, autism, low vision, nystagmus or a cultural norm. |
 | **Typed answers** | **Grant typed answers** / **Withdraw** in the **Answers** column | The student types each answer instead of speaking it; the examiner still speaks the questions, the camera stays on and the eye-contact check still applies. Typed answers are marked as typed for reviewers, and a paste into the answer box is noted for review. Only for a documented speech, hearing or anxiety need. Applies the next time the student opens the exam. |
 | **Lives in the EU/EEA** | **Mark as EU/EEA** / **Unmark** in **Lives in EU/EEA** | Voice measurements are off for this student unless your organization turned them on for everyone. |
 
-Each change is written to the audit log. Owners and admins can also set any of these for many assignments at once on
-the [Assignments console](admin-assignments.md). See [Accommodations](accommodations.md).
+Each change is written to the audit log. Owners and admins can also set any of these for many students at once on
+the [Student terms page](admin-assignments.md). See [Accommodations](accommodations.md).
 
 ## 6. Review a session
 
@@ -290,7 +286,7 @@ See [Reading integrity notes](integrity-notes.md) for what each one means and ho
 steering estimate ended for each concept and how questioning on it closed (SettledConceptualOrAbove: sufficient evidence at Level 3 or above;
 SettledBelowConceptual: sufficient evidence below Level 3; Inconclusive: insufficient evidence; Open; sessions recorded
 before GAD-T823 show the older names Mastered, Aporia and Exhausted). It is
-labelled as a steering aid: it is not a score, a level or a grade. The admin assignment and student pages likewise
+labelled as a steering aid: it is not a score, a level or a grade. The admin student terms and student pages likewise
 show the AI levels (not a percentage) until a final grade exists. The **AI report** is the panel's write-up, with quoted evidence and citations.
 
 ## 7. Grade and publish
@@ -359,7 +355,7 @@ notes, which an instructor who may be grading blind does not see; see the admin 
 | turns (CSV) | Session review summary | One row per question: session, student, exam, attempt, turn, concept, move, question, answer, times (UTC), latency, overall score, agreement, whether judges disagreed, judge summary, criterion scores, each judge's score, text-style score, mastery after, integrity events. Opens correctly in Excel. |
 | report (Markdown) | Session review summary | The AI report plus any earlier instructor decision. |
 | grading report (Markdown, CSV, PDF) | Grading page | The assessment report with AI, human and combined scores. |
-| class summary (PDF) | Assignments tab | Score distribution, per-objective average and who hasn't completed, for one exam's released results. |
+| class summary (PDF) | Students table | Score distribution, per-objective average and who hasn't completed, for one exam's released results. |
 
 Blind-grading rules apply to the exports too.
 

@@ -31,7 +31,7 @@ tells you where to go, and you press **Show me around** once you are there.
 | Admin desk | Admins | The three tabs (exams, students, student exams), each form and the list below it |
 | Students | Admins | Adding, inviting and importing students, filters and the list |
 | Exams | Admins | Creating and importing exams, filters, status and the actions on each exam |
-| Assignments | Admins | Assigning an exam, the list and grid views, filters and changing many at once |
+| Student terms | Admins | Setting terms, the list and grid views, filters and changing many at once |
 | Live sessions | Admins | The card for each exam in progress and the actions to step in |
 | Grading | Examiners, reviewers, instructors and admins | The queue, its filters and opening a session |
 | One grading session | Examiners, reviewers, instructors and admins | Your evaluation, the score comparison, approval, rubrics and the transcript |

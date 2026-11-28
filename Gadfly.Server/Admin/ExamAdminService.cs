@@ -22,7 +22,7 @@ public sealed record ExamWindow(int Assignments, int OpenNow, int NotOpenYet, in
     /// <summary>A short plain description for the list ("Open to 12", "Closed", "Opens 3 Dec"...).</summary>
     public string Describe()
     {
-        if (Assignments == 0) return "Not assigned";
+        if (Assignments == 0) return "Default terms";
         if (OpenNow == Assignments) return LatestCloses is { } c ? $"Open, closes {c.UtcDateTime:d MMM HH:mm} UTC" : "Open";
         if (Closed == Assignments) return "Closed";
         if (NotOpenYet == Assignments) return EarliestOpens is { } o ? $"Opens {o.UtcDateTime:d MMM HH:mm} UTC" : "Not open yet";
@@ -368,7 +368,7 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
         guard.Audit("assessment.restored", "Exam", exam.Id.ToString(), new { Status = nameof(ExamStatus.Archived) }, new { Status = exam.Status.ToString() });
         await SaveAsync(ct);
         return new(true, exam.Status == ExamStatus.Published
-            ? "Restored and published again. Students it is assigned to can start it while their window is open."
+            ? "Restored and published again. Every student can start it while their window is open."
             : "Restored as a draft.", exam.Id);
     }
 
@@ -419,19 +419,19 @@ public sealed class ExamAdminService(GadflyDbContext db, ITenantContext tenant, 
         if (requirePublished && exam.Status != ExamStatus.Published)
             return new(false, exam.Status == ExamStatus.Archived ? "It is archived. Restore it first, then open it." : "Publish it first; a draft can't be opened to students.");
         var assignments = await db.ExamAssignments.Where(a => a.ExamId == examId && a.OrganizationId == org).ToListAsync(ct);
-        if (assignments.Count == 0) return new(false, "It isn't assigned to anyone yet. Assign it first; the window is set per assignment.");
+        if (assignments.Count == 0) return new(false, "No student has terms for it yet. Set terms first; the window is set per student.");
         var before = assignments.Select(a => new { a.Id, a.StudentUserId, a.OpensAt, a.ClosesAt }).ToList();
         foreach (var a in assignments) change(a);
         var changed = assignments.Where(a => db.Entry(a).State == EntityState.Modified).ToList();
         if (changed.Count == 0)
         {
             db.ChangeTracker.Clear();
-            return new(true, "Nothing to change: every assignment already had that window.", examId);
+            return new(true, "Nothing to change: every student already had that window.", examId);
         }
         guard.Audit(action, "Exam", examId.ToString(),
             before: before.Where(b => changed.Any(c => c.Id == b.Id)).ToList(),
             after: changed.Select(a => new { a.Id, a.StudentUserId, a.OpensAt, a.ClosesAt }).ToList(),
-            reason: $"{changed.Count} of {assignments.Count} assignment(s) changed.");
+            reason: $"{changed.Count} of {assignments.Count} student term(s) changed.");
         await SaveAsync(ct);
         return new(true, string.Format(done, changed.Count == 1 ? "1 student" : $"{changed.Count} students"), examId);
     }

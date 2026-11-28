@@ -54,7 +54,7 @@ Students don't need two-step verification (an authenticator app); staff do.
 
 ## Finding your exam: My exams
 
-Sign in and open **My exams**. An exam assigned to you appears here (your organization may also email you about it;
+Sign in and open **My exams**. Every published exam appears here (your organization may also email you if staff set terms for you on one;
 see [Email](#email)). Each exam shows:
 
 | What you see | What it means |
@@ -346,7 +346,7 @@ have saved.
 
 ## Your data
 
-You can download a copy of everything Gadfly holds about you in your organization (your assignments, attempts,
+You can download a copy of everything Gadfly holds about you in your organization (your exam terms, attempts,
 questions and answers, judgments, integrity notes, reports and grades): press **Download my data** at the top of
 **My exams**. It is a single JSON file. If you belong to several organizations, each one's copy is separate;
 switch organization first (the drop-down in the top bar).
@@ -365,7 +365,7 @@ records going into any later copy for the study.
 
 ## Email
 
-Gadfly can email you when an exam is assigned, as a reminder before it's due, when a result is released, and about
+Gadfly can email you when staff set terms for you on an exam, as a reminder before it's due, when a result is released, and about
 your own appeals. Press **Email preferences** next to **Download my data** on **My exams** to turn off the
 before-it's-due reminder — the result-released email and the others still come through, since they matter. Your
 organization can also turn off Gadfly's emails entirely; if they have, your own choice here won't change anything.

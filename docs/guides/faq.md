@@ -99,7 +99,7 @@ organization can ask its admin to turn on **Allow a single grader** in Organizat
 ### A student's exam can't continue. What do I do?
 
 While it is running, **Live sessions** (`/admin/live`) lets an owner or admin pause, resume, add time, send the
-student a notice or end it. Afterwards, the **Assignments** console's **Grant another attempt** or **Reset attempt**
+student a notice or end it. Afterwards, the **Student terms** page's **Grant another attempt** or **Reset attempt**
 (with a reason) lets the student sit it again, and the admin desk's **Reset** removes that student's attempts on that
 exam so they start fresh. See the [Admin guide](ADMIN_GUIDE.md).
 

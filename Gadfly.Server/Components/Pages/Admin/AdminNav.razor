@@ -14,7 +14,24 @@ else if (groups.Count > 0)
 {
     @* In the body on purpose: a second HeadContent would replace the page's own. *@
     <link rel="stylesheet" href="admin.css" />
-    <nav class="admin-nav" aria-label="Administration">
+    <nav class="admin-nav" aria-label="Administration">@Groups</nav>
+    @* Phones get the same links folded behind one disclosure, so the menu doesn't fill the first screen. *@
+    <details class="admin-nav-compact">
+        <summary>Admin menu</summary>
+        <nav class="admin-nav-list" aria-label="Administration">@Groups</nav>
+    </details>
+}
+
+@code {
+    /// <summary>Set by MainLayout only. Anywhere else the component adds the admin stylesheet and nothing visible.</summary>
+    [Parameter] public bool FromLayout { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private IReadOnlyList<AdminArea.Group> groups = [];
+
+    private RenderFragment Groups => __builder =>
+    {
         @foreach (var g in groups)
         {
             <div class="admin-nav-group" role="group" aria-label="@g.Name">
@@ -25,16 +42,7 @@ else if (groups.Count > 0)
                 }
             </div>
         }
-    </nav>
-}
-
-@code {
-    /// <summary>Set by MainLayout only. Anywhere else the component adds the admin stylesheet and nothing visible.</summary>
-    [Parameter] public bool FromLayout { get; set; }
-
-    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
-
-    private IReadOnlyList<AdminArea.Group> groups = [];
+    };
 
     protected override async Task OnParametersSetAsync()
     {

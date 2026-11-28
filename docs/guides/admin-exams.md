@@ -9,12 +9,12 @@ Each row shows the exam's title (it opens the assessment editor), its course and
 
 | Column | What it means |
 |---|---|
-| Status | **Draft** (still being built), **Published** (students it is assigned to can sit it), **Archived** (closed for good, kept for the record) |
+| Status | **Draft** (still being built), **Published** (every student can sit it), **Archived** (closed for good, kept for the record) |
 | Objectives | How many learning objectives it examines |
-| Assigned | How many students it is assigned to |
+| With terms | How many students have terms set for it (see [Student terms](admin-assignments.md)) |
 | Completed | Attempts that reached a proper end (hover to see how many started) |
 | Average time | The average length of completed attempts |
-| Window | Whether students can start it now: *Open*, *Closed*, *Opens 3 Dec 09:00 UTC*, or *Open to 12 of 30* when assignments differ |
+| Window | Whether students can start it now: *Open*, *Closed*, *Opens 3 Dec 09:00 UTC*, or *Open to 12 of 30* when students' terms differ |
 
 **Find** searches titles, courses and source material. **Status** shows active exams (drafts and published) by default;
 choose *Archived* or *All* to see archived ones.
@@ -28,17 +28,17 @@ Open **Actions** on a row:
   *independent* evidence (not after a hint, and not after a question that gave the answer away). An objective few
   attempts reach usually needs more time, fewer objectives, or a higher question limit. An exam built without
   objectives is covered by concept instead.
-- **Window…**: set when every assignment of the exam opens and closes (UTC; leave a box empty for no limit at that end).
-- **Open now**: students it is assigned to can start straight away (an opening date still to come becomes now, and a
+- **Window…**: set when the exam opens for every student and closes and closes (UTC; leave a box empty for no limit at that end).
+- **Open now**: students can start straight away (an opening date still to come becomes now, and a
   closing date already past is cleared). Only for a published exam.
 - **Close now**: no new attempt can start. An attempt already in progress can still be finished.
 - **Preview as a student**: see below.
 - **Duplicate**: a new **draft** copy with everything that describes the exam: details, settings, learning objectives,
-  rubric criteria with their level descriptions, hint ladders and grading policy. Its assignments, attempts, grades and
+  rubric criteria with their level descriptions, hint ladders and grading policy. Its student terms, attempts, grades and
   results stay with the original. Use it to make next term's version, or to change settings a published exam has frozen.
 - **Export as JSON**: downloads the exam's definition (`.gadfly-exam.json`) to keep, share or import elsewhere.
 - **History**: the exam's events in the [audit log](admin-audit-log.md).
-- **Archive** / **Restore**: archiving asks first. An archived exam can't be started by students or assigned again;
+- **Archive** / **Restore**: archiving asks first. An archived exam can't be started by students or opened to new attempts;
   its attempts and results are kept, and an attempt in progress can be finished. **Restore** puts it back as it was:
   published if it had been published, otherwise a draft.
 
@@ -90,7 +90,7 @@ or another one.
 3. Optionally choose the **course**; otherwise Gadfly uses the course named in the file if your organization has one.
 4. **Import**.
 
-The exam arrives as a **draft**: nothing is published or assigned. If anything in the file is wrong, nothing is created
+The exam arrives as a **draft**: nothing is published. If anything in the file is wrong, nothing is created
 and every problem is listed, each saying where it is (for example *Objective 2 (obj-2), criterion 1: give it a name.*).
 Objectives whose concept your chosen source material doesn't have arrive unlinked, with a note; link them in the
 assessment editor before publishing.

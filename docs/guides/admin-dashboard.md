@@ -28,7 +28,7 @@ with nothing in it is left out; when nothing at all is waiting, the page says so
 | Grades to reconcile | Attempts where the AI panel and the grader disagree enough that reconciliation is required, with how many objectives | The attempt's grading page |
 | Grades waiting for final approval | Grades a person has finished, waiting for the final approver | The attempt's grading page |
 | Open appeals | Appeals students have made that nobody has answered yet | The attempt's grading page |
-| Not started, closing within 3 days | Assignments of a published exam with a due date in the next 3 days that the student has not started | The student's profile, or [Assignments](admin-assignments.md) |
+| Not started, closing within 3 days | Published exams with a due date in the next 3 days that the student has not started | The student's profile, or [Student terms](admin-assignments.md) |
 | Background work that failed (last 7 days) | Your organization's background jobs (reading source notes, AI preliminary grading, webhook delivery, retention clean-up) that failed, with the error | [System status](admin-system-status.md) |
 
 ## The last 7 and 30 days

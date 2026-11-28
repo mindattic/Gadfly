@@ -1,6 +1,6 @@
 {
   "_about": "서버가 학생의 요청을 받아들이지 않은 이유 (GAD-T628). 응시의 언어로 시험실과 시험 준비 페이지에 보여요. \"I want to change my answer\" 버튼은 '답변을 바꾸고 싶어요'로 옮깁니다.",
-  "refusal.notAssigned": "이 시험은 배정되지 않았어요.",
+  "refusal.notAssigned": "응시할 수 있는 시험이 아니에요.",
   "refusal.archived": "이 시험은 더 이상 새로 응시할 수 없어요.",
   "refusal.notOpenYet": "이 시험은 아직 열리지 않았어요.",
   "refusal.opensAt": "이 시험은 {0:u}에 열려요.",

@@ -222,7 +222,7 @@ public sealed class ExamService(GadflyDbContext db, ITenantContext tenant, IOrga
         Guard.Audit("assessment.published", "Exam", exam.Id.ToString(), after: new { exam.Title, SessionPolicy = policy }, reason: "Published from the older exam builder");
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
-        return new(true, "Published. Its settings are now frozen; assign it to students below.", exam.Id);
+        return new(true, "Published. Its settings are now frozen, and every student can now take it.", exam.Id);
     }
 
     /// <summary>Archives an exam: no new attempts start; existing sessions and results stay.</summary>
