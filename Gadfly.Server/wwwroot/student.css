@@ -109,10 +109,9 @@ textarea { width: 100%; resize: vertical; }
 .recorded-answer { margin: 0; padding: var(--space-3) var(--space-4); border-left: 3px solid var(--line-strong); background: var(--panel); white-space: pre-wrap; overflow-wrap: anywhere; }
 .last-answer { display: grid; gap: var(--space-3); margin-top: var(--space-4); }
 .last-answer .notice { margin: 0; }
-/* Browse by category (GAD-T658). */
-.catalog { max-width: var(--measure); display: grid; gap: var(--space-3); }
-.catalog-filters { display: flex; flex-wrap: wrap; gap: var(--space-3); }
-.catalog-filters label { display: grid; gap: var(--space-1); flex: 1 1 14rem; }
-.catalog-group h3 { font-size: var(--text-lg); margin: 0 0 var(--space-2); }
-.catalog-list { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-2); }
-.catalog-exam { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); align-items: baseline; padding: var(--space-2) 0; border-bottom: var(--border); }
+/* Every exam, one list (GAD-T845): the heading on the left, the list's tools (a filter box) on the right. */
+.exam-catalog { max-width: var(--measure); display: grid; gap: var(--space-3); }
+.exam-list-header { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); align-items: center; justify-content: space-between; }
+.exam-list-header h2 { margin: 0; }
+.exam-list-tools { display: flex; gap: var(--space-2); margin-left: auto; }
+.exam-item .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }

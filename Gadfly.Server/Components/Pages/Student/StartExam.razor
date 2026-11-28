@@ -636,10 +636,9 @@ else
         examiner = ExaminerCatalog.Pick(examiners, null);
         if (ExamId is { } examId && Tenant.OrganizationId is { } eorg && Tenant.UserId is { } euser)
         {
-            // GAD-T669: start by exam: an exam open to every student gets the student's assignment made on first use, then the
-            // ordinary get-ready page for that assignment takes over. Anything else shows "not assigned" below.
-            var made = await StudentExams.EnsureOpenAssignmentAsync(Scopes, eorg, euser, examId, Clock.GetUtcNow(),
-                createIfMissing: Config.GetValue<bool>(StudentExams.OpenExamsSetting));
+            // GAD-T669, GAD-T845: start by exam: every published exam gets the student's attempt record made on first use, then
+            // the ordinary get-ready page for that assignment takes over. Anything else shows "not assigned" below.
+            var made = await StudentExams.EnsureOpenAssignmentAsync(Scopes, eorg, euser, examId, Clock.GetUtcNow());
             if (made is { } id)
             {
                 Nav.NavigateTo($"my-exams/{id}/start", replace: true);

@@ -649,7 +649,6 @@ is missing. A mock-mode server never sends notification emails (see **Email noti
 
 | Setting | Effect |
 |---|---|
-| `Gadfly:OpenExams` | When `true`, every published exam is offered to every student who opens **My exams** (with 50 attempts), without assigning it. Useful for a demo; turn it off for real classes. |
 | `Gadfly:AdminDesk:Enabled` | The admin desk, for the organization's Owners and Admins (see above). Off in Production unless set to `true`. |
 | `Gadfly:AdminDesk:Admins`, `Gadfly:AdminDesk:Organization` | **Deprecated** (GAD-T459): the old list of extra desk accounts and the organization it applied in. Honoured through V2 with a start-up warning; ignored from V3. |
 | `Gadfly:Notifications:SendInMockMode` | `true` lets a mock-mode server send notification emails, for a developer whose SMTP points at a local test inbox. Off by default. |

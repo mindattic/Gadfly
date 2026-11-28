@@ -28,99 +28,135 @@
     <div class="actions"><a class="button secondary" href="my-exams/practice">@T["myExams.practice.start"]</a></div>
 </section>
 
-@if (rows is null)
+@* Every published exam in the organization, once each, every card alike (GAD-T845): none is assigned to anyone. Starting one by
+   exam makes the student's attempt record (/my-exams/exam/{id}/start, GAD-T669); an attempt in progress or finished shows its
+   standing and Resume or View result on the same card. *@
+@if (cards is null)
 {
     <p class="hint" role="status">@T["myExams.loading"]</p>
 }
-else if (rows.Count == 0)
-{
-    <p class="notice info page-section" role="status" data-tour="my-exams-empty">@T["myExams.empty"]</p>
-}
 else
 {
-    <div class="exam-list page-section">
-        @foreach (var r in rows)
+    <section class="exam-catalog page-section" aria-labelledby="exam-list-heading">
+        <div class="exam-list-header">
+            <h2 id="exam-list-heading">@T["myExams.list.heading"]</h2>
+            <div class="exam-list-tools"></div>
+        </div>
+        @if (cards.Count == 0)
         {
-            <section class="panel exam-item" data-tour="my-exams-item" aria-labelledby="exam-@r.AssignmentId.ToString("N")">
-                <div class="exam-item-head">
-                    <h2 id="exam-@r.AssignmentId.ToString("N")">@r.ExamTitle</h2>
-                    <span class="badge badge-@r.Standing.ToString().ToLowerInvariant()">@StudentExams.Describe(r.Standing, T)</span>
-                </div>
-                <p class="hint">
-                    @Window(r) · @T["myExams.attempts", r.AttemptsUsed, r.AttemptsAllowed]
-                    @* Every exam is spoken on camera (GAD-T239); typing is only an accommodation the instructor grants (GAD-T260). *@
-                    <span> · @(r.TypedAnswers ? T["myExams.typed"] : T["myExams.spoken"])</span>
-                </p>
-                @if (!string.IsNullOrWhiteSpace(r.Instructions))
-                {
-                    <p>@r.Instructions</p>
-                }
-                @if (r.ExamArchived && r.ActiveSessionId is not null)
-                {
-                    <p class="hint">@T["myExams.archivedInProgress"]</p>
-                }
-                @if (r.CanStart)
-                {
-                    <div class="actions" data-tour="my-exams-start">
-                        @if (r.CanResumeDirectly)
-                        {
-                            <a class="button" href="exam/@r.ActiveSessionId">@T["myExams.resume"]</a>
-                        }
-                        else
-                        {
-                            <a class="button" href="my-exams/@r.AssignmentId/start">@(r.ActiveSessionId is null ? T["myExams.start"] : T["myExams.resume"])</a>
-                        }
-                    </div>
-                }
-                @foreach (var pub in Published(r.AssignmentId))
-                {
-                    <div class="result">
-                        <h3>@(r.AttemptsAllowed > 1 ? T["myExams.resultAttempt", pub.Attempt] : T["myExams.result"])</h3>
-                        <p><strong>@T["myExams.grade"]</strong> @(pub.FinalPercent is { } fp ? T.Number((double)fp) + "%" : "—")@(pub.Label is { } lbl ? $" ({lbl})" : "")
-                            @if (pub.Status == Gadfly.Assessment.GradeStatus.Amended) { <span class="hint"> · @T["myExams.amended"]</span> }
-                            @if (pub.OpenAppeal) { <span class="hint"> · @T["myExams.appealOpen"]</span> }
-                        </p>
-                        <p><a href="my-results/@pub.SessionId">@T["myExams.report"]</a></p>
-                    </div>
-                }
-                @if (!Published(r.AssignmentId).Any() && r.ScoresClearedAt is not null && r.AttemptsUsed > 0)
-                {
-                    <p class="hint">@(r.AttemptsUsed == 1 ? T["myExams.clearedOne", T.DateTime(r.ScoresClearedAt.Value), r.AttemptsAllowed] : T["myExams.clearedMany", T.DateTime(r.ScoresClearedAt.Value), r.AttemptsUsed, r.AttemptsAllowed])</p>
-                }
-                else if (!Published(r.AssignmentId).Any() && r.Standing == AssignmentStanding.Completed)
-                {
-                    <p class="hint">@T["myExams.submitted"]</p>
-                }
-            </section>
+            <p class="notice info" role="status" data-tour="my-exams-empty">@T["myExams.empty"]</p>
         }
-    </div>
-}
-
-@* Every exam the student can take, by category (GAD-T658); open exams not started yet live only here. *@
-@if (rows is not null)
-{
-    <ExamCatalog />
+        else
+        {
+            <div class="exam-list">
+                @foreach (var c in cards)
+                {
+                    var r = c.Row;
+                    var pub = r is null ? null : Published(r.AssignmentId);
+                    <section class="panel exam-item" data-tour="my-exams-item" aria-labelledby="exam-@c.ExamId.ToString("N")">
+                        <div class="exam-item-head">
+                            <h2 id="exam-@c.ExamId.ToString("N")">@c.Title</h2>
+                            @if (r is not null && (r.Standing != AssignmentStanding.Open || r.AttemptsUsed > 0))
+                            {
+                                <span class="badge badge-@r.Standing.ToString().ToLowerInvariant()">@StudentExams.Describe(r.Standing, T)</span>
+                            }
+                        </div>
+                        <p class="hint">
+                            @(c.Category.Length > 0 ? c.Category : T["myExams.catalog.uncategorized"])
+                            @if (c.Languages.Count > 0)
+                            {
+                                <span> · @T["myExams.catalog.languages"]: @string.Join(", ", c.Languages.Select(Gadfly.Engine.ExamLanguage.NativeName))</span>
+                            }
+                            @if (r is not null && (r.OpensAt is not null || r.ClosesAt is not null))
+                            {
+                                <span> · @Window(r)</span>
+                            }
+                            @if (r is not null && r.AttemptsUsed > 0)
+                            {
+                                <span> · @T["myExams.attempts", r.AttemptsUsed, r.AttemptsAllowed]</span>
+                            }
+                            @* Every exam is spoken on camera (GAD-T239); typing is only an accommodation the instructor grants (GAD-T260). *@
+                            <span> · @(r is { TypedAnswers: true } ? T["myExams.typed"] : T["myExams.spoken"])</span>
+                        </p>
+                        @if (r is { ExamArchived: true, ActiveSessionId: not null })
+                        {
+                            <p class="hint">@T["myExams.archivedInProgress"]</p>
+                        }
+                        @if (pub is not null)
+                        {
+                            <p class="result"><strong>@T["myExams.grade"]</strong> @(pub.FinalPercent is { } fp ? T.Number((double)fp) + "%" : "—")@(pub.Label is { } lbl ? $" ({lbl})" : "")
+                                @if (pub.Status == Gadfly.Assessment.GradeStatus.Amended) { <span class="hint"> · @T["myExams.amended"]</span> }
+                                @if (pub.OpenAppeal) { <span class="hint"> · @T["myExams.appealOpen"]</span> }
+                            </p>
+                        }
+                        else if (r is not null && r.ScoresClearedAt is not null && r.AttemptsUsed > 0)
+                        {
+                            <p class="hint">@(r.AttemptsUsed == 1 ? T["myExams.clearedOne", T.DateTime(r.ScoresClearedAt.Value), r.AttemptsAllowed] : T["myExams.clearedMany", T.DateTime(r.ScoresClearedAt.Value), r.AttemptsUsed, r.AttemptsAllowed])</p>
+                        }
+                        else if (r is { Standing: AssignmentStanding.Completed })
+                        {
+                            <p class="hint">@T["myExams.submitted"]</p>
+                        }
+                        @if (r is null || r.CanStart || pub is not null)
+                        {
+                            <div class="actions" data-tour="my-exams-start">
+                                @if (r is null)
+                                {
+                                    <a class="button" href="my-exams/exam/@c.ExamId/start">@T["myExams.start"]</a>
+                                }
+                                else if (r.CanResumeDirectly)
+                                {
+                                    <a class="button" href="exam/@r.ActiveSessionId">@T["myExams.resume"]</a>
+                                }
+                                else if (r.CanStart)
+                                {
+                                    <a class="button" href="my-exams/@r.AssignmentId/start">@(r.ActiveSessionId is null ? T["myExams.start"] : T["myExams.resume"])</a>
+                                }
+                                @if (pub is not null)
+                                {
+                                    <a class="button secondary" href="my-results/@pub.SessionId">@T["myExams.viewResult"]</a>
+                                }
+                            </div>
+                        }
+                    </section>
+                }
+            </div>
+        }
+    </section>
 }
 
 @code {
-    private IReadOnlyList<StudentAssignmentView>? rows;
+    /// <summary>One card: a published exam, or an attempt record on an exam no longer published, with the student's attempt record when they have one.</summary>
+    private sealed record Card(Guid ExamId, string Title, string Category, IReadOnlyList<string> Languages, StudentAssignmentView? Row);
+
+    private IReadOnlyList<Card>? cards;
     private IReadOnlyList<Gadfly.Server.Grading.StudentResultRow> published = [];
 
     // Results reach students only through the grading workflow: approved and published (GAD-T98).
-    private IEnumerable<Gadfly.Server.Grading.StudentResultRow> Published(Guid assignmentId) =>
-        published.Where(p => p.AssignmentId == assignmentId).OrderByDescending(p => p.Attempt).Take(1);
+    private Gadfly.Server.Grading.StudentResultRow? Published(Guid assignmentId) =>
+        published.Where(p => p.AssignmentId == assignmentId).OrderByDescending(p => p.Attempt).FirstOrDefault();
 
     protected override async Task OnInitializedAsync()
     {
         if (Tenant.OrganizationId is not { } org || Tenant.UserId is not { } user)
         {
-            rows = [];
+            cards = [];
             return;
         }
-        // Only what staff assigned or the student already started (GAD-T674): an open exam gets its assignment when the
-        // student starts it from the catalog below (/my-exams/exam/{id}/start, GAD-T669), not on sight.
-        rows = await StudentExams.ListAsync(Scopes, org, user, Clock.GetUtcNow(), T.Language);
+        var exams = await StudentCatalog.ListAsync(Scopes, org, T.Language);
+        var rows = await StudentExams.ListAsync(Scopes, org, user, Clock.GetUtcNow(), T.Language);
         published = await Gadfly.Server.Grading.GradingDb.RunAsync(Scopes, Tenant, g => g.MyResultsAsync());
+
+        var byExam = rows.GroupBy(r => r.ExamId).ToDictionary(g => g.Key, g => g.First());
+        var listed = exams.Select(e => new Card(e.ExamId, e.Title, e.CategoryName, e.Languages, byExam.GetValueOrDefault(e.ExamId))).ToList();
+        // An exam archived or withdrawn after the student started it stays on their list while it has an attempt to finish or a result.
+        var shown = exams.Select(e => e.ExamId).ToHashSet();
+        var retired = rows.Where(r => !shown.Contains(r.ExamId)
+                                      && (r.Standing is AssignmentStanding.InProgress or AssignmentStanding.Completed || Published(r.AssignmentId) is not null))
+            .Select(r => new Card(r.ExamId, r.ExamTitle, "", [], r));
+        cards = listed.Concat(retired)
+            .OrderBy(c => c.Row?.Standing == AssignmentStanding.InProgress ? 0 : 1)
+            .ToList();
     }
 
     private string Window(StudentAssignmentView r) => (r.OpensAt, r.ClosesAt) switch

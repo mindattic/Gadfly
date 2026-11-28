@@ -169,15 +169,15 @@ public sealed partial class SessionOrchestrator(
         await CreateOrResumeAsync(organizationId, assignmentId, studentUserId, clientInfo, null, ct);
 
     /// <summary>
-    /// Starts or resumes the student's attempt at an exam by its id rather than an assignment (GAD-T669): an exam open to every
-    /// student gets the student's assignment made on first use (<see cref="Student.StudentExams.EnsureOpenAssignmentAsync"/>), then
-    /// the attempt runs exactly as an assigned one. Refused as not assigned when the exam isn't published and open to all students.
+    /// Starts or resumes the student's attempt at an exam by its id rather than an assignment (GAD-T669): every published exam is
+    /// open to every student (GAD-T845), so the student's assignment is made on first use
+    /// (<see cref="Student.StudentExams.EnsureOpenAssignmentAsync"/>), then the attempt runs exactly as an assigned one. Refused as
+    /// not assigned when the exam isn't published.
     /// </summary>
     public async Task<Guid> CreateOrResumeForExamAsync(Guid organizationId, Guid examId, Guid studentUserId, string? clientInfo, string? language,
         CancellationToken ct = default)
     {
-        var assignmentId = await Student.StudentExams.EnsureOpenAssignmentAsync(scopes, organizationId, studentUserId, examId, clock.GetUtcNow(),
-                createIfMissing: configuration?.GetValue<bool>(Student.StudentExams.OpenExamsSetting) ?? true, ct)
+        var assignmentId = await Student.StudentExams.EnsureOpenAssignmentAsync(scopes, organizationId, studentUserId, examId, clock.GetUtcNow(), ct: ct)
             ?? throw new SessionRefusedException(new StudentText("refusal.notAssigned"));
         return await CreateOrResumeAsync(organizationId, assignmentId, studentUserId, clientInfo, language, ct);
     }

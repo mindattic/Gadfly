@@ -46,7 +46,6 @@ public static class AdminArea
         new("Exams",
         [
             new("admin/exams", "Exams", Audience.OrgAdmin),
-            new("admin/assignments", "Assignments", Audience.OrgAdmin),
             new("admin/desk", "Desk", Audience.Desk),
             new("sources", "Source material", Audience.Instructor),
             new("assessments", "Assessments", Audience.Instructor),

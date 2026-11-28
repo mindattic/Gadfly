@@ -25,6 +25,7 @@ public sealed record ReleasedResult(string? Grade, string? Comment, IReadOnlyLis
 public sealed record StudentAssignmentView
 {
     public required Guid AssignmentId { get; init; }
+    public Guid ExamId { get; init; }
     public required string ExamTitle { get; init; }
     public string? Instructions { get; init; }
     public ExamMode Mode { get; init; }
@@ -149,6 +150,7 @@ public static class StudentExams
             rows.Add(new StudentAssignmentView
             {
                 AssignmentId = a.Id,
+                ExamId = a.ExamId,
                 ExamTitle = texts?.Title ?? a.Exam?.Title ?? "Exam",
                 Instructions = texts is not null ? texts.Instructions : a.Exam?.Instructions,
                 Mode = a.Exam?.Mode ?? ExamMode.Text,
@@ -179,20 +181,16 @@ public static class StudentExams
             .ToList();
     }
 
-    /// <summary>Configuration switch for open exams (GAD-T253).</summary>
-    public const string OpenExamsSetting = "Gadfly:OpenExams";
-
     /// <summary>Attempts allowed on an assignment created for an open exam.</summary>
     public const int OpenExamAttempts = 50;
 
     /// <summary>
-    /// Start by exam (GAD-T669): the student's assignment on <paramref name="examId"/>, the one they already have, or one made now
-    /// when the exam is published and open to all students (<see cref="Exam.OpenToAllStudents"/>) and
-    /// <paramref name="createIfMissing"/> (open exams are on): 50 attempts, assigned by the exam's owner, accommodations copied
-    /// from the student's most recent assignment in the organization. This is the only way an open exam gets an assignment
-    /// (GAD-T674: none are made in bulk, so My exams lists only what staff assigned or the student started). A duplicate made at
-    /// the same moment loses to the unique (exam, student) index and the winner's id is returned. Null when there is none and
-    /// none can be made.
+    /// Start by exam (GAD-T669): the student's attempt record (assignment) on <paramref name="examId"/>, the one they already have,
+    /// or one made now when the exam is published and <paramref name="createIfMissing"/>: every published exam is open to every
+    /// student in the organization (GAD-T845). 50 attempts, assigned by the exam's owner, accommodations copied from the student's
+    /// most recent assignment in the organization. This is the only way an exam gets an assignment (GAD-T674: none are made in
+    /// bulk). A duplicate made at the same moment loses to the unique (exam, student) index and the winner's id is returned. Null
+    /// when there is none and none can be made.
     /// </summary>
     public static Task<Guid?> EnsureOpenAssignmentAsync(
         IServiceScopeFactory scopes, Guid organizationId, Guid studentUserId, Guid examId, DateTimeOffset now,
@@ -206,7 +204,7 @@ public static class StudentExams
         if (await ExistingAsync() is { } existing) return existing;
         if (!createIfMissing) return null;
         var exam = await db.Exams.AsNoTracking()
-            .Where(e => e.Id == examId && e.OrganizationId == organizationId && e.Status == ExamStatus.Published && e.OpenToAllStudents)
+            .Where(e => e.Id == examId && e.OrganizationId == organizationId && e.Status == ExamStatus.Published)
             .Select(e => new
             {
                 e.Id,

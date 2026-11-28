@@ -244,9 +244,9 @@ public class AdminDashboardHelperTests
             AdminArea.GroupsFor(role, platform, desk).SelectMany(g => g.Links).Select(l => l.Href);
 
         var admin = Hrefs(OrgRoles.Admin).ToList();
-        Assert.That(admin, Does.Contain("admin").And.Contain("admin/students").And.Contain("admin/exams").And.Contain("admin/assignments")
+        Assert.That(admin, Does.Contain("admin").And.Contain("admin/students").And.Contain("admin/exams")
             .And.Contain("admin/live").And.Contain("admin/audit").And.Contain("admin/status").And.Contain("org/settings").And.Contain("grading"));
-        Assert.That(admin, Does.Not.Contain("platform/organizations").And.Not.Contain("admin/desk"));
+        Assert.That(admin, Does.Not.Contain("platform/organizations").And.Not.Contain("admin/desk").And.Not.Contain("admin/assignments"));
         Assert.That(Hrefs(OrgRoles.Owner), Is.EquivalentTo(admin));
 
         var instructor = Hrefs(OrgRoles.Instructor).ToList();
